@@ -1,5 +1,5 @@
 import { type ArtifactMount, defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
-import { putTicket } from "../data/collections";
+import { changeTicketFiles } from "../data/collections";
 import {
   fileNameFromPath,
   readTicketMarkdown,
@@ -17,7 +17,7 @@ import {
 import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { refreshTicketCheckout } from "../data/ticket-checkout";
 import { normalizeTicketDependencies, validateTicketDependencies } from "../data/ticket-dependencies";
-import { deleteTicketFileContent, readTicketFileContent, storeTicketFileContent } from "../data/ticket-file-content";
+import { readTicketFileContent, storeTicketFileContent } from "../data/ticket-file-content";
 import { validateTicketFileName } from "../data/ticket-file-name";
 import type { TicketContext } from "../data/ticket-identity";
 import { writeTicketImageCheckout } from "../data/ticket-image-checkout";
@@ -27,7 +27,6 @@ import { deriveTitle } from "../utils/derive-title";
 
 // Reads the local text files back into stored ticket files, preserving a file's id across
 // saves when its name is unchanged. An unchanged body keeps its blob; the others get new ones.
-// Returns the blobs the saved ticket no longer uses, for deletion after the save.
 const readTicketFiles = async (
   storage: ExtensionStorageApi,
   projectFiles: ArtifactMount,
@@ -52,9 +51,7 @@ const readTicketFiles = async (
         : { id: crypto.randomUUID(), name, blobId, createdAt: now, updatedAt: now },
     );
   }
-  const kept = new Set(files.map((file) => file.blobId));
-  const unused = (ticket.files ?? []).map((file) => file.blobId).filter((blobId) => !kept.has(blobId));
-  return { files, unused };
+  return files;
 };
 
 const resolveTags = async (storage: ExtensionStorageApi, tagNames: string[] | undefined, fallback: string[]) =>
@@ -104,35 +101,33 @@ export const saveTicketCommand = defineCommand({
         ? await resolveLinkedTicketId(ctx, frontmatter.parentShorthand, ticket.parentId ? [ticket.parentId] : [])
         : ticket.parentId;
     const paths = (await projectFiles.list(ticketFilesPattern(ticket.shorthand))).map((entry) => entry.path);
-    const { files, unused } = await readTicketFiles(
-      ctx.storage,
-      projectFiles,
-      ticket,
-      paths.filter((path) => !isImagePath(path)),
-    );
     const images = await saveTicketImages(ctx.storage, projectFiles, ticket, paths.filter(isImagePath));
 
-    const next: Ticket = {
-      ...ticket,
+    // The files compare against the stored ticket, so a file change made during this save is not undone.
+    const saved = await changeTicketFiles(ctx, ticket.id, async (stored) => ({
+      ...stored,
       content,
       title: deriveTitle(content),
       statusId,
       tagIds,
       parentId,
-      files,
+      files: await readTicketFiles(
+        ctx.storage,
+        projectFiles,
+        stored,
+        paths.filter((path) => !isImagePath(path)),
+      ),
       attachments: images.attachments,
-      userPrompt: frontmatter.userPrompt ?? ticket.userPrompt ?? null,
+      userPrompt: frontmatter.userPrompt ?? stored.userPrompt ?? null,
       dependsOn,
       blockedReason: frontmatter.blockedReason ?? null,
       draft: false,
       updatedAt: new Date().toISOString(),
-    };
-    await putTicket(ctx, next);
+    }));
     await writeTicketImageCheckout(projectFiles, ticket.shorthand, images.checkout);
-    // Delete replaced images and file bodies only after the ticket stops pointing at them.
+    // Delete replaced images only after the ticket stops pointing at them.
     for (const id of images.replacedIds) await ctx.storage.files.delete(id);
-    await deleteTicketFileContent(ctx.storage, ticket.id, unused);
 
-    return { shorthand: ticket.shorthand, files: files.length };
+    return { shorthand: ticket.shorthand, files: saved.files?.length ?? 0 };
   },
 });

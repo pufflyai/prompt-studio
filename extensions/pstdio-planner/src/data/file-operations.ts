@@ -1,15 +1,9 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { ticketsCollection, updateTicket } from "./collections";
-import { deleteTicketFileContent, storeTicketFileContent } from "./ticket-file-content";
+import { changeTicketFiles } from "./collections";
+import { storeTicketFileContent } from "./ticket-file-content";
 import { validateTicketFileName } from "./ticket-file-name";
 import type { TicketContext } from "./ticket-identity";
 import type { StoredTicketFile } from "./types";
-
-const loadTicket = async (ctx: TicketContext, ticketId: string) => {
-  const ticket = await ticketsCollection(ctx).get(ticketId);
-  if (!ticket) throw new Error(`Unknown ticket: ${ticketId}`);
-  return ticket;
-};
 
 // Creating from the files tree may run without a prompt, so creation falls back
 // to a unique "untitled" name the user can edit later.
@@ -27,20 +21,22 @@ export const createTicketFile = async (input: {
   ticketId: string;
   name?: string;
 }) => {
-  const ticket = await loadTicket(input, input.ticketId);
-  const now = new Date().toISOString();
-  const name = validateTicketFileName(input.name?.trim() || nextUntitledName(ticket.files ?? []));
-  const file: StoredTicketFile = {
-    id: crypto.randomUUID(),
-    name,
-    blobId: await storeTicketFileContent(input.storage, ticket.id, name, ""),
-    createdAt: now,
-    updatedAt: now,
-  };
-  await updateTicket(input, { ...ticket, files: [...(ticket.files ?? []), file], updatedAt: now });
-  return file;
+  const next = await changeTicketFiles(input, input.ticketId, async (ticket) => {
+    const now = new Date().toISOString();
+    const name = validateTicketFileName(input.name?.trim() || nextUntitledName(ticket.files ?? []));
+    const file: StoredTicketFile = {
+      id: crypto.randomUUID(),
+      name,
+      blobId: await storeTicketFileContent(input.storage, ticket.id, name, ""),
+      createdAt: now,
+      updatedAt: now,
+    };
+    return { ...ticket, files: [...(ticket.files ?? []), file], updatedAt: now };
+  });
+  return next.files!.at(-1)!;
 };
 
+// Each change starts from the stored file, so a rename keeps a body saved a moment earlier.
 export const updateTicketFile = async (input: {
   storage: ExtensionStorageApi;
   resources: TicketContext["resources"];
@@ -50,20 +46,20 @@ export const updateTicketFile = async (input: {
   name?: string;
 }) => {
   if (input.name !== undefined) validateTicketFileName(input.name);
-  const ticket = await loadTicket(input, input.ticketId);
-  const previous = ticket.files?.find((file) => file.id === input.fileId);
-  if (!previous) return null;
-  const now = new Date().toISOString();
-  const name = input.name ?? previous.name;
-  const blobId =
-    input.content === undefined
-      ? previous.blobId
-      : await storeTicketFileContent(input.storage, ticket.id, name, input.content);
-  const updated = { ...previous, name, blobId, updatedAt: now };
-  const files = (ticket.files ?? []).map((file) => (file.id === input.fileId ? updated : file));
-  await updateTicket(input, { ...ticket, files, updatedAt: now });
-  if (blobId !== previous.blobId) await deleteTicketFileContent(input.storage, ticket.id, [previous.blobId]);
-  return updated;
+  const next = await changeTicketFiles(input, input.ticketId, async (ticket) => {
+    const previous = ticket.files?.find((file) => file.id === input.fileId);
+    if (!previous) return ticket;
+    const now = new Date().toISOString();
+    const name = input.name ?? previous.name;
+    const blobId =
+      input.content === undefined
+        ? previous.blobId
+        : await storeTicketFileContent(input.storage, ticket.id, name, input.content);
+    const updated = { ...previous, name, blobId, updatedAt: now };
+    const files = (ticket.files ?? []).map((file) => (file.id === input.fileId ? updated : file));
+    return { ...ticket, files, updatedAt: now };
+  });
+  return next.files?.find((file) => file.id === input.fileId) ?? null;
 };
 
 export const deleteTicketFile = async (input: {
@@ -72,14 +68,10 @@ export const deleteTicketFile = async (input: {
   ticketId: string;
   fileId: string;
 }) => {
-  const ticket = await loadTicket(input, input.ticketId);
-  const removed = (ticket.files ?? []).filter((file) => file.id === input.fileId);
-  const files = (ticket.files ?? []).filter((file) => file.id !== input.fileId);
-  await updateTicket(input, { ...ticket, files, updatedAt: new Date().toISOString() });
-  await deleteTicketFileContent(
-    input.storage,
-    ticket.id,
-    removed.map((file) => file.blobId),
-  );
+  await changeTicketFiles(input, input.ticketId, async (ticket) => ({
+    ...ticket,
+    files: (ticket.files ?? []).filter((file) => file.id !== input.fileId),
+    updatedAt: new Date().toISOString(),
+  }));
   return { fileId: input.fileId };
 };

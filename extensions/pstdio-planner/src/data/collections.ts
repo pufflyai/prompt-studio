@@ -1,6 +1,8 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { dependencyBlockerRefs, withIndependentBlockers } from "./dependency-blockers";
 import { readTicketReviewRequests } from "./review-request-storage";
+import { deleteTicketBlobs, deleteTicketFileContent } from "./ticket-file-content";
+import { queueTicketWrite } from "./ticket-write-queue";
 import type { StoredStatus, StoredTag, StoredTicket, Ticket } from "./types";
 
 export { TICKETS_COLLECTION } from "./ticket-records";
@@ -9,6 +11,15 @@ import { readTicketIdentity, type TicketContext, withTicketIdentities, withTicke
 import { ticketRecord, ticketRecords } from "./ticket-records";
 export const STATUSES_COLLECTION = "ticket-statuses";
 export const TAGS_COLLECTION = "ticket-tags";
+
+// File bodies are blobs, deleted once the file list stops using them. A write that read the
+// ticket before a file change would bring back a list whose blobs are gone. So only
+// changeTicketFiles changes the list, and every write runs in the ticket's queue and keeps the
+// stored list.
+const withStoredFiles = async (storage: ExtensionStorageApi, id: string, ticket: StoredTicket) => {
+  const stored = await ticketRecords(storage).get(id);
+  return stored ? { ...ticket, files: stored.files } : ticket;
+};
 
 export const ticketsCollection = (ctx: TicketContext) => {
   const records = ticketRecords(ctx.storage);
@@ -27,11 +38,39 @@ export const ticketsCollection = (ctx: TicketContext) => {
       return ids.map((id) => byId.get(id));
     },
     list: async () => withTicketIdentities(ctx, await records.list()),
-    put: (id: string, ticket: StoredTicket) => records.put(id, ticketRecord(ticket)),
-    update: (id: string, ticket: StoredTicket) => records.update(id, ticketRecord(ticket)),
-    delete: (id: string) => records.delete(id),
+    put: (id: string, ticket: StoredTicket) =>
+      queueTicketWrite(id, async () => records.put(id, ticketRecord(await withStoredFiles(ctx.storage, id, ticket)))),
+    update: (id: string, ticket: StoredTicket) =>
+      queueTicketWrite(id, async () =>
+        records.update(id, ticketRecord(await withStoredFiles(ctx.storage, id, ticket))),
+      ),
+    // The ticket's blobs, file bodies and images alike, have no other owner.
+    delete: (id: string) =>
+      queueTicketWrite(id, async () => {
+        await records.delete(id);
+        await deleteTicketBlobs(ctx.storage, id);
+      }),
   };
 };
+
+/**
+ * The only write that changes a ticket's file list. `change` receives the stored ticket, with its
+ * core number, inside the ticket's queue and returns it unchanged to skip the write. The bodies
+ * the new list no longer uses are deleted after the write.
+ */
+export const changeTicketFiles = (ctx: TicketContext, ticketId: string, change: (stored: Ticket) => Promise<Ticket>) =>
+  queueTicketWrite(ticketId, async () => {
+    const stored = await ticketsCollection(ctx).get(ticketId);
+    if (!stored) throw new Error(`Unknown ticket: ${ticketId}`);
+    const changed = await change(stored);
+    if (changed === stored) return stored;
+    const next = await withDerivedTicketState(ctx, changed);
+    await ticketRecords(ctx.storage).update(ticketId, ticketRecord(next));
+    const kept = new Set((next.files ?? []).map((file) => file.blobId));
+    const unused = (stored.files ?? []).map((file) => file.blobId).filter((blobId) => !kept.has(blobId));
+    await deleteTicketFileContent(ctx.storage, ticketId, unused);
+    return next;
+  });
 
 export const statusesCollection = (storage: ExtensionStorageApi) =>
   storage.collection<StoredStatus>(STATUSES_COLLECTION);

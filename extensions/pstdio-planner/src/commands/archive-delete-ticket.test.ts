@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { createTicketFile, updateTicketFile } from "../data/file-operations";
 import { runTicketsQuery } from "../data/query";
 import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import { archiveTicketCommand } from "./archive-ticket";
@@ -36,5 +37,20 @@ describe("deleteTicketCommand", () => {
     );
 
     expect(await ticketsCollection(storage).get(created.id)).toBeUndefined();
+  });
+
+  test("deletes the ticket's file bodies with the ticket", async () => {
+    const storage = createMemoryStorage();
+    const created = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "X" } }));
+    const file = await createTicketFile({ ...ticketContext(storage), ticketId: created.id, name: "plan.md" });
+    await updateTicketFile({ ...ticketContext(storage), ticketId: created.id, fileId: file.id, content: "# Plan" });
+    const blobs = storage.scope({ type: "resource", resource: { type: "ticket", id: created.id } }).files;
+    expect(await blobs.list()).toHaveLength(1);
+
+    await deleteTicketCommand.run(
+      ...makeCommandArgs({ storage, params: {}, overrides: { resource: { type: "ticket", id: created.id } } }),
+    );
+
+    expect(await blobs.list()).toEqual([]);
   });
 });

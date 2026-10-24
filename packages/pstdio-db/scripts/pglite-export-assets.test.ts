@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PGlite as CurrentPGlite } from "@electric-sql/pglite";
 import { PGlite } from "pglite-previous";
+import { resolvePgliteOptions } from "../src/db/connection.pglite";
+import { openPglite } from "../src/db/open-pglite";
 import { resolveExportWorker } from "../src/db/pglite-export-assets";
 import { buildPgliteExportAssets } from "./pglite-export-assets";
 
@@ -24,8 +25,10 @@ test("the vendored export worker reads homes from both engines outside the repos
       await old.exec("insert into retained values ('previous', decode('00ff', 'hex'))");
       await old.close();
       // A 0.46 nightly home: the current engine, marked, but written before the baseline.
+      // It is opened exactly as the runtime opens a home, so the rows land in the runtime database.
       const nightly = join(root, "nightly");
-      const current = await CurrentPGlite.create(nightly);
+      await mkdir(nightly);
+      const current = await openPglite(nightly, await resolvePgliteOptions([]));
       await current.exec("create table retained(id text primary key, payload bytea not null)");
       await current.exec("insert into retained values ('nightly', decode('1180', 'hex'))");
       await current.close();
