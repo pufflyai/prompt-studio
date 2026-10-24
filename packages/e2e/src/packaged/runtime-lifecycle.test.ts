@@ -327,7 +327,7 @@ describe("packaged runtime lifecycle", () => {
       // is written before unpacking starts and must not trigger the interruption.
       const writesDatabase = () =>
         readdirSync(home, { recursive: true }).some((entry) =>
-          /^pstdio\.db(?:\.engine-transfer[\\/]target)?(?:\.restoring)?[\\/]/.test(String(entry)),
+          /^pstdio\.db(?:\.staging[\\/]target)?(?:\.restoring)?[\\/]/.test(String(entry)),
         );
 
       const first = startRuntime();

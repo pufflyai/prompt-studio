@@ -33,14 +33,12 @@
     "@types/pg": "^8.18.0",
     "drizzle-kit": "^0.31.9",
     "pstdio-relay": "workspace:*",
-    "pstdio-storage": "workspace:*",
     "typescript": "6.0.2",
     "storage-scale-fixture": "workspace:*"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.4.6",
     "@electric-sql/pglite-icu-full": "0.1.0",
-    "@electric-sql/pglite-tools": "0.2.21",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "pg": "^8.20.0",

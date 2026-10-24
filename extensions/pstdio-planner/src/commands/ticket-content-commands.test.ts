@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketsCollection } from "../data/collections";
+import { updateTicketFile } from "../data/file-operations";
 import { observeStorageReads } from "../data/storage-reads.fixture";
+import { readTicketFileContent } from "../data/ticket-file-content";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { getTicketContentCommand } from "./get-ticket-content";
@@ -90,10 +92,7 @@ describe("ticket body file-renderer commands", () => {
     const file = await createTicketFileCommand.run(
       ...makeCommandArgs({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
     );
-    await ticketsCollection(storage).put(ticket.id, {
-      ...(await ticketsCollection(storage).get(ticket.id))!,
-      files: [{ ...file, content: "file content" }],
-    });
+    await updateTicketFile({ storage, ticketId: ticket.id, fileId: file.id, content: "file content" });
 
     const result = await getTicketContentCommand.run(
       ...makeCommandArgs({
@@ -142,7 +141,8 @@ describe("ticket body file-renderer commands", () => {
     );
 
     const stored = await ticketsCollection(storage).get(ticket.id);
-    expect(stored?.files?.find((candidate) => candidate.id === file.id)?.content).toBe("updated file");
+    const saved = stored?.files?.find((candidate) => candidate.id === file.id);
+    expect(await readTicketFileContent(storage, ticket.id, saved!)).toBe("updated file");
     expect(stored?.title).toBe("Ticket");
   });
 

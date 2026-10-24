@@ -1,34 +1,6 @@
 [
   {
     "runner": "bun",
-    "file": "packages/pstdio-db/src/db/pglite-engine-upgrade.test.ts",
-    "name": "createDb upgrades a closed legacy home and preserves records, retry receipts and later writes",
-    "platforms": ["win32"],
-    "owner": "PS-907 / pstdio-db",
-    "reason": "Cold old-engine creation, transfer, restart and cleanup intermittently exceed Windows's 15 seconds. Linux returned to the stable lane after the user approved a 15 second limit on 2026-10-23 for its measured 4.5-4.9 second workload. The same Windows commit passed at 6.573 seconds and timed out at 15.011 seconds after its final reopen.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40002393505",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40004464723",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40009587515/job/120606412298",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913/job/120606436837"
-    ],
-    "removeWhen": "Fix the slow phase and pass ten independent runs on both Linux and Windows at their existing limits, or obtain explicit approval for measured new allowances."
-  },
-  {
-    "runner": "bun",
-    "file": "packages/pstdio-db/src/db/board-view-rules-migration.test.ts",
-    "name": "saved board views keep their filters and ordering as rules and sorts",
-    "platforms": ["win32"],
-    "owner": "PS-907 / pstdio-db",
-    "reason": "Cold upgrade and reopen exceeded 15 seconds, then passed at 9.768 seconds with added phase diagnostics.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40002393505",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40004464723"
-    ],
-    "removeWhen": "Identify and fix the slow phase and pass ten independent Windows runs within 15 seconds."
-  },
-  {
-    "runner": "bun",
     "file": "scripts/release/version-patch.test.ts",
     "name": "uses a patch bump even when the selected fix has a minor changeset",
     "platforms": ["linux"],
@@ -144,19 +116,6 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/40009585913"
     ],
     "removeWhen": "Fix completion synchronization and pass ten independent Windows runs at the existing limits."
-  },
-  {
-    "runner": "bun",
-    "file": "packages/pstdio-db/src/db/shared-workspace-folders.test.ts",
-    "name": "upgrading frees the folders of deleted projects so they can be opened again",
-    "platforms": ["win32"],
-    "owner": "PS-907 / workspace folder upgrades",
-    "reason": "The same revision passed this legacy-home upgrade and deleted-folder reuse contract in 4.945 seconds and timed out at 15.454 seconds in another Windows shard. Keep every ownership and folder-reuse assertion and add phase logs to identify the slow part.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40025877536/job/120662025536",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40025883928/job/120662039027"
-    ],
-    "removeWhen": "Identify and fix the slow phase, then pass ten independent Windows runs within the existing 15 second allowance."
   },
   {
     "runner": "bun",

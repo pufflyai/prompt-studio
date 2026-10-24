@@ -11,7 +11,6 @@ import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_operations, storage_document_updates, storage_documents } from "../../db/schemas.pg";
 import { dataMigrationContext } from "./data-migration-context";
 import type { LoadedDocument } from "./document-cache";
-import { importOwnerDocument } from "./document-import";
 import { trackResourceIdentityProjection } from "./resource-identity-projection";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
@@ -39,7 +38,6 @@ const loadDocument = async (
   tx: Transaction,
   address: DocumentAddress,
   owner: StorageOwner,
-  environmentId: string,
   cached?: LoadedDocument,
   diagnostics?: StorageDiagnostics,
 ) => {
@@ -58,10 +56,6 @@ const loadDocument = async (
     .select({ state: storage_documents.state })
     .from(storage_documents)
     .where(documentWhere(address));
-  if (inserted.length && address.document_id === "records") {
-    saved.state = await importOwnerDocument(tx, owner, environmentId);
-    await tx.update(storage_documents).set({ state: saved.state }).where(documentWhere(address));
-  }
   const document = new Y.Doc();
   Y.applyUpdate(document, saved.state);
   const updates = await tx
@@ -133,21 +127,13 @@ export const runDocumentTransaction = async <T>(
   input: {
     address: DocumentAddress;
     owner: StorageOwner;
-    environmentId: string;
     cached?: LoadedDocument;
     diagnostics?: StorageDiagnostics;
   },
   action: (state: DocumentState) => Promise<T>,
 ) => {
   const { address } = input;
-  const { document, row, initialize } = await loadDocument(
-    tx,
-    address,
-    input.owner,
-    input.environmentId,
-    input.cached,
-    input.diagnostics,
-  );
+  const { document, row, initialize } = await loadDocument(tx, address, input.owner, input.cached, input.diagnostics);
   const identities =
     address.document_id === resourceNumbersDocumentId && address.extension_id === coreOwnerId
       ? await trackResourceIdentityProjection(tx, address, document, !!initialize, row.revision)

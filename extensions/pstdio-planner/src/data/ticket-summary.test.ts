@@ -12,7 +12,7 @@ const ticket = (id: string, parentId?: string): StoredTicket => ({
   shorthand: `T-${id}`,
   title: id,
   content: "Full ticket body",
-  files: [{ id: "file", name: "notes.md", content: "File body", createdAt: "before", updatedAt: "after" }],
+  files: [{ id: "file", name: "notes.md", blobId: "file-body", createdAt: "before", updatedAt: "after" }],
   userPrompt: "Implementation instructions",
   statusId: "ready",
   tagIds: ["feature", "urgent"],
@@ -76,6 +76,6 @@ test("selected hierarchy retains summaries without retaining bodies or rereading
     expect(summary).not.toHaveProperty("files");
     expect(summary).not.toHaveProperty("userPrompt");
   }
-  expect(child.files?.[0].content).toBe("File body");
+  expect(child.files?.[0].blobId).toBe("file-body");
   expect(await ticketsCollection(storage).get(parent.id)).toEqual(parent);
 });

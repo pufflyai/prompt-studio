@@ -1,13 +1,76 @@
-import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import type { ExtensionStorageApi, ExtensionStorageCollectionApi } from "@pstdio/sdk/extensions";
 import { dependencyBlockerRefs, withIndependentBlockers } from "./dependency-blockers";
 import { readTicketReviewRequests } from "./review-request-storage";
+import { deleteTicketBlobs, deleteTicketFileContent, deleteTicketScopedBlobs } from "./ticket-file-content";
+import { queueTicketWrite } from "./ticket-write-queue";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 
 export const TICKETS_COLLECTION = "tickets";
 export const STATUSES_COLLECTION = "ticket-statuses";
 export const TAGS_COLLECTION = "ticket-tags";
 
-export const ticketsCollection = (storage: ExtensionStorageApi) => storage.collection<StoredTicket>(TICKETS_COLLECTION);
+const storedTickets = (storage: ExtensionStorageApi) => storage.collection<StoredTicket>(TICKETS_COLLECTION);
+
+// File bodies and images are blobs, deleted once the ticket stops using them. A write that read
+// the ticket before such a change would bring back references to deleted blobs. So only
+// changeTicketFiles changes `files` and `attachments`, and every other write runs in the
+// ticket's queue and keeps the stored ones.
+const withStoredBlobRefs = async (storage: ExtensionStorageApi, id: string, ticket: StoredTicket) => {
+  const stored = await storedTickets(storage).get(id);
+  return stored ? { ...ticket, files: stored.files, attachments: stored.attachments } : ticket;
+};
+
+export const ticketsCollection = (storage: ExtensionStorageApi) => {
+  const tickets = storedTickets(storage);
+  return {
+    get: (id) => tickets.get(id),
+    list: () => tickets.list(),
+    createIfAbsent: (id, ticket) => tickets.createIfAbsent(id, ticket),
+    create: (ticket) => tickets.create(ticket),
+    attachments: (id) => tickets.attachments(id),
+    put: (id, ticket) =>
+      queueTicketWrite(id, async () => tickets.put(id, await withStoredBlobRefs(storage, id, ticket))),
+    update: (id, ticket) =>
+      queueTicketWrite(id, async () => tickets.update(id, await withStoredBlobRefs(storage, id, ticket))),
+    // The ticket's blobs, file bodies and images alike, have no other owner.
+    delete: (id) =>
+      queueTicketWrite(id, async () => {
+        await tickets.delete(id);
+        await deleteTicketBlobs(storage, id);
+      }),
+    deleteIfValue: (id, ticket) =>
+      queueTicketWrite(id, async () => {
+        const deleted = await tickets.deleteIfValue(id, ticket);
+        if (deleted) await deleteTicketBlobs(storage, id);
+        return deleted;
+      }),
+  } satisfies ExtensionStorageCollectionApi<StoredTicket>;
+};
+
+/**
+ * The only write that changes a ticket's files and attachments. `change` receives the stored
+ * ticket inside the ticket's queue and returns it unchanged to skip the write. After the write,
+ * the file bodies and ticket-scoped images the ticket no longer uses are deleted.
+ */
+export const changeTicketFiles = (
+  storage: ExtensionStorageApi,
+  ticketId: string,
+  change: (stored: StoredTicket) => Promise<StoredTicket>,
+) =>
+  queueTicketWrite(ticketId, async () => {
+    const stored = await storedTickets(storage).get(ticketId);
+    if (!stored) throw new Error(`Unknown ticket: ${ticketId}`);
+    const changed = await change(stored);
+    if (changed === stored) return stored;
+    const next = await withDerivedTicketState(storage, changed);
+    await storedTickets(storage).update(ticketId, next);
+    const unused = (ids: string[], kept: string[]) => ids.filter((id) => !kept.includes(id));
+    const bodies = (ticket: StoredTicket) => (ticket.files ?? []).map((file) => file.blobId);
+    const images = (ticket: StoredTicket) => (ticket.attachments ?? []).map((attachment) => attachment.id);
+    await deleteTicketFileContent(storage, ticketId, unused(bodies(stored), bodies(next)));
+    await deleteTicketScopedBlobs(storage, ticketId, unused(images(stored), images(next)));
+    return next;
+  });
 
 export const statusesCollection = (storage: ExtensionStorageApi) =>
   storage.collection<StoredStatus>(STATUSES_COLLECTION);

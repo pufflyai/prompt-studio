@@ -57,9 +57,8 @@ import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smo
 // Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.
 // scripts/verify/storage-package-consumer.ts checks the packaged SDK's two-device merge and replacement report.
 // Selected storage queries preserve case-insensitive text equality and negation through restart.
-// packaged-storage-upgrade.test.ts checks the released 0.45 engine transition, nested records, assets,
-// operation retries and tombstones through index installation and restart, plus upgrade progress phases
-// and database publication while disk metrics read the home on Windows.
+// packaged-database-retirement.test.ts checks that a released 0.45 home is exported as JSON, moved aside and
+// replaced by an empty current database, once.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.

@@ -1,13 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import {
-  activityEventSelectSchema,
-  sessionApiSchema,
-  workspaceApiSchema,
-  ydocAwarenessSelectSchema,
-  ydocResumeStateSelectSchema,
-  ydocUpdatesSelectSchema,
-} from "./schemas.zod";
+import { activityEventSelectSchema, sessionApiSchema, workspaceApiSchema } from "./schemas.zod";
 
 describe("schemas.zod", () => {
   it("supports workspace and session API payload extensions", () => {
@@ -100,40 +93,6 @@ describe("schemas.zod", () => {
       updated_at: "2026-01-01T00:00:00.000Z",
       workspace_id: null,
       root_path: null,
-    });
-
-    expect(result.success).toBe(true);
-  });
-
-  it("validates ydoc update payloads", () => {
-    const result = ydocUpdatesSelectSchema.safeParse({
-      id: "update-1",
-      projectId: "project-1",
-      room: "doc-room",
-      op: new Uint8Array([1, 2, 3]),
-    });
-
-    expect(result.success).toBe(true);
-  });
-
-  it("validates ydoc awareness payloads", () => {
-    const result = ydocAwarenessSelectSchema.safeParse({
-      clientId: "client-1",
-      projectId: "project-1",
-      room: "doc-room",
-      op: new Uint8Array([1, 2, 3]),
-      updated: "2026-01-01T00:00:00.000Z",
-    });
-
-    expect(result.success).toBe(true);
-  });
-
-  it("validates ydoc resume state payloads", () => {
-    const result = ydocResumeStateSelectSchema.safeParse({
-      projectId: "project-1",
-      room: "doc-room",
-      offset: "0",
-      handle: "handle-1",
     });
 
     expect(result.success).toBe(true);

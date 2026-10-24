@@ -249,11 +249,6 @@ jobs:
       - name: Test the blind sync store, its cleanup and its protocol
         run: bun run --cwd services/relay test:sync
 
-      - name: Test production relay with real local stores
-        env:
-          SYNC_TEST_ENTRY: ../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts
-        run: bun run --cwd packages/pstdio-sync-contracts test:conformance
-
       - name: Test private account authority and its built image with disposable PostgreSQL
         run: bun run --cwd services/account-manager test:isolated
 

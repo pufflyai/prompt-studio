@@ -48,17 +48,15 @@ bun run --cwd services/relay db:generate
 
 Never edit generated SQL by hand. Operators call `migrateRelayStorage(databaseUrl, migrationsFolder)` before opening storage; the runtime image includes the generated `drizzle/` directory. The service does not run migrations or claim storage readiness through liveness.
 
-Run the focused real PostgreSQL checks and the shared cases with real local stores:
+Run the focused real PostgreSQL checks:
 
 ```sh
 bun run --cwd services/relay test:storage
-cd packages/pstdio-sync-contracts
-SYNC_TEST_ENTRY=../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts bun scripts/isolated.ts
 ```
 
-The storage checks use disposable PostgreSQL and RustFS. They cover independent connections, grouped conflicts, missing assets, scope isolation, historical asset requirements, replay/restore lineage, and killing a publishing process at the commit boundary. The shared cases also cover real local journals, late branches, resolutions, and recovery. Their Docker runner mounts repository source read-only and removes its own stack; it never opens the application's database.
+The storage checks use disposable PostgreSQL and RustFS. They cover independent connections, grouped conflicts, missing assets, scope isolation, historical asset requirements, replay/restore lineage, and killing a publishing process at the commit boundary. The Docker runner mounts repository source read-only and removes its own stack; it never opens the application's database.
 
-`SYNC_TEST_ENTRY` selects the test file the runner starts. Without it, `bun run --cwd packages/pstdio-sync-contracts test:conformance` runs the reference relay suite (`src/conformance/reference.integration.ts`). CI runs only `grouped-production-relay.integration.ts` of the three grouped entries in `packages/pstdio-db/src/services/extension-storage/`. No script or CI job runs `grouped-conformance.integration.ts` (the shared cases with local stores against the reference relay) or `grouped-storage-sync.integration.ts` (the grouped storage adapter between three local databases). Run them by hand with the same command and a different `SYNC_TEST_ENTRY`.
+`bun run --cwd packages/pstdio-sync-contracts test:conformance` runs the reference relay suite (`src/conformance/reference.integration.ts`). `SYNC_TEST_ENTRY` selects a different test file for the runner. Since 0.46 the app has no grouped local storage, so there are no local-store conformance entries in `pstdio-db`.
 
 The runner waits for `http://objects:9000/health` before it starts the tests. It prints `Test object storage ready at http://objects:9000` when the check passes. When it fails, the error names the endpoint and the last HTTP status or connection error. Docker passes a proxy from Docker Desktop or `~/.docker/config.json` into every container. The runner sets `NO_PROXY` for its services and for loopback addresses, so requests between containers and to the tests' own servers stay on the run's network. An HTTP 403 such as `No approved upstream IPv4 address` in that error means a request went to the proxy instead; check that the runner's `NO_PROXY` still lists the host. The relay fixtures in `compose.test.yaml` set the same list. Do not turn off the proxy or other network controls to get past it.
 
