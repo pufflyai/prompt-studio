@@ -205,6 +205,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     let remote = new Map<string, Uint8Array[]>();
     let after = 0;
     let state: StateInfo | null = null;
+    let skipped = false;
     while (true) {
       const result = await relay.read(after);
       if (result.state && result.state.stateId !== state?.stateId) {
@@ -214,13 +215,17 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
         if (!frames) return null;
         remote = addFrames(new Map(), frames);
         after = state.through;
+        // A newer latest state covers every update skipped before it.
+        skipped = false;
         continue;
       }
       if (result.status === "state-required") throw new Error("Relay is missing updates after its latest state");
       const updates = checkPage(result, after);
-      addFrames(remote, await reader.openFrames(updates));
+      const frames = await reader.openFrames(updates);
+      if (frames.includes(null)) skipped = true;
+      addFrames(remote, frames);
       after = updates.at(-1)?.sequence ?? after;
-      if (!result.more) return { remote, after, state };
+      if (!result.more) return { remote, after, state, skipped };
     }
   };
 
@@ -237,8 +242,14 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     }
     const downloaded = await download();
     if (!downloaded) return null;
-    const { remote, after, state } = downloaded;
-    const joined = { ...(await withState(cursor, state)), joined: true, after, pendingBytes: 0 };
+    const { remote, after, state, skipped } = downloaded;
+    const joined = {
+      ...(await withState(cursor, state)),
+      joined: true,
+      after,
+      pendingBytes: 0,
+      skipped: cursor.skipped || skipped,
+    };
     const { rejected, cursor: saved } = await store.merge(remote, "adopt", joined);
     await skippedRecords(rejected);
     return saved;
