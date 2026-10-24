@@ -95,7 +95,7 @@ test("opens chat workspace files and restores selected documents through history
     await page.getByRole("link", { name: "Draft", exact: true }).last().click();
     await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Exact\s+workspace\s+draft\s+bytes/);
     await expect(page).toHaveURL(
-      /document=.pstdio%2Fextension-storage%2Fpstdio-planner%2Ftickets%2FPS-105%2Fticket.md/,
+      /document=.pstdio%2Fextension-storage%2Fpstdio.pstdio-planner%2Ftickets%2FPS-105%2Fticket.md/,
     );
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
