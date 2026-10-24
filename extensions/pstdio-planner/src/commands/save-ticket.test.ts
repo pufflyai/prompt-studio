@@ -6,6 +6,7 @@ import { updateTicketFile } from "../data/file-operations";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import { readTicketFileContent } from "../data/ticket-file-content";
+import { readTicketImageCheckout } from "../data/ticket-image-checkout";
 import { attachTicketFileCommand } from "./attach-ticket-file";
 import { makeCommandArgs } from "./command-context.fixture";
 import { saveTicketCommand } from "./save-ticket";
@@ -76,7 +77,7 @@ const ticketWithChangedImage = async () => {
     expect(await blobs.list()).toHaveLength(1);
     return Promise.all(saved.map(async (attachment) => [...(await blobs.getBytes(attachment.id))]));
   };
-  return { storage, ticket, save, imageBytes };
+  return { storage, projectFiles, ticket, image, save, imageBytes };
 };
 
 const otherAttachment = {
@@ -135,4 +136,28 @@ test("save keeps a tag change made by another command while the save runs", asyn
 
   const [ticket] = await ticketsCollection(storage).list();
   expect(ticket.tags).toEqual({ "default-priority": "default-priority-high", "default-type": "default-type-bug" });
+});
+
+test("overlapping saves with different images leave a checkout that names only stored images", async () => {
+  const { storage, projectFiles, ticket, image, save, imageBytes } = await ticketWithChangedImage();
+  // The first save's checkout write is slow. A second save of a newer image starts meanwhile.
+  let second: unknown;
+  const writeText = projectFiles.writeText.bind(projectFiles);
+  projectFiles.writeText = async (path, text) => {
+    if (path.endsWith("image-checkout.json") && !second) {
+      await projectFiles.writeBytes(image, new Uint8Array([3]));
+      second = save();
+      await Bun.sleep(50);
+    }
+    return writeText(path, text);
+  };
+
+  await save();
+  await second;
+
+  const stored = (await ticketsCollection(storage).get(ticket.id))!;
+  const checkout = await readTicketImageCheckout(projectFiles, ticket.shorthand);
+  const ids = stored.attachments!.map((attachment) => attachment.id);
+  expect(Object.values(checkout).every((id) => ids.includes(id))).toBe(true);
+  expect(await imageBytes()).toEqual([[3]]);
 });
