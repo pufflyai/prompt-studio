@@ -1,5 +1,5 @@
 // A single-select property holds one value per ticket. Planner reports conflicts and lets
-// people choose. Only reading a ticket saved by an older build picks a value, by option order.
+// people choose; it never picks a value for them.
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "./collections";
 import { seedDefaultTags } from "./seed";

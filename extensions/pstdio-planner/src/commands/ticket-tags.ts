@@ -1,4 +1,5 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { migratePlannerStorage } from "../data/migrate-storage";
 import { resolveTagId } from "../data/resolve";
 import {
   applyTagDraft,
@@ -21,6 +22,7 @@ export const readTicketTagsCommand = defineCommand({
   title: "Read ticket tags",
   cli: { globalAliases: [["tags", "list"]], examples: ["pstdio tags list"] },
   async run(ctx, _commandParams) {
+    await migratePlannerStorage(ctx);
     return readTicketTags(ctx.storage);
   },
 });

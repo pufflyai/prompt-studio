@@ -11,6 +11,7 @@ export interface TicketStatusDraft {
 }
 
 import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./data/collections";
+import { migratePlannerStorage } from "./data/migrate-storage";
 import { seedDefaultStatuses } from "./data/seed";
 import type { StoredStatus } from "./data/types";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
@@ -55,6 +56,7 @@ export const readStatusSettings = defineCommand({
   id: "ticket-status.read-settings",
   title: "Ticket status",
   async run(ctx) {
+    await migratePlannerStorage(ctx);
     return { statuses: sortedBySortOrder(await seedDefaultStatuses(ctx.storage)).map(toTicketStatusDraft) };
   },
 });

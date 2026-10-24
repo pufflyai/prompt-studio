@@ -3,11 +3,12 @@ import { dependencyBlockerRefs, withIndependentBlockers } from "./dependency-blo
 import { readTicketReviewRequests } from "./review-request-storage";
 import type { StoredStatus, StoredTag, StoredTicket, Ticket } from "./types";
 
-export { TAGS_COLLECTION, TICKETS_COLLECTION } from "./ticket-records";
+export { TICKETS_COLLECTION } from "./ticket-records";
 
 import { type TicketContext, withTicketIdentities, withTicketIdentity } from "./ticket-identity";
-import { TAGS_COLLECTION, ticketRecords } from "./ticket-records";
+import { ticketRecord, ticketRecords } from "./ticket-records";
 export const STATUSES_COLLECTION = "ticket-statuses";
+export const TAGS_COLLECTION = "ticket-tags";
 
 export const ticketsCollection = (ctx: TicketContext) => {
   const records = ticketRecords(ctx.storage);
@@ -26,8 +27,8 @@ export const ticketsCollection = (ctx: TicketContext) => {
       return ids.map((id) => byId.get(id));
     },
     list: async () => withTicketIdentities(ctx, await records.list()),
-    put: (id: string, ticket: StoredTicket) => records.put(id, ticket),
-    update: (id: string, ticket: StoredTicket) => records.update(id, ticket),
+    put: (id: string, ticket: StoredTicket) => records.put(id, ticketRecord(ticket)),
+    update: (id: string, ticket: StoredTicket) => records.update(id, ticketRecord(ticket)),
     delete: (id: string) => records.delete(id),
   };
 };

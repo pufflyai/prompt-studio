@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { cleanupLegacyTicketFields } from "./cleanup-legacy-ticket-fields";
 import { putTicket, ticketsCollection } from "./ticket-context.fixture";
-import { TICKETS_COLLECTION } from "./ticket-records";
+import { ticketRecords } from "./ticket-records";
 
 import type { Ticket } from "./types";
 
@@ -37,7 +37,7 @@ test("removes the old parallelizable field from stored tickets", async () => {
 test("keeps an edit made after the tickets were listed", async () => {
   const storage = createMemoryStorage();
   await putTicket(storage, { ...storedTicket, parallelizable: "no" } as Ticket);
-  const tickets = storage.collection(TICKETS_COLLECTION);
+  const tickets = ticketRecords(storage);
   const list = tickets.list.bind(tickets);
   tickets.list = async () => {
     const listed = await list();
