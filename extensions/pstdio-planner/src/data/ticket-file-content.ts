@@ -24,3 +24,11 @@ export const deleteTicketBlobs = async (storage: ExtensionStorageApi, ticketId: 
   const blobs = ticketBlobs(storage, ticketId);
   for (const blob of await blobs.list()) await blobs.delete(blob.id);
 };
+
+// Attachments can also point at project uploads, which this ticket does not own. Only blobs in the
+// ticket's own scope are deleted.
+export const deleteTicketScopedBlobs = async (storage: ExtensionStorageApi, ticketId: string, ids: string[]) => {
+  if (!ids.length) return;
+  const blobs = ticketBlobs(storage, ticketId);
+  for (const blob of await blobs.list()) if (ids.includes(blob.id)) await blobs.delete(blob.id);
+};

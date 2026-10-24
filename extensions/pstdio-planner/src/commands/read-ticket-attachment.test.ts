@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/ticket-context.fixture";
-
+import { changeTicketFiles } from "../data/collections";
+import { ticketContext } from "../data/ticket-context.fixture";
 import type { StoredTicketAttachment } from "../data/types";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -13,11 +13,11 @@ const attachUpload = async (
   input: { name: string; data: Uint8Array; mimeType: string },
 ) => {
   const ref = await storage.files.put(input);
-  const collection = ticketsCollection(storage);
-  const ticket = await collection.get(ticketId);
-  if (!ticket) throw new Error("ticket missing");
   const attachment: StoredTicketAttachment = { ...ref, hash: ref.hash ?? "" };
-  await collection.put(ticketId, { ...ticket, attachments: [attachment] });
+  await changeTicketFiles(ticketContext(storage), ticketId, async (ticket) => ({
+    ...ticket,
+    attachments: [attachment],
+  }));
   return ref;
 };
 

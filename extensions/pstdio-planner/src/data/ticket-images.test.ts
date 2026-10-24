@@ -4,9 +4,10 @@ import { makeCommandArgs } from "../commands/command-context.fixture";
 import { pullTicketCommand } from "../commands/pull-ticket";
 import { saveTicketCommand } from "../commands/save-ticket";
 import { writeTicketCommand } from "../commands/write-ticket";
+import { changeTicketFiles } from "./collections";
 import { ticketFilesDir } from "./draft-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
-import { ticketsCollection } from "./ticket-context.fixture";
+import { ticketContext, ticketsCollection } from "./ticket-context.fixture";
 import { writeTicketImageCheckout } from "./ticket-image-checkout";
 import { pullTicketImages, saveTicketImages } from "./ticket-images";
 
@@ -55,7 +56,7 @@ describe("ticket images", () => {
     const paths = [...projectFiles.files.keys()].filter((path) => path.endsWith(".png"));
     expect(paths).toHaveLength(3);
     const result = await saveTicketImages(storage, projectFiles, stored, paths);
-    expect(result.replacedIds).toEqual([]);
+    expect(result.attachments.map(({ id }) => id)).toEqual(attachments.map(({ id }) => id));
     expect(await Promise.all(result.attachments.map(({ id }) => files.getBytes(id)))).toEqual([
       new Uint8Array([1]),
       new Uint8Array([2]),
@@ -64,7 +65,7 @@ describe("ticket images", () => {
     const secondPath = paths.find((path) => path.endsWith("proof (3).png"))!;
     await projectFiles.writeBytes(secondPath, new Uint8Array([4]));
     const changed = await saveTicketImages(storage, projectFiles, stored, paths);
-    expect(changed.replacedIds).toEqual([attachments[1].id]);
+    expect(changed.attachments.map(({ id }) => id)).not.toContain(attachments[1].id);
     expect(await Promise.all(changed.attachments.map(({ id }) => files.getBytes(id)))).toEqual([
       new Uint8Array([1]),
       new Uint8Array([4]),
@@ -72,9 +73,10 @@ describe("ticket images", () => {
     ]);
     await writeTicketImageCheckout(projectFiles, ticket.shorthand, changed.checkout);
     expect(
-      (await saveTicketImages(storage, projectFiles, { ...stored, attachments: changed.attachments }, paths))
-        .replacedIds,
-    ).toEqual([]);
+      (
+        await saveTicketImages(storage, projectFiles, { ...stored, attachments: changed.attachments }, paths)
+      ).attachments.map(({ id }) => id),
+    ).toEqual(changed.attachments.map(({ id }) => id));
   });
 
   test("a PNG upload without a suffix gets an image checkout name and keeps its original attachment name", async () => {
@@ -86,7 +88,6 @@ describe("ticket images", () => {
     expect(await projectFiles.readBytes(path)).toEqual(screenshot);
     const result = await saveTicketImages(storage, projectFiles, ticket, [path]);
     expect(result.attachments).toEqual([attachment]);
-    expect(result.replacedIds).toEqual([]);
   });
 
   test("saving a checkout cannot overwrite a later dashboard upload with a colliding name", async () => {
@@ -94,11 +95,17 @@ describe("ticket images", () => {
     const ticket = await readTicket();
     const first = await upload("proof.png", new Uint8Array([1]));
     const second = await upload("proof.png", new Uint8Array([2]));
-    await ticketsCollection(storage).put(ticket.id, { ...ticket, attachments: [first, second] });
+    await changeTicketFiles(ticketContext(storage), ticket.id, async (stored) => ({
+      ...stored,
+      attachments: [first, second],
+    }));
     projectFiles.files.clear();
     await pull();
     const later = await upload("proof (2).png", new Uint8Array([3]));
-    await ticketsCollection(storage).put(ticket.id, { ...ticket, attachments: [first, second, later] });
+    await changeTicketFiles(ticketContext(storage), ticket.id, async (stored) => ({
+      ...stored,
+      attachments: [first, second, later],
+    }));
     await save();
     const saved = await readTicket();
     expect(saved.attachments?.map(({ id }) => id)).toEqual([first.id, second.id, later.id]);
