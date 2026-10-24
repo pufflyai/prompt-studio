@@ -242,7 +242,7 @@ Keep `storage.scope`, `migrate` and `readLegacy`.
 
 On `main`, KV and collection rows already live in records. Since 0.46 the host starts with a new
 database, so there are no old KV or collection rows to import
-([ADR 0102](../../adrs/0102-database-baseline-replaces-in-place-upgrades.md)).
+([ADR 0103](../../adrs/0103-database-baseline-replaces-in-place-upgrades.md)).
 
 - KV needs no data conversion. A key's record ID equals `records.id(key)` in the same scope, and the
   value is unchanged. Callers switch to `records.read` and `save`.

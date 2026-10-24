@@ -43,7 +43,7 @@ These additions ship in the release after 0.44.0. See the
 
 ## Read retained source records
 
-Since 0.46 the host starts with a new database and keeps no retained tables, so it always resolves to `undefined` ([ADR 0102](../../adrs/0102-database-baseline-replaces-in-place-upgrades.md)). Older data is in the JSON export under `~/.pstdio/backups/`.
+Since 0.46 the host starts with a new database and keeps no retained tables, so it always resolves to `undefined` ([ADR 0103](../../adrs/0103-database-baseline-replaces-in-place-upgrades.md)). Older data is in the JSON export under `~/.pstdio/backups/`.
 
 Before 0.46, `readLegacy(source)` returned `{ version, records }` or `undefined`. The version named the schema immediately before the table was removed. Records keep their original column names and JSON values. Your extension validates and interprets them.
 
