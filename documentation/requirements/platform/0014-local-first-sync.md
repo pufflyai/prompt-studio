@@ -244,8 +244,9 @@ anything.
   one captured hourly, one every 12 hours, and one daily. Show their actual capture
   times. Use the disk capacity the device supports, with no fixed snapshot byte
   quota or free-space reserve. If space cannot hold three snapshots, keep only the
-  12-hour snapshot. A person can restore a project, or one extension's data in it,
-  to a snapshot. A restore is a normal edit, so it syncs to every device. This policy
+  12-hour snapshot. A project, or one extension's data in it, can be restored to a
+  snapshot through the CLI and API. The app has no restore screen (decided
+  2026-10-24). A restore is a normal edit, so it syncs to every device. This policy
   was decided on 2026-10-22 and replaces daily snapshots retained for 30 days.
 
 ### Running the relay
