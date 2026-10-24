@@ -45,4 +45,4 @@ The core database does not own extension data, so database code and migrations m
 
 An extension that renames its own commands, schedules, or stored values ships its migration with the extension, using [versioned storage migrations](../extensions/0018-data-migrations.md) and `ctx.storage.migrate` ([ADR 0077](../../adrs/0077-extension-owned-data-migrations.md)). Since 0.46, `ctx.storage.readLegacy` always resolves to `undefined`.
 
-See [ADR 0102](../../adrs/0102-database-baseline-replaces-in-place-upgrades.md) for the decision.
+See [ADR 0103](../../adrs/0103-database-baseline-replaces-in-place-upgrades.md) for the decision.

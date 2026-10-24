@@ -28,4 +28,4 @@ SDK preparation ships first. Extension adoption then removes the old template mi
 
 The temporary Drizzle selection adapter is isolated under [ADR 0078](0078-superseded-temporary-drizzle-migration-selection.md).
 
-Since 0.46 ([ADR 0102](0102-database-baseline-replaces-in-place-upgrades.md)) the host starts with a new database. There is no `pstdio_legacy.snapshots` archive, so `readLegacy` resolves to `undefined`. The `extension_data_versions` table is gone too: successful migration versions live in each owner's metadata document. `migrate` behaves as before.
+Since 0.46 ([ADR 0103](0103-database-baseline-replaces-in-place-upgrades.md)) the host starts with a new database. There is no `pstdio_legacy.snapshots` archive, so `readLegacy` resolves to `undefined`. The `extension_data_versions` table is gone too: successful migration versions live in each owner's metadata document. `migrate` behaves as before.

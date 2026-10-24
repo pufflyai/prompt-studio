@@ -2,7 +2,7 @@
 
 ## What
 
-The 0.46 nightly carried two upgrades that each rewrote all local data: a PGlite engine transfer ([ADR 0098](../adrs/0098-superseded-temporary-pglite-minor-upgrade-adapter.md)) and the move of extension records into one document each ([ADR 0100](../adrs/0100-one-document-per-resource.md)). On a maintainer's two-year-old 1.9 GB home, both failed. The app could not start for several hours, and the fix was to drop in-place upgrades ([ADR 0102](../adrs/0102-database-baseline-replaces-in-place-upgrades.md)).
+The 0.46 nightly carried two upgrades that each rewrote all local data: a PGlite engine transfer ([ADR 0098](../adrs/0098-superseded-temporary-pglite-minor-upgrade-adapter.md)) and the move of extension records into one document each ([ADR 0100](../adrs/0100-one-document-per-resource.md)). On a maintainer's two-year-old 1.9 GB home, both failed. The app could not start for several hours, and the fix was to drop in-place upgrades ([ADR 0103](../adrs/0103-database-baseline-replaces-in-place-upgrades.md)).
 
 1. **The engine transfer crashed.** The import loaded every row, then re-added the foreign keys from the `pg_dump` post-data section. Postgres checks every row when it adds a key, and 4 `workspace_sessions` rows pointed to sessions and workspaces that no longer existed. The whole import rolled back with `23503`.
 2. **The crash looped.** Desktop retried startup, and each retry exported 1,000 files again and failed the same way. Each failure logged the whole 50 KB post-data SQL twice, so the one useful line (`Key (session_id)=(…) is not present`) was hard to find.
