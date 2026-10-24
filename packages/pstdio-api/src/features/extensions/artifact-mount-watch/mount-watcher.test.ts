@@ -31,7 +31,7 @@ const startWatch = async (
   options: { maxFolders?: number; onFolderLimit?: () => void; watch?: WatchDirectory } = {},
 ) => {
   const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-mount-watch-"));
-  const location = { repoRoot, name: "dashboards", mountPath: "boards" };
+  const location = { repoRoot, extensionId: "pstdio.dashboards", mountPath: "boards" };
   const root = resolveArtifactMountRoot(location);
   const ledger = createArtifactMountWriteLedger();
   const changes: string[][] = [];

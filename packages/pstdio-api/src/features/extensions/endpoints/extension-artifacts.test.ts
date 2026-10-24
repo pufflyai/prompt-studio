@@ -105,7 +105,7 @@ beforeEach(async () => {
   labInstanceId = await enableExtension("lab", true);
   otherInstanceId = await enableExtension("other", false);
 
-  mountRoot = join(repoDir, ".pstdio", "extension-storage", "lab", "runs");
+  mountRoot = join(repoDir, ".pstdio", "extension-storage", "pstdio.lab", "runs");
   mkdirSync(join(mountRoot, "a"), { recursive: true });
   writeFileSync(join(mountRoot, "a", "chart.png"), pngBytes);
   writeFileSync(join(mountRoot, "a", "summary.json"), '{"score":1}');

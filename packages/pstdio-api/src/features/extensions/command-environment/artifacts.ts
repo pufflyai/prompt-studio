@@ -1,11 +1,5 @@
-import { join } from "node:path";
 import type { CommandRunnerEnvironment, RuntimeArtifactMount } from "pstdio-extensions";
-import {
-  createFileMount,
-  createReadBoundary,
-  extensionFilesPath,
-  resolveReadExtensionStorageRoot,
-} from "pstdio-extensions";
+import { createReadBoundary } from "pstdio-extensions";
 import { createSharedArtifactMount } from "../../../services/shared-files/artifact-mount";
 import type { ExtensionsRouteDeps } from "../deps";
 import type { FileAccess } from "./workspace-files";
@@ -36,12 +30,6 @@ export const createArtifactsApi = (
       access === "read"
         ? await createReadBoundary(input.signal)(() => resolveProjectPath(access))
         : await resolveProjectPath(access);
-    if (access === "read") {
-      const owner = { extensionId: input.extensionId, name: mount.name };
-      const storageRoot = await resolveReadExtensionStorageRoot(root, owner, false);
-      if (storageRoot !== join(root, extensionFilesPath(owner)))
-        return createFileMount(join(storageRoot, mount.relativePath), input.signal);
-    }
     return createSharedArtifactMount(deps, {
       assertWritable: input.assertWritable,
       projectId: input.projectId,

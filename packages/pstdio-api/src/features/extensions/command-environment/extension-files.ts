@@ -1,13 +1,7 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
-import {
-  createFileMount,
-  createReadBoundary,
-  type ExtensionStorageOwner,
-  extensionFilesPath,
-  resolveReadExtensionStorageRoot,
-} from "pstdio-extensions";
+import { createFileMount, createReadBoundary, type ExtensionStorageOwner, extensionFilesPath } from "pstdio-extensions";
 
 import type { FileAccess } from "./workspace-files";
 
@@ -80,14 +74,8 @@ export const createExtensionFilesApi = (
     signal?: AbortSignal;
   },
 ): ArtifactMount => {
-  const mountFor = async (access: FileAccess) => {
-    const root = await input.resolveRepoPath(access);
-    const path =
-      access === "read"
-        ? await resolveReadExtensionStorageRoot(root, input, true)
-        : join(root, extensionFilesPath(input));
-    return createFileMount(path, input.signal);
-  };
+  const mountFor = async (access: FileAccess) =>
+    createFileMount(join(await input.resolveRepoPath(access), extensionFilesPath(input)), input.signal);
   const readMount = () => createReadBoundary(input.signal)(() => mountFor("read"));
   const beforeWrite = async () => {
     const repoPath = await input.resolveRepoPath("write");

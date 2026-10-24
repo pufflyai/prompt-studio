@@ -1,9 +1,4 @@
-import {
-  type ExtensionRuntime,
-  type loadExtensionSources,
-  migrateExtensionStorage,
-  normalizeExtensionSources,
-} from "pstdio-extensions";
+import { type loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
@@ -62,34 +57,6 @@ export type ProjectExtensionRuntimeCatalogObserver = {
 export type ProjectExtensionRuntimeCatalog = ReturnType<typeof createProjectExtensionRuntimeCatalog>;
 
 type CandidateExtensionSource = LoadableExtensionSource & { extension_id: string };
-// A storage conflict needs the user to resolve files, so it must not block every extension
-// in the project. Reads use the full-ID folder until then, and the next write reports the
-// conflict to the extension. Merging the folders here would have to pick one copy.
-const migrateRuntimeStorage = async (root: string | null | undefined, runtime: ExtensionRuntime) => {
-  if (!root || !runtime.extensions.length) return;
-  const owners = runtime.extensions.map((extension) => ({ name: extension.name, extensionId: extension.id }));
-  await migrateExtensionStorage(root, owners).catch((error) => {
-    apiLogger.warn(
-      { err: error, event: "extensions.storage_migration.failed", root },
-      "Extension storage migration needs attention",
-    );
-  });
-};
-
-type LoadContext = { projectId: string; reason: string; startedAt: number; startRevision: number };
-
-const logLoadFailure = (context: LoadContext, error: unknown) => {
-  apiLogger.error(
-    {
-      duration_ms: Math.round(performance.now() - context.startedAt),
-      err: error,
-      event: "extensions.runtime_catalog.load_failed",
-      project_id: context.projectId,
-      reason: context.reason,
-    },
-    "Project extension runtime load failed",
-  );
-};
 
 export const createProjectExtensionRuntimeCatalog = (deps: {
   extensionService: ReturnType<typeof createExtensionService>;
@@ -137,13 +104,13 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       cachedSources.flatMap((cached) => cached.diagnostics),
       { projectFolder: workspace?.root_path ?? undefined },
     );
-    const fileAccess = workspace?.provider_capabilities_json?.files;
-    if (!fileAccess || fileAccess === "write") await migrateRuntimeStorage(workspace?.root_path, runtime);
 
     await installExtensionStorageIndexes(deps.extensionStorageService, projectId, runtime, validate);
 
     return { enabledSources, project, runtime };
   };
+
+  type LoadContext = { projectId: string; reason: string; startedAt: number; startRevision: number };
 
   const discardStaleLoad = (context: LoadContext) => {
     deps.observer?.onDiscard?.({ projectId: context.projectId, code: "extension_runtime_generation_stale" });
@@ -191,6 +158,19 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       "Published project extension runtime snapshot",
     );
     return snapshot;
+  };
+
+  const logLoadFailure = (context: LoadContext, error: unknown) => {
+    apiLogger.error(
+      {
+        duration_ms: Math.round(performance.now() - context.startedAt),
+        err: error,
+        event: "extensions.runtime_catalog.load_failed",
+        project_id: context.projectId,
+        reason: context.reason,
+      },
+      "Project extension runtime load failed",
+    );
   };
 
   const runLoad = async (projectId: string, state: ProjectState) => {

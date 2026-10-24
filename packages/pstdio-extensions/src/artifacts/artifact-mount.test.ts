@@ -27,20 +27,26 @@ describe("createArtifactMount", () => {
     "runs/../.Publishers/alice",
     ".publishers\\alice",
   ])("keeps the allocated-file namespace reserved for %s", (mountPath) => {
-    expect(() => createArtifactMount({ repoRoot: "/repo", name: "tools", mountPath })).toThrow();
+    expect(() => createArtifactMount({ repoRoot: "/repo", extensionId: "pstdio.tools", mountPath })).toThrow();
   });
 
-  test("rejects mount root that escapes .pstdio/extension-storage/<package-name>", () => {
-    expect(() => createArtifactMount({ repoRoot: "/repo", name: "planner", mountPath: "../escape" })).toThrow();
-    expect(() => createArtifactMount({ repoRoot: "/repo", name: "planner", mountPath: "/abs" })).toThrow();
+  test("rejects mount root that escapes .pstdio/extension-storage/<publisher>.<name>", () => {
+    expect(() =>
+      createArtifactMount({ repoRoot: "/repo", extensionId: "pstdio.planner", mountPath: "../escape" }),
+    ).toThrow();
+    expect(() =>
+      createArtifactMount({ repoRoot: "/repo", extensionId: "pstdio.planner", mountPath: "/abs" }),
+    ).toThrow();
   });
 
-  test("writes and reads text under .pstdio/extension-storage/<package-name>/<mount>", async () => {
+  test("writes and reads text under .pstdio/extension-storage/<publisher>.<name>/<mount>", async () => {
     const repo = createTempDir();
-    const mount = createArtifactMount({ repoRoot: repo, name: "planner", mountPath: "tickets" });
+    const mount = createArtifactMount({ repoRoot: repo, extensionId: "pstdio.planner", mountPath: "tickets" });
 
     await mount.writeText("PS-1/ticket.md", "# hello");
-    const contents = await Bun.file(join(repo, ".pstdio/extension-storage/planner/tickets/PS-1/ticket.md")).text();
+    const contents = await Bun.file(
+      join(repo, ".pstdio/extension-storage/pstdio.planner/tickets/PS-1/ticket.md"),
+    ).text();
     expect(contents).toBe("# hello");
     expect(await mount.readText("PS-1/ticket.md")).toBe("# hello");
     expect(await mount.exists("PS-1/ticket.md")).toBe(true);
@@ -50,7 +56,7 @@ describe("createArtifactMount", () => {
   test("reports each write, update, and delete at its path under the mount root", async () => {
     const repo = createTempDir();
     const written: string[] = [];
-    const input = { repoRoot: repo, name: "dashboards", mountPath: "boards" };
+    const input = { repoRoot: repo, extensionId: "pstdio.dashboards", mountPath: "boards" };
     const mount = createArtifactMount({ ...input, onWrite: (path) => written.push(path) });
     const root = resolveArtifactMountRoot(input);
 
@@ -60,7 +66,7 @@ describe("createArtifactMount", () => {
     await mount.readText("sales/q3.json");
     await mount.delete("sales");
 
-    expect(root).toBe(join(repo, ".pstdio", "extension-storage", "dashboards", "boards"));
+    expect(root).toBe(join(repo, ".pstdio", "extension-storage", "pstdio.dashboards", "boards"));
     expect(written).toEqual([
       join(root, "sales", "q3.json"),
       join(root, "sales", "q3.json"),
@@ -72,7 +78,7 @@ describe("createArtifactMount", () => {
   test("reports a write through a linked file at the file it changes", async () => {
     const repo = createTempDir();
     const written: string[] = [];
-    const input = { repoRoot: repo, name: "dashboards", mountPath: "boards" };
+    const input = { repoRoot: repo, extensionId: "pstdio.dashboards", mountPath: "boards" };
     const mount = createArtifactMount({ ...input, onWrite: (path) => written.push(path) });
     const root = resolveArtifactMountRoot(input);
     await mount.writeText("sales/q3.json", "{}");
@@ -87,7 +93,7 @@ describe("createArtifactMount", () => {
   test("reports a new file written through a linked folder at the folder it lands in", async () => {
     const repo = createTempDir();
     const written: string[] = [];
-    const input = { repoRoot: repo, name: "dashboards", mountPath: "boards" };
+    const input = { repoRoot: repo, extensionId: "pstdio.dashboards", mountPath: "boards" };
     const mount = createArtifactMount({ ...input, onWrite: (path) => written.push(path) });
     const root = resolveArtifactMountRoot(input);
     await mount.writeText("sales/q3.json", "{}");
@@ -100,7 +106,7 @@ describe("createArtifactMount", () => {
 
   test("rejects path escaping mount root", async () => {
     const repo = createTempDir();
-    const mount = createArtifactMount({ repoRoot: repo, name: "planner", mountPath: "tickets" });
+    const mount = createArtifactMount({ repoRoot: repo, extensionId: "pstdio.planner", mountPath: "tickets" });
 
     await expect(mount.writeText("../evil.md", "x")).rejects.toThrow(/escapes/);
     await expect(mount.writeText("/abs.md", "x")).rejects.toThrow(/escapes/);
@@ -108,7 +114,7 @@ describe("createArtifactMount", () => {
 
   test("lists files matching glob", async () => {
     const repo = createTempDir();
-    const mount = createArtifactMount({ repoRoot: repo, name: "planner", mountPath: "tickets" });
+    const mount = createArtifactMount({ repoRoot: repo, extensionId: "pstdio.planner", mountPath: "tickets" });
 
     await mount.writeText("a.md", "a");
     await mount.writeText("nested/b.md", "b");
@@ -125,7 +131,7 @@ describe("createArtifactMount", () => {
 
   test("listDirs returns immediate child directories", async () => {
     const repo = createTempDir();
-    const mount = createArtifactMount({ repoRoot: repo, name: "planner", mountPath: "tickets" });
+    const mount = createArtifactMount({ repoRoot: repo, extensionId: "pstdio.planner", mountPath: "tickets" });
 
     await mount.writeText("a/foo.md", "");
     await mount.writeText("b/bar.md", "");
@@ -136,7 +142,7 @@ describe("createArtifactMount", () => {
 
   test("delete removes a file", async () => {
     const repo = createTempDir();
-    const mount = createArtifactMount({ repoRoot: repo, name: "planner", mountPath: "tickets" });
+    const mount = createArtifactMount({ repoRoot: repo, extensionId: "pstdio.planner", mountPath: "tickets" });
 
     await mount.writeText("a.md", "a");
     await mount.delete("a.md");

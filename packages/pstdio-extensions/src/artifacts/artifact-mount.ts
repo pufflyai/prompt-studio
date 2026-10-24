@@ -10,9 +10,8 @@ import { type KeptWorkspaceFile, runAfterPendingSync, syncWorkspaceDir } from ".
 
 type ArtifactMountLocation = {
   repoRoot: string;
-  /** Package name of the owning extension. */
-  name: string;
-  extensionId?: string;
+  /** Full `<publisher>.<name>` ID of the owning extension. */
+  extensionId: string;
   mountPath: string;
 };
 
@@ -183,10 +182,10 @@ export { ARTIFACT_MOUNT_ROOT } from "./extension-storage-path";
 /** The absolute folder of a mount in one workspace root. */
 export const resolveArtifactMountRoot = (input: ArtifactMountLocation) => {
   const normalized = normalizeArtifactMountPath(input.mountPath);
+  const owner = extensionStorageDirectory(input.extensionId);
   if (!normalized) {
-    throw new Error(`Artifact mount path "${input.mountPath}" must stay under ${ARTIFACT_MOUNT_ROOT}/${input.name}/`);
+    throw new Error(`Artifact mount path "${input.mountPath}" must stay under ${ARTIFACT_MOUNT_ROOT}/${owner}/`);
   }
-  const owner = input.extensionId ? extensionStorageDirectory(input.extensionId) : input.name;
   return resolve(input.repoRoot, ...ARTIFACT_MOUNT_ROOT.split("/"), owner, ...normalized.split("/"));
 };
 
