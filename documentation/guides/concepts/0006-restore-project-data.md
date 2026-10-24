@@ -42,12 +42,12 @@ normal record edits. It brings back deleted records and text, and removes record
 after that point. Restoring one extension leaves other extensions unchanged.
 
 Before it writes, the restore saves the current state in the hour point, or in the
-12-hour point when there is no hour point. Choose that point to undo the restore. A
-project still never has more than three points.
+12-hour point when there is no hour point. Choose that point to undo the restore until
+that point is next replaced. A project still never has more than three points.
 
 A recovery point holds each extension's records, asset references, text documents and
 data migration markers. It does not back up your Git checkout, local workspace folders,
 credentials, account access or private session history. Project resource numbers stay
-unchanged. Asset bytes that a restored record refers to must still be available on the
-device. The relay keeps no recovery history. Removing an extension's data also removes it
+unchanged. Files that a restored record refers to must still be on the device. If one is missing,
+the restore stops before it changes anything. The relay keeps no recovery history. Removing an extension's data also removes it
 from the recovery points.

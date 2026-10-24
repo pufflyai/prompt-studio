@@ -147,9 +147,10 @@ point covers one project. For each extension with data it keeps:
 - the text of its text documents;
 - its data migration markers from the owner document.
 
-A point never encodes record documents. All owners' records are read in one transaction that
-holds their projection rows, so every owner is captured at one revision. An owner whose revision
-has not changed since a kept point reuses those saved records.
+A point never encodes record documents. One transaction reads the whole project and holds the
+owners' projection rows, so every owner is captured at one revision. An owner whose revision has
+not changed since a kept point reuses those saved records. Capture and restore of one project run
+one at a time, so a point never holds a half-finished restore.
 
 `recovery_points` has one row per kept point and `recovery_point_owners` one row per extension
 in it. The slots are fixed: the last hour, 12 hours and day, so a project never has more than
@@ -158,13 +159,14 @@ cannot hold every due point, or a write fails because the disk is full, only the
 stays. There is no fixed quota or reserve. A cloud project gets its first point after its first
 full download. Projects with points keep rotating them while the device runs, even offline.
 
-A restore compares the saved records with the current projection and commits the difference
+A restore first checks that every saved file is still on the device, and changes nothing when one
+is missing. It then compares the saved records with the current projection and commits the difference
 with normal `records.commit` groups for each owner. These commits notify storage listeners and
 sync like any other edit. A record brought back after deletion gets a second pass, because its
 document keeps its old shared value. Text documents and migration markers are set back through
 their documents. Before it writes, the restore saves the current state in the hour point, or in
 the 12-hour point when there is no hour point, so the restore can be undone without a fourth
-point. Purging an extension's data also removes it from recovery points.
+point. A restore that would change nothing keeps every point. Purging an extension's data also removes it from recovery points.
 
 ## Encrypted document transport
 

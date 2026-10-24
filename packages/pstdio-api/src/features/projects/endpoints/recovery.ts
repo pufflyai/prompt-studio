@@ -38,7 +38,11 @@ export const restoreProjectRoute = createRoute({
   responses: {
     200: { description: "Restore saved on this device.", ...json(restoreProjectResultSchema) },
     404: { description: "Project not found.", ...error },
-    409: { description: "The recovery point changed, or the extension has no data.", ...error },
+    409: {
+      description:
+        "The recovery point changed, the extension has no data, a saved file is missing, or the disk is full.",
+      ...error,
+    },
   },
 });
 export const restoreProjectHandler =

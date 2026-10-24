@@ -228,3 +228,57 @@ test("a restored record gets back its shared text exactly once", async () => {
     shared: { kind: "text", value: "Saved body" },
   });
 });
+
+test("a capture that runs during a restore records the finished restore", async () => {
+  const { svc, projectId, records } = await setup();
+  const tickets = await records("ext.tickets");
+  const edits = (value: string) =>
+    Array.from({ length: 300 }, (_, index) => ({ recordId: `t${index}`, replace: value }));
+  await tickets.commit({ operationId: "seed", edits: edits("before") });
+  await svc.recovery.capture(projectId, start);
+  const day = (await svc.recovery.list(projectId)).find((point) => point.hours === 24)!;
+  await tickets.commit({ operationId: "edit", edits: edits("after") });
+
+  const restoring = svc.recovery.restore(projectId, day);
+  await svc.recovery.capture(projectId, later(13));
+  await restoring;
+
+  const twelve = (await svc.recovery.list(projectId)).find((point) => point.hours === 12)!;
+  await tickets.commit({ operationId: "again", edits: edits("later") });
+  await svc.recovery.restore(projectId, twelve);
+  expect(new Set((await tickets.list()).map((record) => record.value))).toEqual(new Set(["before"]));
+});
+
+test("a restore stops before any change when a saved file is missing", async () => {
+  const { svc, projectId, records } = await setup();
+  const asset = { sha256: "a".repeat(64), byteLength: 1, mediaType: "image/png" };
+  const present = { verifyComplete: async () => {}, read: async () => new ReadableStream(), receive: async () => {} };
+  const tickets = (await svc.open({ owner: { workbenchId: projectId, extensionId: "ext.tickets" }, assets: present }))
+    .records;
+  await tickets.commit({ operationId: "seed", edits: [{ recordId: "image", replace: "x", asset }] });
+  await svc.recovery.capture(projectId, start);
+  const before = await svc.recovery.list(projectId);
+  await (await records("ext.tickets")).commit({ operationId: "delete", edits: [{ recordId: "image", deleted: true }] });
+  const missing = {
+    ...present,
+    verifyComplete: async () => {
+      throw new Error("missing");
+    },
+  };
+
+  await expect(svc.recovery.restore(projectId, before[0]!, () => missing)).rejects.toBeInstanceOf(RecoveryPointError);
+
+  expect((await tickets.read("image")).deleted).toBe(true);
+  expect(await svc.recovery.list(projectId)).toEqual(before);
+});
+
+test("a restore that changes nothing keeps every recovery point", async () => {
+  const { svc, projectId, records } = await setup();
+  await (await records("ext.tickets")).commit({ operationId: "seed", edits: [{ recordId: "t", replace: 1 }] });
+  await svc.recovery.capture(projectId, start);
+  const before = await svc.recovery.list(projectId);
+
+  expect(await svc.recovery.restore(projectId, before[2]!)).toEqual({ extensions: [], records: 0 });
+
+  expect(await svc.recovery.list(projectId)).toEqual(before);
+});

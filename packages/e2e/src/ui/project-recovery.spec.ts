@@ -42,7 +42,9 @@ test("recovery offers project and extension scope, reports stale points, and sho
   await confirmation.getByRole("button", { name: "Restore scope" }).click();
   await page.getByRole("menuitem", { name: "pstdio-notes", exact: true }).click();
   await confirmation.getByRole("button", { name: "Restore", exact: true }).click();
-  await expect(confirmation.getByText("This recovery point changed or is no longer available. Refresh the list.")).toBeVisible();
+  await expect(
+    confirmation.getByText("This recovery point changed or is no longer available. Refresh the list."),
+  ).toBeVisible();
   expect(restored).toEqual({ hours: 1, capturedAt: all[0]!.capturedAt, extensionId: "pstdio-notes" });
   rejectRestore = false;
   await confirmation.getByRole("button", { name: "Restore", exact: true }).click();
