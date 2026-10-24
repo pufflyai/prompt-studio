@@ -14,12 +14,22 @@ export const ticketWithIdentity = <T extends { id: string }>(ticket: T, identity
 export const withTicketIdentity = async <T extends { id: string }>(ctx: TicketContext, ticket: T) =>
   ticketWithIdentity(ticket, await ctx.resources.identity({ kind: "ticket", id: ticket.id }));
 
+// Ticket records and core numbers sync separately, so a synced record can arrive before its
+// number. Reads skip such a record until its number arrives; writes still require the number.
+export const readTicketIdentity = async <T extends { id: string }>(ctx: TicketContext, ticket: T) => {
+  const identity = await ctx.resources.identity({ kind: "ticket", id: ticket.id });
+  return identity ? ticketWithIdentity(ticket, identity) : undefined;
+};
+
 export const withTicketIdentities = async <T extends { id: string }>(ctx: TicketContext, tickets: T[]) => {
   const result: ReturnType<typeof ticketWithIdentity<T>>[] = [];
   for (let offset = 0; offset < tickets.length; offset += 100) {
     const batch = tickets.slice(offset, offset + 100);
     const identities = await ctx.resources.identityMany({ kind: "ticket", ids: batch.map((ticket) => ticket.id) });
-    result.push(...batch.map((ticket, index) => ticketWithIdentity(ticket, identities[index] ?? null)));
+    batch.forEach((ticket, index) => {
+      const identity = identities[index];
+      if (identity) result.push(ticketWithIdentity(ticket, identity));
+    });
   }
   return result;
 };

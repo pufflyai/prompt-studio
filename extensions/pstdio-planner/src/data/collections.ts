@@ -5,7 +5,7 @@ import type { StoredStatus, StoredTag, StoredTicket, Ticket } from "./types";
 
 export { TICKETS_COLLECTION } from "./ticket-records";
 
-import { type TicketContext, withTicketIdentities, withTicketIdentity } from "./ticket-identity";
+import { readTicketIdentity, type TicketContext, withTicketIdentities, withTicketIdentity } from "./ticket-identity";
 import { ticketRecord, ticketRecords } from "./ticket-records";
 export const STATUSES_COLLECTION = "ticket-statuses";
 export const TAGS_COLLECTION = "ticket-tags";
@@ -15,7 +15,7 @@ export const ticketsCollection = (ctx: TicketContext) => {
   return {
     get: async (id: string) => {
       const record = await records.get(id);
-      return record ? withTicketIdentity(ctx, record) : undefined;
+      return record ? readTicketIdentity(ctx, record) : undefined;
     },
     getMany: async (ids: string[]) => {
       const selected = await Promise.all(ids.map((id) => records.get(id)));

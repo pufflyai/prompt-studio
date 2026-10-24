@@ -158,3 +158,18 @@ test("a number shared by two linked tickets needs a ticket ID to keep one link",
     'Ticket "T-1" matches several tickets',
   );
 });
+
+test("a synced ticket whose core number has not arrived yet stays hidden instead of failing reads", async () => {
+  const { listTicketsCommand } = await import("./list-tickets");
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, params: {} });
+  const shown = await createTicketCommand.run(ctx, { title: "Has a number" });
+  const waiting = await createTicketCommand.run(ctx, { title: "Number not synced yet" });
+  const identity = ctx.resources.identity;
+  const identityMany = ctx.resources.identityMany;
+  ctx.resources.identity = (input) => (input.id === waiting.id ? Promise.resolve(null) : identity(input));
+  ctx.resources.identityMany = async (input) =>
+    (await identityMany(input)).map((entry, index) => (input.ids[index] === waiting.id ? null : entry));
+  expect((await listTicketsCommand.run(ctx, {})).map(({ title }) => title)).toEqual([shown.title]);
+  expect(await getTicketCommand.run(ctx, { id: waiting.id })).toBeNull();
+});
