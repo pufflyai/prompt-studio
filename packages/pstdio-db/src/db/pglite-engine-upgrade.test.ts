@@ -47,8 +47,24 @@ test("createDb upgrades a closed legacy home and preserves records, retry receip
     phase("legacy fixture closed");
   }
   try {
-    const upgraded = await createDb({ path, onPhase: phase });
+    const phases: string[] = [];
+    const upgraded = await createDb({
+      path,
+      onPhase: (name) => {
+        phases.push(name);
+        phase(name);
+      },
+    });
     try {
+      expect(phases).toEqual([
+        "database_locked",
+        "database_engine_loaded",
+        "database_upgrade_copying",
+        "database_upgrade_exporting",
+        "database_upgrade_importing",
+        "database_opened",
+        "database_migrated",
+      ]);
       await checkLocale(upgraded);
       expect(
         (await upgraded.pglite.query("select id,encode(payload,'hex') payload from retained_fixture")).rows,
@@ -74,8 +90,16 @@ test("createDb upgrades a closed legacy home and preserves records, retry receip
       format: 1,
       engine: "pglite-0.4",
     });
-    const reopened = await createDb({ path, onPhase: (name) => phase(`restart ${name}`) });
+    const reopenedPhases: string[] = [];
+    const reopened = await createDb({
+      path,
+      onPhase: (name) => {
+        reopenedPhases.push(name);
+        phase(`restart ${name}`);
+      },
+    });
     try {
+      expect(reopenedPhases.some((name) => name.startsWith("database_upgrade_"))).toBe(false);
       expect((await reopened.pglite.query("select count(*)::int count from retained_fixture")).rows).toEqual([
         { count: 2 },
       ]);

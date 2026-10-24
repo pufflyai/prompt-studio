@@ -64,6 +64,32 @@ describe("desktop runtime controller", () => {
     expect(elapsed).toBe(25_000);
   });
 
+  test("keeps waiting through readiness connection failures for the expected live runtime", async () => {
+    const discoveries = [
+      { state: "starting" as const, descriptor },
+      { state: "starting" as const, descriptor },
+      { state: "healthy" as const, descriptor },
+    ];
+    expect(
+      await waitForDesktopRuntime("/tmp/runtime.json", descriptor.instanceId, {
+        discover: async () => discoveries.shift()!,
+        signal: new AbortController().signal,
+        sleep: async () => {},
+      }),
+    ).toEqual(descriptor);
+    expect(discoveries).toHaveLength(0);
+  });
+
+  test("rejects a replacement runtime even while it is starting", async () => {
+    await expect(
+      waitForDesktopRuntime("/tmp/runtime.json", descriptor.instanceId, {
+        discover: async () => ({ state: "starting", descriptor: { ...descriptor, instanceId: "replacement" } }),
+        signal: new AbortController().signal,
+        sleep: async () => {},
+      }),
+    ).rejects.toThrow("replacement runtime");
+  });
+
   test("verifies an external runtime without inspecting its host PID", async () => {
     let request: Request | undefined;
 

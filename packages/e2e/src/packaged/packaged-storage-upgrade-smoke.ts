@@ -10,6 +10,14 @@ import { observeUpgradeDisk } from "./storage-upgrade-metrics";
 
 const largeBody = Array.from({ length: 256 }, (_, i) => createHash("sha256").update(String(i)).digest("hex")).join("");
 
+const upgradePhases = async (path: string) =>
+  (await Bun.file(path).text())
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as { event?: string; phase?: string })
+    .filter((entry) => entry.event === "runtime.startup.phase" && entry.phase?.startsWith("database_upgrade_"))
+    .map((entry) => entry.phase);
+
 const writeFixture = (source: string, indexed: boolean) =>
   Bun.write(
     join(source, "extension.ts"),
@@ -116,7 +124,13 @@ export const registerStorageUpgradeSmokeTests = (releasedBinary: () => string) =
         disk = observeUpgradeDisk(root);
         await disk.sample();
         const upgradeStarted = performance.now();
-        host = await startPackagedServe(root, env);
+        const upgradeLog = join(root, "upgrade.log");
+        host = await startPackagedServe(root, { ...env, PSTDIO_LOG_PATH: upgradeLog });
+        expect(await upgradePhases(upgradeLog)).toEqual([
+          "database_upgrade_copying",
+          "database_upgrade_exporting",
+          "database_upgrade_importing",
+        ]);
         expect(await Bun.file(identityPath).json()).toEqual({ format: 1, engine: "pglite-0.4" });
         const upload = new FormData();
         upload.set("kind", "upload");
@@ -147,7 +161,9 @@ export const registerStorageUpgradeSmokeTests = (releasedBinary: () => string) =
         expect(restored.removed.value).toEqual({ title: "Restored" });
         await stopProcess(host.child);
         const restartStarted = performance.now();
-        host = await startPackagedServe(root, env);
+        const restartLog = join(root, "restart.log");
+        host = await startPackagedServe(root, { ...env, PSTDIO_LOG_PATH: restartLog });
+        expect(await upgradePhases(restartLog)).toEqual([]);
         expect(await Bun.file(identityPath).json()).toEqual({ format: 1, engine: "pglite-0.4" });
         expect((await exercise("indexed")).removed).toEqual(restored.removed);
         const restartMs = performance.now() - restartStarted;

@@ -12,7 +12,7 @@ import { migrateThrough } from "./migrate-through";
 import { openPglite } from "./open-pglite";
 import { canonicalDbPath, resolveDbPath } from "./paths";
 import { acquirePgliteLock } from "./pglite-lock";
-import { prepareCurrentPgliteHome } from "./pglite-upgrade";
+import { type PgliteUpgradePhase, prepareCurrentPgliteHome } from "./pglite-upgrade";
 import { snapshotLegacyQueuedRequests } from "./queued-request-migration";
 import * as schema from "./schemas.pg";
 import { removeSharedWorkspaceFolders } from "./shared-workspace-folders";
@@ -134,6 +134,7 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
 
 // Startup steps in order. The runtime publishes itself once the database is locked and logs every step.
 export type DbOpenPhase =
+  | PgliteUpgradePhase
   | "database_locked"
   | "database_engine_loaded"
   | "database_image_restored"
@@ -165,6 +166,7 @@ export const createDb = async (options?: {
         embedded,
         signal: options?.signal,
         onImageRestored: () => onPhase("database_image_restored"),
+        onPhase,
       });
     options?.signal?.throwIfAborted();
     pglite = await openPglite(dbPath, pgliteOpts, () => onPhase("database_image_restored"));

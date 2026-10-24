@@ -7,6 +7,6 @@ export type StartupPhase = DbOpenPhase | "extensions_ready" | "app_ready";
 export const logStartupPhase = (phase: StartupPhase) => {
   startupLogger.info(
     { event: "runtime.startup.phase", phase, elapsedMs: Math.round(performance.now()) },
-    "Runtime startup step finished",
+    "Runtime startup progress",
   );
 };

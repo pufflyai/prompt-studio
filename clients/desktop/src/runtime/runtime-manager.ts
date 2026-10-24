@@ -183,7 +183,10 @@ export class DesktopRuntimeManager {
     const initialShutdown = readRuntimeShutdown(this.#options.descriptorPath);
     const discover = async (path: string) => {
       signal.throwIfAborted();
-      const discovery = await this.#deps.discoverRuntime(path, { signal });
+      const discovery = await this.#deps.discoverRuntime(path, {
+        signal,
+        ...(this.#spawnedIdentity ? { expectedRuntime: this.#spawnedIdentity } : {}),
+      });
       signal.throwIfAborted();
       return discovery;
     };
