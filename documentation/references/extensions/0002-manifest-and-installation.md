@@ -229,6 +229,7 @@ for every existing and new project. Project disable, uninstall, and replacement
 with another provider of its extension ID are refused. Ordinary catalog defaults
 remain optional. The flag belongs to the host catalog, not `package.json` or
 `defineExtension()`, and does not apply to a repo-local copy with the same name.
+If the catalog cannot be read, no extension counts as required until it loads.
 See [app-wide settings](0004-contribution-api.md#app-wide-settings) for settings
 panel placement and device storage.
 

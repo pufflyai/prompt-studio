@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
+import { isAlwaysEnabledExtensionSource } from "./always-on-extensions";
 import { writeExtension } from "./default-extensions-test-fixtures";
 import { syncInstalledExtensionsForProject } from "./installed-extension-sync";
 
@@ -89,6 +90,23 @@ test("host-marked extensions stay enabled in existing and new projects", async (
     expect(await deps.extensionService.listEnabledSourcesForProject(newProject.id)).toHaveLength(1);
   } finally {
     await handle?.close();
+    if (previous.home === undefined) delete process.env.PSTDIO_HOME;
+    else process.env.PSTDIO_HOME = previous.home;
+    if (previous.catalog === undefined) delete process.env.PSTDIO_EXTENSION_CATALOG;
+    else process.env.PSTDIO_EXTENSION_CATALOG = previous.catalog;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("extension policy treats an unreadable catalog as no required extensions", async () => {
+  const root = mkdtempSync(join(tmpdir(), "always-on-missing-catalog-"));
+  const previous = { home: process.env.PSTDIO_HOME, catalog: process.env.PSTDIO_EXTENSION_CATALOG };
+  process.env.PSTDIO_HOME = join(root, "home");
+  process.env.PSTDIO_EXTENSION_CATALOG = join(root, "missing-catalog.json");
+  try {
+    const source = { install_name: "app-tools", source_path: join(process.env.PSTDIO_HOME, "extensions", "app-tools") };
+    expect(await isAlwaysEnabledExtensionSource(source)).toBe(false);
+  } finally {
     if (previous.home === undefined) delete process.env.PSTDIO_HOME;
     else process.env.PSTDIO_HOME = previous.home;
     if (previous.catalog === undefined) delete process.env.PSTDIO_EXTENSION_CATALOG;
