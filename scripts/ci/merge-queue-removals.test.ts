@@ -92,7 +92,7 @@ test("a later removal after a new queue attempt is reported again", async () => 
   expect(comments[0]!.body).toContain("a required check failed");
 });
 
-test("the sweep labels every open pull request that is out of the queue and leaves the others alone", async () => {
+test("manual reconciliation labels every removed open pull request and leaves the others alone", async () => {
   const { api, state } = fixture([
     {
       number: 10,

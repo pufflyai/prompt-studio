@@ -47,7 +47,13 @@ export const repairRemovedCommand = defineCommand({
       ],
       cwd: root,
     });
-    const started = new Set((await ctx.sessions.list()).map((session) => session.title));
+    const started = new Set<string>();
+    let cursor: string | undefined;
+    do {
+      const page = await ctx.sessions.query({ includeArchived: true, cursor });
+      for (const session of page.items) started.add(session.title);
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
     const sessionIds: string[] = [];
     for (const pull of JSON.parse(stdout) as RemovedPull[]) {
       // A fork's branch cannot be pushed from here.

@@ -1,12 +1,10 @@
 name: Merge queue removals
 
-# Labels pull requests that GitHub removed from the merge queue and explains why. The queue
-# events update one pull request; the schedule catches events the workflow missed.
+# Labels pull requests that GitHub removed from the merge queue and explains why. Queue events
+# update one pull request; a manual dispatch reconciles all open pull requests.
 on:
   pull_request_target:
     types: [enqueued, dequeued, closed]
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -16,7 +14,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: merge-queue-removals-${{ github.event.pull_request.number || 'sweep' }}
+  group: merge-queue-removals-${{ github.event.pull_request.number || 'manual' }}
   cancel-in-progress: false
 
 jobs:

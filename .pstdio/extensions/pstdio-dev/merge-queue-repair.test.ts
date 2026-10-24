@@ -31,6 +31,7 @@ const fixture = (existingTitles: string[]) => {
   const commands: string[][] = [];
   const workspaces: unknown[] = [];
   const sessions: Array<{ title: string; prompt: string; workspaceId: string }> = [];
+  const queries: Array<{ cursor?: string; includeArchived?: boolean }> = [];
   const ctx = {
     workspaces: {
       getDefault: async () => ({ id: "default", root_path: "/repo" }),
@@ -46,14 +47,21 @@ const fixture = (existingTitles: string[]) => {
       },
     },
     sessions: {
-      list: async () => existingTitles.map((title, index) => ({ id: `old-${index}`, title, status: "completed" })),
+      query: async (input: { cursor?: string; includeArchived?: boolean }) => {
+        queries.push(input);
+        const titles = input.cursor ? existingTitles.slice(1) : existingTitles.slice(0, 1);
+        return {
+          items: titles.map((title, index) => ({ id: `old-${index}`, title, status: "completed" })),
+          nextCursor: !input.cursor && existingTitles.length > 1 ? "older-sessions" : null,
+        };
+      },
       create: async (input: { title: string; prompt: string; workspaceId: string }) => {
         sessions.push(input);
         return { type: "session", id: `session-${sessions.length}`, title: input.title, status: "in_progress" };
       },
     },
   };
-  return { ctx, commands, workspaces, sessions };
+  return { ctx, commands, workspaces, sessions, queries };
 };
 
 test("checks every five minutes and starts one repair session per removed pull request on its own branch", async () => {
@@ -87,4 +95,20 @@ test("a new head commit after a failed repair gets a new session", async () => {
   await command?.run(ctx as never, {});
 
   expect(sessions.map((session) => session.title)).toEqual(["Repair merge queue removal: #1363 at 57c985327"]);
+});
+
+test("repairs in older or archived session history are not started again", async () => {
+  const { ctx, sessions, queries } = fixture([
+    "Other work",
+    "Repair merge queue removal: #1363 at 57c985327",
+    "Repair merge queue removal: #1371 at 787e8ec0f",
+  ]);
+
+  await command?.run(ctx as never, {});
+
+  expect(sessions).toEqual([]);
+  expect(queries).toEqual([
+    { includeArchived: true, cursor: undefined },
+    { includeArchived: true, cursor: "older-sessions" },
+  ]);
 });
