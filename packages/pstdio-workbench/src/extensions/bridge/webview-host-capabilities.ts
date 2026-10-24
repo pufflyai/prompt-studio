@@ -20,7 +20,7 @@ interface CreateWorkbenchWebviewHostAdaptersInput {
 export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebviewHostAdaptersInput) => {
   const { workbench, placement, extensionId, projectId, hostEvents } = input;
   return {
-    resourceActions: createWebviewResourceActions(workbench, projectId, hostEvents),
+    resourceActions: createWebviewResourceActions(workbench, projectId, hostEvents, placement?.placementIdentity),
     hostEvents,
     editing: createWorkbenchEditingSessionAdapter(input),
     executeCommand: async (request, signal) => ({
@@ -28,7 +28,9 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
         ok: true,
         status: "success",
         value: await workbench.commands.executeCommand(request.commandId, request.params, {
-          resource: request.resource,
+          resource: request.resource ?? placement?.resource,
+          placement: placement?.placementIdentity,
+          projectId,
           signal,
         }),
       },
@@ -46,7 +48,11 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
     },
     navigation: {
       open: (target) =>
-        workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId })),
+        workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId }), {
+          viewer: placement?.placementIdentity,
+          projectId,
+          removalVersion: workbench.resources.getRemovalVersion(),
+        }),
     },
     notifications: {
       show: (notice) => {

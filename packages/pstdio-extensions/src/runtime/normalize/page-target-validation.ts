@@ -66,7 +66,7 @@ const validateResourceInput = (
   }
 };
 
-const slotDestination = (slot: RuntimePageSlot): Destination => ({
+const slotDestination = (slot: Pick<RuntimePageSlot, "item">): Destination => ({
   bindingKinds: slot.item.kind === "binding" ? slot.item.binding.kinds.map((kind) => kind.id) : [],
   cardinality: slot.item.kind === "binding" ? slot.item.binding.cardinality : "one",
 });
@@ -161,6 +161,14 @@ const resolvePlacementDestination = (
     const panel = target.panel;
     const owner = panel.page.extensionId ?? record.extensionId;
     if (owner !== record.extensionId) return undefined;
+    const replacement = runtime.placements.find((placement) =>
+      placement.contribution.replaces?.some(
+        (previous) =>
+          previous.id === panel.id &&
+          normalizedRefId(previous.page, placement.extensionId) === normalizedRefId(panel.page, record.extensionId),
+      ),
+    );
+    if (replacement) return slotDestination(replacement.contribution);
     const page = runtime.pages.find((candidate) => candidate.id === normalizedRefId(panel.page, record.extensionId));
     const slot = page?.contribution.slots.find((candidate) => candidate.id === panel.id);
     if (!slot) {

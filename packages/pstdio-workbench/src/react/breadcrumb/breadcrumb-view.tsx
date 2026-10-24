@@ -2,7 +2,6 @@ import { HStack, Text } from "@chakra-ui/react";
 import { Breadcrumb, type ResourceContextAction, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
-import { resolvePageBreadcrumbPlacement } from "../../core/registries/pages/page-active-placement";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
 import { createWorkbenchResourceMenu } from "../menus/resource-menu";
@@ -11,6 +10,7 @@ import { placementMenuActions } from "../shared/placement-menu-actions";
 import { usePlacementTab } from "../shared/use-placement-tab";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { breadcrumbSnapshot } from "./breadcrumb-snapshot";
+import { useBreadcrumbPlacement } from "./use-breadcrumb-placement";
 
 interface WorkbenchBreadcrumbViewProps {
   workbench: WorkbenchCore;
@@ -61,13 +61,7 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   const { workbench } = props;
   const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const items = useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items) ?? [];
-  const page = useWorkbenchStore(workbench.pages.store, (state) =>
-    state.activePageId ? state.pages[state.activePageId] : undefined,
-  );
-  const routedResource = useWorkbenchStore(workbench.pages.store, (state) => state.location?.resource);
-  const placement = useWorkbenchStore(workbench.layout.store, (state) =>
-    resolvePageBreadcrumbPlacement(state.layout, page, routedResource),
-  );
+  const { placement, content } = useBreadcrumbPlacement(workbench);
   const snapshot = usePlacementTab(placement, workbench);
   useWorkbenchResourceActionResolver(workbench);
   if (items.length === 0) return null;
@@ -78,6 +72,14 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
     if (!projected) return [];
     return [{ ...item, resource: projected, title: projected !== item.resource ? projected.label : item.title }];
   });
+  if (content && !resource && crumbs.length) {
+    const index = crumbs.length - 1;
+    crumbs[index] = {
+      ...crumbs[index]!,
+      title: snapshot.label ?? crumbs[index]!.title,
+      icon: snapshot.icon ?? crumbs[index]!.icon,
+    };
+  }
   if (
     resource &&
     resolveResourcePreview(resource, changes) &&
@@ -96,14 +98,22 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   return (
     <Breadcrumb
       items={buildWorkbenchBreadcrumbItems(crumbs, (item) => [
-        ...(item.resource
+        ...(item.resource || item === crumbs.at(-1)
           ? createWorkbenchResourceMenu(
               workbench,
               item.resource,
-              breadcrumbSnapshot(item, crumbs.at(-1), resource, snapshot, workbench.pages.resourceReferenceKey),
+              !resource && item === crumbs.at(-1)
+                ? snapshot
+                : breadcrumbSnapshot(item, crumbs.at(-1), resource, snapshot, workbench.pages.resourceReferenceKey),
+              item === crumbs.at(-1) ? placement : undefined,
             )
           : []),
-        ...placementMenuActions(workbench, { menu: item.menu }, item.resource),
+        ...placementMenuActions(
+          workbench,
+          { menu: item.menu },
+          item.resource,
+          item === crumbs.at(-1) ? placement : undefined,
+        ),
       ])}
       separator="/"
       separatorGap="xs"

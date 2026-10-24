@@ -55,6 +55,7 @@ test("webviews cannot execute an action that is no longer available", async () =
 
 test("webviews receive the failure of an action they execute", async () => {
   const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project-1");
   workbench.commands.registerCommand(
     { id: "archive", label: "Archive" },
     {

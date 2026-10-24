@@ -5,7 +5,7 @@ import { pageParamDefinitionsSchema } from "./page-params-schema";
 import { createPagePlaceholderBreadcrumbSchema } from "./page-placeholder-schema";
 import { workbenchPlacementPresentationSchema } from "./placement-metadata";
 import { placementItemSchema, resourceConstraintSchema } from "./resource-binding-metadata";
-import { modeRefSchema, pageRefSchema, viewRefSchema } from "./workbench-refs-metadata";
+import { modeRefSchema, pageRefSchema, placementRefSchema, viewRefSchema } from "./workbench-refs-metadata";
 
 export { pageRefSchema, pageSlotRefSchema, panelRefSchema, placementRefSchema } from "./workbench-refs-metadata";
 
@@ -25,10 +25,17 @@ const mainSchema = z.discriminatedUnion("kind", [
       kind: z.literal("view"),
       view: viewRefSchema,
       cardinality: z.enum(["one", "many"]),
+      presentation: z.enum(["page", "tabs"]).optional(),
       empty: emptySchema.optional(),
     })
     .strict(),
-  z.object({ kind: z.literal("panels"), empty: emptySchema.optional(), landing: z.string().optional() }).strict(),
+  z
+    .object({
+      kind: z.literal("panels"),
+      empty: emptySchema.optional(),
+      landing: z.union([z.string(), placementRefSchema]).optional(),
+    })
+    .strict(),
 ]);
 const slotSchema = workbenchPlacementPresentationSchema
   .extend({
@@ -62,5 +69,6 @@ export const workbenchExtensionPageRecordSchema = z.object({
   parent: pageRefSchema.optional(),
   resource: resourceConstraintSchema.optional(),
   main: mainSchema,
+  panelView: placementRefSchema.optional(),
   slots: z.array(slotSchema),
 });

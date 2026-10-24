@@ -1,6 +1,7 @@
 import type { WorkbenchLayout, WorkbenchRegion } from "../../registries/layout/layout-types";
 import { clampPanelSizes } from "../../registries/layout/panel-size-policy";
 import { applyModePanelPolicy } from "../../registries/modes/mode-layout";
+import { isSingleViewPage } from "../../registries/pages/page-main";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getWorkbenchPanelLayout } from "../page-runtime/workbench-layout-context";
 import { resolvePanelPolicy } from "./panel-policy";
@@ -9,11 +10,12 @@ export const workbenchPanelPolicy = (
   core: WorkbenchCore,
   region: WorkbenchRegion,
   modeId = core.modes.getActiveModeId(),
+  proposed = core.pages.store.getState(),
 ) => {
   const mode = modeId ? core.modes.getMode(modeId) : undefined;
-  const state = core.pages.store.getState();
+  const state = proposed;
   const page = state.activePageId ? core.pages.getPage(state.activePageId) : undefined;
-  return resolvePanelPolicy({
+  const policy = resolvePanelPolicy({
     region,
     mode,
     settings: core.layout.getRegionSettings(region, modeId),
@@ -21,9 +23,13 @@ export const workbenchPanelPolicy = (
       page && page.modeId === modeId
         ? page.regionSettings?.[region as "main" | "side" | "secondary"]?.showHeader
         : undefined,
-    state: getWorkbenchPanelLayout(core, modeId).regions[region],
+    state: getWorkbenchPanelLayout(core, modeId, proposed).regions[region],
     legacyFloatable: core.sidePanel.canFloat(),
   });
+  return {
+    ...policy,
+    acceptsTabs: policy.acceptsTabs && !(region === "main" && page?.modeId === modeId && isSingleViewPage(page)),
+  };
 };
 
 export const restorePanelPolicy = (core: WorkbenchCore | undefined, layout: WorkbenchLayout) => {

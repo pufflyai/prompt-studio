@@ -2,6 +2,7 @@ import { Box, Flex, Icon, IconButton, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Bot, GitBranch, MoreHorizontal, PanelLeft } from "lucide-react";
 import type { ReactNode } from "react";
+import { expect, within } from "storybook/test";
 import { Header } from "@/components/layout/header";
 import { PANEL_HEADER_CONTROL_SIZE } from "@/components/layout/panel-header.constants";
 import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout";
@@ -84,6 +85,21 @@ export const BottomPanel: Story = {
 
 export const NotCollapsible: Story = {
   args: { collapsible: false },
+};
+
+export const CollapsedFrameStaysFixed: Story = {
+  tags: ["!manifest", "split-frame-scroll"],
+  args: { collapsed: true, resizableSide: "right", p: "0" },
+  render: (args) => <ResizableSplitLayout {...args} data-testid="split-frame" />,
+  play: async ({ canvasElement }) => {
+    const frame = within(canvasElement).getByTestId("split-frame");
+    const content = frame.querySelector<HTMLElement>('[id$="-content"]')!;
+    const before = content.getBoundingClientRect().toJSON();
+    frame.scrollTo({ left: frame.scrollWidth, top: frame.scrollHeight });
+    expect(frame.scrollLeft).toBe(0);
+    expect(frame.scrollTop).toBe(0);
+    expect(content.getBoundingClientRect().toJSON()).toEqual(before);
+  },
 };
 
 export const ResponsivePanels: Story = {

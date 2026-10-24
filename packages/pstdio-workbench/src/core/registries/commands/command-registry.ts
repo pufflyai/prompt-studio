@@ -1,3 +1,4 @@
+import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { type ContextKeyService, matchesContextExpression } from "../../shared/context/context-key-service";
 import {
   byContributionPriority,
@@ -19,6 +20,8 @@ export interface WorkbenchCommandExecutionError {
 export type WorkbenchCommandExecutionErrorListener = (event: WorkbenchCommandExecutionError) => void;
 
 export interface WorkbenchCommandExecutionContext {
+  projectId?: string;
+  placement?: PlacementIdentity;
   resource?: ResourceRef;
   signal?: AbortSignal;
   source?: "panel-add";
@@ -115,6 +118,7 @@ export interface CommandRegistry {
 
 export interface CreateCommandRegistryInput {
   context?: ContextKeyService;
+  getProjectId?(): string | undefined;
 }
 
 export const createCommandRegistry = (input: CreateCommandRegistryInput = {}): CommandRegistry => {
@@ -188,6 +192,9 @@ export const createCommandRegistry = (input: CreateCommandRegistryInput = {}): C
     },
 
     async executeCommand(id, args, context) {
+      if (context?.projectId !== undefined && input.getProjectId && context.projectId !== input.getProjectId()) {
+        throw new Error(`Command belongs to another project: ${id}`);
+      }
       const record = requireCommand(id);
       if (record.handler.isEnabled?.(args, context) === false) {
         const error = new Error(`Command is disabled: ${id}`);

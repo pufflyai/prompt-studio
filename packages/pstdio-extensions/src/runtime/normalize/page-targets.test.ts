@@ -3,6 +3,7 @@ import {
   defineExtension,
   defineNavigationItem,
   definePage,
+  definePlacement,
   defineResourceKind,
   defineView,
   packageAsset,
@@ -42,6 +43,52 @@ const ticketKind = defineResourceKind({
 });
 const diagnosticsFor = (definition: LoadedExtensionSource["definition"]) =>
   normalizeExtensionSources([source(definition)]).diagnostics;
+test("declarative links keep accepting page slots replaced by independent placements", () => {
+  const page = definePage({
+    id: "library",
+    title: "Library",
+    path: "library",
+    mode: workbenchModes.project,
+    main: { kind: "panels" },
+    slots: [],
+  });
+  const legacy = { kind: "page-slot" as const, page: page.ref, id: "list" };
+  const placement = definePlacement({
+    id: "list",
+    mode: workbenchModes.project,
+    region: "side",
+    replaces: [legacy],
+    item: { kind: "view", view: pageView.ref, presence: "closed" },
+  });
+  const diagnostics = diagnosticsFor(
+    defineExtension({
+      views: [pageView],
+      pages: [page],
+      placements: [placement],
+      navigationItems: [
+        defineNavigationItem({
+          id: "direct",
+          owner: workbenchModes.project,
+          label: "List",
+          action: { kind: "panel", panel: legacy },
+        }),
+        defineNavigationItem({
+          id: "compound",
+          owner: workbenchModes.project,
+          label: "Library",
+          action: {
+            kind: "compound",
+            targets: [
+              { kind: "page", page: page.ref },
+              { kind: "panel", panel: legacy },
+            ],
+          },
+        }),
+      ],
+    }),
+  );
+  expect(diagnostics.filter((diagnostic) => diagnostic.severity === "error")).toEqual([]);
+});
 describe("page target validation", () => {
   test("validates page and panel targets against their exact destination", () => {
     const page = definePage({

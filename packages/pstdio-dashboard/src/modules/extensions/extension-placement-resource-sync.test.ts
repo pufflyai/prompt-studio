@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { ResourceRef } from "@pstdio/workbench";
 import { extensionId, openNoteWorkbench, projectId, settle } from "./extension-resource-sync.fixture";
 
-test("a pending placement refresh cannot overwrite the newer primary resource", async () => {
+test("a closed viewer's pending refresh cannot overwrite the newer page resource", async () => {
   let finishPlacement: (resource: ResourceRef) => void = () => undefined;
   let requestedPlacement = false;
   const { workbench, open, dispose } = openNoteWorkbench((resource) => {
@@ -35,6 +35,7 @@ test("a pending placement refresh cannot overwrite the newer primary resource", 
     workbench.modePlacements.openPlacement({ panel, resource, open: "pin" });
     await settle();
     expect(requestedPlacement).toBe(true);
+    workbench.closePlacement(workbench.layout.getActivePanel("side")!.placementIdentity!);
 
     open(resource);
     await settle();
@@ -44,8 +45,7 @@ test("a pending placement refresh cannot overwrite the newer primary resource", 
     await settle();
 
     expect(workbench.getPrimaryResource()).toMatchObject({ label: "Current title", metadata: { writable: false } });
-    const side = workbench.layout.getLayout().regions.side.widgets.find((widget) => widget.resource?.id === "b");
-    expect(side?.resource).toMatchObject({ label: "Current title", metadata: { writable: false } });
+    expect(workbench.layout.listPanelInstances("side")).toHaveLength(0);
   } finally {
     dispose();
   }

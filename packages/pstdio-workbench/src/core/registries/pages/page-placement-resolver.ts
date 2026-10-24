@@ -2,7 +2,7 @@ import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
-import { PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";
+import { isPageContent, isSingleViewPage, PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";
 import type {
   WorkbenchPageContribution,
   WorkbenchPagePlacementInput,
@@ -40,6 +40,8 @@ export const pageFollowerIdentities = (
 const validatePageSlots = (page: WorkbenchPageContribution) => {
   const ids = new Set<string>();
   for (const slot of page.slots) {
+    if (isSingleViewPage(page) && slot.region === "main")
+      throw new Error(`Page "${page.id}" has one Main view and cannot declare Main tab slots`);
     if (slot.id === PAGE_MAIN_SLOT_ID || ids.has(slot.id))
       throw new Error(`Page "${page.id}" declares duplicate or reserved slot "${slot.id}"`);
     ids.add(slot.id);
@@ -54,6 +56,7 @@ const validatePageSlots = (page: WorkbenchPageContribution) => {
   if (
     main.kind === "panels" &&
     main.landing &&
+    typeof main.landing === "string" &&
     !page.slots.some((slot) => slot.id === main.landing && slot.region === "main" && slot.item.kind === "view")
   ) {
     throw new Error(`Page "${page.id}" must declare a static Main landing slot`);
@@ -85,6 +88,8 @@ const placementFor = <Value>(input: {
   resolvePagePlacement(value: WorkbenchPagePlacementInput): Value;
   resource?: ResourceRef;
   section?: WorkbenchPagePlacementInput["section"];
+  position?: WorkbenchPagePlacementInput["position"];
+  pageContext?: WorkbenchPagePlacementInput["pageContext"];
   open?: WorkbenchPagePlacementInput["open"];
 }) => {
   const item = input.slot.item;
@@ -102,8 +107,10 @@ const placementFor = <Value>(input: {
       viewId: contributionRefId(view),
       ...(input.resource ? { resource: input.resource } : {}),
       ...(input.section ? { section: input.section } : {}),
+      ...(input.position ? { position: input.position } : {}),
+      pageContext: input.pageContext,
       ...(input.open ? { open: input.open } : {}),
-      closable: true,
+      closable: !isPageContent(input.page, identity),
     }),
   } satisfies ResolvedOwnedPlacement<Value>;
 };
@@ -121,7 +128,12 @@ export const resolvePagePlacements = <Value>(input: {
     if (slot.isAvailable && !slot.isAvailable(input.resource)) continue;
     if (staticSlotOpen(slot, input.state))
       placements.push(placementFor({ ...input, slot, instanceKey: input.staticInstanceKey }));
-    for (const instance of input.state.resourceInstances[slot.id] ?? []) {
+    const instances = input.state.resourceInstances[slot.id] ?? [];
+    const visible =
+      slot.role === "primary" && isSingleViewPage(input.page)
+        ? instances.filter((instance) => instance.instanceKey === input.state.activePrimaryInstanceKey).slice(-1)
+        : instances;
+    for (const instance of visible) {
       placements.push(placementFor({ ...input, slot, ...instance }));
     }
   }

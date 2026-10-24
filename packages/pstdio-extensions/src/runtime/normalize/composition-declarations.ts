@@ -93,12 +93,20 @@ export const pageDeclarationSchema = z
           kind: z.literal("view"),
           view: localRefSchema("view"),
           cardinality: z.enum(["one", "many"]),
+          presentation: z.enum(["page", "tabs"]).optional(),
           empty: empty.optional(),
           ...presentation,
         })
         .strict(),
-      z.object({ kind: z.literal("panels"), empty: empty.optional(), landing: z.string().optional() }).strict(),
+      z
+        .object({
+          kind: z.literal("panels"),
+          empty: empty.optional(),
+          landing: z.union([z.string(), localRefSchema("placement")]).optional(),
+        })
+        .strict(),
     ]),
+    panelView: localRefSchema("placement").optional(),
     slots: z.array(slot),
     panels: z.record(z.string(), z.unknown()),
   })
@@ -111,6 +119,9 @@ export const placementDeclarationSchema = z
   .object({
     id: z.string(),
     ref: localRefSchema("placement"),
+    replaces: z
+      .array(z.object({ kind: z.literal("page-slot"), page: localRefSchema("page"), id: z.string().min(1) }).strict())
+      .optional(),
     mode: localRefSchema("mode"),
     region,
     item,

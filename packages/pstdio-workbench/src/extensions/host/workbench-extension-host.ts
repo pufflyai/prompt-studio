@@ -68,6 +68,7 @@ const registerCommands = (
             resource: executionContext?.resource,
             signal: executionContext?.signal,
             region: executionContext?.region,
+            placement: executionContext?.placement,
           }),
       },
     ),
@@ -248,9 +249,9 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     }
     disposables.push(...registerStatusBarItems(input));
     disposables.push(...registerResourceKinds(input));
-    disposables.push(...registerPages(input));
     disposables.push(...registerModes(input));
     disposables.push(...registerModePlacements(input));
+    disposables.push(...registerPages(input));
     return {
       dispose() {
         disposeAll(disposables);

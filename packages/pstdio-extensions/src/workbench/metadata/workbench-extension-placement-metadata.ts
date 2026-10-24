@@ -45,7 +45,13 @@ const emptyRecord = (empty: RuntimePageMain["empty"], extensionId: string) => {
   };
 };
 const mainRecord = (main: RuntimePageMain, extensionId: string) => {
-  if (main.kind === "panels") return { ...main, empty: emptyRecord(main.empty, extensionId) };
+  if (main.kind === "panels")
+    return {
+      ...main,
+      empty: emptyRecord(main.empty, extensionId),
+      landing:
+        main.landing && typeof main.landing !== "string" ? normalizedRef(main.landing, extensionId) : main.landing,
+    };
   return {
     ...main,
     view: normalizedRef(main.view, extensionId),
@@ -77,6 +83,7 @@ export const toPageRecords = (runtime: ExtensionRuntime): WorkbenchExtensionMeta
       ? { kinds: page.contribution.resource.kinds.map((kind) => normalizedRef(kind, page.extensionId)) }
       : undefined,
     main: mainRecord(page.contribution.main, page.extensionId),
+    panelView: page.contribution.panelView ? normalizedRef(page.contribution.panelView, page.extensionId) : undefined,
     slots: page.contribution.slots.map((slot) => slotRecord(slot, page.extensionId)),
   }));
 export const toPlacementRecords = (runtime: ExtensionRuntime): WorkbenchExtensionMetadata["placements"] =>
@@ -85,6 +92,10 @@ export const toPlacementRecords = (runtime: ExtensionRuntime): WorkbenchExtensio
     localId: placement.localId,
     extensionId: placement.extensionId,
     mode: normalizedRef(placement.contribution.mode, placement.extensionId),
+    replaces: placement.contribution.replaces?.map((ref) => ({
+      ...ref,
+      page: normalizedRef(ref.page, placement.extensionId),
+    })),
     item: itemRecord(placement.contribution.item, placement.extensionId),
     region: placement.contribution.region,
     order: placement.contribution.order,

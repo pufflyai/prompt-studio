@@ -32,6 +32,25 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
   },
   definition,
 });
+test("publishes explicit page slot replacements as qualified placement references", () => {
+  const view = defineView({
+    id: "browser",
+    title: "Browser",
+    body: { kind: "webview", entry: packageAsset("./browser.tsx", "file:///fake/lab/") },
+  });
+  const placement = definePlacement({
+    id: "browser",
+    mode: workbenchModes.project,
+    region: "main",
+    replaces: [{ kind: "page-slot", page: { kind: "page", id: "library" }, id: "list" }],
+    item: { kind: "view", view: view.ref, presence: "closed" },
+  });
+  const runtime = normalizeExtensionSources([source(defineExtension({ views: [view], placements: [placement] }))]);
+  const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
+  expect(metadata.placements[0]?.replaces).toEqual([
+    { kind: "page-slot", page: { extensionId: "pstdio.lab", kind: "page", id: "library" }, id: "list" },
+  ]);
+});
 describe("createWorkbenchExtensionMetadata", () => {
   test("preserves resource action availability through normalized metadata", () => {
     const note = defineResourceKind({

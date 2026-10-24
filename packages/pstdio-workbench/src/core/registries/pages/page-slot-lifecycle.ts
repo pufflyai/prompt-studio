@@ -1,7 +1,7 @@
 import type { PageOpenIntent, ResourceRef } from "@pstdio/sdk/extensions";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
-import { pageSlots, primarySlot, type ResolvedPageSlot } from "./page-main";
+import { isSingleViewPage, PAGE_MAIN_SLOT_ID, pageSlots, primarySlot, type ResolvedPageSlot } from "./page-main";
 import type {
   WorkbenchPageContribution,
   WorkbenchPageOpenInput,
@@ -53,7 +53,9 @@ export const openResourceSlot = (input: {
   const instance: WorkbenchPageSlotInstance = {
     instanceKey,
     resource: target.resource,
+    pageContext: target.pageContext,
     ...(target.section ? { section: target.section } : {}),
+    ...(target.position ? { position: target.position } : {}),
     ...(binding.cardinality === "many" ? { open: target.open ?? "preview" } : {}),
   };
   return {
@@ -74,14 +76,23 @@ export const selectPrimaryTarget = (input: {
 }) => {
   const { page, target } = input;
   if (page.resource) {
-    if (!target.resource) throw new Error(`Page "${page.id}" requires a resource`);
+    if (!target.resource) {
+      if (isSingleViewPage(page) && page.main.empty)
+        return {
+          ...input.state,
+          resourceInstances: { ...input.state.resourceInstances, [PAGE_MAIN_SLOT_ID]: [] },
+          activePrimaryInstanceKey: undefined,
+        };
+      throw new Error(`Page "${page.id}" requires a resource`);
+    }
     if (!resourceMatchesConstraint(page.resource, target.resource))
       throw new Error(`Page "${page.id}" does not accept resource kind "${target.resource.type}"`);
   } else if (target.resource) throw new Error(`Page "${page.id}" does not accept a resource`);
   const slot = primarySlot(page);
   if (!slot) {
-    if (target.open) throw new Error(`Panel collection page "${page.id}" does not accept an open intent`);
-    if (page.main.kind === "panels" && page.main.landing)
+    if (target.open && !(page.resource && page.main.kind === "panels" && typeof page.main.landing === "object"))
+      throw new Error(`Panel collection page "${page.id}" does not accept an open intent`);
+    if (page.main.kind === "panels" && typeof page.main.landing === "string")
       return setStaticSlotOpen(input.state, page.main.landing, true);
     return input.state;
   }

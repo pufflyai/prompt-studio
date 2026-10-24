@@ -37,7 +37,15 @@ const normalizeEmpty = (input: NormalizePageInput, empty: PageMain["empty"]) => 
   };
 };
 const normalizeMain = (input: NormalizePageInput, main: PageMain): RuntimePageMain => {
-  if (main.kind === "panels") return { ...main, empty: normalizeEmpty(input, main.empty) };
+  if (main.kind === "panels")
+    return {
+      ...main,
+      empty: normalizeEmpty(input, main.empty),
+      landing:
+        main.landing && typeof main.landing !== "string"
+          ? normalizeContributionRef(input.ext, main.landing)
+          : main.landing,
+    };
   const { tab, ...presentation } = main;
   return {
     ...presentation,
@@ -80,6 +88,7 @@ export const registerPages = (
       contribution: {
         ...contribution,
         ref,
+        ...(contribution.panelView ? { panelView: normalizeContributionRef(ext, contribution.panelView) } : {}),
         mode: normalizeContributionRef(ext, contribution.mode),
         ...(contribution.parent ? { parent: normalizeContributionRef(ext, contribution.parent) } : {}),
         ...(contribution.resource

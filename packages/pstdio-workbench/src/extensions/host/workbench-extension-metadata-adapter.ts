@@ -207,6 +207,7 @@ export const toInternalWorkbenchExtensionMetadata = (
       id: placement.id,
       ref: { extensionId: placement.extensionId, kind: "placement", id: placement.localId },
       modeId: contributionRefId(placement.mode),
+      replaces: placement.replaces,
       item: placement.item,
       region: placement.region,
       order: placement.order,

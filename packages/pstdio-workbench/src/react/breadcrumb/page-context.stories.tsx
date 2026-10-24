@@ -90,3 +90,78 @@ export const RoutedResource: Story = {
     }
   },
 };
+
+const createComposerWorkbench = () => {
+  const workbench = createWorkbench();
+  const page = { kind: "page" as const, extensionId: "storybook", id: "compose" };
+  workbench.modes.registerMode({ id: "project", activate() {} });
+  workbench.views.registerView({ id: "compose", title: "Compose", body: { kind: "react", render: () => null } });
+  workbench.pages.registerPage({
+    id: "compose",
+    ref: page,
+    title: "Messages",
+    path: "messages",
+    modeId: "project",
+    main: {
+      kind: "view",
+      presentation: "page",
+      cardinality: "one",
+      view: { kind: "view", id: "compose" },
+      tab: {
+        getSnapshot: () => ({
+          label: "New message",
+          menu: [
+            {
+              id: "compose",
+              rows: [
+                {
+                  id: "open",
+                  label: "Open message",
+                  action: {
+                    kind: "navigation",
+                    target: {
+                      kind: "viewer",
+                      operation: "switch",
+                      page: { ...page, id: "message" },
+                      resource: { type: "message", id: "one", label: "Message one" },
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      },
+    },
+    slots: [],
+  });
+  workbench.pages.registerPage({
+    id: "message",
+    ref: { ...page, id: "message" },
+    title: "Message",
+    path: "messages/:resourceId",
+    modeId: "project",
+    parentId: "compose",
+    resource: { kinds: [{ kind: "resource-kind", id: "message" }] },
+    main: { kind: "view", presentation: "page", cardinality: "one", view: { kind: "view", id: "compose" } },
+    slots: [],
+  });
+  workbench.pageLocations.setProject("storybook-composer");
+  workbench.pageLocations.navigate({ kind: "page", page });
+  return workbench;
+};
+
+export const PageComposer: Story = {
+  args: { workbench: createComposerWorkbench() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const breadcrumb = within(canvas.getByRole("navigation", { name: "breadcrumb" }));
+    await expect(breadcrumb.getByText("New message", { exact: true })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Page actions" }));
+    await userEvent.click(
+      await within(canvasElement.ownerDocument.body).findByRole("menuitem", { name: "Open message" }),
+    );
+    await expect(breadcrumb.getByText("Messages", { exact: true })).toBeVisible();
+    await expect(breadcrumb.getByText("Message one", { exact: true })).toBeVisible();
+  },
+};

@@ -10,7 +10,7 @@ const removeActiveWorkbenchResource = (
   resource: ResourceRef,
   retained: readonly PlacementIdentity[],
 ) => {
-  if (resource.projectId !== core.pages.store.getState().projectId) return;
+  if (resource.projectId && resource.projectId !== core.pages.store.getState().projectId) return;
   const retainedKeys = new Set(retained.map(placementIdentityKey));
   batchWorkbenchChanges(() => {
     for (const kind of ["mode", "shell"] as const) {
@@ -38,7 +38,6 @@ const removeActiveWorkbenchResource = (
       );
       preparation.apply({ ...state, resourceInstances });
     }
-    core.pageLocations.removeResource(resource, retained);
   });
 };
 
@@ -50,5 +49,6 @@ export const removeWorkbenchResource = (
 ) =>
   batchWorkbenchChanges(() => {
     removeActiveWorkbenchResource(core, resource, retained);
+    core.pageLocations.removeResource(resource, retained);
     removeCached(resource);
   });

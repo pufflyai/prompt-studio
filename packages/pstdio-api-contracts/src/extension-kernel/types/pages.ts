@@ -31,6 +31,8 @@ export interface PageMainView extends PlacementPresentation {
   readonly kind: "view";
   readonly view: ViewRef;
   readonly cardinality: PageSlotCardinality;
+  /** Render page content without tab controls, or normal tabs. Defaults to tabs. */
+  readonly presentation?: "page" | "tabs";
   /** Custom content for an empty Main. */
   readonly empty?: PagePlaceholder;
 }
@@ -38,8 +40,8 @@ export interface PageMainView extends PlacementPresentation {
 export interface PageMainPanels {
   readonly kind: "panels";
   readonly empty?: PagePlaceholder;
-  /** Static Main slot opened when navigating to this collection or selecting its breadcrumb. */
-  readonly landing?: string;
+  /** Static Main slot, independent static view, or many-resource Main viewer selected on navigation. */
+  readonly landing?: string | PlacementRef;
 }
 
 export type PageMain = PageMainView | PageMainPanels;
@@ -90,6 +92,8 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   /** Header defaults only. User choices win; omitted values inherit the mode. */
   readonly regionSettings?: Partial<Record<ExtensionPanelRegion, { readonly showHeader?: boolean }>>;
   readonly main: PageMain;
+  /** Independent panel version of this page, using a normal static view or resource binding. */
+  readonly panelView?: PlacementRef;
   readonly slots: readonly PageSlot[];
   readonly panels: Readonly<Record<string, PageSlotRef>>;
 }
@@ -101,11 +105,16 @@ export type PlacementOwner =
 
 export type PlacementIdentity = PlacementOwner & { readonly instanceKey: string };
 
-export interface PageLocation {
-  readonly page: PageRef;
-  readonly resource?: ResourceRef;
+/** Viewer-owned navigation context and position, separate from resource identity. */
+export interface ViewLocation {
+  readonly pageContext?: Pick<PageLocation, "page" | "parent" | "params">;
   readonly section?: FileRendererSectionTarget;
   readonly position?: FileSourcePosition;
+}
+
+export interface PageLocation extends Pick<ViewLocation, "section" | "position"> {
+  readonly page: PageRef;
+  readonly resource?: ResourceRef;
   /** Overrides that differ from declared defaults. */
   readonly params?: PageParams;
   readonly parent?: PageLocation;

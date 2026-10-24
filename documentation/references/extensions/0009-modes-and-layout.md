@@ -72,7 +72,7 @@ main: {
 },
 ```
 
-`pagePlaceholderView(main.empty)` returns the view ref from either form. The placeholder's breadcrumb applies only to the current page while Main is empty. Ancestor crumbs keep their page titles. Opening a tab restores the normal breadcrumb presentation. The view and its actions belong to the page; a placeholder does not create a tab or a placement identity. The host adds no recovery buttons. A panel collection may name a static Main slot with `main.landing`; collection breadcrumbs and navigation open it. The `workbench.reopenPageContent` and `workbench.resetLayout` commands remain available independently of the placeholder.
+`pagePlaceholderView(main.empty)` returns the view ref from either form. The placeholder's breadcrumb applies only to the current page while Main is empty. Ancestor crumbs keep their page titles. Opening content restores the normal breadcrumb presentation. The view and its actions belong to the page; a placeholder does not create a tab or a placement identity. The host adds no recovery buttons. A panel collection may name a static Main slot or an independent static placement with `main.landing`; collection breadcrumbs and navigation open it. An independent landing must belong to the same mode. Navigation selects it wherever the user placed it. The `workbench.reopenPageContent` and `workbench.resetLayout` commands remain available independently of the placeholder.
 
 Explicit collection navigation selects its available landing slot. Restoring saved page state preserves the saved selection.
 
@@ -84,11 +84,11 @@ Default tab cards wait until a declared mode has been selected, so startup never
 
 Tool cards use the compact action-card style: small body padding, the standard row label, and a 14 px icon, matching the density of Home's Recent rows. Hover entry and exit are immediate. The chooser is top-aligned with `xl` panel padding, centered horizontally, and capped at the `lg` size token. Narrow panels use the available width and collapse to one column.
 
-Start uses its home content as `main.empty`, with no initial tabs or landing slot. Its Main header defaults to hidden. A saved user header choice still wins, and dropping a tool tab into Main reveals the header through the shared move behavior.
+Start uses its home content as a tabless Main view. Its Main header defaults to hidden. A saved user header choice still wins. Main does not accept dropped tabs on this page.
 
-A resource-free panel collection and its detail pages share one Main tab tray. The page hierarchy defines the collection through `parentId`; resource-bearing parents and different modes keep separate trays. Returning to the collection restores its open tabs, tools, order and selection. Header choices remain scoped to each page.
+A resource-free panel collection and its tabbed detail pages share one Main tab tray. The page hierarchy defines the collection through `parentId`; resource-bearing parents and different modes keep separate trays. A detail page can use `main: { kind: "panels", landing: viewer.ref }` to open its routed resource through an independent viewer. That binding must accept the page's resource kinds, use `cardinality: "many"`, and start in Main. A landing placement must map each resource to one unambiguous page route. Returning to the collection restores its other tabs, tools, order and selection. Entries now owned by auxiliary viewers are retired from the saved Main tray. Header choices remain scoped to each page.
 
-Sessions uses the default card placeholder. Its **New session** tool opens a real tab through an explicit creation action. `workbenchPages.newSession` is the routed draft page at `sessions/new`; it accepts a `session-draft` resource and displays that tab. Creating from a routed Main draft navigates to `workbenchPages.session`. A draft moved into a shared panel becomes one session tab there and preserves the current page. A completed creation does not change navigation after its draft has left the current layout. Closing the final tab restores the default card placeholder.
+Sessions uses a tabless Main view. Its root opens the new-session composer, whose tab presentation supplies the current breadcrumb label and menu. A resource or draft replaces Main content. Its independent Session panel view offers new drafts and can switch its own resource. Creating from a routed Main draft opens `workbenchPages.session`; creating in a panel replaces that actual viewer. Late completion cannot reopen a source that has closed, switched, or left its project. Tickets uses a tabless board with an independent browser panel view. Timeline is tabless without a panel view. Artifacts keeps a tabbed collection with a singleton library browser and independent resource viewers.
 
 Right-click, Shift+F10, the Context Menu key, and touch long-press open the same grouped tab menu. Normal clicks select. Preview and pinned tabs can appear in any order. Pin and Unpin change retention without changing position. Alt+Left and Alt+Right reorder the focused tab.
 
@@ -96,9 +96,60 @@ Resource tabs begin with the same resource-owned action group as navigation and 
 
 Placement identity and ownership stay the same when a tab moves. Mode arrangements persist within the project and mode; page arrangements persist within the page location. Reset layout restores the active page and shared mode defaults without deleting session or terminal data or clearing other page locations.
 
-Every view in Main, Side, and Secondary has a tab, including single-resource pages and lone views. The header setting alone decides whether the tray shows. Page-owned Locations and their Sub Panels keep their owner lifecycle when they share a region with other scoped content. Primary changes reconcile each placement separately.
+Main views declare `presentation: "page"` to show one page or resource without tabs. This is independent of resource `cardinality` and header visibility. Main then has no Add, Close, Pin, reorder, or drop target. Navigation replaces its content. Extra Main slots are invalid. Side and Secondary keep normal tabs and their mode permissions.
+
+Omitting `presentation`, or using `presentation: "tabs"`, keeps normal Main tabs. A panel collection also keeps tabs. Every content tab can move to every available tab panel, but a Main showing page content cannot accept one. Showing its header does not change that rule.
+
+Page content has its own lifetime outside the tab layout. It still participates in resource identity, focus, and view context. A resource page can declare `main.empty` for its landing state. When an existing page changes to page presentation, its obsolete saved Main tray is retired; independent panel layouts and page header choices are preserved. A page boundary never inherits an ancestor collection's Main tabs.
+
+## Panel views
+
+A page may name its independent panel version with `panelView: browser.ref`. Declare that panel with `definePlacement`. A static item is a resource browser; a resource binding is a resource viewer. Both use the normal Add menu and card chooser, instance rules, drag behavior, and close/pin actions. The panel can reuse the page's ViewRef or use another renderer. Its lifetime belongs to the mode, so navigating Main does not close it.
+
+```ts
+const browser = definePlacement({
+  id: "board-browser",
+  mode: workbenchModes.project,
+  region: "side",
+  item: { kind: "view", view: boardView.ref, presence: "closed" },
+});
+const board = definePage({
+  id: "board",
+  title: "Board",
+  path: "board",
+  mode: workbenchModes.project,
+  main: { kind: "view", view: boardView.ref, cardinality: "one", presentation: "page" },
+  panelView: browser.ref,
+  slots: [],
+});
+```
+
+Include both declarations in the extension's `pages` and `placements` arrays. An open static browser is a singleton and disappears from Add choices in every panel. A binding needs an explicit `add` action to appear there. Old Main views moved to auxiliary panels migrate to the declared panel version when their page becomes tabless. Pages without a panel version retire their obsolete page tabs; this does not delete their resources or drafts.
+
+A placement can declare `replaces: [previousPageSlot]` when moving an extension's public page slot to an independent owner. Old links resolve to the new placement. Saved tabs migrate in place, retaining their region, selection, and retention. Each previous slot has one replacement, owned by the same extension. Keep the old public ref exported with `@deprecated` and name the new placement ref.
 
 Static tools and single-resource tabs support the same Pin tab and Unpin tab actions as resource previews. Static tabs start pinned. Unpinning makes a normal preview that can be replaced or closed on page leave. Retention is stored in the existing layout, independently of the declaration that creates the content.
+
+Resource links open in Main. If the same resource is already open in this project and mode, Workbench selects and reveals its viewer instead. This includes inactive tabs and collapsed panels. A browser's selected row and an automatic `openOn: "page-resource"` context follower do not own independent viewers. Document identity includes the metadata key declared by `page.document`.
+
+A viewer switches its own resource with a caller-relative navigation target:
+
+```ts
+await host.navigation.open({
+  kind: "viewer",
+  operation: "switch",
+  from: props.resource,
+  resource: nextResource,
+});
+```
+
+The host captures the calling placement. Extensions cannot choose another viewer's identity. If `from` is no longer displayed there, the request has no effect. Switching to a resource open elsewhere focuses that viewer and leaves the caller unchanged. Use `operation: "replace"` after creating a resource from a draft. It replaces the draft in its actual panel and preserves focus when the draft is inactive. A current Main draft can also provide a compatible `page` ref for the created resource. A resource-free Main landing can omit `from` for a switch or replacement and must provide the destination `page`; its caller must still be the current page content.
+
+Page and viewer targets accept a heading `section` or source `position`. These belong to the selected viewer. Webviews receive them as `props.viewLocation`. Its `pageContext` retains the viewer's page, parent resource hierarchy, and parameters when opened through page navigation. Selecting a retained Main resource tab restores that context. `props.pageLocation` continues to describe Main. Auxiliary switches never rewrite Main's URL, breadcrumbs, or navigation memory. A panel view dragged into another tabbed page stays in that page; it does not activate its tabless page version.
+
+Closing a selected collection viewer follows the next resource tab. If no routed viewer remains selected, Main returns to the collection's parent location without reopening a closed browser. Creation and switch callbacks stay in their captured project. The host captures the deletion version before an asynchronous command. A later deletion invalidates that older result; a fresh action can still open a recreated resource with the same identity. Native integrations can use `workbench.viewers.capture(identity)` for the same guarded handoff.
+
+Navigation items can use `intent: "restore"` on a page target to return to the last location within that page and ancestor resource context. Restoration does not reserve a resource. If an auxiliary viewer now owns it, Main returns to its landing state and consumes that remembered resource location. Deleting a resource also clears its navigation references. Explicit resource links still focus an existing viewer.
 
 Live views stay mounted during tab selection and page navigation. Iframe state also survives explicit moves in browsers with the DOM `moveBefore` API. See [ADR 0053](../../adrs/0053-temporary-webview-move-fallback.md) for the temporary WebKit limit.
 

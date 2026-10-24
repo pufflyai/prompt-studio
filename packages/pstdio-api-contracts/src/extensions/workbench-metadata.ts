@@ -138,6 +138,7 @@ const workbenchExtensionModeRecordSchema = z.object({
 });
 
 const workbenchExtensionPlacementRecordSchema = workbenchPlacementPresentationSchema.extend({
+  replaces: z.array(z.object({ kind: z.literal("page-slot"), page: pageRefSchema, id: z.string() })).optional(),
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),

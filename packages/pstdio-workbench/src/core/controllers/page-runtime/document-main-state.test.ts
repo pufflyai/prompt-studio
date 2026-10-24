@@ -125,6 +125,7 @@ test.each(["close", "pin"] as const)("%s targets a foreign document moved into t
   s.navigateDocument("a", undefined, action === "pin" ? "pin" : undefined);
   const a = s.w.layout.listPanelInstances("main")[0]!;
   s.w.movePanel(b.instanceId, "main");
+  const beforeAction = s.w.pages.store.getState().location?.resource;
   if (action === "close") s.w.closePlacement(b.placementIdentity!);
   else {
     s.w.pinPlacement(b.placementIdentity!, false);
@@ -133,7 +134,8 @@ test.each(["close", "pin"] as const)("%s targets a foreign document moved into t
     );
     s.w.pinPlacement(b.placementIdentity!, true);
   }
-  expect(s.w.pages.store.getState().location?.resource?.metadata?.file).toBe("a");
+  if (action === "close") expect(s.w.pages.store.getState().location?.resource?.metadata?.file).toBe("a");
+  else expect(s.w.pages.store.getState().location?.resource).toEqual(beforeAction);
   expect(s.w.layout.listPanelInstances("main").some((tab) => tab.instanceId === a.instanceId)).toBe(true);
   s.navigate("alpha-list");
   s.navigateDocument("a", undefined, action === "pin" ? "pin" : undefined);

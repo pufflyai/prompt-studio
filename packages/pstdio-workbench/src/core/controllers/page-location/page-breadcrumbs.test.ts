@@ -36,6 +36,31 @@ const page = (id: string, title: string): WorkbenchPageContribution => ({
   main: { kind: "view", view: { kind: "view", id: "content" }, cardinality: "one" },
   slots: [],
 });
+test("a page-owned resource uses its resource breadcrumb even though Main has no tabs", () => {
+  const document: WorkbenchPageContribution = {
+    ...page("document", "Document"),
+    resource: { kinds: [{ kind: "resource-kind", id: "document" }] },
+    main: {
+      kind: "view",
+      view: { kind: "view", id: "content" },
+      cardinality: "one",
+      presentation: "page",
+      empty: { view: { kind: "view", id: "empty" }, breadcrumb: { label: "New document" } },
+    },
+  };
+  const resource = { type: "document", id: "x", label: "Document X" };
+  const items = createWorkbenchPageBreadcrumbItems({
+    location: { page: document.ref, resource },
+    pages: [document],
+    navigationTrees,
+    layout,
+    modes,
+    resources,
+    navigate() {},
+  });
+  expect(items[0].title).toBe("Document X");
+  expect(items[0].resource).toEqual(resource);
+});
 test("a current page supplies breadcrumb actions without owning a tab or resource", () => {
   const sessions = {
     ...page("sessions", "Sessions"),
