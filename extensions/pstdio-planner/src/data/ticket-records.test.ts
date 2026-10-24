@@ -1,9 +1,7 @@
 import { expect, test } from "bun:test";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, createMemoryStorageDevices } from "@pstdio/sdk/testing";
-import { makeCommandContext } from "../commands/command-context.fixture";
 import { TAGS_COLLECTION, TICKETS_COLLECTION } from "./collections";
-import { migratePlannerStorage } from "./migrate-storage";
 import { ticketRecords } from "./ticket-records";
 import type { StoredTag } from "./types";
 
@@ -54,7 +52,7 @@ const tickets = {
   draft: ticket("draft", ["ui", "api", "default-priority-low"], { draft: true }),
   archived: ticket("archived", ["ui"], { archived: true }),
   untagged: ticket("untagged", []),
-  // A newer edit that ran before the upgrade wrote `tags` next to the old list.
+  // A newer build wrote `tags` next to the old list.
   edited: ticket("edited", ["default-priority-low", "ui"], { tags: { "default-priority": "default-priority-high" } }),
 };
 
@@ -68,35 +66,50 @@ const expected = {
   edited: { "default-priority": "default-priority-high", track: "ui" },
 };
 
-const storedTags = async (storage: ExtensionStorageApi) =>
-  Object.fromEntries((await ticketRecords(storage).list()).map(({ id, tags, ...rest }) => [id, { tags, rest }]));
+const readTags = async (storage: ExtensionStorageApi) =>
+  Object.fromEntries((await ticketRecords(storage).list()).map(({ id, tags }) => [id, tags]));
 
-const upgrade = async (storage: ExtensionStorageApi) => {
-  await storage.migrate(3, async () => {});
-  await migratePlannerStorage(makeCommandContext({ storage, params: {} }));
-};
-
-test("the storage upgrade stores ticket tags by tag ID with one value per single-select", async () => {
+test("tickets with tagIds read as tags by tag ID with one value per single-select", async () => {
   const storage = createMemoryStorage(seed);
 
-  await upgrade(storage);
-
-  const stored = await storedTags(storage);
-  expect(Object.fromEntries(Object.entries(stored).map(([id, { tags }]) => [id, tags]))).toEqual(expected);
-  for (const { rest } of Object.values(stored)) expect(rest).not.toHaveProperty("tagIds");
-  expect(stored.draft.rest).toMatchObject({ draft: true, content: "# draft" });
-
-  await migratePlannerStorage(makeCommandContext({ storage, params: {} }));
-  expect(await storedTags(storage)).toEqual(stored);
+  expect(await readTags(storage)).toEqual(expected);
+  expect((await ticketRecords(storage).get("draft"))?.tags).toEqual(expected.draft);
 });
 
-test("two devices that upgrade offline store the same tags", async () => {
+test("the next save of a ticket with tagIds stores only tags", async () => {
+  const storage = createMemoryStorage(seed);
+  const records = ticketRecords(storage);
+  const draft = await records.get("draft");
+
+  await records.put("draft", { ...draft!, content: "# edited" });
+
+  expect(await storage.collection(TICKETS_COLLECTION).get("draft")).toEqual({
+    ...draft,
+    content: "# edited",
+    tags: expected.draft,
+  });
+  expect(await storage.collection(TICKETS_COLLECTION).get("draft")).not.toHaveProperty("tagIds");
+});
+
+test("two devices that save tickets with tagIds offline store the same tags", async () => {
   const pair = await createMemoryStorageDevices(seed);
-  for (const storage of pair.devices) await upgrade(storage);
-  const [first, second] = await Promise.all(pair.devices.map(storedTags));
-  expect(second).toEqual(first);
+  for (const storage of pair.devices) {
+    const records = ticketRecords(storage);
+    for (const record of await records.list()) await records.put(record.id, record);
+  }
 
   await pair.merge();
 
-  for (const storage of pair.devices) expect(await storedTags(storage)).toEqual(first);
+  for (const storage of pair.devices) expect(await readTags(storage)).toEqual(expected);
+});
+
+test("a ticket with tagIds that syncs in from an older build shows its tags", async () => {
+  const pair = await createMemoryStorageDevices({ collections: { [TAGS_COLLECTION]: tags } });
+  const [current, older] = pair.devices;
+  // A device on an older build creates a ticket in the old shape while offline.
+  await older.collection(TICKETS_COLLECTION).put("late", ticket("late", ["ui", "api", "b"]));
+
+  await pair.merge();
+
+  expect((await ticketRecords(current).get("late"))?.tags).toEqual({ track: "api", flags: ["b"] });
 });

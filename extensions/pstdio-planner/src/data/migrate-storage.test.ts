@@ -4,9 +4,9 @@ import extension from "../../extension";
 import { makeCommandContext } from "../commands/command-context.fixture";
 import { queryTicketProperties } from "../commands/ticket-properties/query";
 import { timelineViewSchema } from "../timeline/commands/view-schema";
-import { tagsCollection } from "./collections";
+import { TICKETS_COLLECTION, tagsCollection } from "./collections";
 import { migratePlannerStorage } from "./migrate-storage";
-import { putTicket, ticketsCollection } from "./ticket-context.fixture";
+import { putTicket, seedTicketIdentity, ticketsCollection } from "./ticket-context.fixture";
 import type { Ticket } from "./types";
 
 const registered = (id: string) => {
@@ -70,7 +70,9 @@ test.each([
     options: [{ ...option, id: "default-human-requested-true", name: "Needs attention" }, option],
   });
   const original = { ...ticket, tagIds: ["default-human-requested-true", option.id], content: "Keep this body" };
-  await ticketsCollection(storage).put(ticket.id, original);
+  // An older build stored the flat list.
+  seedTicketIdentity(storage, ticket);
+  await storage.collection(TICKETS_COLLECTION).put(ticket.id, original);
   const requests = storage.collection("planner-review-requests");
   const request = { id: "request", ticketId: ticket.id, title: "Choose the scope" };
   await requests.put(request.id, request);

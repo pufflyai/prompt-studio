@@ -11,6 +11,7 @@ import {
   updateTicketTag,
 } from "./tag-operations";
 import { putTicket, ticketContext } from "./ticket-context.fixture";
+import { TICKETS_COLLECTION } from "./ticket-records";
 import type { Ticket } from "./types";
 
 const ticket = (overrides: Partial<Ticket>): Ticket => ({
@@ -186,5 +187,42 @@ describe("tag operations", () => {
 
     const { ticketsCollection } = await import("./ticket-context.fixture");
     expect((await ticketsCollection(storage).get(created.id))?.tags).toEqual({ "default-type": "default-type-bug" });
+  });
+
+  // A bulk tag change writes many tickets. An edit or sync that lands after it listed them must stay.
+  test.each([
+    ["changing the tag type", { "default-priority": ["default-priority-high"] }],
+    ["deleting a tag option", {}],
+    ["deleting the tag", {}],
+  ] as const)("%s keeps a ticket edit made during the change", async (change, expectedTags) => {
+    const storage = createMemoryStorage();
+    await readTicketTags(storage);
+    const created = await putTicket(storage, ticket({ tags: { "default-priority": "default-priority-high" } }));
+    const records = storage.collection<Ticket>(TICKETS_COLLECTION);
+    const list = records.list.bind(records);
+    records.list = async () => {
+      const listed = await list();
+      await records.put(created.id, { ...(await records.get(created.id))!, content: "Edited elsewhere" });
+      return listed;
+    };
+    const ctx = {
+      ...ticketContext(storage),
+      storage: {
+        ...storage,
+        collection: (name: string) => (name === TICKETS_COLLECTION ? records : storage.collection(name)),
+      },
+    } as ReturnType<typeof ticketContext>;
+
+    if (change === "changing the tag type") {
+      await updateTicketTag({ ...ctx, tagId: "default-priority", type: "multi_select" });
+    } else if (change === "deleting a tag option") {
+      await deleteTagOption({ ...ctx, tagId: "default-priority", optionId: "default-priority-high" });
+    } else await deleteTicketTag({ ...ctx, tagId: "default-priority" });
+
+    const { ticketsCollection } = await import("./ticket-context.fixture");
+    expect(await ticketsCollection(storage).get(created.id)).toMatchObject({
+      content: "Edited elsewhere",
+      tags: expectedTags,
+    });
   });
 });

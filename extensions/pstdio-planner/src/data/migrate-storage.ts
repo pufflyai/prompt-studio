@@ -3,17 +3,16 @@ import { cleanupAttentionTag } from "./cleanup-attention-tag";
 import { cleanupLegacyTicketFields } from "./cleanup-legacy-ticket-fields";
 import { cleanupLegacyWorkspaceStatus } from "./cleanup-legacy-workspace-status";
 import { importLegacyTemplates } from "./migrate-templates";
-import { migrateTicketTags } from "./migrate-ticket-tags";
 
 // One version covers every Planner storage upgrade, so each step runs once per project
-// and reads never repeat cleanup writes. Version 4 stores ticket tags by tag ID (PS-841).
+// and reads never repeat cleanup writes.
 export const migratePlannerStorage = (ctx: Pick<ExtensionContextBase, "files" | "storage">) =>
-  ctx.storage.migrate(4, async (previous) => {
+  ctx.storage.migrate(3, async (previous) => {
     if (previous < 1) await importLegacyTemplates(ctx);
     await cleanupLegacyWorkspaceStatus(ctx.storage);
-    await cleanupLegacyTicketFields(ctx.storage);
+    // Retire the attention option first, so ticket reads in later steps drop it.
     await cleanupAttentionTag(ctx.storage);
-    await migrateTicketTags(ctx.storage);
+    await cleanupLegacyTicketFields(ctx.storage);
   });
 
 type StorageContext = Pick<ExtensionContextBase, "files" | "storage">;

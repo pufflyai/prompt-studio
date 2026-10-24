@@ -2,9 +2,14 @@ import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
 import { putTag, putTicket, tagsCollection, ticketsCollection } from "./collections";
 import { seedDefaultTags } from "./seed";
-import { assertSingleSelectConversion, convertTicketTagValues, ticketTagsForIds } from "./tag-cardinality";
+import {
+  assertSingleSelectConversion,
+  convertTicketTagValues,
+  editTicketTagValues,
+  ticketTagsForIds,
+} from "./tag-cardinality";
 import type { TicketContext } from "./ticket-identity";
-import { tagValue, tagValueIds, withTagValue } from "./ticket-tags";
+import { tagValue, tagValueIds } from "./ticket-tags";
 import type { StoredTag, StoredTagOption } from "./types";
 
 const sortTag = (tag: StoredTag): StoredTag => ({ ...tag, options: [...tag.options].sort(bySortOrder) });
@@ -52,20 +57,18 @@ export const updateTicketTag = async (input: {
     type: input.type ?? tag.type,
     sortOrder: input.sortOrder ?? tag.sortOrder,
   });
-  if (next.type !== tag.type) await convertTicketTagValues(input, next);
+  if (next.type !== tag.type) await convertTicketTagValues(input.storage, next);
   return next;
 };
 
 // Removes deleted options from every ticket's value for this tag.
-const removeTicketTagOptions = async (ctx: TicketContext, tag: StoredTag, optionIds: Set<string>) =>
-  Promise.all(
-    (await ticketsCollection(ctx).list()).map((ticket) => {
-      const value = ticket.tags?.[tag.id];
-      const selected = tagValueIds(value);
-      const kept = selected.filter((id) => !optionIds.has(id));
-      if (kept.length === selected.length) return undefined;
-      return putTicket(ctx, { ...ticket, tags: withTagValue(ticket.tags, tag.id, tagValue(tag, kept, value)) });
-    }),
+const removeTicketTagOptions = (storage: ExtensionStorageApi, tag: StoredTag, optionIds: Set<string>) =>
+  editTicketTagValues(storage, tag.id, (value) =>
+    tagValue(
+      tag,
+      tagValueIds(value).filter((id) => !optionIds.has(id)),
+      value,
+    ),
   );
 
 // Removing a tag also removes its value from every ticket so no ticket points
@@ -75,13 +78,7 @@ export const deleteTicketTag = async (input: {
   resources: TicketContext["resources"];
   tagId: string;
 }) => {
-  await Promise.all(
-    (await ticketsCollection(input).list()).map((ticket) =>
-      ticket.tags?.[input.tagId] === undefined
-        ? undefined
-        : putTicket(input, { ...ticket, tags: withTagValue(ticket.tags, input.tagId, undefined) }),
-    ),
-  );
+  await editTicketTagValues(input.storage, input.tagId, () => undefined);
 
   await tagsCollection(input.storage).delete(input.tagId);
   return { tagId: input.tagId };
@@ -145,7 +142,7 @@ export const deleteTagOption = async (input: {
 }) => {
   const tag = await requireTag(input.storage, input.tagId);
   await putTag(input.storage, { ...tag, options: tag.options.filter((opt) => opt.id !== input.optionId) });
-  await removeTicketTagOptions(input, tag, new Set([input.optionId]));
+  await removeTicketTagOptions(input.storage, tag, new Set([input.optionId]));
 
   return { tagId: input.tagId, optionId: input.optionId };
 };
@@ -226,8 +223,8 @@ export const applyTagDraft = async (input: {
     options: [...kept, ...created],
   });
 
-  if (deletedIds.size > 0) await removeTicketTagOptions(input, next, deletedIds);
-  if (next.type !== tag.type) await convertTicketTagValues(input, next);
+  if (deletedIds.size > 0) await removeTicketTagOptions(input.storage, next, deletedIds);
+  if (next.type !== tag.type) await convertTicketTagValues(input.storage, next);
 
   return { tagId: input.tagId };
 };

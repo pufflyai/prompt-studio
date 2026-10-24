@@ -1,17 +1,11 @@
 // A single-select property holds one value per ticket. Planner reports conflicts and lets
-// people choose. Only the storage upgrade picks a value, by option order.
+// people choose. Only reading a ticket saved by an older build picks a value, by option order.
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { putTicket, ticketsCollection } from "./collections";
+import { ticketsCollection } from "./collections";
 import { seedDefaultTags } from "./seed";
 import type { TicketContext } from "./ticket-identity";
-import {
-  assertOneTagValue,
-  sameTicketTags,
-  tagValue,
-  tagValueIds,
-  ticketTagsFromIds,
-  withTagValue,
-} from "./ticket-tags";
+import { ticketRecords } from "./ticket-records";
+import { assertOneTagValue, tagValue, tagValueIds, ticketTagsFromIds, withTagValue } from "./ticket-tags";
 import type { StoredTag, StoredTicketTags } from "./types";
 
 // Checks every stored ticket, including archived ones and drafts, before the type changes.
@@ -32,15 +26,30 @@ export const assertSingleSelectConversion = async (
   );
 };
 
-// Stores each ticket's value in the shape of the tag's current type.
-export const convertTicketTagValues = async (ctx: TicketContext, tag: StoredTag) => {
-  for (const ticket of await ticketsCollection(ctx).list()) {
-    const value = ticket.tags?.[tag.id];
-    if (value === undefined) continue;
-    const tags = withTagValue(ticket.tags, tag.id, tagValue(tag, tagValueIds(value), value));
-    if (!sameTicketTags(tags, ticket.tags)) await putTicket(ctx, { ...ticket, tags });
+type TagValue = StoredTicketTags[string];
+
+// A bulk tag change edits only this tag's value, on the latest copy of each ticket. Saving the
+// listed tickets whole would undo an edit or sync that landed while the change ran.
+export const editTicketTagValues = async (
+  storage: ExtensionStorageApi,
+  tagId: string,
+  edit: (value: TagValue) => TagValue | undefined,
+) => {
+  const records = ticketRecords(storage);
+  for (const listed of await records.list()) {
+    if (listed.tags?.[tagId] === undefined) continue;
+    const ticket = await records.get(listed.id);
+    const value = ticket?.tags?.[tagId];
+    if (!ticket || value === undefined) continue;
+    const next = edit(value);
+    if (JSON.stringify(next) === JSON.stringify(value)) continue;
+    await records.put(ticket.id, { ...ticket, tags: withTagValue(ticket.tags, tagId, next) });
   }
 };
+
+// Stores each ticket's value in the shape of the tag's current type.
+export const convertTicketTagValues = (storage: ExtensionStorageApi, tag: StoredTag) =>
+  editTicketTagValues(storage, tag.id, (value) => tagValue(tag, tagValueIds(value), value));
 
 /** Validate the flat `tagIds` a command received and translate them to the stored object. */
 export const ticketTagsForIds = async (
