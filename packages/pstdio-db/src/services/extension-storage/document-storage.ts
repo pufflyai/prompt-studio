@@ -14,6 +14,7 @@ import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { runDocumentTransaction } from "./document-persistence";
 import { createProjectionStatistics } from "./projection-statistics";
+import { createRecordStreamStore } from "./record-stream-store";
 import { resourceDocumentId } from "./resource-document-persistence";
 import { upgradeOwnerRecords } from "./resource-record-upgrade";
 import { createResourceRecords } from "./resource-records";
@@ -76,6 +77,15 @@ export const createDocumentStorageDBService = (
     flushStatistics: statistics.flush,
     documents: {
       open: (documentId: string) => ({ transaction: transactionFor(documentId) }),
+      recordStream: (owner: StorageOwner) =>
+        createRecordStreamStore(db, owner, {
+          upgrade: () => upgrade(owner),
+          statistics,
+          metadata: transaction,
+          changed: () => {
+            for (const listener of listeners) listener(owner);
+          },
+        }),
       list: async (owner: StorageOwner) => {
         const local = await db
           .select({ id: storage_documents.document_id })

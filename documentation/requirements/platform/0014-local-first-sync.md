@@ -38,7 +38,7 @@ anything.
 | Device | A client that a user has logged into the cloud from. The client's environment ID becomes its device ID. Each device belongs to one user. |
 | Cloud project | A project (workbench) that syncs through the relay. Local projects never leave the device. |
 | CRDT | A data type that merges edits made at the same time on different machines automatically, without a server. [Yjs](https://docs.yjs.dev/) is the CRDT library this PRD assumes. |
-| Document | One CRDT unit that syncs on its own, for example one extension's records in a project, or one session transcript. |
+| Document | One CRDT unit, for example one extension record or one session transcript. The records of one extension in a project travel together through one encrypted relay document, the record stream ([ADR 0102](../../adrs/0102-record-stream-sync.md)). |
 | Update | An encrypted change to one document, produced by a client. |
 | Latest state | An encrypted copy of one document's full current state, uploaded by a client. |
 | Blob | An encrypted file stored by the relay, such as an image or an extension package. |
@@ -71,7 +71,8 @@ anything.
 - R3. The relay is never the source of truth. If the relay loses its data, any device
   with a full copy can upload it again.
 - R4. A change that writes several records or files together is delivered and applied
-  as one unit on every client. A client never shows half of it.
+  as one unit on every client. A client never shows half of it. One save of an extension's
+  records is one update in its record stream.
 - R5. Merging cannot keep rules that span records, such as "only one ticket is in
   progress". Two offline edits can break such a rule, and the extension shows or repairs
   the result. Unique resource numbers, record IDs and hand-arranged order do not fall

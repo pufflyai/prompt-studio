@@ -8,6 +8,7 @@ import {
   storage_document_updates,
   storage_documents,
   storage_record_projections,
+  storage_record_sync,
 } from "../../db/schemas.pg";
 import { resourceDocumentId } from "./resource-document-persistence";
 
@@ -52,6 +53,15 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
       and(
         eq(recovery_point_owners.workbench_id, owner.workbenchId),
         eq(recovery_point_owners.extension_id, owner.extensionId),
+      ),
+    );
+  // The device joins the record stream again, with its saves still waiting for upload dropped.
+  await tx
+    .delete(storage_record_sync)
+    .where(
+      and(
+        eq(storage_record_sync.workbench_id, owner.workbenchId),
+        eq(storage_record_sync.extension_id, owner.extensionId),
       ),
     );
   // Advancing the owner revision rejects cursors issued before the purge.

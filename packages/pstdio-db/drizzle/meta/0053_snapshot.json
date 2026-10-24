@@ -1,5 +1,5 @@
 {
-  "id": "0a3c2598-a08d-4d04-a82d-2576559dfac4",
+  "id": "baa0d160-c221-4ceb-9b70-1459c66cfa0d",
   "prevId": "53511e01-40c5-4d5a-b902-9479981ae121",
   "version": "7",
   "dialect": "postgresql",
@@ -2910,121 +2910,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.recovery_point_owners": {
-      "name": "recovery_point_owners",
-      "schema": "",
-      "columns": {
-        "workbench_id": {
-          "name": "workbench_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "hours": {
-          "name": "hours",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "revision": {
-          "name": "revision",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "records": {
-          "name": "records",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "metadata": {
-          "name": "metadata",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "recovery_point_owners_workbench_id_hours_recovery_points_workbench_id_hours_fk": {
-          "name": "recovery_point_owners_workbench_id_hours_recovery_points_workbench_id_hours_fk",
-          "tableFrom": "recovery_point_owners",
-          "tableTo": "recovery_points",
-          "columnsFrom": ["workbench_id", "hours"],
-          "columnsTo": ["workbench_id", "hours"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "recovery_point_owners_workbench_id_hours_extension_id_pk": {
-          "name": "recovery_point_owners_workbench_id_hours_extension_id_pk",
-          "columns": ["workbench_id", "hours", "extension_id"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.recovery_points": {
-      "name": "recovery_points",
-      "schema": "",
-      "columns": {
-        "workbench_id": {
-          "name": "workbench_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "hours": {
-          "name": "hours",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "captured_at": {
-          "name": "captured_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "recovery_points_workbench_id_projects_id_fk": {
-          "name": "recovery_points_workbench_id_projects_id_fk",
-          "tableFrom": "recovery_points",
-          "tableTo": "projects",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "recovery_points_workbench_id_hours_pk": {
-          "name": "recovery_points_workbench_id_hours_pk",
-          "columns": ["workbench_id", "hours"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "recovery_points_hours": {
-          "name": "recovery_points_hours",
-          "value": "\"recovery_points\".\"hours\" in (1, 12, 24)"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.resource_anchors": {
       "name": "resource_anchors",
       "schema": "",
@@ -3860,6 +3745,176 @@
         "storage_documents_workbench_id_extension_id_document_id_pk": {
           "name": "storage_documents_workbench_id_extension_id_document_id_pk",
           "columns": ["workbench_id", "extension_id", "document_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.storage_record_outbox": {
+      "name": "storage_record_outbox",
+      "schema": "",
+      "columns": {
+        "sequence": {
+          "name": "sequence",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "workbench_id": {
+          "name": "workbench_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "frame": {
+          "name": "frame",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assets": {
+          "name": "assets",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        }
+      },
+      "indexes": {
+        "storage_record_outbox_owner_idx": {
+          "name": "storage_record_outbox_owner_idx",
+          "columns": [
+            {
+              "expression": "workbench_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "extension_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sequence",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "storage_record_outbox_sync_fk": {
+          "name": "storage_record_outbox_sync_fk",
+          "tableFrom": "storage_record_outbox",
+          "tableTo": "storage_record_sync",
+          "columnsFrom": ["workbench_id", "extension_id"],
+          "columnsTo": ["workbench_id", "extension_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.storage_record_sync": {
+      "name": "storage_record_sync",
+      "schema": "",
+      "columns": {
+        "workbench_id": {
+          "name": "workbench_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "joined": {
+          "name": "joined",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "after": {
+          "name": "after",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "state_id": {
+          "name": "state_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "through": {
+          "name": "through",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "pending_bytes": {
+          "name": "pending_bytes",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "state_bytes": {
+          "name": "state_bytes",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "skipped": {
+          "name": "skipped",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "storage_record_sync_workbench_id_projects_id_fk": {
+          "name": "storage_record_sync_workbench_id_projects_id_fk",
+          "tableFrom": "storage_record_sync",
+          "tableTo": "projects",
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "storage_record_sync_workbench_id_extension_id_pk": {
+          "name": "storage_record_sync_workbench_id_extension_id_pk",
+          "columns": ["workbench_id", "extension_id"]
         }
       },
       "uniqueConstraints": {},
