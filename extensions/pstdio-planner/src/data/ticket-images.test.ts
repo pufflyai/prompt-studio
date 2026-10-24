@@ -4,9 +4,10 @@ import { makeCommandArgs } from "../commands/command-context.fixture";
 import { pullTicketCommand } from "../commands/pull-ticket";
 import { saveTicketCommand } from "../commands/save-ticket";
 import { writeTicketCommand } from "../commands/write-ticket";
-import { changeTicketFiles, ticketsCollection } from "./collections";
+import { changeTicketFiles } from "./collections";
 import { ticketFilesDir } from "./draft-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
+import { ticketContext, ticketsCollection } from "./ticket-context.fixture";
 import { writeTicketImageCheckout } from "./ticket-image-checkout";
 import { pullTicketImages, saveTicketImages } from "./ticket-images";
 
@@ -94,11 +95,17 @@ describe("ticket images", () => {
     const ticket = await readTicket();
     const first = await upload("proof.png", new Uint8Array([1]));
     const second = await upload("proof.png", new Uint8Array([2]));
-    await changeTicketFiles(storage, ticket.id, async (stored) => ({ ...stored, attachments: [first, second] }));
+    await changeTicketFiles(ticketContext(storage), ticket.id, async (stored) => ({
+      ...stored,
+      attachments: [first, second],
+    }));
     projectFiles.files.clear();
     await pull();
     const later = await upload("proof (2).png", new Uint8Array([3]));
-    await changeTicketFiles(storage, ticket.id, async (stored) => ({ ...stored, attachments: [first, second, later] }));
+    await changeTicketFiles(ticketContext(storage), ticket.id, async (stored) => ({
+      ...stored,
+      attachments: [first, second, later],
+    }));
     await save();
     const saved = await readTicket();
     expect(saved.attachments?.map(({ id }) => id)).toEqual([first.id, second.id, later.id]);

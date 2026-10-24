@@ -4,7 +4,7 @@ import { fileNameFromPath, ticketFilesDir } from "./draft-storage";
 import { validateTicketFileName } from "./ticket-file-name";
 import { readTicketImageCheckout, writeTicketImageCheckout } from "./ticket-image-checkout";
 import { ticketImagePaths } from "./ticket-image-paths";
-import type { StoredTicket } from "./types";
+import type { Ticket } from "./types";
 
 export const isImagePath = (path: string) => imageMimeType(path) !== null;
 
@@ -20,7 +20,7 @@ const sha256 = async (data: Uint8Array) => {
 export const saveTicketImages = async (
   storage: ExtensionStorageApi,
   projectFiles: ArtifactMount,
-  ticket: StoredTicket,
+  ticket: Ticket,
   paths: string[],
 ) => {
   const files = storage.scope({ type: "resource", resource: { type: "ticket", id: ticket.id } }).files;
@@ -59,11 +59,7 @@ export const saveTicketImages = async (
   };
 };
 
-export const pullTicketImages = async (
-  storage: ExtensionStorageApi,
-  projectFiles: ArtifactMount,
-  ticket: StoredTicket,
-) => {
+export const pullTicketImages = async (storage: ExtensionStorageApi, projectFiles: ArtifactMount, ticket: Ticket) => {
   const files = storage.scope({ type: "resource", resource: { type: "ticket", id: ticket.id } }).files;
   const checkout = await readTicketImageCheckout(projectFiles, ticket.shorthand);
   const images = ticketImagePaths(ticket, checkout);

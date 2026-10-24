@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import type { CommandSource } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt, readAttempt } from "../data/attempt-storage";
-import { putTicket, ticketsCollection } from "../data/collections";
 import { hasPendingImplementationInput } from "../data/implementation-input";
 import {
   hasPendingInput,
@@ -10,6 +9,7 @@ import {
   REVIEW_OUTCOMES_COLLECTION,
   reviewRequestsCollection,
 } from "../data/review-request-storage";
+import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
 import { reviewRequestCleanupHook } from "../hooks/review-request-cleanup";
 import { makeCommandContext } from "./command-context.fixture";
 import {

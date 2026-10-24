@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
-import { changeTicketFiles, ticketsCollection } from "../data/collections";
+import { changeTicketFiles } from "../data/collections";
 import { ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
 import { parseTicketFrontmatter, stripFrontmatter } from "../data/frontmatter";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import { readTicketFileContent, storeTicketFileContent } from "../data/ticket-file-content";
 import { defaultProjectRoot, makeCommandArgs } from "./command-context.fixture";
 import { listTicketFilesCommand } from "./list-ticket-files";
@@ -180,7 +181,7 @@ describe("draft workflow", () => {
       ...makeCommandArgs({ storage, params: { title: "Seeded" }, overrides: { projectFiles } }),
     );
     const [stored] = await ticketsCollection(storage).list();
-    await changeTicketFiles(storage, stored.id, async (ticket) => ({
+    await changeTicketFiles(ticketContext(storage), stored.id, async (ticket) => ({
       ...ticket,
       files: [
         {
@@ -227,7 +228,7 @@ describe("draft workflow", () => {
       ...makeCommandArgs({ storage, params: { title: "Seeded" }, overrides: { projectFiles } }),
     );
     const [stored] = await ticketsCollection(storage).list();
-    await changeTicketFiles(storage, stored.id, async (ticket) => ({
+    await changeTicketFiles(ticketContext(storage), stored.id, async (ticket) => ({
       ...ticket,
       files: [{ id: "f1", name: "only-storage.md", blobId: "unused", createdAt: "x", updatedAt: "x" }],
     }));

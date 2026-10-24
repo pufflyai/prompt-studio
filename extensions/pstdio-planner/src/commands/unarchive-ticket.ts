@@ -21,12 +21,12 @@ export const unarchiveTicketCommand = defineCommand({
     },
   ],
   async run(ctx, commandParams) {
-    const existing = await findTicket(ctx.storage, ticketRefFromCommandContext(ctx, commandParams));
+    const existing = await findTicket(ctx, ticketRefFromCommandContext(ctx, commandParams));
     if (!existing) return null;
     if (!existing.archived) return existing;
 
     const next = { ...existing, archived: false, updatedAt: new Date().toISOString() };
-    await ticketsCollection(ctx.storage).put(next.id, next);
+    await ticketsCollection(ctx).put(next.id, next);
     await ctx.events.emit(plannerTicketsChanged, { ticketId: next.id });
     return next;
   },

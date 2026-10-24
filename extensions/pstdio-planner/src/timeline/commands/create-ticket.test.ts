@@ -2,15 +2,15 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "../../commands/command-context.fixture";
 import { createTicketCommand as createPlannerTicket } from "../../commands/create-ticket";
-import { ticketsCollection } from "../../data/collections";
 import { createTagOption, createTicketTag } from "../../data/tag-operations";
+import { ticketContext, ticketsCollection } from "../../data/ticket-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { loadPlan } from "./plan-store";
 
 test("creates timeline tickets through Planner with body, properties, prerequisites, and milestone", async () => {
   const storage = createMemoryStorage();
-  const tag = await createTicketTag({ storage, name: "Track", type: "single_select" });
-  const track = await createTagOption({ storage, tagId: tag.id, name: "Product" });
+  const tag = await createTicketTag({ ...ticketContext(storage), name: "Track", type: "single_select" });
+  const track = await createTagOption({ ...ticketContext(storage), tagId: tag.id, name: "Product" });
   const prerequisite = await createPlannerTicket.run(...makeCommandArgs({ storage, params: { content: "First" } }));
   const [ctx] = makeCommandArgs({ storage, params: {} });
   const deadline = { id: "preview", date: "2026-10-15", name: "Preview" };

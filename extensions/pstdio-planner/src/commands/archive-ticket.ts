@@ -1,7 +1,7 @@
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
-import type { StoredTicket } from "../data/types";
+import type { Ticket } from "../data/types";
 import { plannerTicketsChanged } from "../events";
 import { ticketMenuSlots } from "../resource-kinds";
 import { ticketRefFromCommandContext } from "./ticket-command-ref";
@@ -10,10 +10,10 @@ import { deleteUnusedLinkedWorkspaces, type TicketCleanupContext } from "./ticke
 
 const ARCHIVE_ALL_COLUMN_ACTION = "archive_all";
 
-const persistArchivedTickets = async (ctx: TicketCleanupContext, tickets: StoredTicket[]) => {
+const persistArchivedTickets = async (ctx: TicketCleanupContext, tickets: Ticket[]) => {
   const updatedAt = new Date().toISOString();
   const archivedTickets = tickets.map((ticket) => ({ ...ticket, archived: true, updatedAt }));
-  const collection = ticketsCollection(ctx.storage);
+  const collection = ticketsCollection(ctx);
 
   await Promise.all(archivedTickets.map((ticket) => collection.put(ticket.id, ticket)));
 
@@ -35,7 +35,7 @@ export const archiveTicketCommand = defineCommand({
     },
   ],
   async run(ctx, commandParams) {
-    const existing = await findTicket(ctx.storage, ticketRefFromCommandContext(ctx, commandParams));
+    const existing = await findTicket(ctx, ticketRefFromCommandContext(ctx, commandParams));
     if (!existing) return null;
 
     const [next] = await persistArchivedTickets(ctx, [existing]);
@@ -52,12 +52,12 @@ export const archiveTicketCommand = defineCommand({
 });
 
 export const archiveTicketColumnAction = async (
-  ctx: Pick<ExtensionContextBase, "events" | "notify" | "storage" | "workspaces" | "settings">,
+  ctx: Pick<ExtensionContextBase, "events" | "notify" | "storage" | "workspaces" | "settings" | "resources">,
   input: { columnId: string; actionId: string },
 ) => {
   if (input.actionId !== ARCHIVE_ALL_COLUMN_ACTION) return { archived: [] };
 
-  const tickets = (await ticketsCollection(ctx.storage).list()).filter(
+  const tickets = (await ticketsCollection(ctx).list()).filter(
     (ticket) => !ticket.archived && ticket.statusId === input.columnId,
   );
   const archived = await persistArchivedTickets(ctx, tickets);

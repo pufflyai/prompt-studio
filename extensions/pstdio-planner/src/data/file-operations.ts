@@ -2,6 +2,7 @@ import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { changeTicketFiles } from "./collections";
 import { storeTicketFileContent } from "./ticket-file-content";
 import { validateTicketFileName } from "./ticket-file-name";
+import type { TicketContext } from "./ticket-identity";
 import type { StoredTicketFile } from "./types";
 
 // Creating from the files tree may run without a prompt, so creation falls back
@@ -14,8 +15,13 @@ const nextUntitledName = (files: StoredTicketFile[]) => {
   return `untitled-${index}.md`;
 };
 
-export const createTicketFile = async (input: { storage: ExtensionStorageApi; ticketId: string; name?: string }) => {
-  const next = await changeTicketFiles(input.storage, input.ticketId, async (ticket) => {
+export const createTicketFile = async (input: {
+  storage: ExtensionStorageApi;
+  resources: TicketContext["resources"];
+  ticketId: string;
+  name?: string;
+}) => {
+  const next = await changeTicketFiles(input, input.ticketId, async (ticket) => {
     const now = new Date().toISOString();
     const name = validateTicketFileName(input.name?.trim() || nextUntitledName(ticket.files ?? []));
     const file: StoredTicketFile = {
@@ -33,13 +39,14 @@ export const createTicketFile = async (input: { storage: ExtensionStorageApi; ti
 // Each change starts from the stored file, so a rename keeps a body saved a moment earlier.
 export const updateTicketFile = async (input: {
   storage: ExtensionStorageApi;
+  resources: TicketContext["resources"];
   ticketId: string;
   fileId: string;
   content?: string;
   name?: string;
 }) => {
   if (input.name !== undefined) validateTicketFileName(input.name);
-  const next = await changeTicketFiles(input.storage, input.ticketId, async (ticket) => {
+  const next = await changeTicketFiles(input, input.ticketId, async (ticket) => {
     const previous = ticket.files?.find((file) => file.id === input.fileId);
     if (!previous) return ticket;
     const now = new Date().toISOString();
@@ -55,8 +62,13 @@ export const updateTicketFile = async (input: {
   return next.files?.find((file) => file.id === input.fileId) ?? null;
 };
 
-export const deleteTicketFile = async (input: { storage: ExtensionStorageApi; ticketId: string; fileId: string }) => {
-  await changeTicketFiles(input.storage, input.ticketId, async (ticket) => ({
+export const deleteTicketFile = async (input: {
+  storage: ExtensionStorageApi;
+  resources: TicketContext["resources"];
+  ticketId: string;
+  fileId: string;
+}) => {
+  await changeTicketFiles(input, input.ticketId, async (ticket) => ({
     ...ticket,
     files: (ticket.files ?? []).filter((file) => file.id !== input.fileId),
     updatedAt: new Date().toISOString(),

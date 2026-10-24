@@ -1,7 +1,7 @@
-import type { StoredTicket } from "./types";
+import type { Ticket } from "./types";
 
 export type TicketSummary = Pick<
-  StoredTicket,
+  Ticket,
   "id" | "shorthand" | "title" | "parentId" | "archived" | "statusId" | "tagIds" | "createdAt" | "updatedAt"
 >;
 

@@ -9,14 +9,12 @@ const BODY_PLACEHOLDER = "Write the ticket description…";
 const FILE_PLACEHOLDER = "Write…";
 
 export const getTicketContent = async (
-  ctx: Pick<ExtensionContextBase, "storage">,
+  ctx: Pick<ExtensionContextBase, "storage" | "resources">,
   input: { id?: string; resource?: ResourceRef },
 ) => {
   const ticketId = input.id ?? (input.resource?.type === "ticket" ? input.resource.id : undefined);
   if (!ticketId) return { content: "", placeholder: BODY_PLACEHOLDER };
-  const ticket = input.id
-    ? await findStoredTicket(ctx.storage, input.id)
-    : await ticketsCollection(ctx.storage).get(ticketId);
+  const ticket = input.id ? await findStoredTicket(ctx, input.id) : await ticketsCollection(ctx).get(ticketId);
   if (!ticket) return { content: "", placeholder: BODY_PLACEHOLDER };
 
   const documentId = selectedDocumentFromResource(input.resource);

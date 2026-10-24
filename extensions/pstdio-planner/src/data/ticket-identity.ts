@@ -1,22 +1,37 @@
-import type { CommandContext } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "./collections";
+import type { ExtensionContextBase, ResourceIdentity } from "@pstdio/sdk/extensions";
 
-export interface TicketIdentityMigration {
-  tickets: { id: string; shorthand: string }[];
-  complete: boolean;
-}
-export const identityMigrations = (ctx: Pick<CommandContext, "storage">) =>
-  ctx.storage.collection<TicketIdentityMigration>("identity-migrations");
-export const IDENTITY_MIGRATION = "ticket-identities-v1";
+export type TicketContext = Pick<ExtensionContextBase, "storage" | "resources">;
 
-export const allocateTicketIdentity = async (ctx: CommandContext) => {
-  const migrations = identityMigrations(ctx);
-  let migration = await migrations.get(IDENTITY_MIGRATION);
-  if (!migration && (await ticketsCollection(ctx.storage).list()).length === 0) {
-    await migrations.createIfAbsent(IDENTITY_MIGRATION, { tickets: [], complete: true });
-    migration = await migrations.get(IDENTITY_MIGRATION);
-  }
-  if (!migration?.complete)
-    throw new Error("Run pst pstdio-planner migrate-ticket-identities before creating tickets in this project.");
-  return ctx.resources.allocate({ kind: "ticket" });
+export const ticketWithIdentity = <T extends { id: string }>(ticket: T, identity: ResourceIdentity | null) => {
+  if (!identity) throw new Error(`Core identity is missing for ticket "${ticket.id}"`);
+  return {
+    ...ticket,
+    shorthand: identity.shorthand,
+    ...(identity.aliases.length ? { aliases: identity.aliases } : {}),
+  };
 };
+
+export const withTicketIdentity = async <T extends { id: string }>(ctx: TicketContext, ticket: T) =>
+  ticketWithIdentity(ticket, await ctx.resources.identity({ kind: "ticket", id: ticket.id }));
+
+// Ticket records and core numbers sync separately, so a synced record can arrive before its
+// number. Reads skip such a record until its number arrives; writes still require the number.
+export const readTicketIdentity = async <T extends { id: string }>(ctx: TicketContext, ticket: T) => {
+  const identity = await ctx.resources.identity({ kind: "ticket", id: ticket.id });
+  return identity ? ticketWithIdentity(ticket, identity) : undefined;
+};
+
+export const withTicketIdentities = async <T extends { id: string }>(ctx: TicketContext, tickets: T[]) => {
+  const result: ReturnType<typeof ticketWithIdentity<T>>[] = [];
+  for (let offset = 0; offset < tickets.length; offset += 100) {
+    const batch = tickets.slice(offset, offset + 100);
+    const identities = await ctx.resources.identityMany({ kind: "ticket", ids: batch.map((ticket) => ticket.id) });
+    batch.forEach((ticket, index) => {
+      const identity = identities[index];
+      if (identity) result.push(ticketWithIdentity(ticket, identity));
+    });
+  }
+  return result;
+};
+
+export const allocateTicketIdentity = (ctx: TicketContext) => ctx.resources.allocate({ kind: "ticket" });

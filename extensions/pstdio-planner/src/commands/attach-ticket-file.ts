@@ -11,10 +11,10 @@ export const attachTicketFileCommand = defineCommand({
     ref: params.json<StoredTicketAttachment, { required: true }>({ required: true }),
   },
   async run(ctx, commandParams) {
-    const existing = await ticketsCollection(ctx.storage).get(commandParams.ticketId);
+    const existing = await ticketsCollection(ctx).get(commandParams.ticketId);
     if (!existing) return null;
 
-    const next = await changeTicketFiles(ctx.storage, existing.id, async (stored) => ({
+    const next = await changeTicketFiles(ctx, existing.id, async (stored) => ({
       ...stored,
       attachments: [
         ...(stored.attachments ?? []).filter((attachment) => attachment.id !== commandParams.ref.id),
@@ -35,10 +35,10 @@ export const detachTicketFileCommand = defineCommand({
     fileId: params.text({ required: true }),
   },
   async run(ctx, commandParams) {
-    const existing = await ticketsCollection(ctx.storage).get(commandParams.ticketId);
+    const existing = await ticketsCollection(ctx).get(commandParams.ticketId);
     if (!existing) return null;
 
-    const next = await changeTicketFiles(ctx.storage, existing.id, async (stored) => ({
+    const next = await changeTicketFiles(ctx, existing.id, async (stored) => ({
       ...stored,
       attachments: (stored.attachments ?? []).filter((attachment) => attachment.id !== commandParams.fileId),
       updatedAt: new Date().toISOString(),
