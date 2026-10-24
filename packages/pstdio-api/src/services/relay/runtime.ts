@@ -1,12 +1,15 @@
 import { createRelayAccess } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
+import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
 import { startAutomationSync } from "./automations";
 import { startCoreDocumentSync } from "./core-documents";
 import { startRelayExtension } from "./extension-owner";
 import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
+import { startPublishedExtensions } from "./publications";
+import { createWorkbenchConnections } from "./workbench-connections";
 
 export type RelayWorkbench = {
   accountId: string;
@@ -28,10 +31,19 @@ export const startRelayRuntime = async (input: {
   const access = new Map<string, ReturnType<typeof createRelayAccess>>();
   const controller = new AbortController();
   const { deps } = input;
-  const coreConnections = new Map<string, ReturnType<typeof startCoreDocumentSync>>();
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
-  const automations = new Map<string, ReturnType<typeof startAutomationSync>>();
-  const personal = new Map<string, ReturnType<typeof startRelayPersonalHistory>>();
+  const core = (config: RelayWorkbench) => ({
+    config,
+    deps,
+    access: access.get(config.workbenchId)!,
+    signal: controller.signal,
+    statusChanged: () => statusChanged(config.workbenchId),
+  });
+  const publications = createWorkbenchConnections((config) => startPublishedExtensions(core(config)));
+  const automations = createWorkbenchConnections((config) => startAutomationSync(core(config)));
+  const personal = createWorkbenchConnections((config) => startRelayPersonalHistory(core(config)));
+  const coreDocuments = createWorkbenchConnections((config) => startCoreDocumentSync(core(config)));
+  const coreOwners = [publications, automations, personal, coreDocuments];
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
     connection.close();
     await connection.done;
@@ -50,37 +62,8 @@ export const startRelayRuntime = async (input: {
     if (!controller.signal.aborted) input.statusChanged?.(workbenchId);
   };
   let retry: ReturnType<typeof setTimeout> | undefined;
-  const startCoreOwners = (workbenchId: string, config: RelayWorkbench) => {
-    if (!automations.has(workbenchId))
-      automations.set(
-        workbenchId,
-        startAutomationSync({
-          config,
-          deps,
-          access: access.get(workbenchId)!,
-          signal: controller.signal,
-          statusChanged: () => statusChanged(workbenchId),
-        }),
-      );
-    if (!personal.has(workbenchId))
-      personal.set(
-        workbenchId,
-        startRelayPersonalHistory({ config, deps, signal: controller.signal, access: access.get(workbenchId)! }),
-      );
-    if (!coreConnections.has(workbenchId))
-      coreConnections.set(
-        workbenchId,
-        startCoreDocumentSync({
-          config,
-          deps,
-          access: access.get(workbenchId)!,
-          signal: controller.signal,
-          statusChanged: () => statusChanged(workbenchId),
-        }),
-      );
-  };
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
-    startCoreOwners(workbenchId, config);
+    for (const owners of coreOwners) owners.ensure(config);
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
     if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
     const workspace = await deps.workspaceService.getDefault(workbenchId);
@@ -149,6 +132,11 @@ export const startRelayRuntime = async (input: {
   };
   const stopStorage = deps.extensionStorageService.watch((owner) => {
     if (!workbenches.has(owner.workbenchId)) return;
+    if (owner.extensionId === publishedExtensionsId) {
+      publications.get(owner.workbenchId)?.wake();
+      statusChanged(owner.workbenchId);
+      return;
+    }
     notify(owner.workbenchId);
     statusChanged(owner.workbenchId);
     const connection = connections.get(JSON.stringify([owner.workbenchId, owner.extensionId]));
@@ -162,12 +150,13 @@ export const startRelayRuntime = async (input: {
   });
   await refresh();
   return {
-    // Every owner of project data reports: core documents and each enabled extension.
+    // Every owner of project data reports: core resource numbers and each enabled extension.
     // An owner that has not started yet counts as not downloaded.
     async status(workbenchId: string) {
       const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
       const owners = [
-        coreConnections.get(workbenchId),
+        coreDocuments.get(workbenchId),
+        publications.get(workbenchId),
         automations.get(workbenchId),
         ...snapshot.enabledSources.map(({ installedSource }) =>
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
@@ -193,18 +182,7 @@ export const startRelayRuntime = async (input: {
           .map(([id]) => id),
       );
       for (const id of changed) {
-        const automation = automations.get(id);
-        automation?.close();
-        await automation?.done;
-        automations.delete(id);
-        const previous = personal.get(id);
-        previous?.close();
-        if (previous) await previous.done;
-        personal.delete(id);
-        const coreConnection = coreConnections.get(id);
-        coreConnection?.close();
-        await coreConnection?.done;
-        coreConnections.delete(id);
+        for (const owners of coreOwners) await owners.remove(id);
         workbenches.delete(id);
         access.delete(id);
       }
@@ -225,15 +203,11 @@ export const startRelayRuntime = async (input: {
       stopEvents();
       clearTimeout(retry);
       controller.abort();
-      for (const connection of automations.values()) connection.close();
-      for (const connection of coreConnections.values()) connection.close();
+      for (const owners of coreOwners) owners.close();
       for (const connection of connections.values()) connection.close();
-      for (const connection of personal.values()) connection.close();
       await running;
-      await Promise.all([...automations.values()].map((connection) => connection.done));
-      await Promise.all([...coreConnections.values()].map((connection) => connection.done));
+      for (const owners of coreOwners) await owners.done();
       await Promise.all([...connections.values()].map((connection) => connection.done));
-      await Promise.all([...personal.values()].map((connection) => connection.done));
     },
   };
 };

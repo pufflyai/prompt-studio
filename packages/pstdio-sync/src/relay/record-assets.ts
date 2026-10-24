@@ -79,9 +79,16 @@ export const createRecordAssets = (input: {
       for (const reference of references) {
         if (await complete(reference.asset)) continue;
         if (!(await complete(reference.encrypted))) {
-          const bytes = await require().blobs.get(reference.blobId);
-          if ((await sha256(bytes)) !== reference.encrypted.sha256) throw new UnreadableSyncData();
-          await save(reference.encrypted, bytes);
+          const { assets, blobs } = require();
+          // A ranged read lets an interrupted download continue from the bytes already stored. The
+          // asset store checks those bytes itself and rejects a mismatch as unreadable.
+          const read = blobs.read;
+          if (read) await assets.receive(reference.encrypted, (offset) => read(reference.blobId, offset));
+          else {
+            const bytes = await blobs.get(reference.blobId);
+            if ((await sha256(bytes)) !== reference.encrypted.sha256) throw new UnreadableSyncData();
+            await save(reference.encrypted, bytes);
+          }
         }
         const plain = await openBlob(input.space, reference.blobId, await read(reference.encrypted));
         if ((await sha256(plain)) !== reference.asset.sha256) throw new UnreadableSyncData();

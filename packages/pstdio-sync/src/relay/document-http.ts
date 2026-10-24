@@ -90,6 +90,15 @@ export const createDocumentRelay = (input: {
     await (await checked(await post(blob(blobId, "finish"), {}))).body?.cancel();
   };
 
+  const readBlob = async (blobId: string, offset: number) => {
+    const response = await post(blob(blobId, "read"), { offset });
+    if (response.status === 404) {
+      await response.body?.cancel();
+      throw new DocumentBlobMissing();
+    }
+    return (await checked(response)).body!;
+  };
+
   const relay = {
     read: async (after) =>
       readResultSchema.parse(await (await checked(await post(document("read"), { after }))).json()),
@@ -127,14 +136,8 @@ export const createDocumentRelay = (input: {
     },
     blobs: {
       put: (blobId, bytes) => putBlob(blobId, bytes, "begin"),
-      async get(blobId) {
-        const response = await post(blob(blobId, "read"), { offset: 0 });
-        if (response.status === 404) {
-          await response.body?.cancel();
-          throw new DocumentBlobMissing();
-        }
-        return new Uint8Array(await (await checked(response)).arrayBuffer());
-      },
+      read: readBlob,
+      get: async (blobId) => new Uint8Array(await new Response(await readBlob(blobId, 0)).arrayBuffer()),
     },
   } satisfies DocumentRelay;
   return {
