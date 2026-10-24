@@ -1,13 +1,13 @@
 import { expect, test } from "bun:test";
 import { createTestApp } from "../../test-utils/create-test-app";
-import { startResourceNumberSync } from "./resource-numbers";
+import { startCoreDocumentSync } from "./core-documents";
 
-test("removing resource sync closes while access renewal is still pending", async () => {
+test("removing core document sync closes while access renewal is still pending", async () => {
   const app = await createTestApp();
   const entered = Promise.withResolvers<void>();
   const renewal = Promise.withResolvers<{ token: string; expiresAt: string }>();
   const controller = new AbortController();
-  const connection = startResourceNumberSync({
+  const connection = startCoreDocumentSync({
     deps: app.deps,
     config: {
       accountId: "account",

@@ -29,9 +29,14 @@ const seedWorkspaces = async (seed: Transaction, rows: readonly LegacyWorkspace[
 
 // Builds a database at the last migration before the folder index, then opens it with the current host.
 const upgradeFrom = async (seed: (tx: Transaction) => Promise<void>) => {
+  const started = performance.now();
+  const phase = (name: string) =>
+    console.info(`[workspace folder upgrade] ${name} +${Math.round(performance.now() - started)}ms`);
+  phase("create legacy fixture");
   const root = await mkdtemp(join(tmpdir(), "shared-workspace-folders-"));
   const old = new PGlite();
   await old.waitReady;
+  phase("legacy engine ready");
   let image: Blob;
   try {
     await migrateThrough(
@@ -43,12 +48,17 @@ const upgradeFrom = async (seed: (tx: Transaction) => Promise<void>) => {
     image = await old.dumpDataDir("none");
   } finally {
     await old.close();
+    phase("legacy fixture closed");
   }
   await new Bun.Archive(image).extract(join(root, "database"));
-  const upgraded = await createDb({ path: join(root, "database") });
+  phase("legacy home extracted");
+  const upgraded = await createDb({ path: join(root, "database"), onPhase: phase });
   const close = async () => {
+    phase("close upgraded database");
     await upgraded.close();
+    phase("remove fixture");
     await rm(root, { recursive: true, force: true });
+    phase("fixture removed");
   };
   return { db: upgraded.db, workspaces: createWorkspacesDBService(upgraded.db), close };
 };

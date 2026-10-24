@@ -12,6 +12,7 @@ const CLAUDE_CODE_ID = testHarnessId("claude-code");
 
 let app: OpenAPIHono<AppBindings>;
 let eventBus: Awaited<ReturnType<typeof createTestApp>>["eventBus"];
+let deps: Awaited<ReturnType<typeof createTestApp>>["deps"];
 let closeApp: () => Promise<void>;
 let tempRoot: string;
 
@@ -20,6 +21,7 @@ beforeAll(async () => {
   ({
     app,
     eventBus,
+    deps,
     close: closeApp,
   } = await createTestApp({
     databasePath: ":memory:",
@@ -43,6 +45,19 @@ const createProject = async (name: string) => {
 };
 
 describe("PATCH /v1/projects/:id", () => {
+  test("a rename reaches the synced project info, so other and new devices get it", async () => {
+    const project = await createProject("Notes");
+
+    const res = await app.request(`/v1/projects/${project.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Team notes" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect((await deps.projectInfoService.read(project.id)).name).toBe("Team notes");
+  });
+
   test("returns 404 for missing project", async () => {
     const res = await app.request("/v1/projects/missing", {
       method: "PATCH",

@@ -8,6 +8,7 @@ import {
   createTestHarnessRegistry,
   testHarnessId,
 } from "../../harnesses/test-harness-registry";
+import { ProjectFolderMissingError } from "../../projects/project-folder-missing";
 
 test("a new conversation discovers native commands without creating a session or starting a turn", async () => {
   let starts = 0;
@@ -71,6 +72,47 @@ test("a new conversation discovers native commands without creating a session or
       body: JSON.stringify({ project_id: project.id, agent: testHarnessId("draft-commands"), workspace_id: "missing" }),
     });
     expect(invalid.status).toBe(404);
+  } finally {
+    await app.close();
+  }
+});
+
+test("a new conversation in a project without a folder discovers commands only for harnesses that need no folder", async () => {
+  const state = { slashCommands: true, commands: [], modes: [] };
+  const chatInputs: unknown[] = [];
+  const registry = createTestHarnessRegistry([
+    createTestHarnessRecord("coder", { provider: { getCommandState: () => state } }),
+    createTestHarnessRecord("chat", {
+      provider: {
+        cwdRequirement: "optional",
+        getCommandState: (_ctx, input) => {
+          chatInputs.push(input);
+          return state;
+        },
+      },
+    }),
+  ]);
+  const app = await createTestApp({ harnessRegistry: registry });
+  try {
+    // A cloud project from another device has its data here but no folder yet.
+    const project = await app.deps.projectService.create({ name: "Cloud notes" });
+    await app.deps.workspaceService.ensureDefault({ project_id: project.id, name: "Project folder" });
+    const discover = (agent: string) =>
+      app.app.request("/v1/sessions/harness-command-state", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ project_id: project.id, agent: testHarnessId(agent) }),
+      });
+
+    const coding = await discover("coder");
+    expect(coding.status).toBe(409);
+    expect(await coding.json()).toEqual({
+      error: new ProjectFolderMissingError().message,
+      code: "project_folder_missing",
+    });
+
+    expect((await discover("chat")).status).toBe(200);
+    expect(chatInputs).toEqual([expect.objectContaining({ cwd: undefined, workspace: undefined })]);
   } finally {
     await app.close();
   }

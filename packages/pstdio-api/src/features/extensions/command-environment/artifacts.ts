@@ -17,6 +17,7 @@ export const createArtifactsApi = (
     extensionId: string;
     name: string;
     onWrite: (path: string) => void;
+    assertWritable?: () => Promise<void>;
     projectId: string;
     signal?: AbortSignal;
   },
@@ -42,6 +43,7 @@ export const createArtifactsApi = (
         return createFileMount(join(storageRoot, mount.relativePath), input.signal);
     }
     return createSharedArtifactMount(deps, {
+      assertWritable: input.assertWritable,
       projectId: input.projectId,
       extensionId: input.extensionId,
       repoRoot: root,

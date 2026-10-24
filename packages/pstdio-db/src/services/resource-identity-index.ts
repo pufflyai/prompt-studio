@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import type { ResourceIdentity } from "pstdio-api-contracts/extension-kernel";
-import { resourceNumbersDocumentId, resourceNumbersOwnerId } from "pstdio-sync";
+import { coreOwnerId, resourceNumbersDocumentId } from "pstdio-sync";
 import type { DbClient } from "../db/connection.pglite";
 import {
   storage_resource_aliases as aliases,
@@ -20,7 +20,7 @@ export const upgradeResourceIdentityIndexes = async (
     .leftJoin(projections, eq(projections.workbench_id, storage_documents.workbench_id))
     .where(
       and(
-        eq(storage_documents.extension_id, resourceNumbersOwnerId),
+        eq(storage_documents.extension_id, coreOwnerId),
         eq(storage_documents.document_id, resourceNumbersDocumentId),
         or(isNull(projections.workbench_id), ne(projections.revision, storage_documents.revision)),
       ),
@@ -28,7 +28,7 @@ export const upgradeResourceIdentityIndexes = async (
   for (const { projectId } of outdated)
     await documents.documents
       .open(resourceNumbersDocumentId)
-      .transaction({ workbenchId: projectId, extensionId: resourceNumbersOwnerId }, async (state) => {
+      .transaction({ workbenchId: projectId, extensionId: coreOwnerId }, async (state) => {
         if (!state.rebuildProjection) throw new Error("Resource identity projection upgrade is unavailable");
         await state.rebuildProjection();
       });
@@ -51,7 +51,7 @@ export const createResourceIdentityIndex = (db: DbClient, ready: Promise<void>) 
       .where(
         and(
           eq(storage_documents.workbench_id, projectId),
-          eq(storage_documents.extension_id, resourceNumbersOwnerId),
+          eq(storage_documents.extension_id, coreOwnerId),
           eq(storage_documents.document_id, resourceNumbersDocumentId),
         ),
       );

@@ -141,7 +141,7 @@ test("Auto Build assigns recovery to the existing implementation owner without a
 });
 
 test("an owner can realign and submit a root after rebasing to another target", async () => {
-  const f = await stackSubmissionFixture();
+  const f = await stackSubmissionFixture({ trace: true });
   try {
     const oldBase = await f.commit("old-target.txt");
     await putAttempt(f.storage, { ...f.attempt, base: { workspaceId: null, headSha: oldBase } });

@@ -6,7 +6,11 @@ type ProjectRecord = {
   default_agent_model?: string | null;
 };
 
-export type ResolveAgentResult = { type: "error"; error: string } | { type: "ok"; agentId: string | undefined };
+type Harness = NonNullable<Awaited<ReturnType<HarnessRegistryService["get"]>>>;
+
+export type ResolveAgentResult =
+  | { type: "error"; error: string }
+  | { type: "ok"; agentId: string | undefined; harness: Harness | undefined };
 
 // Harness availability per project is extension enablement: a harness resolves for a
 // project iff its extension is enabled there. Resolution order: explicit request,
@@ -19,19 +23,17 @@ export const resolveCreateSessionAgent = async (
   const projectId = project?.id;
 
   if (inputAgent) {
-    if (await harnessRegistry.get(inputAgent, { projectId })) {
-      return { type: "ok", agentId: inputAgent };
-    }
+    const harness = await harnessRegistry.get(inputAgent, { projectId });
+    if (harness) return { type: "ok", agentId: inputAgent, harness };
     return { type: "error", error: `Agent '${inputAgent}' is not enabled for this project.` };
   }
 
   const projectDefault = project?.default_agent_id ?? null;
-  if (projectDefault && (await harnessRegistry.get(projectDefault, { projectId }))) {
-    return { type: "ok", agentId: projectDefault };
-  }
+  const defaultHarness = projectDefault ? await harnessRegistry.get(projectDefault, { projectId }) : null;
+  if (projectDefault && defaultHarness) return { type: "ok", agentId: projectDefault, harness: defaultHarness };
 
   const [fallback] = await harnessRegistry.list({ projectId });
-  return { type: "ok", agentId: fallback?.id };
+  return { type: "ok", agentId: fallback?.id, harness: fallback };
 };
 
 export const resolveCreateSessionModel = async (

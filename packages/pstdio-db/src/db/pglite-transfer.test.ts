@@ -100,7 +100,7 @@ test.each([
   }
 });
 
-test("a damaged binary chunk rejects staging and releases its temporary assembly table", async () => {
+test("a damaged binary chunk rolls back staging and releases its temporary assembly table", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pglite-transfer-damage-"));
   const source = await PGlite.create();
   const destination = await NextPGlite.create({ database: "template1", username: "postgres" });
@@ -111,6 +111,9 @@ test("a damaged binary chunk rejects staging and releases its temporary assembly
     const manifest = await Bun.file(join(directory, "manifest.json")).json();
     await Bun.write(join(directory, manifest.tables[0].binary[0].files[0].name), "damaged transfer");
     await expect(importPgliteDatabase(destination, directory)).rejects.toThrow("checksum mismatch");
+    expect((await destination.query("select to_regclass('public.snapshots') as table_name")).rows).toEqual([
+      { table_name: null },
+    ]);
     expect((await source.query("select octet_length(state) length from snapshots")).rows).toEqual([{ length: 90_000 }]);
     expect(
       (await destination.query("select count(*)::integer count from pg_tables where schemaname like 'pg_temp_%'")).rows,

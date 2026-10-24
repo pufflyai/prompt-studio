@@ -2,12 +2,13 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { preparePgliteHome } from "./pglite-home-recovery";
 import { acquirePgliteLock } from "./pglite-lock";
 
 const run = async (active: string, phase = "") => {
   const child = Bun.spawn(
-    [process.execPath, new URL("./pglite-home-recovery.fixture.ts", import.meta.url).pathname, active, phase],
+    [process.execPath, fileURLToPath(new URL("./pglite-home-recovery.fixture.ts", import.meta.url)), active, phase],
     {
       stdout: "pipe",
       stderr: "pipe",
@@ -176,6 +177,21 @@ test("partial candidate identities never block rebuilding an initial home or res
         expect(result).toEqual({ exitCode: 0, stderr: "" });
         expect(await readFile(join(f.active, "record"), "utf8")).toBe("first value");
       }
+    } finally {
+      await rm(f.directory, { recursive: true, force: true });
+    }
+  }
+});
+
+test("a start stopped while it wrote transfer ownership does not block the next start", async () => {
+  for (const legacy of [false, true]) {
+    const f = await fixture(legacy);
+    try {
+      await mkdir(f.transition);
+      await writeFile(join(f.transition, "owner.json.partial"), '{"format":');
+      expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
+      expect(await readFile(join(f.active, "record"), "utf8")).toBe(legacy ? "original value" : "first value");
+      expect(await Bun.file(f.transition).exists()).toBe(false);
     } finally {
       await rm(f.directory, { recursive: true, force: true });
     }

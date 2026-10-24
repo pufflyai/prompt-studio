@@ -1,5 +1,6 @@
 import { strict as assert } from "node:assert";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { checkExtensionSource } from "../features/extensions/extension-runtime";
@@ -81,5 +82,6 @@ try {
     assert.equal(readFileSync(join(installed, "README.md"), "utf8"), readFileSync(join(source, "README.md"), "utf8"));
   }
 } finally {
-  rmSync(tempRoot, { recursive: true, force: true });
+  // ADR 0039: shutdown is awaited above; yield while Windows releases filesystem handles.
+  await rm(tempRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }

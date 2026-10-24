@@ -12,6 +12,8 @@ A release upgrades a database written by any Prompt Studio release published in 
 
 ## Legacy migration code
 
+The PGlite engine upgrade prepares a private copy, exports with the previous engine, then imports and checks a new database before publication. It emits `database_upgrade_copying`, `database_upgrade_exporting` and `database_upgrade_importing` before each operation so desktop can explain the work underway. Ordinary starts on the current engine omit these phases. See [ADR 0098](../../adrs/0098-temporary-pglite-minor-upgrade-adapter.md) for data ownership and interruption recovery.
+
 Code that only repairs databases older than a given release may be deleted once that release falls out of the window. Delete it in the next breaking release after the removal date, together with the other removals (see [API versioning](../extensions/0014-api-versioning.md) for how breaking releases are grouped).
 
 | Code | First shipped | Removal date (90 days later) |

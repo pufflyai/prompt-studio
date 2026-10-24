@@ -21,6 +21,7 @@ import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createExtensionConnectionsApi } from "../extension-connection-service";
 import { findFreePort } from "../extension-process-api";
+import { createPublicationStorageAccess } from "../publication/storage-access";
 import { createAccountApi } from "./account";
 import { createActivityApi } from "./activity";
 import { createArtifactsApi } from "./artifacts";
@@ -136,6 +137,7 @@ export const createCommandEnvironment = (
     const storage = createStorageApi(deps, {
       extensionId: input.extensionId,
       extensionInstanceId: enabledSource.instance.id,
+      source: enabledSource.installedSource,
       projectId: input.projectId,
       signal,
     });
@@ -153,6 +155,12 @@ export const createCommandEnvironment = (
         resolveOwnStoragePath,
         {
           ...input,
+          assertWritable: createPublicationStorageAccess(deps, {
+            projectId: input.projectId,
+            extensionId: input.extensionId,
+            extensionInstanceId: enabledSource.instance.id,
+            source: enabledSource.installedSource,
+          }).write,
           onWrite: (path) => deps.artifactMountWrites.record(path),
           signal,
         },

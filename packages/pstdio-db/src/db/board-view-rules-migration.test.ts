@@ -12,10 +12,15 @@ import * as schema from "./schemas.pg";
 const migrationsFolder = join(import.meta.dir, "../../drizzle");
 
 test("saved board views keep their filters and ordering as rules and sorts", async () => {
+  const started = performance.now();
+  const phase = (name: string) =>
+    console.info(`[board view upgrade] ${name} +${Math.round(performance.now() - started)}ms`);
+  phase("initialize legacy database");
   const root = mkdtempSync(join(tmpdir(), "board-view-upgrade-"));
   const dbPath = join(root, "database");
   const pglite = new PGlite(dbPath);
   await pglite.waitReady;
+  phase("legacy database ready");
   try {
     const db = drizzle(pglite as unknown as CurrentPGlite, { schema });
     await migrateThrough(db, migrationsFolder, 34);
@@ -41,10 +46,12 @@ test("saved board views keep their filters and ordering as rules and sorts", asy
     await insert("manual", { ...display, ordering: { attributeId: "manual", direction: "asc" } }, {});
 
     await pglite.close();
-    const current = await createDb({ path: dbPath });
+    phase("legacy fixture closed");
+    const current = await createDb({ path: dbPath, onPhase: phase });
     const { rows } = await current.pglite.query("SELECT id, settings, filter, sorts FROM board_views ORDER BY id");
     await current.close();
-    const reopened = await createDb({ path: dbPath });
+    phase("upgraded database closed");
+    const reopened = await createDb({ path: dbPath, onPhase: (name) => phase(`restart ${name}`) });
     const second = await reopened.pglite.query("SELECT id, settings, filter, sorts FROM board_views ORDER BY id");
     await reopened.close();
     expect(second.rows).toEqual(rows);

@@ -36,6 +36,9 @@ export type DesktopStartupPhase =
   | "environment"
   | "spawning"
   | "database"
+  | "upgrade_copying"
+  | "upgrade_exporting"
+  | "upgrade_importing"
   | "migrations"
   | "extensions"
   | "readiness";

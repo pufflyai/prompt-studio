@@ -2,14 +2,13 @@ import { spawnSync } from "node:child_process";
 import { appendFileSync, readFileSync } from "node:fs";
 import { basename, relative } from "node:path";
 import { allBrowserChecks, selectBrowserChecks } from "./browser-checks";
-import { ciBase, readQueueChanges } from "./ci-event";
 import { affectedPackages as selectAffectedPackages } from "./ci-packages";
 import { requiredCiJobs } from "./required-ci-jobs";
 
 // Repository tooling, such as the test preload and build scripts, affects every package.
 const REPOSITORY_TOOLING_DIR = "scripts";
 
-// A person adds this label to run the full after-merge suite on a pull request.
+// A person adds this label to run the full suite on a pull request before it reaches the queue.
 const FULL_RUN_LABEL = "ci:full";
 
 // Their test suites take minutes, so they run in sharded jobs of their own.
@@ -29,7 +28,8 @@ const isPackageFile = (file: string, packageDirs: string[]) =>
   !isInside(file, REPOSITORY_TOOLING_DIR) && packageDirs.some((dir) => isInside(file, dir));
 const isDocumentation = (file: string) => file.endsWith(".md") || file.startsWith("design/") || file === "LICENSE";
 
-// PRs and merge groups share one selection policy. Full runs remain available through ci:full.
+// Pull requests run the checks their changes select. The merge queue and main run everything, so
+// main receives only commits that passed the full suite.
 export function resolveCiScope({ event, labels, changedFiles, packageDirs, affectedPackages }: CiScopeInput) {
   const everyCheck = {
     dockerBuild: true,
@@ -44,11 +44,17 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
     nativeChecks: ["filesystem", "process", "desktop"],
     packageChecks: true,
   };
-  if (!["pull_request", "merge_group"].includes(event) || labels.includes(FULL_RUN_LABEL)) {
+  if (event !== "pull_request" || labels.includes(FULL_RUN_LABEL)) {
     // Full UI and Windows suites already include these targeted checks.
-    return { stage: "full", ...everyCheck, browserChecks: [] as string[], nativeChecks: [] as string[] };
+    return {
+      stage: "full",
+      ...everyCheck,
+      browserSmoke: false,
+      browserChecks: [] as string[],
+      nativeChecks: [] as string[],
+    };
   }
-  const stage = event === "merge_group" ? "merge_queue" : "pull_request";
+  const stage = "pull_request";
 
   // Files outside every package, such as the lockfile or workflows, can affect any package.
   if (changedFiles.some((file) => !isPackageFile(file, packageDirs) && !isDocumentation(file))) {
@@ -103,20 +109,12 @@ function run(command: string, args: string[]) {
 
 if (import.meta.main) {
   const event = process.env.GITHUB_EVENT_NAME ?? "";
-  const payload = process.env.GITHUB_EVENT_PATH ? JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")) : {};
-  const base = ciBase(event, payload);
-  const changedFiles = run("git", ["diff", "--name-only", "--no-renames", base, "HEAD"]).split("\n").filter(Boolean);
-  let labels: string[] = JSON.parse(process.env.PULL_REQUEST_LABELS || "[]");
-  if (event === "merge_group") {
-    const commits = new Set(
-      run("git", ["rev-list", `${base}..HEAD`])
-        .split("\n")
-        .filter(Boolean),
-    );
-    const queued = await readQueueChanges(payload, commits);
-    labels = queued.labels;
-    changedFiles.push(...queued.changedFiles);
-  }
+  // A pull request is checked out as its merge commit, so its first parent is the target branch. Other
+  // events run every check and ignore the diff.
+  const changedFiles = run("git", ["diff", "--name-only", "--no-renames", "HEAD~1", "HEAD"])
+    .split("\n")
+    .filter(Boolean);
+  const labels: string[] = JSON.parse(process.env.PULL_REQUEST_LABELS || "[]");
   const lernaPackages = (...filters: string[]) =>
     JSON.parse(run("bunx", ["lerna", "ls", "--all", "--json", "--loglevel", "silent", ...filters])) as Array<{
       name: string;
