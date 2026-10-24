@@ -207,5 +207,35 @@
     "reason": "On Windows this case exhausted its 60 second allowance in a merge group whose change only touches ticket numbering. The next recovery case in the same job passed. Keep Linux and macOS coverage blocking and preserve the owner-repair assertions.",
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40123218595"],
     "removeWhen": "Identify and fix the slow phase, then pass ten independent Windows runs within the existing 60 second allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/db/rename-pglite-home.test.ts",
+    "platforms": ["win32"],
+    "owner": "PS-907 / Windows database publication",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40128973926/job/120976509591"],
+    "name": "database publication waits for a temporary Windows reader to release its handle",
+    "reason": "The PowerShell reader fixture never confirmed its open handle within 15 seconds; this case normally takes 2.5 to 4 seconds, mostly PowerShell startup. Later cases in the same file then received its cleanup errors. Preserve the real sharing violation and all publication assertions.",
+    "removeWhen": "Replace or bound the PowerShell reader startup so a stalled reader fails fast without leaking into later cases, then pass ten independent Windows runs within the existing 15 second allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/db/rename-pglite-home.test.ts",
+    "platforms": ["win32"],
+    "owner": "PS-907 / Windows database publication",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40128973926/job/120976509591"],
+    "name": "cancelling Windows publication while a reader is open preserves the active home",
+    "reason": "Shares the PowerShell reader fixture; in the same job its reader also never confirmed the open handle, and it received the previous case's cleanup errors. Preserve the real sharing violation and all publication assertions.",
+    "removeWhen": "Replace or bound the PowerShell reader startup so a stalled reader fails fast without leaking into later cases, then pass ten independent Windows runs within the existing 15 second allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/db/rename-pglite-home.test.ts",
+    "platforms": ["win32"],
+    "owner": "PS-907 / Windows database publication",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40128973926/job/120976509591"],
+    "name": "a persistent Windows reader reports publication failure and preserves the active home",
+    "reason": "Shares the PowerShell reader fixture; in the same job its reader never confirmed the open handle within 15 seconds, against about 0.6 seconds normally. Preserve the real sharing violation and all publication assertions.",
+    "removeWhen": "Replace or bound the PowerShell reader startup so a stalled reader fails fast without leaking into later cases, then pass ten independent Windows runs within the existing 15 second allowance."
   }
 ]
