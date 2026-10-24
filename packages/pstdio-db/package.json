@@ -24,8 +24,8 @@
     "studio": "drizzle-kit studio --config ./drizzle.config.ts",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun test --silent",
-    "test:coverage": "bun test --coverage"
+    "test": "bun ../../scripts/ci/run-bun-tests.ts --silent",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "3.1152.0",

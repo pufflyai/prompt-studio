@@ -27,6 +27,38 @@ for (const shutdown of ["desktop quit", "API shutdown"] as const) {
     const heartbeatPath = join(home, "detached-heartbeat.json");
     let app: PackagedApp | null = null;
     let probePid: number | undefined;
+    const observations: unknown[] = [];
+    const observe = (phase: string) => {
+      let alive = false;
+      let probeError: string | undefined;
+      if (probePid) {
+        try {
+          process.kill(probePid, 0);
+          alive = true;
+        } catch (error) {
+          probeError = String(error);
+        }
+      }
+      let heartbeat: ReturnType<typeof readHeartbeat> = null;
+      let heartbeatError: string | undefined;
+      try {
+        heartbeat = readHeartbeat(heartbeatPath);
+      } catch (error) {
+        heartbeatError = String(error);
+      }
+      observations.push({
+        phase,
+        time: Date.now(),
+        probePid,
+        alive,
+        probeError,
+        desktopPid: app?.child.pid,
+        desktopExitCode: app?.child.exitCode,
+        desktopSignal: app?.child.signalCode,
+        heartbeat,
+        heartbeatError,
+      });
+    };
     try {
       app = await launchPackagedApp(home, {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
@@ -55,6 +87,7 @@ for (const shutdown of ["desktop quit", "API shutdown"] as const) {
       probePid = result.body.outcome.value.pid;
       expect(probePid).toBeGreaterThan(0);
       await expect.poll(() => readHeartbeat(heartbeatPath)?.pid).toBe(probePid);
+      observe("before-shutdown");
       await app.finishTrace();
       if (shutdown === "desktop quit") {
         await allowPageClose(app.page, () => app!.page.evaluate(() => void window.promptStudioDesktop.quitApp()));
@@ -65,16 +98,29 @@ for (const shutdown of ["desktop quit", "API shutdown"] as const) {
         expect(await close).toMatchObject({ exitCode: 0 });
       }
       expect(existsSync(join(home, "runtime.json"))).toBe(false);
+      observe("after-shutdown");
       const tick = readHeartbeat(heartbeatPath)!.tick;
       await expect.poll(() => readHeartbeat(heartbeatPath)?.tick).toBeGreaterThan(tick);
     } finally {
-      if (probePid) {
-        try {
-          process.kill(probePid, "SIGKILL");
-        } catch {}
+      try {
+        observe("before-cleanup");
+        const eventsPath = `${heartbeatPath}.events`;
+        await test.info().attach("detached-process-observations", {
+          body: JSON.stringify({
+            observations,
+            events: existsSync(eventsPath) ? readFileSync(eventsPath, "utf8") : null,
+          }),
+          contentType: "application/json",
+        });
+      } finally {
+        if (probePid) {
+          try {
+            process.kill(probePid, "SIGKILL");
+          } catch {}
+        }
+        await disposePackagedApp(app);
+        await removePackagedHome(home);
       }
-      await disposePackagedApp(app);
-      await removePackagedHome(home);
     }
   });
 }

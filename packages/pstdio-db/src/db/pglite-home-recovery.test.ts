@@ -2,12 +2,13 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { preparePgliteHome } from "./pglite-home-recovery";
 import { acquirePgliteLock } from "./pglite-lock";
 
 const run = async (active: string, phase = "") => {
   const child = Bun.spawn(
-    [process.execPath, new URL("./pglite-home-recovery.fixture.ts", import.meta.url).pathname, active, phase],
+    [process.execPath, fileURLToPath(new URL("./pglite-home-recovery.fixture.ts", import.meta.url)), active, phase],
     {
       stdout: "pipe",
       stderr: "pipe",

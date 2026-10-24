@@ -23,7 +23,6 @@ import {
   type InstallExtensionSourceInput,
   type InstalledExtensionSource,
   installExtensionSource,
-  isLocalExtensionSource,
 } from "./install-extension-source";
 
 export {
@@ -146,12 +145,12 @@ export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}
             );
         const extensionsRoot = join(resolvePstdioHome({ env }), "extensions");
         // Startup and first-project setup share this queue. Check after the previous install
-        // finishes so project creation does not fetch the same defaults again. Project sync
+        // finishes so project creation does not install or validate the same defaults again. Project sync
         // discovers installed sources and keeps their recorded Git origin.
         const defaultExtensions = entries.filter((entry) => {
-          if (isLocalExtensionSource(sourceFor(entry)) || (typeof entry !== "string" && entry.force)) return true;
+          if (typeof entry !== "string" && entry.force) return true;
           if (!isInstalledUserExtension(entry, extensionsRoot)) return true;
-          const installName = typeof entry === "string" ? entry : (entry.installName ?? entry.source);
+          const installName = typeof entry === "string" ? entry : (entry.installName ?? basename(entry.source));
           const targetPath = join(extensionsRoot, installName);
           const { manifest } = readPackageManifestMetadata(targetPath);
           return !manifest || manifest.pstdio?.scope === "repo" || shouldInstallDependencies(targetPath);

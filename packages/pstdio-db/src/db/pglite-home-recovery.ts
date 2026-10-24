@@ -88,7 +88,7 @@ const readOwner = async (work: string, active: string) => {
 interface Preparation {
   activePath: string;
   signal?: AbortSignal;
-  // Resolves only after the private target is verified and its engine is closed.
+  // Resolves after the private image is complete and any preparation engine is closed.
   // The source remains authoritative; preparation must read an owned copy of it.
   prepare: (paths: { source?: string; target: string; work: string }) => Promise<void>;
   onPhase?: (phase: Phase) => void;

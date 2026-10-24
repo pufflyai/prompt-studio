@@ -51,6 +51,17 @@ test("missing required results fail while intentionally unselected jobs may skip
   ).not.toThrow();
 });
 
+test("quarantine setup failures remain blocking", () => {
+  const results = {
+    scope: { result: "success" },
+    static_checks: { result: "success" },
+    quarantined_bun_tests: { result: "failure" },
+    quarantined_browser_tests: { result: "failure" },
+  };
+  expect(() => requireCiJobs(["scope", "static_checks"], results)).toThrow();
+  expect(() => requireCiJobs(["scope", "static_checks", "quarantined_bun_tests"], results)).toThrow();
+});
+
 test("queue and full stages still require native client builds", () => {
   const scope = resolveCiScope({
     event: "merge_group",

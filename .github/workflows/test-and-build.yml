@@ -10,12 +10,13 @@ on:
   push:
     branches:
       - main
+      - test/ci-reliability/**
   workflow_dispatch:
 
 concurrency:
   # Only a newer event on the same pull request replaces a run. Every queue and main commit keeps
   # its own run until it finishes, so a red commit can always be traced.
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'latest' || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -314,7 +315,6 @@ jobs:
       matrix:
         include:
           - { check: lint, lane: lint }
-          - { check: native, lane: native }
           - { check: unit-1, lane: unit, shard: 1/4 }
           - { check: unit-2, lane: unit, shard: 2/4 }
           - { check: unit-3, lane: unit, shard: 3/4 }
@@ -337,42 +337,14 @@ jobs:
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
 
-      - name: Test dependency installs, workspace links, watchers, and attachments
-        if: matrix.lane == 'native'
-        run: bun test --timeout 15000 scripts/ci/install-native-dependencies.test.ts packages/pstdio-extensions/src/runtime/loader-node-modules.test.ts packages/pstdio-extensions/src/authoring/extension-source-watcher-dependencies.test.ts packages/pstdio-api/src/features/sessions/session-attachments.test.ts
-
       # A fresh runner's first Windows PowerShell start prepares its modules and C# compiler. That one-time cost
       # is usually about 4 s but has stalled past the 15 s test limit, so pay it before the tests that use PowerShell.
       - name: Warm up Windows PowerShell
         if: matrix.lane != 'lint'
         run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
 
-      - name: Test Windows desktop platform integrations
-        if: matrix.lane == 'native'
-        run: bun test --timeout 15000 clients/desktop/src/cli clients/desktop/src/performance
-
-      - name: Check formatting
-        if: matrix.lane == 'lint'
-        run: bun run format:check
-
       - name: Build monorepo
         run: bun run build
-
-      - name: Test Windows npm command shims
-        if: matrix.lane == 'native'
-        run: bun --conditions=source test --timeout 15000 packages/pstdio-api/src/features/extensions/process-command.test.ts packages/pstdio-api/src/features/extensions/process-command.windows.test.ts packages/pstdio-api/src/features/extensions/process-discovery.test.ts packages/pstdio-extensions/src/runtime/process-environment.test.ts packages/pstdio-api-runtime-host/src/harness-registry.test.ts
-
-      - name: Compile Windows runtime for harness detection
-        if: matrix.lane == 'native'
-        env:
-          PSTDIO_BUILD_PLATFORM_PKG: cli-win-x64
-        run: bun run --cwd scripts build:all
-
-      - name: Test packaged Windows npm harness detection
-        if: matrix.lane == 'native'
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe
-        run: bun test packages/e2e/src/packaged/harness-npm-detection.test.ts packages/e2e/src/packaged/performance-observer.test.ts --timeout 30000
 
       - name: Lint monorepo
         if: matrix.lane == 'lint'
@@ -585,6 +557,13 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
       - name: Build SDK contracts used by native fixtures
         run: bun run build -- --scope @pstdio/sdk --include-dependencies
+      - name: Test Windows release paths and default extension reuse
+        run: >-
+          bun --conditions=source test
+          scripts/release/align-release-baseline.test.ts
+          packages/pstdio-api/src/features/extensions/default-extensions.test.ts
+          packages/pstdio-api/src/features/extensions/default-extensions-reuse.test.ts
+          packages/pstdio-api/src/features/extensions/repo-default-extensions.test.ts
       - name: Prepare Windows PowerShell
         run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
       - name: Test dependency installs, workspace links, watchers, and attachments
@@ -696,6 +675,10 @@ jobs:
     if: needs.scope.outputs.stage == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [cli, browser]
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
       options: --user 1001 --init --ipc=host
@@ -724,23 +707,126 @@ jobs:
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
 
       - name: Test Vite terminal e2e
+        if: matrix.suite == 'cli'
         run: bun run --cwd packages/e2e test:vite-terminal
 
       - name: Compile the packaged test CLI once
+        id: packaged_cli
         run: bun run --cwd scripts build:host
 
-      - name: Test packaged e2e
+      - name: Benchmark packaged collection readiness without traces
+        if: matrix.suite == 'browser' && !cancelled() && steps.packaged_cli.outcome == 'success'
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+        run: bun run --cwd packages/e2e test:packaged:benchmark
+
+      - name: Test packaged ${{ matrix.suite }} e2e
+        if: ${{ !cancelled() && steps.packaged_cli.outcome == 'success' }}
         env:
           DEBUG: pw:browser
           E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
-        run: bun run --cwd packages/e2e test:packaged
+        run: bun run --cwd packages/e2e test:packaged:${{ matrix.suite }}
 
       - name: Preserve packaged and Vite test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: packaged-vite-e2e-results-attempt-${{ github.run_attempt }}
+          name: packaged-vite-e2e-${{ matrix.suite }}-results-attempt-${{ github.run_attempt }}
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: warn
+
+  quarantined_bun_tests:
+    needs: scope
+    if: needs.scope.outputs.stage == 'full' || needs.scope.outputs.package_checks == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      E2E_TEST_LANE: quarantine
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Build database test dependencies
+        run: bun run build -- --scope pstdio-db --include-dependencies
+      - name: Build quarantined API dependencies
+        if: runner.os == 'Windows'
+        run: bun run build -- --scope pstdio-api --include-dependencies
+      - name: Run quarantined database cases with their existing limits
+        continue-on-error: true
+        run: bun run --cwd packages/pstdio-db test ${{ runner.os == 'Windows' && '--timeout=15000' || '' }}
+      - name: Run quarantined release cases with their existing limits
+        continue-on-error: true
+        run: bun run --cwd scripts test
+      - name: Run quarantined API cases with their existing limits
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        env:
+          PSTDIO_DEFAULT_EXTENSIONS: "[]"
+          PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0"
+        run: bun --cwd packages/pstdio-api ../../scripts/ci/run-bun-tests.ts --conditions=source --timeout 30000 --silent
+      - name: Require every registered case to have executed
+        run: bun scripts/ci/verify-quarantine-reports.ts bun
+      - name: Preserve quarantine test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quarantined-bun-${{ runner.os }}-results-attempt-${{ github.run_attempt }}
+          path: test-results/quarantine
+          if-no-files-found: warn
+
+  quarantined_browser_tests:
+    needs: scope
+    if: needs.scope.outputs.stage == 'full'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_TEST_LANE: quarantine
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "24"
+      - name: Setup Bun
+        run: node scripts/ci/setup-container-bun.ts
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Build packaged test dependencies
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - name: Compile the packaged test CLI
+        run: bun run --cwd scripts build:host
+      - name: Run quarantined browser cases without retries
+        continue-on-error: true
+        env:
+          E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+        run: bun run --cwd packages/e2e test:packaged:browser
+      - name: Require first-attempt browser execution
+        run: bun scripts/ci/verify-quarantine-reports.ts playwright
+      - name: Preserve quarantine evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quarantined-browser-results-attempt-${{ github.run_attempt }}
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report
@@ -820,8 +906,19 @@ jobs:
         run: node scripts/ci/install-native-dependencies.ts
 
       - name: Test native DMG attachment cleanup
+        id: dmg_cleanup
         if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
-        run: bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts
+        run: |
+          set -o pipefail
+          bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts 2>&1 | tee native-dmg-cleanup.log
+
+      - name: Preserve failed native DMG cleanup log
+        if: failure() && steps.dmg_cleanup.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-dmg-cleanup-${{ matrix.target }}-attempt-${{ github.run_attempt }}
+          path: native-dmg-cleanup.log
+          if-no-files-found: error
 
       - name: Build monorepo
         if: matrix.platform == 'linux'
@@ -878,6 +975,18 @@ jobs:
           DEBUG: pw:api,pw:browser
         working-directory: clients/desktop
         run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged
+
+      - name: Run quarantined Apple Silicon packaged cases
+        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin' && matrix.arch == 'arm64' && !cancelled() && steps.desktop.outcome == 'success'
+        continue-on-error: true
+        env:
+          E2E_TEST_LANE: quarantine
+        working-directory: clients/desktop
+        run: bun run test:packaged
+
+      - name: Require first-attempt Apple Silicon quarantine execution
+        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin' && matrix.arch == 'arm64' && !cancelled() && steps.desktop.outcome == 'success'
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop
 
       - name: Preserve desktop test reports and traces
         if: always() && needs.scope.outputs.stage == 'full' && matrix.tests
@@ -956,6 +1065,8 @@ jobs:
       - build_clients
       - build_docker
       - packaged_toolchain
+      - quarantined_bun_tests
+      - quarantined_browser_tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

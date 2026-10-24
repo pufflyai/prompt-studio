@@ -16,6 +16,7 @@ export {
   writeProjectInfo,
 } from "./project-info";
 export { appendGroups, projectGroups, type RecordProjection } from "./projection";
+export { adoptionEdit, mergeJson } from "./record-adoption";
 export {
   compareQueryValues,
   encodeQueryCursor,
@@ -29,7 +30,13 @@ export {
 } from "./record-query";
 export { applyRecordChange, blankRecord, recordConflict } from "./records";
 export { type ResolutionState, validateResolution } from "./resolution-validation";
-export { editResourceDocument } from "./resource-document";
+export {
+  adoptResourceDocument,
+  editResourceDocument,
+  mergeResourceDocument,
+  type ResourceMigration,
+  resourceDocumentState,
+} from "./resource-document";
 export type { NumberedResource } from "./resource-numbers";
 export {
   coreOwnerId,

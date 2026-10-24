@@ -45,6 +45,8 @@ export const PerformanceStatusItem = (props: PerformanceStatusItemProps) => {
 
   return (
     <Popover.Root
+      lazyMount
+      unmountOnExit
       open={open}
       initialFocusEl={() => contentRef.current}
       onOpenChange={(event) => controller.setPopoverOpen(event.open)}

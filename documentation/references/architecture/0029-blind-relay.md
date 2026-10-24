@@ -6,6 +6,8 @@ keeps one latest state per document and the updates after it, and it checks acce
 quotas from metadata alone.
 
 This replaces the grouped relay in the [synchronization contracts](0026-synchronization-contracts.md).
+Clients sync an extension's records through one relay document, the record stream
+([ADR 0102](../../adrs/0102-record-stream-sync.md)); to the relay it is an ordinary document.
 Clients use the encrypted document protocol. The grouped relay remains for upgrade and
 legacy test coverage until PS-824 removes it.
 

@@ -53,6 +53,8 @@ export const verifyEditingSession = async (page: Page) => {
   await expect(first).toHaveValue("ABC");
   await expect(second).toHaveValue("ABC");
   await canvas.getByRole("button", { name: "Preview move", exact: true }).click();
+  await expect(canvas.getByRole("alert")).toBeEmpty();
+  await expect(canvas.getByRole("status", { name: "Position" })).toHaveText("12, 24");
   await expect(inspector.getByRole("status", { name: "Position" })).toHaveText("12, 24");
   await canvas.getByRole("button", { name: "Cancel move", exact: true }).click();
   await expect(inspector.getByRole("status", { name: "Position" })).toHaveText("0, 0");
