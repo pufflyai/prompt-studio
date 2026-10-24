@@ -18,6 +18,7 @@ const cursorOf = (row: typeof storage_record_sync.$inferSelect): RecordStreamCur
   through: row.through,
   pendingBytes: row.pending_bytes,
   stateBytes: row.state_bytes,
+  skipped: row.skipped,
 });
 
 /** One owner's records as its encrypted relay stream reads and writes them. */
@@ -47,6 +48,7 @@ export const createRecordStreamStore = (
         through: cursor.through,
         pending_bytes: cursor.pendingBytes,
         state_bytes: cursor.stateBytes,
+        skipped: cursor.skipped,
       })
       .where(syncWhere);
   /** Runs a record write under the owner lock and notifies watchers once it commits. */
@@ -104,19 +106,23 @@ export const createRecordStreamStore = (
       return cursorOf(row!);
     },
     async apply(frames: (RecordFrame | null)[], cursor: RecordStreamCursor) {
-      let rejectedFrames: number[] = [];
+      let result = { rejected: [] as number[], cursor };
       await write(async (tx, revision) => {
         const { accepted, rejected } = await acceptFrames(tx, owner, frames);
-        rejectedFrames = rejected;
         const { changes } = await mergeRecords(tx, owner, accepted, false);
         const projected = await save(tx, revision, changes);
-        await saveCursor(tx, cursor);
+        result = {
+          rejected,
+          cursor: { ...cursor, skipped: cursor.skipped || rejected.length > 0 || frames.includes(null) },
+        };
+        await saveCursor(tx, result.cursor);
         return { projected, changed: changes.length > 0, rejected: [] };
       });
-      return rejectedFrames;
+      return result;
     },
     async merge(remote: Map<string, Uint8Array[]>, mode: "adopt" | "repair", cursor: RecordStreamCursor) {
-      return write(async (tx, revision) => {
+      let saved = cursor;
+      const rejected = await write(async (tx, revision) => {
         // Adopting replaces this device's record histories, so saves queued against them are folded in.
         if (mode === "adopt") await dropRecordOutbox(tx, owner);
         const merged =
@@ -131,9 +137,11 @@ export const createRecordStreamStore = (
           uploads.map((upload) => upload.recordId),
         );
         await queueRecordBytes(tx, owner, uploads, assets, recordFrameLimit);
-        await saveCursor(tx, cursor);
+        saved = { ...cursor, skipped: cursor.skipped || merged.rejected.length > 0 };
+        await saveCursor(tx, saved);
         return { projected, changed: merged.changes.length > 0, rejected: merged.rejected };
       });
+      return { rejected, cursor: saved };
     },
     outbox: (limit: number) => readRecordOutbox(db, owner, limit),
     async sent(sequence: number) {
@@ -151,7 +159,12 @@ export const createRecordStreamStore = (
               eq(storage_record_outbox.extension_id, owner.extensionId),
             ),
           )) as [{ outbox: number | null }];
-        return { records: await recordStates(tx, owner, await localRecordIds(tx, owner)), outbox: outbox ?? 0 };
+        const ids = await localRecordIds(tx, owner);
+        return {
+          records: await recordStates(tx, owner, ids),
+          assets: await currentAssets(tx, ids),
+          outbox: outbox ?? 0,
+        };
       });
     },
     async published(cursor: RecordStreamCursor, outbox: number) {
@@ -161,7 +174,6 @@ export const createRecordStreamStore = (
       });
     },
     hasRecords: async () => (await localRecordIds(db, owner, 1)).length > 0,
-    assets: async (recordIds: string[]) => [...(await currentAssets(db, recordIds)).values()],
     async pending() {
       const rows = await db
         .select({ sequence: storage_record_outbox.sequence })

@@ -26,7 +26,8 @@ stays blind and unchanged: it stores ciphertext updates, latest states and blobs
 
 - **Updates.** One relay update is one local save. Its encrypted frame lists each changed record's
   Yjs update and the files those records point to. A save larger than one update travels as an
-  encrypted blob that the update references, so it still arrives as one unit (R4).
+  encrypted blob that the update references, so it still arrives as one unit (R4). The blob also
+  holds the file references, so a save with thousands of files fits in one update.
 - **Outbox.** A save writes its frame to `storage_record_outbox` in the save's transaction, only
   for owners that sync (`storage_record_sync` has a row). The stream uploads outbox entries in
   order and drops them when the relay accepts them.
@@ -35,7 +36,9 @@ stays blind and unchanged: it stores ciphertext updates, latest states and blobs
 - **Latest states.** A latest state lists encrypted chunks of record states, stored as blobs. The
   first latest state (no base) **founds** the stream. Every later one is a compaction: a device
   builds it only when it has read every update and its outbox is empty, so it holds nothing an
-  update did not already carry. A device that follows the updates loads only the founding state, or
+  update did not already carry. A device that set aside a frame or record marks its cursor
+  `skipped` and builds no compaction until it loads a later latest state, including after a
+  restart. A latest state's records and files are read in one transaction. A device that follows the updates loads only the founding state, or
   a latest state when the relay removed updates it still needed. A compaction is due when the
   updates after the latest state outgrow it (its encrypted summary holds its size), so a large owner
   is rewritten in proportion to its edits, not every 1 MiB.
@@ -45,12 +48,14 @@ stays blind and unchanged: it stores ciphertext updates, latest states and blobs
   Otherwise it downloads the stream and adopts it: each shared record takes the synced history, and
   this device's changes since it first saved the record are reapplied as an edit (a three-way merge
   with local winning where both changed one value; without the first save, a deletion wins). A
-  record whose history the stream already shares merges normally. Records only this device has are
-  uploaded.
+  record whose history the stream already shares merges normally. Only edits by a device prove a
+  shared history: deterministic migration authors appear in unrelated histories too. Records only
+  this device has are uploaded.
 - **Migrations.** A save inside a data migration uses deterministic Yjs authors per record
   document again, so two devices that run the same migration write identical updates (R44).
 - **Failures.** Network errors stop the pass, and the next pass retries it. Only data that cannot be
-  decrypted or decoded is set aside, and a frame with any unreadable record is set aside whole.
+  decrypted or decoded is set aside, and a frame with any unreadable record is set aside whole. A
+  latest state that cannot be read leaves the cursor in place, so the next pass retries it.
 - **Owner metadata** syncs under a new relay name. Relay copies from before ADR 0100 still hold
   records in the owner document; merging them back would let the record upgrade overwrite newer
   record documents.
