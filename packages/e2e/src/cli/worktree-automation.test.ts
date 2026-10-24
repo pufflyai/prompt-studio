@@ -64,7 +64,7 @@ describe("workspace provisioning", () => {
         worktreePath,
         ".pstdio",
         "extension-storage",
-        "pstdio-planner",
+        "pstdio.pstdio-planner",
         "tickets",
         ticketShorthand,
         "ticket.md",
