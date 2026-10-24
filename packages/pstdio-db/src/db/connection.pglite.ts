@@ -10,6 +10,7 @@ import { normalizeEmbeddedFileName } from "pstdio-paths";
 import { openPglite } from "./open-pglite";
 import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
+import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
 import * as schema from "./schemas.pg";
 
@@ -98,12 +99,11 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
     normalizeEmbeddedFileName(file.name).endsWith(PGLITE_INITIAL_DATABASE_SUFFIX),
   );
   const icu = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_ICU_SUFFIX));
-  const identity = { database: "template1", username: "postgres" };
   if (!wasmFile && !dataFile && !initialDatabase && !icu) {
     const require = createRequire(import.meta.url);
     const icuPath = path.join(path.dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
     return {
-      ...identity,
+      ...pgliteIdentity,
       icuDataDir: Bun.file(icuPath),
       loadDataDir: Bun.file(path.join(import.meta.dirname, "../../vendor/pglite/empty-database.tar.gz")),
     };
@@ -118,7 +118,7 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
   const wasmModule = await WebAssembly.compile(wasmBytes);
 
   return {
-    ...identity,
+    ...pgliteIdentity,
     fsBundle: dataFile,
     pgliteWasmModule: wasmModule,
     loadDataDir: initialDatabase,
