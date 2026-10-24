@@ -4,7 +4,7 @@ Proposed: 2026-10-16
 
 ## Status
 
-SUPERSEDED on 2026-10-24 by [ADR 0102](0102-database-baseline-replaces-in-place-upgrades.md). The squashed 0.46 baseline has no migration prefix to select, so startup uses the public Drizzle PGlite migrator and the adapter is gone.
+SUPERSEDED on 2026-10-24 by [ADR 0103](0103-database-baseline-replaces-in-place-upgrades.md). The squashed 0.46 baseline has no migration prefix to select, so startup uses the public Drizzle PGlite migrator and the adapter is gone.
 
 ## Ideal behavior
 

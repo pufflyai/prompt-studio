@@ -1,4 +1,4 @@
-# ADR 0102: A database baseline replaces in-place upgrades
+# ADR 0103: A database baseline replaces in-place upgrades
 
 Proposed: 2026-10-24
 
