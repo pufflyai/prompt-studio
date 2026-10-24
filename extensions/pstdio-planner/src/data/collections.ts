@@ -1,7 +1,7 @@
 import type { ExtensionStorageApi, ExtensionStorageCollectionApi } from "@pstdio/sdk/extensions";
 import { dependencyBlockerRefs, withIndependentBlockers } from "./dependency-blockers";
 import { readTicketReviewRequests } from "./review-request-storage";
-import { deleteTicketBlobs, deleteTicketFileContent } from "./ticket-file-content";
+import { deleteTicketBlobs, deleteTicketFileContent, deleteTicketScopedBlobs } from "./ticket-file-content";
 import { queueTicketWrite } from "./ticket-write-queue";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 
@@ -11,13 +11,13 @@ export const TAGS_COLLECTION = "ticket-tags";
 
 const storedTickets = (storage: ExtensionStorageApi) => storage.collection<StoredTicket>(TICKETS_COLLECTION);
 
-// File bodies are blobs, deleted once the file list stops using them. A write that read the
-// ticket before a file change would bring back a list whose blobs are gone. So only
-// changeTicketFiles changes the list, and every write runs in the ticket's queue and keeps the
-// stored list.
-const withStoredFiles = async (storage: ExtensionStorageApi, id: string, ticket: StoredTicket) => {
+// File bodies and images are blobs, deleted once the ticket stops using them. A write that read
+// the ticket before such a change would bring back references to deleted blobs. So only
+// changeTicketFiles changes `files` and `attachments`, and every other write runs in the
+// ticket's queue and keeps the stored ones.
+const withStoredBlobRefs = async (storage: ExtensionStorageApi, id: string, ticket: StoredTicket) => {
   const stored = await storedTickets(storage).get(id);
-  return stored ? { ...ticket, files: stored.files } : ticket;
+  return stored ? { ...ticket, files: stored.files, attachments: stored.attachments } : ticket;
 };
 
 export const ticketsCollection = (storage: ExtensionStorageApi) => {
@@ -28,9 +28,10 @@ export const ticketsCollection = (storage: ExtensionStorageApi) => {
     createIfAbsent: (id, ticket) => tickets.createIfAbsent(id, ticket),
     create: (ticket) => tickets.create(ticket),
     attachments: (id) => tickets.attachments(id),
-    put: (id, ticket) => queueTicketWrite(id, async () => tickets.put(id, await withStoredFiles(storage, id, ticket))),
+    put: (id, ticket) =>
+      queueTicketWrite(id, async () => tickets.put(id, await withStoredBlobRefs(storage, id, ticket))),
     update: (id, ticket) =>
-      queueTicketWrite(id, async () => tickets.update(id, await withStoredFiles(storage, id, ticket))),
+      queueTicketWrite(id, async () => tickets.update(id, await withStoredBlobRefs(storage, id, ticket))),
     // The ticket's blobs, file bodies and images alike, have no other owner.
     delete: (id) =>
       queueTicketWrite(id, async () => {
@@ -47,9 +48,9 @@ export const ticketsCollection = (storage: ExtensionStorageApi) => {
 };
 
 /**
- * The only write that changes a ticket's file list. `change` receives the stored ticket inside the
- * ticket's queue and returns it unchanged to skip the write. The bodies the new list no longer
- * uses are deleted after the write.
+ * The only write that changes a ticket's files and attachments. `change` receives the stored
+ * ticket inside the ticket's queue and returns it unchanged to skip the write. After the write,
+ * the file bodies and ticket-scoped images the ticket no longer uses are deleted.
  */
 export const changeTicketFiles = (
   storage: ExtensionStorageApi,
@@ -63,9 +64,11 @@ export const changeTicketFiles = (
     if (changed === stored) return stored;
     const next = await withDerivedTicketState(storage, changed);
     await storedTickets(storage).update(ticketId, next);
-    const kept = new Set((next.files ?? []).map((file) => file.blobId));
-    const unused = (stored.files ?? []).map((file) => file.blobId).filter((blobId) => !kept.has(blobId));
-    await deleteTicketFileContent(storage, ticketId, unused);
+    const unused = (ids: string[], kept: string[]) => ids.filter((id) => !kept.includes(id));
+    const bodies = (ticket: StoredTicket) => (ticket.files ?? []).map((file) => file.blobId);
+    const images = (ticket: StoredTicket) => (ticket.attachments ?? []).map((attachment) => attachment.id);
+    await deleteTicketFileContent(storage, ticketId, unused(bodies(stored), bodies(next)));
+    await deleteTicketScopedBlobs(storage, ticketId, unused(images(stored), images(next)));
     return next;
   });
 

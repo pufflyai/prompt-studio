@@ -101,32 +101,34 @@ export const saveTicketCommand = defineCommand({
         ? await resolveTicketId(ctx.storage, frontmatter.parentShorthand)
         : ticket.parentId;
     const paths = (await projectFiles.list(ticketFilesPattern(ticket.shorthand))).map((entry) => entry.path);
-    const images = await saveTicketImages(ctx.storage, projectFiles, ticket, paths.filter(isImagePath));
+    let checkout: Record<string, string> = {};
 
-    // The files compare against the stored ticket, so a file change made during this save is not undone.
-    const saved = await changeTicketFiles(ctx.storage, ticket.id, async (stored) => ({
-      ...stored,
-      content,
-      title: deriveTitle(content),
-      statusId,
-      tagIds,
-      parentId,
-      files: await readTicketFiles(
-        ctx.storage,
-        projectFiles,
-        stored,
-        paths.filter((path) => !isImagePath(path)),
-      ),
-      attachments: images.attachments,
-      userPrompt: frontmatter.userPrompt ?? stored.userPrompt ?? null,
-      dependsOn,
-      blockedReason: frontmatter.blockedReason ?? null,
-      draft: false,
-      updatedAt: new Date().toISOString(),
-    }));
-    await writeTicketImageCheckout(projectFiles, ticket.shorthand, images.checkout);
-    // Delete replaced images only after the ticket stops pointing at them.
-    for (const id of images.replacedIds) await ctx.storage.files.delete(id);
+    // Files and images compare against the stored ticket, so a change made during this save is not undone.
+    const saved = await changeTicketFiles(ctx.storage, ticket.id, async (stored) => {
+      const images = await saveTicketImages(ctx.storage, projectFiles, stored, paths.filter(isImagePath));
+      checkout = images.checkout;
+      return {
+        ...stored,
+        content,
+        title: deriveTitle(content),
+        statusId,
+        tagIds,
+        parentId,
+        files: await readTicketFiles(
+          ctx.storage,
+          projectFiles,
+          stored,
+          paths.filter((path) => !isImagePath(path)),
+        ),
+        attachments: images.attachments,
+        userPrompt: frontmatter.userPrompt ?? stored.userPrompt ?? null,
+        dependsOn,
+        blockedReason: frontmatter.blockedReason ?? null,
+        draft: false,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    await writeTicketImageCheckout(projectFiles, ticket.shorthand, checkout);
 
     return { shorthand: ticket.shorthand, files: saved.files?.length ?? 0 };
   },
