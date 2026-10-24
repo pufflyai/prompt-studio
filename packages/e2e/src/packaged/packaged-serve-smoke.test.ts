@@ -33,7 +33,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // Core extension checks cover extension-owned draft storage, versioned template edits, and allocated file roots.
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
 // packaged-command-palette.spec.ts checks theme selection from the palette and persistence after reload.
-// packaged-main-fullscreen.spec.ts checks the empty project picker, Settings access, hidden background chrome,
+// packaged-main-fullscreen.spec.ts checks the empty picker, Settings, creation without a reload, hidden chrome,
 // Main fullscreen, its minimized Side bubble, keyboard exit and reload state.
 // Desktop packaged-project-tabs.spec.ts checks the title-bar maximize control and focus after fullscreen exit.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,

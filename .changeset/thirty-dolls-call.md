@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Show Settings in the project picker and hide workbench controls before a project is selected.
+Show Settings in the project picker, hide background controls, and open the first created project without reloading.
