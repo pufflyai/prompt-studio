@@ -62,16 +62,19 @@ it("releases ownership when a process is killed", async () => {
 it("elects only one owner when processes race for a released lock", async () => {
   const root = temporary();
   const iterations = 150;
+  // Each contender writes its result to a temporary file and renames it, so the parent never reads a
+  // result file that exists but is still empty.
   const source = `import fs from 'node:fs'; import path from 'node:path'; import {acquirePgliteLock} from ${JSON.stringify(module)};
     const [root,name,count]=process.argv.slice(1);
+    const report=(dir,result)=>{ const file=path.join(dir,name); fs.writeFileSync(file+'.tmp',result); fs.renameSync(file+'.tmp',file); };
     for(let i=0;i<Number(count);i++) {
       const dir=path.join(root,String(i));
       while(!fs.existsSync(path.join(dir,'start'))) await Bun.sleep(1);
       try { const release=acquirePgliteLock(path.join(dir,'database'));
-        fs.writeFileSync(path.join(dir,name),'acquired');
+        report(dir,'acquired');
         while(!fs.existsSync(path.join(dir,'release'))) await Bun.sleep(1);
         release();
-      } catch(error) { fs.writeFileSync(path.join(dir,name),error.message.includes('refusing')?'rejected':error.message); }
+      } catch(error) { report(dir,error.message.includes('refusing')?'rejected':error.message); }
     }`;
   const children = ["a", "b"].map((name) =>
     Bun.spawn([process.execPath, "-e", source, root, name, String(iterations)]),
