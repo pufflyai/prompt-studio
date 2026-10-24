@@ -61,7 +61,7 @@ test.each([
     sortOrder: 3,
     options: [{ ...option, id: "default-human-requested-true", name: "Needs attention" }, option],
   });
-  const original = { ...ticket, tagIds: ["default-human-requested-true", option.id], content: "Keep this body" };
+  const original = { ...ticket, tags: { "default-human-requested": [option.id] }, content: "Keep this body" };
   await ticketsCollection(storage).put(ticket.id, original);
   const requests = storage.collection("planner-review-requests");
   const request = { id: "request", ticketId: ticket.id, title: "Choose the scope" };
@@ -80,7 +80,7 @@ test.each([
   });
   expect(await ticketsCollection(storage).get(ticket.id)).toMatchObject({
     content: "Keep this body",
-    tagIds: [option.id],
+    tags: { "default-human-requested": [option.id] },
   });
   expect(await requests.get(request.id)).toEqual(request);
   await migratePlannerStorage(ctx);

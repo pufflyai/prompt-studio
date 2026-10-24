@@ -15,7 +15,7 @@ const ticket = (id: string, parentId?: string): Ticket => ({
   files: [{ id: "file", name: "notes.md", blobId: "file-body", createdAt: "before", updatedAt: "after" }],
   userPrompt: "Implementation instructions",
   statusId: "ready",
-  tagIds: ["feature", "urgent"],
+  tags: { labels: ["feature", "urgent"] },
   archived: false,
   sortOrder: 1,
   createdAt: "2026-01-01T00:00:00.000Z",
@@ -27,7 +27,7 @@ test("summary rows preserve full-ticket values, hierarchy, tags, archives and wo
   const tickets = [
     ticket("root"),
     { ...ticket("child", "root"), archived: true },
-    { ...ticket("orphan", "missing"), title: "", statusId: null, tagIds: undefined },
+    { ...ticket("orphan", "missing"), title: "", statusId: null, tags: undefined },
     ticket("cycle-a", "cycle-b"),
     ticket("cycle-b", "cycle-a"),
   ];

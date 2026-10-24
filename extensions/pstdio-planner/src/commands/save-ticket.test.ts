@@ -11,6 +11,7 @@ import { plannerTicketsChanged } from "../events";
 import { attachTicketFileCommand } from "./attach-ticket-file";
 import { makeCommandArgs } from "./command-context.fixture";
 import { saveTicketCommand } from "./save-ticket";
+import { updateTicketCommand } from "./update-ticket";
 import { writeTicketCommand } from "./write-ticket";
 
 const setup = async () => {
@@ -114,6 +115,28 @@ test("a ticket write that read the ticket before a save keeps the saved image", 
 
   expect((await ticketsCollection(storage).get(ticket.id))?.title).toBe("Renamed");
   expect(await imageBytes()).toEqual([[2]]);
+});
+
+test("save keeps a tag change made by another command while the save runs", async () => {
+  const { storage, projectFiles } = await setup();
+  const { shorthand } = await writeTicketCommand.run(
+    ...makeCommandArgs({ storage, params: { title: "Tagged", tags: ["High"] }, overrides: { projectFiles } }),
+  );
+  const markdown = ticketMarkdownPath(shorthand);
+  const readText = projectFiles.readText.bind(projectFiles);
+  let edited = false;
+  projectFiles.readText = async (path) => {
+    if (path === markdown && !edited) {
+      edited = true;
+      await updateTicketCommand.run(...makeCommandArgs({ storage, params: { id: shorthand, tags: ["High", "Bug"] } }));
+    }
+    return readText(path);
+  };
+
+  await saveTicketCommand.run(...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { projectFiles } }));
+
+  const [ticket] = await ticketsCollection(storage).list();
+  expect(ticket.tags).toEqual({ "default-priority": "default-priority-high", "default-type": "default-type-bug" });
 });
 
 test("overlapping saves with different images leave a checkout that names only stored images", async () => {

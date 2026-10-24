@@ -75,7 +75,7 @@ test("an open request blocks the ticket and prerequisites without a stored tag",
     instructions: "Confirm the layout.",
     request: { kind: "task" },
   } as never);
-  await ticketsCollection(storage).put(ticket.id, { ...ticket, tagIds: [] });
+  await ticketsCollection(storage).put(ticket.id, { ...ticket, tags: {} });
   const dependent = await createTicketCommand.run(ctx, { title: "Use the tool", dependsOn: [ticket.id] });
   for (const target of [ticket, dependent]) {
     expect((await loadAttemptReadiness(ctx, target.id, {})).readiness).toMatchObject({
@@ -104,7 +104,7 @@ test("an unreadable outcome keeps a concrete error and pending input", async () 
     kind: "answered",
     response: { confirmed: false },
   } as never);
-  await ticketsCollection(storage).put(ticket.id, { ...ticket, tagIds: [] });
+  await ticketsCollection(storage).put(ticket.id, { ...ticket, tags: {} });
   const group = await listTicketReviewRequests(storage, ticket.id);
   expect(group.errors).toHaveLength(1);
   expect(group.errors[0]).toContain(request.id);

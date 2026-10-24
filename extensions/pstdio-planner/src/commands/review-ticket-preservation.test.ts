@@ -36,7 +36,7 @@ test("answering a request preserves ticket edits that race with its reads", asyn
       title: `Edit ${++edits}`,
       content: "Keep the new body",
       statusId: "ready",
-      tagIds: ["other"],
+      tags: { labels: ["other"] },
     };
     await collection.put(id, latest);
     return snapshot;

@@ -15,7 +15,7 @@ const makeTicket = (overrides: Partial<Ticket> = {}) =>
     title: "Ticket",
     content: "# Ticket",
     statusId: "backlog",
-    tagIds: [],
+    tags: {},
     attachments: [],
     files: [],
     parentId: null,

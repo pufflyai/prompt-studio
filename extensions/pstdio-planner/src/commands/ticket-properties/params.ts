@@ -6,7 +6,8 @@ import {
   type ResourceControl,
   type ResourceOption,
 } from "@pstdio/sdk/extensions";
-import { isSingleSelectTicketTag, ticketTagAttributeId } from "../../data/mappers";
+import { ticketTagAttributeId } from "../../data/mappers";
+import { isSingleSelectTicketTag, tagValueIds } from "../../data/ticket-tags";
 import type { StoredStatus, StoredTag, Ticket } from "../../data/types";
 import type { StoredPlan } from "../../timeline/contracts";
 import { reviewLinkLabel, reviewLinkTooltip } from "../../views/review-link-values";
@@ -81,7 +82,7 @@ const statusParam = (ticket: Ticket, statuses: StoredStatus[]): WireResource => 
 const tagParam = (ticket: Ticket, tag: StoredTag): WireResource => {
   const single = isSingleSelectTicketTag(tag);
   const optionIds = new Set(tag.options.map((option) => option.id));
-  const selected = (ticket.tagIds ?? []).filter((id) => optionIds.has(id));
+  const selected = tagValueIds(ticket.tags?.[tag.id]).filter((id) => optionIds.has(id));
   const options: ResourceOption[] = tag.options.map((option) => ({
     id: option.id,
     name: option.name,

@@ -14,7 +14,7 @@ import {
   resolveStatusId,
   resolveTagOptionIds,
 } from "../data/resolve";
-import { assertSingleSelectTagIds } from "../data/tag-cardinality";
+import { ticketTagsForIds } from "../data/tag-cardinality";
 import { refreshTicketCheckout } from "../data/ticket-checkout";
 import { normalizeTicketDependencies, validateTicketDependencies } from "../data/ticket-dependencies";
 import { readTicketFileContent, storeTicketFileContent } from "../data/ticket-file-content";
@@ -22,6 +22,7 @@ import { validateTicketFileName } from "../data/ticket-file-name";
 import type { TicketContext } from "../data/ticket-identity";
 import { writeTicketImageCheckout } from "../data/ticket-image-checkout";
 import { isImagePath, saveTicketImages } from "../data/ticket-images";
+import { ticketTagIds, withChangedTags } from "../data/ticket-tags";
 import type { StoredTicketFile, Ticket } from "../data/types";
 import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
@@ -89,8 +90,8 @@ export const saveTicketCommand = defineCommand({
 
     const statusId =
       commandParams.status !== undefined ? await resolveStatusId(ctx.storage, commandParams.status) : ticket.statusId;
-    const tagIds = await resolveTags(ctx.storage, frontmatter.tagNames, ticket.tagIds ?? []);
-    await assertSingleSelectTagIds(ctx.storage, tagIds, ticket.tagIds);
+    const tagIds = await resolveTags(ctx.storage, frontmatter.tagNames, ticketTagIds(ticket));
+    const tags = await ticketTagsForIds(ctx.storage, tagIds, ticket.tags);
     const dependsOn = await resolveDependencies(
       ctx,
       frontmatter.dependsOn,
@@ -112,7 +113,7 @@ export const saveTicketCommand = defineCommand({
         content,
         title: deriveTitle(content),
         statusId,
-        tagIds,
+        tags: withChangedTags(stored.tags, ticket.tags, tags),
         parentId,
         files: await readTicketFiles(
           ctx.storage,

@@ -104,7 +104,7 @@ describe("draft workflow", () => {
     expect(saved.draft).toBe(false);
     expect(saved.title).toBe("Edited title");
     expect(saved.content).toContain("Body text.");
-    expect(saved.tagIds).toEqual(["default-priority-high"]);
+    expect(saved.tags).toEqual({ "default-priority": "default-priority-high" });
     expect(saved.files?.[0]?.name).toBe("notes.md");
     expect(await readTicketFileContent(storage, saved.id, saved.files![0])).toBe("extra notes");
   });

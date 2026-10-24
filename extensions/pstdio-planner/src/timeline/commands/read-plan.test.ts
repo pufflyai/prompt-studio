@@ -122,10 +122,16 @@ test("the plan reads one ticket snapshot without loading workspace session histo
 test("the plan query derives milestone ETA from saved complexity and observed attempt starts", async () => {
   const storage = createMemoryStorage();
   const [ctx] = makeCommandArgs({ storage, params: {} });
-  const done = await createTicketCommand.run(ctx, { content: "# Finished work", statusId: "done" });
-  const open = await createTicketCommand.run(ctx, { content: "# Remaining work", statusId: "ready" });
-  await putTicket(storage, { ...done, tagIds: ["default-complexity-simple"] });
-  await putTicket(storage, { ...open, tagIds: ["default-complexity-complex"] });
+  const done = await createTicketCommand.run(ctx, {
+    content: "# Finished work",
+    statusId: "done",
+    tagIds: ["default-complexity-simple"],
+  });
+  const open = await createTicketCommand.run(ctx, {
+    content: "# Remaining work",
+    statusId: "ready",
+    tagIds: ["default-complexity-complex"],
+  });
   const deadline = (await createDeadlineCommand.run(ctx, { date: "2030-01-01", name: "Release" }))!;
   await moveTicketCommand.run(ctx, { ticket: done.id, deadline: deadline.id });
   await moveTicketCommand.run(ctx, { ticket: open.id, deadline: deadline.id });

@@ -97,7 +97,7 @@ describe("runTicketsQuery", () => {
       storage,
       makeTicket({
         shorthand: "T-1",
-        tagIds: ["default-priority-high", "default-type-bug"],
+        tags: { "default-priority": "default-priority-high", "default-type": "default-type-bug" },
       }),
     );
 

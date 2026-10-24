@@ -20,7 +20,7 @@ const plan = buildPlan({
       title: "Finished",
       content: "",
       statusId: "done",
-      tagIds: ["default-complexity-simple"],
+      tags: { "default-complexity": "default-complexity-simple" },
     },
     {
       id: "open",
@@ -28,7 +28,7 @@ const plan = buildPlan({
       title: "Visible",
       content: "",
       statusId: "ready",
-      tagIds: ["default-complexity-complex"],
+      tags: { "default-complexity": "default-complexity-complex" },
     },
     {
       id: "hidden",
@@ -36,7 +36,7 @@ const plan = buildPlan({
       title: "Hidden",
       content: "",
       statusId: "ready",
-      tagIds: ["default-complexity-simple"],
+      tags: { "default-complexity": "default-complexity-simple" },
     },
   ],
   plan: {

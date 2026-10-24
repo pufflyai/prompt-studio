@@ -20,7 +20,7 @@ for (const count of [50, 500, 1_000]) {
       title: `Stress ticket ${index + 1}`,
       content: "Synthetic ticket instructions.\n".repeat(128),
       statusId: "backlog",
-      tagIds: ["default-type-bug", "default-priority-high"],
+      tags: { "default-type": "default-type-bug", "default-priority": "default-priority-high" },
       archived: false,
       sortOrder: index,
       createdAt: now,

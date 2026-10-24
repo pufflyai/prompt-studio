@@ -18,7 +18,7 @@ test("every milestone can use completed work elsewhere in the project to estimat
         title: "Finished",
         content: "",
         statusId: "done",
-        tagIds: ["default-complexity-simple"],
+        tags: { "default-complexity": "default-complexity-simple" },
       },
       {
         id: "open",
@@ -26,7 +26,7 @@ test("every milestone can use completed work elsewhere in the project to estimat
         title: "Next release",
         content: "",
         statusId: "ready",
-        tagIds: ["default-complexity-complex"],
+        tags: { "default-complexity": "default-complexity-complex" },
       },
     ],
     plan: {
