@@ -1,5 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { commandRefId, contributionRefId, workbenchSlots } from "@pstdio/sdk/extensions";
+import { commandRefId, contributionRefId } from "@pstdio/sdk/extensions";
 import type { ParamObjectSchema } from "pstdio-api-contracts";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
 import { toWorkbenchWhenExpression } from "./workbench-extension-metadata-ref";
@@ -7,13 +7,6 @@ import { toInternalWorkbenchPages } from "./workbench-extension-page-metadata";
 import type { WorkbenchExtensionTabMetadata } from "./workbench-extension-tab-presentation";
 
 type MetadataView = WorkbenchExtensionMetadata["views"][number];
-const settingsScope = (slot: { id: string }) => {
-  if (slot.id === workbenchSlots.globalSettings.id) return "global" as const;
-  if (slot.id === workbenchSlots.projectSettings.id || slot.id === workbenchSlots.extensionSettings.id)
-    return "project" as const;
-  // Preserve published extensions that used a custom global slot before the public ref existed.
-  return slot.id.includes("global") ? ("global" as const) : ("project" as const);
-};
 const resourceKindForView = (metadata: WorkbenchExtensionMetadata, viewId: string) => {
   const bindings = metadata.pages.flatMap((page) => [
     ...(page.main.kind === "view" && page.resource ? [{ ...page.resource, view: page.main.view }] : []),
@@ -263,7 +256,10 @@ export const toInternalWorkbenchExtensionMetadata = (
           viewId: view.id,
           extensionId: panel.extensionId,
           slotId: panel.slot.id,
-          scope: settingsScope(panel.slot),
+          scope: ["global.settings", "global.settingsPanels", "developer.settings"].includes(panel.slot.id)
+            ? ("global" as const)
+            : ("project" as const),
+          parentPanelId: panel.slot.id === "developer.settings" ? "developer-tools" : undefined,
           title: view.title,
           icon: view.icon,
           section: panel.section ? contributionRefId(panel.section) : undefined,

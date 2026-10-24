@@ -32,7 +32,7 @@ for (const count of [100])
         edits: [{ recordId: "changing", replace: index }],
       });
     historySize = count;
-    const legacy = createLegacyRecordStorage({ store: service, owner }).scope("project", "scope");
+    const legacy = createLegacyRecordStorage({ records: service.open({ owner }).records }).scope("project", "scope");
     queries = [];
     const start = performance.now();
     for (let repeat = 0; repeat < 20; repeat++) {
@@ -47,6 +47,11 @@ for (const count of [100])
       JSON.stringify({ priorEdits: count, samples: 20, saveAndReadMilliseconds: (performance.now() - start) / 20 }),
     );
     expect(queries.filter((query) => query.includes('from "extension_storage_journal"'))).toHaveLength(0);
-    expect(queries.filter((query) => query.includes('from "storage_document_updates"'))).toHaveLength(0);
-    expect(queries.filter((query) => /^select .*"state".*from "storage_documents"/.test(query))).toHaveLength(0);
+    // A save loads only the documents of the records it names, never the owner's history.
+    const documentReads = queries.filter(
+      (query) =>
+        query.includes('from "storage_document_updates"') || /^select .*"state".*from "storage_documents"/.test(query),
+    );
+    expect(documentReads.length).toBeGreaterThan(0);
+    for (const query of documentReads) expect(query).toContain('"document_id" in');
   });

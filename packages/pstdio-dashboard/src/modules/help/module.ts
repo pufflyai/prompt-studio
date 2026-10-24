@@ -45,6 +45,7 @@ const registerHelpSidenav = (ctx: WorkbenchModuleContext) =>
     id: "dashboard.help.footer",
     modes: ["project"],
     slot: "footer",
+    getStructure: () => [{ ...dashboardNavigationSections.footer, nodes: [helpFooterNode()] }],
     getSections: () => [{ ...dashboardNavigationSections.footer, nodes: [helpFooterNode()] }],
   });
 

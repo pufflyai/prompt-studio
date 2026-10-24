@@ -18,6 +18,7 @@ import { createWebviewEditingClient, type WebviewEditingClient } from "./webview
 import { createWebviewEventsClient, type WebviewEventsClient } from "./webview-events";
 import { createWebviewFilesClient, type WebviewFilesClient } from "./webview-files-client";
 import { createWebviewPageClient, type WebviewPageClient } from "./webview-page-client";
+import { createWebviewPerformanceClient, type WebviewPerformanceClient } from "./webview-performance-client";
 import { type CommandStreamOptions, openWebviewCommandStream, type WebviewStreamsClient } from "./webview-streams";
 
 // Command types derive from a record of `defineCommand` values (the extension's
@@ -83,6 +84,7 @@ export type WebviewClient<TCommands, TSettings = undefined> = {
   events: WebviewEventsClient;
   settings: WebviewSettingsClient<ClientSettingsMap<TSettings>>;
   account: WebviewAccountClient;
+  performance: WebviewPerformanceClient;
 };
 
 export interface WebviewClientOptions {
@@ -195,5 +197,6 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     events,
     settings,
     account: createWebviewAccountClient(host),
+    performance: createWebviewPerformanceClient(host),
   } as WebviewClient<TCommands, TSettings>;
 };

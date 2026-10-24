@@ -8,8 +8,11 @@ const nativeResult = (
   turn: number,
   thread: number,
   recoveryActive?: boolean,
+  goalStatus?: string,
 ) => {
   switch (method) {
+    case "thread/goal/get":
+      return { goal: goalStatus ? { status: goalStatus } : null };
     case "thread/start":
     case "thread/resume":
       return { thread: { id: params.threadId ?? `thread-${thread}`, path: null }, model: "native-default" };
@@ -45,6 +48,7 @@ export const peer = (
     recoveryActive?: boolean;
     rejectInterrupt?: boolean;
     delayTurnStarted?: boolean;
+    goalStatus?: string;
   } = {},
 ) => {
   let held:
@@ -94,7 +98,7 @@ export const peer = (
           {
             if (m.method === "turn/start") turn++;
             if (m.method === "thread/start") thread++;
-            const result = nativeResult(m.method, m.params, turn, thread, options.recoveryActive);
+            const result = nativeResult(m.method, m.params, turn, thread, options.recoveryActive, options.goalStatus);
             respond(m, result);
             if (m.method === "turn/start" && !options.delayTurnStarted)
               emit({

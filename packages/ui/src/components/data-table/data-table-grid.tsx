@@ -23,6 +23,7 @@ export interface DataTableGridProps
     | "columnStats"
     | "enableRowActivation"
     | "getCellContextMenuActions"
+    | "page"
   > {
   table: TanStackTable<RowData>;
   /** The rows and group rows of the current page, in shown order. */
@@ -35,6 +36,7 @@ export interface DataTableGridProps
   fieldMenu: DataTableFieldMenu;
   /** Set when rows can be selected. */
   selectionActions?: DataTableSelectionAction[];
+  selectedRecords?: RowData[];
 }
 
 const resolveColumnSizeVars = (table: TanStackTable<RowData>) => {
@@ -53,6 +55,7 @@ export const DataTableGrid = (props: DataTableGridProps) => {
   const tableRowsById = new Map(table.getRowModel().rows.map((row) => [row.id, row]));
   const columnSizeVars = resolveColumnSizeVars(table);
   const selectedRows = table.getSelectedRowModel().rows;
+  const selectedRecords = props.selectedRecords ?? getSelectedOriginalRows(selectedRows);
 
   return (
     <Box position="relative" flex="1" minHeight="0">
@@ -86,6 +89,7 @@ export const DataTableGrid = (props: DataTableGridProps) => {
                     headerGroup={headerGroup}
                     rows={data}
                     columnStats={columnStats}
+                    summaries={props.page?.result?.statistics}
                     noBorder={noBorder}
                     fullWidth={fullWidth}
                   />
@@ -101,7 +105,7 @@ export const DataTableGrid = (props: DataTableGridProps) => {
                   <DataTableGroupRow
                     key={`group:${key}`}
                     label={entry.group.label}
-                    count={entry.group.rows.length}
+                    count={entry.group.count ?? entry.group.rows.length}
                     collapsed={collapsed.has(key)}
                     columnCount={table.getVisibleLeafColumns().length}
                     onToggle={() => onToggleGroup(key)}
@@ -127,14 +131,14 @@ export const DataTableGrid = (props: DataTableGridProps) => {
           </Table.Body>
         </Table.Root>
       </ScrollArea>
-      {selectionActions && selectedRows.length > 0 ? (
+      {selectionActions && selectedRecords.length > 0 ? (
         <SelectionToolbar
-          selectedCount={selectedRows.length}
-          totalCount={data.length}
-          onClearSelection={() => table.toggleAllRowsSelected(false)}
+          selectedCount={selectedRecords.length}
+          totalCount={selectedRecords.length + data.length - selectedRows.length}
+          onClearSelection={() => table.resetRowSelection()}
           onSelectAll={() => table.toggleAllRowsSelected(true)}
           actions={selectionActions}
-          selectedRows={getSelectedOriginalRows(selectedRows)}
+          selectedRows={selectedRecords}
         />
       ) : null}
     </Box>

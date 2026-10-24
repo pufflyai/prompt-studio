@@ -10,7 +10,17 @@ export const alertSlotRecipe = defineSlotRecipe({
       ...rootDensity,
       borderRadius: "xs",
       alignItems: "flex-start",
-      minH: "auto",
+      minH: "0",
+      minW: "0",
+      maxW: "full",
+      maxH: "alert-max-height",
+      overflow: "hidden",
+      "& [data-scope=scroll-area][data-part=scrollbar]": {
+        color: "inherit",
+        margin: "0",
+        "--thumb-bg": "currentColor",
+        "&:is(:hover, :active)": { "--thumb-bg": "currentColor" },
+      },
       "& .chakra-button": {
         color: "inherit",
         bg: "transparent",
@@ -32,15 +42,20 @@ export const alertSlotRecipe = defineSlotRecipe({
     content: {
       gap: "0",
       minWidth: "0",
+      minHeight: "0",
+      alignSelf: "stretch",
     },
     title: {
       textStyle: "label/M/medium",
       py: "0.5",
       overflowWrap: "anywhere",
+      whiteSpace: "pre-wrap",
     },
     description: {
       textStyle: "paragraph/S/regular",
       overflowWrap: "anywhere",
+      whiteSpace: "pre-wrap",
+      "& pre": { whiteSpace: "pre-wrap", overflowWrap: "anywhere" },
     },
   },
   variants: {

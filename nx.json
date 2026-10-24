@@ -30,18 +30,28 @@
       "outputs": ["{projectRoot}/dist", "{projectRoot}/.publish"]
     },
     "test": {
-      "cache": true,
+      "cache": false,
       "dependsOn": ["^build"],
       "inputs": [
         "default",
         "^production",
         "{workspaceRoot}/scripts/test-setup.ts",
+        "{workspaceRoot}/scripts/ci/run-bun-tests.ts",
+        "{workspaceRoot}/scripts/ci/test-quarantine.ts",
+        "{workspaceRoot}/scripts/ci/test-quarantine.json",
+        { "env": "E2E_TEST_LANE" },
         "{workspaceRoot}/bunfig.toml",
         "{workspaceRoot}/bun.lock",
         {
           "runtime": "bun --version"
         }
       ]
+    },
+    "test:conformance": {
+      "cache": false
+    },
+    "test:coverage": {
+      "cache": false
     },
     "lint": {
       "cache": true,

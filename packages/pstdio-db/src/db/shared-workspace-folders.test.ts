@@ -2,8 +2,9 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PGlite, type Transaction } from "@electric-sql/pglite";
+import type { PGlite as CurrentPGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
+import { PGlite, type Transaction } from "pglite-previous";
 import { createWorkspacesDBService } from "../services/workspaces/workspaces";
 import { createDb } from "./connection.pglite";
 import { migrateThrough } from "./migrate-through";
@@ -28,22 +29,36 @@ const seedWorkspaces = async (seed: Transaction, rows: readonly LegacyWorkspace[
 
 // Builds a database at the last migration before the folder index, then opens it with the current host.
 const upgradeFrom = async (seed: (tx: Transaction) => Promise<void>) => {
+  const started = performance.now();
+  const phase = (name: string) =>
+    console.info(`[workspace folder upgrade] ${name} +${Math.round(performance.now() - started)}ms`);
+  phase("create legacy fixture");
   const root = await mkdtemp(join(tmpdir(), "shared-workspace-folders-"));
   const old = new PGlite();
   await old.waitReady;
+  phase("legacy engine ready");
   let image: Blob;
   try {
-    await migrateThrough(drizzle(old, { schema }), join(import.meta.dir, "../../drizzle"), 32);
+    await migrateThrough(
+      drizzle(old as unknown as CurrentPGlite, { schema }),
+      join(import.meta.dir, "../../drizzle"),
+      32,
+    );
     await old.transaction(seed);
     image = await old.dumpDataDir("none");
   } finally {
     await old.close();
+    phase("legacy fixture closed");
   }
   await new Bun.Archive(image).extract(join(root, "database"));
-  const upgraded = await createDb({ path: join(root, "database") });
+  phase("legacy home extracted");
+  const upgraded = await createDb({ path: join(root, "database"), onPhase: phase });
   const close = async () => {
+    phase("close upgraded database");
     await upgraded.close();
+    phase("remove fixture");
     await rm(root, { recursive: true, force: true });
+    phase("fixture removed");
   };
   return { db: upgraded.db, workspaces: createWorkspacesDBService(upgraded.db), close };
 };

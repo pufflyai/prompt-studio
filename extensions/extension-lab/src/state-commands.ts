@@ -1,12 +1,10 @@
-import { defineCommand, eventRef, l10n, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { readExampleState, writeExampleState } from "./example-state";
 import type { StateChange } from "./state-changes";
 import { type ExampleName, exampleNames, exampleResources } from "./state-defaults";
 
-export const examplesChanged = eventRef<{ name: string }>({
-  extensionId: "pstdio.extension-lab",
-  id: "examples.changed",
-});
+import { examplesChanged } from "./state-events";
+
 const nameParam = () =>
   params.select({ required: true, options: exampleNames.map((value) => ({ value, label: value })) });
 const exampleName = (name: string) => {

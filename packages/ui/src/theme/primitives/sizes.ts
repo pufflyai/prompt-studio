@@ -47,6 +47,9 @@ export const spacing = {
 };
 
 export const sizes = {
+  "alert-max-height": { value: "min(24rem, 50dvh)" },
+  "kanban-create-editor-min": { value: "min(9rem, 40dvh)" },
+  "kanban-create-editor-max": { value: "min(20rem, 40dvh)" },
   "chat-user-preview": { value: sp[1600] },
   "chat-user-footer": { value: sp[400] },
   "chat-user-expanded": { value: "min(70dvh, calc(100dvh - 12rem), 22rem)" },

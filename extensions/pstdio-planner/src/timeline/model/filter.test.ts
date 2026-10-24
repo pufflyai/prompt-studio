@@ -1,10 +1,12 @@
 import { expect, test } from "bun:test";
 import { DEFAULT_STATUSES, DEFAULT_TAGS } from "../../data/seed";
+import { emptyWorkflowStatuses } from "../../data/workflow-statuses";
 import { buildPlan } from "./build-plan";
 import { filterSections } from "./filter";
 import { reviewQueue } from "./review";
 
 const plan = buildPlan({
+  workflow: { ...emptyWorkflowStatuses(), completedStatusIds: ["done"] },
   today: "2026-10-13",
   now: Date.parse("2026-10-13T12:00:00Z"),
   statuses: DEFAULT_STATUSES,
@@ -67,4 +69,23 @@ test("a completed-only view shows Done while empty milestones stay visible witho
   expect(sections[1]!.rows).toEqual([]);
   expect(sections[1]!.eta).toBeNull();
   expect(filterSections(plan, new Set()).map(({ deadline }) => deadline?.id)).toEqual(["empty", undefined]);
+});
+
+test("completion visibility uses the full milestone before filtering its tickets", () => {
+  const sections = filterSections(plan, new Set(["done"]), { showCompletedMilestones: false });
+  expect(sections[0]?.deadline?.id).toBe("release");
+  expect(sections[0]?.counts).toMatchObject({ done: 1, total: 1 });
+});
+test("passed milestone visibility leaves undated work and empty future milestones", () => {
+  const past = {
+    ...plan,
+    sections: plan.sections.map((section) =>
+      section.deadline?.id === "release" ? { ...section, deadline: { ...section.deadline, daysLeft: -1 } } : section,
+    ),
+  };
+  expect(
+    filterSections(past, new Set(["done", "open"]), { showPassedMilestones: false }).map(
+      ({ deadline }) => deadline?.id,
+    ),
+  ).toEqual(["empty", undefined]);
 });

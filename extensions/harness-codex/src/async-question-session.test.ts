@@ -50,6 +50,31 @@ const waitForQuestion = async (events: ReturnType<typeof sink>) => {
   expect(findQuestion(events.getMessages())).toMatchObject({ callId: "async-1", status: "pending" });
 };
 
+test("answers a persisted async question after idle native resources are released", async () => {
+  const runtime = createCodexRuntime(deps);
+  runtimes.push(runtime);
+  const events = sink();
+  const input = {
+    prompt: "Ask asynchronously",
+    env: { PSTDIO_SESSION_ID: "idle-question", PSTDIO_TEST_MODE: "async-complete" },
+    events,
+  };
+  const first = await runtime.run(input);
+  await first.done;
+  expect(findQuestion(events.getMessages())?.status).toBe("pending");
+  expect(await runtime.releaseSession(undefined, "idle-question")).toBe(true);
+  const answers = [["Hello"], ["colleague"]];
+  const resumed = await runtime.run({
+    ...input,
+    agentSessionId: first.agentSessionId!,
+    env: { ...input.env, PSTDIO_TEST_MODE: "complete" },
+    questionResponse: { callId: "async-1", answers },
+  });
+  await resumed.done;
+  expect(resumed.agentSessionId).toBe(first.agentSessionId);
+  expect(findQuestion(events.getMessages())).toMatchObject({ status: "completed", state: { output: { answers } } });
+});
+
 test("steers a Unicode async answer to the active turn and rejects duplicate submissions", async () => {
   const events = sink();
   const session = await startCodexSession({ prompt: "Ask asynchronously", events }, deps);

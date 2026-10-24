@@ -268,12 +268,26 @@ export const LongNames: Story = {
     await expect(text.scrollWidth).toBeGreaterThan(text.clientWidth);
     await expect(text).toHaveStyle({ textOverflow: "ellipsis", whiteSpace: "nowrap" });
     const page = within(canvasElement.ownerDocument.body);
+    const short = within(canvasElement).getByRole("tab", { name: "Docs" });
+    // Let the label's ResizeObserver commit before sending a synthetic hover.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     await userEvent.hover(tab);
     await expect(await page.findByRole("tooltip")).toHaveTextContent(label);
-    await userEvent.keyboard("{Escape}");
     await userEvent.unhover(tab);
+    await userEvent.hover(short);
+    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
+    await userEvent.unhover(short);
+    await userEvent.hover(tab);
+    await expect(await page.findByRole("tooltip")).toHaveTextContent(label);
+    await userEvent.unhover(tab);
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
     tab.focus();
     await expect(await page.findByRole("tooltip")).toHaveTextContent(label);
+    await userEvent.keyboard("{Escape}");
+    short.focus();
+    await userEvent.hover(short);
+    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
   },
 };
 export const Dark: Story = { render: () => <Example />, globals: { theme: "pstdio-dark" } };

@@ -42,8 +42,6 @@ const EditableBadgeWrapper = () => {
         onAttributeChange={handleAttributeChange}
         getBoardColumnConfig={(groupKey) => ({
           color: boardColumnColors[groupKey] ?? "gray",
-          canDragIn: true,
-          canDragOut: true,
           canCreate: false,
         })}
       />
@@ -143,8 +141,6 @@ const EditableMultiSelectBadgeWrapper = () => {
         onAttributeChange={handleAttributeChange}
         getBoardColumnConfig={(groupKey) => ({
           color: boardColumnColors[groupKey] ?? "gray",
-          canDragIn: true,
-          canDragOut: true,
           canCreate: false,
         })}
       />
@@ -286,7 +282,6 @@ const FailedActionExample = () => {
         attributes={attributes}
         storageKey="storybook-kanban-failed-action"
         defaultSettings={{ viewMode: "board", columnGrouping: "status", displayProperties: ["status"] }}
-        getBoardColumnConfig={() => ({ canDragIn: true, canDragOut: true })}
         onAttributeChange={async () => {
           throw new Error("Could not save the change.");
         }}

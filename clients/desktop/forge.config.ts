@@ -4,6 +4,7 @@ import { FuseV1Options, FuseVersion } from "@electron/fuses";
 import type { MakerDMGConfig } from "@electron-forge/maker-dmg";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import type { ForgeConfig } from "@electron-forge/shared-types";
+import checksums from "electron/checksums.json";
 import { version } from "./package.json";
 import { writeCliInstallScripts } from "./src/packaging/cli-install-scripts";
 import { DeviceDmgMaker } from "./src/packaging/device-dmg-maker";
@@ -29,6 +30,8 @@ const run = (args: string[]) => {
 const config: ForgeConfig = {
   outDir: "out",
   packagerConfig: {
+    // Verify cached Electron archives with the pinned package hashes without another GitHub request.
+    download: { checksums },
     appBundleId: "studio.prompt.desktop",
     appCategoryType: "public.app-category.developer-tools",
     asar: true,

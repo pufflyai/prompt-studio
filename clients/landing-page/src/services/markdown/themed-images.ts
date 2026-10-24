@@ -4,7 +4,7 @@ import type { MdastPluginDefinition as MdastPlugin } from "satteri";
 export const themedImages: MdastPlugin = {
   name: "themed-images",
   image(node, ctx) {
-    const tone = node.url.match(/-(light|dark)\.gif$/)?.[1];
+    const tone = node.url.match(/-(light|dark)\.(gif|svg)$/)?.[1];
     if (!tone) return;
     ctx.setProperty(node, "data", {
       ...node.data,

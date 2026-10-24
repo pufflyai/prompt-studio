@@ -6,6 +6,7 @@ const views = [
   webview("boombox-player", "Player"),
   webview("boombox-nav", "Boombox"),
   webview("boombox-rail", "Library"),
+  webview("boombox-queue", "Queue"),
 ];
 const example = defineExample({
   name: "boombox",
@@ -14,12 +15,19 @@ const example = defineExample({
   primary: views[0].ref,
   chrome: { nav: views[2].ref, sidenav: false, activity: views[3].ref },
   regionSettings: {
-    secondary: { size: { defaultPx: 88, minPx: 88, maxPx: 88 }, collapsible: false, showHeader: false },
+    side: { size: { defaultPx: 300, minPx: 240, maxPx: 440 }, canClose: false, floatable: false, showHeader: false },
+    secondary: { size: { defaultPx: 88, minPx: 88, maxPx: 88 }, canClose: false, resizable: false, showHeader: false },
   },
   initialResource: true,
 });
 export default defineExtension({
   placements: [
+    definePlacement({
+      id: "boombox-queue",
+      mode: example.mode.ref,
+      region: "side",
+      item: { kind: "view", view: views[4].ref, presence: "fixed" },
+    }),
     definePlacement({
       id: "boombox-player",
       mode: example.mode.ref,

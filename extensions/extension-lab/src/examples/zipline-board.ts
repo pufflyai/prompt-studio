@@ -6,7 +6,8 @@ import {
 } from "@pstdio/sdk/extensions";
 import { ziplineIssues } from "../apps/zipline-data";
 import { readExampleState } from "../example-state";
-import { examplesChanged, updateState } from "../state-commands";
+import { updateState } from "../state-commands";
+import { examplesChanged } from "../state-events";
 
 const boardAttributes: KanbanRendererAttributeDescriptor[] = [
   { id: "id", label: "ID", type: { kind: "string" }, displayable: true },
@@ -66,7 +67,6 @@ const boardSettings = {
   viewMode: "board",
   columnGrouping: "status",
   rowGrouping: "none",
-  ordering: { attributeId: "manual", direction: "asc" },
   displayProperties: ["id", "priority", "team", "assignee"],
 } satisfies Partial<KanbanRendererSettings>;
 
@@ -94,9 +94,9 @@ export const board = defineView({
           },
         })),
         boardColumnConfigs: {
-          Backlog: { color: "gray", canDragIn: true, canDragOut: true },
-          "In progress": { color: "purple", canDragIn: true, canDragOut: true },
-          Done: { color: "green", canDragIn: true, canDragOut: true },
+          Backlog: { color: "gray" },
+          "In progress": { color: "purple" },
+          Done: { color: "green" },
         },
       };
     },

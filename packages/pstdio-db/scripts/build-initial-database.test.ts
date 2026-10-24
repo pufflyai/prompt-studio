@@ -12,7 +12,7 @@ test("builds a migrated starter database that holds only the database the runtim
     await buildInitialDatabase(imagePath);
 
     const image = new Blob([readFileSync(imagePath)], { type: "application/gzip" });
-    const db = await PGlite.create({ loadDataDir: image });
+    const db = await PGlite.create({ database: "template1", username: "postgres", loadDataDir: image });
     try {
       expect((await db.query("SELECT datname FROM pg_database")).rows).toEqual([{ datname: "template1" }]);
       expect((await db.query("SELECT to_regclass('public.projects')::text AS projects")).rows).toEqual([

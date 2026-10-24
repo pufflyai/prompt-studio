@@ -8,7 +8,7 @@ const serializeBytes = (value: unknown) => {
 
 // The image is unpacked beside the data folder and moved in whole. A start that stops partway
 // leaves the data folder empty, so the next start unpacks the image again.
-const restoreInitialDatabase = async (dataDir: string, image: Blob) => {
+export const restoreInitialDatabase = async (dataDir: string, image: Blob) => {
   const staging = `${dataDir}.restoring`;
   rmSync(staging, { recursive: true, force: true });
   await new Bun.Archive(new Uint8Array(await image.arrayBuffer())).extract(staging);
