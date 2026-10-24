@@ -91,7 +91,14 @@ export const registerDocumentSyncSmokeTests = () =>
         await command("commit", {
           group: {
             operationId: "offline-note",
-            edits: [{ recordId: note.recordId, replace: `packaged-secret${"x".repeat(1_048_576)}`, asset }],
+            // Records stay under the 256 KiB record limit; together they are over 1 MB.
+            edits: [
+              { recordId: note.recordId, replace: `packaged-secret${"x".repeat(250_000)}`, asset },
+              ...[1, 2, 3, 4].map((page) => ({
+                recordId: `page-${page}`,
+                replace: `packaged-secret${"x".repeat(250_000)}`,
+              })),
+            ],
           },
         });
         const syncState = async () => (await client.account.projectSyncStatus(project.id)).state;
@@ -119,7 +126,7 @@ export const registerDocumentSyncSmokeTests = () =>
         const saved = await Bun.file(join(quarantine, files[0]!)).text();
         expect(saved).toContain("invalidciphertext000000");
         expect(saved).not.toContain("packaged-secret");
-        // Record text, including the 1 MB value, never reaches the relay readable: not in updates,
+        // Record text, including the 1 MB save, never reaches the relay readable: not in updates,
         // latest states or the blobs that hold latest-state chunks and files.
         const payloads = [...peer.documents.values()].flatMap((document) => [
           ...(document.payload ? [Buffer.from(document.payload, "base64")] : []),

@@ -269,11 +269,16 @@ test("large offline documents use the latest-state channel when an update frame 
   try {
     const first = await f.device();
     const second = await f.device();
-    const content = "large offline note".repeat(70_000);
-    await first.save("large", content);
+    // One save of several records, each under the record limit, is larger than one update frame.
+    const content = "large offline note".repeat(14_000);
+    const ids = ["large-1", "large-2", "large-3", "large-4", "large-5"];
+    await first.storage.records.commit({
+      operationId: crypto.randomUUID(),
+      edits: ids.map((recordId) => ({ recordId, replace: content })),
+    });
     await first.sync.synchronize();
     await second.sync.synchronize();
-    expect((await second.storage.records.read("large")).value).toBe(content);
+    for (const id of ids) expect((await second.storage.records.read(id)).value).toBe(content);
     expect((await second.adapter.read(0)).state).not.toBeNull();
   } finally {
     await f.close();

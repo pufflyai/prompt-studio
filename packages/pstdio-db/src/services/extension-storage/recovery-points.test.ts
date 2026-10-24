@@ -315,3 +315,19 @@ const deleteWhileRestoring = async () => {
 test("deleting an extension's data during a restore keeps it deleted", async () => {
   expect(await deleteWhileRestoring()).toBe(0);
 });
+
+test("restoring records that together are over one commit's size limit splits the restore", async () => {
+  const { svc, projectId, records } = await setup();
+  const tickets = await records("ext.tickets");
+  const body = "x".repeat(220 * 1024);
+  const ids = Array.from({ length: 20 }, (_, index) => `PS-${index}`);
+  // Each save stays within the limits; the restore writes all of them back.
+  for (const id of ids) await tickets.commit({ operationId: `create-${id}`, edits: [{ recordId: id, replace: body }] });
+  await svc.recovery.capture(projectId, start);
+  const [point] = await svc.recovery.list(projectId);
+  for (const id of ids) await tickets.commit({ operationId: `delete-${id}`, edits: [{ recordId: id, deleted: true }] });
+
+  await svc.recovery.restore(projectId, { hours: point!.hours, capturedAt: point!.capturedAt });
+
+  for (const id of ids) expect((await tickets.read(id)).value).toBe(body);
+});

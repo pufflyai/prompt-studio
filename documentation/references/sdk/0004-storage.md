@@ -220,6 +220,35 @@ complete before a group can sync any member. Use
 Today no save reports `offline`. Cloud projects report it once they sync through the
 relay.
 
+## Size limits
+
+Records hold small structured data. From extension API 0.3, planned for 0.46, the
+host refuses a save that is over either limit:
+
+| Limit | Size | What counts |
+| --- | --- | --- |
+| `storageLimits.recordBytes` | 256 KiB | UTF-8 bytes of `JSON.stringify({ value, shared })` for one saved record. Asset references do not count. |
+| `storageLimits.commitBytes` | 4 MiB | The sum of those sizes for every record in one `commit`, one collection write, or one `set`. |
+
+The size is measured on the record as the save leaves it. A text edit is measured
+with the text it adds to, and a deleted record counts as zero. The whole group fails,
+and nothing in it is written. Deleting a record is never refused.
+
+The error has `code: "storage_limit_exceeded"` and a `data` object with `limit`
+(`"record"` or `"commit"`), the `recordId` for a record, `bytes`, and `maxBytes`.
+Its message names the record, its size and the limit. Check it with
+`isStorageLimitError(error)` from `@pstdio/sdk/extensions`. The check works across
+bundles and through the webview bridge.
+
+The persistent host and `createMemoryStorage` from `@pstdio/sdk/testing` apply the
+same limits. Records merged from another device are not refused, so a record can go
+over the limit when two devices add to it at the same time. The next local save of
+that record must bring it back under the limit.
+
+Store large content as a file and keep its ID or path in the record:
+`ctx.storage.files` or the files of a resource scope, `ctx.extensionFiles`, or an
+artifact mount. See [Keep records small](../../guides/sdk/0003-storage.md#keep-records-small).
+
 ## Deprecated conflict members
 
 Edits from several devices are moving to automatic merging, so there are no
