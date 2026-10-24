@@ -157,5 +157,25 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/40025883928/job/120662039027"
     ],
     "removeWhen": "Identify and fix the slow phase, then pass ten independent Windows runs within the existing 15 second allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-api/src/startup/index.test.ts",
+    "platforms": ["win32"],
+    "owner": "PS-907 / startup default extensions",
+    "name": "refreshes local default extensions when an existing project starts in source mode",
+    "reason": "On Windows the restarted test app did not refresh the installed default extension within the fixture's 10 second wait in one merge-queue run; the same code passed this shard on a later full run and passes on macOS and Linux. Keep the restart and refresh assertions and add phase logs to find the slow step.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40087386182/job/120853065703"],
+    "removeWhen": "Identify and fix the slow refresh step, then pass ten independent Windows runs within the existing 10 second wait."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-api/src/startup/index.test.ts",
+    "platforms": ["win32"],
+    "owner": "PS-907 / startup default extensions",
+    "name": "refreshes local default extensions when running from source",
+    "reason": "On Windows the fixture's temp folder could not be removed after the test app closed (EPERM), even with five delete retries; a rerun of the same job passed. A file inside the folder stays open after shutdown. Keep the cleanup and find which handle survives `close()`.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40091382710/job/120865030664"],
+    "removeWhen": "Find and close the handle that outlives app shutdown, then pass ten independent Windows runs."
   }
 ]

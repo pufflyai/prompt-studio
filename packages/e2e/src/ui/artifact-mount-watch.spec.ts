@@ -14,7 +14,7 @@ test("an open webview refreshes when a watched mount file changes on disk", asyn
   mkdirSync(parent, { recursive: true });
   const root = mkdtempSync(join(parent, "artifact-mount-watch-"));
   const source = writeWatchedMountExtension(root);
-  const boards = join(root, ".pstdio", "extension-storage", "board-fixture", "boards");
+  const boards = join(root, ".pstdio", "extension-storage", "test.board-fixture", "boards");
   const response = await request.post(`${baseURL}/v1/projects`, {
     data: folderProjectInput({ name: "Watched mounts" }, root),
   });

@@ -20,6 +20,7 @@ import { validateTicketFileName } from "../data/ticket-file-name";
 import { writeTicketImageCheckout } from "../data/ticket-image-checkout";
 import { isImagePath, saveTicketImages } from "../data/ticket-images";
 import type { StoredTicket, StoredTicketFile } from "../data/types";
+import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
 
 // Reads the local text files back into stored ticket files, preserving a
@@ -115,6 +116,8 @@ export const saveTicketCommand = defineCommand({
     await writeTicketImageCheckout(projectFiles, ticket.shorthand, images.checkout);
     // Delete replaced images only after the ticket stops pointing at them.
     for (const id of images.replacedIds) await ctx.storage.files.delete(id);
+
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
 
     return { shorthand: ticket.shorthand, files: files.length };
   },
