@@ -41,6 +41,17 @@ export const withTagValue = (tags: StoredTicketTags | undefined, tagId: string, 
   return value === undefined ? rest : { ...rest, [tagId]: value };
 };
 
+// Applies only the tags whose value changed from `previous` to `next` onto `stored`, so a write
+// that started from an older read keeps tag changes made since.
+export const withChangedTags = (
+  stored: StoredTicketTags | undefined,
+  previous: StoredTicketTags = {},
+  next: StoredTicketTags = {},
+) =>
+  [...new Set([...Object.keys(previous), ...Object.keys(next)])]
+    .filter((tagId) => JSON.stringify(previous[tagId]) !== JSON.stringify(next[tagId]))
+    .reduce((tags, tagId) => withTagValue(tags, tagId, next[tagId]), stored ?? {});
+
 export const sameTicketTags = (left: StoredTicketTags = {}, right: StoredTicketTags = {}) =>
   [...new Set([...Object.keys(left), ...Object.keys(right)])].every(
     (tagId) => JSON.stringify(left[tagId]) === JSON.stringify(right[tagId]),

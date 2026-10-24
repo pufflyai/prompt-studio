@@ -22,7 +22,7 @@ import { validateTicketFileName } from "../data/ticket-file-name";
 import type { TicketContext } from "../data/ticket-identity";
 import { writeTicketImageCheckout } from "../data/ticket-image-checkout";
 import { isImagePath, saveTicketImages } from "../data/ticket-images";
-import { ticketTagIds } from "../data/ticket-tags";
+import { ticketTagIds, withChangedTags } from "../data/ticket-tags";
 import type { StoredTicketFile, Ticket } from "../data/types";
 import { deriveTitle } from "../utils/derive-title";
 
@@ -113,7 +113,7 @@ export const saveTicketCommand = defineCommand({
         content,
         title: deriveTitle(content),
         statusId,
-        tags,
+        tags: withChangedTags(stored.tags, ticket.tags, tags),
         parentId,
         files: await readTicketFiles(
           ctx.storage,

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
 import { updateTicket } from "../data/collections";
-import { ticketFilesDir } from "../data/draft-storage";
+import { ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
 import { updateTicketFile } from "../data/file-operations";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
@@ -9,6 +9,7 @@ import { readTicketFileContent } from "../data/ticket-file-content";
 import { attachTicketFileCommand } from "./attach-ticket-file";
 import { makeCommandArgs } from "./command-context.fixture";
 import { saveTicketCommand } from "./save-ticket";
+import { updateTicketCommand } from "./update-ticket";
 import { writeTicketCommand } from "./write-ticket";
 
 const setup = async () => {
@@ -112,4 +113,26 @@ test("a ticket write that read the ticket before a save keeps the saved image", 
 
   expect((await ticketsCollection(storage).get(ticket.id))?.title).toBe("Renamed");
   expect(await imageBytes()).toEqual([[2]]);
+});
+
+test("save keeps a tag change made by another command while the save runs", async () => {
+  const { storage, projectFiles } = await setup();
+  const { shorthand } = await writeTicketCommand.run(
+    ...makeCommandArgs({ storage, params: { title: "Tagged", tags: ["High"] }, overrides: { projectFiles } }),
+  );
+  const markdown = ticketMarkdownPath(shorthand);
+  const readText = projectFiles.readText.bind(projectFiles);
+  let edited = false;
+  projectFiles.readText = async (path) => {
+    if (path === markdown && !edited) {
+      edited = true;
+      await updateTicketCommand.run(...makeCommandArgs({ storage, params: { id: shorthand, tags: ["High", "Bug"] } }));
+    }
+    return readText(path);
+  };
+
+  await saveTicketCommand.run(...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { projectFiles } }));
+
+  const [ticket] = await ticketsCollection(storage).list();
+  expect(ticket.tags).toEqual({ "default-priority": "default-priority-high", "default-type": "default-type-bug" });
 });
