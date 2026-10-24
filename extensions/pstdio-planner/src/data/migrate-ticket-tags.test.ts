@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
+import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, createMemoryStorageDevices } from "@pstdio/sdk/testing";
 import { makeCommandContext } from "../commands/command-context.fixture";
-import { TAGS_COLLECTION, TICKETS_COLLECTION, ticketsCollection } from "./collections";
+import { TAGS_COLLECTION, TICKETS_COLLECTION } from "./collections";
 import { migratePlannerStorage } from "./migrate-storage";
+import { ticketRecords } from "./ticket-records";
 import type { StoredTag } from "./types";
 
 const option = (id: string, sortOrder: number) => ({
@@ -35,7 +37,6 @@ const tags: Record<string, StoredTag> = {
 
 const ticket = (id: string, tagIds: string[], extra: Record<string, unknown> = {}) => ({
   id,
-  shorthand: id.toUpperCase(),
   title: id,
   content: `# ${id}`,
   statusId: "ready",
@@ -67,10 +68,10 @@ const expected = {
   edited: { "default-priority": "default-priority-high", track: "ui" },
 };
 
-const storedTags = async (storage: Parameters<typeof ticketsCollection>[0]) =>
-  Object.fromEntries((await ticketsCollection(storage).list()).map(({ id, tags, ...rest }) => [id, { tags, rest }]));
+const storedTags = async (storage: ExtensionStorageApi) =>
+  Object.fromEntries((await ticketRecords(storage).list()).map(({ id, tags, ...rest }) => [id, { tags, rest }]));
 
-const upgrade = async (storage: Parameters<typeof ticketsCollection>[0]) => {
+const upgrade = async (storage: ExtensionStorageApi) => {
   await storage.migrate(3, async () => {});
   await migratePlannerStorage(makeCommandContext({ storage, params: {} }));
 };

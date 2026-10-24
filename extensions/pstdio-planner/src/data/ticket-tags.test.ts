@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { createMemoryStorageDevices } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "../commands/command-context.fixture";
 import { setTicketAttributeCommand } from "../commands/set-ticket-attribute";
-import { TAGS_COLLECTION, TICKETS_COLLECTION, ticketsCollection } from "./collections";
+import { TAGS_COLLECTION, TICKETS_COLLECTION } from "./collections";
 import { DEFAULT_TAGS } from "./seed";
+import { seedTicketIdentity } from "./ticket-context.fixture";
+import { ticketRecords } from "./ticket-records";
 import type { StoredTag, StoredTicket } from "./types";
 
 const option = (id: string, sortOrder: number) => ({
@@ -32,7 +34,6 @@ const flags: StoredTag = {
 
 const ticket: StoredTicket = {
   id: "ticket",
-  shorthand: "T-1",
   title: "Ticket",
   content: "# Ticket",
   statusId: "ready",
@@ -51,11 +52,12 @@ const offlineDevices = async () => {
       [TICKETS_COLLECTION]: { [ticket.id]: ticket },
     },
   });
+  for (const device of pair.devices) seedTicketIdentity(device, { id: ticket.id, shorthand: "T-1" });
   const set = (device: 0 | 1, attributeId: string, value: string | string[]) =>
     setTicketAttributeCommand.run(
       ...makeCommandArgs({ storage: pair.devices[device], params: { rowId: ticket.id, attributeId, value } }),
     );
-  const tagsOn = async (device: 0 | 1) => (await ticketsCollection(pair.devices[device]).get(ticket.id))?.tags;
+  const tagsOn = async (device: 0 | 1) => (await ticketRecords(pair.devices[device]).get(ticket.id))?.tags;
   return { pair, set, tagsOn };
 };
 

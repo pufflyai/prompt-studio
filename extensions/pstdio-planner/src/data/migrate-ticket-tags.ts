@@ -1,6 +1,6 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { TICKETS_COLLECTION } from "./collections";
 import { seedDefaultTags } from "./seed";
+import { TICKETS_COLLECTION, ticketRecord } from "./ticket-records";
 import { ticketTagsFromIds } from "./ticket-tags";
 import type { StoredTicket } from "./types";
 
@@ -19,6 +19,7 @@ export const migrateTicketTags = async (storage: ExtensionStorageApi) => {
     if (!current || !("tagIds" in current)) continue;
     const { tagIds, ...ticket } = current;
     // `tags` can only come from a newer edit that ran before this upgrade, so it wins.
-    await tickets.put(ticket.id, { ...ticket, tags: { ...ticketTagsFromIds(tags, tagIds ?? []), ...ticket.tags } });
+    const next = { ...ticket, tags: { ...ticketTagsFromIds(tags, tagIds ?? []), ...ticket.tags } };
+    await tickets.put(ticket.id, ticketRecord(next));
   }
 };
