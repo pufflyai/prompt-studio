@@ -6,6 +6,7 @@ import { seedDefaultTags } from "./seed";
 import type { TicketContext } from "./ticket-identity";
 import { ticketRecords } from "./ticket-records";
 import { assertOneTagValue, tagValue, tagValueIds, ticketTagsFromIds, withTagValue } from "./ticket-tags";
+import { queueTicketWrite } from "./ticket-write-queue";
 import type { StoredTag, StoredTicketTags } from "./types";
 
 // Checks every stored ticket, including archived ones and drafts, before the type changes.
@@ -29,7 +30,8 @@ export const assertSingleSelectConversion = async (
 type TagValue = StoredTicketTags[string];
 
 // A bulk tag change edits only this tag's value, on the latest copy of each ticket. Saving the
-// listed tickets whole would undo an edit or sync that landed while the change ran.
+// listed tickets whole would undo an edit or sync that landed while the change ran. Each edit runs
+// in the ticket's write queue, so it never writes back a file list that changeTicketFiles replaced.
 export const editTicketTagValues = async (
   storage: ExtensionStorageApi,
   tagId: string,
@@ -38,12 +40,14 @@ export const editTicketTagValues = async (
   const records = ticketRecords(storage);
   for (const listed of await records.list()) {
     if (listed.tags?.[tagId] === undefined) continue;
-    const ticket = await records.get(listed.id);
-    const value = ticket?.tags?.[tagId];
-    if (!ticket || value === undefined) continue;
-    const next = edit(value);
-    if (JSON.stringify(next) === JSON.stringify(value)) continue;
-    await records.put(ticket.id, { ...ticket, tags: withTagValue(ticket.tags, tagId, next) });
+    await queueTicketWrite(listed.id, async () => {
+      const ticket = await records.get(listed.id);
+      const value = ticket?.tags?.[tagId];
+      if (!ticket || value === undefined) return;
+      const next = edit(value);
+      if (JSON.stringify(next) === JSON.stringify(value)) return;
+      await records.put(ticket.id, { ...ticket, tags: withTagValue(ticket.tags, tagId, next) });
+    });
   }
 };
 

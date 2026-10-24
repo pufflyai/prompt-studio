@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { createTicketFile, deleteTicketFile } from "./file-operations";
 import {
   applyTagDraft,
   createTagOption,
@@ -223,6 +224,43 @@ describe("tag operations", () => {
     expect(await ticketsCollection(storage).get(created.id)).toMatchObject({
       content: "Edited elsewhere",
       tags: expectedTags,
+    });
+  });
+
+  // Only changeTicketFiles changes a ticket's file list, so a bulk tag change must not write back
+  // a file list it read before a file change.
+  test("changing a tag type keeps a file deleted while the change runs", async () => {
+    const storage = createMemoryStorage();
+    await readTicketTags(storage);
+    const created = await putTicket(storage, ticket({ tags: { "default-priority": "default-priority-high" } }));
+    const ctx = ticketContext(storage);
+    const file = await createTicketFile({ ...ctx, ticketId: created.id, name: "plan.md" });
+    const records = storage.collection<Ticket>(TICKETS_COLLECTION);
+    const get = records.get.bind(records);
+    let deletion: Promise<unknown> | undefined;
+    records.get = async (id) => {
+      const record = await get(id);
+      if (!deletion) {
+        deletion = deleteTicketFile({ ...ctx, ticketId: created.id, fileId: file.id });
+        await Promise.race([deletion, Bun.sleep(20)]);
+      }
+      return record;
+    };
+    const observed = {
+      ...ctx,
+      storage: {
+        ...storage,
+        collection: (name: string) => (name === TICKETS_COLLECTION ? records : storage.collection(name)),
+      },
+    } as ReturnType<typeof ticketContext>;
+
+    await updateTicketTag({ ...observed, tagId: "default-priority", type: "multi_select" });
+    await deletion;
+
+    const { ticketsCollection } = await import("./ticket-context.fixture");
+    expect(await ticketsCollection(storage).get(created.id)).toMatchObject({
+      files: [],
+      tags: { "default-priority": ["default-priority-high"] },
     });
   });
 });
