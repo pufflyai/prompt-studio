@@ -26,3 +26,15 @@ test("moving a ticket by an old number keeps its own deadline", async () => {
   ctx.resources.findByShorthand = async () => [identity];
   expect(await moveTicketInPlan(ctx, { ticket: "T-2" })).toEqual({ ticketId: second.id, deadlineId: "second-date" });
 });
+
+test("moving a ticket before an archived ticket is rejected", async () => {
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, params: {} });
+  const moved = await createTicketCommand.run(ctx, { title: "Moved" });
+  const archived = await createTicketCommand.run(ctx, { title: "Archived" });
+  const records = storage.collection<Record<string, unknown>>("tickets");
+  await records.put(archived.id, { ...(await records.get(archived.id)), archived: true });
+  await expect(moveTicketInPlan(ctx, { ticket: moved.id, before: archived.id })).rejects.toThrow(
+    `Unknown ticket "${archived.id}".`,
+  );
+});

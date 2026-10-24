@@ -1,7 +1,11 @@
 import { normalizeTicketDependencies } from "./ticket-dependencies";
 import type { Ticket } from "./types";
 
-type DependencyTicket = Pick<Ticket, "id" | "shorthand" | "dependsOn" | "blockedReason">;
+type DependencyTicket = Pick<Ticket, "id" | "shorthand" | "aliases" | "dependsOn" | "blockedReason">;
+
+// A blocker can name a prerequisite by a number it had before core renumbered it.
+const namesTicket = (ticket: DependencyTicket, ref: string) =>
+  [ticket.shorthand, ...(ticket.aliases ?? [])].some((name) => name.toLowerCase() === ref.toLowerCase());
 
 // Recognize only the reported dependency-only sentence. Additional instructions are independent blockers.
 export const dependencyBlockerRefs = (reason: string | null | undefined) => {
@@ -22,12 +26,13 @@ export const dependencyTicketIndex = <T extends DependencyTicket>(tickets: T[]) 
 export const dependencyBlockerIds = <T extends DependencyTicket>(ticket: T, byRef: Map<string, T>) => {
   const refs = dependencyBlockerRefs(ticket.blockedReason);
   if (!refs) return undefined;
-  const linkedIds = new Set(
-    normalizeTicketDependencies(ticket.dependsOn).map((ref) => byRef.get(ref.toLowerCase())?.id),
-  );
-  const dependencies = refs.map((ref) => byRef.get(ref.toLowerCase()));
-  if (dependencies.some((dependency) => !dependency || !linkedIds.has(dependency.id))) return undefined;
-  return dependencies.map((dependency) => dependency!.id);
+  const linked = [
+    ...new Set(normalizeTicketDependencies(ticket.dependsOn).flatMap((ref) => byRef.get(ref.toLowerCase()) ?? [])),
+  ];
+  // Each number must name exactly one linked prerequisite; a shared old number stays a real blocker.
+  const dependencies = refs.map((ref) => linked.filter((dependency) => namesTicket(dependency, ref)));
+  if (dependencies.some((matches) => matches.length !== 1)) return undefined;
+  return dependencies.map(([dependency]) => dependency!.id);
 };
 
 export const withIndependentBlockers = <T extends DependencyTicket>(tickets: T[]) => {

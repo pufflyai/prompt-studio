@@ -138,3 +138,23 @@ test("saving a ticket keeps relationships whose old number became a shared alias
     dependsOn: [dependency.id],
   });
 });
+
+test("a number shared by two linked tickets needs a ticket ID to keep one link", async () => {
+  const { updateTicketCommand } = await import("./update-ticket");
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, params: {} });
+  const first = await createTicketCommand.run(ctx, { title: "First" });
+  const second = await createTicketCommand.run(ctx, { title: "Second" });
+  const child = await createTicketCommand.run(ctx, { title: "Child", dependsOn: [first.id, second.id] });
+  const identities = [
+    { id: first.id, kind: "ticket", shorthand: "T-5", aliases: ["T-1"] },
+    { id: second.id, kind: "ticket", shorthand: "T-6", aliases: ["T-1"] },
+    { id: child.id, kind: "ticket", shorthand: child.shorthand, aliases: [] },
+  ];
+  ctx.resources.identity = async ({ id }) => identities.find((entry) => entry.id === id) ?? null;
+  ctx.resources.findByShorthand = async ({ shorthand }) =>
+    identities.filter((entry) => entry.shorthand === shorthand || entry.aliases.includes(shorthand));
+  await expect(updateTicketCommand.run(ctx, { id: child.id, dependsOn: ["T-1"] })).rejects.toThrow(
+    'Ticket "T-1" matches several tickets',
+  );
+});
