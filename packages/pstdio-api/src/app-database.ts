@@ -1,3 +1,4 @@
+import { statfs } from "node:fs/promises";
 import {
   createActivityEventsDBService,
   createAssetTransfersDBService,
@@ -57,7 +58,13 @@ export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}
   }
 };
 
-export const createAppDatabaseServices = (db: DbClient) => ({
+// Recovery points use the free space of the disk that holds the database, with no fixed quota.
+const freeBytes = (path: string) => async () => {
+  const disk = await statfs(path);
+  return disk.bavail * disk.bsize;
+};
+
+export const createAppDatabaseServices = (db: DbClient, databasePath: string) => ({
   assetTransfersDBService: createAssetTransfersDBService(db),
   environmentDBService: createEnvironmentDBService(db),
   boardViewsDBService: createBoardViewsDBService(db),
@@ -78,7 +85,9 @@ export const createAppDatabaseServices = (db: DbClient) => ({
   extensionFilesDBService: createExtensionFilesDBService(db),
   extensionSkillPreferencesDBService: createExtensionSkillPreferencesDBService(db),
   extensionAutomationPreferencesDBService: createExtensionAutomationPreferencesDBService(db),
-  extensionStorageDBService: createExtensionStorageDBService(db, storageObserver),
+  extensionStorageDBService: createExtensionStorageDBService(db, storageObserver, {
+    freeBytes: freeBytes(databasePath),
+  }),
   resourceLinksDBService: createResourceLinksDBService(db),
   extensionResourceSequencesDBService: createExtensionResourceSequencesDBService(db),
   projectInfoDBService: createProjectInfoDBService(db),

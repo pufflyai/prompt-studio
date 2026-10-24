@@ -44,6 +44,7 @@ beforeEach(async () => {
     extensionInstancesService,
     installedExtensionSourcesService,
     extensionUserDataService,
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
     projectService,
   });
 });
@@ -95,6 +96,7 @@ test("concurrent ownership claims leave one provider enabled", async () => {
     },
     installedExtensionSourcesService,
     extensionUserDataService,
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
     projectService,
   });
 

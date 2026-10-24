@@ -37,6 +37,7 @@ test("does not clear a current entry failure with success from a replaced entry"
     extensionInstancesService,
     installedExtensionSourcesService,
     extensionUserDataService,
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
     projectService,
   });
   const sourcePath = "/extensions/lab";
@@ -101,6 +102,7 @@ describe("extensionService webview build status", () => {
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
       projectService,
       eventBus,
       onInstalledSourcesChanged: () => {
@@ -180,6 +182,7 @@ describe("extensionService webview build status", () => {
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
       projectService,
       eventBus,
     });
@@ -220,6 +223,7 @@ describe("extensionService webview build status", () => {
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
       projectService,
       eventBus,
     });
@@ -261,6 +265,7 @@ describe("extensionService webview build status", () => {
       extensionInstancesService,
       installedExtensionSourcesService,
       extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
       projectService,
     });
     const register = (sourcePath: string) =>

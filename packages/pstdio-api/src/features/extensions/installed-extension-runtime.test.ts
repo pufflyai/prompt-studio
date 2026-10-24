@@ -217,6 +217,7 @@ describe("createInstalledExtensionRuntime", () => {
         extensionInstancesService,
         installedExtensionSourcesService,
         extensionUserDataService: createExtensionUserDataDBService(db),
+        recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
         projectService,
         onInstalledSourcesChanged: () => refreshRuntime(),
       });

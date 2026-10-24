@@ -217577,6 +217577,325 @@
           "fontWeight": "normal"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "vWunm",
+      "x": 62790,
+      "y": 0,
+      "name": "Project settings · Recovery · PS-847",
+      "clip": true,
+      "width": 720,
+      "height": 580,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "buiY9",
+          "name": "Heading",
+          "fill": "$ds-fg",
+          "content": "Recovery",
+          "fontFamily": "$font-heading",
+          "fontSize": 20,
+          "fontWeight": "500"
+        },
+        {
+          "type": "text",
+          "id": "C1p53",
+          "name": "Description",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Restore this cloud project or one extension to a recent recovery point. The restore syncs to your other devices.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "bhcHq",
+          "name": "Last hour",
+          "width": "fill_container",
+          "gap": 16,
+          "padding": [
+            12,
+            0
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "XOGuf",
+              "name": "Last hour details",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "d1l5f",
+                  "name": "Last hour label",
+                  "fill": "$ds-fg",
+                  "content": "Last hour",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "RBS3S",
+                  "name": "Last hour capture time",
+                  "fill": "$ds-fg-muted",
+                  "content": "22 October 2026, 10:00",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "Ly61F",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Choose Last hour",
+              "theme": {
+                "btn": "outline",
+                "size": "sm"
+              },
+              "height": 32,
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "content": "Choose"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "O9NHP2",
+          "name": "Last 12 hours",
+          "width": "fill_container",
+          "gap": 16,
+          "padding": [
+            12,
+            0
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "JCvkR",
+              "name": "Last 12 hours details",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "s2V7p",
+                  "name": "Last 12 hours label",
+                  "fill": "$ds-fg",
+                  "content": "Last 12 hours",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "uhXOs",
+                  "name": "Last 12 hours capture time",
+                  "fill": "$ds-fg-muted",
+                  "content": "22 October 2026, 00:00",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "owwAu",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Choose Last 12 hours",
+              "theme": {
+                "btn": "outline",
+                "size": "sm"
+              },
+              "height": 32,
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "content": "Choose"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "gPu65",
+          "name": "Last day",
+          "width": "fill_container",
+          "gap": 16,
+          "padding": [
+            12,
+            0
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "J8wrHz",
+              "name": "Last day details",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "vW4bx",
+                  "name": "Last day label",
+                  "fill": "$ds-fg",
+                  "content": "Last day",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "tyUSr",
+                  "name": "Last day capture time",
+                  "fill": "$ds-fg-muted",
+                  "content": "21 October 2026, 12:00",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "mBm1V",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Choose Last day",
+              "theme": {
+                "btn": "outline",
+                "size": "sm"
+              },
+              "height": 32,
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "content": "Choose"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "M0b6UT",
+          "name": "Low disk state",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "When disk space is low, only the 12-hour recovery point is kept.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "id": "awxYK",
+      "type": "ref",
+      "ref": "oEM2Q",
+      "name": "Restore recovery point · Confirmation",
+      "x": 63590,
+      "y": 0,
+      "descendants": {
+        "lhmhO": {
+          "content": "Restore project data?"
+        },
+        "QBUX8": {
+          "type": "frame",
+          "id": "frQqP",
+          "name": "Restore scope",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            8,
+            24,
+            24,
+            24
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "GtYnh",
+              "name": "Restore explanation",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Changes sync to your other devices. The current state is kept in a recovery slot so you can undo this restore.",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "U8k5pl",
+              "name": "Capture time",
+              "fill": "$ds-fg-muted",
+              "content": "22 October 2026, 10:00",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "rIUii",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Restore scope selector",
+              "width": "fill_container",
+              "height": 32,
+              "theme": {
+                "btn": "outline",
+                "size": "sm"
+              },
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "content": "Whole project ▾"
+                }
+              }
+            }
+          ]
+        },
+        "aWg2H": {
+          "theme": {
+            "btn": "primary",
+            "size": "sm"
+          }
+        },
+        "aWg2H/Hf4GT": {
+          "content": "Restore"
+        }
+      }
     }
   ],
   "themes": {
