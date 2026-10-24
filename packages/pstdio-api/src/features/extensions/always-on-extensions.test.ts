@@ -46,7 +46,9 @@ test("host-marked extensions stay enabled in existing and new projects", async (
     const optional = (await deps.extensionService.listProjectExtensionInstances(project.id)).find(
       (copy) => copy.installedSource.install_name === "optional-copy",
     );
+    // The host reads each catalog source once, so the new policy comes from a new catalog source.
     catalog.extensions[0]!.alwaysEnabled = true;
+    process.env.PSTDIO_EXTENSION_CATALOG = join(root, "catalog-required.json");
     writeFileSync(process.env.PSTDIO_EXTENSION_CATALOG, JSON.stringify(catalog));
     // A required provider also wins while discovery is restoring a disabled instance.
     await expect(deps.extensionService.setProjectExtensionEnabled(optional!.instance.id, true)).rejects.toMatchObject({
@@ -63,7 +65,6 @@ test("host-marked extensions stay enabled in existing and new projects", async (
     );
 
     // A second installed copy cannot replace a required provider during project setup.
-
     const created = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
