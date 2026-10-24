@@ -247,6 +247,43 @@
                 },
                 {
                   "type": "frame",
+                  "id": "e55BF",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "cz6ip",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "hFQnf",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "GDaOJ",
                   "name": "Examples",
                   "width": "fill_container",
@@ -3060,6 +3097,43 @@
                 },
                 {
                   "type": "frame",
+                  "id": "w9BOG",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "jtuY4",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "BNFBX",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "vGVca",
                   "name": "Examples",
                   "width": "fill_container",
@@ -4655,6 +4729,43 @@
                 },
                 {
                   "type": "frame",
+                  "id": "vKUpq",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "LRCku",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "mgivE",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "sgJl6",
                   "name": "Examples",
                   "width": "fill_container",
@@ -5960,6 +6071,43 @@
                 },
                 {
                   "type": "frame",
+                  "id": "C7EnmT",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "y4J3b",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "vnUcg",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "Zw6SP",
                   "name": "Examples",
                   "width": "fill_container",
@@ -7250,6 +7398,43 @@
                       "name": "What is Prompt Studio label",
                       "fill": "$ds-fg",
                       "content": "What is Prompt Studio",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "GqEf3",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "RM0px",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "d3TQX",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
                       "fontFamily": "$font-body",
                       "fontSize": 14,
                       "fontWeight": "normal"
@@ -11663,6 +11848,43 @@
                 },
                 {
                   "type": "frame",
+                  "id": "dmBC5",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "tY0Wp",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "y9G6N",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "jtMby",
                   "name": "Examples",
                   "width": "fill_container",
@@ -13355,6 +13577,43 @@
                 },
                 {
                   "type": "frame",
+                  "id": "L8ZkI",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "pnT6r",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "CjGma",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "i5xJ1O",
                   "name": "Examples",
                   "width": "fill_container",
@@ -14875,6 +15134,43 @@
                       "name": "What is Prompt Studio label",
                       "fill": "$ds-fg",
                       "content": "What is Prompt Studio",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "O8C6qv",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "LVWKt",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Ocnbf",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
                       "fontFamily": "$font-body",
                       "fontSize": 14,
                       "fontWeight": "normal"
@@ -16745,6 +17041,43 @@
                 },
                 {
                   "type": "frame",
+                  "id": "B0yvO",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "$ds-bg-active",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "emQJA",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "e406E",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "EraZg",
                   "name": "Examples",
                   "width": "fill_container",
@@ -17935,6 +18268,43 @@
                       "name": "What is Prompt Studio label",
                       "fill": "$ds-fg",
                       "content": "What is Prompt Studio",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "v0Wlv",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "SH6ii",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "bxqF4",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
                       "fontFamily": "$font-body",
                       "fontSize": 14,
                       "fontWeight": "normal"
@@ -19226,6 +19596,43 @@
                 },
                 {
                   "type": "frame",
+                  "id": "g8QY1E",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "ZD83r",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "olnda",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "YPpHN",
                   "name": "Examples",
                   "width": "fill_container",
@@ -20215,6 +20622,43 @@
                 },
                 {
                   "type": "frame",
+                  "id": "edXMf",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "LLVmT",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "T363Jd",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "jitba",
                   "name": "Examples",
                   "width": "fill_container",
@@ -20931,6 +21375,43 @@
                       "name": "What is Prompt Studio label",
                       "fill": "$ds-fg",
                       "content": "What is Prompt Studio",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Q5XbKK",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "kjHKX",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "MsFcL",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
                       "fontFamily": "$font-body",
                       "fontSize": 14,
                       "fontWeight": "normal"
@@ -52964,6 +53445,2000 @@
           "fontFamily": "$font-body",
           "fontSize": 14,
           "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "jase0",
+      "x": 35236,
+      "y": 0,
+      "name": "Website · What is Prompt Studio · Visual walkthrough · 1440p",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 2560,
+      "height": 1440,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "S6x4xJ",
+          "name": "Window title bar",
+          "width": "fill_container",
+          "height": 44,
+          "gap": 8,
+          "padding": [
+            0,
+            22
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "qfrvF",
+              "name": "Window controls",
+              "width": 52,
+              "height": 44,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "EfyXo",
+                  "name": "Close",
+                  "fill": "#FF5F57",
+                  "width": 12,
+                  "height": 12
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ePbio",
+                  "name": "Minimize",
+                  "fill": "#FEBC2E",
+                  "width": 12,
+                  "height": 12
+                },
+                {
+                  "type": "ellipse",
+                  "id": "B6iCRU",
+                  "name": "Zoom",
+                  "fill": "#28C840",
+                  "width": 12,
+                  "height": 12
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "skm7k",
+              "layoutPosition": "absolute",
+              "x": 94,
+              "y": 8,
+              "name": "Prompt Studio tab",
+              "height": 28,
+              "fill": "$ds-surface-hover",
+              "cornerRadius": 4,
+              "gap": 8,
+              "padding": [
+                0,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "path",
+                  "id": "EwX21",
+                  "name": "Prompt Studio logo",
+                  "geometry": "M8 0c-4.41828 0-8 3.58172-8 8v10c0 4.4183 3.58172 8 8 8h10c4.4183 0 8-3.5817 8-8v-10c0-4.41828-3.5817-8-8-8h-10z m5 11c0 1.6569-1.3431 3-3 3-1.65685 0-3-1.3431-3-3 0-1.65685 1.34315-3 3-3 1.6569 0 3 1.34315 3 3z m2 0c0 2.7614-2.2386 5-5 5-2.76142 0-5-2.2386-5-5 0-2.76142 2.23858-5 5-5 2.7614 0 5 2.23858 5 5z",
+                  "fillRule": "evenodd",
+                  "viewBox": [
+                    0,
+                    0,
+                    26,
+                    26
+                  ],
+                  "fill": "$ds-fg",
+                  "width": 16,
+                  "height": 16
+                },
+                {
+                  "type": "text",
+                  "id": "Qla0U",
+                  "name": "Brand",
+                  "fill": "$ds-fg",
+                  "content": "Prompt Studio",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "YmiJH",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "hO5Vr",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "mhETj",
+          "name": "Landing panels",
+          "width": "fill_container",
+          "height": "fill_container",
+          "gap": 4,
+          "padding": 4,
+          "children": [
+            {
+              "type": "frame",
+              "id": "SNQuZ",
+              "name": "Website navigation",
+              "width": 220,
+              "height": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 8,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Lf0B4",
+                  "name": "Start Here",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "$ds-bg-active",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "Vc9kQ",
+                      "name": "Start Here icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "sparkles",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "LOXBp",
+                      "name": "Start Here label",
+                      "fill": "$ds-fg",
+                      "content": "Start Here",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "a8TcY",
+                  "name": "What is Prompt Studio",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "$ds-surface-hover",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "FRsn4",
+                      "name": "What is Prompt Studio icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "badge-check",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "W1zCJ4",
+                      "name": "What is Prompt Studio label",
+                      "fill": "$ds-fg",
+                      "content": "What is Prompt Studio",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "BXDqT",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "FdBon",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "bYHuu",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "X0mhHM",
+                  "name": "Examples",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "XctbH",
+                      "name": "Examples icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "panels-top-left",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "N9fvv",
+                      "name": "Examples label",
+                      "fill": "$ds-fg",
+                      "content": "Examples",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "EfyHQ",
+                  "name": "Features",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "q3ZLt",
+                      "name": "Features icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "layout-grid",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Gy60M",
+                      "name": "Features label",
+                      "fill": "$ds-fg",
+                      "content": "Features",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "HBqZt",
+                  "name": "Navigation spacer",
+                  "width": 1,
+                  "height": "fill_container"
+                },
+                {
+                  "type": "text",
+                  "id": "b14pn",
+                  "name": "Community label",
+                  "fill": "$ds-fg-subtle",
+                  "content": "GET INVOLVED",
+                  "fontFamily": "$font-body",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "M08FV",
+                  "name": "Issues",
+                  "width": "fill_container",
+                  "height": 37,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "Y2cZT5",
+                      "name": "Issues icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-dot",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "cJyer",
+                      "name": "Issues label",
+                      "fill": "$ds-fg",
+                      "content": "Issues",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "S9aQr",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "icon",
+                      "id": "F9DvYb",
+                      "name": "External",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "arrow-up-right",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Erkih",
+                  "name": "Discord",
+                  "width": "fill_container",
+                  "height": 37,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "r1ykm",
+                      "name": "Discord icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "messages-square",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "nl8dT",
+                      "name": "Discord label",
+                      "fill": "$ds-fg",
+                      "content": "Discord",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wpkUE",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "icon",
+                      "id": "k7mloU",
+                      "name": "External",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "arrow-up-right",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "XI9K3",
+              "name": "Purpose walkthrough",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$ds-bg",
+              "cornerRadius": 8,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 24,
+              "padding": 32,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "H1YMJG",
+                  "name": "Purpose title",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "What is Prompt Studio?",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-heading",
+                  "fontSize": 36,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "T1SYNK",
+                  "name": "Purpose caption",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "A place for the tools your day is missing. Ask for one, use it, make it yours.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "OMxY6",
+                  "name": "Request and working tool",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "gap": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "x8CD9E",
+                      "name": "Conversation and steps",
+                      "width": 352,
+                      "layout": "vertical",
+                      "gap": 24,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "s46o5",
+                          "name": "1  Describe it",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "1  Describe it",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hNdPL",
+                          "name": "2  Use it",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "2  Use it",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "HuDD4",
+                          "name": "3  Change it",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "3  Change it",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "K1M0se",
+                          "name": "Your request",
+                          "width": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "cornerRadius": 8,
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 24,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "A0lYM",
+                              "name": "You",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "You",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "r00sR4",
+                              "name": "Build request",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Build me a reading list beside my project notes.",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "qF5m6",
+                          "name": "Agent result",
+                          "width": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "cornerRadius": 8,
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 24,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "m3b8B",
+                              "name": "Agent",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Your agent",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "QDK8w",
+                              "name": "Ready",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Reading list added to this project.",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "u8vzjm",
+                          "name": "Next change",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Add a filter for unread items →",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AQ2pO",
+                      "name": "Working example",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "j0YVH8",
+                          "name": "Example project",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Weekend reading · Interactive example",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "YcmlD",
+                          "name": "Notes beside reading list",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "H4ZAl",
+                              "name": "Project notes",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "$ds-bg",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 24,
+                              "padding": 24,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "E3QY9f",
+                                  "name": "Project notes header",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Project notes",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "pi5NT",
+                                  "name": "Editable notes",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Collect a few ideas for a quieter workday.\n\n• Keep useful links beside my notes.\n• Try one small tool, then change it.\n\nNext: skim the reading list and mark what I have read.",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "s0UOb",
+                              "name": "Reading list",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "$ds-bg",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 24,
+                              "padding": 24,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "VjbtZ",
+                                  "name": "Reading list header",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Reading list",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "zGsor",
+                                  "name": "Reading count",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "2 unread · 1 read",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "pPeqZ",
+                                  "name": "☐  Welcome to Prompt Studio",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "☐  Welcome to Prompt Studio",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "l56ciQ",
+                                  "name": "☐  Tools you can reshape",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "☐  Tools you can reshape",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "VLiK8",
+                                  "name": "☑  Build your first tool",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "☑  Build your first tool",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Jfhe0",
+                                  "name": "Add a reading item",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 12,
+                                  "justifyContent": "end",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "tpXaW",
+                                      "name": "New reading item",
+                                      "fill": "$ds-fg-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "An article, book, or idea…",
+                                      "lineHeight": 1.5,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "p7Hj8",
+                                      "name": "Add item button",
+                                      "fill": "$ds-fg",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "＋ Add to reading list",
+                                      "lineHeight": 1.5,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "h0Por",
+                  "name": "Next links",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "How does it work →    Build your first tool →    From the blog →",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Y4tMR",
+          "name": "Website status bar",
+          "width": "fill_container",
+          "height": 28,
+          "gap": 24,
+          "padding": [
+            0,
+            16
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "rbhj9",
+              "name": "Privacy",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "IjRuG",
+                  "name": "Privacy icon",
+                  "width": 12,
+                  "height": 12,
+                  "icon": "shield-check",
+                  "library": "lucide",
+                  "fill": "$ds-fg-muted"
+                },
+                {
+                  "type": "text",
+                  "id": "G99f9",
+                  "name": "Privacy label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Privacy",
+                  "fontFamily": "$font-body",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "zpyav",
+              "name": "Terms",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "qOM9i",
+                  "name": "Terms icon",
+                  "width": 12,
+                  "height": 12,
+                  "icon": "scale",
+                  "library": "lucide",
+                  "fill": "$ds-fg-muted"
+                },
+                {
+                  "type": "text",
+                  "id": "cmL87",
+                  "name": "Terms label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Terms",
+                  "fontFamily": "$font-body",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qVMWv",
+              "name": "Imprint",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "JrMP0",
+                  "name": "Imprint icon",
+                  "width": 12,
+                  "height": 12,
+                  "icon": "building-2",
+                  "library": "lucide",
+                  "fill": "$ds-fg-muted"
+                },
+                {
+                  "type": "text",
+                  "id": "m0U7Yh",
+                  "name": "Imprint label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Imprint",
+                  "fontFamily": "$font-body",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "KpfZE",
+              "name": "Footer spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "path",
+              "id": "rkj6U",
+              "name": "Stockholm symbol",
+              "geometry": "M3.54 18.54h7.92v20.46h1.08v-5.46h28.92v5.46h1.08v-9.96h1.92v9.96h1.08v-10.5c0-0.06-0.02-0.12-0.03-0.17l0.01-0.01-1.48-4.41v-4.41h-1.08v4.41l-1.47 4.42c-0.02 0.05-0.03 0.11-0.03 0.17v3.2l-1.92-1.92v-2.78h-1.08v2.46h-25.92v-14.46h-1.08v2.4a2.47 2.47 0 0 1-1.92-2.4v-3.96h0.96v-1.08h-1.7l0.58-0.58a0.54 0.54 0 0 0 0-0.76l-1.34-1.34v-2.56l1.34-1.34-0.76-0.76-0.58 0.58v-1.7h-1.08v1.7l-0.58-0.58-0.76 0.76 1.34 1.34v2.56l-1.34 1.34a0.54 0.54 0 0 0 0 0.76l0.58 0.58h-1.7v1.08h0.96v3.96c0 1.17-0.82 2.15-1.92 2.4v-2.4h-1.08v24h1.08v-20.46z m39.21 9.42l0.75-2.25 0.75 2.25h-1.5z m-35.25-19.7l0.74 0.74-0.74 0.74-0.74-0.74 0.74-0.74z m-1.02 7.28h2.03c0.12 0.74 0.45 1.4 0.95 1.92h-3.92c0.5-0.52 0.83-1.18 0.94-1.92z m32.3 15l1.92 1.92h-28.16v-1.92h26.24z m-30.32-19.5v3.42h-1.92v-3.42h1.92z m-3 17.46h1.08v10.5h-1.08v-10.5z m3 0h1.08v10.5h-1.08v-10.5z m-1.92-6h-1.08v-1.5h1.08v1.5z m3 0h-1.08v-1.5h1.08v1.5z m6.42 16.5v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m9.88 5.58c0.23 0.2 0.27 0.54 0.08 0.77-1.68 2.02-4.59 2.2-6.42 0.44a4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.33 4.33 0 0 1-3 1.25 0.54 0.54 0 1 1 0-1.08c0.97 0 1.88-0.46 2.58-1.3a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.68 3.77 1.67 5.17 0 0.19-0.23 0.53-0.27 0.76-0.08z m0-3c0.23 0.2 0.27 0.54 0.08 0.77-1.68 2.02-4.59 2.2-6.42 0.44a4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.33 4.33 0 0 1-3 1.25 0.54 0.54 0 1 1 0-1.08c0.97 0 1.88-0.46 2.58-1.3a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.68 3.77 1.67 5.17 0 0.19-0.23 0.53-0.27 0.76-0.08z",
+              "viewBox": [
+                0,
+                0,
+                48,
+                48
+              ],
+              "fill": "$ds-fg-muted",
+              "width": 24,
+              "height": 24
+            },
+            {
+              "type": "text",
+              "id": "sHfrt",
+              "name": "Copyright",
+              "fill": "$ds-fg",
+              "content": "© Pufflig AB. Stockholm, 2026",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-heading",
+              "fontSize": 12,
+              "fontWeight": "500"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "qYZVw",
+      "x": 37896,
+      "y": 0,
+      "name": "Website · How does it work · Fitted chapter · 1440p",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 2560,
+      "height": 1440,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "h0OpJd",
+          "name": "Window title bar",
+          "width": "fill_container",
+          "height": 44,
+          "gap": 8,
+          "padding": [
+            0,
+            22
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "qWnFY",
+              "name": "Window controls",
+              "width": 52,
+              "height": 44,
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "AIgNv",
+                  "name": "Close",
+                  "fill": "#FF5F57",
+                  "width": 12,
+                  "height": 12
+                },
+                {
+                  "type": "ellipse",
+                  "id": "QIxiX",
+                  "name": "Minimize",
+                  "fill": "#FEBC2E",
+                  "width": 12,
+                  "height": 12
+                },
+                {
+                  "type": "ellipse",
+                  "id": "rzBou",
+                  "name": "Zoom",
+                  "fill": "#28C840",
+                  "width": 12,
+                  "height": 12
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hEYNx",
+              "layoutPosition": "absolute",
+              "x": 94,
+              "y": 8,
+              "name": "Prompt Studio tab",
+              "height": 28,
+              "fill": "$ds-surface-hover",
+              "cornerRadius": 4,
+              "gap": 8,
+              "padding": [
+                0,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "path",
+                  "id": "ltlzM",
+                  "name": "Prompt Studio logo",
+                  "geometry": "M8 0c-4.41828 0-8 3.58172-8 8v10c0 4.4183 3.58172 8 8 8h10c4.4183 0 8-3.5817 8-8v-10c0-4.41828-3.5817-8-8-8h-10z m5 11c0 1.6569-1.3431 3-3 3-1.65685 0-3-1.3431-3-3 0-1.65685 1.34315-3 3-3 1.6569 0 3 1.34315 3 3z m2 0c0 2.7614-2.2386 5-5 5-2.76142 0-5-2.2386-5-5 0-2.76142 2.23858-5 5-5 2.7614 0 5 2.23858 5 5z",
+                  "fillRule": "evenodd",
+                  "viewBox": [
+                    0,
+                    0,
+                    26,
+                    26
+                  ],
+                  "fill": "$ds-fg",
+                  "width": 16,
+                  "height": 16
+                },
+                {
+                  "type": "text",
+                  "id": "JLWRe",
+                  "name": "Brand",
+                  "fill": "$ds-fg",
+                  "content": "Prompt Studio",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "MxpNb",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "wtrKT",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "F02P4",
+          "name": "Landing panels",
+          "width": "fill_container",
+          "height": "fill_container",
+          "gap": 4,
+          "padding": 4,
+          "children": [
+            {
+              "type": "frame",
+              "id": "y4n2zp",
+              "name": "Website navigation",
+              "width": 220,
+              "height": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 8,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "eJvXx",
+                  "name": "Start Here",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "$ds-bg-active",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "wNVHH",
+                      "name": "Start Here icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "sparkles",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "RdOWe",
+                      "name": "Start Here label",
+                      "fill": "$ds-fg",
+                      "content": "Start Here",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "i8RET",
+                  "name": "What is Prompt Studio",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "ep98t",
+                      "name": "What is Prompt Studio icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "badge-check",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "KZRSV",
+                      "name": "What is Prompt Studio label",
+                      "fill": "$ds-fg",
+                      "content": "What is Prompt Studio",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "GtbRX",
+                  "name": "How does it work",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "$ds-surface-hover",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "CLYN9",
+                      "name": "How does it work icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-help",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "NSpWh",
+                      "name": "How does it work label",
+                      "fill": "$ds-fg",
+                      "content": "How does it work",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "i6fwF",
+                  "name": "Examples",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "uyzrl",
+                      "name": "Examples icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "panels-top-left",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "G6RBhw",
+                      "name": "Examples label",
+                      "fill": "$ds-fg",
+                      "content": "Examples",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "KOLmw",
+                  "name": "Features",
+                  "width": "fill_container",
+                  "height": 37,
+                  "fill": "#00000000",
+                  "cornerRadius": 4,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "atIPy",
+                      "name": "Features icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "layout-grid",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "VIkJA",
+                      "name": "Features label",
+                      "fill": "$ds-fg",
+                      "content": "Features",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dxFvd",
+                  "name": "Navigation spacer",
+                  "width": 1,
+                  "height": "fill_container"
+                },
+                {
+                  "type": "text",
+                  "id": "IwLp4",
+                  "name": "Community label",
+                  "fill": "$ds-fg-subtle",
+                  "content": "GET INVOLVED",
+                  "fontFamily": "$font-body",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "J2RFa",
+                  "name": "Issues",
+                  "width": "fill_container",
+                  "height": 37,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "s7lWYp",
+                      "name": "Issues icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "circle-dot",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Hy6Sq",
+                      "name": "Issues label",
+                      "fill": "$ds-fg",
+                      "content": "Issues",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nPz86",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "icon",
+                      "id": "KJt7B",
+                      "name": "External",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "arrow-up-right",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "WsUWu",
+                  "name": "Discord",
+                  "width": "fill_container",
+                  "height": 37,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "CwW1L",
+                      "name": "Discord icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "messages-square",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ePk2B",
+                      "name": "Discord label",
+                      "fill": "$ds-fg",
+                      "content": "Discord",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YwfUA",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "icon",
+                      "id": "h4776G",
+                      "name": "External",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "arrow-up-right",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "n6VrK",
+              "name": "Full height chapter",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$ds-bg",
+              "cornerRadius": 8,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 24,
+              "padding": 32,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "x2aEE",
+                  "name": "Chapter tabs",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Building blocks     A clean editor     Connected tools     Make it yours",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "DIiVb",
+                  "name": "Chapter title",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "The right building blocks to create extensions.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-heading",
+                  "fontSize": 36,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "CzrmM",
+                  "name": "Chapter caption",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Give your agents the pieces they need to build useful tools.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "wRmWf",
+                  "name": "Bounded building blocks",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "h9bZO",
+                      "name": "Building blocks row 0",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "tj4gt",
+                          "name": "Pages",
+                          "width": 480,
+                          "height": 280,
+                          "fill": "$ds-bg-subtle",
+                          "cornerRadius": 8,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 24,
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "dpVJd",
+                              "name": "Pages title",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Pages",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-heading",
+                              "fontSize": 24,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "RDMtV",
+                              "name": "Pages detail",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Give your tool an interface.",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "WV8os",
+                          "name": "Editors",
+                          "width": 480,
+                          "height": 280,
+                          "fill": "$ds-bg-subtle",
+                          "cornerRadius": 8,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 24,
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "WlIgy",
+                              "name": "Editors title",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Editors",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-heading",
+                              "fontSize": 24,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "nakbv",
+                              "name": "Editors detail",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Work with files your way.",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "stRjJ",
+                          "name": "Commands",
+                          "width": 480,
+                          "height": 280,
+                          "fill": "$ds-bg-subtle",
+                          "cornerRadius": 8,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 24,
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "yzB1F",
+                              "name": "Commands title",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Commands",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-heading",
+                              "fontSize": 24,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "f1VGO",
+                              "name": "Commands detail",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Add an action you or your agent can run.",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h76D1v",
+                      "name": "Building blocks row 1",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "FWuiE",
+                          "name": "Skills",
+                          "width": 480,
+                          "height": 280,
+                          "fill": "$ds-bg-subtle",
+                          "cornerRadius": 8,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 24,
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "SYSBZ",
+                              "name": "Skills title",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Skills",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-heading",
+                              "fontSize": 24,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Sat0w",
+                              "name": "Skills detail",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Teach your agent how you work.",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hWmkY",
+                          "name": "Hooks",
+                          "width": 480,
+                          "height": 280,
+                          "fill": "$ds-bg-subtle",
+                          "cornerRadius": 8,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 24,
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "KHfs5",
+                              "name": "Hooks title",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Hooks",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-heading",
+                              "fontSize": 24,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "fLXzi",
+                              "name": "Hooks detail",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Run an action when something happens.",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "WhQNF",
+                          "name": "Schedules",
+                          "width": 480,
+                          "height": 280,
+                          "fill": "$ds-bg-subtle",
+                          "cornerRadius": 8,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 24,
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ZE5kM",
+                              "name": "Schedules title",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Schedules",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-heading",
+                              "fontSize": 24,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "I9Nhwm",
+                              "name": "Schedules detail",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Give repeated work a time to run.",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "EkJ70",
+                  "name": "Guide link",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Read about extensions →",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "SWSUX",
+          "name": "Website status bar",
+          "width": "fill_container",
+          "height": 28,
+          "gap": 24,
+          "padding": [
+            0,
+            16
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "J0Qum8",
+              "name": "Privacy",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "BInNu",
+                  "name": "Privacy icon",
+                  "width": 12,
+                  "height": 12,
+                  "icon": "shield-check",
+                  "library": "lucide",
+                  "fill": "$ds-fg-muted"
+                },
+                {
+                  "type": "text",
+                  "id": "eDcP1",
+                  "name": "Privacy label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Privacy",
+                  "fontFamily": "$font-body",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Xxb7x",
+              "name": "Terms",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "a1Z2XZ",
+                  "name": "Terms icon",
+                  "width": 12,
+                  "height": 12,
+                  "icon": "scale",
+                  "library": "lucide",
+                  "fill": "$ds-fg-muted"
+                },
+                {
+                  "type": "text",
+                  "id": "l2TLv",
+                  "name": "Terms label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Terms",
+                  "fontFamily": "$font-body",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "WT5sO",
+              "name": "Imprint",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "de5aC",
+                  "name": "Imprint icon",
+                  "width": 12,
+                  "height": 12,
+                  "icon": "building-2",
+                  "library": "lucide",
+                  "fill": "$ds-fg-muted"
+                },
+                {
+                  "type": "text",
+                  "id": "a1XeV",
+                  "name": "Imprint label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Imprint",
+                  "fontFamily": "$font-body",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "P1WhnC",
+              "name": "Footer spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "path",
+              "id": "z5cYp9",
+              "name": "Stockholm symbol",
+              "geometry": "M3.54 18.54h7.92v20.46h1.08v-5.46h28.92v5.46h1.08v-9.96h1.92v9.96h1.08v-10.5c0-0.06-0.02-0.12-0.03-0.17l0.01-0.01-1.48-4.41v-4.41h-1.08v4.41l-1.47 4.42c-0.02 0.05-0.03 0.11-0.03 0.17v3.2l-1.92-1.92v-2.78h-1.08v2.46h-25.92v-14.46h-1.08v2.4a2.47 2.47 0 0 1-1.92-2.4v-3.96h0.96v-1.08h-1.7l0.58-0.58a0.54 0.54 0 0 0 0-0.76l-1.34-1.34v-2.56l1.34-1.34-0.76-0.76-0.58 0.58v-1.7h-1.08v1.7l-0.58-0.58-0.76 0.76 1.34 1.34v2.56l-1.34 1.34a0.54 0.54 0 0 0 0 0.76l0.58 0.58h-1.7v1.08h0.96v3.96c0 1.17-0.82 2.15-1.92 2.4v-2.4h-1.08v24h1.08v-20.46z m39.21 9.42l0.75-2.25 0.75 2.25h-1.5z m-35.25-19.7l0.74 0.74-0.74 0.74-0.74-0.74 0.74-0.74z m-1.02 7.28h2.03c0.12 0.74 0.45 1.4 0.95 1.92h-3.92c0.5-0.52 0.83-1.18 0.94-1.92z m32.3 15l1.92 1.92h-28.16v-1.92h26.24z m-30.32-19.5v3.42h-1.92v-3.42h1.92z m-3 17.46h1.08v10.5h-1.08v-10.5z m3 0h1.08v10.5h-1.08v-10.5z m-1.92-6h-1.08v-1.5h1.08v1.5z m3 0h-1.08v-1.5h1.08v1.5z m6.42 16.5v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m3 0v-3h1.08v3h-1.08z m9.88 5.58c0.23 0.2 0.27 0.54 0.08 0.77-1.68 2.02-4.59 2.2-6.42 0.44a4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.33 4.33 0 0 1-3 1.25 0.54 0.54 0 1 1 0-1.08c0.97 0 1.88-0.46 2.58-1.3a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.68 3.77 1.67 5.17 0 0.19-0.23 0.53-0.27 0.76-0.08z m0-3c0.23 0.2 0.27 0.54 0.08 0.77-1.68 2.02-4.59 2.2-6.42 0.44a4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.34 4.34 0 0 1-6 0 4.33 4.33 0 0 1-3 1.25 0.54 0.54 0 1 1 0-1.08c0.97 0 1.88-0.46 2.58-1.3a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.67 3.77 1.67 5.16 0a0.54 0.54 0 0 1 0.84 0c1.39 1.68 3.77 1.67 5.17 0 0.19-0.23 0.53-0.27 0.76-0.08z",
+              "viewBox": [
+                0,
+                0,
+                48,
+                48
+              ],
+              "fill": "$ds-fg-muted",
+              "width": 24,
+              "height": 24
+            },
+            {
+              "type": "text",
+              "id": "XQ6T9",
+              "name": "Copyright",
+              "fill": "$ds-fg",
+              "content": "© Pufflig AB. Stockholm, 2026",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-heading",
+              "fontSize": 12,
+              "fontWeight": "500"
+            }
+          ]
         }
       ]
     }

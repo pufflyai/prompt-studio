@@ -16,6 +16,7 @@ export const landingStorySlotRecipe = defineSlotRecipe({
     "blockSymbol",
     "blockMark",
     "composition",
+    "scrollContent",
   ],
   base: {
     page: {
@@ -77,14 +78,17 @@ export const landingStorySlotRecipe = defineSlotRecipe({
     blockGrid: {
       display: "grid",
       gap: "sm",
-      gridTemplateColumns: "minmax(0, 1fr)",
-      "@container (min-width: 26rem)": { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" },
-      "@container (min-width: 55rem)": { gridTemplateColumns: "repeat(3, minmax(0, 1fr))" },
+      gridTemplateColumns: "minmax(0, {sizes.sm})",
+      alignContent: "start",
+      "@container (min-width: 36rem)": { gridTemplateColumns: "repeat(2, minmax(0, {sizes.sm}))" },
+      "@container (min-width: 55rem)": { gridTemplateColumns: "repeat(3, minmax(0, {sizes.sm}))" },
     },
     block: {
       display: "flex",
       flexDirection: "column",
       alignItems: "start",
+      maxWidth: "sm",
+      maxHeight: "80",
       gap: "sm",
       p: "lg",
       bg: "bg.subtle",
@@ -106,6 +110,18 @@ export const landingStorySlotRecipe = defineSlotRecipe({
     },
   },
   variants: {
+    fill: {
+      true: {
+        page: { flex: 1, minHeight: "full", gap: "lg", py: { base: "lg", md: "xl" } },
+        scrollContent: { height: "full", display: "flex", flexDirection: "column" },
+        section: { flex: 1, minHeight: "min-content" },
+        visual: { display: "flex", flexDirection: "column", flex: 1, minHeight: "min-content" },
+        panels: { flex: 1, alignItems: "stretch", minHeight: "min-content" },
+        panel: { minHeight: "64", maxHeight: "none" },
+        blockGrid: { flex: 1, gridAutoRows: "minmax({sizes.56}, max-content)" },
+        block: { justifyContent: "center" },
+      },
+    },
     compact: {
       true: {
         panelHeader: { p: "xs", textStyle: "label/S/medium" },

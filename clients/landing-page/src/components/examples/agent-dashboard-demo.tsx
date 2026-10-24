@@ -57,7 +57,13 @@ export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind }) => {
       })),
   }));
   return (
-    <Stack ref={board.hostRef} gap="panel-gap" role="group" aria-label="Coding agent workflow">
+    <Stack
+      ref={board.hostRef}
+      css={styles.agentDashboard}
+      gap="panel-gap"
+      role="group"
+      aria-label="Coding agent workflow"
+    >
       {highlighted === "command" || highlighted === "skill" || highlighted === "automation" ? (
         <AgentWorkflowExamples highlighted={highlighted} />
       ) : (

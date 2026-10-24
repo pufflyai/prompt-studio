@@ -41,16 +41,24 @@ Narrow layouts use 95% of the fitted editor width, aligning more closely with th
 download content. Desktop layouts keep their compact 85% fit.
 The download button uses a download icon. The platform menu uses monochrome macOS,
 Windows, or Linux logos for each build.
-All 28 building-block shapes start in a settled pile beneath the editor. Matter.js supplies gravity,
+All 28 building-block shapes start awake in low stacks on the floor beneath the editor. Matter.js supplies gravity,
 collisions, rotation, momentum, and wall bounces across the entire main area,
 including the download area. Only docked shapes remain fixed. Drag or toss blocks
 with a mouse, touch, or pen; pulling one out of a slot makes it fall again.
+Fast drags use smaller collision steps along the pointer path so the held shape
+keeps up without skipping neighbouring shapes.
+Throws use the body's actual travel over the last 50 milliseconds, so momentum
+survives gaps between pointer events and physics ticks on high refresh displays.
+A reversed gesture starts a new throw once the body moves in the new direction;
+a final pointer event cannot erase travel before the physics world follows it.
+Pausing before release or cancelling a drag clears that momentum.
 The download links remain clickable above the scene.
 The build description and platform controls reserve their space while downloads
 load, so resolving a release does not shift the scene's ground on mobile.
 The settled pile is included in the static HTML and appears before JavaScript loads.
-Its ground-relative positions are shared with the physics engine, which starts the
-shapes asleep instead of calculating their resting positions during startup. The
+Its floor positions are shared with the physics engine. Flat shapes support the upper
+shapes, leaving only slight contact settling on desktop. Narrow scenes crowd the
+shapes inside their walls and let the pile settle naturally. The
 editor outline also appears in the static HTML at its fitted size. The live editor
 and cursors appear once their layout is measured. Idle cursors drift slowly over
 short distances while they wait for their next task. Initialization does not
@@ -80,6 +88,10 @@ the fitted size. Its controls stay at their reference scale as the board grows,
 so larger screens show more content instead of oversized UI. The landing preview
 hides its scrollbars while allowing the animated agents to reveal their controls.
 The shader code pane fills its panel's remaining height.
+The icon set editor fills the workbench preview, with its panels stretched to fit.
+The standalone icon editor keeps its content-sized panels.
+The coding agent dashboard and its board also fill the workbench preview. Its
+standalone example retains its fixed board height and session detail.
 The measured download column and the theme's font scaling keep that layout
 aligned on large displays too.
 Shapes keep their original size when inserted,
@@ -141,13 +153,23 @@ palette provide navigation.
 
 ## Product examples
 
-What is Prompt Studio lives at `/what-is-prompt-studio`. Its carousel shows one
-chapter at a time: building blocks, a clean editor, connected tools, and tools
+What is Prompt Studio lives at `/what-is-prompt-studio/`. It shows a working
+reading-list tool beside editable project notes. Visitors can replay the request,
+build the tool, add and read items, then ask for an unread
+filter. Notes and list items stay intact while the example changes. These are
+local example interactions. The page keeps links to the guides and blog posts
+behind the idea.
+How does it work follows it in navigation, at `/how-does-it-work/`. Its carousel
+links each chapter to the relevant documentation and shows one chapter at a time: building blocks, a clean editor, connected tools, and tools
 adapted by an agent. A compact chapter tab row stays visible above the content. Both carousels
 advance every eight seconds and wrap to the first chapter. Pointer hover,
 keyboard focus, or a hidden browser tab suspends playback. Selecting a tab
 or swiping horizontally also changes the chapter. Chapters change immediately,
 without transition animations. Arrow keys navigate focused tabs. Reduced motion disables autoplay.
+How does it work uses a fitted demo layout: its chapter, panels, and previews
+share the available height at 1440p. Standalone examples keep content sizing.
+Building-block cards have bounded widths and content-sized rows so they stay
+compact when the chapter grows.
 Each chapter scrolls within the available panel height on desktop and mobile;
 scrolling never advances to another chapter. There is no numbered stepper or pause
 button. The Tweak demo focuses on the shader and its controls.

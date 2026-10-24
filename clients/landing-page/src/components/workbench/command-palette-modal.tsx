@@ -19,7 +19,8 @@ import { landingPathForView } from "../../services/landing-route";
 
 const VIEW_SEARCH_TEXT: Record<SidebarView, string> = {
   start: "home landing start here install",
-  "what-is-prompt-studio": "what is prompt studio extensions tools building blocks workbench",
+  "what-is-prompt-studio": "what is prompt studio purpose why tools workbench build with agents",
+  "how-does-it-work": "how does it work extensions tools building blocks workbench documentation",
   examples: "examples tools icons coding agent dashboard kanban financial formula glossary building blocks",
   features: "features search notifications navigation extension management themes plumbing",
 };

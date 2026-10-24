@@ -93,7 +93,7 @@ export const fieldPieces = (size: FieldSize, board = assemblyLayout(size).board)
     ...piece,
     source: {
       ...piece.source,
-      x: center + piece.source.x,
+      x: Math.max(piece.width / 2, Math.min(size.width - piece.width / 2, center + piece.source.x)),
       y: size.height + piece.source.y,
     },
   }));

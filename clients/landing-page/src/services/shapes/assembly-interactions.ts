@@ -2,6 +2,7 @@ import { DEMO_CLI_EVENT, demoCliResult, demoCliText } from "../../content/demo-c
 import type { ToolExampleId } from "../../content/tool-examples-content";
 import { TOOL_INTERACTIONS, type ToolInteraction } from "../../content/tool-interactions";
 import { MOTION_DURATION_SCALE, type Point, travel } from "./assembly-motion";
+import { assemblyTargetPoint, revealAssemblyTarget } from "./assembly-targets";
 
 interface PanelAgent {
   position: Point;
@@ -26,18 +27,6 @@ const setInput = (element: HTMLInputElement | HTMLTextAreaElement, value: string
   element.setSelectionRange(value.length, value.length);
 };
 
-const revealInFrame = (parent: HTMLElement, element: HTMLElement, editingEnd: boolean) => {
-  const frame = parent.getBoundingClientRect();
-  const target = element.getBoundingClientRect();
-  const scale = frame.height / parent.clientHeight;
-  const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight);
-  const top = editingEnd ? target.bottom - lineHeight * scale : target.top;
-  // A tall field cannot fit both edges. Keep its edited line visible instead of alternating between them.
-  if (!editingEnd && target.height > frame.height && target.top < frame.bottom && target.bottom > frame.top) return;
-  if (target.bottom > frame.bottom) parent.scrollTop += (target.bottom - frame.bottom + 8) / scale;
-  else if (top < frame.top) parent.scrollTop += (top - frame.top - 8) / scale;
-};
-
 /** Agents use the same controls and React handlers as the example pages. */
 export const createAssemblyInteractions = (scene: SVGSVGElement, agents: PanelAgent[]) => {
   const preview = scene.querySelector<HTMLElement>("[data-tool-preview]")!;
@@ -54,38 +43,20 @@ export const createAssemblyInteractions = (scene: SVGSVGElement, agents: PanelAg
     delete scene.dataset.assemblyAction;
   };
   const reveal = (element: HTMLElement, editingEnd = false) => {
-    for (let parent = element.parentElement; parent && preview.contains(parent); parent = parent.parentElement) {
-      if (!parent.clientHeight || parent.scrollHeight <= parent.clientHeight) continue;
-      if (["visible", "clip"].includes(getComputedStyle(parent).overflowY)) continue;
-      revealInFrame(parent, element, editingEnd);
-    }
+    revealAssemblyTarget(preview, element, editingEnd);
   };
-  const point = (element: HTMLElement, typing: boolean) => {
-    const rect = element.getBoundingClientRect();
-    let { left, right, top, bottom } = rect;
-    for (let parent = element.parentElement; parent && preview.contains(parent); parent = parent.parentElement) {
-      if (getComputedStyle(parent).overflow === "visible") continue;
-      const frame = parent.getBoundingClientRect();
-      left = Math.max(left, frame.left);
-      right = Math.min(right, frame.right);
-      top = Math.max(top, frame.top);
-      bottom = Math.min(bottom, frame.bottom);
-    }
-    const p = new DOMPoint(
-      typing ? left + Math.min(30, (right - left) / 2) : (left + right) / 2,
-      (top + bottom) / 2,
-    ).matrixTransform(scene.getScreenCTM()!.inverse());
-    return { x: p.x - 5, y: p.y - 5 };
-  };
+  const point = (element: HTMLElement, typing: boolean) => assemblyTargetPoint(scene, preview, element, typing);
   const type = (current: InteractionJob, progress: number) => {
     if (current.action.kind !== "type") return;
     const suffix = current.action.edit === "shader" ? "\n// Codex: brighten the ribbon colours." : "-spark";
-    let characters = Math.floor(suffix.length * Math.min(1, progress));
+    const input = current.target as HTMLInputElement | HTMLTextAreaElement;
+    // Reaching a moved field pauses typing. Keep the prefix already entered when it resumes.
+    const entered = input.value.length - current.initialText.length;
+    let characters = Math.max(entered, Math.floor(suffix.length * Math.min(1, progress)));
     // Insert the comment delimiter together so intermediate keystrokes remain valid GLSL.
     if (current.action.edit === "shader" && characters > 0) characters = Math.max(3, characters);
     let value = current.initialText + suffix.slice(0, characters);
     if (progress >= 1 && current.action.edit === "shader") value = value.replace("glow * 0.55", "glow * 0.85");
-    const input = current.target as HTMLInputElement | HTMLTextAreaElement;
     if (input.value !== value) setInput(input, value);
     if (current.action.edit === "shader") reveal(input, true);
   };
@@ -112,7 +83,8 @@ export const createAssemblyInteractions = (scene: SVGSVGElement, agents: PanelAg
     if (!target || target.hasAttribute("disabled")) return;
     reveal(target, action.kind === "type" && target instanceof HTMLTextAreaElement);
     const from = { ...agents[action.agent].position };
-    const targetPoint = point(target, false);
+    const targetPoint = point(target, action.kind === "type");
+    if (!targetPoint) return;
     job = {
       action,
       target,
@@ -120,18 +92,20 @@ export const createAssemblyInteractions = (scene: SVGSVGElement, agents: PanelAg
       started: now,
       duration: (700 + Math.hypot(from.x - targetPoint.x, from.y - targetPoint.y) * 0.5) * MOTION_DURATION_SCALE,
       phase: "approach",
-      initialText: "",
+      initialText: (target as HTMLInputElement).value ?? "",
       applied: false,
     };
   };
   const approach = (current: InteractionJob, now: number, progress: number) => {
     const agent = agents[current.action.agent];
-    agent.position = travel(current.from, point(current.target, false), progress, 28);
+    reveal(current.target, current.action.kind === "type" && current.target instanceof HTMLTextAreaElement);
+    const target = point(current.target, current.action.kind === "type");
+    if (!target) return;
+    agent.position = travel(current.from, target, progress, 28);
     if (progress < 1) return;
     current.phase = "act";
     current.started = now;
     current.duration = current.action.kind === "type" ? 2200 : 550;
-    current.initialText = (current.target as HTMLInputElement).value ?? "";
     current.target.dataset.agentOwner = agent.element.dataset.cursorName;
   };
   const act = (current: InteractionJob, now: number, progress: number) => {
@@ -149,16 +123,28 @@ export const createAssemblyInteractions = (scene: SVGSVGElement, agents: PanelAg
         result.textContent = "✓";
         result.setAttribute("aria-label", demoCliResult(current.action.command));
       }
-    } else actOnControl(current, progress);
-    if (progress < 1) return;
+    } else actOnControl(current, now, progress);
+    if (current.phase !== "act" || progress < 1) return;
     current.target.removeAttribute("data-agent-owner");
     job = undefined;
     index++;
     nextAction = now + 600;
   };
-  const actOnControl = (current: InteractionJob, progress: number) => {
+  const actOnControl = (current: InteractionJob, now: number, progress: number) => {
+    // A click can remove or move its control. Its completed position belongs to the cursor.
+    if (current.applied) return;
     const typing = current.action.kind === "type";
-    agents[current.action.agent].position = point(current.target, typing);
+    reveal(current.target, typing && current.target instanceof HTMLTextAreaElement);
+    const target = point(current.target, typing);
+    const agent = agents[current.action.agent];
+    if (!target || Math.hypot(target.x - agent.position.x, target.y - agent.position.y) > 1) {
+      current.phase = "approach";
+      current.from = { ...agent.position };
+      current.started = now;
+      current.duration = 700 * MOTION_DURATION_SCALE;
+      return;
+    }
+    agent.position = target;
     if (typing) type(current, progress);
     else if (progress > 0.35 && !current.applied) {
       current.applied = true;
@@ -190,6 +176,11 @@ export const createAssemblyInteractions = (scene: SVGSVGElement, agents: PanelAg
       }
       if (!job) return undefined;
       const current = job;
+      if (current.action.kind !== "cli" && !current.applied && !current.target.isConnected) {
+        current.target.removeAttribute("data-agent-owner");
+        job = undefined;
+        return current.action.agent;
+      }
       const progress = (now - current.started) / current.duration;
       if (current.phase === "approach") approach(current, now, progress);
       else act(current, now, progress);
@@ -206,6 +197,12 @@ export const createAssemblyInteractions = (scene: SVGSVGElement, agents: PanelAg
         job?.action.agent === agent && job.phase === "act" && ["click", "key"].includes(job.action.kind) && job.applied,
       ),
     done: () => Boolean(example && index === TOOL_INTERACTIONS[example].length && !job),
+    resize: (now: number) => {
+      if (!job || job.applied || job.action.kind === "cli") return;
+      job.phase = "approach";
+      job.from = { ...agents[job.action.agent].position };
+      job.started = now;
+    },
     reset,
   };
 };

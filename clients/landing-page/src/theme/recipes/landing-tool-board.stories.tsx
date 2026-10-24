@@ -31,7 +31,16 @@ export const InspectorAdded: Story = {
     docs: { description: { story: "The inspector centers its glyph in a taller preview, including compact boards." } },
   },
 };
-export const IconsComplete: Story = { args: { view: { example: "icons", parts: ["page", "editor", "command"] } } };
+export const IconsComplete: Story = {
+  args: { view: { example: "icons", parts: ["page", "editor", "command"] } },
+  parameters: {
+    docs: {
+      description: {
+        story: "The icon editor fills the workbench content area as the board grows and shrinks.",
+      },
+    },
+  },
+};
 export const NarrowIconsComplete: Story = {
   args: { scale: 0.5, view: { example: "icons", parts: ["page", "editor", "command"] } },
 };
@@ -47,6 +56,18 @@ export const LargeShadersComplete: Story = {
 };
 export const AgentsComplete: Story = {
   args: { view: { example: "agents", parts: ["page", "command", "skill", "hook", "automation"] } },
+  parameters: {
+    docs: { description: { story: "The coding agent panel and kanban board fill the workbench content height." } },
+  },
+};
+export const LargeAgentsComplete: Story = {
+  args: { scale: 1.8, view: { example: "agents", parts: ["page", "command", "skill", "hook", "automation"] } },
+};
+export const AgentPageAdded: Story = {
+  args: { view: { example: "agents", parts: ["page"] } },
+};
+export const NarrowAgentsComplete: Story = {
+  args: { scale: 0.5, view: { example: "agents", parts: ["page", "command", "skill", "hook", "automation"] } },
 };
 export const AgentSlotOutlines: Story = { args: { view: { example: "agents", parts: [] } } };
 export const NarrowFiveSlots: Story = { args: { scale: 0.5, view: { example: "agents", parts: [] } } };

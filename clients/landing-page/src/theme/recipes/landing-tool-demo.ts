@@ -34,6 +34,9 @@ export const landingToolDemoSlotRecipe = defineSlotRecipe({
     "shaderControl",
     "extensionPanels",
     "agentBoard",
+    "agentDashboard",
+    "connectedTools",
+    "changeDemo",
   ],
   base: {
     agentBoard: { height: "96", minWidth: 0 },
@@ -189,8 +192,31 @@ export const landingToolDemoSlotRecipe = defineSlotRecipe({
     },
   },
   variants: {
+    fill: {
+      true: {
+        iconEditor: { flex: 1, minHeight: 0, alignItems: "stretch" },
+        inspector: { flex: 1, minHeight: 0 },
+        iconCanvas: { flex: 1 },
+        shaderPanels: { flex: 1, minHeight: "min-content" },
+        shaderCanvas: { flex: 1, height: "auto", minHeight: "48" },
+        connectedTools: {
+          flex: 1,
+          minHeight: "min-content",
+          display: "grid",
+          gridTemplateRows: "auto auto minmax(min-content, 1fr)",
+        },
+        changeDemo: { flex: 1, minHeight: "min-content" },
+        prompt: { flexShrink: 0 },
+      },
+    },
     compact: {
       true: {
+        iconEditor: {
+          height: "full",
+          minHeight: 0,
+          alignItems: "stretch",
+          "& > [data-demo-part]": { minHeight: 0, maxHeight: "none" },
+        },
         iconGrid: {
           gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
           gap: "2xs",
@@ -211,7 +237,12 @@ export const landingToolDemoSlotRecipe = defineSlotRecipe({
         shaderControl: { gap: "xs" },
         session: { p: "sm", gap: "xs" },
         sessions: { gap: "xs" },
-        agentBoard: { width: "calc(100% / 0.72)", height: "64", zoom: 0.72 },
+        agentDashboard: {
+          height: "full",
+          minHeight: 0,
+          "& > [data-demo-part=page]": { height: "full", minHeight: 0, maxHeight: "none" },
+        },
+        agentBoard: { height: "auto", flex: 1, minHeight: 0, zoom: 0.72 },
       },
     },
   },
