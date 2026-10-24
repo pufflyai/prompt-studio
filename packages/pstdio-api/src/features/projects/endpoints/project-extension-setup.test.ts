@@ -76,6 +76,25 @@ test.each([
   expect(instances[0].instance.enabled).toBe(true);
 });
 
+test("first project creation completes an interrupted default installation", async () => {
+  const fixture = { ...(await extension("interrupted-fixture")), force: true };
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([fixture]);
+  const target = join(root, "home/extensions/interrupted-fixture");
+  await mkdir(target, { recursive: true });
+  await writeFile(join(target, "extension.ts"), "export default {};");
+  const folder = join(root, "first-project");
+  await mkdir(folder);
+
+  const response = await open({ provider_id: "pstdio.root", params: { path: folder } });
+
+  expect(response.status).toBe(201);
+  const project = await response.json();
+  const instances = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
+  expect(instances).toHaveLength(1);
+  expect(instances[0].instance.enabled).toBe(true);
+  expect(JSON.parse(await readFile(join(target, "package.json"), "utf8")).name).toBe("interrupted-fixture");
+});
+
 test("initial project setup enables defaults discovered before workspace initialization", async () => {
   process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([await extension("healthy-fixture")]);
   await installDefaultExtensions();
