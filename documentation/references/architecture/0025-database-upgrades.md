@@ -22,7 +22,7 @@ At startup, `prepareCurrentPgliteHome` (`pstdio-db/src/db/pglite-current-home.ts
 | Marked with the current baseline | Open it and apply newer migrations. |
 | Anything else | Retire it, then create an empty database. |
 
-Retiring writes `backups/pre-0.46-<time>/` next to the database:
+Retiring writes `backups/pre-0.46-<time>-<folder>/` next to the database:
 
 - `export/tables/<schema>.<table>.jsonl`: every table, one JSON row per line.
 - `export/extension-records/<project id>/<extension id>.jsonl`: extension records, such as tickets, decoded from their Yjs documents.

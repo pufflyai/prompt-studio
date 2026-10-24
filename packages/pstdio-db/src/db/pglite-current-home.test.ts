@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PGlite } from "pglite-previous";
 import { createDb } from "./connection.pglite";
+import { retiredHomePath } from "./pglite-current-home";
 import { engineIdentity } from "./pglite-home-recovery";
 
 test("createDb moves an old home into a JSON-exported backup and starts with a current database", async () => {
@@ -115,4 +116,9 @@ test("a start stopped during the export keeps the old home and leaves no partial
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("homes that share a folder and retire in the same millisecond get separate backups", () => {
+  const now = new Date("2026-10-24T11:08:58.776Z");
+  expect(retiredHomePath("/home/.pstdio/first", now)).not.toBe(retiredHomePath("/home/.pstdio/second", now));
 });

@@ -1,5 +1,5 @@
 import { mkdir, rename, rm } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import type { PGliteOptions } from "@electric-sql/pglite";
 import { restoreInitialDatabase } from "./open-pglite";
 import { type EmbeddedEngineFile, resolveExportWorker } from "./pglite-export-assets";
@@ -8,9 +8,12 @@ import { preparePgliteHome } from "./pglite-home-recovery";
 
 export type PgliteRetirementPhase = "database_retiring" | "database_retired";
 
-/** Where a home from another release goes: `backups/pre-0.46-<time>/` next to the database. */
+/**
+ * Where a home from another release goes: `backups/pre-0.46-<time>-<folder>/` next to the database.
+ * The folder name keeps homes that share a parent apart when they retire in the same millisecond.
+ */
 export const retiredHomePath = (activePath: string, now = new Date()) =>
-  join(dirname(activePath), "backups", `pre-0.46-${now.toISOString().replaceAll(":", "-")}`);
+  join(dirname(activePath), "backups", `pre-0.46-${now.toISOString().replaceAll(":", "-")}-${basename(activePath)}`);
 
 export const prepareCurrentPgliteHome = async (options: {
   activePath: string;

@@ -17,7 +17,7 @@ On a real two-year-old database both upgrades failed. Four rows broke their own 
 0.46 is a breaking release for local data.
 
 - `pstdio-db/drizzle` holds one generated baseline migration for the 0.46 schema. Later schema changes add generated migrations on top of it.
-- The engine marker `.pstdio-engine.json` names the baseline (`{ "baseline": "0.46" }`). A home without that exact marker is *retired*: startup exports it to JSON, moves it to `backups/pre-0.46-<time>/` next to the database, and creates an empty database from the built image.
+- The engine marker `.pstdio-engine.json` names the baseline (`{ "baseline": "0.46" }`). A home without that exact marker is *retired*: startup exports it to JSON, moves it to `backups/pre-0.46-<time>-<folder>/` next to the database, and creates an empty database from the built image.
 - The export worker opens the old home with the engine that wrote it (`pglite-previous` for an unmarked home). It writes every table as JSON lines and decodes extension records from their Yjs documents into plain records. A failed export writes `export-error.txt` and still moves the folder aside, so nobody is locked out.
 - People bring data back by asking an agent to read the export and recreate it with the `pst` CLI. Core has no import code.
 - The public `ctx.storage.readLegacy` API stays and resolves to `undefined`. Its `@deprecated` marker ships in a separate SDK change, because one pull request may not change both the SDK and extensions. `ctx.storage.migrate` is unchanged.
