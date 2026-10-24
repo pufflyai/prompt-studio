@@ -41,7 +41,7 @@ export const readSessionHistorySources = async (sessionId: string, deps: History
       if (!session.agent_session_id || !harness?.supportsHistory) return;
       try {
         workspace = deps.workspaceSessionService
-          ? await resolveSessionWorkspaceContext(deps.workspaceSessionService, sessionId)
+          ? await resolveSessionWorkspaceContext(deps.workspaceSessionService, sessionId, harness.cwdRequirement)
           : undefined;
         sources.native = await harness.getMessages(
           { agentSessionId: session.agent_session_id, cwd: session.cwd ?? undefined, workspace },

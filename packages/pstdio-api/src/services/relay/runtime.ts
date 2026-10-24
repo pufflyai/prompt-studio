@@ -4,11 +4,11 @@ import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
 import { startAutomationSync } from "./automations";
+import { startCoreDocumentSync } from "./core-documents";
 import { startRelayExtension } from "./extension-owner";
 import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
 import { startPublishedExtensions } from "./publications";
-import { startResourceNumberSync } from "./resource-numbers";
 import { createWorkbenchConnections } from "./workbench-connections";
 
 export type RelayWorkbench = {
@@ -42,8 +42,8 @@ export const startRelayRuntime = async (input: {
   const publications = createWorkbenchConnections((config) => startPublishedExtensions(core(config)));
   const automations = createWorkbenchConnections((config) => startAutomationSync(core(config)));
   const personal = createWorkbenchConnections((config) => startRelayPersonalHistory(core(config)));
-  const resourceConnections = createWorkbenchConnections((config) => startResourceNumberSync(core(config)));
-  const coreOwners = [publications, automations, personal, resourceConnections];
+  const coreDocuments = createWorkbenchConnections((config) => startCoreDocumentSync(core(config)));
+  const coreOwners = [publications, automations, personal, coreDocuments];
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
     connection.close();
     await connection.done;
@@ -155,7 +155,7 @@ export const startRelayRuntime = async (input: {
     async status(workbenchId: string) {
       const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
       const owners = [
-        resourceConnections.get(workbenchId),
+        coreDocuments.get(workbenchId),
         publications.get(workbenchId),
         automations.get(workbenchId),
         ...snapshot.enabledSources.map(({ installedSource }) =>

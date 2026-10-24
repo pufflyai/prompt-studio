@@ -8,9 +8,12 @@ import type {
 } from "@pstdio/workbench";
 import { createElement } from "react";
 import { getApiClient } from "@/lib/api";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { createDashboardWorkspaces } from "@/shared/workspaces/dashboard-workspaces";
 import {
   absoluteWorkspaceEntryPath,
+  projectFolderMissingState,
   workspaceDeleteResource,
   workspaceFilesUnavailableState,
   workspaceIdOf,
@@ -208,6 +211,22 @@ const unsupportedSection = (title: string, description: string): TreeViewSection
   { id: "workspace-files", emptyState: { title, description }, nodes: [] },
 ];
 
+const projectFolderSection: TreeViewSection[] = [
+  {
+    id: "workspace-files",
+    nodes: [
+      {
+        id: "choose-project-folder",
+        label: "Choose a folder",
+        description: projectFolderMissingState.title,
+        icon: "folder-open",
+        commandId: dashboardCommandIds.chooseProjectFolder,
+        target: { kind: "command", commandId: dashboardCommandIds.chooseProjectFolder },
+      },
+    ],
+  },
+];
+
 export const loadWorkspaceFileEntries = async (
   ctx: WorkbenchModuleContext,
   context: TreeQueryContext,
@@ -215,10 +234,15 @@ export const loadWorkspaceFileEntries = async (
   pendingCreation: { workspaceId: string; parentPath: string; type: WorkspaceEntryCreationType } | undefined,
   path = "",
 ) => {
-  const resource = context.resource;
-  const workspaceId = workspaceIdOf(resource);
-  if (!resource || !workspaceId) return unsupportedSection("Files unavailable", "Workspace details are missing.");
+  const opened = context.resource;
+  const workspaceId = workspaceIdOf(opened);
+  if (!opened || !workspaceId) return unsupportedSection("Files unavailable", "Workspace details are missing.");
+  // A tree keeps the resource it opened with. The synced workspace row says whether its files are here now,
+  // for example after a project without a folder gets one.
+  const current = createDashboardWorkspaces().find((workspace) => workspace.id === workspaceId)?.resource;
+  const resource = current ? { ...opened, metadata: { ...opened.metadata, ...current.metadata } } : opened;
   const unavailable = workspaceFilesUnavailableState(resource);
+  if (unavailable === projectFolderMissingState) return projectFolderSection;
   if (unavailable) return unsupportedSection(unavailable.title, unavailable.description);
   const diffRequest = resolveWorkspaceDiffRequest({ resourceId: resource.id, metadata: resource.metadata });
 

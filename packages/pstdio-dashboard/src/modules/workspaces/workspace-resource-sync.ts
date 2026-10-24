@@ -1,8 +1,13 @@
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createDashboardWorkspaces } from "@/shared/workspaces/dashboard-workspaces";
+
+const fileAvailability = (metadata: Record<string, unknown> | undefined) =>
+  JSON.stringify([metadata?.workspaceProviderState, metadata?.workspacePath]);
+
 export const watchOpenWorkspaceResource = (ctx: WorkbenchModuleContext) => {
   const sync = () => {
     const location = ctx.pages.store.getState().location;
@@ -30,6 +35,10 @@ export const watchOpenWorkspaceResource = (ctx: WorkbenchModuleContext) => {
     )
       return;
     setResourceBreadcrumb(ctx, resource);
+    // Tree reads key on the workspace's identity. A workspace that becomes ready, or gets its project
+    // folder on this device, has new files to show.
+    if (fileAvailability(primary.metadata) !== fileAvailability(resource.metadata))
+      ctx.views.refreshView(dashboardWidgetIds.workspaceFileTree);
   };
   const unsubscribeData = subscribeDashboardData((change) => {
     if (!change || change.table === "workspaces") sync();

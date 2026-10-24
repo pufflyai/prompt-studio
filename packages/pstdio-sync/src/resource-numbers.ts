@@ -1,7 +1,7 @@
 import type * as Y from "yjs";
 
 export const resourceNumbersDocumentId = "resource-identities";
-export const resourceNumbersOwnerId = "pstdio";
+export const coreOwnerId = "pstdio";
 
 export interface NumberedResource {
   id: string;
