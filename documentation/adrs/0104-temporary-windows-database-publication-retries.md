@@ -2,11 +2,11 @@
 
 Proposed: 2026-10-24
 
-Status: Proposed. Native Windows regression and packaged qualification are in progress.
+Status: Accepted.
 
 ## Intended behavior
 
-The [engine upgrade adapter](0098-temporary-pglite-minor-upgrade-adapter.md) prepares and verifies a closed private database before publishing it with atomic directory renames. The existing external database lock excludes other writers throughout preparation, publication, and recovery. Diagnostic readers should not prevent a completed upgrade from opening.
+The engine upgrade adapter in ADR 0098 prepares and verifies a closed private database before publishing it with atomic directory renames. The existing external database lock excludes other writers throughout preparation, publication, and recovery. Diagnostic readers should not prevent a completed upgrade from opening.
 
 ## External limitation
 
@@ -32,4 +32,4 @@ A native Windows regression holds an actual file reader in a separate process, c
 
 ## Removal
 
-Remove the retry helper when the supported Windows runtime can publish these directories atomically while readers finish, or when the engine adapter stops renaming database homes. Keep the native reader regression to prove that supported publication still succeeds. Remove the workaround and this adapter's temporary behavior together when [ADR 0098](0098-temporary-pglite-minor-upgrade-adapter.md) reaches its removal condition.
+Remove the retry helper when the supported Windows runtime can publish these directories atomically while readers finish, or when database homes no longer move during startup. Keep the native reader regression to prove that supported publication still succeeds. When the engine adapter in ADR 0098 is removed, remove its publication calls. Keep the helper only if the replacement still moves database directories and the native regression still demonstrates the Windows sharing restriction.
