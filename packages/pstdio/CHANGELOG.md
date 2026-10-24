@@ -1,5 +1,51 @@
 # pstdio
 
+## 0.46.0
+
+_2026-10-24_
+
+### Minor Changes
+
+- 4f3928b: Store each extension record in its own document so saves stay fast and memory stays bounded in large projects; existing records move automatically, and record sync between devices is paused until per-record sync ships.
+- 65d36f4: Control Cloud early access per account and expose relay feature grants in account status.
+- 17e518d: Get your cloud projects back on a new or reset device after signing in, and give a project its folder later by cloning its git remote or choosing a checkout.
+- c157b26: Run cloud automations only on their assigned device and record missed occurrences without catch-up.
+- 34f8998: Expose device-owned performance captures, recording exports, and Developer settings controls.
+- dd5f406: Add optional bounded table and board queries with indexed page navigation and aggregate counts.
+- 9931aa2: Breaking: 0.46 starts with a new database; data from older releases is exported as JSON to `~/.pstdio/backups/pre-0.46-*` for agents to re-import, and `ctx.storage.readLegacy` now always returns undefined.
+- def084b: Add indexed record pages, aggregates and batch reads without hydrating owner documents, with safe runtime index activation and recovery of stale record and resource projections.
+- 37383ef: Sync extension records between devices again: each save travels as one encrypted update in a per-extension record stream.
+- add1413: Add reusable outliner previews, persistent controls, multiselection, and keyboard reordering.
+- bf6b2d1: Add JSON session lists and restore harness control hover feedback with explanatory tooltips.
+- 9f0140e: Add explicit CLI live steering with guarded delivery and no automatic queue fallback.
+- d91e4da: Sync cloud project extension sets with encrypted packages, atomic activation, and version-gated data writes.
+
+### Patch Changes
+
+- b86f345: Add Home above Sessions, keep project navigation stable when entering and leaving tickets, place the mode return first in subnavigation content, and remove the desktop project breadcrumb button.
+- d5b11df: Answer unfiltered record totals from a stored count so large views with many deleted records open quickly.
+- af71240: Preserve stored records through faster locale-aware database startup and drain session hooks before shutdown.
+- 4a7e459: Allow cards to move between every board column and remove drag permission settings.
+- a5aaf39: Expose full project session controls, conversation streaming, approvals, attachments, and native commands to extensions.
+- d2d175f: Keep live database upgrades starting through readiness timeouts and show migration progress.
+- d2d73b8: Preserve live webviews and unsaved state when switching session previews.
+- d07cb26: Let database upgrades finish after temporary Windows file readers release their handles.
+- 371aa05: Reuse installed local default extensions when project setup follows startup.
+- 9931aa2: Save extension records with multi-megabyte values, such as tickets with attached files, without running out of database memory.
+- 3af6c31: Retain encrypted manifest descendants until their final relay reference retires.
+- 0c308d9: Reuse installed default extensions and preserve hidden collection page state while deferring rendering until the page is visible.
+- 141d765: Keep indexed extension record pages fast in large projects by giving the query planner statistics for declared indexes.
+- e6cd77e: Keep published extensions consistent across devices when a leftover copy is disabled, a switch loses to a newer choice, or an uninstall fails.
+- bf6b2d1: Use a 380 ms first-hover tooltip delay, show harness setting labels, reveal clipped tab titles, and keep full prompt history navigable while drafts are saved.
+- 414e7b2: Give a Windows database home the same path whether it is opened through a short or a long folder name.
+- 27ef0a3: Negotiate relay support before uploading encrypted manifests with immutable child references.
+- 597ee3b: Keep navigation group drags from activating panel dropzones.
+- 0c308d9: Preserve upgrade data atomically, initialize fresh homes with one database engine, and avoid unused performance-monitoring work.
+- 36aa19a: Bound manifest downloads by their authenticated ciphertext length before buffering response bodies.
+- 216b519: Bound ticket descriptions and use shared scrollbars in create dialogs.
+- 414e7b2: Start normally after a first start was stopped while it began preparing the database.
+- f5c5c4b: Keep variable alerts bounded with full-message copying and matching scrollbars, and prevent offline icon lookups from crashing the runtime.
+
 ## 0.45.0
 
 _2026-10-22_
