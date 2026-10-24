@@ -1,8 +1,8 @@
 name: Test and Build
 
 # Pull requests select fast package, browser and native checks from their affected inputs.
-# Merge groups run the same selection over every queued PR and also build every client.
-# Main, manual runs, and ci:full PRs and merge groups retain full validation.
+# Merge groups, main, manual runs and ci:full pull requests run the full stage, so main
+# receives only commits that passed every check main runs.
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
@@ -23,6 +23,24 @@ env:
   NX_DAEMON: "false"
 
 jobs:
+  # The final success gate waits for every suite. Queue runs can stop sooner after a terminal failure.
+  # PR and main runs keep all diagnostics. Only this queue-only job can cancel a workflow run.
+  queue_fail_fast:
+    if: ${{ !cancelled() && github.event_name == 'merge_group' }}
+    permissions:
+      contents: read
+      actions: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Stop remaining queue work after a job fails
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/merge-queue-fail-fast.ts
+
   scope:
     permissions:
       contents: read
@@ -248,7 +266,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         include:
           - { package: pstdio-api, shard: 1/4 }
@@ -311,7 +329,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 25
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         include:
           - { check: lint, lane: lint }
@@ -367,7 +385,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 25
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         include:
           - { package: pstdio-api, shard: 1/8 }
@@ -504,7 +522,7 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
       options: --user 1001 --init --ipc=host
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         include: ${{ fromJSON(needs.scope.outputs.browser_matrix) }}
     env:
@@ -585,7 +603,7 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
       options: --user 1001 --init --ipc=host
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         shard: [1, 2, 3]
     env:
@@ -676,7 +694,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 18
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         suite: [cli, browser]
     container:
@@ -744,7 +762,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         os: [ubuntu-latest, windows-latest]
     env:
@@ -882,7 +900,7 @@ jobs:
       # Packaged apps install this commit's core extensions, not those of the last release tag.
       PSTDIO_EXTENSION_RELEASE_REF: ${{ github.sha }}
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         include:
           - { target: linux-x64, os: ubuntu-latest, platform: linux, arch: x64, tests: true }

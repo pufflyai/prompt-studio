@@ -1,0 +1,56 @@
+name: Merge queue removals
+
+# Labels pull requests that GitHub removed from the merge queue and explains why. Queue events
+# and manual dispatches update one pull request at a time.
+on:
+  pull_request_target:
+    types: [enqueued, dequeued, closed]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: Pull request number to reconcile
+        required: true
+        type: number
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: merge-queue-removals-${{ github.event.pull_request.number || inputs.pr-number }}
+  cancel-in-progress: false
+
+jobs:
+  label:
+    if: github.event_name == 'pull_request_target' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Like pr-risk-labels.yml, load the script from the trusted base commit and never check out PR code.
+      - name: Label removed pull requests
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PULL_NUMBER: ${{ github.event.pull_request.number || inputs.pr-number }}
+        with:
+          script: |
+            const { stripTypeScriptTypes } = await import('node:module');
+            const { writeFile } = await import('node:fs/promises');
+            const { pathToFileURL } = await import('node:url');
+            const { data } = await github.rest.repos.getContent({
+              ...context.repo,
+              path: 'scripts/ci/merge-queue-removals.ts',
+              ref: context.sha,
+            });
+            const path = `${process.env.RUNNER_TEMP}/merge-queue-removals.mjs`;
+            await writeFile(path, stripTypeScriptTypes(Buffer.from(data.content, 'base64').toString('utf8')));
+            const queue = await import(pathToFileURL(path).href);
+            const api = queue.createApi({
+              apiUrl: process.env.GITHUB_API_URL,
+              graphqlUrl: process.env.GITHUB_GRAPHQL_URL,
+              repository: `${context.repo.owner}/${context.repo.repo}`,
+              token: process.env.GITHUB_TOKEN,
+            });
+            await queue.reconcilePull(api, Number(process.env.PULL_NUMBER));
