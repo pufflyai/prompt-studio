@@ -8,7 +8,6 @@ import {
 } from "pstdio-sync";
 import type { Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { readRetiredData } from "../../db/retired-data";
 import { createStorageMigrations } from "./data-migrations";
 import { createDocumentStorageDBService } from "./document-storage";
 import type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
@@ -54,8 +53,6 @@ export const createExtensionStorageDBService = (
     documents: documents.documents,
     openTextDocument: documents.openTextDocument,
     migrate: createStorageMigrations(db, documents),
-    readLegacy: (source: string, scope: { projectId: string; extensionInstanceId: string }) =>
-      readRetiredData(db, source, scope),
     recordId: (scopeType: string, scopeId: string, key: string) => storageRecordId([scopeType, scopeId, "kv"], key),
     open: async (input: { owner: StorageOwner; assets?: AssetStore }) => {
       const storage = documents.open(input);

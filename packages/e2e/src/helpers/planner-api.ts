@@ -3,7 +3,7 @@ import { type APIRequestContext, expect } from "@playwright/test";
 export interface PlannerTicketFile {
   id: string;
   name: string;
-  content: string;
+  blobId: string;
   createdAt: string;
   updatedAt: string;
 }

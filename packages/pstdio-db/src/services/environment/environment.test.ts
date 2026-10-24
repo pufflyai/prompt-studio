@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { createDb } from "../../db/connection.pglite";
+import { engineIdentity } from "../../db/pglite-home-recovery";
 import { createProjectsDBService } from "../projects/projects";
 import { createWorkspacesDBService } from "../workspaces/workspaces";
 import { createEnvironmentDBService } from "./environment";
@@ -33,7 +34,7 @@ test(
         ["first", "second"].map(async (laptop) => {
           const path = join(root, laptop);
           await new Bun.Archive(image).extract(path);
-          await Bun.write(join(path, ".pstdio-engine.json"), JSON.stringify({ format: 1, engine: "pglite-0.4" }));
+          await Bun.write(join(path, ".pstdio-engine.json"), JSON.stringify(engineIdentity));
           phase(laptop, "open initial database");
           const initial = await createDb({ path, onPhase: (name) => phase(laptop, `initial ${name}`) });
           phase(laptop, "initial database ready");
