@@ -23,25 +23,35 @@ export const expectPackagedArtifacts = async (input: {
     expect.objectContaining({
       extensionId: "pstdio.pstdio-artifacts",
       localId: "artifacts",
-      main: { kind: "panels", empty: expect.any(Object), landing: "library" },
-      slots: expect.arrayContaining([
-        expect.objectContaining({
-          id: "library",
-          region: "main",
-          item: expect.objectContaining({ kind: "view", presence: "fixed" }),
-        }),
-        expect.objectContaining({
-          id: "artifact",
-          tab: expect.objectContaining({
-            queryHandlerId: expect.any(String),
-            refreshEventIds: ["pstdio.pstdio-artifacts.artifacts.changed"],
-          }),
-        }),
-      ]),
+      main: { kind: "panels", landing: { kind: "placement", extensionId: "pstdio.pstdio-artifacts", id: "library" } },
+      panelView: { kind: "placement", extensionId: "pstdio.pstdio-artifacts", id: "library" },
+      slots: [],
     }),
   );
-  expect(metadata.views).toContainEqual(
-    expect.objectContaining({ extensionId: "pstdio.pstdio-artifacts", localId: "open-artifact" }),
+  expect(metadata.placements).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        extensionId: "pstdio.pstdio-artifacts",
+        localId: "library",
+        addableIn: ["main"],
+        item: expect.objectContaining({ kind: "view", presence: "closed" }),
+        replaces: [
+          {
+            kind: "page-slot",
+            page: { kind: "page", extensionId: "pstdio.pstdio-artifacts", id: "artifacts" },
+            id: "library",
+          },
+        ],
+      }),
+      expect.objectContaining({
+        extensionId: "pstdio.pstdio-artifacts",
+        localId: "artifact",
+        tab: expect.objectContaining({
+          queryHandlerId: expect.any(String),
+          refreshEventIds: ["pstdio.pstdio-artifacts.artifacts.changed"],
+        }),
+      }),
+    ]),
   );
   expect(metadata.commands).toContainEqual(
     expect.objectContaining({ id: "pstdio.pstdio-artifacts.command.start-creation" }),
