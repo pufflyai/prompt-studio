@@ -183,6 +183,21 @@ test("partial candidate identities never block rebuilding an initial home or res
   }
 });
 
+test("a start stopped while it wrote transfer ownership does not block the next start", async () => {
+  for (const legacy of [false, true]) {
+    const f = await fixture(legacy);
+    try {
+      await mkdir(f.transition);
+      await writeFile(join(f.transition, "owner.json.partial"), '{"format":');
+      expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
+      expect(await readFile(join(f.active, "record"), "utf8")).toBe(legacy ? "original value" : "first value");
+      expect(await Bun.file(f.transition).exists()).toBe(false);
+    } finally {
+      await rm(f.directory, { recursive: true, force: true });
+    }
+  }
+});
+
 test("partial ownership and active engine identities fail without deleting unknown data", async () => {
   const f = await fixture(true);
   try {

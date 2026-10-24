@@ -56,7 +56,7 @@ describe("canonicalDbPath", () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-"));
     const dbPath = path.join(tempRoot, "nested", ".pstdio");
 
-    expect(canonicalDbPath(dbPath)).toBe(path.join(fs.realpathSync(path.dirname(dbPath)), ".pstdio"));
+    expect(canonicalDbPath(dbPath)).toBe(path.join(fs.realpathSync.native(path.dirname(dbPath)), ".pstdio"));
     expect(fs.existsSync(dbPath)).toBe(false);
 
     fs.rmSync(tempRoot, { force: true, recursive: true });
