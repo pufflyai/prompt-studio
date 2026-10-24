@@ -81,11 +81,42 @@ const exportExtensionRecords = async (
     "select distinct workbench_id, extension_id from storage_documents order by 1, 2",
   );
   for (const owner of owners.rows) {
+    const part = `extension-records/${owner.workbench_id}/${owner.extension_id}.jsonl`;
     try {
-      await exportOwnerRecords(db, directory, owner);
+      await exportOwnerRecords(db, directory, owner, (documentId, error) =>
+        failed(`${part} (document ${documentId})`, error),
+      );
     } catch (error) {
-      failed(`extension-records/${owner.workbench_id}/${owner.extension_id}.jsonl`, error);
+      failed(part, error);
     }
+  }
+};
+
+type ExportedRecord = Omit<Awaited<ReturnType<typeof readDocumentRecord>>, "revision" | "exists">;
+
+const readDocumentRecords = async (db: ExportDatabase, address: [string, string, string]) => {
+  const state = await db.query<{ state: Uint8Array }>(
+    "select state from storage_documents where workbench_id = $1 and extension_id = $2 and document_id = $3",
+    address,
+  );
+  const updates = await db.query<{ update: Uint8Array }>(
+    `select "update" from storage_document_updates
+     where workbench_id = $1 and extension_id = $2 and document_id = $3 order by revision`,
+    address,
+  );
+  const document = new Y.Doc();
+  try {
+    Y.applyUpdate(document, state.rows[0].state);
+    for (const { update } of updates.rows) Y.applyUpdate(document, update);
+    const ids = new Set([...document.getMap("records").keys(), ...document.getMap("deleted").keys()]);
+    const records: ExportedRecord[] = [];
+    for (const id of ids) {
+      const { revision: _revision, exists: _exists, ...record } = await readDocumentRecord(document, id);
+      records.push(record);
+    }
+    return records;
+  } finally {
+    document.destroy();
   }
 };
 
@@ -93,35 +124,21 @@ const exportOwnerRecords = async (
   db: ExportDatabase,
   directory: string,
   owner: { workbench_id: string; extension_id: string },
+  failed: (documentId: string, error: unknown) => void,
 ) => {
   await mkdir(join(directory, owner.workbench_id), { recursive: true });
-  const records: Omit<Awaited<ReturnType<typeof readDocumentRecord>>, "revision" | "exists">[] = [];
+  const records: ExportedRecord[] = [];
   const documents = await db.query<{ document_id: string }>(
     "select document_id from storage_documents where workbench_id = $1 and extension_id = $2 order by 1",
     [owner.workbench_id, owner.extension_id],
   );
+  // One damaged document must not cost the owner's healthy records, so each document reads on its own.
   for (const { document_id } of documents.rows) {
-    const address = [owner.workbench_id, owner.extension_id, document_id];
-    const state = await db.query<{ state: Uint8Array }>(
-      "select state from storage_documents where workbench_id = $1 and extension_id = $2 and document_id = $3",
-      address,
-    );
-    const updates = await db.query<{ update: Uint8Array }>(
-      `select "update" from storage_document_updates
-       where workbench_id = $1 and extension_id = $2 and document_id = $3 order by revision`,
-      address,
-    );
-    const document = new Y.Doc();
     try {
-      Y.applyUpdate(document, state.rows[0].state);
-      for (const { update } of updates.rows) Y.applyUpdate(document, update);
-      const ids = new Set([...document.getMap("records").keys(), ...document.getMap("deleted").keys()]);
-      for (const id of ids) {
-        const { revision: _revision, exists: _exists, ...record } = await readDocumentRecord(document, id);
-        records.push(record);
-      }
-    } finally {
-      document.destroy();
+      const address: [string, string, string] = [owner.workbench_id, owner.extension_id, document_id];
+      for (const record of await readDocumentRecords(db, address)) records.push(record);
+    } catch (error) {
+      failed(document_id, error);
     }
   }
   records.sort((left, right) => (left.recordId < right.recordId ? -1 : 1));
