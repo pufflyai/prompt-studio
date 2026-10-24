@@ -1,8 +1,8 @@
 import { Box, Button, Icon, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ListRow, SearchModalContent } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
-import { useWorkbenchStore } from "@pstdio/workbench/react";
-import { Folder, Plus, Search } from "lucide-react";
+import { useWorkbenchStore, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
+import { Folder, Plus, Search, Settings } from "lucide-react";
 import { useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -105,9 +105,21 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
       searchPlaceholder={t("list.searchPlaceholder")}
       searchIcon={<Search size={14} />}
       searchAutoFocus
+      footerStart={
+        !selectedProjectId ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void input.workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID)}
+          >
+            <Icon as={Settings} />
+            {t("list.settings")}
+          </Button>
+        ) : undefined
+      }
       footerEnd={
-        <Button variant="outline" size="xs" onClick={handleCreateProject}>
-          <Icon as={Plus} boxSize="14px" />
+        <Button variant="outline" size="sm" onClick={handleCreateProject}>
+          <Icon as={Plus} />
           {t("list.createProject")}
         </Button>
       }
