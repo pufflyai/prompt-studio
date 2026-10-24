@@ -6,15 +6,28 @@ const REMOVED_LABEL = "removed-from-queue";
 interface RemovedPull {
   number: number;
   headRefName: string;
-  headRefOid: string;
   url: string;
   isCrossRepository: boolean;
+  timelineItems: { nodes: Array<{ createdAt: string }> };
 }
 
-// The title names the head commit, so the existing session list records which removals already
-// have a repair. A failed repair stays handled until someone pushes a new commit.
-const sessionTitle = (pull: RemovedPull) =>
-  `Repair merge queue removal: #${pull.number} at ${pull.headRefOid.slice(0, 9)}`;
+// A repair's own push must not start another repair for the same queue removal.
+const sessionTitle = (pull: RemovedPull, removedAt: string) =>
+  `Repair merge queue removal: #${pull.number} at ${removedAt}`;
+
+const removedPullsQuery = `query($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(first: 100, after: $endCursor, states: OPEN, labels: ["${REMOVED_LABEL}"]) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        number headRefName url isCrossRepository
+        timelineItems(last: 1, itemTypes: [REMOVED_FROM_MERGE_QUEUE_EVENT]) {
+          nodes { ... on RemovedFromMergeQueueEvent { createdAt } }
+        }
+      }
+    }
+  }
+}`;
 
 const repairPrompt = (pull: RemovedPull) =>
   [
@@ -36,17 +49,23 @@ export const repairRemovedCommand = defineCommand({
     const { stdout } = await ctx.process.runOrThrow({
       command: [
         "gh",
-        "pr",
-        "list",
-        "--state",
-        "open",
-        "--label",
-        REMOVED_LABEL,
-        "--json",
-        "number,headRefName,headRefOid,url,isCrossRepository",
+        "api",
+        "graphql",
+        "--paginate",
+        "--slurp",
+        "-F",
+        "owner={owner}",
+        "-F",
+        "name={repo}",
+        "-f",
+        `query=${removedPullsQuery}`,
       ],
       cwd: root,
     });
+    const pages = JSON.parse(stdout) as Array<{
+      data: { repository: { pullRequests: { nodes: RemovedPull[] } } };
+    }>;
+    const pulls = pages.flatMap((page) => page.data.repository.pullRequests.nodes);
     const started = new Set<string>();
     let cursor: string | undefined;
     do {
@@ -56,10 +75,14 @@ export const repairRemovedCommand = defineCommand({
     } while (cursor);
     const sessionIds: string[] = [];
     const failures: string[] = [];
-    for (const pull of JSON.parse(stdout) as RemovedPull[]) {
+    for (const pull of pulls) {
       // A fork's branch cannot be pushed from here.
-      if (pull.isCrossRepository || started.has(sessionTitle(pull))) continue;
+      if (pull.isCrossRepository) continue;
       try {
+        const removedAt = pull.timelineItems.nodes[0]?.createdAt;
+        if (!removedAt) throw new Error("The pull request has no merge queue removal event.");
+        const title = sessionTitle(pull, removedAt);
+        if (started.has(title)) continue;
         await ctx.process.runOrThrow({ command: ["git", "fetch", "origin", pull.headRefName], cwd: root });
         const workspace = await ctx.workspaces.create({
           shorthand_base: `PR-${pull.number}`,
@@ -67,7 +90,7 @@ export const repairRemovedCommand = defineCommand({
           params: { base: `origin/${pull.headRefName}` },
         });
         const session = await ctx.sessions.create({
-          title: sessionTitle(pull),
+          title,
           prompt: repairPrompt(pull),
           workspaceId: workspace.id,
         });

@@ -56,7 +56,8 @@ const reconcile = async (api: QueueApi, pull: PullQueueState) => {
   const labelled = pull.labels.includes(REMOVED_LABEL);
   // The label marks a reported removal, so each removal is commented on once.
   if (removal && !labelled) {
-    const run = removal.reason === "failed_checks" ? await api.readFailedRun(pull.number, removal.at) : null;
+    const run =
+      removal.reason === "failed_checks" ? await api.readFailedRun(pull.number, removal.at).catch(() => null) : null;
     await api.comment(pull.number, removalComment(removal, run));
     await api.addLabel(pull.number);
   }

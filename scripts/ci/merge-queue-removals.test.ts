@@ -104,30 +104,48 @@ test("a manual removal is reported without blaming an earlier failed run", async
   expect(comments[0]!.body).not.toContain("actions/runs");
 });
 
-for (const failure of ["readFailedRun", "comment"] as const) {
-  test(`a failed ${failure} can be recovered without losing the removal explanation`, async () => {
-    const { api, state, comments } = fixture([
-      {
-        number: 1363,
-        state: "OPEN",
-        labels: [],
-        events: [removed("2026-10-23T22:57:00Z", "failed_checks")],
-      },
-    ]);
-    const operation = api[failure];
-    api[failure] = async () => {
-      throw new Error("GitHub temporarily unavailable");
-    };
+test("a failed comment can be recovered without losing the removal explanation", async () => {
+  const { api, state, comments } = fixture([
+    {
+      number: 1363,
+      state: "OPEN",
+      labels: [],
+      events: [removed("2026-10-23T22:57:00Z", "failed_checks")],
+    },
+  ]);
+  const comment = api.comment;
+  api.comment = async () => {
+    throw new Error("GitHub temporarily unavailable");
+  };
 
-    await expect(reconcilePull(api, 1363)).rejects.toThrow("GitHub temporarily unavailable");
-    expect(state.get(1363)!.labels).toEqual([]);
-    expect(comments).toEqual([]);
+  await expect(reconcilePull(api, 1363)).rejects.toThrow("GitHub temporarily unavailable");
+  expect(state.get(1363)!.labels).toEqual([]);
+  expect(comments).toEqual([]);
 
-    Object.assign(api, { [failure]: operation });
-    await reconcilePull(api, 1363);
-    await reconcilePull(api, 1363);
+  api.comment = comment;
+  await reconcilePull(api, 1363);
+  await reconcilePull(api, 1363);
 
-    expect(state.get(1363)!.labels).toEqual([REMOVED_LABEL]);
-    expect(comments).toHaveLength(1);
-  });
-}
+  expect(state.get(1363)!.labels).toEqual([REMOVED_LABEL]);
+  expect(comments).toHaveLength(1);
+});
+
+test("a failed run lookup still reports the removal before starting a repair", async () => {
+  const { api, state, comments } = fixture([
+    {
+      number: 1363,
+      state: "OPEN",
+      labels: [],
+      events: [removed("2026-10-23T22:57:00Z", "failed_checks")],
+    },
+  ]);
+  api.readFailedRun = async () => {
+    throw new Error("GitHub temporarily unavailable");
+  };
+
+  await reconcilePull(api, 1363);
+
+  expect(comments).toHaveLength(1);
+  expect(comments[0]!.body).toContain("a required check failed");
+  expect(state.get(1363)!.labels).toEqual([REMOVED_LABEL]);
+});
