@@ -165,7 +165,11 @@ const prepareDefaultExtensions = (deps: InstallDefaultExtensionsDeps, mode: Defa
         // Project sync discovers installed sources and keeps their recorded Git origin.
         const defaultExtensions = entries
           .filter((entry) => needsDefaultExtensionInstall(entry, extensionsRoot, mode))
-          .map((entry) => (mode === "ensure" && typeof entry !== "string" ? { ...entry, force: false } : entry));
+          .map((entry) =>
+            mode === "ensure" && typeof entry !== "string"
+              ? { ...entry, force: !isInstalledUserExtension(entry, extensionsRoot) }
+              : entry,
+          );
         const context = {
           config: { defaultExtensions },
           env,
