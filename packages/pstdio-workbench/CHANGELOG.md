@@ -1,5 +1,23 @@
 # @pstdio/workbench
 
+## 0.46.0
+
+_2026-10-24_
+
+### Minor Changes
+
+- 34f8998: Expose device-owned performance captures, recording exports, and Developer settings controls.
+- dd5f406: Add optional bounded table and board queries with indexed page navigation and aggregate counts.
+
+### Patch Changes
+
+- b86f345: Add Home above Sessions, keep project navigation stable when entering and leaving tickets, place the mode return first in subnavigation content, and remove the desktop project breadcrumb button.
+- 4a7e459: Allow cards to move between every board column and remove drag permission settings.
+- d2d73b8: Preserve live webviews and unsaved state when switching session previews.
+- 0c308d9: Reuse installed default extensions and preserve hidden collection page state while deferring rendering until the page is visible.
+- bf6b2d1: Use a 380 ms first-hover tooltip delay, show harness setting labels, reveal clipped tab titles, and keep full prompt history navigable while drafts are saved.
+- 597ee3b: Keep navigation group drags from activating panel dropzones.
+
 ## 0.45.0
 
 _2026-10-22_
