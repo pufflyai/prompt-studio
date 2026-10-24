@@ -17,6 +17,7 @@ export * from "./link-icons";
 export * from "./notifications/types";
 export * from "./pagination";
 export * from "./project-folder";
+export * from "./project-recovery";
 export * from "./projects";
 export * from "./queued-follow-ups";
 export * from "./resource-anchors";
