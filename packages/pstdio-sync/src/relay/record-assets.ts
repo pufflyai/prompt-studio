@@ -1,5 +1,5 @@
 import type { Asset, AssetReference } from "pstdio-sync-contracts";
-import { openBlob, type SyncSpace, sealBlob } from "../encryption";
+import { openBlob, type SyncSpace, sealBlob, UnreadableSyncData } from "../encryption";
 import type { AssetStore } from "../types";
 import type { DocumentRelay } from "./document-sync-types";
 
@@ -71,18 +71,28 @@ export const createRecordAssets = (input: {
       }
       return references;
     },
-    /** Downloads and decrypts every referenced asset this device does not have yet. */
+    /**
+     * Downloads and decrypts every referenced asset this device does not have yet. Bytes that do not
+     * decrypt or do not match their reference throw `UnreadableSyncData`.
+     */
     async download(references: AssetReference[]) {
       for (const reference of references) {
         if (await complete(reference.asset)) continue;
         if (!(await complete(reference.encrypted))) {
           const { assets, blobs } = require();
-          // A ranged read lets an interrupted download continue from the bytes already stored.
+          // A ranged read lets an interrupted download continue from the bytes already stored. The
+          // asset store checks those bytes itself and rejects a mismatch as unreadable.
           const read = blobs.read;
           if (read) await assets.receive(reference.encrypted, (offset) => read(reference.blobId, offset));
-          else await save(reference.encrypted, await blobs.get(reference.blobId));
+          else {
+            const bytes = await blobs.get(reference.blobId);
+            if ((await sha256(bytes)) !== reference.encrypted.sha256) throw new UnreadableSyncData();
+            await save(reference.encrypted, bytes);
+          }
         }
-        await save(reference.asset, await openBlob(input.space, reference.blobId, await read(reference.encrypted)));
+        const plain = await openBlob(input.space, reference.blobId, await read(reference.encrypted));
+        if ((await sha256(plain)) !== reference.asset.sha256) throw new UnreadableSyncData();
+        await save(reference.asset, plain);
         await input.references.set(reference);
       }
     },
