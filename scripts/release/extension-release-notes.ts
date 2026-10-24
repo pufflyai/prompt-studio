@@ -16,7 +16,8 @@ export const independentExtensionNotes = async (root: string, hostVersion: strin
   const sections: string[] = [];
   for (const dir of await publishedExtensionDirs(root)) {
     const manifest = await Bun.file(join(root, dir, "package.json")).json();
-    const before = previous ? git(["show", `${previous}:${dir}/package.json`]) : undefined;
+    // Git object paths use "/" on every platform; dir uses the native separator.
+    const before = previous ? git(["show", `${previous}:${dir.replaceAll("\\", "/")}/package.json`]) : undefined;
     const oldVersion = before?.status === 0 ? (JSON.parse(before.stdout).version as string) : undefined;
     if (oldVersion === manifest.version) continue;
     const file = Bun.file(join(root, dir, "CHANGELOG.md"));
