@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { BrowserContext } from "playwright-core";
-import { observeSmokePage } from "./smoke-observations";
+import { observeSmokePage, summarizeSmokeBrowserLog } from "./smoke-observations";
 import { completeSmokeCoverage, planSmokePages } from "./smoke-plan";
 import type { SmokeResult } from "./smoke-result";
 import { checkSmokeComposition, visitSmokePage, waitForSmokeCondition } from "./smoke-visit";
@@ -45,7 +45,7 @@ export const exerciseSmokeDashboard = async (input: {
           const pendingUrl = new URL(request.url());
           return `${pendingUrl.origin}${pendingUrl.pathname}`;
         }),
-        browserLog: readFileSync(input.logPath, "utf8").trim().split("\n").filter(Boolean).slice(-20),
+        browserLog: summarizeSmokeBrowserLog(readFileSync(input.logPath, "utf8")),
       };
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`${message}\nRegistration diagnostics: ${JSON.stringify(diagnostic)}`, { cause: error });

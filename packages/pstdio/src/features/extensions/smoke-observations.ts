@@ -4,6 +4,17 @@ import { EXTENSION_HOST_LOG_PREFIX, type ExtensionHostDiagnostic } from "pstdio-
 import type { SmokeResult } from "./smoke-result";
 
 const prefix = EXTENSION_HOST_LOG_PREFIX;
+export const summarizeSmokeBrowserLog = (log: string) =>
+  log
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .filter((line) => {
+      const entry = JSON.parse(line) as { message: string };
+      return !/^HTTP [123]\d{2}:/.test(entry.message);
+    })
+    .slice(-20);
+
 export const recordSmokeHostDiagnostic = (result: SmokeResult, event: ExtensionHostDiagnostic, phase: string) => {
   if (!event.event.endsWith("error") && event.event !== "webview-diagnostic") return;
   result.checks.push({
