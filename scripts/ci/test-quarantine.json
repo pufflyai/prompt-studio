@@ -137,9 +137,7 @@
     "owner": "PS-907 / startup default extensions",
     "name": "refreshes local default extensions when an existing project starts in source mode",
     "reason": "On Windows the restarted test app did not refresh the installed default extension within the fixture's 10 second wait in one merge-queue run; the same code passed this shard on a later full run and passes on macOS and Linux. Keep the restart and refresh assertions and add phase logs to find the slow step.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40087386182/job/120853065703"
-    ],
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40087386182/job/120853065703"],
     "removeWhen": "Identify and fix the slow refresh step, then pass ten independent Windows runs within the existing 10 second wait."
   },
   {
@@ -149,9 +147,7 @@
     "owner": "PS-907 / startup default extensions",
     "name": "refreshes local default extensions when running from source",
     "reason": "On Windows the fixture's temp folder could not be removed after the test app closed (EPERM), even with five delete retries; a rerun of the same job passed. A file inside the folder stays open after shutdown. Keep the cleanup and find which handle survives `close()`.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40091382710/job/120865030664"
-    ],
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40091382710/job/120865030664"],
     "removeWhen": "Find and close the handle that outlives app shutdown, then pass ten independent Windows runs."
   },
   {
@@ -178,9 +174,7 @@
     "arch": "arm64",
     "owner": "PS-907 / desktop navigation customization",
     "reason": "Apple Silicon exhausted 30 seconds across two app launches while reopening the second project after relaunch; no runtime error was logged. The merge group changed only extension manifests and report bodies. Keep Linux, Windows and Intel coverage blocking.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40113373674/job/120929910888"
-    ],
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40113373674/job/120929910888"],
     "removeWhen": "Identify and fix the slow phase and pass ten independent Apple Silicon runs within 30 seconds, preserving both launches and all navigation assertions."
   },
   {
@@ -191,9 +185,7 @@
     "arch": "arm64",
     "owner": "PS-907 / desktop navigation customization",
     "reason": "Failed in the same Apple Silicon job with the same 30 second relaunch pattern as the order and visibility case. Keep Linux, Windows and Intel coverage blocking.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40113373674/job/120929910888"
-    ],
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40113373674/job/120929910888"],
     "removeWhen": "Identify and fix the slow phase and pass ten independent Apple Silicon runs within 30 seconds, preserving both launches and the reset assertions."
   }
 ]
