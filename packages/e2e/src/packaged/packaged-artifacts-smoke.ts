@@ -23,12 +23,12 @@ export const expectPackagedArtifacts = async (input: {
     expect.objectContaining({
       extensionId: "pstdio.pstdio-artifacts",
       localId: "artifacts",
-      main: { kind: "panels", empty: expect.any(Object) },
+      main: { kind: "panels", landing: "library" },
       slots: expect.arrayContaining([
         expect.objectContaining({
           id: "library",
-          region: "main",
-          item: expect.objectContaining({ kind: "view", presence: "fixed" }),
+          addableIn: ["main"],
+          item: expect.objectContaining({ kind: "view", presence: "open" }),
         }),
         expect.objectContaining({
           id: "artifact",

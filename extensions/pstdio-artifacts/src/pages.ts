@@ -9,6 +9,7 @@ export { artifact } from "./resource-kinds";
 export const view = defineView({
   id: "artifacts",
   title: l10n("views.artifacts", "Artifacts"),
+  icon: "file-code",
   body: {
     kind: "webview",
     entry: packageAsset("./view.tsx", import.meta.url),
@@ -21,14 +22,15 @@ export const library = definePage({
   path: libraryPageRef.id,
   icon: "file-code",
   mode: workbenchModes.project,
-  main: { kind: "panels", empty: view.ref },
+  main: { kind: "panels", landing: libraryPanelRef.id },
   slots: [
     {
       id: libraryPanelRef.id,
       region: "main",
+      addableIn: ["main"],
       order: 0,
       mountStrategy: "keep-mounted",
-      item: { kind: "view", view: view.ref, presence: "fixed" },
+      item: { kind: "view", view: view.ref, presence: "open" },
     },
     {
       id: artifactPanelRef.id,
