@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { folderWorkspaceCapabilities } from "pstdio-db";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { blobFilesFixture } from "../../../services/shared-files/blob-files.fixture";
+import { createTestDocumentStorage } from "../../../test-utils/create-test-document-storage";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createFilesApi } from "./files";
 import { createCommandEnvironment } from "./index";
@@ -53,6 +54,7 @@ const makeEnabledSources = () => [
 const projectContext = { id: "project-1", name: "Project One", shorthand: "PO" };
 
 const makeStorageService = () => ({
+  ...createTestDocumentStorage(),
   getKv: async () => null,
   setKv: async () => {},
   deleteKv: async () => {},

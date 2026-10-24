@@ -36,9 +36,9 @@ const resolve = async (deps: SessionsRouteDeps, id: string) => {
   const record = await waitForWorkspaceReady({ workspaceSessionService: deps.workspaceSessionService }, id);
   if (record?.initializing || record?.setup_error || (record?.provider_state && record.provider_state !== "ready"))
     throw new HarnessOperationError("The workspace is not ready.", 409);
-  const workspace = toHarnessWorkspaceContext(record);
   const harness = await getSessionHarness(deps.harnessRegistry, session);
   if (!harness) throw new HarnessOperationError("The selected harness is not enabled for this project.", 400);
+  const workspace = toHarnessWorkspaceContext(record, harness.cwdRequirement);
   if (workspace?.executionTarget.kind === "remote" && harness.cwdRequirement === "required")
     throw new HarnessOperationError("This harness requires a local workspace.", 400);
   const input: HarnessCommandContext = {

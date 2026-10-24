@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import {
+  coreOwnerId,
   type DocumentState,
   documentHistory,
   resourceNumbersDocumentId,
-  resourceNumbersOwnerId,
   type StorageOwner,
 } from "pstdio-sync";
 import * as Y from "yjs";
@@ -149,7 +149,7 @@ export const runDocumentTransaction = async <T>(
     input.diagnostics,
   );
   const identities =
-    address.document_id === resourceNumbersDocumentId && address.extension_id === resourceNumbersOwnerId
+    address.document_id === resourceNumbersDocumentId && address.extension_id === coreOwnerId
       ? await trackResourceIdentityProjection(tx, address, document, !!initialize, row.revision)
       : undefined;
   const operations = localOperations(tx, address);

@@ -28,6 +28,7 @@ export { createFilesDBService } from "./services/files/files";
 export { createInstalledExtensionSourcesDBService } from "./services/installed-extension-sources/installed-extension-sources";
 export { legacyResourceOwner, sessionColumns, workspaceColumns } from "./services/legacy-resource-links";
 export { createNotificationsDBService } from "./services/notifications/notifications";
+export { createProjectInfoDBService } from "./services/project-info";
 export { createProjectsDBService } from "./services/projects/projects";
 export { pageBoundary, pageLimit, queryPage } from "./services/query-page";
 export { createResourceLinksDBService } from "./services/resource-links";

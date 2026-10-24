@@ -17,6 +17,16 @@ export const layerStyles = defineLayerStyles({
       borderColor: "border.subtle",
     },
   },
+  // A bordered choice in a dialog. The card holding the checked radio takes the accent border.
+  optionCard: {
+    value: {
+      padding: "sm",
+      borderWidth: "1px",
+      borderColor: "border.subtle",
+      borderRadius: "compact",
+      "&:has(input:checked)": { borderColor: "border.accent" },
+    },
+  },
   markdownEditorInset: {
     value: {
       padding: "lg",

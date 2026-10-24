@@ -17,6 +17,7 @@ import {
   createFilesDBService,
   createInstalledExtensionSourcesDBService,
   createNotificationsDBService,
+  createProjectInfoDBService,
   createProjectsDBService,
   createResourceLinksDBService,
   createSessionQueueEntriesDBService,
@@ -89,6 +90,7 @@ export const createAppDatabaseServices = (db: DbClient, databasePath: string) =>
   }),
   resourceLinksDBService: createResourceLinksDBService(db),
   extensionResourceSequencesDBService: createExtensionResourceSequencesDBService(db),
+  projectInfoDBService: createProjectInfoDBService(db),
   extensionSettingsDBService: createExtensionSettingsDBService(db),
   webviewPreferencesDBService: createWebviewPreferencesDBService(db),
 });

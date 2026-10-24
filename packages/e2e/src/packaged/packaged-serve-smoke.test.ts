@@ -19,6 +19,8 @@ import { registerPackagedChatMotionSmokeTests } from "./packaged-chat-motion-smo
 import { registerCliHelpSmokeTests } from "./packaged-cli-help-smoke";
 // Explicit live follow-ups capture their active run and never fall back to ordinary queued work.
 import { registerCliSteeringSmokeTests } from "./packaged-cli-steering-smoke";
+// Three compiled hosts install the published extension set; local overrides keep their code.
+import { registerCloudExtensionSetSmokeTests } from "./packaged-cloud-extension-set-smoke";
 // Shared borderless Kanban and data table tabs persist pointer/keyboard order and follow live sync.
 // scripts/verify/public-package-consumer.ts checks packaged authoring row previews, persistent actions and controlled TreeList selection.
 import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
@@ -45,6 +47,7 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 // Includes linked dependency loading and missing dependency diagnostics.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
+import { registerExtensionPublicationSmokeTests } from "./packaged-extension-publication-smoke";
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
 // CRDT storage checks atomic saves, ignored revisions, local retry outcomes and durable restart.
@@ -148,7 +151,8 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Adding Terminal in Side or Session in Bottom keeps the other empty panel open.
 // The packaged empty-panel browser flow also checks nearby tab targets, mirrored Navigation, panel handles and reload.
 
-// Two hosts check an interrupted first download, offline and back, and local edits that merge when sync restarts.
+// Two hosts check that a new device gets the cloud project after login, an interrupted first download, cloning its
+// folder later, offline and back, and local edits that merge when sync restarts.
 import { registerTwoDeviceSyncSmokeTests } from "./packaged-two-device-sync-smoke";
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { registerWorkspaceCleanupSmokeTests } from "./packaged-workspace-cleanup-smoke";
@@ -167,6 +171,8 @@ registerCliHelpSmokeTests();
 registerLinkIconsSmokeTests();
 // Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
+registerExtensionPublicationSmokeTests();
+registerCloudExtensionSetSmokeTests();
 registerExtensionStartupSmokeTests();
 registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();

@@ -1,6 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { JsonObject } from "pstdio-api-contracts/extension-kernel";
 import type { AppRouteHandler } from "../../../types";
+import { ProjectFolderMissingError } from "../../projects/project-folder-missing";
 import type { WorkspacesRouteDeps } from "../deps";
 import { createWorkspaceBodySchema, workspaceResponseSchema } from "../dto";
 import { toExtensionWorkspace } from "../extension-workspace";
@@ -37,6 +38,10 @@ export const createWorkspaceRoute = createRoute({
       description: "The workspace provider's required source is unavailable.",
       content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
+    409: {
+      description: "The project has no folder on this device yet.",
+      content: { "application/json": { schema: z.object({ error: z.string(), code: z.string().optional() }) } },
+    },
   },
 });
 
@@ -59,6 +64,7 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
       if (error instanceof InvalidWorkspaceShorthandError || error instanceof InvalidWorkspaceParamsError)
         return c.json({ error: error.message }, 400);
       if (error instanceof WorkspaceSourceNotFoundError) return c.json({ error: error.message }, 404);
+      if (error instanceof ProjectFolderMissingError) return c.json({ error: error.message, code: error.code }, 409);
       throw error;
     }
 

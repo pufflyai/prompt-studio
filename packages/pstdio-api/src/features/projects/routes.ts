@@ -4,6 +4,12 @@ import type { ProjectsRouteDeps } from "./deps";
 import { attachWorkspaceHandler, attachWorkspaceRoute } from "./endpoints/attach-workspace";
 import { createProjectHandler, createProjectRoute } from "./endpoints/create-project";
 import { bindEnvironmentHandler, bindEnvironmentRoute } from "./endpoints/environment-binding";
+import {
+  chooseProjectFolderHandler,
+  chooseProjectFolderRoute,
+  getProjectFolderHandler,
+  getProjectFolderRoute,
+} from "./endpoints/folder";
 import { getProjectHandler, getProjectRoute } from "./endpoints/get-project";
 import {
   getHarnessParamDefaultsHandler,
@@ -32,6 +38,8 @@ export const createProjectRoutes = (deps: ProjectsRouteDeps) => {
   routes.openapi(listProjectsRoute, listProjectsHandler(deps));
   routes.openapi(bindEnvironmentRoute, bindEnvironmentHandler(deps));
   routes.openapi(attachWorkspaceRoute, attachWorkspaceHandler(deps));
+  routes.openapi(getProjectFolderRoute, getProjectFolderHandler(deps));
+  routes.openapi(chooseProjectFolderRoute, chooseProjectFolderHandler(deps));
   routes.openapi(createProjectRoute, createProjectHandler(deps));
   routes.openapi(retryProjectSetupRoute, retryProjectSetupHandler(deps));
   routes.openapi(getProjectRoute, getProjectHandler(deps));

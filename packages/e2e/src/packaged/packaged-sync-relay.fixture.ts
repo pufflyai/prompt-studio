@@ -7,6 +7,9 @@ const validateLeafBegin = async (request: Request) => {
   expect(input.byteLength).toBeGreaterThan(0);
 };
 
+/** The project key the peer hands out, so a test can derive the relay ID of a named document. */
+export const packagedProjectKey = { generation: 1, secret: "A".repeat(43) };
+
 const privateSpaceOwner = (parts: string[]) => {
   if (parts[4] !== "spaces") return null;
   const owner = decodeURIComponent(parts[5]!.slice(1));
@@ -66,8 +69,9 @@ export const createPackagedSyncPeer = (
   let storedStates = 0;
   const personalDocumentIds = new Set<string>();
   const devices = new Map<string, string>();
-  // While set, document reads fail, so a device cannot finish its first download.
-  let failReads = false;
+  // While set, document reads fail, so a device cannot finish its first download. A function picks the
+  // documents whose reads fail.
+  let failReads: boolean | ((documentId: string) => boolean) = false;
   let failedReads = 0;
   let completedReads = 0;
   const document = (id: string) => {
@@ -96,7 +100,7 @@ export const createPackagedSyncPeer = (
   const workbenchRequest = (path: string) => {
     if (path.endsWith("/keys"))
       return json({
-        project: [{ generation: 1, secret: "A".repeat(43) }],
+        project: [packagedProjectKey],
         personal: [{ generation: 1, secret: "B".repeat(43) }],
       });
     if (path === "/v1/workbenches") return json([...projects].map((workbenchId) => ({ workbenchId })));
@@ -144,7 +148,7 @@ export const createPackagedSyncPeer = (
     const input = async () => (await request.json()) as Record<string, unknown>;
     const doc = document(id);
     if (path.endsWith("/read")) {
-      if (failReads) {
+      if (typeof failReads === "function" ? failReads(id.slice(1)) : failReads) {
         failedReads++;
         return new Response(null, { status: 503 });
       }
@@ -235,7 +239,7 @@ export const createPackagedSyncPeer = (
     },
     failedReads: () => failedReads,
     personalDocuments: () => [...personalDocumentIds].map((id) => documents.get(id)!),
-    failReads(value: boolean) {
+    failReads(value: boolean | ((documentId: string) => boolean)) {
       failReads = value;
     },
     /** Drops every connection, as a lost network does. */
