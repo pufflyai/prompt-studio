@@ -24,12 +24,17 @@ nativeTest(
     const appdmgRequire = createRequire(installerRequire.resolve("appdmg"));
     const hdiutil = appdmgRequire("./lib/hdiutil") as DmgAttachmentCallbacks;
     const started = performance.now();
-    const phase = (name: string) =>
-      console.info(`DMG cleanup fixture: ${name} +${Math.round(performance.now() - started)}ms`);
+    const phase = (name: string) => {
+      const message = `${name} +${Math.round(performance.now() - started)}ms`;
+      console.info(`DMG cleanup fixture: ${message}`);
+      if (process.env.GITHUB_ACTIONS) console.info(`::notice title=Native DMG cleanup::${message}`);
+    };
     try {
+      phase("creating");
       await execute("hdiutil", ["create", image, "-size", "16m", "-fs", "HFS+", "-volname", "Pstdio cleanup fixture"]);
       phase("created");
       await withDmgDeviceCleanup(hdiutil, async () => {
+        phase("attaching");
         const mountPath = await new Promise<string>((resolve, reject) => {
           hdiutil.attach(image, (error, mounted) => {
             if (error) reject(error);
@@ -41,19 +46,32 @@ nativeTest(
         try {
           // Establish the missing-mount precondition even while a process uses this owned test volume.
           // The production detach adapter must still release the attached device afterwards.
+          phase("unmounting");
           await execute("diskutil", ["unmount", "force", mountPath]);
         } finally {
           closeSync(file);
         }
         phase("unmounted");
         expect(existsSync(mountPath)).toBe(false);
+        phase("detaching");
         const result = await new Promise<Error | null>((resolve) => hdiutil.detach(mountPath, resolve));
         phase("detached");
         expect(result).toBeNull();
+        phase("checking attachment inventory");
         const remaining = await execute("hdiutil", ["info"]);
         expect(remaining.stdout).not.toContain(image);
       });
+    } catch (error) {
+      if (process.env.GITHUB_ACTIONS) {
+        const message = String(error instanceof Error ? error.stack : error)
+          .replaceAll("%", "%25")
+          .replaceAll("\r", "%0D")
+          .replaceAll("\n", "%0A");
+        console.error(`::error title=Native DMG cleanup failure::${message}`);
+      }
+      throw error;
     } finally {
+      phase("cleaning fixture");
       const { stdout } = await execute("hdiutil", ["info", "-plist"]);
       const inventory = JSON.parse(
         execFileSync("plutil", ["-convert", "json", "-o", "-", "--", "-"], { input: stdout, encoding: "utf8" }),
