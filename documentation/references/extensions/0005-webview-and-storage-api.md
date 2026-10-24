@@ -292,7 +292,7 @@ Package asset paths must be relative and stay inside the package.
 
 Command and hook handlers can read other packaged files through `ctx.packageFiles`. This API is read-only and scoped to the installed package root. Files omitted from an installed copy by `.gitignore` are unavailable at runtime.
 
-Set `pstdio.projectFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. From 0.46 it is rooted at `.pstdio/extension-storage/<publisher>.<name>/`, the same folder as the extension's artifact mounts. In 0.44 and 0.45 it is rooted at `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. 0.46 does not move or read that folder. In 0.43.x it is rooted at `.pstdio/ext/<publisher>.<name>/`. Publishers with the same package name keep separate files and ignore rules. Unless `tracked` is true, the host adds an ignore entry for the extension's full-ID folder on the first write, which also covers its artifact mounts.
+Set `pstdio.projectFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. From 0.46 it is rooted at `.pstdio/extension-storage/<publisher>.<name>/`, the same folder as the extension's artifact mounts. In 0.44 and 0.45 it is rooted at `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. 0.46 does not move or read that folder. In 0.43.x it is rooted at `.pstdio/ext/<publisher>.<name>/`. Publishers with the same package name keep separate files and ignore rules. Unless `tracked` is true, the host adds an ignore entry for the extension's full-ID folder on the first `ctx.extensionFiles` write, which also covers its artifact mounts. A write through an artifact mount alone does not add this entry.
 
 ## Artifact mounts and storage
 
