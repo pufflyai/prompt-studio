@@ -278,7 +278,7 @@ creates a new URL while the old URL still returns the old bytes.
 
 Planner writes ticket checkouts to `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/` through
 `ctx.projectFiles` ([draft-storage.ts](../../../extensions/pstdio-planner/src/data/draft-storage.ts)).
-Reports does the same under `pstdio-reports/reports/`
+Reports does the same under `pstdio.pstdio-reports/reports/`
 ([draft-storage.ts](../../../extensions/pstdio-reports/src/data/draft-storage.ts)). Both skip the
 `.publishers/<publisher>/` child. A checkout and a draft are the same files: `pst tickets pull`
 writes them and `save` reads them back. They are extension working data, so they move to

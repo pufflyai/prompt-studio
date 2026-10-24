@@ -79,9 +79,9 @@ Tickets belong to the Planner extension (`pstdio-planner`). Each ticket has a sh
 ├── config.json                  # Link to the project
 ├── extensions/                  # Repo-scoped extension source
 └── extension-storage/           # All extension-owned project files
-    ├── pstdio-planner/tickets/  # Ticket copies and planning files
-    ├── pstdio-reports/reports/  # Reports and evidence
-    └── pstdio-artifacts/        # Artifact drafts and prototypes
+    ├── pstdio.pstdio-planner/tickets/  # Ticket copies and planning files
+    ├── pstdio.pstdio-reports/reports/  # Reports and evidence
+    └── pstdio.pstdio-artifacts/        # Artifact drafts and prototypes
 ```
 
 Each extension keeps its configuration, caches, drafts, and evidence in its own folder under `extension-storage/`. Use the paths that extension commands return.
