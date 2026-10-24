@@ -58,8 +58,9 @@ export const resolveTicketId = async (ctx: TicketContext, value: string) => {
 // merge, a ticket's old number can be shared, but an unchanged relationship
 // still points at one stored ID.
 export const resolveLinkedTicketId = async (ctx: TicketContext, value: string, linkedIds: string[]) => {
-  const linked = (await findStoredTickets(ctx, value)).find((ticket) => linkedIds.includes(ticket.id));
-  return linked ? linked.id : resolveTicketId(ctx, value);
+  const linked = (await findStoredTickets(ctx, value)).filter((ticket) => linkedIds.includes(ticket.id));
+  // Several linked matches stay ambiguous, so the lookup below asks for a ticket ID.
+  return linked.length === 1 ? linked[0]!.id : resolveTicketId(ctx, value);
 };
 
 // Dependencies are written as shorthands by both routes that set them (the

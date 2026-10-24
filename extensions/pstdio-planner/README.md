@@ -32,7 +32,7 @@ Use **Open tickets** in the dashboard command palette to open the current projec
 
 ## Ticket numbers
 
-Core assigns ticket numbers. Planner reads the current number from core instead of storing its own copy. After devices reconnect, core repairs duplicate numbers and keeps old numbers as aliases. Old numbers still open the ticket. A shared alias shows every matching ticket in search and opens every match from a file link; `pst tickets panel --id <number>` returns all matches. Use the stable ticket ID when changing a ticket through a shared alias.
+Core assigns ticket numbers. Planner reads the current number from core instead of storing its own copy. After devices reconnect, core repairs duplicate numbers and keeps old numbers as aliases. An old number that matches one ticket still opens that ticket. A shared alias shows every matching ticket in search and opens every match from a file link; `pst tickets panel --id <number>` returns all matches. Use the stable ticket ID when changing a ticket through a shared alias.
 
 Local ticket folders follow the current number. Planner preserves unsaved text and attached files when it moves an owned checkout after a renumber. Workspace links use ticket IDs, so an old branch number does not attach the workspace to a different ticket.
 

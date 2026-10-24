@@ -20,8 +20,9 @@ export const ticketRefFromLifecyclePayload = (payload: {
 export const workspaceTicketIds = async (ctx: TicketContext, workspace: ExtensionWorkspace) => {
   const anchored = (workspace.anchors_json ?? []).filter((anchor) => anchor.type === "ticket").map(({ id }) => id);
   if (anchored.length) return [...new Set(anchored)];
-  const name = workspace.branch ?? workspace.workspace_shorthand ?? "";
-  const shorthand = /(?:^|\/)([A-Z][A-Z0-9]*-\d+)_A\d+$/.exec(name)?.[1];
+  const shorthand = [workspace.branch, workspace.workspace_shorthand]
+    .map((name) => /(?:^|\/)([A-Z][A-Z0-9]*-\d+)_A\d+$/.exec(name ?? "")?.[1])
+    .find((match) => match !== undefined);
   if (!shorthand) return [];
   return (await ctx.resources.findByShorthand({ kind: "ticket", shorthand })).map(({ id }) => id);
 };

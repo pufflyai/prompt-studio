@@ -8,8 +8,11 @@ export const moveTicketCheckout = async (files: ArtifactMount, ticket: Ticket, p
   const oldPath = ticketMarkdownPath(previousShorthand);
   if (!(await files.exists(oldPath))) return;
   const markdown = await files.readText(oldPath);
-  // The same number can belong to a different ticket on this device.
-  if (parseTicketFrontmatter(markdown).resourceId !== ticket.id) return;
+  // The same number can belong to a different ticket on this device. Checkouts written
+  // before `resource_id` existed prove ownership by the ticket's creation time.
+  const owner = parseTicketFrontmatter(markdown);
+  const owned = owner.resourceId ? owner.resourceId === ticket.id : owner.createdAt === ticket.createdAt;
+  if (!owned) return;
   const source = `${TICKETS_DIR}/${previousShorthand}`;
   const destination = `${TICKETS_DIR}/${ticket.shorthand}`;
   const entries = await files.list(`${source}/**`);
