@@ -45,7 +45,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /** Right after signing in on a new device, cloud projects download without a folder. */
-export const NewDeviceDownloading: Story = {
+export const NotOnThisDeviceYet: Story = {
   args: {
     cloudState: (id) =>
       id === "scratchpad"
