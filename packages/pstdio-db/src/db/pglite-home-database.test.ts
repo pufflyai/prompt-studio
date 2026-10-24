@@ -48,15 +48,14 @@ test("a closed imported database survives interrupted publication and later comm
     const unexpectedPreparation = async () => {
       throw new Error("A verified or active home must not be prepared again");
     };
-    await expect(
-      preparePgliteHome({
-        activePath,
-        prepare,
-        onPhase: (phase) => {
-          if (phase === "original-moved") throw new Error("interrupted publication");
-        },
-      }),
-    ).rejects.toThrow("interrupted publication");
+    const failure = await preparePgliteHome({
+      activePath,
+      prepare,
+      onPhase: (phase) => {
+        if (phase === "original-moved") throw new Error("interrupted publication");
+      },
+    }).catch((error: unknown) => error);
+    expect(failure).toMatchObject({ message: "interrupted publication" });
     await preparePgliteHome({ activePath, prepare: unexpectedPreparation });
     const reopened = await NextPGlite.create(activePath, engine);
     try {

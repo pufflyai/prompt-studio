@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { BrowserContext } from "playwright-core";
 import { observeSmokePage } from "./smoke-observations";
@@ -34,7 +35,21 @@ export const exerciseSmokeDashboard = async (input: {
     await waitForSmokeCondition(
       () => observation.events.some((event) => event.event === "registration-ready" && event.projectId === projectId),
       signal,
-    );
+    ).catch((error: unknown) => {
+      signal.throwIfAborted();
+      const url = new URL(page.url());
+      const diagnostic = {
+        page: `${url.origin}${url.pathname}`,
+        hostEvents: observation.events,
+        pending: [...observation.pending].map((request) => {
+          const pendingUrl = new URL(request.url());
+          return `${pendingUrl.origin}${pendingUrl.pathname}`;
+        }),
+        browserLog: readFileSync(input.logPath, "utf8").trim().split("\n").filter(Boolean).slice(-20),
+      };
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`${message}\nRegistration diagnostics: ${JSON.stringify(diagnostic)}`, { cause: error });
+    });
     const registrationFailed = observation.events.some((event) => event.event === "registration-error");
     result.checks.push({ id: "host-registration", status: registrationFailed ? "failed" : "passed", extensionId });
     if (registrationFailed) {
