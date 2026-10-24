@@ -5,6 +5,7 @@ import { ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
 import { parseTicketFrontmatter, stripFrontmatter } from "../data/frontmatter";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketsCollection } from "../data/ticket-context.fixture";
+import { readTicketFileContent, storeTicketFileContent } from "../data/ticket-file-content";
 import { defaultProjectRoot, makeCommandArgs } from "./command-context.fixture";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { pullTicketCommand } from "./pull-ticket";
@@ -104,7 +105,7 @@ describe("draft workflow", () => {
     expect(saved.content).toContain("Body text.");
     expect(saved.tagIds).toEqual(["default-priority-high"]);
     expect(saved.files?.[0]?.name).toBe("notes.md");
-    expect(saved.files?.[0]?.content).toBe("extra notes");
+    expect(await readTicketFileContent(storage, saved.id, saved.files![0])).toBe("extra notes");
   });
 
   test("save resolves depends_on shorthands to ticket ids", async () => {
@@ -181,7 +182,15 @@ describe("draft workflow", () => {
     const [stored] = await ticketsCollection(storage).list();
     await ticketsCollection(storage).put(stored.id, {
       ...stored,
-      files: [{ id: "f1", name: "spec.md", content: "spec body", createdAt: "x", updatedAt: "x" }],
+      files: [
+        {
+          id: "f1",
+          name: "spec.md",
+          blobId: await storeTicketFileContent(storage, stored.id, "spec.md", "spec body"),
+          createdAt: "x",
+          updatedAt: "x",
+        },
+      ],
     });
 
     // Clear the working tree so pull has to recreate everything.
@@ -220,7 +229,7 @@ describe("draft workflow", () => {
     const [stored] = await ticketsCollection(storage).list();
     await ticketsCollection(storage).put(stored.id, {
       ...stored,
-      files: [{ id: "f1", name: "only-storage.md", content: "x", createdAt: "x", updatedAt: "x" }],
+      files: [{ id: "f1", name: "only-storage.md", blobId: "unused", createdAt: "x", updatedAt: "x" }],
     });
     await projectFiles.writeText(`${ticketFilesDir(shorthand)}/only-local.md`, "y");
 

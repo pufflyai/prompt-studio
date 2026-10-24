@@ -53,8 +53,8 @@ import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smo
 // Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.
 // scripts/verify/storage-package-consumer.ts checks the packaged SDK's two-device merge and replacement report.
 // Selected storage queries preserve case-insensitive text equality and negation through restart.
-// packaged-storage-upgrade.test.ts checks the released 0.45 engine transition, nested records, assets,
-// operation retries and tombstones through index installation and restart, plus upgrade progress phases.
+// packaged-database-retirement.test.ts checks that a released 0.45 home is exported as JSON, moved aside and
+// replaced by an empty current database, once.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
@@ -148,7 +148,8 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Adding Terminal in Side or Session in Bottom keeps the other empty panel open.
 // The packaged empty-panel browser flow also checks nearby tab targets, mirrored Navigation, panel handles and reload.
 
-// Two hosts check an interrupted first download, offline and back, and local edits that merge when sync restarts.
+// Two hosts check that a new device gets the cloud project after login, an interrupted first download, cloning its
+// folder later, offline and back, and local edits that merge when sync restarts.
 import { registerTwoDeviceSyncSmokeTests } from "./packaged-two-device-sync-smoke";
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { registerWorkspaceCleanupSmokeTests } from "./packaged-workspace-cleanup-smoke";

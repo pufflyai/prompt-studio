@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "./file-operations";
 import { putTicket, ticketContext, ticketsCollection } from "./ticket-context.fixture";
+import { readTicketFileContent } from "./ticket-file-content";
 import type { Ticket } from "./types";
 
 const ticket = (overrides: Partial<Ticket> = {}): Ticket => ({
@@ -47,7 +48,8 @@ describe("ticket file operations", () => {
 
     const file = await createTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", name });
 
-    expect(file).toMatchObject({ name, content: "" });
+    expect(file.name).toBe(name);
+    expect(await readTicketFileContent(storage, "ticket-1", file)).toBe("");
     const stored = await ticketsCollection(storage).get("ticket-1");
     expect(stored?.files?.map((entry) => entry.id)).toEqual([file.id]);
   });
@@ -72,8 +74,30 @@ describe("ticket file operations", () => {
     await updateTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", fileId: first.id, content: "hello" });
 
     const stored = await ticketsCollection(storage).get("ticket-1");
-    expect(stored?.files?.find((entry) => entry.id === first.id)?.content).toBe("hello");
-    expect(stored?.files?.find((entry) => entry.id === second.id)?.content).toBe("");
+    const files = new Map(stored?.files?.map((entry) => [entry.id, entry]));
+    expect(await readTicketFileContent(storage, "ticket-1", files.get(first.id)!)).toBe("hello");
+    expect(await readTicketFileContent(storage, "ticket-1", files.get(second.id)!)).toBe("");
+  });
+
+  test("file bodies stay out of the ticket record and replaced bodies are deleted", async () => {
+    const storage = createMemoryStorage();
+    await putTicket(storage, ticket());
+    const blobs = storage.scope({ type: "resource", resource: { type: "ticket", id: "ticket-1" } }).files;
+    const file = await createTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", name: "report.md" });
+    const body = "x".repeat(100_000);
+
+    const updated = await updateTicketFile({
+      ...ticketContext(storage),
+      ticketId: "ticket-1",
+      fileId: file.id,
+      content: body,
+    });
+
+    expect(JSON.stringify(await ticketsCollection(storage).get("ticket-1")).length).toBeLessThan(1_000);
+    expect(await readTicketFileContent(storage, "ticket-1", updated!)).toBe(body);
+    expect(await blobs.get(file.blobId)).toBeUndefined();
+    await deleteTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", fileId: file.id });
+    expect(await blobs.list()).toEqual([]);
   });
 
   test("deleteTicketFile removes only the targeted file", async () => {

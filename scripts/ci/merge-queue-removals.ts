@@ -116,6 +116,23 @@ export const createApi = (options: { apiUrl: string; graphqlUrl: string; reposit
       throw new Error(`GitHub GraphQL failed: ${JSON.stringify(result.errors ?? response.status)}`);
     return result.data;
   };
+  const readFailedJobs = async (id: number) => {
+    const failedJobs: string[] = [];
+    for (let jobPage = 1; ; jobPage++) {
+      const { jobs } = await rest(`actions/runs/${id}/jobs?per_page=100&filter=latest&page=${jobPage}`);
+      failedJobs.push(
+        ...jobs
+          .filter(
+            (job: { conclusion: string; name: string }) =>
+              ["failure", "timed_out", "action_required", "startup_failure"].includes(job.conclusion) &&
+              job.name !== "ci_passed",
+          )
+          .map((job: { name: string }) => job.name),
+      );
+      if (jobs.length < 100) break;
+    }
+    return failedJobs;
+  };
   return {
     readPull: async (number) => {
       const data = await graphql(
@@ -125,24 +142,27 @@ export const createApi = (options: { apiUrl: string; graphqlUrl: string; reposit
       return toState(data.repository.pullRequest);
     },
     readFailedRun: async (number, before) => {
-      const { workflow_runs: runs } = await rest("actions/runs?event=merge_group&status=failure&per_page=100");
-      // Queue branches are named gh-readonly-queue/<base>/pr-<number>-<base sha>.
-      const run = runs.find(
-        (candidate: { head_branch: string; created_at: string }) =>
-          candidate.head_branch.startsWith("gh-readonly-queue/") &&
-          candidate.head_branch.includes(`/pr-${number}-`) &&
-          candidate.created_at <= before,
-      );
-      if (!run) return null;
-      const { jobs } = await rest(`actions/runs/${run.id}/jobs?per_page=100&filter=latest`);
-      return {
-        url: run.html_url,
-        jobs: jobs
-          .filter(
-            (job: { conclusion: string; name: string }) => job.conclusion === "failure" && job.name !== "ci_passed",
+      // Queue removal can arrive during cancellation cleanup, before the run gets its final conclusion.
+      for (let page = 1; ; page++) {
+        const { workflow_runs: runs } = await rest(`actions/runs?event=merge_group&per_page=100&page=${page}`);
+        for (const run of runs) {
+          // Queue branches are named gh-readonly-queue/<base>/pr-<number>-<base sha>.
+          if (
+            ![null, "failure", "cancelled", "timed_out", "action_required", "startup_failure"].includes(
+              run.conclusion,
+            ) ||
+            !run.head_branch.startsWith("gh-readonly-queue/") ||
+            !run.head_branch.includes(`/pr-${number}-`) ||
+            run.created_at > before
           )
-          .map((job: { name: string }) => job.name),
-      };
+            continue;
+          const failedJobs = await readFailedJobs(run.id);
+          // A manual cancellation without a failed check is not evidence of a failed validation.
+          if ((run.conclusion === "cancelled" || run.conclusion === null) && failedJobs.length === 0) continue;
+          return { url: run.html_url, jobs: failedJobs };
+        }
+        if (runs.length < 100) return null;
+      }
     },
     addLabel: async (number) => {
       await rest(`issues/${number}/labels`, { body: { labels: [REMOVED_LABEL] } });

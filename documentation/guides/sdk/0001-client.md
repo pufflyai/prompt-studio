@@ -269,3 +269,5 @@ See the [method reference](../../references/sdk/0003-api.md) for all client grou
 and links to their current request and response types.
 
 `client.projects.attachInitialWorkspace(projectId, { provider_id, params })` attaches a location to a project that has no initial workspace. It preserves the project and existing default workspace IDs.
+
+A cloud project that came from another device starts without a folder. `client.projects.folder(projectId)` returns `{ path, gitRemote }`: the folder on this device, or `null`, and the git remote recorded for the project. `client.projects.chooseFolder(projectId, { path, clone })` gives it a folder. With `clone: true` it clones `gitRemote` into a new folder; with `clone: false` it uses an existing folder and checks that it holds the same repository. The path may start with `~/`.

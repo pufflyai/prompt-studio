@@ -1,0 +1,21 @@
+import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import type { StoredTicketFile } from "./types";
+
+// File bodies live in ticket-scoped blobs, like image attachments. The ticket record keeps only
+// the blob id, so a large file never grows the record or the history of every later ticket edit.
+const ticketBlobs = (storage: ExtensionStorageApi, ticketId: string) =>
+  storage.scope({ type: "resource", resource: { type: "ticket", id: ticketId } }).files;
+
+export const readTicketFileContent = async (storage: ExtensionStorageApi, ticketId: string, file: StoredTicketFile) =>
+  new TextDecoder().decode(await ticketBlobs(storage, ticketId).getBytes(file.blobId));
+
+/** Stores a new body and returns its blob id. The caller deletes the replaced blob after the ticket stops using it. */
+export const storeTicketFileContent = async (
+  storage: ExtensionStorageApi,
+  ticketId: string,
+  name: string,
+  content: string,
+) => (await ticketBlobs(storage, ticketId).put({ name, data: new TextEncoder().encode(content) })).id;
+
+export const deleteTicketFileContent = (storage: ExtensionStorageApi, ticketId: string, blobIds: string[]) =>
+  Promise.all(blobIds.map((id) => ticketBlobs(storage, ticketId).delete(id)));

@@ -18,7 +18,8 @@ export interface StoredTicketAttachment {
 export interface StoredTicketFile {
   id: string;
   name: string;
-  content: string;
+  /** The ticket-scoped blob that holds the file body; see ticket-file-content.ts. */
+  blobId: string;
   createdAt: string;
   updatedAt: string;
 }

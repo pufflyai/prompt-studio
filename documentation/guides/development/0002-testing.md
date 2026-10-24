@@ -73,7 +73,9 @@ Test and Build runs one stage per event. The `scope` job runs `scripts/ci/pull-r
 | Pull request | Opening, reopening, a new push, or a new label on a pull request | Whole-repo static checks; parallel affected-package lint and unit tests; selected database shards, browser regressions, Windows contracts, compatibility and container checks | Every selected job succeeded; no job failed or was cancelled |
 | Full | A merge group, a push to `main`, a manual run, or `ci:full` on a PR | Full Windows, browser E2E, desktop and packaged suites, plus the package and compatibility checks | Every required full-stage job succeeded |
 
-A newer event on the same pull request cancels the older run. Every merge queue and `main` commit keeps its own run, so a red commit can always be traced.
+A newer event on the same pull request cancels the older run. Pull requests, including `ci:full`, and pushes to `main` finish every selected check so one run reports all errors. Merge queue matrices use fail-fast cancellation. A queue-only monitor also polls job results every ten seconds and cancels that same run after a job completes with failure, cancellation, or another terminal error. This stops unrelated suites while preserving the failed job and its logs. It does not cancel other queue candidates.
+
+The monitor uses Node without installing Bun or workspace dependencies. Only its queue-only job has Actions write permission. It checks the API event and run attempt before cancelling; an old monitor exits if a rerun has started. If monitoring is unavailable, it logs a warning and ordinary validation continues. The existing `ci_passed` gate still requires every selected check to succeed. The monitor is an optimization, not an additional success condition, and uses one Ubuntu runner while queue validation runs.
 
 ### Pull request stage
 

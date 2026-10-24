@@ -3,9 +3,8 @@ import type { DesktopStartupPhase } from "../lifecycle/lifecycle-machine";
 const startupPhases: Record<string, DesktopStartupPhase> = {
   database_locked: "database",
   database_engine_loaded: "database",
-  database_upgrade_copying: "upgrade_copying",
-  database_upgrade_exporting: "upgrade_exporting",
-  database_upgrade_importing: "upgrade_importing",
+  database_retiring: "retiring",
+  database_retired: "database",
   database_image_restored: "database",
   database_opened: "migrations",
   database_migrated: "extensions",

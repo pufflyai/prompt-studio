@@ -1,7 +1,8 @@
 # Local CRDT storage
 
-Extension records live in one Yjs document per extension and project. A declared text
-file uses its own document. The runtime owns merging and persistence. Extensions keep
+Each extension record is its own Yjs document ([ADR 0100](../../adrs/0100-one-document-per-resource.md)).
+A declared text file uses its own document. An extension's records sync together through one
+encrypted record stream ([ADR 0102](../../adrs/0102-record-stream-sync.md)). The runtime owns merging and persistence. Extensions keep
 using `storage.records`, the deprecated KV and collection methods, and the file APIs.
 [PRD 0014](../../requirements/platform/0014-local-first-sync.md) defines the requirements.
 
@@ -37,7 +38,8 @@ revision. Owner metadata writes, such as data migration versions, do not change 
 The public methods and typed field semantics are in the
 [storage reference](../sdk/0004-storage.md#indexed-queries).
 
-Records do not sync through the relay yet. The owner document syncs only its metadata.
+The owner document keeps owner metadata, such as data migration versions and the text document
+directory, and syncs as its own relay document. Records sync through the record stream below.
 Projection rows and record documents are removed with their workbench and cleared with an owner
 purge.
 
@@ -136,6 +138,24 @@ identity before replacing bytes downloaded while an editor was saving.
 Yjs text document even for single-line content. Binding native editor collaboration to
 that port is separate from this storage implementation; ordinary artifact files still
 use verified asset references.
+
+## Record stream
+
+Each extension owner syncs its records through one relay document, named
+`[extensionId, "record-stream"]` before hashing. The transport lives in
+`pstdio-sync/src/relay/record-stream.ts`; `pstdio-db` implements its store in
+`record-stream-store.ts`.
+
+| Part | Rule |
+| --- | --- |
+| Update | One local save: an encrypted frame with each changed record's Yjs update and the files those records use. A frame too large for one update is stored as a blob that the update names. |
+| Outbox | `storage_record_outbox` keeps a save's frame, written in the save's transaction. Only owners with a `storage_record_sync` row keep one. |
+| Download | A page of frames, the records they change, their query rows, the owner revision and the cursor in `storage_record_sync` commit in one transaction. |
+| Latest state | Encrypted chunks of record states, stored as blobs. The first one founds the stream. Later ones are built only by a device that has read every update and has an empty outbox, so they add nothing an update did not carry, and only once the updates outgrow the latest state. |
+| Joining | The first device with records founds the stream. A later device adopts each record's synced history and reapplies its own changes since it first saved the record; a history the stream already shares merges normally. |
+
+A save inside a data migration uses deterministic Yjs authors per record document, so two devices
+that run the same migration write identical updates.
 
 ## Encrypted document transport
 

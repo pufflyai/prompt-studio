@@ -1,10 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
-import { extension_storage_journal, storage_document_updates, storage_documents } from "../../db/schemas.pg";
+import { storage_document_updates, storage_documents } from "../../db/schemas.pg";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
-import { createGroupedStorageDBService } from "./grouped-storage";
 
 const cleanup: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
@@ -44,31 +43,9 @@ test("a durable multi-record update survives a new service and folds without rep
   const reopened = createDocumentStorageDBService(f.db).open({ owner: f.owner });
   expect((await reopened.records.read("ticket")).value).toEqual({ title: "Title 129", status: "ready" });
   expect((await reopened.records.read("note")).value).toBe("first\nlast");
-  expect(await f.db.select().from(extension_storage_journal)).toHaveLength(0);
   expect((await f.db.select().from(storage_document_updates)).length).toBeLessThan(128);
   // The owner metadata document plus one document per record.
   expect(await f.db.select().from(storage_documents)).toHaveLength(3);
-});
-
-test("the journal is projected once per owner and later writes leave it untouched", async () => {
-  const f = await fixture();
-  const legacy = createGroupedStorageDBService(f.db).open({
-    owner: f.owner,
-    environmentId: (await f.service.getEnvironment()).environmentId,
-  });
-  await legacy.records.commit({
-    operationId: "old-save",
-    edits: [{ recordId: "note", replace: { title: "Imported" } }],
-  });
-  expect((await f.storage.records.read("note")).value).toEqual({ title: "Imported" });
-  await f.storage.records.commit({
-    operationId: "new-save",
-    edits: [{ recordId: "note", replace: { title: "Current" } }],
-  });
-  const rows = await f.db.select().from(extension_storage_journal);
-  expect(rows).toHaveLength(1);
-  const restarted = createDocumentStorageDBService(f.db).open({ owner: f.owner });
-  expect((await restarted.records.read("note")).value).toEqual({ title: "Current" });
 });
 
 test("another store sees a complete update only after its database commit", async () => {

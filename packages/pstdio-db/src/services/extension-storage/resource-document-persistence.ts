@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_updates, storage_documents } from "../../db/schemas.pg";
+import { jsonBatches } from "./json-batches";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 export const resourceDocumentId = (recordId: string) => JSON.stringify(["resource", recordId]);
@@ -55,11 +56,11 @@ export const persistResourceDocuments = async (tx: Transaction, owner: StorageOw
     revision: row.revision,
     state: Buffer.from(row.checkpoint!).toString("hex"),
   }));
-  if (rows.length)
+  for (const batch of jsonBatches(rows))
     await tx.execute(sql`
     INSERT INTO storage_documents (workbench_id, extension_id, document_id, state, revision, folded_revision)
     SELECT ${owner.workbenchId}, ${owner.extensionId}, input.id, decode(input.state, 'hex'), input.revision, input.revision
-    FROM jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) AS input(id text, state text, revision bigint)
+    FROM jsonb_to_recordset(${batch}::jsonb) AS input(id text, state text, revision bigint)
     ON CONFLICT (workbench_id, extension_id, document_id) DO UPDATE
     SET state = excluded.state, revision = excluded.revision, folded_revision = excluded.folded_revision
   `);
@@ -69,11 +70,11 @@ export const persistResourceDocuments = async (tx: Transaction, owner: StorageOw
     revision: row.revision,
     update: Buffer.from(row.update!).toString("hex"),
   }));
-  if (tails.length)
+  for (const batch of jsonBatches(tails))
     await tx.execute(sql`
     INSERT INTO storage_document_updates (workbench_id, extension_id, document_id, revision, "update")
     SELECT ${owner.workbenchId}, ${owner.extensionId}, input.id, input.revision, decode(input."update", 'hex')
-    FROM jsonb_to_recordset(${JSON.stringify(tails)}::jsonb) AS input(id text, revision bigint, "update" text)
+    FROM jsonb_to_recordset(${batch}::jsonb) AS input(id text, revision bigint, "update" text)
   `);
   const folded = checkpoints
     .filter((row) => row.foldedRevision > 0)

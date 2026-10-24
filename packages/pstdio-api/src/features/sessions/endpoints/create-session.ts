@@ -1,7 +1,13 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { type HarnessAttachment, type HarnessParams, sessionCreateResponseSchema } from "pstdio-api-contracts";
+import {
+  type HarnessAttachment,
+  type HarnessParams,
+  projectFolderMissingCode,
+  sessionCreateResponseSchema,
+} from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
+import { ProjectFolderMissingError } from "../../projects/project-folder-missing";
 import type { SessionsRouteDeps } from "../deps";
 import { createSessionBodySchema } from "../dto";
 import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
@@ -11,7 +17,7 @@ import { createSessionHarnessOperation, HarnessOperationError } from "../session
 import { toSessionResponse } from "../session-response";
 import { createSessionScheduler } from "../session-scheduler";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "./resolve-create-session";
-import { resolveCreateWorkspace } from "./resolve-create-workspace";
+import { needsProjectFolder, resolveCreateWorkspace } from "./resolve-create-workspace";
 
 export const createSessionRoute = createRoute({
   method: "post",
@@ -38,8 +44,8 @@ export const createSessionRoute = createRoute({
       content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
     409: {
-      description: "Conflicting native work.",
-      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+      description: "Conflicting native work, or the project's folder is not on this device.",
+      content: { "application/json": { schema: z.object({ error: z.string(), code: z.string().optional() }) } },
     },
   },
 });
@@ -81,11 +87,14 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
       return c.json({ error: resolvedAgent.error }, 400);
     }
 
-    const { agentId } = resolvedAgent;
+    const { agentId, harness } = resolvedAgent;
 
     if (!agentId) {
       return c.json({ error: "No harness available. Install and enable a harness extension first." }, 400);
     }
+
+    if (needsProjectFolder(resolvedWorkspace.workspace!, harness))
+      return c.json({ error: new ProjectFolderMissingError().message, code: projectFolderMissingCode }, 409);
 
     const resolvedModel = await resolveCreateSessionModel(input.model, project, agentId, deps.harnessRegistry, {
       requestAgentWasOmitted: !input.agent,

@@ -1,10 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
-import { and, eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
-import * as Y from "yjs";
 import * as schema from "../../db/schemas.pg";
-import { storage_document_operations, storage_document_updates, storage_documents } from "../../db/schemas.pg";
+import { storage_document_operations, storage_documents } from "../../db/schemas.pg";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
@@ -97,60 +95,6 @@ test("transactions read and commit under one owner lock and notify watchers afte
   expect((await f.storage.records.read("job")).value).toEqual({ state: "new" });
 });
 
-test("records saved in an owner document move into their own documents once", async () => {
-  const f = await fixture();
-  const old = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() });
-  await old.setDataVersion("scope", 3);
-  await old.records.commit({
-    operationId: "old",
-    edits: [
-      { recordId: "note", replace: { title: "Kept", nested: { items: [1, 2] } } },
-      { recordId: "draft", shared: [{ kind: "text.insert", index: 0, text: "Shared text" }] },
-      { recordId: "gone", replace: "removed" },
-      { recordId: "settings", shared: [{ kind: "map.set", key: "theme", value: "dark" }] },
-    ],
-  });
-  await old.records.commit({
-    operationId: "empty-map",
-    edits: [{ recordId: "settings", shared: [{ kind: "map.delete", key: "theme" }] }],
-  });
-  await old.records.commit({ operationId: "delete", edits: [{ recordId: "gone", deleted: true }] });
-  await f.db.insert(storage_documents).values({
-    workbench_id: f.owner.workbenchId,
-    extension_id: f.owner.extensionId,
-    document_id: "records",
-    state: await old.exportUpdate(),
-    revision: 1,
-    folded_revision: 1,
-  });
-
-  const records = f.storage.records;
-  expect((await records.read("note")).value).toEqual({ title: "Kept", nested: { items: [1, 2] } });
-  expect((await records.read("draft")).shared).toEqual({ kind: "text", value: "Shared text" });
-  expect(await records.read("gone")).toMatchObject({ exists: true, deleted: true });
-  expect((await records.read("settings")).shared).toEqual({ kind: "map", value: {} });
-  expect((await records.list()).map((record) => record.recordId)).toEqual(["draft", "note", "settings"]);
-  expect(await f.storage.dataVersion("scope")).toBe(3);
-
-  const ownerWhere = and(
-    eq(storage_documents.workbench_id, f.owner.workbenchId),
-    eq(storage_documents.extension_id, f.owner.extensionId),
-    eq(storage_documents.document_id, "records"),
-  );
-  const [owner] = await f.db.select().from(storage_documents).where(ownerWhere);
-  const remaining = new Y.Doc();
-  Y.applyUpdate(remaining, owner.state);
-  expect(remaining.getMap("records").size + remaining.getMap("deleted").size).toBe(0);
-  expect(
-    await f.db.select().from(storage_document_updates).where(eq(storage_document_updates.document_id, "records")),
-  ).toEqual([]);
-
-  // A fresh service finds nothing left to move and keeps later edits.
-  await records.commit({ operationId: "after", edits: [{ recordId: "note", replace: { title: "Edited" } }] });
-  const reopened = createDocumentStorageDBService(f.db).open({ owner: f.owner });
-  expect((await reopened.records.read("note")).value).toEqual({ title: "Edited" });
-});
-
 test("unfiltered totals follow live records without reading them", async () => {
   const f = await fixture();
   const statements: string[] = [];
@@ -174,45 +118,18 @@ test("unfiltered totals follow live records without reading them", async () => {
   expect(await total()).toBe(0);
 });
 
-test("a failed upgrade leaves the owner document in charge and a later start completes it", async () => {
+test("a group commit of multi-megabyte records saves without exhausting database memory", async () => {
   const f = await fixture();
-  const old = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() });
-  await old.records.commit({
-    operationId: "old",
-    edits: [
-      { recordId: "first", replace: { title: "First" } },
-      { recordId: "second", replace: { title: "Second" } },
-    ],
+  // Tickets with attached files reach several megabytes each.
+  const content = "x".repeat(8_000_000);
+  await f.storage.records.commit({
+    operationId: "large",
+    edits: Array.from({ length: 24 }, (_, index) => ({
+      recordId: `ticket-${index}`,
+      replace: { files: [{ name: "report.md", content }] },
+    })),
   });
-  await f.db.insert(storage_documents).values({
-    workbench_id: f.owner.workbenchId,
-    extension_id: f.owner.extensionId,
-    document_id: "records",
-    state: await old.exportUpdate(),
-    revision: 1,
-    folded_revision: 1,
-  });
-  // A real database failure after some record documents were written inside the move.
-  await f.db.execute(sql`CREATE FUNCTION fail_second() RETURNS trigger AS $$
-    BEGIN IF NEW.record_id = 'second' THEN RAISE EXCEPTION 'interrupted upgrade'; END IF; RETURN NEW; END $$
-    LANGUAGE plpgsql`);
-  await f.db.execute(
-    sql`CREATE TRIGGER fail_second BEFORE INSERT ON storage_current_records FOR EACH ROW EXECUTE FUNCTION fail_second()`,
-  );
-  await expect(f.storage.records.read("first")).rejects.toThrow();
-  expect(
-    await f.db
-      .select()
-      .from(storage_documents)
-      .where(eq(storage_documents.document_id, resourceDocumentId("first"))),
-  ).toEqual([]);
-  const [owner] = await f.db.select().from(storage_documents).where(eq(storage_documents.document_id, "records"));
-  const remaining = new Y.Doc();
-  Y.applyUpdate(remaining, owner.state);
-  expect(remaining.getMap("records").size).toBe(2);
-
-  await f.db.execute(sql`DROP TRIGGER fail_second ON storage_current_records`);
-  const restarted = createDocumentStorageDBService(f.db).open({ owner: f.owner });
-  expect((await restarted.records.read("second")).value).toEqual({ title: "Second" });
-  expect((await restarted.records.list()).map((record) => record.recordId)).toEqual(["first", "second"]);
+  const records = await f.storage.records.list();
+  expect(records).toHaveLength(24);
+  expect((records[0].value as { files: { content: string }[] }).files[0].content).toHaveLength(8_000_000);
 });

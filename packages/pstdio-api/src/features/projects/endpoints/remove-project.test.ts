@@ -4,10 +4,11 @@ import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { OpenAPIHono } from "@hono/zod-openapi";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
+import { removeProjectHandler, removeProjectRoute } from "./remove-project";
 
 let app: OpenAPIHono<AppBindings>;
 let appHandle: Awaited<ReturnType<typeof createTestApp>>;
@@ -214,4 +215,25 @@ test("deletes a project after its Git workspace was deleted through a symlinked 
     if (previousHome === undefined) delete process.env.PSTDIO_HOME;
     else process.env.PSTDIO_HOME = previousHome;
   }
+});
+
+test("a cloud project is not deleted from one device while the account syncs it", async () => {
+  const project = await appHandle.deps.projectService.create({ name: "Cloud notes" });
+  const accountService = {
+    ...appHandle.deps.accountService,
+    status: async () => ({
+      login: { managerOrigin: "https://accounts.example.test", relayOrigin: "", accountId: "a", deviceId: "d" },
+      cloudProjects: [project.id],
+      cloudProjectsLoaded: true,
+      features: { relay: true },
+    }),
+  };
+  const routes = new OpenAPIHono<AppBindings>();
+  routes.openapi(removeProjectRoute, removeProjectHandler({ ...appHandle.deps, accountService }));
+
+  const response = await routes.request(`/projects/${project.id}`, { method: "DELETE" });
+
+  // The next account refresh would bring it back. Making it local first applies to every device.
+  expect(response.status).toBe(409);
+  expect(await appHandle.deps.projectService.get(project.id)).not.toBeNull();
 });

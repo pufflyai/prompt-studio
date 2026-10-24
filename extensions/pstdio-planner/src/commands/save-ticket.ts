@@ -17,6 +17,7 @@ import {
 import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { refreshTicketCheckout } from "../data/ticket-checkout";
 import { normalizeTicketDependencies, validateTicketDependencies } from "../data/ticket-dependencies";
+import { deleteTicketFileContent, readTicketFileContent, storeTicketFileContent } from "../data/ticket-file-content";
 import { validateTicketFileName } from "../data/ticket-file-name";
 import type { TicketContext } from "../data/ticket-identity";
 import { writeTicketImageCheckout } from "../data/ticket-image-checkout";
@@ -24,22 +25,36 @@ import { isImagePath, saveTicketImages } from "../data/ticket-images";
 import type { StoredTicketFile, Ticket } from "../data/types";
 import { deriveTitle } from "../utils/derive-title";
 
-// Reads the local text files back into stored ticket files, preserving a
-// file's id across saves when its name is unchanged.
-const readTicketFiles = async (projectFiles: ArtifactMount, ticket: Ticket, paths: string[]) => {
+// Reads the local text files back into stored ticket files, preserving a file's id across
+// saves when its name is unchanged. An unchanged body keeps its blob; the others get new ones.
+// Returns the blobs the saved ticket no longer uses, for deletion after the save.
+const readTicketFiles = async (
+  storage: ExtensionStorageApi,
+  projectFiles: ArtifactMount,
+  ticket: Ticket,
+  paths: string[],
+) => {
   const now = new Date().toISOString();
   const previous = new Map((ticket.files ?? []).map((file) => [file.name, file]));
-
-  return Promise.all(
-    paths.map(async (path): Promise<StoredTicketFile> => {
-      const name = validateTicketFileName(fileNameFromPath(ticket.shorthand, path));
-      const content = await projectFiles.readText(path);
-      const existing = previous.get(name);
-      return existing
-        ? { ...existing, content, updatedAt: now }
-        : { id: crypto.randomUUID(), name, content, createdAt: now, updatedAt: now };
-    }),
-  );
+  const files: StoredTicketFile[] = [];
+  for (const path of paths) {
+    const name = validateTicketFileName(fileNameFromPath(ticket.shorthand, path));
+    const content = await projectFiles.readText(path);
+    const existing = previous.get(name);
+    if (existing && (await readTicketFileContent(storage, ticket.id, existing)) === content) {
+      files.push(existing);
+      continue;
+    }
+    const blobId = await storeTicketFileContent(storage, ticket.id, name, content);
+    files.push(
+      existing
+        ? { ...existing, blobId, updatedAt: now }
+        : { id: crypto.randomUUID(), name, blobId, createdAt: now, updatedAt: now },
+    );
+  }
+  const kept = new Set(files.map((file) => file.blobId));
+  const unused = (ticket.files ?? []).map((file) => file.blobId).filter((blobId) => !kept.has(blobId));
+  return { files, unused };
 };
 
 const resolveTags = async (storage: ExtensionStorageApi, tagNames: string[] | undefined, fallback: string[]) =>
@@ -89,7 +104,8 @@ export const saveTicketCommand = defineCommand({
         ? await resolveLinkedTicketId(ctx, frontmatter.parentShorthand, ticket.parentId ? [ticket.parentId] : [])
         : ticket.parentId;
     const paths = (await projectFiles.list(ticketFilesPattern(ticket.shorthand))).map((entry) => entry.path);
-    const files = await readTicketFiles(
+    const { files, unused } = await readTicketFiles(
+      ctx.storage,
       projectFiles,
       ticket,
       paths.filter((path) => !isImagePath(path)),
@@ -113,8 +129,9 @@ export const saveTicketCommand = defineCommand({
     };
     await putTicket(ctx, next);
     await writeTicketImageCheckout(projectFiles, ticket.shorthand, images.checkout);
-    // Delete replaced images only after the ticket stops pointing at them.
+    // Delete replaced images and file bodies only after the ticket stops pointing at them.
     for (const id of images.replacedIds) await ctx.storage.files.delete(id);
+    await deleteTicketFileContent(ctx.storage, ticket.id, unused);
 
     return { shorthand: ticket.shorthand, files: files.length };
   },

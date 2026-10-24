@@ -1,5 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, rename, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { preparePgliteHome } from "./pglite-home-recovery";
 import { acquirePgliteLock } from "./pglite-lock";
 
@@ -13,9 +13,13 @@ try {
   await preparePgliteHome({
     activePath,
     onPhase: interrupt,
-    prepare: async ({ source, target }) => {
+    retire: async (active) => {
+      interrupt("retire-started");
+      await rename(active, join(dirname(active), "retired"));
+    },
+    prepare: async ({ target }) => {
       await mkdir(target);
-      await writeFile(join(target, "record"), source ? await readFile(join(source, "record")) : "first value");
+      await writeFile(join(target, "record"), "first value");
       interrupt("candidate-created");
     },
   });
