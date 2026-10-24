@@ -6,6 +6,8 @@ const cloneProtocols = ["ssh", "file"].flatMap((protocol) => ["-c", `protocol.${
 const cloneEnvironment = {
   ...process.env,
   GIT_TERMINAL_PROMPT: "0",
+  // An empty askpass also turns off askpass helpers inherited from this machine.
+  GIT_ASKPASS: "",
   GIT_SSH_COMMAND: "ssh -o BatchMode=yes",
 };
 
@@ -70,5 +72,8 @@ export const cloneGitRemote = async (remote: string, folder: string) => {
     env: cloneEnvironment,
     signal: AbortSignal.timeout(CLONE_TIMEOUT_MS),
   });
-  if (result.exitCode !== 0) throw new Error(`Could not clone ${remote}: ${result.stderr || result.stdout}`);
+  if (result.exitCode === 0) return;
+  // The remote came from another device. Its credentials must not reach a response or a log.
+  const output = (result.stderr || result.stdout).replaceAll(remote, withoutCredentials(remote));
+  throw new Error(`Could not clone ${withoutCredentials(remote)}: ${output}`);
 };

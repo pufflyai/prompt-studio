@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readGitRemote, sameRepository } from "./git-remote";
+import { cloneGitRemote, readGitRemote, sameRepository } from "./git-remote";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -49,4 +49,15 @@ test("ssh and https addresses of one repository match", () => {
   expect(sameRepository("ssh://git@GitHub.com/acme/notes.git/", "https://github.com/acme/notes.git")).toBe(true);
   expect(sameRepository("git@github.com:acme/notes.git", "https://github.com/acme/other.git")).toBe(false);
   expect(sameRepository("/srv/git/notes", "/srv/git/notes/")).toBe(true);
+});
+
+test("a failed clone never shows the remote's credentials", async () => {
+  const root = await mkdtemp(join(tmpdir(), "git-remote-"));
+  roots.push(root);
+  const target = join(root, "checkout");
+  const error = await cloneGitRemote("https://ci:secret-token@127.0.0.1:9/acme/notes.git", target).catch(
+    (cause: Error) => cause,
+  );
+  expect(error).toBeInstanceOf(Error);
+  expect((error as Error).message).not.toContain("secret-token");
 });
