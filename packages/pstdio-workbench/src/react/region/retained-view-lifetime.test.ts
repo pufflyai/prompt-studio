@@ -24,6 +24,14 @@ test("inactive open tabs never expire and reopening a recent view restores its e
   expect(closedAgain.expires.get("session")).toBe(50 * 60_000);
 });
 
+test("returning to a cached view preserves mount order before the open placement snapshot catches up", () => {
+  const second = { ...tab, widgetId: "second" };
+  const previous = { placements: [tab, second], expires: new Map([[tab.widgetId, 30 * 60_000]]) };
+  const returned = retainRecentViewPlacements(previous, [{ ...tab }], registered, new Set(["second"]), 100);
+  expect(returned.placements).toBe(previous.placements);
+  expect(returned.expires.has(tab.widgetId)).toBe(false);
+});
+
 test("removing a view contribution releases it immediately while registered chrome retains its owner", () => {
   expect(retainRecentViewPlacements(initial(), [], new Set(), new Set(), 0).placements).toEqual([]);
   expect(retainRecentViewPlacements(initial(), [], registered, undefined, 60 * 60_000).placements).toEqual([tab]);

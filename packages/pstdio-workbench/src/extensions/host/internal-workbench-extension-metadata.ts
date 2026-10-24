@@ -69,6 +69,7 @@ export interface InternalWorkbenchExtensionMetadata {
       id: string;
       ref: { extensionId: string; kind: "placement"; id: string };
       modeId: string;
+      replaces?: WorkbenchExtensionMetadata["placements"][number]["replaces"];
       item: WorkbenchOwnedPlacementItem;
       region: "main" | "secondary" | "side";
       order?: number;

@@ -21,6 +21,7 @@ const pageTarget = (target: NavigationTargetPage): Extract<MetadataTarget, { kin
 });
 export const previewNavigationTarget = (target: NavigationTarget): MetadataTarget => {
   if (target.kind === "page") return pageTarget(target);
+  if (target.kind === "viewer") return { ...target, page: target.page ? previewRef(target.page) : undefined };
   if (target.kind === "panel")
     return {
       ...target,
@@ -93,9 +94,17 @@ export const previewPage = (
   mode: previewRef(page.mode),
   parent: page.parent ? previewRef(page.parent) : undefined,
   resource: page.resource ? { kinds: page.resource.kinds.map(previewRef) } : undefined,
+  panelView: page.panelView ? previewRef(page.panelView) : undefined,
   main:
     page.main.kind === "panels"
-      ? { ...page.main, empty: previewEmpty(page.main.empty) }
+      ? {
+          ...page.main,
+          empty: previewEmpty(page.main.empty),
+          landing:
+            page.main.landing && typeof page.main.landing !== "string"
+              ? previewRef(page.main.landing)
+              : page.main.landing,
+        }
       : {
           ...page.main,
           view: previewRef(page.main.view),

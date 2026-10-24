@@ -1,6 +1,7 @@
 import { isLocalizedString, type NavigationTargetPage, type PageLocation, type PageRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchLayout } from "../../registries/layout/layout-types";
 import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
+import { isSingleViewPage } from "../../registries/pages/page-main";
 import type {
   WorkbenchPageContribution,
   WorkbenchPageRegistry,
@@ -67,9 +68,10 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
   const locations = locationsFromRoot(input.location);
   return locations.map((location, index) => {
     const page = pagesByRef.get(pageRefKey(location.page));
+    const hasPageContent = isSingleViewPage(page) && (!page?.resource || Boolean(location.resource));
     const presentation = placeholderBreadcrumb(
       page,
-      index === locations.length - 1 && input.layout.regions.main.widgets.length === 0,
+      index === locations.length - 1 && !hasPageContent && input.layout.regions.main.widgets.length === 0,
     );
     const base = breadcrumbPresentation(location, page, input.resources);
     const item: WorkbenchBreadcrumbItem = {
@@ -84,7 +86,9 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
       page?.main.kind === "panels" && !location.resource
         ? page.slots.find((slot) => page.main.kind === "panels" && slot.id === page.main.landing)
         : undefined;
-    if (index < locations.length - 1 || (landingPanel && input.openPanel)) {
+    const independentLanding =
+      page?.main.kind === "panels" && page.main.landing && typeof page.main.landing !== "string";
+    if (index < locations.length - 1 || (landingPanel && input.openPanel) || independentLanding) {
       item.onClick = () => {
         input.navigate(targetFromLocation(location));
         if (page && landingPanel) input.openPanel?.(page.id, landingPanel.id);

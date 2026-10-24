@@ -3,6 +3,8 @@ import {
   defineExtension,
   defineMode,
   definePage,
+  definePlacement,
+  defineResourceKind,
   defineView,
   packageAsset,
   workbenchModes,
@@ -32,6 +34,75 @@ const pageView = defineView({
 });
 const diagnosticsFor = (definition: LoadedExtensionSource["definition"]) =>
   normalizeExtensionSources([source(definition)]).diagnostics;
+
+test.each(["many", "one"] as const)("resource collection landing validates %s viewer cardinality", (cardinality) => {
+  const kind = defineResourceKind({ id: "record" });
+  const viewer = definePlacement({
+    id: "record-viewer",
+    mode: workbenchModes.project,
+    region: "main",
+    item: { kind: "binding", binding: { kinds: [kind.ref], view: pageView.ref, cardinality } },
+  });
+  const page = definePage({
+    id: "record",
+    title: "Record",
+    path: "record",
+    mode: workbenchModes.project,
+    resource: { kinds: [kind.ref] },
+    main: { kind: "panels", landing: viewer.ref },
+    slots: [],
+  });
+  const diagnostics = diagnosticsFor(
+    defineExtension({ resourceKinds: [kind], views: [pageView], placements: [viewer], pages: [page] }),
+  );
+  expect(diagnostics.filter((diagnostic) => diagnostic.code === "extension_page_panel_invalid")).toHaveLength(
+    cardinality === "many" ? 0 : 1,
+  );
+});
+
+test("extension pages preserve explicit page presentation through normalization", () => {
+  const browser = definePlacement({
+    id: "reader-browser",
+    mode: workbenchModes.project,
+    region: "side",
+    item: { kind: "view", view: pageView.ref, presence: "closed" },
+  });
+  const page = definePage({
+    id: "reader",
+    title: "Reader",
+    path: "reader",
+    mode: workbenchModes.project,
+    main: { kind: "view", view: pageView.ref, cardinality: "one", presentation: "page" },
+    panelView: browser.ref,
+    slots: [],
+  });
+  const runtime = normalizeExtensionSources([
+    source(defineExtension({ views: [pageView], pages: [page], placements: [browser] })),
+  ]);
+  expect(runtime.diagnostics).toEqual([]);
+  expect(runtime.pages[0]?.contribution.main).toMatchObject({ presentation: "page" });
+  const panel = { extensionId: "pstdio.lab", kind: "placement" as const, id: "reader-browser" };
+  expect(runtime.pages[0]?.contribution.panelView).toEqual(panel);
+  expect(runtime.placements.find((placement) => placement.localId === "reader-browser")?.contribution).toMatchObject({
+    ref: panel,
+    region: "side",
+    item: { kind: "view", presence: "closed" },
+  });
+});
+
+test("a page panel version and independent landing must name a placement in the page's mode", () => {
+  const page = definePage({
+    id: "library",
+    title: "Library",
+    path: "library",
+    mode: workbenchModes.project,
+    panelView: { kind: "placement", id: "missing" },
+    main: { kind: "panels", landing: { kind: "placement", id: "missing" } },
+    slots: [],
+  });
+  const diagnostics = diagnosticsFor(defineExtension({ pages: [page] }));
+  expect(diagnostics.filter((diagnostic) => diagnostic.code === "extension_page_panel_invalid")).toHaveLength(2);
+});
 describe("page input validation", () => {
   test("rejects malformed mode theme and chrome references", () => {
     for (const extra of [

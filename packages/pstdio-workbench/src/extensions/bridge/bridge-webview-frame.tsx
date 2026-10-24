@@ -2,21 +2,31 @@ import { Box, Center, Stack, Text } from "@chakra-ui/react";
 import { resolvePageParams } from "pstdio-api-contracts";
 import { createWebviewDiagnostics, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
-import type { WorkbenchCore } from "../../core";
+import type { WorkbenchCore, WorkbenchPanelInstance } from "../../core";
 
 type BridgeWebviewFrameProps = Omit<ExtensionFrameProps, "onDiagnostics" | "onError" | "onReady"> & {
   workbench: WorkbenchCore;
+  placement?: WorkbenchPanelInstance;
 };
 
 /** A bridged webview that shows one failure message, in theme colors, when it cannot load. */
 export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
-  const { view, workbench, ...frameProps } = props;
+  const { view, workbench, placement, ...frameProps } = props;
   const [pageState, setPageState] = useState(workbench.pages.store.getState);
   useEffect(() => workbench.pages.store.subscribe((state) => setPageState(state)), [workbench]);
   const page = pageState.activePageId ? workbench.pages.getPage(pageState.activePageId) : undefined;
   const pageProps = {
     pageLocation: pageState.location,
     pageParams: resolvePageParams(page?.params, pageState.location?.params),
+    ...(placement
+      ? {
+          viewLocation: {
+            section: placement.section,
+            position: placement.position,
+            pageContext: placement.pageContext,
+          },
+        }
+      : {}),
   };
   const [error, setError] = useState<string | null>(null);
   const diagnostics = createWebviewDiagnostics(view);

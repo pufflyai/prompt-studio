@@ -3,8 +3,10 @@ import { resourceMatchesConstraint } from "../../shared/contributions/reference-
 import { createDisposable } from "../../shared/disposable";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { composeOwnedPlacements, reconcileOwnedPlacements } from "../layout/placement-reconciliation";
+import { resolvePageContent } from "./page-content";
 import { resolvePagePlacementClose } from "./page-placement-close";
 import { pinPagePlacement } from "./page-placement-pin";
+import { refreshPagePlacementReference } from "./page-placement-reference";
 import { createPagePreparation } from "./page-preparation";
 import { registerWorkbenchPage } from "./page-registration";
 import { setWorkbenchPageRegistryInternals, type WorkbenchPageLocationCommitInput } from "./page-registry-internals";
@@ -47,21 +49,31 @@ export const createWorkbenchPageRegistry = <Value>(
     input.resources.toUri(normalizeResource(resource));
   const store = createPageRegistryStore(input);
   let runtime:
-    | ((state: WorkbenchPageRegistryStoreState<Value>) => WorkbenchPageRegistryStoreState<Value>["layoutActivation"])
+    | ((
+        state: WorkbenchPageRegistryStoreState<Value>,
+        operation: "navigate" | "select",
+      ) => WorkbenchPageRegistryStoreState<Value>["layoutActivation"])
     | undefined;
   let normalizeState:
-    | ((state: WorkbenchPageRegistryStoreState<Value>) => WorkbenchPageRegistryStoreState<Value>)
+    | ((
+        state: WorkbenchPageRegistryStoreState<Value>,
+        operation: "navigate" | "select",
+      ) => WorkbenchPageRegistryStoreState<Value>)
     | undefined;
   let publishingState: WorkbenchPageRegistryStoreState<Value> | undefined;
 
-  const publishState = (state: WorkbenchPageRegistryStoreState<Value>, action: string) =>
+  const publishState = (
+    state: WorkbenchPageRegistryStoreState<Value>,
+    action: string,
+    operation: "navigate" | "select" = "navigate",
+  ) =>
     batchWorkbenchChanges(() => {
-      state = normalizeState?.(state) ?? state;
+      state = normalizeState?.(state, operation) ?? state;
       const storeBeforeRuntime = store.getState();
       const previousPublishingState = publishingState;
       publishingState = state;
       try {
-        const layoutActivation = runtime?.(state);
+        const layoutActivation = runtime?.(state, operation);
         state = { ...state, layoutActivation: layoutActivation || undefined };
       } finally {
         publishingState = previousPublishingState;
@@ -85,6 +97,9 @@ export const createWorkbenchPageRegistry = <Value>(
 
   const registry: WorkbenchPageRegistry<Value> = {
     store,
+    getContent() {
+      return resolvePageContent(store.getState());
+    },
 
     registerPage(page) {
       validatePageParamDefinitions(page.params);
@@ -129,6 +144,10 @@ export const createWorkbenchPageRegistry = <Value>(
         pageStates: refreshPageResources(state.pageStates, resource, registry.resourceReferenceKey),
         action: "refreshPageResource",
       });
+    },
+
+    refreshPlacement(identity, reference) {
+      publishState(refreshPagePlacementReference(store.getState(), identity, reference, input), "refreshPagePlacement");
     },
 
     pinPlacement(identity, open) {

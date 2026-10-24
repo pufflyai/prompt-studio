@@ -25,6 +25,7 @@ interface PageLocationControllerActionsInput<Value> {
   normalizeStored(location: PageLocation): ResolvedPageLocation;
   locationsEqual(left: PageLocation | undefined, right: PageLocation | undefined): boolean;
   replay(projectId: string, resolved: ResolvedPageLocation): WorkbenchPageNavigationResult;
+  select(projectId: string, resolved: ResolvedPageLocation): WorkbenchPageNavigationResult;
   commit(
     projectId: string,
     resolved: ResolvedPageLocation,
@@ -53,7 +54,10 @@ export const createPageLocationControllerActions = <Value>(
   const { input } = actions;
   const { navigation } = actions;
   const navigated = (result: WorkbenchPageNavigationResult) => {
-    if (result.ok) navigation.notify(result.location);
+    if (result.ok) {
+      input.activateLocation?.();
+      navigation.notify(result.location);
+    }
     return result;
   };
   return {
@@ -93,6 +97,11 @@ export const createPageLocationControllerActions = <Value>(
       if (!projectId) return actions.fail("navigation", new Error("Cannot navigate before a project is active"));
       try {
         const resolved = actions.normalizeTarget(target);
+        const current = input.registry.store.getState().location;
+        if (current && target.intent !== "restore" && input.focusResource?.(resolved.location)) {
+          navigation.notify(current);
+          return { ok: true, location: current };
+        }
         const history = actions.locationsEqual(input.registry.store.getState().location, resolved.location)
           ? "none"
           : "push";
@@ -126,6 +135,16 @@ export const createPageLocationControllerActions = <Value>(
         return actions.replay(projectId, actions.normalizeStored(location));
       } catch (error) {
         return actions.fail("history", error);
+      }
+    },
+    select(location) {
+      const projectId = input.registry.store.getState().projectId;
+      if (!projectId)
+        return actions.fail("navigation", new Error("Cannot select a Main view before a project is active"));
+      try {
+        return actions.select(projectId, actions.normalizeStored(location));
+      } catch (error) {
+        return actions.fail("navigation", error);
       }
     },
     navigateToParent() {

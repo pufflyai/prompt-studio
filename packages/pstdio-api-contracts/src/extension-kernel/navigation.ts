@@ -22,6 +22,7 @@ const isPageTarget = (value: unknown, ancestors = new Set<unknown>()): boolean =
   if (value.position !== undefined && (!isFileSourcePosition(value.position) || value.section !== undefined))
     return false;
   if (!isOpenIntent(value.open)) return false;
+  if (value.intent !== undefined && value.intent !== "open" && value.intent !== "restore") return false;
   if (value.parent === undefined) return true;
   const next = new Set(ancestors);
   next.add(value);
@@ -41,6 +42,18 @@ const isItemTarget = (value: unknown): value is Exclude<NavigationTarget, { kind
   if (!isRecord(value)) return false;
   if (value.kind === "page") return isPageTarget(value);
   if (value.kind === "panel") return isPanelTarget(value);
+  if (value.kind === "viewer")
+    return (
+      (value.operation === "switch" || value.operation === "replace") &&
+      (value.from === undefined ? isContributionRef(value.page, "page") : isResource(value.from)) &&
+      isResource(value.resource) &&
+      (value.page === undefined || isContributionRef(value.page, "page")) &&
+      (value.section === undefined || isRecord(value.section)) &&
+      (value.position === undefined || (isFileSourcePosition(value.position) && value.section === undefined)) &&
+      Object.keys(value).every((key) =>
+        ["kind", "operation", "from", "resource", "page", "section", "position"].includes(key),
+      )
+    );
   if (value.kind === "href") return isNavigationHref(value.href);
   return (
     value.kind === "command" &&
@@ -85,6 +98,13 @@ export const qualifyNavigationTarget = (
 ): NavigationTarget => {
   if (!isNavigationTarget(target)) throw new Error("Invalid navigation target.");
   if (target.kind === "page") return toPageTarget(target, extensionId, projectId);
+  if (target.kind === "viewer")
+    return {
+      ...target,
+      ...(target.from ? { from: qualifyResource(target.from, extensionId, projectId) } : {}),
+      resource: qualifyResource(target.resource, extensionId, projectId),
+      ...(target.page ? { page: withExtensionOwner(target.page, extensionId) } : {}),
+    };
   if (target.kind === "panel")
     return {
       ...target,

@@ -1,6 +1,7 @@
 import type {
   DockedWorkbenchRegion,
   FileRendererSectionTarget,
+  FileSourcePosition,
   Localizable,
   PageContribution,
   PageDocumentDeclaration,
@@ -14,6 +15,7 @@ import type {
   PlacementIdentity,
   ResourceConstraint,
   ResourceRef,
+  ViewLocation,
   ViewRef,
 } from "@pstdio/sdk/extensions";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
@@ -52,6 +54,7 @@ export interface WorkbenchPageContribution {
   params?: Readonly<Record<string, PageParamDefinition>>;
   regionSettings?: PageContribution["regionSettings"];
   main: WorkbenchPageMain;
+  panelView?: PageContribution["panelView"];
   slots: readonly WorkbenchPageSlot[];
 }
 
@@ -62,6 +65,7 @@ export interface WorkbenchPageResourceCodec {
 }
 
 export interface WorkbenchPagePlacementInput {
+  pageContext?: ViewLocation["pageContext"];
   identity: PlacementIdentity;
   pageId: string;
   slotId: string;
@@ -69,14 +73,17 @@ export interface WorkbenchPagePlacementInput {
   viewId: string;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
+  position?: FileSourcePosition;
   open?: PageOpenIntent;
   closable: boolean;
 }
 
 export interface WorkbenchPageOpenInput {
+  pageContext?: ViewLocation["pageContext"];
   pageId: string;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
+  position?: FileSourcePosition;
   open?: PageOpenIntent;
 }
 
@@ -90,9 +97,11 @@ export interface WorkbenchPageSlotOpenInput {
 }
 
 export interface WorkbenchPageSlotInstance {
+  pageContext?: ViewLocation["pageContext"];
   instanceKey: string;
   resource: ResourceRef;
   section?: FileRendererSectionTarget;
+  position?: FileSourcePosition;
   open?: PageOpenIntent;
 }
 
@@ -134,6 +143,11 @@ export interface CreateWorkbenchPageRegistryInput<Value> {
     projectId?: string,
     pageId?: string,
   ): readonly ResolvedOwnedPlacement<Value>[];
+  resolveLanding?(
+    page: WorkbenchPageContribution,
+    context: { projectId: string; location: PageLocation; open?: PageOpenIntent },
+  ): { placements: readonly ResolvedOwnedPlacement<Value>[]; identity: PlacementIdentity } | undefined;
+  validateLanding?(state: WorkbenchPageRegistryStoreState<Value>, identity: PlacementIdentity): void;
   resolvePagePlacement(input: WorkbenchPagePlacementInput): Value;
   resources: WorkbenchPageResourceCodec;
   valuesEqual(current: Value, desired: Value): boolean;
@@ -142,11 +156,14 @@ export interface CreateWorkbenchPageRegistryInput<Value> {
 
 export interface WorkbenchPageRegistry<Value> {
   store: WorkbenchStore<WorkbenchPageRegistryStoreState<Value>>;
+  /** Current page-owned Main content, outside the tab layout. */
+  getContent(): Value | undefined;
   registerPage(page: WorkbenchPageContribution): { dispose(): void };
   getPage(pageId: string): WorkbenchPageContribution | undefined;
   listPages(): WorkbenchPageContribution[];
   resourceReferenceKey(resource: ResourceRef): string;
   refreshResource(resource: ResourceRef): void;
+  refreshPlacement(identity: PlacementIdentity, reference: { resource: ResourceRef } & ViewLocation): void;
   pinPlacement(identity: PlacementIdentity, open?: PageOpenIntent): void;
   openSlot(input: WorkbenchPageSlotOpenInput): void;
 }

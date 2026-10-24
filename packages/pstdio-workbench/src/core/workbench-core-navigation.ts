@@ -1,5 +1,6 @@
 import { prepareWorkbenchNavigation } from "./controllers/navigation/compound-navigation";
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
+import { replacedPageSlot } from "./registries/modes/placement-replacement";
 import { createNavigationRegistry, type NavigationTargetPanel } from "./registries/navigation/navigation-registry";
 import type { WorkbenchCore } from "./workbench-core-types";
 
@@ -14,11 +15,12 @@ const canOpenCorePanel = (core: WorkbenchCore, target: NavigationTargetPanel) =>
   const panel = target.panel;
   if (panel.kind === "shell-placement") return Boolean(core.shellPlacements.getPlacement(panel.id));
   if (panel.kind !== "page-slot") return Boolean(core.modePlacements.getPlacement(panel));
+  if (replacedPageSlot(core.modePlacements, panel)) return true;
   return Boolean(findPagePanelOwner(core, panel)?.slots.some((slot) => slot.id === panel.id));
 };
 
 export const revealPanelRegion = (core: WorkbenchCore, region: WorkbenchRegion) => {
-  if (region === "secondary") {
+  if (region === "secondary" && !core.shell.getPanelPolicy("secondary").open) {
     core.shell.setRegionOpen("secondary", true);
   }
   if (region === "side" && core.sidePanel.getMode() === "closed") core.sidePanel.setMode("attached");
@@ -29,6 +31,7 @@ const openCorePanelTarget = (core: WorkbenchCore, target: NavigationTargetPanel)
 
 export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =>
   createNavigationRegistry({
+    getProjectId: () => resolveCore().pages.store.getState().projectId,
     resolveDispatcher: () => {
       const core = resolveCore();
       return {
@@ -36,13 +39,21 @@ export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =
         canOpenPanel: (target) => canOpenCorePanel(core, target),
         canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
         openPanelTarget: (target) => openCorePanelTarget(core, target),
+        openViewerTarget: (target, context) => {
+          if (!context?.viewer) throw new Error("Viewer navigation requires a calling viewer");
+          return core.viewers.change(context.viewer, target, context);
+        },
         openPageTarget: (target) => {
           const result = core.pageLocations.navigate(target);
           if (!result.ok) throw new Error(result.diagnostic.message);
           return result;
         },
-        executeCommand: (commandId, args, region) =>
-          core.commands.executeCommand(commandId, args, region ? { region, source: "panel-add" } : undefined),
+        executeCommand: (commandId, args, region, context) =>
+          core.commands.executeCommand(commandId, args, {
+            ...(region ? { region, source: "panel-add" as const } : {}),
+            ...(context?.viewer ? { placement: context.viewer } : {}),
+            ...(context?.projectId ? { projectId: context.projectId } : {}),
+          }),
         openHref: (href) => globalThis.open(href, "_blank", "noopener,noreferrer"),
       };
     },

@@ -55,6 +55,7 @@ export const toInternalWorkbenchPages = (
     modeId: contributionRefId(page.mode),
     resource: page.resource,
     main: pageMain(page.main, { extensionId: page.extensionId, placementId: `${page.id}.$main`, ...input }),
+    panelView: page.panelView,
     slots: page.slots.map((slot) =>
       pageSlot(slot, { extensionId: page.extensionId, placementId: `${page.id}.${slot.id}`, ...input }),
     ),

@@ -23,8 +23,14 @@ export const writeNavigationExtension = (root: string) => {
       modes: [{ id: "policy", ref: { kind: "mode", id: "policy" }, label: "Policy", regions: ["main", "side", "secondary"], regionSettings: { side: { canOpen: true, canClose: false, acceptsTabs: true, resizable: false, movable: false, floatable: false } } }],
       resourceKinds: [{ id: "record", ref: { kind: "resource-kind", id: "record" } }],
       views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: { kind: "file", resourceKind: { kind: "resource-kind", id: "record" }, load: () => ({ content: "probe", editable: false }) } }],
-      pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, regionSettings: { main: { showHeader: false } }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one", empty: { view: { kind: "view", id: "document" }, breadcrumb: { label: "New record", icon: "add", menu: [{ id: "record", rows: [{ id: "open", label: "Open record", action: { kind: "page", page: { kind: "page", id: "record" }, resource: { type: "record", id: "record-1" } } }] }] } } }, slots: [], panels: {} }],
+      placements: [{ id: "reader", ref: { kind: "placement", id: "reader" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, region: "side", replaces: [{ kind: "page-slot", page: { kind: "page", id: "record" }, id: "legacy" }], item: { kind: "binding", binding: { kinds: [{ kind: "resource-kind", id: "record" }], view: { kind: "view", id: "document" }, cardinality: "many" } } }],
+      pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, regionSettings: { main: { showHeader: false } }, panelView: { kind: "placement", id: "reader" }, main: { kind: "view", presentation: "page", view: { kind: "view", id: "document" }, cardinality: "one", empty: { view: { kind: "view", id: "document" }, breadcrumb: { label: "New record", icon: "add", menu: [{ id: "record", rows: [{ id: "open", label: "Open record", action: { kind: "page", page: { kind: "page", id: "record" }, resource: { type: "record", id: "record-1" } } }] }] } } }, slots: [], panels: {} }],
       commands: [{
+      id: "replace-document", ref: { kind: "command", id: "replace-document" }, title: "Replace document",
+      run(ctx: { navigation: { open(target: unknown): void } }) {
+        ctx.navigation.open({ kind: "viewer", operation: "replace", from: { type: "record", id: "draft" }, resource: { type: "record", id: "created" }, position: { line: 4 } });
+      },
+    }, {
       id: "open-document", ref: { kind: "command", id: "open-document" }, title: "Open document",
       run(ctx: { navigation: { open(target: unknown): void } }) {
         ctx.navigation.open({ kind: "page", page: { kind: "page", id: "record" }, resource: { type: "record", id: "record-1", metadata: { documentId: "file-1" } }, position: { line: 2, column: 3 } });
@@ -55,7 +61,9 @@ export const expectPackagedNavigation = async (input: {
       localId: "record",
       document: { metadataKey: "documentId" },
       regionSettings: { main: { showHeader: false } },
+      panelView: { kind: "placement", id: "reader", extensionId: "test.navigation-probe" },
       main: expect.objectContaining({
+        presentation: "page",
         empty: {
           view: { kind: "view", id: "document", extensionId: "test.navigation-probe" },
           breadcrumb: {
@@ -82,6 +90,40 @@ export const expectPackagedNavigation = async (input: {
       }),
     }),
   );
+  expect(metadata.placements).toContainEqual(
+    expect.objectContaining({
+      localId: "reader",
+      replaces: [
+        { kind: "page-slot", page: { kind: "page", id: "record", extensionId: "test.navigation-probe" }, id: "legacy" },
+      ],
+    }),
+  );
+  const replaced = await fetch(
+    input.baseUrl +
+      "/v1/projects/" +
+      input.projectId +
+      "/extensions/commands/test.navigation-probe.command.replace-document/execute",
+    {
+      method: "POST",
+      headers: { ...input.headers, "content-type": "application/json" },
+      body: JSON.stringify({ source: "dashboard", params: {} }),
+    },
+  );
+  expect(replaced.status).toBe(200);
+  expect(await replaced.json()).toMatchObject({
+    outcome: {
+      status: "success",
+      navigationRequests: [
+        {
+          kind: "viewer",
+          operation: "replace",
+          from: { type: "record", id: "draft" },
+          resource: { type: "record", id: "created" },
+          position: { line: 4 },
+        },
+      ],
+    },
+  });
   expect(metadata.modes).toContainEqual(
     expect.objectContaining({
       localId: "policy",

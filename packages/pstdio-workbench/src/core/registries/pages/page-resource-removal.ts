@@ -1,6 +1,6 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { placementIdentityKey } from "../layout/placement-reconciliation";
-import { primarySlot } from "./page-main";
+import { isSingleViewPage, primarySlot } from "./page-main";
 import type { WorkbenchPageRegistryStoreState, WorkbenchPageResourceCodec } from "./page-registry-types";
 import { pageStateKey } from "./page-state-key";
 
@@ -55,7 +55,10 @@ export const removePageResource = <Value>(
     const remaining = primary ? (current?.resourceInstances[primary.id] ?? []) : [];
     const active = remaining.find((instance) => instance.instanceKey === current?.activePrimaryInstanceKey);
     if (active) location = { ...location, resource: active.resource, section: active.section };
-    else if (location.parent) location = location.parent;
+    else if (isSingleViewPage(page) && page.main.empty) {
+      const { resource: _resource, section: _section, position: _position, ...landing } = location;
+      location = landing;
+    } else if (location.parent) location = location.parent;
     else if (page.parentId) location = { page: state.pages[page.parentId]!.ref };
   }
   return { pageStates, location };

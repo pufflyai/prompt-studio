@@ -15,8 +15,8 @@ export const retainRecentViewPlacements = (
   now: number,
 ) => {
   const expires = new Map<string, number>();
-  const retained = open ? new Set(open) : undefined;
   const currentIds = new Set(current.map((placement) => placement.widgetId));
+  const retained = open ? new Set([...open, ...currentIds]) : undefined;
   for (const placement of previous.placements) {
     if (!placement.viewId || !registered.has(placement.viewId)) continue;
     const id = placement.widgetId;

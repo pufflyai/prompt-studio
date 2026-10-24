@@ -13,6 +13,7 @@ import type {
   WorkbenchPanelMenuStateController,
   WorkbenchPanelMenuStatePersistenceAdapter,
 } from "./controllers/panel-menus/panel-menu-state-controller";
+import type { WorkbenchViewerController } from "./controllers/resource-viewers/resource-viewers";
 import type { WorkbenchShellController } from "./controllers/shell/shell-controller";
 import type {
   WorkbenchSidePanelController,
@@ -85,6 +86,7 @@ export type WorkbenchTreeViews = Pick<
 >;
 
 export interface WorkbenchCoreContributionContext {
+  viewers: WorkbenchViewerController;
   pinPlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity, pinned?: boolean): void;
   getPanelDestinations(instanceId: string): import("./registries/layout/layout-types").WorkbenchPanelRegion[];
   movePanel(

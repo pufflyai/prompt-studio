@@ -4,29 +4,33 @@ import { createWorkbench } from "../../workbench-core";
 const owner = "acme.notes";
 const pageRef = (id: string) => ({ kind: "page" as const, extensionId: owner, id });
 const resource = (id: string) => ({ type: "note", id, extensionId: owner, projectId: "project" });
-const setup = () => {
-  const core = createWorkbench();
+const setup = (input: Parameters<typeof createWorkbench>[0] = {}) => {
+  const core = createWorkbench(input);
   core.modes.registerMode({ id: "project", activate: () => undefined });
   core.views.registerView({ id: "editor", title: "Editor", body: { kind: "react", render: () => null } });
+  const registrations = new Map<string, { dispose(): void }>();
   for (const id of ["collection", "notes", "other"])
-    core.pages.registerPage({
+    registrations.set(
       id,
-      ref: pageRef(id),
-      modeId: "project",
-      path: id,
-      slots: [],
-      ...(id === "collection"
-        ? {}
-        : {
-            parentId: "collection",
-            resource: { kinds: [{ kind: "resource-kind" as const, id: "note", extensionId: owner }] },
-          }),
-      main: { kind: "view", view: { kind: "view", id: "editor" }, cardinality: id === "collection" ? "one" : "many" },
-    });
+      core.pages.registerPage({
+        id,
+        ref: pageRef(id),
+        modeId: "project",
+        path: id,
+        slots: [],
+        ...(id === "collection"
+          ? {}
+          : {
+              parentId: "collection",
+              resource: { kinds: [{ kind: "resource-kind" as const, id: "note", extensionId: owner }] },
+            }),
+        main: { kind: "view", view: { kind: "view", id: "editor" }, cardinality: id === "collection" ? "one" : "many" },
+      }),
+    );
   core.pageLocations.setProject("project");
   const open = (id: string, page = "notes") =>
     core.pageLocations.navigate({ kind: "page", page: pageRef(page), resource: resource(id), open: "pin" });
-  return { core, open };
+  return { core, open, registrations };
 };
 
 test("removing the routed resource returns to its parent and preserves other pages", () => {
@@ -40,6 +44,15 @@ test("removing the routed resource returns to its parent and preserves other pag
   open("b");
   expect(core.getPrimaryResource()?.id).toBe("b");
   core.resources.removed(resource("b"));
+  expect(core.pages.store.getState().activePageId).toBe("collection");
+});
+
+test("removing an unscoped resource closes its active viewer", () => {
+  const { core } = setup();
+  const note = { type: "note", id: "global", extensionId: owner };
+  core.pageLocations.navigate({ kind: "page", page: pageRef("notes"), resource: note });
+  expect(core.getPrimaryResource()?.id).toBe("global");
+  core.resources.removed(note);
   expect(core.pages.store.getState().activePageId).toBe("collection");
 });
 
@@ -57,6 +70,43 @@ test("removal updates inactive page state without moving the active route", () =
   expect(instances().map((instance) => instance.resource.id)).toEqual(["b"]);
   core.resources.removed({ ...resource("b"), projectId: "different" });
   expect(instances()).toHaveLength(1);
+});
+
+test("deleting a resource in an inactive project clears its saved route and navigation memory", () => {
+  const { core, open } = setup({ startPage: pageRef("collection") });
+  open("a");
+  core.pageLocations.switchProject("other-project");
+  core.pageLocations.navigate({
+    kind: "page",
+    page: pageRef("other"),
+    resource: {
+      ...resource("b"),
+      projectId: "other-project",
+    },
+  });
+  core.resources.removed(resource("a"));
+  expect(core.getPrimaryResource()?.id).toBe("b");
+  core.pageLocations.switchProject("project");
+  expect(core.pages.store.getState().activePageId).toBe("collection");
+  expect(core.getPrimaryResource()).toBeUndefined();
+  core.pageLocations.navigate({ kind: "page", page: pageRef("notes"), intent: "restore" });
+  expect(core.getPrimaryResource()).toBeUndefined();
+  open("a");
+  expect(core.getPrimaryResource()?.id).toBe("a");
+});
+
+test("inactive project deletion clears routes owned by an extension unavailable in the active project", () => {
+  const { core, open, registrations } = setup({ startPage: pageRef("collection") });
+  open("a");
+  const notes = core.pages.getPage("notes")!;
+  core.pageLocations.switchProject("other-project");
+  registrations.get("notes")!.dispose();
+  core.resources.removed(resource("a"));
+  expect(core.pages.store.getState().activePageId).toBe("collection");
+  core.pages.registerPage(notes);
+  core.pageLocations.switchProject("project");
+  expect(core.pages.store.getState().activePageId).toBe("collection");
+  expect(core.getPrimaryResource()).toBeUndefined();
 });
 
 test("an editor can retain its dirty placement while other bindings are removed", () => {

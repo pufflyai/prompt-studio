@@ -1,8 +1,8 @@
 import { IconButton } from "@chakra-ui/react";
 import { ResourceActionMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
-import { resolvePageBreadcrumbPlacement } from "../../core/registries/pages/page-active-placement";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
+import { useBreadcrumbPlacement } from "../breadcrumb/use-breadcrumb-placement";
 import { createWorkbenchLocationActions, useWorkbenchResourceActionResolver } from "../menus/resource-actions";
 import { createWorkbenchResourceMenu } from "../menus/resource-menu";
 import { WorkbenchIcon } from "../shared/icon";
@@ -13,21 +13,15 @@ export const WorkbenchBreadcrumbActions = (props: { workbench: WorkbenchCore }) 
   const { workbench } = props;
   const items = useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items) ?? [];
   const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
-  const page = useWorkbenchStore(workbench.pages.store, (state) =>
-    state.activePageId ? state.pages[state.activePageId] : undefined,
-  );
-  const routedResource = useWorkbenchStore(workbench.pages.store, (state) => state.location?.resource);
-  const placement = useWorkbenchStore(workbench.layout.store, (state) =>
-    resolvePageBreadcrumbPlacement(state.layout, page, routedResource),
-  );
+  const { placement } = useBreadcrumbPlacement(workbench);
   const snapshot = usePlacementTab(placement, workbench);
   useWorkbenchResourceActionResolver(workbench);
   const subject = placement?.resource ?? items.at(-1)?.resource;
   const resource = subject ? resolveResourcePreview(subject, changes) : undefined;
-  const resourceActions = createWorkbenchResourceMenu(workbench, resource, snapshot);
+  const resourceActions = createWorkbenchResourceMenu(workbench, resource, snapshot, placement);
   const actions = [
     ...resourceActions,
-    ...placementMenuActions(workbench, { menu: items.at(-1)?.menu }, resource),
+    ...placementMenuActions(workbench, { menu: items.at(-1)?.menu }, resource, placement),
     ...createWorkbenchLocationActions(workbench, resource).map((action) => ({
       ...action,
       group: { id: "location", label: "Location" },

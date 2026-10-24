@@ -2,6 +2,7 @@ import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries
 import { indexCurrentOwnedPlacements, renderDesiredPlacements } from "../../registries/layout/owned-placement-layout";
 import { placementIdentityKey, reconcileOwnedPlacements } from "../../registries/layout/placement-reconciliation";
 import { planTrayTabs } from "../../registries/layout/tray-tabs";
+import { isSingleViewPage } from "../../registries/pages/page-main";
 import { editPagePlacementStates } from "../../registries/pages/page-placement-state";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 
@@ -26,6 +27,7 @@ export const retainTrayPreviews = (
     .map((entry) => placementIdentityKey(entry.identity));
   const removed = new Set<string>();
   for (const region of Object.values(current.regions)) {
+    if (region.id === "main" && isSingleViewPage(state.pages[state.activePageId ?? ""])) continue;
     const candidates = rendered.filter((entry) => entry.region === region.id);
     const preferredEntry = preferred
       .map((key) => candidates.find((entry) => placementIdentityKey(entry.identity) === key))

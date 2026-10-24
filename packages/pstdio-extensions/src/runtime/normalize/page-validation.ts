@@ -8,6 +8,7 @@ import {
 import type { RuntimePageRecord, RuntimePageSlot } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { Accumulator } from "./accumulator";
+import { validatePagePanels } from "./page-panel-validation";
 
 export interface PageDiagnosticInput {
   code: string;
@@ -118,6 +119,7 @@ const validatePageMainDefaults = (runtime: Accumulator, record: RuntimePageRecor
   if (
     main.kind === "panels" &&
     main.landing &&
+    typeof main.landing === "string" &&
     !page.slots.some((slot) => slot.id === main.landing && slot.region === "main" && slot.item.kind === "view")
   ) {
     addPageDiagnostic(runtime, {
@@ -294,7 +296,10 @@ const validateParentCycles = (runtime: Accumulator) => {
 };
 
 export const validatePageDefinitions = (runtime: Accumulator) => {
-  for (const record of runtime.pages) validatePageStructure(runtime, record);
+  for (const record of runtime.pages) {
+    validatePageStructure(runtime, record);
+    validatePagePanels(runtime, record);
+  }
   validatePaths(runtime);
   validateParentCycles(runtime);
 };

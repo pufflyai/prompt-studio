@@ -123,6 +123,8 @@ export interface ResourceRegistryStoreState {
 export interface ResourceRegistry {
   preview: ReturnType<typeof createResourcePreview>;
   removed(resource: ResourceRef): void;
+  getRemovalVersion(): number;
+  wasRemovedSince(resource: ResourceRef, version: number): boolean;
   onWillRemove(listener: (resource: ResourceRef) => readonly PlacementIdentity[]): Disposable;
   onDidRemove(listener: (resource: ResourceRef) => void): Disposable;
   store: WorkbenchStore<ResourceRegistryStoreState>;
@@ -152,6 +154,8 @@ export interface CreateResourceRegistryInput {
 export const createResourceRegistry = (input: CreateResourceRegistryInput = {}): ResourceRegistry => {
   const removalListeners = new Set<(resource: ResourceRef) => readonly PlacementIdentity[]>();
   const removedListeners = new Set<(resource: ResourceRef) => void>();
+  const removals = new Map<string, number>();
+  let removalVersion = 0;
   const cycleListeners = new Set<(cycle: ResourceHierarchyCycle) => void>();
   const store = createWorkbenchStore<ResourceRegistryStoreState>({
     name: "workbench.resources",
@@ -160,7 +164,10 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
   return {
     store,
     preview: createResourcePreview(),
+    getRemovalVersion: () => removalVersion,
+    wasRemovedSince: (resource, version) => (removals.get(resourceKey(resource)) ?? 0) > version,
     removed(resource) {
+      removals.set(resourceKey(resource), ++removalVersion);
       const retained = [...removalListeners].flatMap((listener) => listener(resource));
       try {
         input.remove?.(resource, retained);
