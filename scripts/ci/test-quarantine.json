@@ -197,5 +197,15 @@
     "reason": "Failed in the same Apple Silicon job with the same 30 second relaunch pattern as the order and visibility case. Keep Linux, Windows and Intel coverage blocking.",
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40113373674/job/120929910888"],
     "removeWhen": "Identify and fix the slow phase and pass ten independent Apple Silicon runs within 30 seconds, preserving both launches and the reset assertions."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-startup-recovery.spec.ts",
+    "name": "keeps an uncertain runtime owner intact until its descriptor is repaired",
+    "platforms": ["win32"],
+    "owner": "PS-907 / desktop startup recovery",
+    "reason": "On Windows this case exhausted its 60 second allowance in a merge group whose change only touches ticket numbering. The next recovery case in the same job passed. Keep Linux and macOS coverage blocking and preserve the owner-repair assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40123218595"],
+    "removeWhen": "Identify and fix the slow phase, then pass ten independent Windows runs within the existing 60 second allowance."
   }
 ]

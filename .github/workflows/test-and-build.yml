@@ -1004,16 +1004,17 @@ jobs:
         working-directory: clients/desktop
         run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged
 
-      - name: Run quarantined Apple Silicon packaged cases
-        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin' && matrix.arch == 'arm64' && !cancelled() && steps.desktop.outcome == 'success'
+      # Machines without registered cases select nothing here.
+      - name: Run quarantined packaged desktop cases
+        if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
         continue-on-error: true
         env:
           E2E_TEST_LANE: quarantine
         working-directory: clients/desktop
-        run: bun run test:packaged
+        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged --pass-with-no-tests
 
-      - name: Require first-attempt Apple Silicon quarantine execution
-        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin' && matrix.arch == 'arm64' && !cancelled() && steps.desktop.outcome == 'success'
+      - name: Require first-attempt packaged desktop quarantine execution
+        if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop
 
       - name: Preserve desktop test reports and traces
