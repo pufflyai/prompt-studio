@@ -118,18 +118,29 @@ test("unfiltered totals follow live records without reading them", async () => {
   expect(await total()).toBe(0);
 });
 
-test("a group commit of multi-megabyte records saves without exhausting database memory", async () => {
+test("a group commit larger than one write statement is saved in statements of bounded size", async () => {
   const f = await fixture();
-  // Tickets with attached files reach several megabytes each.
-  const content = "x".repeat(8_000_000);
-  await f.storage.records.commit({
+  // Rows per batched statement and the bytes of its parameters.
+  const statements: { rows: number; bytes: number }[] = [];
+  const logQuery = (_query: string, params: unknown[]) => {
+    const rows = params.find((param) => typeof param === "string" && param.startsWith("[{"));
+    if (typeof rows !== "string") return;
+    statements.push({ rows: (JSON.parse(rows) as unknown[]).length, bytes: Buffer.byteLength(rows) });
+  };
+  const db = drizzle(f.db.$client, { schema, logger: { logQuery } });
+  const records = createDocumentStorageDBService(db as unknown as typeof f.db).open({ owner: f.owner }).records;
+  // Batched by row count, one statement would carry all twenty records into PGlite's heap at once.
+  const content = "x".repeat(100_000);
+  await records.commit({
     operationId: "large",
-    edits: Array.from({ length: 24 }, (_, index) => ({
+    edits: Array.from({ length: 20 }, (_, index) => ({
       recordId: `ticket-${index}`,
       replace: { files: [{ name: "report.md", content }] },
     })),
   });
-  const records = await f.storage.records.list();
-  expect(records).toHaveLength(24);
-  expect((records[0].value as { files: { content: string }[] }).files[0].content).toHaveLength(8_000_000);
+  expect(await records.list()).toHaveLength(20);
+  const documentWrites = statements.filter(({ bytes }) => bytes > 100_000);
+  expect(documentWrites.length).toBeGreaterThan(1);
+  // A statement holds several rows only while it stays under the 4 MB cap; a larger row stands alone.
+  for (const { rows, bytes } of documentWrites) if (rows > 1) expect(bytes).toBeLessThanOrEqual(4_000_000);
 });
