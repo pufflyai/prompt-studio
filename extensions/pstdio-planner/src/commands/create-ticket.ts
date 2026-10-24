@@ -54,7 +54,7 @@ export const createTicketCommand = defineCommand({
   async run(ctx, commandParams) {
     // Resolve before anything is written, so an unknown shorthand leaves no
     // half-created ticket and burns no shorthand.
-    const dependsOn = commandParams.dependsOn ? await resolveDependencyIds(ctx, commandParams.dependsOn) : [];
+    const dependsOn = commandParams.dependsOn ? await resolveDependencyIds(ctx, commandParams.dependsOn, []) : [];
     const statuses = await seedDefaultStatuses(ctx.storage);
     if (commandParams.tags !== undefined) await seedDefaultTags(ctx.storage);
     const attributes = commandParams.attributes ?? {};

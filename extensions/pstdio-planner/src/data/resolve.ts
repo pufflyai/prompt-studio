@@ -54,11 +54,19 @@ export const resolveTicketId = async (ctx: TicketContext, value: string) => {
   return ticket.id;
 };
 
+// A value that names a ticket already linked keeps that link. After an offline
+// merge, a ticket's old number can be shared, but an unchanged relationship
+// still points at one stored ID.
+export const resolveLinkedTicketId = async (ctx: TicketContext, value: string, linkedIds: string[]) => {
+  const linked = (await findStoredTickets(ctx, value)).find((ticket) => linkedIds.includes(ticket.id));
+  return linked ? linked.id : resolveTicketId(ctx, value);
+};
+
 // Dependencies are written as shorthands by both routes that set them (the
 // `--depends-on` flag and `depends_on` frontmatter) but stored as ticket ids.
 // Both go through here so the two cannot drift.
-export const resolveDependencyIds = async (ctx: TicketContext, values: string[]) =>
-  Promise.all(values.map((value) => resolveTicketId(ctx, value)));
+export const resolveDependencyIds = async (ctx: TicketContext, values: string[], linkedIds: string[]) =>
+  Promise.all(values.map((value) => resolveLinkedTicketId(ctx, value, linkedIds)));
 
 export const requireTickets = async (ctx: TicketContext, value: string) => {
   const tickets = await findTickets(ctx, value);

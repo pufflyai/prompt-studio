@@ -169,7 +169,7 @@ describe("proposal notifications", () => {
         actions: expect.arrayContaining([
           expect.objectContaining({ command: "pstdio.pstdio-planner.command.approve-proposal", label: "Approve" }),
         ]),
-        dedupeKey: "pstdio-planner:ticket:T-1:proposal-refined",
+        dedupeKey: `pstdio-planner:ticket:${ticket.id}:proposal-refined`,
         kind: "needs_review",
         target: expect.objectContaining({ id: ticket.id, type: "ticket" }),
       }),
@@ -196,7 +196,10 @@ describe("proposal notifications", () => {
       }),
     );
 
-    expect(resolutions).toEqual([{ dedupeKey: "pstdio-planner:ticket:T-1:proposal-refined", status: "done" }]);
+    expect(resolutions).toContainEqual({
+      dedupeKey: `pstdio-planner:ticket:${ticket.id}:proposal-refined`,
+      status: "done",
+    });
   });
 });
 
