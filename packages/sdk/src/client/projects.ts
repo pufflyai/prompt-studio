@@ -1,5 +1,6 @@
 import type {
   BindEnvironmentInput,
+  ChooseProjectFolderInput,
   CreateProjectInput,
   EnvironmentBinding,
   InitialWorkspaceRequest,
@@ -7,6 +8,7 @@ import type {
   PageQuery,
   ProjectCreateRequest,
   ProjectDetails,
+  ProjectFolder,
   ProjectUpdateRequest,
   UpdateProjectInput,
 } from "pstdio-api-contracts";
@@ -29,6 +31,10 @@ export type ProjectClient = {
     projectId: string,
     input: InitialWorkspaceRequest | CreateProjectInput["initial_workspace"],
   ): Promise<Workspace & ExtensionWorkspace>;
+  /** Where the project's files are on this device, and the git remote a device without a folder can clone. */
+  folder(projectId: string): Promise<ProjectFolder>;
+  /** Gives a project without a folder on this device its folder, by cloning its git remote or using a checkout. */
+  chooseFolder(projectId: string, input: ChooseProjectFolderInput): Promise<Workspace & ExtensionWorkspace>;
   retrySetup(projectId: string): Promise<Workspace & ExtensionWorkspace>;
   update(projectId: string, input: ProjectUpdateRequest | UpdateProjectInput): Promise<Project & ProjectDetails>;
   delete(projectId: string): Promise<void>;
@@ -43,6 +49,9 @@ export const createProjectClient = (request: RequestFn): ProjectClient => ({
     request(`/v1/projects/${encodeURIComponent(workbenchId)}/environment-binding`, { method: "PUT", body: input }),
   attachInitialWorkspace: (projectId, input) =>
     request(`/v1/projects/${encodeURIComponent(projectId)}/initial-workspace`, { method: "POST", body: input }),
+  folder: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/folder`),
+  chooseFolder: (projectId, input) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/folder`, { method: "POST", body: input }),
   retrySetup: (projectId) => request(`/v1/projects/${projectId}/retry-setup`, { method: "POST" }),
   update: (projectId, input) => request(`/v1/projects/${projectId}`, { method: "PATCH", body: input }),
   delete: (projectId) => request(`/v1/projects/${projectId}`, { method: "DELETE" }),

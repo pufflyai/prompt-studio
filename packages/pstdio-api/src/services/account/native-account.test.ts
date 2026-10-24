@@ -197,6 +197,7 @@ test("an existing project starts syncing after another device enables Cloud", as
       if (synced.length) discovered.resolve();
     },
     async () => ({ state: "synced", offlineReady: true }),
+    async () => {},
   );
   try {
     await account.refresh();

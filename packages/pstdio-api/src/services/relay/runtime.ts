@@ -3,10 +3,10 @@ import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
 import { startAutomationSync } from "./automations";
+import { startCoreDocumentSync } from "./core-documents";
 import { startRelayExtension } from "./extension-owner";
 import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
-import { startResourceNumberSync } from "./resource-numbers";
 
 export type RelayWorkbench = {
   accountId: string;
@@ -28,7 +28,7 @@ export const startRelayRuntime = async (input: {
   const access = new Map<string, ReturnType<typeof createRelayAccess>>();
   const controller = new AbortController();
   const { deps } = input;
-  const resourceConnections = new Map<string, ReturnType<typeof startResourceNumberSync>>();
+  const coreConnections = new Map<string, ReturnType<typeof startCoreDocumentSync>>();
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
   const automations = new Map<string, ReturnType<typeof startAutomationSync>>();
   const personal = new Map<string, ReturnType<typeof startRelayPersonalHistory>>();
@@ -67,10 +67,10 @@ export const startRelayRuntime = async (input: {
         workbenchId,
         startRelayPersonalHistory({ config, deps, signal: controller.signal, access: access.get(workbenchId)! }),
       );
-    if (!resourceConnections.has(workbenchId))
-      resourceConnections.set(
+    if (!coreConnections.has(workbenchId))
+      coreConnections.set(
         workbenchId,
-        startResourceNumberSync({
+        startCoreDocumentSync({
           config,
           deps,
           access: access.get(workbenchId)!,
@@ -162,12 +162,12 @@ export const startRelayRuntime = async (input: {
   });
   await refresh();
   return {
-    // Every owner of project data reports: core resource numbers and each enabled extension.
+    // Every owner of project data reports: core documents and each enabled extension.
     // An owner that has not started yet counts as not downloaded.
     async status(workbenchId: string) {
       const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
       const owners = [
-        resourceConnections.get(workbenchId),
+        coreConnections.get(workbenchId),
         automations.get(workbenchId),
         ...snapshot.enabledSources.map(({ installedSource }) =>
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
@@ -201,10 +201,10 @@ export const startRelayRuntime = async (input: {
         previous?.close();
         if (previous) await previous.done;
         personal.delete(id);
-        const resourceConnection = resourceConnections.get(id);
-        resourceConnection?.close();
-        await resourceConnection?.done;
-        resourceConnections.delete(id);
+        const coreConnection = coreConnections.get(id);
+        coreConnection?.close();
+        await coreConnection?.done;
+        coreConnections.delete(id);
         workbenches.delete(id);
         access.delete(id);
       }
@@ -226,12 +226,12 @@ export const startRelayRuntime = async (input: {
       clearTimeout(retry);
       controller.abort();
       for (const connection of automations.values()) connection.close();
-      for (const connection of resourceConnections.values()) connection.close();
+      for (const connection of coreConnections.values()) connection.close();
       for (const connection of connections.values()) connection.close();
       for (const connection of personal.values()) connection.close();
       await running;
       await Promise.all([...automations.values()].map((connection) => connection.done));
-      await Promise.all([...resourceConnections.values()].map((connection) => connection.done));
+      await Promise.all([...coreConnections.values()].map((connection) => connection.done));
       await Promise.all([...connections.values()].map((connection) => connection.done));
       await Promise.all([...personal.values()].map((connection) => connection.done));
     },

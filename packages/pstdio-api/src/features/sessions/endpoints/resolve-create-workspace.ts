@@ -17,3 +17,15 @@ export const resolveCreateWorkspace = async (
     return { error: `Workspace not found: ${workspaceId}`, status: 404 as const };
   return { workspace };
 };
+
+type FolderWorkspace = { is_default: boolean; execution_kind: string; root_path: string | null };
+
+// A harness that works on files cannot start in a project whose folder is not on this device yet.
+export const needsProjectFolder = (
+  workspace: FolderWorkspace,
+  harness: { cwdRequirement: "required" | "optional" } | undefined,
+) =>
+  workspace.is_default &&
+  workspace.execution_kind === "local" &&
+  !workspace.root_path &&
+  harness?.cwdRequirement === "required";

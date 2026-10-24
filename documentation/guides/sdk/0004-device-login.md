@@ -21,16 +21,36 @@ pst projects list
 pst projects cloud PROJECT_ID
 ```
 
-The project keeps its ID, folder and local data. Every device of your account that has this project syncs it. To get the project on another computer, log in there and bind the same project ID to a folder:
+The project keeps its ID, folder and local data. Every device of your account syncs it, together with its name and the `origin` git remote of its folder. A device notices a new cloud project when it starts, logs in, creates or binds the project, or checks the account again, which it does every minute.
+
+To stop syncing a project, run `pst projects local PROJECT_ID`. Every device keeps its local copy. A project that syncs cannot be deleted on one device, because every device of the account gets every cloud project back. Make it local first, then delete it.
+
+## Get your cloud projects on a new computer
+
+After you log in on a new or reset computer, every cloud project of your account appears in the project picker with its name. Its data, such as tickets, notes and artifacts, downloads without a folder. Until the first download finishes, the project reports `first-download-incomplete`.
+
+The second line of each cloud project in the picker says where it is on this computer:
+
+| Line | Meaning |
+| --- | --- |
+| Cloud · not on this device yet | The first download has not finished. |
+| Cloud · waiting to download | Newer changes from other devices are still on their way. |
+| Cloud · ready offline · no folder yet | All data is here. The project's files are not. |
+| Cloud · needs attention | Some synced data could not be read. |
+| The folder path | The project has a folder on this computer. |
+
+A project opens before its download finishes. After the first download, opening it reads the downloaded data directly.
+
+The project's files come later. The first time something needs them, such as opening Files, creating a workspace or starting a session with an agent that works on files, Prompt Studio asks for a folder. It offers to clone the project's recorded git remote, or to use a folder that already holds the same repository. Work that needs files on a computer without the project's folder fails with the error "This project's files are not on this device."
+
+To use a folder you already have from the command line, bind the project ID to it:
 
 ```sh
 pst projects environment
 pst projects bind PROJECT_ID --environment ENVIRONMENT_ID --name Notes --path /absolute/path/to/notes
 ```
 
-The environment ID comes from `pst projects environment` on that computer. A device notices a cloud project when it starts, logs in, or creates or binds the project.
-
-To stop syncing a project, run `pst projects local PROJECT_ID`. Every device keeps its local copy.
+The environment ID comes from `pst projects environment` on that computer.
 
 ## Manage devices
 
