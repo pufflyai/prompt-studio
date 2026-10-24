@@ -181,11 +181,11 @@ export class DesktopRuntimeManager {
     }
 
     const initialShutdown = readRuntimeShutdown(this.#options.descriptorPath);
-    const discover = async (path: string) => {
+    const discover = async (path: string, expectedRuntime?: Pick<RuntimeDescriptor, "pid" | "instanceId">) => {
       signal.throwIfAborted();
       const discovery = await this.#deps.discoverRuntime(path, {
         signal,
-        ...(this.#spawnedIdentity ? { expectedRuntime: this.#spawnedIdentity } : {}),
+        ...(expectedRuntime ? { expectedRuntime } : {}),
       });
       signal.throwIfAborted();
       return discovery;
@@ -244,7 +244,7 @@ export class DesktopRuntimeManager {
     try {
       const descriptor = await Promise.race([
         waitForDesktopRuntime(this.#options.descriptorPath, instanceId, {
-          discover,
+          discover: (path) => discover(path, this.#spawnedIdentity ?? undefined),
           signal,
           sleep: this.#deps.sleep,
         }),

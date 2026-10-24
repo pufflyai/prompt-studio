@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { discoverRuntime, type RuntimeDescriptor, writeRuntimeDescriptor } from "pstdio/runtime";
 import { DesktopRuntimeManager } from "./runtime-manager";
 
-test("keeps its live upgrade process after a readiness connection fails and attaches when ready", async () => {
+test("keeps its live upgrade process through connection failures and retries without duplicating it", async () => {
   const root = mkdtempSync(join(tmpdir(), "desktop-upgrade-readiness-"));
   const descriptorPath = join(root, "runtime.json");
   const descriptor: RuntimeDescriptor = {
@@ -22,6 +22,8 @@ test("keeps its live upgrade process after a readiness connection fails and atta
   };
   const signals: (NodeJS.Signals | number | undefined)[] = [];
   let probes = 0;
+  let failNextProbe = false;
+  let spawns = 0;
   const child = Object.assign(new EventEmitter(), {
     pid: process.pid,
     readOutput: () => JSON.stringify({ event: "runtime.startup.phase", phase: "database_upgrade_exporting" }),
@@ -48,12 +50,16 @@ test("keeps its live upgrade process after a readiness connection fails and atta
         discoverRuntime(path, {
           ...options,
           fetch: async () => {
-            if (++probes <= 2) throw new TypeError("Readiness socket closed during upgrade");
+            if (++probes <= 2 || failNextProbe) {
+              failNextProbe = false;
+              throw new TypeError("Readiness socket closed during upgrade");
+            }
             return Response.json({ ok: true, protocolVersion: 1, instanceId: "upgrading", ownerType: "desktop" });
           },
         }),
       sleep: async () => {},
       spawn: () => {
+        spawns += 1;
         writeRuntimeDescriptor(descriptorPath, descriptor);
         return child;
       },
@@ -63,6 +69,12 @@ test("keeps its live upgrade process after a readiness connection fails and atta
     await expect(manager.start()).resolves.toEqual({ descriptor, external: false });
     expect(probes).toBe(3);
     expect(signals).toEqual([]);
+    failNextProbe = true;
+    await expect(manager.start()).rejects.toThrow("ownership is unsafe");
+    expect(spawns).toBe(1);
+    expect(signals).toEqual([]);
+    await expect(manager.start()).resolves.toEqual({ descriptor, external: false });
+    expect(spawns).toBe(1);
   } finally {
     await manager.detach();
     rmSync(root, { recursive: true, force: true });
