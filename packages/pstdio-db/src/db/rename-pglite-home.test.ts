@@ -38,7 +38,9 @@ const withWindowsReader = async (
     `param([string]$Path)
 $reader = [System.IO.File]::Open($Path, 'Open', 'Read', 'ReadWrite')
 try {
-  [Console]::Out.WriteLine('reader ready')
+  [Console]::Out.Write('reader ')
+  Start-Sleep -Milliseconds 20
+  [Console]::Out.WriteLine('ready')
   [Console]::In.ReadLine() | Out-Null
 } finally {
   $reader.Dispose()
@@ -63,9 +65,18 @@ try {
   };
   try {
     const reader = child.stdout.getReader();
-    const ready = await reader.read();
-    reader.releaseLock();
-    expect(new TextDecoder().decode(ready.value)).toContain("reader ready");
+    const decoder = new TextDecoder();
+    let ready = "";
+    try {
+      while (!ready.includes("\n")) {
+        const { done, value } = await reader.read();
+        if (done) throw new Error("Windows reader ended before confirming its open handle");
+        ready += decoder.decode(value, { stream: true });
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    expect(ready.trim()).toBe("reader ready");
     const blocked = await rename(active, original).catch((error: unknown) => error);
     expect(blocked).toMatchObject({ code: "EPERM" });
     await run({ active, original, releaseReader });
