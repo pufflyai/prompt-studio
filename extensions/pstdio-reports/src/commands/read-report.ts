@@ -1,5 +1,6 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { reportsCollection } from "../data/collections";
+import { readReportBody } from "../data/report-body";
 
 export const readReportCommand = defineCommand({
   id: "reports.read",
@@ -11,6 +12,6 @@ export const readReportCommand = defineCommand({
   async run(ctx, commandParams) {
     const report = await reportsCollection(ctx.storage).get(commandParams.id);
     if (!report) throw new Error(`Unknown report "${commandParams.id}"`);
-    return report;
+    return { ...report, body: await readReportBody(ctx.storage, report) };
   },
 });

@@ -354,7 +354,9 @@ describe("saved report workflow", () => {
       source: "manual",
       draft: false,
     });
-    expect(saved.body).toContain("Body text.");
+    expect((await readReportCommand.run(...makeCommandArgs({ storage, params: { id: saved.id } }))).body).toContain(
+      "Body text.",
+    );
     expect(saved.createdAt).not.toBe("1999-01-01T00:00:00.000Z");
     expect(saved.files[0]).toMatchObject({ name: "screenshot.png", size: 4, hash: expect.any(String) });
     expect(saved.files[0]?.hash).not.toBe("");
@@ -389,6 +391,28 @@ describe("saved report identity and failures", () => {
     const report = await readReportCommand.run(...makeCommandArgs({ storage, params: { id: written.reportId } }));
 
     expect(report).toMatchObject({ id: written.reportId, workspaceShorthand: "PS-116_A1", draft: false });
+  });
+
+  test("a long report body is stored as a file and the report record stays small", async () => {
+    const { storage, projectFiles } = setup();
+    const written = await writeReportCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { projectFiles },
+      }),
+    );
+    // Over the 256 KiB record limit of extension API 0.3, like a report with pasted test logs.
+    const log = "test output line\n".repeat(20_000);
+    projectFiles.files.set(reportMarkdownPath("review"), new TextEncoder().encode(`# Review\n\n${log}`));
+    await saveReportCommand.run(
+      ...makeCommandArgs({ storage, params: { workspace: "PS-116_A1", name: "review" }, overrides: { projectFiles } }),
+    );
+
+    const [stored] = await reportsCollection(storage).list();
+    expect(JSON.stringify(stored).length).toBeLessThan(10_000);
+    const report = await readReportCommand.run(...makeCommandArgs({ storage, params: { id: written.reportId } }));
+    expect(report.body).toBe(`# Review\n\n${log}`);
   });
 
   test("save succeeds when old attachment cleanup fails after storage update", async () => {

@@ -9,6 +9,7 @@ import {
   requireReportDraftFiles,
 } from "../data/draft-storage";
 import { parseReportFrontmatter, stripFrontmatter } from "../data/frontmatter";
+import { storeReportBody } from "../data/report-body";
 import { findReport, resolveWorkspace } from "../data/resolve";
 import type { StoredReport, StoredReportFile } from "../data/types";
 import { assertSafeReportFileName, assertSafeReportName } from "../data/validation";
@@ -99,12 +100,14 @@ export const saveReportCommand = defineCommand({
       }),
     );
     const nextFiles = uploadedFiles;
+    const bodyBlobId = await storeReportBody(ctx.storage, report.id, body);
+    const newBlobIds = [bodyBlobId, ...nextFiles.map((file) => file.blobId)];
 
     const next: StoredReport = {
       ...report,
       kind: frontmatter.kind ?? report.kind,
       source: frontmatter.source ?? report.source,
-      body,
+      bodyBlobId,
       files: nextFiles,
       draft: false,
       updatedAt: new Date().toISOString(),
@@ -112,12 +115,12 @@ export const saveReportCommand = defineCommand({
     try {
       await reportsCollection(ctx.storage).put(report.id, next);
     } catch (error) {
-      await Promise.allSettled(nextFiles.map((file) => blobs.delete(file.blobId)));
+      await Promise.allSettled(newBlobIds.map((blobId) => blobs.delete(blobId)));
       throw error;
     }
-    const oldBlobIds = new Set(report.files.map((file) => file.blobId));
+    const oldBlobIds = new Set([report.bodyBlobId, ...report.files.map((file) => file.blobId)]);
     await Promise.allSettled([...oldBlobIds].map((blobId) => blobs.delete(blobId)));
-    await projectFiles.writeText(reportMarkdownPathFor(next), reportToMarkdown(next));
+    await projectFiles.writeText(reportMarkdownPathFor(next), reportToMarkdown(next, body));
 
     await ctx.events.emit("pstdio-reports.report.saved", {
       projectId: ctx.projectId,

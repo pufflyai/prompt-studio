@@ -9,6 +9,7 @@ import {
   reportToMarkdown,
   requireReportDraftFiles,
 } from "../data/draft-storage";
+import { storeReportBody } from "../data/report-body";
 import { resolveReportName, resolveWorkspace } from "../data/resolve";
 import { readReportTemplate } from "../data/template-store";
 
@@ -69,22 +70,23 @@ export const writeReportCommand = defineCommand({
     const { name, path, filesPath } = await resolveAvailableReport(ctx, projectFiles, directoryName);
 
     const now = new Date().toISOString();
+    const identity = await ctx.resources.allocate({ kind: "report" });
     const report = await putReport(ctx.storage, {
-      ...(await ctx.resources.allocate({ kind: "report" })),
+      ...identity,
       workspaceShorthand,
       workspaceId: workspace?.id ?? null,
       name,
       directoryName,
       kind,
       source: commandParams.source ?? null,
-      body: templateBody,
+      bodyBlobId: await storeReportBody(ctx.storage, identity.id, templateBody),
       files: [],
       draft: true,
       createdAt: now,
       updatedAt: now,
     });
 
-    await projectFiles.writeText(path, reportToMarkdown(report));
+    await projectFiles.writeText(path, reportToMarkdown(report, templateBody));
     await ctx.events.emit("pstdio-reports.report.created", {
       projectId: ctx.projectId,
       reportId: report.id,
