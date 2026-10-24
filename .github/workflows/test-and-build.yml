@@ -741,6 +741,18 @@ jobs:
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
         run: bun run --cwd packages/e2e test:packaged:${{ matrix.suite }}
 
+      - name: Run quarantined packaged CLI cases
+        if: matrix.suite == 'cli' && !cancelled() && steps.packaged_cli.outcome == 'success'
+        continue-on-error: true
+        env:
+          E2E_TEST_LANE: quarantine
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+        run: bun run --cwd packages/e2e test:packaged:cli
+
+      - name: Require every packaged CLI quarantine case to have executed
+        if: matrix.suite == 'cli' && !cancelled() && steps.packaged_cli.outcome == 'success'
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun
+
       - name: Preserve packaged and Vite test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -787,6 +799,11 @@ jobs:
           PSTDIO_DEFAULT_EXTENSIONS: "[]"
           PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0"
         run: bun --cwd packages/pstdio-api ../../scripts/ci/run-bun-tests.ts --conditions=source --timeout 30000 --silent
+      - name: Run quarantined extension cases with their existing limits
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        run: bun run --cwd extensions/harness-codex test --timeout=15000
+
       - name: Require every registered case to have executed
         run: bun scripts/ci/verify-quarantine-reports.ts bun
       - name: Preserve quarantine test reports
