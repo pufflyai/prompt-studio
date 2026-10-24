@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
-import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
+import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
 import { createExtensionScheduler } from "./extension-scheduler";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
@@ -84,8 +84,8 @@ const writeScheduledExtension = (options: { scheduleDisabled?: boolean; workspac
 type AutomationPreferenceRow = { extension_instance_id: string; automation_id: string; enabled: boolean };
 
 const createDeps = (sourcePath: string, automationPreferences: AutomationPreferenceRow[] = []) => {
-  const store = createMemoryDocumentStore();
   const extensionService = {
+    listProjectExtensionInstances: async () => extensionService.listEnabledSourcesForProject(),
     listEnabledSourcesForProject: async () => [
       {
         instance: { id: "instance-1" },
@@ -121,8 +121,7 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     extensionService,
     projectService,
     extensionStorageService: {
-      open: async (input: { owner: { workbenchId: string; extensionId: string } }) =>
-        createDocumentStorage({ ...input, store }),
+      ...createTestDocumentStorage(),
       getKv: async () => null,
       setKv: async () => {},
       deleteKv: async () => {},

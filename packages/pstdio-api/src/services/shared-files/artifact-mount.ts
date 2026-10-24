@@ -1,7 +1,6 @@
 import { posix, resolve } from "node:path";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import {
-  createArtifactMount,
   createFileMount,
   createSafeFileRoot,
   normalizeMountRelativePath,
@@ -9,6 +8,8 @@ import {
 } from "pstdio-extensions";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
+import { PublicationUpdateRequiredError } from "../../features/extensions/publication/types";
+import { artifactTreeReader } from "./artifact-tree-reader";
 import { createFileProjectionIO } from "./file-io";
 import { createFileReconciler } from "./file-reconciliation";
 import { fileProjection, serializeFiles } from "./file-state";
@@ -29,6 +30,7 @@ export const createSharedArtifactMount = (
     mountPaths?: string[];
     signal?: AbortSignal;
     onWrite?: (path: string) => void;
+    assertWritable?: () => Promise<void>;
     resolveWriteRoot?: () => Promise<string>;
   },
 ) => {
@@ -36,7 +38,6 @@ export const createSharedArtifactMount = (
   const prefix = normalizeMountRelativePath(input.mountPath);
   const roots = input.mountPaths ?? [prefix];
   const tree = createFileTree(roots);
-  const local = createArtifactMount(input);
   const root = resolveArtifactMountRoot(input);
   const boundary = createSafeFileRoot(root);
   const assertBoundary = async (path: string) => {
@@ -76,9 +77,18 @@ export const createSharedArtifactMount = (
     projection,
     open,
     signal: input.signal,
+    assertWritable: input.assertWritable,
   });
   const run = <T>(action: (storage: Awaited<ReturnType<typeof open>>) => Promise<T>) =>
-    serializeFiles(key, async () => action(await withoutStorageObservation(reconcile)));
+    serializeFiles(key, async () => {
+      try {
+        await input.assertWritable?.();
+      } catch (error) {
+        if (!(error instanceof PublicationUpdateRequiredError)) throw error;
+        return action(await open());
+      }
+      return action(await withoutStorageObservation(reconcile));
+    });
   const write = (path: string, value: Blob, update: boolean) =>
     run(async (storage) => {
       const target = fullPath(path);
@@ -122,6 +132,7 @@ export const createSharedArtifactMount = (
         asset,
         deleted: false,
       });
+      await input.assertWritable?.();
       await storage.records.commit({ operationId: crypto.randomUUID(), edits });
       await withoutStorageObservation(reconcile);
     });
@@ -133,14 +144,15 @@ export const createSharedArtifactMount = (
       return assets.read(owner, entry.record.asset, input.signal);
     });
   const api: ArtifactMount = {
-    exists: (path) => run(async () => local.exists(path)),
+    exists: (path) => run(async (storage) => artifactTreeReader(storage, prefix, roots).exists(fullPath(path))),
     readText: async (path) => new Response(await read(path)).text(),
     readBytes: async (path) => new Uint8Array(await new Response(await read(path)).arrayBuffer()),
     writeText: (path, value) => write(path, new Blob([value], { type: "text/plain" }), false),
     updateText: (path, value) => write(path, new Blob([value], { type: "text/plain" }), true),
     writeBytes: (path, value) => write(path, new Blob([new Uint8Array(value)]), false),
-    list: (pattern) => run(async () => local.list(pattern)),
-    listDirs: (path) => run(async () => local.listDirs(path)),
+    list: (pattern) => run(async (storage) => artifactTreeReader(storage, prefix, roots).list(pattern)),
+    listDirs: (path = "") =>
+      run(async (storage) => artifactTreeReader(storage, prefix, roots).listDirs(fullPath(path))),
     delete: (path) =>
       run(async (storage) => {
         const target = fullPath(path);
@@ -150,6 +162,7 @@ export const createSharedArtifactMount = (
           within(node.path, target),
         );
         if (!entries.length) throw missing(path);
+        await input.assertWritable?.();
         await storage.records.commit({
           operationId: crypto.randomUUID(),
           edits: entries.map(({ record }) => ({

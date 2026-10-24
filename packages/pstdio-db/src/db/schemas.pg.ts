@@ -10,6 +10,7 @@ export * from "./schemas/extensions";
 export * from "./schemas/files";
 export * from "./schemas/notifications";
 export * from "./schemas/projects";
+export * from "./schemas/recovery-points";
 export * from "./schemas/resource-anchors";
 export * from "./schemas/session-queue-entries";
 export * from "./schemas/sessions";

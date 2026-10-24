@@ -5,6 +5,8 @@ import type { RouteDeps } from "./features/deps";
 import { validateLegacyAnchors } from "./features/extensions/command-environment/resource-link-policy";
 import { fireExtensionEventAsync } from "./features/extensions/extension-event-runtime";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
+import { selectPublicationSource } from "./features/extensions/publication/prepare-activation";
+import { createPublicationStorageAccess } from "./features/extensions/publication/storage-access";
 import type { EventBus } from "./features/sync/event-bus";
 import { createAssetTransferService } from "./services/asset-transfer-service";
 import { createExtensionFileService } from "./services/extension-file-service";
@@ -49,6 +51,22 @@ export const createCoreDomainServices = (input: {
     assetTransferService,
     projectService: createProjectService({ projectsDBService: dbs.projectsDBService, syncService, eventBus }),
     extensionFileService: createExtensionFileService({
+      beforeWrite: async (file) => {
+        const deps = input.getCommandDeps();
+        const records = await deps.extensionService.listProjectExtensionInstances(file.project_id);
+        const record =
+          records.find(({ instance }) => instance.id === file.extension_instance_id) ??
+          selectPublicationSource(
+            records.filter(({ installedSource }) => installedSource.extension_id === file.extension_instance_id),
+          );
+        if (record)
+          await createPublicationStorageAccess(deps, {
+            projectId: file.project_id,
+            extensionId: record.installedSource.extension_id,
+            extensionInstanceId: record.instance.id,
+            source: record.installedSource,
+          }).write();
+      },
       extensionFilesDBService: dbs.extensionFilesDBService,
       extensionInstancesDBService: dbs.extensionInstancesDBService,
       fileService,

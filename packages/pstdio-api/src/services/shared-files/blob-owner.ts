@@ -14,10 +14,11 @@ export const createBlobOwnerResolver =
         ? { owner: { workbenchId: input.project_id, extensionId: source.extension_id }, instanceId: instance.id }
         : null;
     }
-    for (const candidate of await deps.extensionInstancesDBService.list({
+    const candidates = await deps.extensionInstancesDBService.list({
       scope_type: "project",
       scope_id: input.project_id,
-    })) {
+    });
+    for (const candidate of candidates.sort((a, b) => Number(b.enabled) - Number(a.enabled))) {
       const source = await deps.installedExtensionSourcesDBService.get(candidate.installed_extension_id);
       if (source?.extension_id === input.extension_instance_id)
         return { owner: { workbenchId: input.project_id, extensionId: source.extension_id }, instanceId: candidate.id };
