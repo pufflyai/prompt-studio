@@ -7,12 +7,18 @@ import { type EmbeddedEngineFile, resolveUpgradeWorker } from "./pglite-upgrade-
 
 import { runUpgradeWorker } from "./pglite-upgrade-process";
 
+export type PgliteUpgradePhase =
+  | "database_upgrade_copying"
+  | "database_upgrade_exporting"
+  | "database_upgrade_importing";
+
 export const prepareCurrentPgliteHome = async (options: {
   activePath: string;
   runtime: PGliteOptions;
   embedded: readonly EmbeddedEngineFile[];
   signal?: AbortSignal;
   onImageRestored: () => void;
+  onPhase?: (phase: PgliteUpgradePhase) => void;
 }) => {
   await preparePgliteHome({
     activePath: options.activePath,
@@ -33,6 +39,7 @@ export const prepareCurrentPgliteHome = async (options: {
       try {
         const copy = join(work, "source");
         const archive = join(work, "archive");
+        options.onPhase?.("database_upgrade_copying");
         await cp(source, copy, { recursive: true });
         const args = (phase: string, database: string) => [
           phase,
@@ -40,7 +47,9 @@ export const prepareCurrentPgliteHome = async (options: {
           archive,
           ...(worker.assets ? [worker.assets] : []),
         ];
+        options.onPhase?.("database_upgrade_exporting");
         await runUpgradeWorker({ entry: worker.entry, args: args("export", copy), signal: options.signal });
+        options.onPhase?.("database_upgrade_importing");
         await runUpgradeWorker({ entry: worker.entry, args: args("import", target), signal: options.signal });
       } finally {
         await worker.dispose();
