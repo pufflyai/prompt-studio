@@ -12,7 +12,7 @@ const makeTicket = (overrides: Partial<Ticket>): Ticket => ({
   title: "Ticket",
   content: "Ticket body",
   statusId: null,
-  tagIds: [],
+  tags: {},
   attachments: [],
   files: [],
   archived: false,
@@ -23,11 +23,19 @@ const makeTicket = (overrides: Partial<Ticket>): Ticket => ({
 });
 
 describe("readTicketsCommand", () => {
-  test("returns full visible ticket records ordered by sort order", async () => {
+  test("returns full visible ticket records with flat tag IDs, ordered by sort order", async () => {
     const storage = createMemoryStorage();
     await putTicket(storage, makeTicket({ shorthand: "T-late", sortOrder: 2 }));
     await putTicket(storage, makeTicket({ shorthand: "T-archived", archived: true, sortOrder: 1 }));
-    await putTicket(storage, makeTicket({ shorthand: "T-early", draft: true, sortOrder: 0 }));
+    await putTicket(
+      storage,
+      makeTicket({
+        shorthand: "T-early",
+        draft: true,
+        sortOrder: 0,
+        tags: { "default-priority": "default-priority-high", labels: ["api", "ui"] },
+      }),
+    );
 
     const result = await readTicketsCommand.run(...makeCommandArgs({ storage, params: {} }));
 
@@ -36,7 +44,8 @@ describe("readTicketsCommand", () => {
       content: "Ticket body",
       draft: true,
       files: [],
-      tagIds: [],
+      tagIds: ["default-priority-high", "api", "ui"],
     });
+    expect(result[0]).not.toHaveProperty("tags");
   });
 });

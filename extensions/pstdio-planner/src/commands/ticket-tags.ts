@@ -14,6 +14,7 @@ import {
   updateTagOption,
   updateTicketTag,
 } from "../data/tag-operations";
+import { withTicketTagIds } from "../data/ticket-tags";
 import { plannerSchemaChanged, plannerTicketsChanged } from "../events";
 
 export const readTicketTagsCommand = defineCommand({
@@ -242,6 +243,6 @@ export const setTicketTagsCommand = defineCommand({
       tagIds: commandParams.tagIds ?? [],
     });
     await ctx.events.emit(plannerTicketsChanged, {});
-    return result;
+    return result && withTicketTagIds(result);
   },
 });

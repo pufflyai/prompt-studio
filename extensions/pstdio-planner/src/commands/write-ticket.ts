@@ -8,7 +8,7 @@ import {
 } from "../data/draft-storage";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
-import { assertSingleSelectTagIds } from "../data/tag-cardinality";
+import { ticketTagsForIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
 import { withTicketOrder } from "../data/ticket-order";
 
@@ -44,7 +44,7 @@ export const writeTicketCommand = defineCommand({
         ? await resolveStatusId(ctx.storage, commandParams.status)
         : (defaultStatus?.id ?? null);
     const tagIds = commandParams.tags !== undefined ? await resolveTagOptionIds(ctx.storage, commandParams.tags) : [];
-    await assertSingleSelectTagIds(ctx.storage, tagIds);
+    const tags = await ticketTagsForIds(ctx.storage, tagIds);
     const parentId = commandParams.parent !== undefined ? await resolveTicketId(ctx, commandParams.parent) : null;
 
     const ticket = await withTicketOrder(ctx, async () => {
@@ -55,7 +55,7 @@ export const writeTicketCommand = defineCommand({
         title: commandParams.title,
         content: `# ${commandParams.title}\n`,
         statusId,
-        tagIds,
+        tags,
         attachments: [],
         parentId,
         dependsOn: [],

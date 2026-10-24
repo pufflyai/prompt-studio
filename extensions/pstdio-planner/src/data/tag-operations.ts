@@ -2,8 +2,14 @@ import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
 import { putTag, putTicket, tagsCollection, ticketsCollection } from "./collections";
 import { seedDefaultTags } from "./seed";
-import { assertSingleSelectConversion, assertSingleSelectTagIds } from "./tag-cardinality";
+import {
+  assertSingleSelectConversion,
+  convertTicketTagValues,
+  editTicketTagValues,
+  ticketTagsForIds,
+} from "./tag-cardinality";
 import type { TicketContext } from "./ticket-identity";
+import { tagValue, tagValueIds } from "./ticket-tags";
 import type { StoredTag, StoredTagOption } from "./types";
 
 const sortTag = (tag: StoredTag): StoredTag => ({ ...tag, options: [...tag.options].sort(bySortOrder) });
@@ -45,31 +51,34 @@ export const updateTicketTag = async (input: {
 }) => {
   const tag = await requireTag(input.storage, input.tagId);
   await assertSingleSelectConversion(input, tag, input.type);
-  return putTag(input.storage, {
+  const next = await putTag(input.storage, {
     ...tag,
     name: input.name ?? tag.name,
     type: input.type ?? tag.type,
     sortOrder: input.sortOrder ?? tag.sortOrder,
   });
+  if (next.type !== tag.type) await convertTicketTagValues(input.storage, next);
+  return next;
 };
 
-// Removing a tag also strips its option ids from every ticket so no ticket points
+// Removes deleted options from every ticket's value for this tag.
+const removeTicketTagOptions = (storage: ExtensionStorageApi, tag: StoredTag, optionIds: Set<string>) =>
+  editTicketTagValues(storage, tag.id, (value) =>
+    tagValue(
+      tag,
+      tagValueIds(value).filter((id) => !optionIds.has(id)),
+      value,
+    ),
+  );
+
+// Removing a tag also removes its value from every ticket so no ticket points
 // at a tag that no longer exists.
 export const deleteTicketTag = async (input: {
   storage: ExtensionStorageApi;
   resources: TicketContext["resources"];
   tagId: string;
 }) => {
-  const tag = await tagsCollection(input.storage).get(input.tagId);
-  const optionIds = new Set((tag?.options ?? []).map((opt) => opt.id));
-
-  await Promise.all(
-    (await ticketsCollection(input).list()).map((ticket) => {
-      const tagIds = ticket.tagIds ?? [];
-      const next = tagIds.filter((id) => !optionIds.has(id));
-      return next.length !== tagIds.length ? putTicket(input, { ...ticket, tagIds: next }) : undefined;
-    }),
-  );
+  await editTicketTagValues(input.storage, input.tagId, () => undefined);
 
   await tagsCollection(input.storage).delete(input.tagId);
   return { tagId: input.tagId };
@@ -133,15 +142,7 @@ export const deleteTagOption = async (input: {
 }) => {
   const tag = await requireTag(input.storage, input.tagId);
   await putTag(input.storage, { ...tag, options: tag.options.filter((opt) => opt.id !== input.optionId) });
-
-  await Promise.all(
-    (await ticketsCollection(input).list()).map((ticket) => {
-      const tagIds = ticket.tagIds ?? [];
-      return tagIds.includes(input.optionId)
-        ? putTicket(input, { ...ticket, tagIds: tagIds.filter((id) => id !== input.optionId) })
-        : undefined;
-    }),
-  );
+  await removeTicketTagOptions(input.storage, tag, new Set([input.optionId]));
 
   return { tagId: input.tagId, optionId: input.optionId };
 };
@@ -156,9 +157,8 @@ export const setTicketTags = async (input: {
 }) => {
   const ticket = await ticketsCollection(input).get(input.ticketId);
   if (!ticket) return null;
-  await assertSingleSelectTagIds(input.storage, input.tagIds, ticket.tagIds);
-  const next = { ...ticket, tagIds: input.tagIds, updatedAt: new Date().toISOString() };
-  return putTicket(input, next);
+  const tags = await ticketTagsForIds(input.storage, input.tagIds, ticket.tags);
+  return putTicket(input, { ...ticket, tags, updatedAt: new Date().toISOString() });
 };
 
 export interface TagDraftOptionCreate {
@@ -176,7 +176,7 @@ export interface TagDraftOptionUpdate {
 
 // Applies a full tag draft (type + create/update/delete options) in a single tag
 // write so partial-save failures from per-option commands are no longer possible.
-// Orphan tagId references on tickets are scrubbed after the tag write succeeds.
+// Ticket values of deleted options are removed after the tag write succeeds.
 export const applyTagDraft = async (input: {
   storage: ExtensionStorageApi;
   resources: TicketContext["resources"];
@@ -216,22 +216,15 @@ export const applyTagDraft = async (input: {
     description: null,
   }));
 
-  await putTag(input.storage, {
+  const next = await putTag(input.storage, {
     ...tag,
     name: input.name ?? tag.name,
     type: input.type ?? tag.type,
     options: [...kept, ...created],
   });
 
-  if (deletedIds.size > 0) {
-    await Promise.all(
-      (await ticketsCollection(input).list()).map((ticket) => {
-        const tagIds = ticket.tagIds ?? [];
-        const next = tagIds.filter((id) => !deletedIds.has(id));
-        return next.length !== tagIds.length ? putTicket(input, { ...ticket, tagIds: next }) : undefined;
-      }),
-    );
-  }
+  if (deletedIds.size > 0) await removeTicketTagOptions(input.storage, next, deletedIds);
+  if (next.type !== tag.type) await convertTicketTagValues(input.storage, next);
 
   return { tagId: input.tagId };
 };

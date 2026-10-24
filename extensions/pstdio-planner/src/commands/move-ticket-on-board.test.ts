@@ -23,7 +23,7 @@ test("column, row group, and order save as one move and one completed event", as
   expect(await f.ordered()).toEqual([last.id, first.id, hidden.id]);
   expect(await ticketsCollection(f.storage).get(last.id)).toMatchObject({
     statusId: "done",
-    tagIds: ["default-priority-high"],
+    tags: { "default-priority": "default-priority-high" },
   });
   expect(f.writes).toEqual([last.id]);
   expect(f.events).toEqual(["tickets.changed"]);

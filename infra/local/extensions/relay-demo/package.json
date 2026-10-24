@@ -8,7 +8,7 @@
   "main": "./extension.ts",
   "type": "module",
   "engines": {
-    "pstdio": "^0.2.0"
+    "pstdio": "^0.2.0 || ^0.3.0"
   },
   "dependencies": {
     "@pstdio/sdk": "^0.43.1"

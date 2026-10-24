@@ -6,7 +6,7 @@ export { plannerTicketsChanged } from "../events";
 export const plannerExtensionId = "pstdio.pstdio-planner";
 export type PlannerTicket = Pick<
   Ticket,
-  "id" | "shorthand" | "title" | "content" | "statusId" | "tagIds" | "parentId" | "dependsOn" | "blockedReason"
+  "id" | "shorthand" | "title" | "content" | "statusId" | "tags" | "parentId" | "dependsOn" | "blockedReason"
 >;
 export type PlannerStatus = StoredStatus;
 export const ticketTarget = (ticket: Pick<PlannerTicket, "id" | "shorthand" | "title">): NavigationTargetPage =>
