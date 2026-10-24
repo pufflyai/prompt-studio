@@ -26,6 +26,17 @@ export const openPublishedCatalog = async (
   return createPublicationCatalog({ records, verifyComplete: assets.verifyComplete });
 };
 
+/** The activation input for a listed set; a selection without its package stops the whole set. */
+export const publishedEntries = (
+  records: Awaited<ReturnType<Awaited<ReturnType<typeof openPublishedCatalog>>["list"]>>,
+) =>
+  records.map((record) => {
+    const publication = publicationSchema.safeParse(record.value);
+    if (!publication.success || publication.data.extensionId !== record.recordId || !record.asset)
+      throw new Error(`The published package for ${record.recordId} is unavailable`);
+    return { publication: publication.data, asset: record.asset };
+  });
+
 export const publishExtension = async (
   deps: ExtensionsRouteDeps,
   input: { projectId: string; instanceId: string; expectedRevision: string },

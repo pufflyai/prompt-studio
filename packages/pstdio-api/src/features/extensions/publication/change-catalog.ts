@@ -1,6 +1,6 @@
 import type { ExtensionsRouteDeps } from "../deps";
 import { activatePublishedSet } from "./activate";
-import { openPublishedCatalog, publicationSchema } from "./catalog";
+import { openPublishedCatalog, publicationSchema, publishedEntries } from "./catalog";
 import { packageMetadataSchema } from "./types";
 
 type CatalogChange =
@@ -46,10 +46,7 @@ export const adoptPublishedExtension = async (
   const catalog = await openPublishedCatalog(deps, projectId);
   const accepted = await catalog.read(extensionId);
   if (!accepted?.asset || accepted.deleted) throw new Error("Published package is unavailable");
-  const entries = (await catalog.list()).map((record) => ({
-    publication: publicationSchema.parse(record.value),
-    asset: record.asset!,
-  }));
+  const entries = publishedEntries(await catalog.list());
   const statuses = await activatePublishedSet(deps, projectId, entries, signal, extensionId);
   return { status: statuses[entries.findIndex((entry) => entry.publication.extensionId === extensionId)] };
 };

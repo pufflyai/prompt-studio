@@ -344,7 +344,8 @@ transaction. This work runs in the project's background sync connection; showing
 enabled extensions reads only local rows. Workspace setup runs afterward through the
 normal workspace setup queue; its failures belong to the workspace setup status. A failed
 transfer or activation keeps the previous usable set. A set that fails to activate is
-not tried again until it changes, the app restarts, or someone adopts the extension.
+tried again at once when it changes, and otherwise after a delay that grows from 30
+seconds to one hour.
 Interrupted encrypted downloads resume from their durable byte offset.
 
 Packages include portable source and assets. They omit dependency directories, checkout
@@ -358,9 +359,11 @@ overrides. Catch-up preserves their code. Their record and artifact edits still 
 but their data migration callbacks do not run. Only the selected, unmodified synced
 package can run data migrations. A skipped migration is not recorded, so the synced
 version still runs it. An older package can read shared data but cannot change it until
-updated. This also applies to file uploads and artifact writes. Extensions that are not
-published, and all extensions in local projects, keep normal migration behavior. See
-[data migrations](0018-data-migrations.md).
+updated. This also applies to file uploads and artifact writes. A selection whose package
+cannot be read blocks writes and migrations the same way until it is repaired. Extensions
+that are not published keep normal migration behavior. So do published extensions in
+projects that the device knows are not cloud projects; while its cloud project list has not
+loaded, the override rules apply. See [data migrations](0018-data-migrations.md).
 
 To replace a private override with the selected package, or select a retained package:
 

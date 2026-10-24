@@ -19,7 +19,13 @@ export const createPublicationCatalog = (input: {
   // A selection without its matching package reads as unpublished, so one bad entry cannot break callers.
   // Activation still refuses it and keeps the current set.
   const resolve = async (selected: StorageRecord, reader: Pick<CatalogRecords, "read">) => {
-    const unpublished = { ...selected, value: null, asset: null };
+    // `damaged` marks a selection whose package cannot be read; version checks still apply to it.
+    const unpublished = {
+      ...selected,
+      value: null,
+      asset: null,
+      damaged: !selected.deleted && selected.value !== null,
+    };
     const selection = selectionSchema.safeParse(selected.value);
     if (selected.deleted || !selection.success) return unpublished;
     const pkg = await reader.read(`package:${selection.data.revision}`);
@@ -30,7 +36,7 @@ export const createPublicationCatalog = (input: {
       pkg.asset?.sha256 !== selection.data.revision
     )
       return unpublished;
-    return { ...selected, value: { ...metadata.data, ...selection.data }, asset: pkg.asset };
+    return { ...selected, value: { ...metadata.data, ...selection.data }, asset: pkg.asset, damaged: false };
   };
   const view = (reader: Pick<CatalogRecords, "read">) => ({
     records: reader,

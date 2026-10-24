@@ -276,3 +276,49 @@ test("local overrides sync their edits but never run data migrations; older vers
     await app.deps.accountService.logout();
   }
 });
+
+test("a selection whose package cannot be read blocks shared writes and migrations", async () => {
+  const project = await app.deps.projectService.create({ name: "Damaged selection" });
+  const source = createTestExtensionSource({
+    root,
+    name: "damaged-access",
+    installName: "damaged-access",
+    displayName: "Damaged access",
+    version: "1.0.0",
+  });
+  const { instance } = await app.deps.extensionService.enableInstalledSourceForProject({
+    projectId: project.id,
+    sourcePath: source,
+    name: "damaged-access",
+    installName: "damaged-access",
+    displayName: "Damaged access",
+    extensionId: "test.damaged-access",
+    version: "1.0.0",
+    manifest: {},
+  });
+  const catalog = await openPublishedCatalog(app.deps, project.id);
+  const asset = await app.deps.assetTransferService.stage(
+    { workbenchId: project.id, extensionId: "pstdio.published-extensions" },
+    crypto.randomUUID(),
+    new Blob(["damaged"]),
+  );
+  await catalog.select(
+    { extensionId: "test.damaged-access", revision: asset.sha256, version: "1.0.0", enabled: true },
+    asset,
+  );
+  await catalog.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: `package:${asset.sha256}`, deleted: true }],
+  });
+  const storage = createStorageApi(app.deps, {
+    projectId: project.id,
+    extensionId: "test.damaged-access",
+    extensionInstanceId: instance.id,
+  });
+  await expect(storage.set("note", "write")).rejects.toThrow("Update");
+  let migrations = 0;
+  await storage.migrate(1, async () => {
+    migrations++;
+  });
+  expect(migrations).toBe(0);
+});

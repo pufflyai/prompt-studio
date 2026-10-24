@@ -82,6 +82,7 @@ export const activatePublishedExtensions = async (deps: ActivationDeps, inputs: 
         enabled: input.enabled,
       })),
     );
+    const replacedFolders: string[] = [];
     for (const [index, entry] of prepared.entries()) {
       deps.emit(entry.registered);
       for (const instance of activated[index]!.changed) deps.emitInstance(instance);
@@ -91,12 +92,13 @@ export const activatePublishedExtensions = async (deps: ActivationDeps, inputs: 
         !(await deps.instances.list({ installed_extension_id: entry.previousSource.id })).length
       ) {
         await deps.sources.remove(entry.previousSource.id);
-        // Each revision is unpacked into its own folder, which nothing uses once its row is gone.
-        if (!entry.input.keepReplacedFolder)
-          await rm(entry.previousSource.source_path, { recursive: true, force: true });
+        if (!entry.input.keepReplacedFolder) replacedFolders.push(entry.previousSource.source_path);
         deps.emitRemoved(entry.previousSource);
       }
     }
+    // Each revision is unpacked into its own folder that nothing uses once its row is gone. The set is
+    // already active, so a folder that cannot be removed now (an open file on Windows) stays behind.
+    for (const folder of replacedFolders) await rm(folder, { recursive: true, force: true }).catch(() => {});
     return activated.map((result, index) => ({
       installedSource: prepared[index]!.registered,
       instance: result.instance,

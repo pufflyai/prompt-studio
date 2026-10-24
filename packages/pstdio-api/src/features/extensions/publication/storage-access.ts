@@ -18,13 +18,16 @@ export const createPublicationStorageAccess = (
   const getSource = async () =>
     (source ??= (await deps.extensionService.getProjectExtensionInstance(input.projectId, input.extensionInstanceId))
       ?.installedSource);
+  // A selection whose package cannot be read is `damaged`: it blocks writes and migrations until repaired.
   const selection = async () => {
     const record = await (await openPublishedCatalog(deps, input.projectId)).read(input.extensionId);
+    if (record.damaged) return "damaged" as const;
     return record.value && !record.deleted ? { record, publication: publicationSchema.parse(record.value) } : null;
   };
   return {
     async write() {
       const selected = await selection();
+      if (selected === "damaged") throw new PublicationUpdateRequiredError();
       if (!selected) return;
       const invoking = await getSource();
       if (!invoking?.version || Bun.semver.order(invoking.version, selected.publication.version) < 0)
@@ -45,6 +48,7 @@ export const createPublicationStorageAccess = (
     async migrate() {
       // Without a published version every device runs its own copy, as in a local project.
       const selected = await selection();
+      if (selected === "damaged") return false;
       if (!selected) return true;
       const { cloudProjects, cloudProjectsLoaded } = await deps.accountService.status();
       if (cloudProjectsLoaded && !(cloudProjects as string[]).includes(input.projectId)) return true;
