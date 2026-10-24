@@ -10,6 +10,7 @@ import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
+test.use({ trace: "retain-on-failure" });
 test.afterEach(stopPendingTestProcesses);
 test.beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
@@ -48,14 +49,18 @@ test("a table row opens its artifact while statistics assets are delayed", async
     await page.goto(`${runtime.baseUrl}/projects/${project.id}`);
     await page.getByRole("option", { name: "Lab mode", exact: true }).click();
     await page.getByRole("tab", { name: "Artifacts", exact: true }).click();
-    const createdResponse = page.waitForResponse(
-      (result) =>
-        new URL(result.url()).pathname.endsWith(
-          "/pstdio.workbench-fixture.view.artifact-create.controls.onValueChange/execute",
-        ) && result.request().method() === "POST",
-    );
-    await page.getByRole("button", { name: "Random artifact", exact: true }).click();
-    const created = (await (await createdResponse).json()) as { outcome: { value: { title: string } } };
+    await expect(page.getByText("No artifacts found", { exact: true })).toBeVisible();
+    const createMenu = page.locator('[data-workbench-panel-menu="main-right"]');
+    const [createdResponse] = await Promise.all([
+      page.waitForResponse(
+        (result) =>
+          new URL(result.url()).pathname.endsWith(
+            "/pstdio.workbench-fixture.view.artifact-create.controls.onValueChange/execute",
+          ) && result.request().method() === "POST",
+      ),
+      createMenu.getByRole("button", { name: "Random artifact", exact: true }).click(),
+    ]);
+    const created = (await createdResponse.json()) as { outcome: { value: { title: string } } };
     const cell = page.getByRole("cell", { name: created.outcome.value.title, exact: true });
     await expect(cell).toBeVisible();
     await expect(page.locator(".data-table-stats-row")).toBeVisible();

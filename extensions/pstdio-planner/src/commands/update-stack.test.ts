@@ -23,7 +23,6 @@ async function staleStack() {
     ...f.attempt,
     workspaceId: "parent",
     ticketId: "Parent",
-    state: "approved",
     revisions: [
       {
         revision: 1,
@@ -82,7 +81,6 @@ test("next tickets exposes stack recovery even when no new implementation can st
     const attempt = await readAttempt(f.storage, "child");
     await putAttempt(f.storage, {
       ...attempt!,
-      state: "review_ready",
       revisions: [
         {
           revision: 1,
@@ -110,7 +108,6 @@ test("Auto Build assigns recovery to the existing implementation owner without a
     const attempt = (await readAttempt(f.storage, "child"))!;
     await putAttempt(f.storage, {
       ...attempt,
-      state: "review_ready",
       revisions: [
         {
           revision: 1,
@@ -133,10 +130,10 @@ test("Auto Build assigns recovery to the existing implementation owner without a
       prompt: "Finish Child",
       blockOnReview: false,
     });
+    await f.storage.set("auto-build-supervisor", { sessionId: "supervisor" });
     const result = await autoBuildDispatchCommand.run(f.ctx, { ticket: "Child", revision: mode.revision });
     expect(result).toMatchObject({ decision: "started", sessionId: "owner", workspaceId: "child" });
     expect(calls).toEqual(["owner"]);
-    expect((await readAttempt(f.storage, "child"))?.state).toBe("review_ready");
     expect((await nextTicketsCommand.run(f.ctx, {})).tickets).toHaveLength(0);
   } finally {
     await f.cleanup();
@@ -144,7 +141,7 @@ test("Auto Build assigns recovery to the existing implementation owner without a
 });
 
 test("an owner can realign and submit a root after rebasing to another target", async () => {
-  const f = await stackSubmissionFixture();
+  const f = await stackSubmissionFixture({ trace: true });
   try {
     const oldBase = await f.commit("old-target.txt");
     await putAttempt(f.storage, { ...f.attempt, base: { workspaceId: null, headSha: oldBase } });
@@ -157,7 +154,6 @@ test("an owner can realign and submit a root after rebasing to another target", 
     const head = await f.git("rev-parse", "HEAD");
     await putAttempt(f.storage, {
       ...f.attempt,
-      state: "review_ready",
       base: { workspaceId: null, headSha: oldBase },
       revisions: [
         {
@@ -180,7 +176,7 @@ test("an owner can realign and submit a root after rebasing to another target", 
     });
     expect(result.base).toEqual({ workspaceId: null, headSha: target });
     expect(result.headSha).toBe(head);
-    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!)).toMatchObject({
+    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!, {})).toMatchObject({
       headSha: head,
       base: { workspaceId: null, headSha: target },
       needsIntegration: false,

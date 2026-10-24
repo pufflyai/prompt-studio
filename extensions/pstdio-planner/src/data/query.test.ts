@@ -64,8 +64,6 @@ describe("runTicketsQuery", () => {
     expect(result.boardColumnConfigs?.[todo.id]).toMatchObject({
       color: todo.color,
       canCreate: todo.canCreate,
-      canDragIn: todo.canDragIn,
-      canDragOut: todo.canDragOut,
     });
   });
 
@@ -89,8 +87,6 @@ describe("runTicketsQuery", () => {
     const result = await runTicketsQuery({ storage, projectId: "proj-1" });
     expect(result.boardColumnConfigs?.done).toMatchObject({
       canCreate: false,
-      canDragIn: true,
-      canDragOut: true,
       actions: [{ id: "archive_all" }],
     });
   });
@@ -118,11 +114,11 @@ describe("runTicketsQuery", () => {
       "priority",
       "type",
       "complexity",
-      "default-human-requested",
       "milestone",
       "milestoneDate",
       "milestoneState",
       "needsAttention",
+      "reviewRequests",
     ]);
     expect(result.rows[0]?.attributes).toMatchObject({
       archived: "active",
@@ -132,6 +128,7 @@ describe("runTicketsQuery", () => {
       workspaceItems: [],
       priority: "default-priority-high",
       type: "default-type-bug",
+      reviewRequests: "",
     });
 
     const typeAttribute = result.attributes?.find((attribute) => attribute.id === "type");

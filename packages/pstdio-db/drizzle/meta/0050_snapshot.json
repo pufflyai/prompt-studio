@@ -1,5 +1,5 @@
 {
-  "id": "240d27f4-d827-454f-a7d7-27710f8f8130",
+  "id": "45befc64-18b3-473b-9f2e-6177b5d16e26",
   "prevId": "8824a311-e450-4fc0-9d28-8eb3326f98ce",
   "version": "7",
   "dialect": "postgresql",
@@ -3752,8 +3752,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.document_snapshots": {
-      "name": "document_snapshots",
+    "public.storage_current_records": {
+      "name": "storage_current_records",
       "schema": "",
       "columns": {
         "workbench_id": {
@@ -3762,30 +3762,121 @@
           "primaryKey": false,
           "notNull": true
         },
-        "hours": {
-          "name": "hours",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "captured_at": {
-          "name": "captured_at",
+        "extension_id": {
+          "name": "extension_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "state": {
-          "name": "state",
-          "type": "bytea",
+        "record_id": {
+          "name": "record_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deleted": {
+          "name": "deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "asset": {
+          "name": "asset",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shared": {
+          "name": "shared",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "document_snapshots_workbench_id_projects_id_fk": {
-          "name": "document_snapshots_workbench_id_projects_id_fk",
-          "tableFrom": "document_snapshots",
+        "storage_current_records_workbench_id_projects_id_fk": {
+          "name": "storage_current_records_workbench_id_projects_id_fk",
+          "tableFrom": "storage_current_records",
+          "tableTo": "projects",
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "storage_current_records_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk": {
+          "name": "storage_current_records_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk",
+          "tableFrom": "storage_current_records",
+          "tableTo": "storage_record_projections",
+          "columnsFrom": ["workbench_id", "extension_id"],
+          "columnsTo": ["workbench_id", "extension_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "storage_current_records_workbench_id_extension_id_record_id_pk": {
+          "name": "storage_current_records_workbench_id_extension_id_record_id_pk",
+          "columns": ["workbench_id", "extension_id", "record_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.storage_record_indexes": {
+      "name": "storage_record_indexes",
+      "schema": "",
+      "columns": {
+        "workbench_id": {
+          "name": "workbench_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "definition": {
+          "name": "definition",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "database_name": {
+          "name": "database_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "storage_record_indexes_workbench_id_projects_id_fk": {
+          "name": "storage_record_indexes_workbench_id_projects_id_fk",
+          "tableFrom": "storage_record_indexes",
           "tableTo": "projects",
           "columnsFrom": ["workbench_id"],
           "columnsTo": ["id"],
@@ -3794,19 +3885,419 @@
         }
       },
       "compositePrimaryKeys": {
-        "document_snapshots_workbench_id_hours_pk": {
-          "name": "document_snapshots_workbench_id_hours_pk",
-          "columns": ["workbench_id", "hours"]
+        "storage_record_indexes_workbench_id_extension_id_name_pk": {
+          "name": "storage_record_indexes_workbench_id_extension_id_name_pk",
+          "columns": ["workbench_id", "extension_id", "name"]
         }
       },
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {
-        "document_snapshots_hours": {
-          "name": "document_snapshots_hours",
-          "value": "\"document_snapshots\".\"hours\" in (1, 12, 24)"
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.storage_record_projections": {
+      "name": "storage_record_projections",
+      "schema": "",
+      "columns": {
+        "workbench_id": {
+          "name": "workbench_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'records'"
+        },
+        "revision": {
+          "name": "revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
         }
       },
+      "indexes": {},
+      "foreignKeys": {
+        "storage_record_projections_workbench_id_projects_id_fk": {
+          "name": "storage_record_projections_workbench_id_projects_id_fk",
+          "tableFrom": "storage_record_projections",
+          "tableTo": "projects",
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "storage_record_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk": {
+          "name": "storage_record_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk",
+          "tableFrom": "storage_record_projections",
+          "tableTo": "storage_documents",
+          "columnsFrom": ["workbench_id", "extension_id", "document_id"],
+          "columnsTo": ["workbench_id", "extension_id", "document_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "storage_record_projections_workbench_id_extension_id_pk": {
+          "name": "storage_record_projections_workbench_id_extension_id_pk",
+          "columns": ["workbench_id", "extension_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.storage_record_types": {
+      "name": "storage_record_types",
+      "schema": "",
+      "columns": {
+        "workbench_id": {
+          "name": "workbench_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type_name": {
+          "name": "type_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type_kind": {
+          "name": "type_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "record_id": {
+          "name": "record_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "storage_record_types_lookup": {
+          "name": "storage_record_types_lookup",
+          "columns": [
+            {
+              "expression": "workbench_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "extension_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "md5(\"type_name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "storage_record_types_workbench_id_projects_id_fk": {
+          "name": "storage_record_types_workbench_id_projects_id_fk",
+          "tableFrom": "storage_record_types",
+          "tableTo": "projects",
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "storage_record_types_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk": {
+          "name": "storage_record_types_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk",
+          "tableFrom": "storage_record_types",
+          "tableTo": "storage_record_projections",
+          "columnsFrom": ["workbench_id", "extension_id"],
+          "columnsTo": ["workbench_id", "extension_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.storage_resource_aliases": {
+      "name": "storage_resource_aliases",
+      "schema": "",
+      "columns": {
+        "workbench_id": {
+          "name": "workbench_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shorthand": {
+          "name": "shorthand",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "storage_resource_identity_alias": {
+          "name": "storage_resource_identity_alias",
+          "columns": [
+            {
+              "expression": "workbench_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "shorthand",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "storage_resource_aliases_workbench_id_projects_id_fk": {
+          "name": "storage_resource_aliases_workbench_id_projects_id_fk",
+          "tableFrom": "storage_resource_aliases",
+          "tableTo": "projects",
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "storage_resource_aliases_workbench_id_storage_resource_projections_workbench_id_fk": {
+          "name": "storage_resource_aliases_workbench_id_storage_resource_projections_workbench_id_fk",
+          "tableFrom": "storage_resource_aliases",
+          "tableTo": "storage_resource_projections",
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["workbench_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "storage_resource_aliases_workbench_id_resource_id_shorthand_pk": {
+          "name": "storage_resource_aliases_workbench_id_resource_id_shorthand_pk",
+          "columns": ["workbench_id", "resource_id", "shorthand"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.storage_resource_identities": {
+      "name": "storage_resource_identities",
+      "schema": "",
+      "columns": {
+        "workbench_id": {
+          "name": "workbench_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shorthand": {
+          "name": "shorthand",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "storage_resource_identity_number": {
+          "name": "storage_resource_identity_number",
+          "columns": [
+            {
+              "expression": "workbench_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "extension_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "shorthand",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "storage_resource_identities_workbench_id_projects_id_fk": {
+          "name": "storage_resource_identities_workbench_id_projects_id_fk",
+          "tableFrom": "storage_resource_identities",
+          "tableTo": "projects",
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "storage_resource_identities_workbench_id_storage_resource_projections_workbench_id_fk": {
+          "name": "storage_resource_identities_workbench_id_storage_resource_projections_workbench_id_fk",
+          "tableFrom": "storage_resource_identities",
+          "tableTo": "storage_resource_projections",
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["workbench_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "storage_resource_identities_workbench_id_resource_id_pk": {
+          "name": "storage_resource_identities_workbench_id_resource_id_pk",
+          "columns": ["workbench_id", "resource_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.storage_resource_projections": {
+      "name": "storage_resource_projections",
+      "schema": "",
+      "columns": {
+        "workbench_id": {
+          "name": "workbench_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pstdio'"
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'resource-identities'"
+        },
+        "revision": {
+          "name": "revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "storage_resource_projections_workbench_id_projects_id_fk": {
+          "name": "storage_resource_projections_workbench_id_projects_id_fk",
+          "tableFrom": "storage_resource_projections",
+          "tableTo": "projects",
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "storage_resource_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk": {
+          "name": "storage_resource_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk",
+          "tableFrom": "storage_resource_projections",
+          "tableTo": "storage_documents",
+          "columnsFrom": ["workbench_id", "extension_id", "document_id"],
+          "columnsTo": ["workbench_id", "extension_id", "document_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "storage_resource_projections_workbench_id_pk": {
+          "name": "storage_resource_projections_workbench_id_pk",
+          "columns": ["workbench_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.webview_preferences": {

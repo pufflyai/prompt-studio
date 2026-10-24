@@ -2,10 +2,10 @@ import { createRelayAccess } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
+import { startAutomationSync } from "./automations";
 import { startRelayExtension } from "./extension-owner";
 import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
-import { startRecoverySnapshots } from "./recovery-snapshots";
 import { startResourceNumberSync } from "./resource-numbers";
 
 export type RelayWorkbench = {
@@ -30,21 +30,7 @@ export const startRelayRuntime = async (input: {
   const { deps } = input;
   const resourceConnections = new Map<string, ReturnType<typeof startResourceNumberSync>>();
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
-  const recovery = startRecoverySnapshots({
-    storage: deps.extensionStorageService,
-    projects: async () => {
-      const ready: string[] = [];
-      for (const id of workbenches.keys()) {
-        const catalog = await deps.extensionRuntimeCatalog.get(id);
-        const owners = catalog.enabledSources.map(({ installedSource }) =>
-          connections.get(JSON.stringify([id, installedSource.extension_id])),
-        );
-        const statuses = await Promise.all(owners.map((owner) => owner?.status()));
-        if (statuses.length && statuses.every((status) => status?.downloaded && !status.needsAttention)) ready.push(id);
-      }
-      return ready;
-    },
-  });
+  const automations = new Map<string, ReturnType<typeof startAutomationSync>>();
   const personal = new Map<string, ReturnType<typeof startRelayPersonalHistory>>();
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
     connection.close();
@@ -53,22 +39,29 @@ export const startRelayRuntime = async (input: {
   };
   let running: Promise<void> | undefined;
   let dirty = false;
-  const notify = (workbenchId: string) => {
+  const notify = (workbenchId: string) =>
     deps.eventBus.emit("extension_events", "set", {
       id: crypto.randomUUID(),
       projectId: workbenchId,
       eventId: "pstdio.event.storage-changed",
     });
-  };
   // Shutdown closes every connection. That is not a status change to announce.
   const statusChanged = (workbenchId: string) => {
-    if (!controller.signal.aborted) {
-      input.statusChanged?.(workbenchId);
-      void recovery.capture();
-    }
+    if (!controller.signal.aborted) input.statusChanged?.(workbenchId);
   };
   let retry: ReturnType<typeof setTimeout> | undefined;
-  const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
+  const startCoreOwners = (workbenchId: string, config: RelayWorkbench) => {
+    if (!automations.has(workbenchId))
+      automations.set(
+        workbenchId,
+        startAutomationSync({
+          config,
+          deps,
+          access: access.get(workbenchId)!,
+          signal: controller.signal,
+          statusChanged: () => statusChanged(workbenchId),
+        }),
+      );
     if (!personal.has(workbenchId))
       personal.set(
         workbenchId,
@@ -85,6 +78,9 @@ export const startRelayRuntime = async (input: {
           statusChanged: () => statusChanged(workbenchId),
         }),
       );
+  };
+  const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
+    startCoreOwners(workbenchId, config);
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
     if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
     const workspace = await deps.workspaceService.getDefault(workbenchId);
@@ -172,6 +168,7 @@ export const startRelayRuntime = async (input: {
       const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
       const owners = [
         resourceConnections.get(workbenchId),
+        automations.get(workbenchId),
         ...snapshot.enabledSources.map(({ installedSource }) =>
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
         ),
@@ -196,6 +193,10 @@ export const startRelayRuntime = async (input: {
           .map(([id]) => id),
       );
       for (const id of changed) {
+        const automation = automations.get(id);
+        automation?.close();
+        await automation?.done;
+        automations.delete(id);
         const previous = personal.get(id);
         previous?.close();
         if (previous) await previous.done;
@@ -217,19 +218,19 @@ export const startRelayRuntime = async (input: {
       await Promise.all(obsolete.map(([key, active]) => stopConnection(key, active)));
       for (const id of changed) statusChanged(id);
       await refresh();
-      await recovery.capture();
     },
     async close() {
-      await recovery.close();
       stopStorage();
       stopCatalog();
       stopEvents();
       clearTimeout(retry);
       controller.abort();
+      for (const connection of automations.values()) connection.close();
       for (const connection of resourceConnections.values()) connection.close();
       for (const connection of connections.values()) connection.close();
       for (const connection of personal.values()) connection.close();
       await running;
+      await Promise.all([...automations.values()].map((connection) => connection.done));
       await Promise.all([...resourceConnections.values()].map((connection) => connection.done));
       await Promise.all([...connections.values()].map((connection) => connection.done));
       await Promise.all([...personal.values()].map((connection) => connection.done));

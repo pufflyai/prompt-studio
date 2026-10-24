@@ -1,197 +1,119 @@
-import { Box, Button, Popover, Portal, Separator, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage } from "@pstdio/ui";
-import { Pause, Play } from "lucide-react";
-import { useState } from "react";
-import { type AutoBuildSession, AutoBuildSessionRow } from "./auto-build-session-row";
+import { Button, CloseButton, Dialog, HStack, Portal } from "@chakra-ui/react";
+import { installPrismGlobal } from "@pstdio/ui";
+import { Play } from "lucide-react";
+import { lazy, Suspense, useRef, useState } from "react";
+import type { WaitingTicket } from "../../commands/next-ticket-types";
+import type { ReviewRequestView } from "../../data/review-request-types";
+import { AutoBuildActivity } from "./auto-build-activity";
+import type { AutoBuildFormProps } from "./auto-build-form";
+import { AutoBuildHelp } from "./auto-build-help";
+import { AutoBuildIndicator, resolveAutoBuildIndicatorStatus } from "./auto-build-indicator";
+import type { AutoBuildSession } from "./auto-build-session-row";
 
-interface AutoBuildButtonProps {
+const AutoBuildForm = lazy(async () => {
+  await installPrismGlobal();
+  return import("./auto-build-form").then((module) => ({ default: module.AutoBuildForm }));
+});
+
+export interface AutoBuildButtonProps {
   enabled: boolean;
+  paused?: boolean;
+  reviewRequests?: ReviewRequestView[];
+  requestErrors?: string[];
+  onOpenRequest?: (request: ReviewRequestView) => void;
+  onPause?: () => Promise<boolean>;
+  onResume?: () => Promise<boolean>;
+  completed?: boolean;
   supervisor?: AutoBuildSession | null;
   sessions: AutoBuildSession[];
   running: number;
   capacity: number;
+  matchingTicketCount?: number;
+  readyTicketCount?: number;
+  waitingTickets?: WaitingTicket[];
+  starting?: boolean;
   error?: string;
+  actionError?: string;
   stuck?: boolean;
   disabled?: boolean;
-  onConfigure: () => void;
-  onTurnOff: () => Promise<boolean>;
+  configuration?: Omit<AutoBuildFormProps, "onClose" | "t">;
   onOpenSession: (session: AutoBuildSession) => void;
   t: (key: string, fallback?: string) => string;
 }
 
 export function AutoBuildButton(props: AutoBuildButtonProps) {
-  const {
+  const { enabled, paused, completed, supervisor, running, error, stuck, disabled, configuration, starting, t } = props;
+  const [content, setContent] = useState<"configuration" | "sessions" | null>(null);
+  const anchor = useRef<HTMLButtonElement>(null);
+  const failed = (!completed && supervisor?.status === "failed") || Boolean(error);
+  const inspectable = enabled || paused || failed;
+  const status = resolveAutoBuildIndicatorStatus({
     enabled,
-    supervisor,
-    sessions,
-    running,
-    capacity,
-    error,
+    paused,
+    completed,
+    failed,
     stuck,
-    disabled,
-    onConfigure,
-    onTurnOff,
-    onOpenSession,
-    t,
-  } = props;
-  const [open, setOpen] = useState(false);
-  const failed = supervisor?.status === "failed" || Boolean(error);
-  const inspectable = enabled || failed;
-  let activity = "waiting";
-  let color = "fg.warning";
-  if (failed) {
-    activity = "error";
-    color = "fg.error";
-  } else if (running > 0) {
-    activity = "running";
-    color = "fg.success";
-  }
-  const stop = async () => {
-    if (await onTurnOff()) setOpen(false);
+    supervisorStatus: supervisor?.status,
+    running,
+    starting,
+  });
+  const activity = status?.replaceAll("_", " ") ?? "off";
+  const close = () => {
+    if (!disabled) setContent(null);
   };
-  return (
-    <Popover.Root
-      size="xs"
-      open={open && inspectable}
-      onOpenChange={({ open }) => setOpen(inspectable && open)}
-      positioning={{ placement: "bottom-end" }}
-    >
-      <Popover.Trigger asChild>
-        <Button
-          aria-label={t("timeline.autoBuild.start", "Auto Build")}
-          aria-description={enabled || failed ? `Auto Build ${activity}` : undefined}
-          size="2xs"
-          variant="outline"
-          disabled={disabled}
-          onClick={() => {
-            if (!inspectable) onConfigure();
-          }}
-        >
-          {enabled || failed ? (
-            <Box
-              role="img"
-              aria-label={`Auto Build ${activity}`}
-              data-activity={activity}
-              boxSize="status-dot"
-              rounded="full"
-              bg={color}
-              flexShrink="0"
-            />
-          ) : (
-            <Play />
-          )}
-          {t("timeline.autoBuild.start", "Auto Build")}
-        </Button>
-      </Popover.Trigger>
-      <Portal>
-        <Popover.Positioner>
-          <Popover.Content
-            aria-label="Auto Build sessions"
-            width="sm"
-            maxW="calc(100vw - 2 * var(--chakra-spacing-xs))"
-          >
-            <Popover.Header display="flex" alignItems="center" justifyContent="space-between" gap="xs">
-              <Popover.Title textStyle="label/S/medium" whiteSpace="nowrap">
-                {t("timeline.autoBuild.sessions", "Running ticket sessions")} ({running}/{capacity})
-              </Popover.Title>
-              {enabled ? (
-                <Button size="2xs" variant="outline" disabled={disabled} onClick={() => void stop()}>
-                  <Pause />
-                  {t("timeline.autoBuild.stop", "Stop Auto Build")}
-                </Button>
-              ) : (
-                <Button
-                  size="2xs"
-                  variant="outline"
-                  disabled={disabled}
-                  onClick={() => {
-                    setOpen(false);
-                    onConfigure();
-                  }}
-                >
-                  <Play />
-                  {t("timeline.autoBuild.start", "Auto Build")}
-                </Button>
-              )}
-            </Popover.Header>
-            <Popover.Body>
-              <AutoBuildSessions
-                enabled={enabled}
-                supervisor={supervisor}
-                sessions={sessions}
-                failed={failed}
-                error={error}
-                stuck={stuck}
-                onOpenSession={onOpenSession}
-                t={t}
-              />
-            </Popover.Body>
-          </Popover.Content>
-        </Popover.Positioner>
-      </Portal>
-    </Popover.Root>
-  );
-}
 
-interface AutoBuildSessionsProps
-  extends Pick<
-    AutoBuildButtonProps,
-    "enabled" | "supervisor" | "sessions" | "error" | "stuck" | "onOpenSession" | "t"
-  > {
-  failed: boolean;
-}
-function AutoBuildSessions(props: AutoBuildSessionsProps) {
-  const { enabled, supervisor, sessions, failed, error, stuck, onOpenSession, t } = props;
-  const supervisorActive = ["queued", "in_progress", "awaiting_input"].includes(supervisor?.status ?? "");
   return (
-    <Stack gap="xs">
-      {failed || stuck || supervisor?.status === "awaiting_input" ? (
-        <AlertMessage
-          role="alert"
-          status={failed ? "error" : "warning"}
-          title={
-            error ??
-            (failed
-              ? t("timeline.autoBuild.failed", "The supervisor failed. Open its session to inspect the error.")
-              : t(
-                  "timeline.autoBuild.stuck",
-                  "Auto Build is stuck. Check dependencies, blockers, and items that need attention.",
-                ))
-          }
-        />
-      ) : null}
-      {supervisor ? (
-        <AutoBuildSessionRow
-          session={supervisor}
-          label={t("timeline.autoBuild.supervisor", "Supervisor")}
-          statusLabel={
-            enabled && !supervisorActive && !failed ? t("timeline.autoBuild.sleeping", "sleeping") : undefined
-          }
-          onOpen={onOpenSession}
-        />
-      ) : (
-        <Text textStyle="paragraph/S/regular">
-          {enabled
-            ? t("timeline.autoBuild.sleeping", "sleeping")
-            : t("timeline.autoBuild.noSupervisor", "No supervisor session")}
-        </Text>
-      )}
-      <Separator />
-      <Stack gap="2xs">
-        {sessions.map((session) => (
-          <AutoBuildSessionRow
-            key={session.id}
-            session={session}
-            label={t("timeline.autoBuild.ticketSession", "Ticket session")}
-            onOpen={onOpenSession}
-          />
-        ))}
-        {sessions.length === 0 ? (
-          <Text textStyle="label/XS" color="fg.muted">
-            {t("timeline.autoBuild.noSessions", "No running ticket sessions")}
-          </Text>
-        ) : null}
-      </Stack>
-    </Stack>
+    <>
+      <Button
+        ref={anchor}
+        aria-label={t("timeline.autoBuild.start", "Auto Build")}
+        aria-description={enabled || paused || failed ? `Auto Build ${activity}` : undefined}
+        size="xs"
+        variant="outline"
+        disabled={disabled}
+        onClick={() => setContent(inspectable ? "sessions" : "configuration")}
+      >
+        {status ? <AutoBuildIndicator status={status} label={`Auto Build ${activity}`} /> : <Play />}
+        {t("timeline.autoBuild.start", "Auto Build")}
+      </Button>
+      <AutoBuildActivity
+        {...props}
+        open={content === "sessions"}
+        failed={failed}
+        anchor={anchor}
+        onClose={close}
+        onConfigure={() => setContent("configuration")}
+      />
+      <Dialog.Root
+        lazyMount
+        unmountOnExit
+        open={content === "configuration"}
+        size="lg"
+        scrollBehavior="inside"
+        onOpenChange={({ open }) => !open && close()}
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <HStack gap="xs">
+                  <Dialog.Title>{t("timeline.autoBuild.start", "Auto Build")}</Dialog.Title>
+                  <AutoBuildHelp t={t} />
+                </HStack>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton size="sm" disabled={disabled} />
+                </Dialog.CloseTrigger>
+              </Dialog.Header>
+              {content === "configuration" && configuration ? (
+                <Suspense fallback={null}>
+                  <AutoBuildForm {...configuration} onClose={() => setContent(null)} t={t} />
+                </Suspense>
+              ) : null}
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
+    </>
   );
 }

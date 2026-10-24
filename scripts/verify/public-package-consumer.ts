@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { freshInstallArgs } from "./fresh-install";
@@ -86,7 +86,16 @@ if (projectNavigation.resourceScope !== "project") throw new Error("Navigation l
       (react && imports.includes("@pstdio/ui")
         ? `
 import { createElement } from "react";
-import { BubblePanel } from "@pstdio/ui";
+import { BubblePanel, ListRow, TreeList } from "@pstdio/ui";
+const outliner = createElement(TreeList, {
+  sections: [{ id: "layers", nodes: [{ id: "image", label: "Image", startContent: createElement("span"),
+    actionsVisibility: "always", actions: [{ id: "visibility", label: "Visibility", pressed: true, disabled: false }] }] }],
+  activeNodeId: ["image"], onSelectionChange: (ids: string[]) => void ids, moveSelection: true,
+  onMoveNode: (source: string) => void source,
+});
+const groupRow = createElement(ListRow, { label: "Group", isContainer: true, showExpandToggle: true,
+  expandOnClick: false, onToggleExpand: () => {}, startContent: createElement("span") });
+void [outliner, groupRow];
 import { CollectionViewBar, EMPTY_VIEW_FILTER, filterRowsByView, withTitleField } from "@pstdio/ui/collection-view";
 const panelOverlay = createElement(BubblePanel, { isOpen: true, overlay: createElement("div", { "data-drop-feedback": true }) });
 void panelOverlay;
@@ -122,6 +131,11 @@ void [invalidAttribute, invalidColumn];
         : ""),
   );
   writeStoragePackageConsumer(directory);
+  if (react && dependencies["@pstdio/ui"]) {
+    cpSync(join(directory, "node_modules/@pstdio/ui/examples/performance"), join(directory, "performance-example"), {
+      recursive: true,
+    });
+  }
   writeFileSync(
     join(directory, "tsconfig.json"),
     JSON.stringify({
@@ -134,9 +148,9 @@ void [invalidAttribute, invalidColumn];
         target: "ES2022",
         lib: ["ES2022", "ESNext.Disposable", "DOM", "DOM.Iterable"],
         jsx: "react-jsx",
-        types: react ? ["node"] : [],
+        types: react ? ["node", "vite/client"] : [],
       },
-      include: ["consumer.ts", "storage-consumer.ts"],
+      include: ["consumer.ts", "storage-consumer.ts", "performance-example/*.ts", "performance-example/*.tsx"],
     }),
   );
   run(directory, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
@@ -144,7 +158,7 @@ void [invalidAttribute, invalidColumn];
     writeFileSync(
       join(directory, "vite.config.ts"),
       `import { defineConfig } from "vite";
-export default defineConfig({ build: { lib: { entry: "consumer.ts", formats: ["es"] } } });`,
+export default defineConfig({ build: { lib: { entry: ${JSON.stringify(dependencies["@pstdio/ui"] ? { consumer: "consumer.ts", performance: "performance-example/view.tsx" } : "consumer.ts")}, formats: ["es"] } } });`,
     );
     run(directory, ["node_modules/vite/bin/vite.js", "build"]);
     if (dependencies["@pstdio/ui"]) {

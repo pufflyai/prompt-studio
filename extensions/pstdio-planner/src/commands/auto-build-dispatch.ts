@@ -9,6 +9,7 @@ import { resumeAutoBuildAttempt } from "./auto-build-resume";
 import { resumeStackRepair } from "./auto-build-stack";
 import type { NextTicket } from "./next-ticket-types";
 import { readNextTickets } from "./next-tickets";
+import { repairAttempt } from "./repair-attempt";
 import { startAttempt } from "./run-attempt";
 
 async function dispatchNext(
@@ -22,6 +23,16 @@ async function dispatchNext(
       "Existing attempts keep their workspace and base. Dispatch without overrides, then use update-stack to change the base.",
     );
   if (candidate.action === "resume") return resumeAutoBuildAttempt(ctx, candidate.id, beforeDispatch);
+  if (candidate.action === "repair") {
+    await beforeDispatch();
+    return repairAttempt(ctx, {
+      workspaceId: candidate.workspaceId!,
+      expectedHeadSha: candidate.expectedHeadSha!,
+      expectedRun: candidate.expectedRun,
+      evidenceKey: candidate.evidenceKey,
+      reason: candidate.detail!,
+    });
+  }
   if (candidate.action === "update-stack" && candidate.workspaceId)
     return resumeStackRepair(ctx, candidate.workspaceId, beforeDispatch);
   if (candidate.action === "recover-workspace") {
@@ -39,7 +50,7 @@ async function dispatchNext(
       },
       {
         beforeDispatch,
-        dependencyReview: (await readAutoBuildMode(ctx)).blockOnReview ? "approved" : "submitted",
+        requireMergedDependencies: (await readAutoBuildMode(ctx)).requireMergedDependencies,
         recovery: { previous, headSha: candidate.recoveryHeadSha, detail: candidate.detail ?? "Workspace unavailable" },
       },
     );
@@ -55,7 +66,11 @@ async function dispatchNext(
   const started = await startAttempt(
     ctx,
     { ticket: candidate.id, ...(base ? { workspace: { providerId: "pstdio.worktree", params: { base } } } : {}) },
-    { beforeDispatch, workspaceId: input.workspaceId, dependencyReview: mode.blockOnReview ? "approved" : "submitted" },
+    {
+      beforeDispatch,
+      workspaceId: input.workspaceId,
+      requireMergedDependencies: mode.requireMergedDependencies,
+    },
   );
   return {
     decision: "started" as const,
@@ -89,6 +104,7 @@ export const autoBuildDispatchCommand = defineCommand({
           decision: "wait" as const,
           reason: capacity.running >= capacity.limit ? "capacity-full" : "ticket-not-ready",
         };
+      if (!owner.sessionId) return { decision: "wait" as const, reason: "supervisor-not-ready" };
       const beforeDispatch = async (baseHeadSha?: string) => {
         const current = await readAutoBuildMode(ctx);
         if (!current.enabled || current.revision !== revision) {
@@ -103,12 +119,11 @@ export const autoBuildDispatchCommand = defineCommand({
         if (next.snapshot !== snapshot) throw new Error("Work changed before dispatch. Read tickets next again.");
       };
       const result = await dispatchNext(ctx, candidate, beforeDispatch, input);
-      if (result.decision === "started") {
-        if (owner.sessionId)
-          await autoBuildDispatches(ctx, owner.sessionId).put(result.workspaceId, {
-            workspaceId: result.workspaceId,
-            dispatchedAt: new Date().toISOString(),
-          });
+      if (["started", "resumed", "queued"].includes(result.decision) && "workspaceId" in result && result.workspaceId) {
+        await autoBuildDispatches(ctx, owner.sessionId).put(result.workspaceId, {
+          workspaceId: result.workspaceId,
+          dispatchedAt: new Date().toISOString(),
+        });
         // The supervisor already knows about work it dispatched.
         await withWriteGuard(
           ctx,

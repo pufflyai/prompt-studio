@@ -92,6 +92,15 @@ export function registerPackagedShowcaseSmokeTests() {
         expect(
           existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "view", "use-canvas-zoom.ts")),
         ).toBe(true);
+        expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "views", "workflow-settings.ts"))).toBe(
+          true,
+        );
+        const implementationSkill = ["extensions", "pstdio-planner", "skills", "implement-ticket", "SKILL.md"];
+        const packagedSkill = Bun.file(join(tempRoot, ...implementationSkill));
+        const sourceSkill = Bun.file(join(import.meta.dirname, "../../../..", ...implementationSkill));
+        expect(Bun.CryptoHasher.hash("sha256", await packagedSkill.arrayBuffer(), "hex")).toBe(
+          Bun.CryptoHasher.hash("sha256", await sourceSkill.arrayBuffer(), "hex"),
+        );
         await expectPackagedRefinement({
           baseUrl: started.baseUrl,
           projectId: project.id,

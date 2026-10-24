@@ -55,6 +55,13 @@ const terminalRequest = z.object({
 const projectId = { projectId: identifier.optional() };
 
 const schemas = {
+  "performance.read": z.strictObject({
+    operation: z.enum(["state", "snapshot", "subscribe", "unsubscribe", "recordings", "retain", "dispose"]),
+  }),
+  "performance.control": z.discriminatedUnion("operation", [
+    z.strictObject({ operation: z.literal("set-enabled"), enabled: z.boolean() }),
+    z.strictObject({ operation: z.enum(["pause-extension", "resume-extension"]), installedExtensionId: identifier }),
+  ]),
   "harnesses.read": z.object({ harnessId: identifier.optional(), model: z.string().optional() }),
   "resources.actions": z.discriminatedUnion("operation", [
     z.object({ operation: z.literal("list"), resource: extensionResourceRefSchema }),

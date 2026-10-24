@@ -31,16 +31,16 @@ const revision = (reviews: AttemptReview[]): AttemptRevision => ({
 
 describe("attempt revision state", () => {
   test("rejects malformed stored attempt states and revisions", () => {
-    expect(isAttemptRecord({ schemaVersion: 1, state: "invented" })).toBe(false);
+    expect(isAttemptRecord({ schemaVersion: 2, state: "invented" })).toBe(false);
     expect(
       isAttemptRecord({
-        schemaVersion: 1,
+        schemaVersion: 2,
         workspaceId: "workspace-1",
         workspaceShorthand: "PS-1_A1",
         ticketId: "ticket-1",
         ticketShorthand: "PS-1",
         implementationSessionId: "session-1",
-        state: "review_ready",
+
         base: { workspaceId: null, headSha: "base-sha" },
         revisions: [{ revision: 1 }],
         implementationDisconnectRetries: 0,

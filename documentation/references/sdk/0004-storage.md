@@ -19,9 +19,9 @@ scope. All record methods use complete addresses and cover the entire owner.
 One group can include records from several scopes.
 
 A local save persists the complete operation in the database before returning.
-Current records are derived from accepted state and the ordered local journal.
-Receiving accepted work preserves pending operations and an open caller's captured
-revision. Text and list documents stay internal to the host.
+Current query rows are derived from the owner's merged CRDT state. A durable
+transaction publishes document changes, affected current rows, indexes and the
+projection revision together. Text and list documents stay internal to the host.
 
 These methods support local-only workbenches. They do not configure a production
 relay or create an account. The internal relay adapter is for host integration;
@@ -72,6 +72,10 @@ define the exact types exported by `@pstdio/sdk/extensions`.
 | `id(key)` | Complete opaque record address for a key in the selected storage scope. |
 | `read(recordId)` | Value, shared content, asset, deletion state, existence, and opaque revision. |
 | `list()` | The owner's current saved records across scopes, excluding tombstones. |
+| `defineIndexes(definitions)` | Explicitly install or upgrade the owner's deterministic field/index definitions. |
+| `query({ index, where?, fields?, limit?, cursor?, offset?, revision? })` | A bounded selected page with its revision and nullable cursor. |
+| `aggregate({ index, where?, groupBy? })` | A count and optional grouped counts at one revision. |
+| `readMany(recordIds)` | Up to 100 complete records in input order, including missing records and tombstones. |
 | `commit({ operationId, edits })` | Durable outcome for the entire group. `expectedRevision` on an edit is optional. |
 | `outcome(operationId)` | The current outcome with its sync `state`, or `undefined` for an unknown operation. |
 
@@ -91,10 +95,99 @@ requires the same request, including revisions and edit order. Changed content i
 rejected. Read the stored outcome after an uncertain response; do not rerun the
 extension command.
 
+### Indexed queries
+
+The query and batch methods are additive APIs on `main`, planned for 0.46.
+They require an updated host as well as SDK types. Existing `list()` still returns
+the complete list; it does not become a paged response.
+
+Declare definitions in `defineExtension({ storageIndexes: [...] })`. The host
+installs them on each device before publishing the extension runtime. Registration
+replaces that owner's definitions and populates derived data. A query requires an
+installed index and never builds one as a side effect. Keep definitions
+deterministic across devices. `records.defineIndexes` is the same explicit local
+installation operation; do not put local index installation behind the synced
+`storage.migrate` version. A second device can receive that version without having
+local indexes. Memory fixtures accept `createMemoryStorage({ indexes })`.
+
+The host accepts all index definitions for a runtime in one database transaction.
+If any extension's installation fails, the previous runtime keeps its definitions.
+If a newer source arrives after acceptance, the accepted candidate owns those
+definitions while the host retries the newer load; a failed retry falls back to
+that matching candidate rather than the earlier handlers.
+
+Each definition names fields by paths within `record.value`, optional leading
+`equality` fields and a fixed `orderBy`. Field types are `string`, `number`,
+`boolean` and `array` (strings only). Timestamps use consistently formatted strings.
+Selectable fields are not implicitly equality keys. Omitted `equality` means none.
+An optional complete-address `prefix` restricts the index to a namespace or
+collection. Record methods otherwise cover the whole extension owner across scopes.
+The host supplies the owner; callers cannot query another extension or workbench.
+
+Predicates use `{ field, op, value }`, nested `{ all: [...] }`, `{ any: [...] }`,
+or `{ not: predicate }`. Negation is the boolean complement, including for missing
+and null fields: negating a failed comparison matches those records.
+Supported comparisons are `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in` and `notIn`.
+`contains` tests exact string-array membership or a case-insensitive literal string
+substring. `equalsIgnoreCase` compares a string field with a complete string value.
+Both string operations use JavaScript's locale-independent `toLowerCase` rule.
+Case-insensitive equality does not match missing or null values; `eq` and `ne`
+retain their exact comparison semantics. Negate `contains` or `equalsIgnoreCase`
+to express negative text filters. `%` and `_` have no wildcard meaning.
+`empty`, `notEmpty`, `exists` and
+`missing` do not take a value. Empty means missing, null, empty string or empty
+array. Equality and grouping combine missing with null; existence predicates
+distinguish them. Values with a different declared type are treated as missing.
+Ordering predicates reject arrays. `contains` rejects number and boolean fields.
+
+`textContains` searches the JavaScript `String(value)` form of a declared string,
+finite number, or boolean field, using locale-independent lowercase and a literal
+string needle. It does not match missing, null, or incorrectly typed values.
+Numeric text preserves JavaScript's decimal and exponent spelling, including
+`1e-7` and `1e+21`; it does not use a database locale or cast through another
+floating-point representation. This is scalar text, not a cell formatter: date
+labels, custom display labels, and diff summaries need their provider's matching
+rules. `contains` keeps its existing string and string-array behavior.
+
+`fields` selects declared field names. Each result has `recordId`, the record's
+content `revision`, and a `fields` object; it does not include the complete body,
+asset or shared content. Unset selected fields are null. Omit `fields` to select
+all declared fields. Use `readMany` when complete selected records are needed.
+
+The page limit is 1–100 and defaults to 100. SQL filters and sorts before the
+limit and field materialization. Sorting uses the definition's order, with nulls
+last in either direction and a final ascending complete-record-ID tie breaker.
+Strings use Unicode code point order, independent of locale. Equality keys use
+digests with full-value rechecking. Long-string ordering uses bounded prefixes
+and complete comparisons within ties; large equal-prefix groups can still scan
+or sort many rows. See [the temporary index limitation](../../adrs/0089-temporary-bounded-query-index-keys.md).
+Store the returned opaque cursor unchanged. It binds the owner, index definition,
+filter, field selection and owner revision. A changed revision rejects the cursor;
+restart at page one instead of combining results from different revisions. Counts
+and pages each report their revision so a caller can compare them.
+
+The database maintains only records affected by local commits or received merges,
+including named nested types. A normal query, aggregate or batch read uses the
+durable projection and does not hydrate the owner's Yjs document. The memory test
+API follows the same query behavior with its in-memory data. This read contract
+does not establish the separate cold-save and synchronization performance targets.
+
+The host checks that the projection revision matches the authoritative document.
+If an older host changes that document without maintaining the projection, reads
+and writes fail with an out-of-date projection error. Installing the same index
+definitions again explicitly rebuilds the projection. This repair is atomic: a
+failed rebuild leaves source records and operation identities intact, and the next
+installation can retry it. Normal reads never perform this backfill.
+
 ## Edits and outcomes
 
 A record can hold JSON in `value`, one shared primitive, an immutable asset
 reference, and deletion state. A group contains at most one edit per record.
+
+Accepted string values and object keys use well-formed UTF-16. An unpaired
+surrogate is replaced with U+FFFD before saving, matching the existing CRDT wire
+encoding. NUL and valid surrogate pairs are preserved. Memory, indexed and
+reopened reads therefore return the same values and content revisions.
 
 | Edit field | Behavior |
 | --- | --- |
@@ -201,3 +294,11 @@ same logical owner on different devices. Without them, each store has a random
 workbench and device ID and uses `test-extension` as its extension ID.
 
 See the [save workflow](../../guides/sdk/0003-storage.md) for examples.
+
+### Direct page navigation
+
+`query` accepts a nonnegative integer `offset` for direct table page jumps. Supply
+the previous page's `revision` to reject a jump after the owner changes. Use either
+a nonzero offset or a cursor, never both. Cursor continuation remains the preferred
+path for adjacent pages. Deep offsets still traverse skipped index entries inside
+the database; they do not read skipped record bodies or hydrate the owner document.

@@ -15,9 +15,14 @@ export const readValue = (value: unknown, document: Y.Doc): Json => {
   if (reference.kind === "list") {
     const items = document.getMap(`${reference.name}:items`);
     const order = document.getArray<string>(`${reference.name}:order`).toArray();
-    return order
-      .filter((key, index) => items.has(key) && order.lastIndexOf(key) === index)
-      .map((key) => readValue(items.get(key), document));
+    const seen = new Set<string>();
+    const visible: string[] = [];
+    for (let index = order.length - 1; index >= 0; index--) {
+      const key = order[index];
+      if (items.has(key) && !seen.has(key)) visible.push(key);
+      seen.add(key);
+    }
+    return visible.reverse().map((key) => readValue(items.get(key), document));
   }
   return Object.fromEntries(
     [...document.getMap(reference.name)].map(([key, entry]) => [key, readValue(entry, document)]),
@@ -67,8 +72,10 @@ const writeList = (document: Y.Doc, name: string, values: Json[], author?: Docum
   for (let index = 0; index < keys.length; index++)
     writeValue(items, keys[index], values[index], `${name}:items`, author);
   const current = order.toArray();
+  const seen = new Set<string>();
   for (let index = current.length - 1; index >= 0; index--) {
-    if (!wanted.has(current[index]) || current.lastIndexOf(current[index]) !== index) order.delete(index, 1);
+    if (!wanted.has(current[index]) || seen.has(current[index])) order.delete(index, 1);
+    seen.add(current[index]);
   }
   for (let index = 0; index < keys.length; index++) {
     if (order.get(index) === keys[index]) continue;

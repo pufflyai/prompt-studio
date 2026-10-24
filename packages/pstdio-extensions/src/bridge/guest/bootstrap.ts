@@ -5,6 +5,7 @@ import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
 import { installEscapeForwarder } from "./escape-forwarder";
+import { observeContentHeight } from "./observe-content-height";
 import { observeContentWidth } from "./observe-content-width";
 import { createViewLifecycle } from "./view-lifecycle";
 
@@ -123,10 +124,11 @@ const start = async () => {
       propsStore,
     );
     const mount = ensureMount();
-    const stopSizing =
-      message.sizing === "content-width"
-        ? observeContentWidth(mount, (width) => connection.remote.contentWidthChanged(width))
-        : undefined;
+    let stopSizing: (() => void) | undefined;
+    if (message.sizing === "content-width")
+      stopSizing = observeContentWidth(mount, (width) => connection.remote.contentWidthChanged(width));
+    if (message.sizing === "content-height")
+      stopSizing = observeContentHeight(mount, (height) => connection.remote.contentHeightChanged?.(height));
     const dispose = await view.mount(mount, host, propsStore);
     return () => {
       stopSizing?.();

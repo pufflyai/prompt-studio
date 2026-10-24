@@ -1,6 +1,7 @@
 import { canonicalJson, type Json, type SharedEdit } from "pstdio-sync-contracts";
 import type * as Y from "yjs";
 import type { DocumentAuthor } from "./document-author";
+import { normalizeDocumentJson } from "./document-json";
 import { readValue, valueReference, writeValue } from "./document-values";
 import type { GroupCommit } from "./types";
 
@@ -56,10 +57,13 @@ export const applyDocumentEdit = (document: Y.Doc, edit: GroupCommit["edits"][nu
     document.getMap("deleted").delete(edit.recordId);
   }
   const record = document.getMap(name);
-  if (Object.hasOwn(edit, "replace")) writeValue(record, "value", edit.replace!, name, author);
-  if (edit.asset !== undefined && canonicalJson((record.get("asset") ?? null) as Json) !== canonicalJson(edit.asset))
-    record.set("asset", structuredClone(edit.asset));
-  for (const shared of edit.shared ?? []) {
+  if (Object.hasOwn(edit, "replace")) writeValue(record, "value", normalizeDocumentJson(edit.replace!), name, author);
+  if (edit.asset !== undefined) {
+    const asset = normalizeDocumentJson(edit.asset);
+    if (canonicalJson((record.get("asset") ?? null) as Json) !== canonicalJson(asset)) record.set("asset", asset);
+  }
+  for (const input of edit.shared ?? []) {
+    const shared = normalizeDocumentJson(input as unknown as Json) as unknown as SharedEdit;
     const apply = () => applyShared(document, record, name!, shared, author);
     if (author) author(name, "shared", shared as unknown as Json, apply);
     else apply();

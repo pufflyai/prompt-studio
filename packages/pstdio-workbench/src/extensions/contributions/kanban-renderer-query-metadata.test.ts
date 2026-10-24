@@ -110,8 +110,6 @@ test("refreshes query-owned enum choices and column rules without a status provi
         boardColumnConfigs: {
           todo: {
             color: options[0]!.color,
-            canDragIn: false,
-            canDragOut: true,
             canCreate: true,
             actions: [{ id: "archive", label: "Archive" }],
           },
@@ -134,8 +132,6 @@ test("refreshes query-owned enum choices and column rules without a status provi
   expect(notifications).toBe(2);
   expect(renderer.getBoardColumnConfig?.("todo")).toMatchObject({
     color: "purple",
-    canDragIn: false,
-    canDragOut: true,
     canCreate: true,
     actions: [{ id: "archive", label: "Archive" }],
   });

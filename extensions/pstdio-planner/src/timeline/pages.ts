@@ -17,6 +17,8 @@ export const timelineView = defineView({
     capabilities: [
       "commands.execute",
       "navigation.open",
+      "harnesses.read",
+      "resources.actions",
       "files.upload",
       "preferences.get",
       "preferences.set",

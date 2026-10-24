@@ -14,6 +14,7 @@ test("local enrollment gives the device one token for every cloud project of the
       accountId,
       owner: { issuer: "https://accounts.google.com", subject: "owned-local-fixture" },
     });
+    await context.manager.setFeature({ accountId, feature: "relay", enabled: true });
     await context.manager.addWorkbench({ accountId, workbenchId: context.scope.workbenchId });
     const enroll = async () => {
       const child = Bun.spawn(

@@ -6,6 +6,7 @@ import { createTicketCommand } from "../../commands/create-ticket";
 import { requestHumanCommand, reviewCommand } from "../../commands/review-requests";
 import { putAttempt } from "../../data/attempt-storage";
 import { putTicket, statusesCollection, ticketsCollection } from "../../data/collections";
+import { migratePlannerStorage } from "../../data/migrate-storage";
 import { DEFAULT_STATUSES } from "../../data/seed";
 import { createTicketTag } from "../../data/tag-operations";
 import { timelineBoard } from "../../data/ticket-board";
@@ -77,6 +78,7 @@ test("the plan reads one ticket snapshot without loading workspace session histo
   const storage = createMemoryStorage();
   const [ctx] = makeCommandArgs({ storage, params: {} });
   const ticket = await createTicketCommand.run(ctx, { title: "Visible work", statusId: "ready" });
+  await migratePlannerStorage(ctx);
   let ticketReads = 0;
   let sessionReads = 0;
   const collection = storage.collection.bind(storage);
@@ -98,7 +100,20 @@ test("the plan reads one ticket snapshot without loading workspace session histo
     return { items: [], nextCursor: null };
   };
   const plan = await readPlanCommand.run(ctx, {});
-  expect(plan.ticketRows).toContainEqual(expect.objectContaining({ id: ticket.id }));
+  expect(plan.ticketRows).toContainEqual(
+    expect.objectContaining({
+      id: ticket.id,
+      resource: expect.objectContaining({
+        type: "ticket",
+        id: ticket.id,
+        projectId: ctx.projectId,
+        extensionId: ctx.extensionId,
+      }),
+    }),
+  );
+  expect(plan.sections.flatMap(({ rows }) => rows).find(({ id }) => id === ticket.id)?.target.resource).toEqual(
+    plan.ticketRows.find(({ id }) => id === ticket.id)?.resource,
+  );
   expect(ticketReads).toBe(1);
   expect(sessionReads).toBe(0);
 });
@@ -115,13 +130,12 @@ test("the plan query derives milestone ETA from saved complexity and observed at
   await moveTicketCommand.run(ctx, { ticket: open.id, deadline: deadline.id });
   const startedAt = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
   await putAttempt(storage, {
-    schemaVersion: 1,
+    schemaVersion: 2,
     workspaceId: "owner-workspace",
     workspaceShorthand: "WS-1",
     ticketId: done.id,
     ticketShorthand: done.shorthand,
     implementationSessionId: "owner",
-    state: "approved",
     base: { workspaceId: null, headSha: "base" },
     revisions: [],
     blocker: null,
@@ -144,7 +158,24 @@ test("uses Planner's configured status identities for progress, completion, and 
     await statusesCollection(storage).put(`project-${status.id}`, { ...status, id: `project-${status.id}` });
   }
   await statusesCollection(storage).put("project-wip", { ...DEFAULT_STATUSES[2]!, id: "project-wip", name: "WIP" });
-  const [ctx] = makeCommandArgs({ storage, params: {} });
+  const [ctx] = makeCommandArgs({
+    storage,
+    params: {},
+    overrides: {
+      settings: {
+        all: async () => ({
+          "workflow.statuses": {
+            completedStatusIds: ["project-done"],
+            blockedStatusIds: ["project-blocked"],
+            activeStatusIds: ["project-in-progress", "project-wip"],
+            mergeTargetStatusId: "project-done",
+          },
+        }),
+      },
+    },
+  });
+  for (const status of await statusesCollection(storage).list())
+    await statusesCollection(storage).put(status.id, { ...status, name: `Renamed ${status.id}` });
   const completed = await createTicketCommand.run(ctx, {
     content: "# Finished prerequisite",
     statusId: "project-done",
@@ -170,17 +201,19 @@ test("uses Planner's configured status identities for progress, completion, and 
   expect(rows.find((row) => row.id === completed.id)).toMatchObject({
     done: true,
     state: "done",
-    status: { name: "Done" },
+    status: { name: "Renamed project-done" },
   });
   expect(rows.find((row) => row.id === progress.id)).toMatchObject({
     state: "in-progress",
     dependsOn: [{ id: completed.id, done: true }],
   });
   expect(rows.find((row) => row.id === blocked.id)).toMatchObject({
-    state: "blocked",
     flags: expect.arrayContaining(["blocked"]),
   });
-  expect(rows.find((row) => row.id === wip.id)).toMatchObject({ state: "in-progress", status: { name: "WIP" } });
+  expect(rows.find((row) => row.id === wip.id)).toMatchObject({
+    state: "in-progress",
+    status: { name: "Renamed project-wip" },
+  });
 });
 
 test("preserves the configured status presentation independently of review state", async () => {
@@ -225,7 +258,6 @@ test("waiting for prerequisites is distinct from a blocker on otherwise availabl
     expect(row.flags).not.toContain("blocked");
   }
   expect(rows.find((row) => row.id === availableBlocker.id)).toMatchObject({
-    state: "blocked",
     flags: expect.arrayContaining(["blocked"]),
   });
   expect(plan.sections[0]!.counts.blocked).toBe(1);
@@ -234,7 +266,6 @@ test("waiting for prerequisites is distinct from a blocker on otherwise availabl
   const available = (await readPlanCommand.run(ctx, {})).sections.flatMap((section) => section.rows);
   expect(available.find((row) => row.id === waiting.id)?.flags).not.toContain("waiting");
   expect(available.find((row) => row.id === deferredBlocker.id)).toMatchObject({
-    state: "blocked",
     flags: expect.arrayContaining(["blocked"]),
   });
 });
@@ -244,6 +275,9 @@ test("answering one request keeps another open request awaiting input", async ()
   const sessions = { create: async () => ({ type: "session", id: "chat", title: "Chat", status: "in_progress" }) };
   const [ctx] = makeCommandArgs({ storage, params: {}, overrides: { sessions: sessions as never } });
   const ticket = await createTicketCommand.run(ctx, { content: "# Mixed requests", statusId: "in-review" });
+  const reviewState = async () =>
+    (await readPlanCommand.run(ctx, {})).ticketRows.find((row) => row.id === ticket.id)?.attributes.reviewRequests;
+  expect(await reviewState()).toBe("");
   const handoff = {
     kind: "decision",
     questions: [{ id: "result", label: "Result", required: true, input: { kind: "text" } }],
@@ -267,10 +301,12 @@ test("answering one request keeps another open request awaiting input", async ()
   const row = plan.sections.flatMap((section) => section.rows).find((entry) => entry.id === ticket.id);
   expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["human-needed"]) });
   expect(row?.requests.map((request) => request.state).sort()).toEqual(["answered", "open"]);
+  expect(await reviewState()).toBe("requested");
   expect(plan.sections.find((section) => section.rows.includes(row!))?.counts.humanNeeded).toBe(1);
 
   const handoffId = row?.requests.find((request) => request.state === "open")?.id as string;
   await reviewCommand.run(ctx, { requestId: handoffId, response: { answers: { result: "Merged A1." } } });
+  expect(await reviewState()).toBe("answered");
   const stateWith = async (statusId: string) => {
     await putTicket(storage, { ...(await ticketsCollection(storage).get(ticket.id))!, statusId });
     const rows = (await readPlanCommand.run(ctx, {})).sections.flatMap((section) => section.rows);

@@ -1,4 +1,5 @@
 import type { Localizable } from "../l10n";
+import type { CollectionPage, CollectionPageRequest } from "./collection-page";
 import type { ViewFilterGroup, ViewSort } from "./collection-view";
 import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
@@ -40,10 +41,12 @@ export interface DataTableRendererSavedView {
 }
 
 export interface DataTableRendererQueryParams {
+  /** Present for queryMode: "paged". Apply all view controls before selecting these rows. */
+  page?: CollectionPageRequest;
   renderer: RendererContext;
-  /** The view's full filter. Use it only to narrow what you load; the renderer applies it to the rows you return. */
+  /** The view's full filter. Paged providers apply it before pagination; legacy providers also get local filtering. */
   filter: ViewFilterGroup;
-  /** The view's sorts, first level first. The renderer applies them to the rows you return. */
+  /** The view's sorts, first level first. Paged providers apply them before pagination; legacy providers also get local sorting. */
   sorts: ViewSort[];
   settings: DataTableRendererSettings;
 }
@@ -93,6 +96,8 @@ export interface DataTableRendererRow {
 }
 
 export interface DataTableRendererQueryResult {
+  /** Required for queryMode: "paged"; full-result providers omit it. */
+  page?: CollectionPage;
   rows: DataTableRendererRow[];
   columns?: DataTableRendererColumn[];
 }
@@ -116,6 +121,8 @@ export interface DataTableRendererSelectionAction<TParams extends Struct = Struc
 export type DataTableRendererRowActivationHandler = RendererCallback<{ row: DataTableRendererRow }, void>;
 
 export interface DataTableRendererContribution extends RendererContributionBase {
+  /** Opt in to bounded provider-owned filtering, sorting, search and paging. */
+  queryMode?: "paged";
   toolbarActions?: ViewToolbarAction[];
   columns?: DataTableRendererColumn[];
   query: RendererCallback<DataTableRendererQueryParams, DataTableRendererQueryResult>;

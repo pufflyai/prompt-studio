@@ -68,3 +68,7 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 
 1. Always use the shared `ScrollArea` component for scrollable containers. This includes popovers, dialogs, panels, and lists; do not create scrollable surfaces with raw overflow styles.
 3. Main and side chat views fill their panels with the same composer inset. The workspace header touches the input without an extra gap.
+
+## 11. Interface text
+
+1. Cut taglines, helper text and secondary labels. If a screen needs them to make sense, fix the layout.

@@ -1,12 +1,34 @@
+import { readFileSync } from "node:fs";
 import { defineConfig } from "@playwright/test";
 
+const quarantine = process.env.E2E_TEST_LANE === "quarantine";
+const reportName = quarantine ? "packaged-browser-quarantine" : "packaged-browser";
+const cases = JSON.parse(readFileSync(new URL("../../scripts/ci/test-quarantine.json", import.meta.url), "utf8")) as {
+  runner: string;
+  name: string;
+  platforms: string[];
+  arch?: string;
+}[];
+const names = cases.filter(
+  (entry) =>
+    entry.runner === "playwright" &&
+    entry.platforms.includes(process.platform) &&
+    (!entry.arch || entry.arch === process.arch),
+);
+const pattern = new RegExp(
+  `(?:${names.map((entry) => entry.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") || "(?!)"})(?:\\s+@\\S+)*$`,
+);
+
 export default defineConfig({
+  ...(quarantine ? { grep: pattern } : { grepInvert: pattern }),
   testDir: "./src/packaged",
   testMatch: [
     "packaged-empty-panels.spec.ts",
+    "packaged-paged-collections.spec.ts",
     "packaged-editing-sessions.spec.ts",
     "packaged-extension-startup.spec.ts",
     "packaged-webview-browsers.spec.ts",
+    "packaged-webview-lifetime.spec.ts",
     "packaged-statistics-loading.spec.ts",
     "packaged-planner-runtime.spec.ts",
     "packaged-planner-window.spec.ts",
@@ -20,6 +42,11 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   forbidOnly: !!process.env.CI,
-  outputDir: "test-results/packaged-browser",
-  reporter: [["line"], ["html", { open: "never", outputFolder: "playwright-report/packaged-browser" }]],
+  use: { trace: "retain-on-failure" },
+  outputDir: `test-results/${reportName}`,
+  reporter: [
+    ["line"],
+    ["html", { open: "never", outputFolder: `playwright-report/${reportName}` }],
+    ["json", { outputFile: `test-results/${reportName}/results.json` }],
+  ],
 });

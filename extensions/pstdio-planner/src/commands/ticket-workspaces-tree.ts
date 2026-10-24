@@ -88,7 +88,7 @@ export const buildWorkspacesSection = (
 ) =>
   ({
     id: "workspaces",
-    label: "Workspaces",
+    label: l10n("navigation.workspaces", "Workspaces"),
     collapsible: true,
     actions: creationOptions ? workspaceSectionActions(creationOptions) : [],
     nodes: workspaces.length > 0 ? workspaceNodes(workspaces, ticket) : [emptyWorkspacesNode()],

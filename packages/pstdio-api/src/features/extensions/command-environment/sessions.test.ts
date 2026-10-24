@@ -50,7 +50,15 @@ test("session readers expose harness and usage through an explicit public mappin
     cacheReadTokens: 0,
     cacheWriteTokens: 2,
   });
-  expect(await api.get(row.id)).toEqual({ ...page.items[0], lastExit: null, last_exit: null });
+  expect(await api.get(row.id)).toEqual({
+    ...page.items[0],
+    projectId: project.id,
+    agentSessionId: null,
+    sessionFileId: null,
+    params: null,
+    lastExit: null,
+    last_exit: null,
+  });
   expect(page.items[0]).not.toHaveProperty("project_id");
   expect(page.items[0]).not.toHaveProperty("session_file_id");
   const foreign = await handle.deps.projectService.create({ name: "foreign" });

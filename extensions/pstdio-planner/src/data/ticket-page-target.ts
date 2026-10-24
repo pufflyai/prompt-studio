@@ -57,3 +57,6 @@ export const ticketFileTarget = (resource: ResourceRef, file: { id: string; name
   resource: { ...resource, label: file.name, icon, metadata: { ...resource.metadata, documentId: file.id } },
   parent: ticketPageTarget(resource),
 });
+
+export const ticketActivationTarget = (resource: ResourceRef, pendingInput: boolean): NavigationTargetPage =>
+  pendingInput ? ticketRequestsTarget(resource) : ticketPageTarget(resource);

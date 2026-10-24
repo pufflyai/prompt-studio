@@ -47,3 +47,26 @@ export const pageRows = <TRow extends KanbanRendererRow>(rows: TRow[], pageIndex
     .map((row) => ({ kind: "row", row }));
   return { entries, pageCount, page };
 };
+
+export const resolveTablePage = <TRow extends KanbanRendererRow>(input: {
+  groups?: CollectionRowGroup<TRow>[];
+  rows: TRow[];
+  collapsed: Set<string>;
+  index: number;
+  size: number;
+  provider?: { filteredTotal?: number };
+}) => {
+  const index = input.provider ? 0 : input.index;
+  const page = input.groups
+    ? pageGroupedRows(input.groups, input.collapsed, index, input.size)
+    : pageRows(input.rows, index, input.size);
+  if (!input.provider) return page;
+  return {
+    ...page,
+    page: input.index,
+    pageCount: Math.max(1, Math.ceil((input.provider.filteredTotal ?? 0) / input.size)),
+  };
+};
+
+export const resolveCollapsedGroups = (key: string, local: { key: string; groups: string[] }, paged?: string[]) =>
+  new Set(paged ?? (local.key === key ? local.groups : []));

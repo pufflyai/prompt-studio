@@ -9,8 +9,6 @@ const status: StoredStatus = {
   sortOrder: 1,
   isDefault: true,
   canCreate: true,
-  canDragIn: true,
-  canDragOut: false,
   columnActions: ["archive_all"],
 };
 
@@ -161,11 +159,9 @@ describe("buildTicketAttributes", () => {
 });
 
 describe("statusToColumnConfig", () => {
-  test("maps drag/create rules and column actions", () => {
+  test("maps column color, creation, and actions", () => {
     expect(statusToColumnConfig(status)).toEqual({
       color: "blue",
-      canDragIn: true,
-      canDragOut: false,
       canCreate: true,
       actions: [
         { id: "archive_all", label: { $l10n: "boardView.archiveAll", default: "Archive all" }, icon: "archive" },

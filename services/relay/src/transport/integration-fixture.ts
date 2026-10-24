@@ -133,6 +133,7 @@ export const createTransportFixture = () => {
           accountId: scope.accountId,
           owner: { issuer: "https://accounts.google.com", subject: scope.accountId },
         });
+        await manager.setFeature({ accountId: scope.accountId, feature: "relay", enabled: true });
         await manager.addWorkbench({ accountId: scope.accountId, workbenchId: scope.workbenchId });
         const device = await manager.registerDevice({
           accountId: scope.accountId,

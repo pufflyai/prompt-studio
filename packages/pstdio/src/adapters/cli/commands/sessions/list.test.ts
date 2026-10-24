@@ -42,6 +42,41 @@ describe("sessions list", () => {
     expect(output).toContain("claude-code");
   });
 
+  test("prints complete session records as JSON while applying filters", async () => {
+    const sessions = [
+      {
+        id: "9e596e65-3df1-4fa7-9dcc-f9b516d7c43c",
+        title: "Work in progress",
+        status: "in_progress",
+        agent: "pstdio.harness-codex.harness.codex",
+        workspace_id: "workspace-1",
+        created_at: "2026-10-22T10:00:00Z",
+        last_request_started: "2026-10-22T10:01:00Z",
+      },
+    ];
+    const listSessions = mock(async () => sessions as never[]);
+    const deps = makeDeps({ listSessions });
+
+    await createHandler(deps)(argv({ json: true, status: "in_progress", "workspace-id": "workspace-1" }));
+
+    expect(deps.log).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(deps.log.mock.calls[0][0])).toEqual(sessions);
+    expect(listSessions).toHaveBeenCalledWith(
+      expect.any(String),
+      "proj-1",
+      expect.objectContaining({ status: "in_progress", workspaceId: "workspace-1" }),
+    );
+  });
+
+  test("prints an empty JSON array when no sessions match", async () => {
+    const deps = makeDeps({ listSessions: mock(async () => []) });
+
+    await createHandler(deps)(argv({ json: true }));
+
+    expect(deps.log).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(deps.log.mock.calls[0][0])).toEqual([]);
+  });
+
   test("shows empty message when no sessions", async () => {
     const deps = makeDeps({ listSessions: mock(async () => []) });
     const handler = createHandler(deps);

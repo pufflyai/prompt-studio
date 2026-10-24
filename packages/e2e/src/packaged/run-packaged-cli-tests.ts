@@ -5,7 +5,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 const child = Bun.spawn(
   [
     process.execPath,
-    "test",
+    `${import.meta.dir}/../../../../scripts/ci/run-bun-tests.ts`,
     "--preload",
     "./src/scripts/bun-process-cleanup.ts",
     "src/packaged",

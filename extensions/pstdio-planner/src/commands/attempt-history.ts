@@ -1,7 +1,7 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
-import { rollUpAttemptTicket } from "../data/attempt-rollup";
-import { deriveRevisionVerdict, paginateAttemptEvents } from "../data/attempt-state";
+import { legacyAttemptOutput } from "../data/attempt-compatibility";
+import { paginateAttemptEvents } from "../data/attempt-state";
 import {
   appendAttemptEvent,
   attemptEventsCollection,
@@ -37,7 +37,12 @@ export const readAttemptHistoryCommand = defineCommand({
       commandParams.cursor,
       Math.min(100, Math.max(1, commandParams.limit ?? 50)),
     );
-    return { attempt, events: page.items, nextCursor: page.nextCursor };
+    return {
+      attempt: await legacyAttemptOutput(ctx.storage, attempt),
+      variant: attempt,
+      events: page.items,
+      nextCursor: page.nextCursor,
+    };
   },
 });
 
@@ -170,17 +175,10 @@ export const dismissReviewCommand = defineCommand({
           candidate.id === review.id ? { ...candidate, state: "dismissed" as const } : candidate,
         ),
       };
-      const currentRevision = attempt.revisions.at(-1)!;
-      const verdict = deriveRevisionVerdict(
-        currentRevision.revision === nextRevision.revision ? nextRevision : currentRevision,
-      );
-      let state: "review_ready" | "approved" | "changes_requested" = "review_ready";
-      if (verdict === "passed") state = "approved";
-      if (verdict === "changes_requested") state = "changes_requested";
       const revisions = attempt.revisions.map((candidate) =>
         candidate.revision === revision.revision ? nextRevision : candidate,
       );
-      const next = await putAttempt(ctx.storage, { ...attempt, state, revisions, updatedAt: new Date().toISOString() });
+      const next = await putAttempt(ctx.storage, { ...attempt, revisions, updatedAt: new Date().toISOString() });
       await appendAttemptEvent(ctx.storage, {
         workspaceId: attempt.workspaceId,
         revision: revision.revision,
@@ -194,8 +192,7 @@ export const dismissReviewCommand = defineCommand({
         metadata: { reason: commandParams.reason },
       });
       await reviewLaunchClaimsCollection(ctx.storage).delete(`${attempt.workspaceId}:${revision.revision}`);
-      await rollUpAttemptTicket(ctx, attempt.ticketId);
-      return next;
+      return legacyAttemptOutput(ctx.storage, next);
     });
   },
 });

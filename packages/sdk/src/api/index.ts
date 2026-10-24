@@ -92,6 +92,7 @@ export type {
   SessionConversationResponse,
   SessionConversationSources,
   SessionQueuedMessagesResponse,
+  SessionSteeringInput,
   SteerQueuedFollowUpInput,
   UpdateQueuedFollowUpInput,
 } from "./sessions";

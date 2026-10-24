@@ -178,8 +178,8 @@ const launchPackaged = async <T>(
           contentType: "text/plain",
         });
     } finally {
-      await browser?.close().catch(() => {});
       await stopPackagedProcess(child);
+      await browser?.close().catch(() => {});
     }
     throw startupFailure(error, home, [readDescriptor(home)?.token ?? ""]);
   }
@@ -252,9 +252,13 @@ export const runPackagedCli = (home: string, args: string[]) =>
 
 export const disposePackagedApp = async (app: PackagedWindow | null) => {
   if (!app) return;
-  await app.finishTrace();
-  await app.browser.close().catch(() => {});
-  await stopPackagedProcess(app.child);
+  try {
+    await app.finishTrace();
+  } finally {
+    // The test owns Electron. CDP Browser.close can wait on its live monitoring resources.
+    await stopPackagedProcess(app.child);
+    await app.browser.close().catch(() => {});
+  }
 };
 
 export const removePackagedHome = async (home: string) => {

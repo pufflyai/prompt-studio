@@ -42,6 +42,18 @@ beforeAll(async () => {
   };
   // Each login signs out the Google session it used, so every device login gets its own session.
   const subject = `native-a-${crypto.randomUUID()}`;
+  const manager = fixture.owner();
+  try {
+    const accountId = crypto.randomUUID();
+    await manager.provision({
+      requestId: "native-early-access",
+      accountId,
+      owner: { issuer: "https://accounts.google.com", subject },
+    });
+    await manager.setFeature({ accountId, feature: "relay", enabled: true });
+  } finally {
+    await manager.close();
+  }
   const [a, again, b] = [
     await authentication.login(subject),
     await authentication.login(subject),

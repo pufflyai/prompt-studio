@@ -1,6 +1,6 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { dependencyBlockerRefs, withIndependentBlockers } from "./dependency-blockers";
-import { deriveReviewNeededFlag, readTicketReviewRequests, withReviewNeededFlag } from "./review-request-storage";
+import { readTicketReviewRequests } from "./review-request-storage";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 
 export const TICKETS_COLLECTION = "tickets";
@@ -41,9 +41,7 @@ export const putTag = async (storage: ExtensionStorageApi, tag: StoredTag) => {
 export const readTicketSnapshot = async (storage: ExtensionStorageApi) => {
   const [tickets, requests] = await Promise.all([ticketsCollection(storage).list(), readTicketReviewRequests(storage)]);
   return {
-    tickets: withIndependentBlockers(tickets).map((ticket) =>
-      withReviewNeededFlag(ticket, requests.get(ticket.id) ?? { requests: [], errors: [] }),
-    ),
+    tickets: withIndependentBlockers(tickets),
     requests,
   };
 };
@@ -52,7 +50,7 @@ export const readTicketsWithReviewState = async (storage: ExtensionStorageApi) =
   (await readTicketSnapshot(storage)).tickets;
 
 export const withDerivedTicketState = async (storage: ExtensionStorageApi, ticket: StoredTicket) =>
-  deriveReviewNeededFlag(storage, await withIndependentBlocker(storage, ticket));
+  withIndependentBlocker(storage, ticket);
 
 const withIndependentBlocker = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
   if (!dependencyBlockerRefs(ticket.blockedReason)) return ticket;

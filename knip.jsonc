@@ -63,6 +63,7 @@
         "src/**/*.integration.ts",
         // Tests spawn fixtures by path, so nothing imports them.
         "src/**/*.fixture.ts",
+        "src/**/*.bench.ts",
         "src/**/*.typecheck.ts",
         "*.test.ts",
         "scripts/**/*.ts",
@@ -77,8 +78,15 @@
         "src/cli/run-pstdio.ts",
         "src/**/*.spec.ts",
         "src/**/*.perf.ts",
+        "src/**/*.bench.ts",
         "src/perf/planner-moves.stress.ts",
         "src/perf/planner-moves.validation.ts",
+        // These diagnostics compile or launch fixture modules by path.
+        "src/perf/storage-scale-container-setup.ts",
+        "src/perf/storage-scale-container-entry.ts",
+        "src/perf/storage-scale-case.ts",
+        "src/perf/storage-scale-prepare.ts",
+        "src/perf/storage-scale-extension.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts",
         "src/**/*.fixture.tsx",
@@ -137,8 +145,12 @@
         "drizzle.config.ts",
         "scripts/**/*.ts",
         "src/index.ts",
+        // The database asset build bundles this isolated child entrypoint by path.
+        "src/db/pglite-upgrade-worker.ts",
         "src/services/sessions/session-query.bench.ts",
         "src/services/extension-storage/document-storage.bench.ts",
+        "src/services/extension-storage/document-scale.bench.ts",
+        "src/services/extension-storage/record-read-scale.bench.ts",
         "src/**/*.test.ts",
         // The isolated conformance runner and durability tests launch these by path.
         "src/**/*.integration.ts",
@@ -209,6 +221,9 @@
         "src/**/*.stories.tsx",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
+        // The packaged browser test bundles these two public-consumer entries by path.
+        "src/react/settings/settings-lifetime.fixture.tsx",
+        "src/react/settings/settings-lifetime-guest.fixture.ts",
         "src/**/*.typecheck.ts"
       ],
       "project": [".storybook/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],

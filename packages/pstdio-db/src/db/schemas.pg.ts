@@ -19,6 +19,8 @@ export * from "./schemas/sessions";
 export * from "./schemas/settings";
 export * from "./schemas/skills";
 export * from "./schemas/storage-documents";
+export * from "./schemas/storage-records";
+export * from "./schemas/storage-resource-identities";
 export type { JsonObject, ResourceRef } from "./schemas/types";
 export * from "./schemas/webview-preferences";
 export * from "./schemas/workspaces";

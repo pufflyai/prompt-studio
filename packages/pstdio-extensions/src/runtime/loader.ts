@@ -51,6 +51,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 let importCounter = 0;
+// The import identity already increments for real module loads; reads add no disabled work.
+export const readRuntimeImportCount = () => importCounter;
 const prunedRuntimeCacheRoots = new Set<string>();
 
 const formatImportError = (error: unknown, fallback: string) => {

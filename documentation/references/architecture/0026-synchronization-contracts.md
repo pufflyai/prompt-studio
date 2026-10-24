@@ -10,7 +10,7 @@ using `storage.records`, the deprecated KV and collection methods, and the file 
 | Package | Responsibility |
 | --- | --- |
 | `pstdio-sync` | Shape-based edits, document reads, shared primitives, checkpoint staging and legacy namespaces. |
-| `pstdio-db` | Durable document state, incremental updates, local retry identities, migration versions and the one-time journal import. |
+| `pstdio-db` | Durable document state, atomic current-record projections, query indexes, incremental updates, local retry identities, migration versions and the one-time journal import. |
 | `pstdio-api` | Public storage adapters, verified assets, file projection and notifications after local commits. |
 | `@pstdio/sdk/testing` | The same document engine with an in-memory store. |
 | Extensions | Domain data and validation, without merge rules or relay code. |
@@ -21,6 +21,43 @@ the functions in `packages/pstdio-sync/src/encryption/` and keys from the accoun
 transport and latest-state uploads run in `pstdio-sync/src/relay/`. The runtime starts
 encrypted document sync for each enabled extension. Local reads and saves do not wait
 for the relay.
+
+## Indexed current records
+
+[ADR 0099](../../adrs/0099-durable-record-query-projections.md) separates reads from
+merge-state loading. [ADR 0100](../../adrs/0100-one-document-per-resource.md) gives each
+record its own Yjs document. A commit loads only the documents of the records it names. In one
+durable transaction it writes their CRDT updates, their current rows and content revisions,
+the operation identity, and the owner revision. Only after that transaction commits does the
+service notify listeners.
+
+Normal queries, aggregates and batch reads never load a record document. Predicates, stable
+sorting, cursor seeks, field selection and limits run in SQL. A cursor rejects a changed owner
+revision. Owner metadata writes, such as data migration versions, do not change that revision.
+The public methods and typed field semantics are in the
+[storage reference](../sdk/0004-storage.md#indexed-queries).
+
+Records do not sync through the relay yet. The owner document syncs only its metadata.
+Projection rows and record documents are removed with their workbench and cleared with an owner
+purge.
+
+Resource identity and alias indexes also record their source document revision.
+If an older host saves the source without updating these indexes, reads and
+incremental writes reject the stale projection. Resource service startup rebuilds
+missing or stale projections before serving identities. A later allocation must
+not mark an incomplete index current merely because its own new row was indexed.
+
+## Scheduled automations
+
+The core `pstdio.automations` owner uses the same encrypted document transport as
+extensions. Each schedule record holds `deviceId`, `enabled`, and `startsAt`. No
+automation data or disable acknowledgment is stored separately on the relay.
+
+Schedule admission checks the current device before arming and again just before
+command dispatch. Unassigned cloud schedules stay idle. The local
+`pstdio.automation-runs` owner never joins sync. Its claim and cursor commit together
+before effects. It records missed occurrences as skipped and does not replay claims
+after restart. See the [schedule reference](../cli/0010-scheduled-automations.md).
 
 ## Data merges by shape
 

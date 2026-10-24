@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
-// Account checks include project sync status, native sign-in cancellation, and authenticated presence.
+// Account checks include project sync status, native sign-in cancellation, early access and authenticated presence.
 import { registerAccountSmokeTests } from "./packaged-account-smoke";
 import { registerAssetStorageSmokeTests } from "./packaged-assets-smoke";
 // Includes retained creation drafts, backdrop protection, and creation without row activation.
@@ -17,7 +17,10 @@ import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 import { registerPackagedChatMotionSmokeTests } from "./packaged-chat-motion-smoke";
 // Localized parameter guidance is readable in compiled CLI help.
 import { registerCliHelpSmokeTests } from "./packaged-cli-help-smoke";
+// Explicit live follow-ups capture their active run and never fall back to ordinary queued work.
+import { registerCliSteeringSmokeTests } from "./packaged-cli-steering-smoke";
 // Shared borderless Kanban and data table tabs persist pointer/keyboard order and follow live sync.
+// scripts/verify/public-package-consumer.ts checks packaged authoring row previews, persistent actions and controlled TreeList selection.
 import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 // OpenAPI publishes recursive command causes without expanding forever.
 // Canonical and deprecated streams preserve full rejections through the SDK and compiled CLI.
@@ -35,8 +38,8 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
-// Also lists recovery points and restores a deleted record through the compiled CLI and normal CRDT sync.
-// Document sync checks the local, synced and needs-attention project states from the sync owners.
+// Document sync checks local, synced and needs-attention states plus strict leaf uploads to an older relay.
+import { registerDeviceAutomationSmokeTests } from "./packaged-device-automations-smoke";
 import { registerDocumentSyncSmokeTests } from "./packaged-document-sync-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 // Includes linked dependency loading and missing dependency diagnostics.
@@ -45,13 +48,20 @@ import { registerExtensionInstallSmokeTests } from "./packaged-extension-install
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
 // CRDT storage checks atomic saves, ignored revisions, local retry outcomes and durable restart.
+// Declared indexes, filtered cursor pages, selected fields, aggregates and batch reads survive restart.
+// Accepted Unicode normalization and NUL preservation agree before and after restart.
 // Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.
 // scripts/verify/storage-package-consumer.ts checks the packaged SDK's two-device merge and replacement report.
+// Selected storage queries preserve case-insensitive text equality and negation through restart.
+// packaged-storage-upgrade.test.ts checks the released 0.45 engine transition, nested records, assets,
+// operation retries and tombstones through index installation and restart.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
+// Shutdown also drains session lifecycle work after an immediately completed harness run.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { registerLinkIconsSmokeTests } from "./packaged-link-icons-smoke";
 // Harness discovery/models live in harness-npm-detection.test.ts; Codex exit outcomes in codex-transport.test.ts.
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
@@ -66,24 +76,31 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // Navigation metadata preserves independent panel capabilities, including whole-panel movement through the compiled host.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
+import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // The browser suite checks typed host props, page updates, structured capability errors and saved settings.
 // packaged-editing-sessions.spec.ts checks shared local edits, coalesced writes and cancelled previews across opaque views.
 // Real React Query subscriptions cover matching events, reconnect deduplication and unmount cleanup.
+// The built workbench/SDK lifetime fixture checks independent embedded frames, StrictMode, context replacement and disconnect disposal.
 // Typed settings deletion restores its fallback after reload.
-import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
+// Ten public owners retain bounded table/board metadata, selected fields, cursor and direct page navigation.
+import { registerPagedCollectionSmokeTests } from "./packaged-paged-collections-smoke";
 // Private history stays readable offline and appears in the initial live-sync snapshot after restart.
+// Native backend observers use the compiled Bun ABI on every release target.
+// performance-observer.test.ts also runs on reduced Intel and Windows release targets.
 import { registerPersonalHistorySmokeTests } from "./packaged-personal-history-smoke";
 // The packaged browser suite checks document/section Main closure, reload and foreign-document close/pin controls.
-// Planner covers timeline state, complete board moves, missing folders/Git metadata, dependency recovery and Git conflicts.
+// Planner covers supervisor choices and Resume wakes, idle/startup waiting reasons, timeline review indicators, board moves, missing folders/Git metadata, and dependency recovery.
 // Its browser smoke also checks immediate ticket property edits while persistence is held open.
 // Planner covers timeline state, editable saved decisions, linked counts, dependency recovery and Git conflicts in separate packaged cases.
 // Review requests start conversations only when opened and reuse them on later visits.
+// Auto Build saves and restarts retain settings while clearing the old supervisor scope.
 // Ticket document loads observe only the selected ticket's storage version.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
-// Composer coverage preserves route-group file paths and keeps web references natively clickable in packaged messages.
+// Composer coverage recalls saved prompts, preserves route-group file paths, and keeps web references clickable.
 // Queue drag targets follow live-input support and retain padded delete actions.
+// Extension commands stop active work and cancel remaining queued follow-ups through the public SDK.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
@@ -100,7 +117,7 @@ import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // The session query smoke also checks open-tab resource retention in the compiled host.
 // The fixed 1,000-session / 1,000-ticket compiled navigation gate lives in ../perf/subnav-benchmark.ts.
 // Packaged browser coverage also checks shared Session action groups and lazy title search in the tab menu.
-// Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
+// Includes speed selection, JSON session lists, queued steering and shutdown with existing native goal turns.
 import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
 import { registerPackagedShowcaseSmokeTests } from "./packaged-showcase-smoke";
 import { registerStorageMigrationSmokeTests } from "./packaged-storage-migration-smoke";
@@ -113,7 +130,9 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // A context-menu deletion resolves its hidden note identifier without opening a parameter form.
 // packaged-statistics-loading.spec.ts keeps row activation during delayed statistics loading.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
+// Group dragging keeps panel dropzones hidden.
 // The paired session-menu browser check restores focus to its tab after Escape.
+// The packaged collection browser journey checks the fixed mode return below the Sidenav header items.
 // Its floating launcher hides while open, returns on close, and reopens with the keyboard.
 // It also opens a workspace's related session through the default-on preview policy and checks that it is unpinned.
 // Related openings preserve selected tabs; all new automatic previews close on page leave and empty panels collapse.
@@ -145,6 +164,7 @@ beforeAll(() => {
 registerSharedCodexSmokeTests();
 registerWorkspaceCleanupSmokeTests();
 registerCliHelpSmokeTests();
+registerLinkIconsSmokeTests();
 // Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
 registerExtensionStartupSmokeTests();
@@ -304,6 +324,7 @@ registerResourceRemovalSmokeTests();
 registerQueuedRequestSmokeTests();
 
 registerSessionQuerySmokeTests();
+registerCliSteeringSmokeTests();
 // Migration smoke also checks stable import IDs, random UUIDv7 IDs, and core order positions.
 registerStorageMigrationSmokeTests();
 
@@ -313,6 +334,9 @@ registerPageParamsSmokeTests();
 
 registerResourcePageSmokeTests();
 
+registerDeviceAutomationSmokeTests();
 registerDocumentSyncSmokeTests();
 registerPersonalHistorySmokeTests();
 registerTwoDeviceSyncSmokeTests();
+
+registerPagedCollectionSmokeTests();
