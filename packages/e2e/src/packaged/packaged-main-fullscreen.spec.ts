@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium, expect, test } from "@playwright/test";
@@ -12,7 +12,9 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
   try {
-    const started = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") });
+    const defaults = JSON.parse(e2eExtensions("workbench-fixture"));
+    defaults.defaultExtensions[0].force = true;
+    const started = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults) });
     child = started.child;
     browser = await chromium.launch();
     const page = await browser.newPage();
@@ -35,6 +37,10 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await expect(picker).toBeVisible();
     await page.screenshot({ path: test.info().outputPath("empty-project-selection.png") });
 
+    const installedRoot = join(root, "extensions", "workbench-fixture");
+    await expect.poll(() => existsSync(join(installedRoot, "package.json"))).toBe(true);
+    const installedNote = join(installedRoot, "local-note.txt");
+    writeFileSync(installedNote, "Keep the installed source");
     await picker.getByRole("button", { name: "Create project", exact: true }).click();
     const path = page.getByRole("textbox", { name: "Folder path", exact: true });
     await path.fill(folderProjectInput({}).initial_workspace.params.path);
@@ -45,6 +51,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await page.getByRole("button", { name: "Open folder", exact: true }).click();
     const response = await created;
     expect(response.status()).toBe(201);
+    expect(readFileSync(installedNote, "utf8")).toBe("Keep the installed source");
     const project = (await response.json()) as { id: string };
     await expect(page.getByRole("option", { name: "Home", exact: true })).toBeVisible();
     await expect(page.getByTestId("start-page")).toBeVisible();

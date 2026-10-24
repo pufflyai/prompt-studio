@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Show Settings in the project picker, hide background controls, and open the first created project without reloading.
+Show Settings in the project picker, hide background controls, and reuse installed defaults when opening the first project without reloading.
