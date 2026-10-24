@@ -55,12 +55,19 @@ test("dashboard keeps project selection open when no project is selected", { tag
   const projectPicker = page.getByRole("dialog").filter({ hasText: "No projects yet" });
   await expect(projectPicker).toBeVisible();
   await expect(projectPicker.getByRole("button", { name: "Close Projects" })).toHaveCount(0);
-  await expect(page.locator('button[aria-label="Switch project"]')).toBeVisible();
+  for (const control of await page.locator("#root button").all()) {
+    await expect(control).toBeHidden();
+  }
   await expect(page.getByRole("option", { name: "Search", exact: true })).toHaveCount(0);
   await expect(page.getByRole("option", { name: "Notifications", exact: true })).toHaveCount(0);
   await expect(page.locator('[data-workbench-region="sidenav"]')).toBeHidden();
   await expect(page.locator('[data-workbench-region="activity"]')).toBeHidden();
   await expect(page.locator('[data-workbench-region="status"]')).toBeHidden();
+
+  await projectPicker.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("option", { name: "Appearance", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /^Close/ }).click();
+  await expect(projectPicker).toBeVisible();
 
   await page.keyboard.press("Escape");
   await expect(projectPicker).toBeVisible();
