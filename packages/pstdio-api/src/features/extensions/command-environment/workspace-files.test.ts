@@ -37,8 +37,8 @@ beforeEach(async () => {
   };
   for (const path of [
     "",
-    ".pstdio/extension-storage/tools/.publishers/example",
-    ".pstdio/extension-storage/tools/reports",
+    ".pstdio/extension-storage/example.tools",
+    ".pstdio/extension-storage/example.tools/reports",
   ]) {
     await mkdir(join(root, path), { recursive: true });
     await writeFile(join(root, path, "notes.txt"), "keep");

@@ -56,21 +56,22 @@ describe("pstdio extension commands", () => {
       run(`extensions add ${source} --skip-install`, repo);
 
       const rootHelp = run("--help", repo);
-      expect(rootHelp).toContain("workbench-fixture [command]");
+      expect(rootHelp).toContain("pstdio pstdio.workbench-fixture");
 
-      const namespaceHelp = run("workbench-fixture --help", repo);
+      const namespaceHelp = run("pstdio.workbench-fixture --help", repo);
       // Namespace help mirrors the yargs command-group layout: scriptName-prefixed
       // paths under a Commands section, plus an Options section.
       expect(namespaceHelp).toContain("Commands:");
-      expect(namespaceHelp).toContain("pstdio workbench-fixture counter bump");
+      expect(namespaceHelp).toContain("pstdio pstdio.workbench-fixture counter bump");
       expect(namespaceHelp).toContain("Options:");
 
-      const commandHelp = run("workbench-fixture counter bump --help", repo);
+      const commandHelp = run("pstdio.workbench-fixture counter bump --help", repo);
       expect(commandHelp).toContain("--amount");
 
-      const bump = JSON.parse(run("workbench-fixture counter bump --amount 2", repo));
+      const bump = JSON.parse(run("pstdio.workbench-fixture counter bump --amount 2", repo));
       expect(bump.counter).toBe(2);
 
+      // The name-only namespace stays a deprecated alias for the same command.
       const read = JSON.parse(run("workbench-fixture counter read", repo));
       expect(read.counter).toBe(2);
     },

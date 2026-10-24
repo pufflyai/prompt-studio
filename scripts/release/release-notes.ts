@@ -1,4 +1,5 @@
 import { dirname, join } from "node:path";
+import { independentExtensionNotes } from "./extension-release-notes";
 
 type RootManifest = {
   workspaces?: string[];
@@ -52,6 +53,7 @@ export const createReleaseNotes = async (cwd: string, version: string) => {
     const notes = section.replace(/^_\d{4}-\d{2}-\d{2}_\s*$/gm, "").trim();
     if (notes) sections.push(`## ${name}\n\n${notes}\n\n`);
   }
+  sections.push(...(await independentExtensionNotes(cwd, version)));
   return sections.length ? sections.join("") : "_No changelog entries._\n";
 };
 

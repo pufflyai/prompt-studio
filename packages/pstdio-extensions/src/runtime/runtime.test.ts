@@ -65,7 +65,7 @@ describe("loadExtensionRuntime", () => {
     expect(runtime.extensions).toHaveLength(1);
     expect(runtime.commands).toHaveLength(1);
     expect(runtime.commands[0]?.id).toBe("pstdio.lab.command.say-hello");
-    expect(runtime.cli[0]?.pathKey).toBe("lab say-hello");
+    expect(runtime.cli[0]?.pathKey).toBe("pstdio.lab say-hello");
   });
 
   test("reports diagnostics when an extension has invalid manifest identity", async () => {

@@ -12,6 +12,7 @@ import {
 } from "../features/extensions/local-extension-folder";
 import { ProjectNotFoundError } from "./extension-service";
 import type { ExtensionUpgradeServiceDeps } from "./extension-upgrade-service";
+import { createRegistryExtensionSource } from "./registry-extension-source";
 
 interface ExtensionSourceInstallerDeps {
   deps: ExtensionUpgradeServiceDeps;
@@ -41,9 +42,13 @@ const projectSourcePath = (repoPath: string | undefined, path: string) => {
 
 export const createExtensionSourceInstaller = (input: ExtensionSourceInstallerDeps) => {
   const { deps, install, catalogEntry, releaseRefFor } = input;
+  const registry = createRegistryExtensionSource(deps, install);
   const installCatalog = async (source: CatalogSource, options: Omit<InstallExtensionSourceInput, "source">) => {
     const entry = await catalogEntry(source.name);
     if (!entry) throw new ExtensionNotInCatalogError(source.name);
+    if (!source.ref && deps.release?.source === "registry" && entry.extensionId) {
+      return registry.installCatalog(entry, { ...options, installName: options.installName ?? entry.installName });
+    }
     const ref = source.ref ?? releaseRefFor(entry);
     const workspaceSource = !source.ref && deps.release?.source === "workspace" && entry.origin.ref === "{hostRelease}";
     const sourcePath =

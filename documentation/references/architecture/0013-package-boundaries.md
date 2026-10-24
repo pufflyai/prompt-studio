@@ -57,6 +57,11 @@ layer-map change.
    contracts, and package artifacts. It must not depend on `@pstdio/workbench`;
    workbench adapters for extension metadata belong in `@pstdio/workbench`.
 
+   The private `pstdio-psx` service consumes the runtime's distribution subpath
+   for package validation. It owns PostgreSQL release metadata and S3 package
+   storage. It does not import API host packages. E2E fixtures drive its production
+   image through HTTP to check delivery to a packaged host.
+
 4. **API host**
    `pstdio-api-runtime-host` and `pstdio-api` own runtime execution and HTTP/API
    orchestration. They consume contracts and extension runtime packages, but they

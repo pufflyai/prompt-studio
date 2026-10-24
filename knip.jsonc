@@ -32,6 +32,11 @@
       "project": ["src/**/*.ts", "scripts/**/*.ts", "drizzle.config.ts"],
       "ignore": ["dist/**"]
     },
+    "services/psx": {
+      "entry": ["src/index.ts", "src/server.ts", "src/**/*.integration.ts", "drizzle.config.ts"],
+      "project": ["src/**/*.ts", "drizzle.config.ts"],
+      "ignore": ["dist/**"]
+    },
     "services/relay": {
       "entry": [
         "package.json",

@@ -61,9 +61,9 @@ test("cancelling scoped reads leaves artifact, project and extension saves indep
     const results = await Promise.allSettled(saves);
     expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled", "fulfilled"]);
     for (const path of [
-      ".pstdio/extension-storage/example/docs/draft.md",
+      ".pstdio/extension-storage/test.example/docs/draft.md",
       "draft.md",
-      ".pstdio/extension-storage/example/.publishers/test/draft.md",
+      ".pstdio/extension-storage/test.example/draft.md",
     ]) {
       expect(await readFile(join(root, path), "utf8")).toBe("Saved draft");
     }

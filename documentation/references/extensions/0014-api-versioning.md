@@ -213,9 +213,17 @@ The optional `HarnessSession.steer` capability and host-provided `ctx.sessions` 
 
 ## Extension file storage in API 0.2
 
-API 0.2 is on `main` and in nightly builds. It ships in the release after 0.43.x. Release 0.43.x still provides API 0.1.6 and the old layout.
+API 0.2 shipped in 0.44.0. Release 0.43.x provides API 0.1.6 and the old layout.
 
 API 0.2 moves `ctx.extensionFiles` from `.pstdio/ext/<publisher>.<name>/` to `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. Publishers with the same package name keep separate files. Artifact mount paths cannot start with the reserved `.publishers` segment, including case variants. This is a breaking filesystem layout change; relative file operations stay the same. Move existing allocated files using the [storage migration guide](../../guides/extensions/0009-allocated-extension-files.md). Extensions that work with both layouts can declare `^0.1.0 || ^0.2.0`.
+
+Prompt Studio 0.46 roots extension storage at
+`.pstdio/extension-storage/<publisher>.<name>/`. Relative file operations stay
+the same. 0.46 starts with an empty database and does not move or read earlier
+`<package-name>/` folders, so each extension starts fresh. Extensions that build
+storage paths themselves must use the full-ID folder. Name-only CLI namespaces
+and resource-kind references remain deprecated aliases when unambiguous;
+full-ID forms replace them. Declared global aliases keep their short form.
 
 ## Independent panel permissions in API 0.2.1
 

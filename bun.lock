@@ -935,6 +935,21 @@
         "typescript": "6.0.2",
       },
     },
+    "services/psx": {
+      "name": "pstdio-psx",
+      "dependencies": {
+        "@aws-sdk/client-s3": "3.1152.0",
+        "drizzle-orm": "^0.45.2",
+        "pg": "^8.20.0",
+        "pstdio-extensions": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/pg": "^8.18.0",
+        "drizzle-kit": "^0.31.9",
+        "typescript": "6.0.2",
+      },
+    },
     "services/relay": {
       "name": "pstdio-relay",
       "dependencies": {
@@ -4338,6 +4353,8 @@
     "pstdio-paths": ["pstdio-paths@workspace:packages/pstdio-paths"],
 
     "pstdio-planner": ["pstdio-planner@workspace:extensions/pstdio-planner"],
+
+    "pstdio-psx": ["pstdio-psx@workspace:services/psx"],
 
     "pstdio-relay": ["pstdio-relay@workspace:services/relay"],
 
