@@ -71,9 +71,12 @@ test("an old database exports its tables and decoded extension records as JSON l
   }
 });
 
-test("a part that cannot be read is listed in errors.txt and the rest still exports", async () => {
+test("an unreadable document is listed in errors.txt and every other part still exports", async () => {
   const directory = await mkdtemp(join(tmpdir(), "database-json-export-errors-"));
   const db = await PGlite.create();
+  const owner = { workbenchId: "project-1", extensionId: "pstdio.pstdio-planner" };
+  const healthy = createDocumentStorage({ owner, store: createMemoryDocumentStore() });
+  await healthy.records.commit({ operationId: "seed", edits: [{ recordId: "ticket-1", replace: { title: "Kept" } }] });
   try {
     await db.exec(`
       create table projects(id text primary key);
@@ -81,15 +84,27 @@ test("a part that cannot be read is listed in errors.txt and the rest still expo
       create table storage_document_updates(workbench_id text, extension_id text, document_id text, revision bigint, "update" bytea not null);
       insert into projects values ('project-1');
     `);
-    await db.query("insert into storage_documents values ('project-1', 'broken', 'records', $1, 1)", [
+    // The damaged document sorts before the healthy one, so a failure cannot hide behind loop order.
+    await db.query("insert into storage_documents values ($1, $2, 'a-damaged', $3, 1)", [
+      owner.workbenchId,
+      owner.extensionId,
       new Uint8Array([255, 255, 255]),
+    ]);
+    await db.query("insert into storage_documents values ($1, $2, 'records', $3, 1)", [
+      owner.workbenchId,
+      owner.extensionId,
+      await healthy.exportUpdate(),
     ]);
 
     await exportDatabaseAsJson(db, directory);
 
     expect(await Bun.file(join(directory, "errors.txt")).text()).toStartWith(
-      "extension-records/project-1/broken.jsonl: ",
+      "extension-records/project-1/pstdio.pstdio-planner.jsonl (document a-damaged): ",
     );
+    const records = await lines(join(directory, "extension-records", "project-1", "pstdio.pstdio-planner.jsonl"));
+    expect(records.map(({ recordId, value }) => ({ recordId, value }))).toEqual([
+      { recordId: "ticket-1", value: { title: "Kept" } },
+    ]);
     expect(await lines(join(directory, "tables", "public.projects.jsonl"))).toEqual([{ id: "project-1" }]);
   } finally {
     await db.close();

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
+import { changeTicketFiles, ticketsCollection } from "../data/collections";
 import { ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
 import { parseTicketFrontmatter, stripFrontmatter } from "../data/frontmatter";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
@@ -180,8 +180,8 @@ describe("draft workflow", () => {
       ...makeCommandArgs({ storage, params: { title: "Seeded" }, overrides: { projectFiles } }),
     );
     const [stored] = await ticketsCollection(storage).list();
-    await ticketsCollection(storage).put(stored.id, {
-      ...stored,
+    await changeTicketFiles(storage, stored.id, async (ticket) => ({
+      ...ticket,
       files: [
         {
           id: "f1",
@@ -191,7 +191,7 @@ describe("draft workflow", () => {
           updatedAt: "x",
         },
       ],
-    });
+    }));
 
     // Clear the working tree so pull has to recreate everything.
     projectFiles.files.clear();
@@ -227,10 +227,10 @@ describe("draft workflow", () => {
       ...makeCommandArgs({ storage, params: { title: "Seeded" }, overrides: { projectFiles } }),
     );
     const [stored] = await ticketsCollection(storage).list();
-    await ticketsCollection(storage).put(stored.id, {
-      ...stored,
+    await changeTicketFiles(storage, stored.id, async (ticket) => ({
+      ...ticket,
       files: [{ id: "f1", name: "only-storage.md", blobId: "unused", createdAt: "x", updatedAt: "x" }],
-    });
+    }));
     await projectFiles.writeText(`${ticketFilesDir(shorthand)}/only-local.md`, "y");
 
     const rows = await listTicketFilesCommand.run(
