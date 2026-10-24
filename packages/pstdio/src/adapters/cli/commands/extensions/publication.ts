@@ -1,3 +1,4 @@
+import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { createRequest } from "@pstdio/sdk/client";
 import type { Arguments, Argv } from "yargs";
 import { apiClient } from "@/features/api-client";
@@ -27,6 +28,12 @@ interface Args {
   revision?: string;
 }
 
+// Older disabled copies can share an extension ID. The enabled copy is the code this device runs.
+export const findPublicationSource = (extensions: ProjectExtensionInstance[], name: string) => {
+  const matches = extensions.filter((extension) => extension.installName === name || extension.extensionId === name);
+  return matches.find((extension) => extension.enabled) ?? matches[0];
+};
+
 export const handler = async (argv: Arguments<Args>) => {
   const { projectId } = resolveProjectId(process.cwd(), argv["project-id"]);
   const request = createRequest({ baseUrl: resolveApiUrl(), token: process.env.PSTDIO_API_TOKEN });
@@ -38,9 +45,7 @@ export const handler = async (argv: Arguments<Args>) => {
   }
   if (!argv.name) throw new Error("Choose an extension name or published extension ID.");
   const { extensions } = await apiClient().extensions.listProject(projectId);
-  const source = extensions.find(
-    (extension) => extension.installName === argv.name || extension.extensionId === argv.name,
-  );
+  const source = findPublicationSource(extensions, argv.name);
   const extensionId = source?.extensionId ?? argv.name;
   const record = records.find((record) => record.recordId === extensionId);
   if (!record) throw new Error("Extension is not installed or published in this workbench.");

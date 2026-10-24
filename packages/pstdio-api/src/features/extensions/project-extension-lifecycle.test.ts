@@ -1,6 +1,13 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
+import { loadExtensionSource } from "./extension-runtime";
 import { createProjectExtensionLifecycle } from "./project-extension-lifecycle";
+import { openPublishedCatalog, publishExtension } from "./publication/catalog";
+import { createTestExtensionSource } from "./test-utils/create-test-extension-source";
 
 const installedSource = {
   id: "source-1",
@@ -222,5 +229,69 @@ describe("project extension lifecycle", () => {
     await expect(
       lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true }),
     ).resolves.toBe("removed");
+  });
+});
+
+describe("published extension lifecycle", () => {
+  let app: Awaited<ReturnType<typeof createTestApp>>;
+  let root: string;
+  beforeAll(async () => {
+    root = await mkdtemp(join(tmpdir(), "published-lifecycle-"));
+    app = await createTestApp();
+  });
+  afterAll(async () => {
+    await app.close();
+    await rm(root, { recursive: true, force: true });
+  });
+
+  const install = async (projectId: string, installName: string, name: string, extensionTs?: string) => {
+    const sourcePath = createTestExtensionSource({ root, installName, name, displayName: name });
+    if (extensionTs) await writeFile(join(sourcePath, "extension.ts"), extensionTs);
+    const loaded = await loadExtensionSource(sourcePath);
+    const { instance } = await app.deps.extensionService.enableInstalledSourceForProject({
+      projectId,
+      sourcePath,
+      extensionId: loaded.metadata.id,
+      installName,
+      name,
+      displayName: name,
+      manifest: loaded.manifest,
+    });
+    return instance.id;
+  };
+  const publish = async (projectId: string, instanceId: string, extensionId: string) =>
+    publishExtension(app.deps, {
+      projectId,
+      instanceId,
+      expectedRevision: (await (await openPublishedCatalog(app.deps, projectId)).read(extensionId)).revision,
+    });
+  const selection = async (projectId: string, extensionId: string) =>
+    (await openPublishedCatalog(app.deps, projectId)).records.read(extensionId);
+
+  test("an enable this device refuses is not shared", async () => {
+    const project = await app.deps.projectService.create({ name: "Refused enable" });
+    const lifecycle = createProjectExtensionLifecycle(app.deps);
+    const prefixed =
+      'export default { resourceKinds: [{ id: "item", ref: { kind: "resource-kind", id: "item" }, prefix: "XX" }] };';
+    const published = await install(project.id, "prefix-published", "prefix-published", prefixed);
+    await lifecycle.setEnabled(project.id, published, false);
+    await publish(project.id, published, "test.prefix-published");
+    await install(project.id, "prefix-local", "prefix-local", prefixed);
+
+    await expect(lifecycle.setEnabled(project.id, published, true)).rejects.toThrow("prefix");
+    expect((await selection(project.id, "test.prefix-published")).value).toMatchObject({ enabled: false });
+  });
+
+  test("uninstalling a leftover copy keeps the published extension on every device", async () => {
+    const project = await app.deps.projectService.create({ name: "Leftover copy" });
+    const lifecycle = createProjectExtensionLifecycle(app.deps);
+    const leftover = await install(project.id, "copy-old", "copy");
+    const active = await install(project.id, "copy-new", "copy");
+    await publish(project.id, active, "test.copy");
+
+    await lifecycle.uninstall({ projectId: project.id, instanceId: leftover, deleteUserData: true });
+    expect((await selection(project.id, "test.copy")).deleted).toBe(false);
+    await lifecycle.uninstall({ projectId: project.id, instanceId: active, deleteUserData: true });
+    expect((await selection(project.id, "test.copy")).deleted).toBe(true);
   });
 });

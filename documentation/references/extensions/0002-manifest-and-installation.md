@@ -376,8 +376,12 @@ pst extensions publication enable <extension-id> --project-id <project-id>
 
 Adoption preserves the instance, storage owner and settings. The previous source folder
 stays available. Rollback changes the selected code; it does not undo data migrations.
-All published extensions share their enabled state. Uninstalling a published extension
-removes it from the set on every device. Automation scheduling still follows its device
+Rollback, enable and disable first apply the changed set on this device. A change this
+device cannot apply is not shared. Rollback also repairs a selection whose package cannot
+be read. All published extensions share their enabled state; a local enable is shared only
+after this device accepts it. Uninstalling a published extension removes it from the set
+on every device. Uninstalling an older copy that this device does not run keeps it in the
+set. When several copies share an extension ID, `publish` uses the enabled copy. Automation scheduling still follows its device
 assignment; publication does not move execution to another device.
 
 Agents and clients use the same API: `GET` and `POST

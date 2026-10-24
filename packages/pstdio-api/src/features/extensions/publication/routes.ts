@@ -80,7 +80,7 @@ export const publicationRoutes = (deps: ExtensionsRouteDeps) => {
       if (input.kind === "publish") return c.json(await publishExtension(deps, { ...input, projectId }), 200);
       if (input.kind === "adopt")
         return c.json(await adoptPublishedExtension(deps, projectId, input.extensionId, c.req.raw.signal), 200);
-      return c.json(await changePublishedCatalog(deps, projectId, input), 200);
+      return c.json(await changePublishedCatalog(deps, projectId, input, c.req.raw.signal), 200);
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : "Publication failed" }, 409);
     }
