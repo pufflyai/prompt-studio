@@ -15,8 +15,7 @@ const waitFor = async (condition: () => Promise<boolean> | boolean) => {
 };
 export const registerDocumentSyncSmokeTests = () =>
   test(
-    // Record content stays on the device until per-record sync exists (ADR 0100); the owner document still syncs.
-    "compiled host uploads encrypted shared documents, keeps records local and sets aside unreadable updates",
+    "compiled host uploads encrypted states and blobs and sets aside unreadable updates",
     async () => {
       const root = await mkdtemp(join(tmpdir(), "packaged-document-sync-"));
       const key = join(root, "peer-key.pem");
@@ -95,23 +94,24 @@ export const registerDocumentSyncSmokeTests = () =>
             edits: [{ recordId: note.recordId, replace: `packaged-secret${"x".repeat(1_048_576)}`, asset }],
           },
         });
-        // Resource numbers still sync as a shared document; allocating one gives the relay encrypted content.
-        await command("allocate");
         const syncState = async () => (await client.account.projectSyncStatus(project.id)).state;
         expect(await syncState()).toBe("local");
         await client.account.syncProject(project.id);
-        await waitFor(() =>
-          [...peer.documents.values()].some((document) => document.updates.length || document.payload),
-        );
+        await waitFor(() => peer.states() > 0);
         await waitFor(async () => (await syncState()) === "synced");
         expect(await client.account.projectSyncStatus(project.id)).toEqual({ state: "synced", offlineReady: true });
         peer.corrupt();
         const quarantine = join(root, "state", "sync-quarantine");
         await waitFor(async () => (await readdir(quarantine).catch(() => [])).some((file) => file.endsWith(".json")));
         await waitFor(async () => (await syncState()) === "needs-attention");
-        // Healthy uploads continue after an unreadable update; only the new allocation can add one now.
+        // Healthy record uploads continue after an unreadable update.
         const before = new Map([...peer.documents].map(([id, document]) => [id, document.updates.length]));
-        await command("allocate");
+        await command("commit", {
+          group: {
+            operationId: "healthy-after-corrupt",
+            edits: [{ recordId: note.recordId, replace: "healthy after corrupt update" }],
+          },
+        });
         await waitFor(() =>
           [...peer.documents].some(([id, document]) => document.updates.length > (before.get(id) ?? 0)),
         );
@@ -119,14 +119,14 @@ export const registerDocumentSyncSmokeTests = () =>
         const saved = await Bun.file(join(quarantine, files[0]!)).text();
         expect(saved).toContain("invalidciphertext000000");
         expect(saved).not.toContain("packaged-secret");
+        // Record text, including the 1 MB value, never reaches the relay readable: not in updates,
+        // latest states or the blobs that hold latest-state chunks and files.
         const payloads = [...peer.documents.values()].flatMap((document) => [
-          ...(document.payload ? [document.payload] : []),
-          ...document.updates.map((update) => String(update.payload)),
+          ...(document.payload ? [Buffer.from(document.payload, "base64")] : []),
+          ...document.updates.map((update) => Buffer.from(String(update.payload), "base64")),
         ]);
-        for (const payload of payloads) {
-          expect(payload).not.toContain("packaged-secret");
-          expect(Buffer.from(payload, "base64").toString("latin1")).not.toContain("packaged-secret");
-        }
+        for (const bytes of [...payloads, ...peer.blobContents()])
+          expect(Buffer.from(bytes).toString("latin1")).not.toContain("packaged-secret");
       } finally {
         await stopProcess(host.child);
         await peer.stop();

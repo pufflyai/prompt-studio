@@ -21,7 +21,7 @@ export const createPackagedSyncPeer = (
   hostname = "127.0.0.1",
 ) => {
   const projects = new Set<string>();
-  const blobs = new Map<string, { parts: Set<number>; complete: boolean }>();
+  const blobs = new Map<string, { parts: Map<number, Uint8Array>; complete: boolean }>();
   const documents = new Map<
     string,
     { state: Record<string, unknown> | null; payload?: string; updates: Record<string, unknown>[] }
@@ -107,7 +107,7 @@ export const createPackagedSyncPeer = (
     let blob = blobs.get(id);
     if (path.endsWith("/begin")) {
       await validateLeafBegin(request);
-      blob ??= { parts: new Set(), complete: false };
+      blob ??= { parts: new Map(), complete: false };
       blobs.set(id, blob);
       return json({ partSize: 1_048_576, completed: blob.complete, parts: [] });
     }
@@ -116,9 +116,13 @@ export const createPackagedSyncPeer = (
       return json({ ok: true });
     }
     if (parts[6] === "parts") {
-      await request.arrayBuffer();
-      blob!.parts.add(Number(parts[7]));
+      blob!.parts.set(Number(parts[7]), new Uint8Array(await request.arrayBuffer()));
       return json({ ok: true });
+    }
+    if (path.endsWith("/read")) {
+      if (!blob?.complete) return new Response(null, { status: 404 });
+      const ordered = [...blob.parts].sort(([a], [b]) => a - b).map(([, bytes]) => bytes);
+      return new Response(Buffer.concat(ordered));
     }
     return new Response(null, { status: 404 });
   };
@@ -211,6 +215,10 @@ export const createPackagedSyncPeer = (
       return server.url.origin;
     },
     documents,
+    blobContents: () =>
+      [...blobs.values()].map((blob) =>
+        Buffer.concat([...blob.parts].sort(([a], [b]) => a - b).map(([, bytes]) => bytes)),
+      ),
     states: () => storedStates,
     reads: () => completedReads,
     announceUnchanged() {
