@@ -56,13 +56,3 @@ test("a remote renumber never moves the other ticket's checkout at the shared ol
   expect(await projectFiles.exists(ticketMarkdownPath("T-1"))).toBe(true);
   expect(await projectFiles.exists(ticketMarkdownPath("T-2"))).toBe(false);
 });
-
-test("core renumbering moves a checkout written before checkouts stored the ticket ID", async () => {
-  const { ctx, projectFiles, ticket, event } = await setup();
-  const original = await projectFiles.readText(ticketMarkdownPath("T-1"));
-  await projectFiles.writeText(ticketMarkdownPath("T-1"), original.replace(/^resource_id:.*\n/m, ""));
-  ctx.resources.identity = async () => ({ id: ticket.id, kind: "ticket", shorthand: "T-2", aliases: ["T-1"] });
-  await ticketRenumberedHook.run({ ...ctx, eventId: "event", deliveryId: "delivery" }, event);
-  expect(await projectFiles.exists(ticketMarkdownPath("T-1"))).toBe(false);
-  expect(await projectFiles.readText(ticketMarkdownPath("T-2"))).toContain('ticket_id: "T-2"');
-});

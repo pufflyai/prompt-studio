@@ -4,7 +4,6 @@ import { migratePlannerStorage } from "../data/migrate-storage";
 import { runTicketsQuery } from "../data/query";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { loadLatestWorkspaceSessions } from "../data/workspace-sessions";
-import { resolveWorkspaceTicketAnchors } from "../data/workspace-ticket-link";
 
 export const queryTickets = async (
   ctx: Pick<
@@ -14,7 +13,7 @@ export const queryTickets = async (
   input: { filter?: ViewFilterGroup },
 ) => {
   await migratePlannerStorage(ctx);
-  const workspaces = await resolveWorkspaceTicketAnchors(ctx, await ctx.workspaces.list());
+  const workspaces = await ctx.workspaces.list();
 
   return runTicketsQuery({
     storage: ctx.storage,

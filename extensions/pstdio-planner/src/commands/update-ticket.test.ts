@@ -140,7 +140,7 @@ describe("updateTicket server-side resolution", () => {
         priority: "high",
       }),
     ]);
-    expect(resolutions).toContainEqual({ dedupeKey: `pstdio-planner:ticket:${ticket.id}:blocked`, status: "done" });
+    expect(resolutions).toEqual([{ dedupeKey: `pstdio-planner:ticket:${ticket.id}:blocked`, status: "done" }]);
   });
 
   test("a blocked notification closes after the ticket is renumbered", async () => {
@@ -164,8 +164,6 @@ describe("updateTicket server-side resolution", () => {
       },
     });
     const ticket = await createTicketCommand.run(ctx, { title: "Blocked" });
-    // Older Planner builds keyed notifications by the ticket number.
-    open.add(`pstdio-planner:ticket:${ticket.shorthand}:blocked`);
 
     await updateTicketCommand.run(ctx, { id: ticket.id, blockedReason: "need credentials" });
     ctx.resources.identity = async ({ id }) => ({ id, kind: "ticket", shorthand: "T-9", aliases: [ticket.shorthand] });

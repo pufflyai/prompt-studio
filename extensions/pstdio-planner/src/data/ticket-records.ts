@@ -4,7 +4,7 @@ import type { StoredTicket } from "./types";
 export const TICKETS_COLLECTION = "tickets";
 export const ticketRecords = (storage: ExtensionStorageApi) => storage.collection<StoredTicket>(TICKETS_COLLECTION);
 
-// Presentation fields can arrive from a query or an older record. Core owns them.
+// Reads add the number fields from core, so saves drop them. Core owns them.
 export const ticketRecord = (ticket: StoredTicket) => {
   const {
     shorthand: _shorthand,

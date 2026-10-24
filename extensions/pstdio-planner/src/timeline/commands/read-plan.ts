@@ -15,7 +15,6 @@ import { readTicketTags } from "../../data/tag-operations";
 import { timelineBoard } from "../../data/ticket-board";
 import { ticketActivationTarget } from "../../data/ticket-page-target";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
-import { resolveWorkspaceTicketAnchors } from "../../data/workspace-ticket-link";
 import { sortedBySortOrder } from "../../utils/sort";
 import { buildPlan } from "../model/build-plan";
 import { resolvePlan } from "../model/resolve-plan";
@@ -64,7 +63,7 @@ export const readPlanCommand = defineCommand({
     const toRow = createTicketRowMapper(
       ctx.projectId,
       tags,
-      createTicketWorkspaceLookup(await resolveWorkspaceTicketAnchors(ctx, workspaces)),
+      createTicketWorkspaceLookup(workspaces),
       createTicketParentLookup(tickets),
     );
     const ticketRows = active.map((ticket) => {

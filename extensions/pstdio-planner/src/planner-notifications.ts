@@ -9,12 +9,12 @@ interface PlannerContext {
   projectId: string;
 }
 
-interface NotifyResolveContext {
-  notify: { resolve?: (input: { dedupeKey: string; status: "done" }) => Promise<unknown> };
+interface NotifyActionContext extends PlannerContext {
+  notify: { action?: (input: PlannerNotificationInput) => Promise<unknown> };
 }
 
-interface NotifyActionContext extends PlannerContext, NotifyResolveContext {
-  notify: NotifyResolveContext["notify"] & { action?: (input: PlannerNotificationInput) => Promise<unknown> };
+interface NotifyResolveContext {
+  notify: { resolve?: (input: { dedupeKey: string; status: "done" }) => Promise<unknown> };
 }
 
 const notifyAction = (ctx: NotifyActionContext, input: PlannerNotificationInput) => {
@@ -27,17 +27,6 @@ const notifyResolve = (ctx: NotifyResolveContext, input: { dedupeKey: string; st
 // Ticket numbers can change after an offline merge, so keys use the stable ticket ID.
 const ticketNotificationDedupeKey = (ticket: Ticket, reason: string) => `pstdio-planner:ticket:${ticket.id}:${reason}`;
 
-// Older Planner builds keyed notifications by the ticket number. Closing that key
-// clears a notification opened before the upgrade instead of leaving a duplicate.
-// Aliases are skipped because another ticket on this device can use the same number.
-const closeNumberKeyedNotification = (ctx: NotifyResolveContext, ticket: Ticket, reason: string) =>
-  notifyResolve(ctx, { dedupeKey: `pstdio-planner:ticket:${ticket.shorthand}:${reason}`, status: "done" });
-
-const resolveTicketNotification = async (ctx: NotifyResolveContext, ticket: Ticket, reason: string) => {
-  await closeNumberKeyedNotification(ctx, ticket, reason);
-  await notifyResolve(ctx, { dedupeKey: ticketNotificationDedupeKey(ticket, reason), status: "done" });
-};
-
 export const ticketAnchor = (ctx: PlannerContext, ticket: Ticket) =>
   ({
     type: "ticket",
@@ -49,8 +38,7 @@ export const ticketAnchor = (ctx: PlannerContext, ticket: Ticket) =>
     shorthand: ticket.shorthand,
   }) satisfies ResourceAnchor;
 
-export const notifyProposalRefined = async (ctx: NotifyActionContext, ticket: Ticket) => {
-  await closeNumberKeyedNotification(ctx, ticket, "proposal-refined");
+export const notifyProposalRefined = (ctx: NotifyActionContext, ticket: Ticket) => {
   const target = ticketAnchor(ctx, ticket);
   const ticketPage = { ...ticketPageRef, extensionId: ctx.extensionId };
   return notifyAction(ctx, {
@@ -80,8 +68,7 @@ export const notifyProposalRefined = async (ctx: NotifyActionContext, ticket: Ti
   });
 };
 
-export const notifyBlocked = async (ctx: NotifyActionContext, ticket: Ticket, sessionId?: string) => {
-  await closeNumberKeyedNotification(ctx, ticket, "blocked");
+export const notifyBlocked = (ctx: NotifyActionContext, ticket: Ticket, sessionId?: string) => {
   const target = ticketAnchor(ctx, ticket);
   const ticketPage = { ...ticketPageRef, extensionId: ctx.extensionId };
   const related = sessionId
@@ -119,7 +106,7 @@ export const notifyBlocked = async (ctx: NotifyActionContext, ticket: Ticket, se
 };
 
 export const resolveProposalRefinedNotification = (ctx: NotifyResolveContext, ticket: Ticket) =>
-  resolveTicketNotification(ctx, ticket, "proposal-refined");
+  notifyResolve(ctx, { dedupeKey: ticketNotificationDedupeKey(ticket, "proposal-refined"), status: "done" });
 
 export const resolveBlockedNotification = (ctx: NotifyResolveContext, ticket: Ticket) =>
-  resolveTicketNotification(ctx, ticket, "blocked");
+  notifyResolve(ctx, { dedupeKey: ticketNotificationDedupeKey(ticket, "blocked"), status: "done" });
