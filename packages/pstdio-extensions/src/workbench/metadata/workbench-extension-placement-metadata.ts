@@ -24,12 +24,39 @@ const tabRecord = (tab: RuntimePlacementTab | undefined, extensionId: string) =>
         refreshEventIds: refreshEventIds(tab.refreshEvents, extensionId),
       }
     : undefined;
+const emptyRecord = (empty: RuntimePageMain["empty"], extensionId: string) => {
+  if (!empty) return undefined;
+  if (!("view" in empty)) return normalizedRef(empty, extensionId);
+  return {
+    ...empty,
+    view: normalizedRef(empty.view, extensionId),
+    breadcrumb: empty.breadcrumb
+      ? {
+          ...empty.breadcrumb,
+          menu: empty.breadcrumb.menu?.map((group) => ({
+            ...group,
+            rows: group.rows.map((row) => ({
+              ...row,
+              action: row.action ? normalizeTarget(row.action, extensionId) : undefined,
+            })),
+          })),
+        }
+      : undefined,
+  };
+};
 const mainRecord = (main: RuntimePageMain, extensionId: string) => {
-  if (main.kind === "panels") return { ...main, empty: normalizedRef(main.empty, extensionId) };
-  return { ...main, view: normalizedRef(main.view, extensionId), tab: tabRecord(main.tab, extensionId) };
+  if (main.kind === "panels") return { ...main, empty: emptyRecord(main.empty, extensionId) };
+  return {
+    ...main,
+    view: normalizedRef(main.view, extensionId),
+    empty: emptyRecord(main.empty, extensionId),
+    tab: tabRecord(main.tab, extensionId),
+  };
 };
 const slotRecord = (slot: RuntimePageSlot, extensionId: string) => ({
   ...slot,
+  addableIn: slot.addableIn ? [...slot.addableIn] : undefined,
+  movableTo: slot.movableTo ? [...slot.movableTo] : undefined,
   item: itemRecord(slot.item, extensionId),
   tab: tabRecord(slot.tab, extensionId),
 });
@@ -43,6 +70,7 @@ export const toPageRecords = (runtime: ExtensionRuntime): WorkbenchExtensionMeta
     path: page.contribution.path,
     document: page.contribution.document,
     params: page.contribution.params,
+    regionSettings: page.contribution.regionSettings,
     mode: normalizedRef(page.contribution.mode, page.extensionId),
     parent: page.contribution.parent ? normalizedRef(page.contribution.parent, page.extensionId) : undefined,
     resource: page.contribution.resource
@@ -60,6 +88,7 @@ export const toPlacementRecords = (runtime: ExtensionRuntime): WorkbenchExtensio
     item: itemRecord(placement.contribution.item, placement.extensionId),
     region: placement.contribution.region,
     order: placement.contribution.order,
+    addableIn: placement.contribution.addableIn ? [...placement.contribution.addableIn] : undefined,
     movableTo: placement.contribution.movableTo ? [...placement.contribution.movableTo] : undefined,
     mountStrategy: placement.contribution.mountStrategy,
     hiddenByDefault: placement.contribution.hiddenByDefault,

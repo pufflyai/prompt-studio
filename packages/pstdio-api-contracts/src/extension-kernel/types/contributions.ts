@@ -93,7 +93,7 @@ export interface ModeRegionSettings {
    * @deprecated For panel visibility use canOpen/canClose. Retained for menu collapse.
    */
   readonly collapsible?: boolean;
-  /** Keep a tab visible when this region has only one visible item. */
+  /** @deprecated Use showHeader. Every visible header shows its tabs. */
   readonly alwaysShowTabs?: boolean;
 }
 

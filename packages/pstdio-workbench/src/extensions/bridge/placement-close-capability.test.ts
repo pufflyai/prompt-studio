@@ -52,7 +52,7 @@ test("close requires a declaration and rejects a caller-supplied placement ident
   expect(workbench.pages.store.getState()).toBe(before);
 });
 
-test("native close and webview close enforce fixed placements and the last resource parent rule", async () => {
+test("webview close keeps the resource page open with empty Main", async () => {
   const { workbench } = setup();
   const home = workbench.pages.getPage("notes")!;
   const resourcePage = { ...home.ref, id: "note" };
@@ -72,7 +72,7 @@ test("native close and webview close enforce fixed placements and the last resou
   const capabilities = createWorkbenchWebviewHostCapabilities({ workbench, placement: calling });
   const gate = createHostCapabilityGate({ capabilities, declaredCapabilities: ["placement.close"] });
   await gate.call({ method: "placement.close" });
-  expect(workbench.pages.store.getState().location?.page).toEqual(home.ref);
-  const fixed = workbench.layout.getLayout().regions.main.widgets[0]!;
-  expect(() => workbench.closePlacement(fixed.placementIdentity!)).toThrow("fixed");
+  expect(workbench.pages.store.getState().location?.page).toEqual(resourcePage);
+  expect(workbench.pages.store.getState().location?.resource?.id).toBe("one");
+  expect(workbench.layout.listPanelInstances("main")).toEqual([]);
 });

@@ -66,7 +66,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: Dash
   ctx.views.registerView(
     {
       id: dashboardWidgetIds.sessionBubble,
-      title: "Session",
+      title: "New session",
       icon: "MessageCircle",
       body: {
         kind: "react",
@@ -112,7 +112,10 @@ const openNewSessionDraft = (
   }
   // Requests from the Side Panel stay in the panel; other entry points follow the open Sessions page.
   const pageId = ctx.pages.store.getState().activePageId;
-  if (!input.sidePanel && (pageId === workbenchPages.sessions.id || pageId === workbenchPages.session.id)) {
+  if (
+    !input.sidePanel &&
+    [workbenchPages.sessions.id, workbenchPages.session.id, workbenchPages.newSession.id].some((id) => id === pageId)
+  ) {
     return openSessionsPage(ctx, draftResource);
   }
   return openSessionBubbleWidgets(ctx, {
@@ -183,7 +186,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
         await openNewSessionDraft(ctx, {
           workspace,
           replacePanel: isNewTab ? undefined : replacePanel,
-          sidePanel: sidePanel || isNewTab,
+          sidePanel: sidePanel || (isNewTab && context?.region !== "main"),
           tabRetention: isNewTab ? "persistent" : undefined,
           region: context?.region,
         });

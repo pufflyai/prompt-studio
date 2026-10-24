@@ -145,7 +145,7 @@ export const ReturnToProject: Story = {
     await userEvent.click(await canvas.findByRole("button", { name: "Open ticket" }));
     await userEvent.click(await canvas.findByRole("button", { name: "Finish navigation read" }));
     await canvas.findByRole("option", { name: "notes.md" });
-    await userEvent.click(canvas.getByRole("button", { name: "Project" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Back to project" }));
     await canvas.findByRole("button", { name: "Open ticket" });
     for (const [index, label] of labels.entries()) {
       const row = canvas.getByRole("option", { name: label });

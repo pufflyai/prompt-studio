@@ -36,13 +36,9 @@ export const openPanelWidget = async (input: OpenPanelWidgetInput) => {
       });
     });
   } else {
-    const widgetResource = widget.resourceKinds?.length || widget.canOpen ? resource : undefined;
     // Adding a tab from the region's "+" tray is the user asking for a tab that stays.
-    // The resource only binds the tab to its location; the tab is the widget, so it
-    // keeps the widget's title instead of inheriting the location resource's label.
     workbench.layout.openWidget(widget.id, {
       region,
-      resource: widgetResource,
       title: widget.title,
       closable: true,
       pinned,

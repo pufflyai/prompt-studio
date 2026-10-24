@@ -32,6 +32,11 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     }, project.id);
     await page.goto(`${baseUrl}/projects/${project.id}/sessions`);
     phase("dashboard opened");
+    await page
+      .locator('[data-workbench-panel="main"]')
+      .getByRole("group", { name: "Available tabs" })
+      .getByRole("button", { name: "New session", exact: true })
+      .click();
     const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
     const send = page.getByTestId("send-message-button").filter({ visible: true }).last();
     let release!: () => void;

@@ -24,6 +24,7 @@ export default defineConfig({
   testDir: "./src/packaged",
   testMatch: [
     "packaged-empty-panels.spec.ts",
+    "packaged-session-tools.spec.ts",
     "packaged-paged-collections.spec.ts",
     "packaged-editing-sessions.spec.ts",
     "packaged-extension-startup.spec.ts",

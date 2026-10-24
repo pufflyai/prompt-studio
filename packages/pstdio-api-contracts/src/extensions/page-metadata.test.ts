@@ -18,6 +18,8 @@ const page = (main: object) => ({
 
 test.each([
   { kind: "view", view, cardinality: "many" },
+  { kind: "view", view, cardinality: "one", empty: view },
+  { kind: "panels" },
   { kind: "panels", empty: view },
 ])("preserves routed resource context with Main presentation %j", (main) => {
   const parsed = workbenchExtensionPageRecordSchema.parse(page(main));
@@ -28,7 +30,6 @@ test.each([
 test.each([
   [{ kind: "view", cardinality: "one" }, "view"],
   [{ kind: "view", view, cardinality: "several" }, "cardinality"],
-  [{ kind: "panels" }, "empty"],
 ])("reports missing or invalid Main content %j", (main, field) => {
   const result = workbenchExtensionPageRecordSchema.safeParse(page(main));
   expect(result.success).toBe(false);
@@ -41,4 +42,16 @@ test("preserves the selected document declaration in page metadata", () => {
   expect(workbenchExtensionPageRecordSchema.safeParse({ ...record, document: { metadataKey: " " } }).success).toBe(
     false,
   );
+});
+
+test("preserves a page slot's legacy Add regions", () => {
+  const slot = { id: "library", region: "main", movableTo: ["main"], item: { kind: "view", view, presence: "open" } };
+  const record = { ...page({ kind: "panels" }), slots: [slot] };
+  expect(workbenchExtensionPageRecordSchema.parse(record).slots[0]?.movableTo).toEqual(["main"]);
+});
+
+test("preserves the regions where a page slot is offered by Add", () => {
+  const slot = { id: "library", region: "main", addableIn: ["main"], item: { kind: "view", view, presence: "open" } };
+  const record = { ...page({ kind: "panels" }), slots: [slot] };
+  expect(workbenchExtensionPageRecordSchema.parse(record).slots[0]?.addableIn).toEqual(["main"]);
 });

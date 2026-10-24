@@ -15,9 +15,9 @@ export type WorkbenchExtensionTabMetadata = NonNullable<MetadataPlacement["tab"]
 };
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
-const navigationAction = (value: unknown, extensionId: string, projectId: string) =>
+const navigationAction = (value: unknown, extensionId: string, projectId?: string) =>
   isNavigationTarget(value) ? toWorkbenchNavigationTarget(value, { extensionId, projectId }) : undefined;
-const toRows = (value: unknown, extensionId: string, projectId: string) =>
+const toRows = (value: unknown, extensionId: string, projectId?: string) =>
   Array.isArray(value)
     ? value.flatMap((row) => {
         if (!isRecord(row) || typeof row.id !== "string") return [];
@@ -35,7 +35,11 @@ const toRows = (value: unknown, extensionId: string, projectId: string) =>
         ];
       })
     : [];
-const toSnapshot = (value: unknown, extensionId: string, projectId: string): WorkbenchTabSnapshot => {
+export const toWorkbenchPresentationSnapshot = (
+  value: unknown,
+  extensionId: string,
+  projectId?: string,
+): WorkbenchTabSnapshot => {
   if (!isRecord(value)) return {};
   const indicator = isRecord(value.indicator)
     ? {
@@ -98,7 +102,10 @@ export const createWorkbenchExtensionTabPresentation = (
           await load(instance);
           return;
         }
-        snapshots.set(instance.instanceId, toSnapshot(value, metadata.extensionId, input.projectId));
+        snapshots.set(
+          instance.instanceId,
+          toWorkbenchPresentationSnapshot(value, metadata.extensionId, input.projectId),
+        );
         for (const listener of listeners) listener();
       })
       .finally(() => {

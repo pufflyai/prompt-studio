@@ -117,19 +117,29 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     const stateKey = pageStateKey(page, target.location, input.resources);
     const currentPageState =
       pageStates[stateKey] ?? input.restorePageState?.(page, target.location, target.projectId) ?? emptyPageState(page);
-    const primaryState = selectPrimaryTarget({ page, state: currentPageState, target: normalizedTarget, resourceKey });
+    const primaryState = target.pageStates
+      ? currentPageState
+      : selectPrimaryTarget({ page, state: currentPageState, target: normalizedTarget, resourceKey });
     const openFollowers =
       !target.pageStates ||
       current.activePageId !== page.id ||
       pageResourceContextKey(page, current.location?.resource) !==
         pageResourceContextKey(page, normalizedTarget.resource) ||
-      current.pageStates[stateKey]?.activePrimaryInstanceKey !== primaryState.activePrimaryInstanceKey;
+      (primaryState.activePrimaryInstanceKey !== undefined &&
+        current.pageStates[stateKey]?.activePrimaryInstanceKey !== primaryState.activePrimaryInstanceKey);
     const pageState = openFollowers
       ? openPageResourceBindings({ page, state: primaryState, target: normalizedTarget, resourceKey })
       : primaryState;
     const primary = primarySlot(page);
     const instanceKey = pageState.activePrimaryInstanceKey;
     const followers = openFollowers ? pageFollowerIdentities(page, normalizedTarget.resource, resourceKey) : [];
+    const main = page.main;
+    const landing =
+      main.kind === "panels" && !target.pageStates
+        ? page.slots.find(
+            (slot) => slot.id === main.landing && (!slot.isAvailable || slot.isAvailable(normalizedTarget.resource)),
+          )
+        : undefined;
     return compose(
       current,
       {
@@ -140,6 +150,15 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
         activeModeId: page.modeId,
         activate: [
           ...(primary && instanceKey ? [pagePlacementIdentity(page.id, primary.id, instanceKey)] : []),
+          ...(landing
+            ? [
+                pagePlacementIdentity(
+                  page.id,
+                  landing.id,
+                  staticPageInstanceKey(page, normalizedTarget.resource, input.resources),
+                ),
+              ]
+            : []),
           ...followers,
         ],
         action: target.action,
@@ -156,7 +175,6 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     const page = requirePage(current, target.pageId);
     const resourceKey = (resource: ResourceRef) => pageResourceInstanceKey(page, resource, input.resources);
     const slot = requirePageSlot(page, target.slotId);
-    if (slot.role !== "auxiliary") throw new Error(`Page slot is not an auxiliary panel: ${page.id}.${slot.id}`);
     const stateKey = pageStateKey(page, current.location, input.resources);
     let pageState = current.pageStates[stateKey] ?? emptyPageState(page);
     let instanceKey = staticPageInstanceKey(page, current.location?.resource, input.resources);
@@ -172,7 +190,7 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     } else {
       if (slot.item.kind === "binding") throw new Error(`Page slot "${slot.id}" requires a resource`);
       if (target.open) throw new Error(`Page slot "${slot.id}" accepts open intent only with a resource`);
-      if (slot.item.presence !== "fixed") pageState = setStaticSlotOpen(pageState, slot.id, true);
+      pageState = setStaticSlotOpen(pageState, slot.id, true);
     }
     return compose(
       current,

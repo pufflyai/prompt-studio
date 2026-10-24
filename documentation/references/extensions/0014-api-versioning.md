@@ -25,7 +25,7 @@ The host decides what loads. It compares its own extension API version with `eng
 | 0.43.1 | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
 | 0.44.0 | 0.2.0 | A breaking step. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
 | 0.45.0 | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
-| `main` | 0.2.2 | Adds account feature grants, full project-scoped `ctx.sessions` operations, indexed record queries and batches, optional paged collection views, device performance capture and Developer settings contributions, and always allows Kanban dragging. Existing `^0.2.0` ranges still load. |
+| `main` | 0.2.2 | Adds account feature grants, full project-scoped `ctx.sessions` operations, indexed record queries and batches, optional paged collection views, device performance capture and Developer settings contributions, page header defaults, optional empty views, collection landing slots, and closable fixed tabs. Kanban dragging is always allowed. Existing `^0.2.0` ranges still load. |
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
@@ -221,7 +221,13 @@ API 0.2 moves `ctx.extensionFiles` from `.pstdio/ext/<publisher>.<name>/` to `.p
 
 API 0.2.1 also adds optional `HarnessProvider.releaseSession(ctx, { sessionId })` for host-managed idle-resource cleanup. The host retains open tabs, active work, and sessions used within 30 minutes. Return `true` after releasing idle resources and `false` while native work or delivery remains uncertain. Preserve history and recreate resources on the next call. Existing providers keep working. Publish the SDK and host before separately released harnesses adopt it.
 
-`ModeRegionSettings` adds optional `canOpen`, `canClose`, `acceptsTabs`, `movable`, `resizable` and Side `floatable` permissions. `floatingPanels` and panel `collapsible` are deprecated, with their old behavior retained. Published extension header and tab behavior stays compatible until the coordinated breaking release. Publish the SDK and host before separately released extensions use these additions.
+`ModeRegionSettings` adds optional `canOpen`, `canClose`, `acceptsTabs`, `movable`, `resizable` and Side `floatable` permissions. `floatingPanels` and panel `collapsible` are deprecated, with their old behavior retained. Deprecated declarations remain accepted until the coordinated breaking release. Publish the SDK and host before separately released extensions use these additions.
+
+## Page tabs and header defaults in API 0.2.2
+
+Pages add optional `regionSettings.<region>.showHeader`, resolved as user, page, then mode. Main view and panel collection pages can omit `main.empty` to use the host placeholder. `PagePlaceholder` accepts either a view ref or `{ view, breadcrumb }`; the object can define a label and menu for the current breadcrumb while Main is empty. `pagePlaceholderView` resolves the view ref from either form. Existing view refs remain valid. The host adds `workbenchPages.newSession` for a routed session draft tab. A collection can declare a static Main `landing` slot for navigation and recovery. Page slots and mode placements can declare `addableIn` for Add menu and default-placeholder choices. Every tab can move between available tab panels. `movableTo` is deprecated and retained as an Add-scope alias until the coordinated breaking release; it does not restrict movement or saved positions.
+
+Every tab can close, including single-resource Main content. `presence: "fixed"` is deprecated in tab regions and behaves like `"open"`; chrome placements retain their owner lifecycle. `alwaysShowTabs` is deprecated in favor of `showHeader`. The declarations remain accepted until the coordinated breaking release removes them. A successful tab move restores a hidden destination header as a saved user choice. Publish the SDK and host before separately released extensions use the new declarations.
 
 ## Local editing sessions in API 0.2.1
 

@@ -8,6 +8,7 @@ export * from "./environment";
 export * from "./extension-kernel";
 export * from "./extensions";
 export { pageParamDefinitionsSchema, pageParamValueSchema } from "./extensions/page-params-schema";
+export { createPagePlaceholderBreadcrumbSchema } from "./extensions/page-placeholder-schema";
 export * from "./extensions.terminal";
 export * from "./files";
 export * from "./harness";

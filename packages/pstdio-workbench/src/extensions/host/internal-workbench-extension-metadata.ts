@@ -72,6 +72,7 @@ export interface InternalWorkbenchExtensionMetadata {
       item: WorkbenchOwnedPlacementItem;
       region: "main" | "secondary" | "side";
       order?: number;
+      addableIn?: readonly ("main" | "secondary" | "side")[];
       movableTo?: readonly ("main" | "secondary" | "side")[];
     } & WorkbenchPlacementPresentation
   >;

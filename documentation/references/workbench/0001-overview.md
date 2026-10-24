@@ -35,8 +35,8 @@ results inherit the destination from the Add action.
 Hover over a tab or focus it with the keyboard to see its full title in a tooltip.
 The tooltip appears below the tab after 300 ms.
 
-When a panel menu shows an opener in the header, the panel also shows its tab,
-even for a single fixed panel. The tab keeps its existing close behavior.
+Every Main, Side, and Secondary view has a closable tab. The header setting
+controls whether its tray and panel menu openers are visible.
 
 Tabs can be dragged onto panel content, including webviews in panels without a
 tab strip. During a tab drag, the workbench catches pointer events over panels

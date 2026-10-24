@@ -15,6 +15,8 @@ import { verifyTicketCreation } from "./packaged-ticket-creation";
 
 export const registerBoardPanningSmokeTests = () => {
   test("packaged Planner board pans with a mouse and keeps ticket and column actions", async () => {
+    const startedAt = Date.now();
+    const phase = (name: string) => console.log(`Packaged board: ${name} (${Date.now() - startedAt}ms)`);
     const root = mkdtempSync(join(tmpdir(), "packaged-board-panning-"));
     let child: ChildProcess | undefined;
     let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
@@ -23,6 +25,7 @@ export const registerBoardPanningSmokeTests = () => {
         PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner"),
       });
       child = runtime.child;
+      phase("runtime ready");
       const folder = join(root, "project");
       mkdirSync(folder);
       const response = await fetch(`${runtime.baseUrl}/v1/projects`, {
@@ -32,12 +35,14 @@ export const registerBoardPanningSmokeTests = () => {
       });
       expect(response.status).toBe(201);
       const { id } = (await response.json()) as { id: string };
+      phase("project created");
       browser = await chromium.launch(PROVISIONED_CHROMIUM);
       const page = await browser.newPage({
         viewport: { width: 1000, height: 720 },
         extraHTTPHeaders: runtimeAuthorization(runtime.descriptor),
       });
       await signInBrowser(page, runtime.descriptor);
+      phase("browser signed in");
       await createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Pan board ticket" });
       await createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Edge scroll ticket" });
       await createPlannerTicket(page.request, runtime.baseUrl, id, {
@@ -45,10 +50,14 @@ export const registerBoardPanningSmokeTests = () => {
         statusId: "done",
       });
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+      phase("tickets created");
       await page.goto(`${runtime.baseUrl}/projects/${id}/`);
       await page.getByRole("option", { name: "Tickets", exact: true }).click();
+      phase("board opened");
       await verifyBoardPanning(page);
+      phase("panning checked");
       await verifyBoardEdgeScrolling(page);
+      phase("edge scrolling checked");
       const doneCard = page.getByTestId("renderer-card").filter({ hasText: "Completed board ticket" });
       await doneCard.scrollIntoViewIfNeeded();
       await page.getByRole("button", { name: "Column actions for Done", exact: true }).click();
@@ -56,6 +65,7 @@ export const registerBoardPanningSmokeTests = () => {
       await expect(doneCard).toBeHidden();
       await page.getByTestId("board-column-backlog").scrollIntoViewIfNeeded();
       await verifyTicketCreation(page);
+      phase("ticket creation checked");
       await page.getByTestId("renderer-card").filter({ hasText: "Pan board ticket" }).click();
       await expect(page.getByTestId("board-column-backlog")).toBeHidden();
     } finally {

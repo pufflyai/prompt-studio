@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { resolvePagePlacements } from "./page-placement-resolver";
 import type { WorkbenchPageContribution } from "./page-registry-types";
+import { emptyPageState } from "./page-slot-lifecycle";
 
 test("resolves page panels from the current resource capabilities", () => {
   const page: WorkbenchPageContribution = {
@@ -22,7 +23,7 @@ test("resolves page panels from the current resource capabilities", () => {
   for (const supportsDiff of [true, false, true]) {
     const placements = resolvePagePlacements({
       page,
-      state: { openStaticSlotIds: [], resourceInstances: {} },
+      state: emptyPageState(page),
       staticInstanceKey: "default",
       resource: { type: "workspace", id: "workspace", metadata: { supportsDiff } },
       sharedPlacements: [],

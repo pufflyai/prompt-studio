@@ -55,7 +55,7 @@ const createEditor = () => {
 test("renders peer Main panels while the page keeps its routed resource context", () => {
   const { registry, ref, open, edit } = createEditor();
   open("ws-1");
-  expect(registry.store.getState().placements.map((placement) => placement.value.view)).toEqual(["empty"]);
+  expect(registry.store.getState().placements.map((placement) => placement.value.view)).toEqual([]);
   edit("notes.ts");
   expect(registry.store.getState().placements.map((placement) => placement.value.view)).toEqual(["editor"]);
   expect(registry.store.getState().location).toEqual({ page: ref, resource: { type: "workspace", id: "ws-1" } });
@@ -66,7 +66,7 @@ test("scopes Main panel collections to the routed page location", () => {
   open("ws-1");
   edit("notes.ts");
   open("ws-2");
-  expect(registry.store.getState().placements.map((placement) => placement.value.view)).toEqual(["empty"]);
+  expect(registry.store.getState().placements.map((placement) => placement.value.view)).toEqual([]);
   edit("tasks.ts");
   open("ws-1");
   expect(registry.store.getState().placements.map((placement) => placement.value.resource?.id)).toEqual(["notes.ts"]);

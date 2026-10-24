@@ -60,7 +60,7 @@ describe("page placement close lifecycle", () => {
       pageIdentity("tools", "emoji", "default"),
     ]);
   });
-  test("moves the last resource close to its declared parent in one update", () => {
+  test("closing the last resource keeps its page context in one update", () => {
     const registry = createRegistry();
     registerPage(registry, {
       id: "list",
@@ -102,8 +102,9 @@ describe("page placement close lifecycle", () => {
     const unsubscribe = registry.store.subscribe((state) => observed.push(state.activePageId ?? "none"));
     closePlacement(registry, pageIdentity("detail", "$main", "ticket:two"));
     unsubscribe();
-    expect(observed).toEqual(["list"]);
-    expect(registry.store.getState().activePageId).toBe("list");
-    expect(activePagePlacements(registry, "$main")[0]?.value.viewId).toBe("list");
+    expect(observed).toEqual(["detail"]);
+    expect(registry.store.getState().activePageId).toBe("detail");
+    expect(registry.store.getState().location?.resource?.id).toBe("two");
+    expect(activePagePlacements(registry, "$main")).toEqual([]);
   });
 });

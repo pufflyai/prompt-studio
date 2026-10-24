@@ -109,7 +109,8 @@ export const createPageStateRestorer =
     const restoresSavedLocation = workbenchPageLocationsEqual(saved, location, defaultPageResourceCodec, [page]);
     if (
       !layout ||
-      (!restoresSavedLocation &&
+      (!hasPageMain &&
+        !restoresSavedLocation &&
         !Object.values(layout.regions).some((region) =>
           region.widgets.some(
             (placement) =>

@@ -32,7 +32,7 @@ const setup = async (page: Page, request: APIRequestContext, prompts = ["Session
     const draft = header.getByRole("tab", { name: "New session", exact: true });
     if ((await draft.count()) === 0) {
       await header.getByRole("button", { name: "Add panel", exact: true }).click();
-      await page.getByRole("menuitem", { name: "Session", exact: true }).click();
+      await page.getByRole("menuitem", { name: "New session", exact: true }).click();
     }
     await draft.click({ button: "right" });
     await switchSession(page, session.title);

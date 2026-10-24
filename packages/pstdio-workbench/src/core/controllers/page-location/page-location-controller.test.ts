@@ -196,20 +196,22 @@ describe("page location project and owner lifecycle", () => {
     expect(harness.browser.pushes.length + harness.browser.replacements.length).toBe(writes);
     expect(harness.diagnostics[0]).toMatch(/missing.*page/i);
   });
-  test("replaces history when closing the active resource primary to its parent", () => {
+  test("keeps history when closing the final primary tab", () => {
     const harness = createHarness();
     harness.controller.boot("p1");
     harness.controller.navigate(ticketTarget());
     const pushes = harness.browser.pushes.length;
+    const before = harness.registry.store.getState().location;
+    const replacements = harness.browser.replacements.length;
     harness.controller.closePlacement({
       kind: "page",
       pageId: "ticket",
       slotId: "$main",
       instanceKey: "pstdio://ticket/PS-326",
     });
-    expect(harness.registry.store.getState().location).toEqual({ page: ticketsRef, parent: { page: startRef } });
+    expect(harness.registry.store.getState().location).toEqual(before);
     expect(harness.browser.pushes).toHaveLength(pushes);
-    expect(harness.browser.replacements.at(-1)?.url).toBe("/projects/p1/extensions/acme.planner/tickets");
+    expect(harness.browser.replacements).toHaveLength(replacements);
   });
   test("does not write history when closing an inactive pinned primary", () => {
     const harness = createHarness();

@@ -1,5 +1,4 @@
 import { type ChatInputQuestionResponse, HarnessControls } from "@pstdio/ui/chat-ui";
-import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import type {
   DraftHarnessCommandInput,
   HarnessCommandState,
@@ -16,6 +15,7 @@ import {
 import { composerCommandSuggestions } from "../chat/composer-command-suggestions";
 import type { createHarnessConfirmation } from "../chat/harness-confirmation";
 import { handOffNativeCommand, type SubmittedCommand, takeNativeCommand } from "../chat/native-command-handoff";
+import type { SessionViewContext } from "../chat/session-view-context";
 import { useHarnessCommands } from "../hooks/use-harness-commands";
 import { CommandComposerNotices } from "./command-composer-notices";
 import { useHarnessConfirmation } from "./use-harness-confirmation";
@@ -30,7 +30,7 @@ export const useCommandComposer = (
   draft: DraftHarnessCommandInput | undefined,
   createCommand: Parameters<typeof useHarnessCommands>[3],
   onCreated: (sessionId: string, title: string) => void,
-  input: WorkbenchPanelRenderInput,
+  input: SessionViewContext,
 ) => {
   const scope = JSON.stringify([sessionId, selectedAgent, sessionId ? undefined : draft]);
   const currentScope = useRef(scope);

@@ -18,7 +18,6 @@ import {
   placementItemViewId,
   staticPlacementClosable,
   updateResourcePlacementInstance,
-  validateOwnedPlacementItem,
   type WorkbenchOwnedPlacementItem,
 } from "../placements/owned-placement-lifecycle";
 import type { OwnedPlacementLocationContext } from "../placements/owned-placement-preparation";
@@ -37,6 +36,8 @@ import {
 } from "../views/view-placement";
 import type { WorkbenchViewRegistry } from "../views/view-registry";
 
+import { copyPlacement, placementRefKey, validatePlacement } from "./mode-placement-declarations";
+
 export interface WorkbenchModePlacementContribution extends WorkbenchPlacementPresentation {
   readonly id: string;
   readonly ref: PlacementRef;
@@ -44,6 +45,8 @@ export interface WorkbenchModePlacementContribution extends WorkbenchPlacementPr
   readonly item: WorkbenchOwnedPlacementItem;
   readonly region: DockedWorkbenchRegion;
   readonly order?: number;
+  readonly addableIn?: readonly DockedWorkbenchRegion[];
+  /** @deprecated Use addableIn. Tab movement is independent of Add choices. */
   readonly movableTo?: readonly DockedWorkbenchRegion[];
 }
 
@@ -85,38 +88,6 @@ const tabState = (open: PageOpenIntent | undefined) => {
   if (open === "preview") return { pinned: false, tabRetention: "preview" as const };
   return {};
 };
-
-const placementRefKey = (ref: PlacementRef) => JSON.stringify([ref.extensionId, ref.id]);
-
-const validatePlacement = (input: {
-  placement: WorkbenchModePlacementContribution;
-  placements: Map<string, WorkbenchModePlacementContribution>;
-  refs: Map<string, WorkbenchModePlacementContribution>;
-  views: WorkbenchViewRegistry;
-}) => {
-  const { placement, placements, refs, views } = input;
-  if (placements.has(placement.id)) throw new Error(`Mode placement already registered: ${placement.id}`);
-  if (placement.ref.kind !== "placement" || !placement.ref.extensionId || !placement.ref.id) {
-    throw new Error(`Mode placement "${placement.id}" must declare a normalized placement ref`);
-  }
-  const refKey = placementRefKey(placement.ref);
-  if (refs.has(refKey)) throw new Error(`Mode placement ref already registered: ${refKey}`);
-  if (placement.movableTo && !placement.movableTo.includes(placement.region)) {
-    throw new Error(`Mode placement "${placement.id}" must include its initial region in movableTo`);
-  }
-  validateOwnedPlacementItem("Mode placement", placement.id, placement.item);
-  if (!views.getView(placementItemViewId(placement.item))) {
-    throw new Error(`Workbench mode placement view is not registered: ${placementItemViewId(placement.item)}`);
-  }
-  return refKey;
-};
-
-const copyPlacement = (placement: WorkbenchModePlacementContribution) => ({
-  ...placement,
-  ref: { ...placement.ref },
-  item: { ...placement.item },
-  ...(placement.movableTo ? { movableTo: [...placement.movableTo] } : {}),
-});
 
 export const createWorkbenchModePlacementRegistry = (input: {
   views: WorkbenchViewRegistry;
@@ -222,8 +193,6 @@ export const createWorkbenchModePlacementRegistry = (input: {
     open(target, current = state) {
       const placement = placements.get(target.placementId);
       if (!placement) throw new Error(`Unknown mode placement: ${target.placementId}`);
-      if (target.region && placement.movableTo && !placement.movableTo.some((region) => region === target.region))
-        throw new Error(`Mode panel cannot open in ${target.region}: ${placement.id}`);
       return prepareOwnedPlacement({
         label,
         target,

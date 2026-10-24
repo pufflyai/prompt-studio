@@ -7,11 +7,7 @@ import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-me
 import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
 import { PanelHeader } from "../region/panel-header";
 import { WorkbenchRegion } from "../region/region";
-import {
-  useWorkbenchPanelHeaderVisible,
-  useWorkbenchRegionTabsVisible,
-  WorkbenchRegionTabs,
-} from "../region/region-tabs";
+import { useWorkbenchRegionTabsVisible, WorkbenchRegionTabs } from "../region/region-tabs";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
@@ -47,14 +43,11 @@ interface MainHeaderBarProps {
 const MainHeaderBar = (props: MainHeaderBarProps) => {
   const { workbench, hasMainHeader } = props;
   const hasMainContentTabs = useWorkbenchRegionTabsVisible(workbench, "main");
-  const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "main");
 
   return (
     <PanelHeader
       workbench={workbench}
       region="main"
-      hasTabs={hasMainContentTabs}
-      hasContent={hasMainHeader || hasPanelHeader}
       data-workbench-panel-header="main"
       variant="main"
       bg={workbenchBackgrounds.main}

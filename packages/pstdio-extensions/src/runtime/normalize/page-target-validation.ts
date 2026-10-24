@@ -10,6 +10,8 @@ import type { RuntimeNavigationItemRecord, RuntimePageSlot } from "../../types/r
 import type { Accumulator } from "./accumulator";
 import { addPageDiagnostic, normalizedRefId } from "./page-validation";
 
+type NavigationOwner = Pick<RuntimeNavigationItemRecord, "id" | "localId" | "extensionId" | "sourcePath">;
+
 interface Destination {
   bindingKinds: readonly string[];
   cardinality: "one" | "many";
@@ -17,7 +19,7 @@ interface Destination {
 
 const validateResourceInput = (
   runtime: Accumulator,
-  record: RuntimeNavigationItemRecord,
+  record: NavigationOwner,
   input: {
     destination: Destination;
     fieldPath: string;
@@ -73,7 +75,7 @@ const hostPages = new Map(Object.values(workbenchPageDefinitions).map((definitio
 
 const resolvePageDestination = (
   runtime: Accumulator,
-  record: RuntimeNavigationItemRecord,
+  record: NavigationOwner,
   target: NavigationTargetPage,
   fieldPath: string,
 ) => {
@@ -115,7 +117,7 @@ const resolvePageDestination = (
 
 const validatePageTarget = (
   runtime: Accumulator,
-  record: RuntimeNavigationItemRecord,
+  record: NavigationOwner,
   target: NavigationTargetPage,
   fieldPath: string,
   ancestors: Set<NavigationTargetPage>,
@@ -151,7 +153,7 @@ const hostPanels = new Map(
 
 const resolvePlacementDestination = (
   runtime: Accumulator,
-  record: RuntimeNavigationItemRecord,
+  record: NavigationOwner,
   target: NavigationTargetPanel,
   fieldPath: string,
 ) => {
@@ -218,7 +220,7 @@ const resolvePlacementDestination = (
 
 const validatePanelTarget = (
   runtime: Accumulator,
-  record: RuntimeNavigationItemRecord,
+  record: NavigationOwner,
   target: NavigationTargetPanel,
   fieldPath: string,
 ) => {
@@ -233,12 +235,7 @@ const validatePanelTarget = (
   });
 };
 
-const validateTarget = (
-  runtime: Accumulator,
-  record: RuntimeNavigationItemRecord,
-  target: NavigationTarget,
-  fieldPath: string,
-) => {
+const validateTarget = (runtime: Accumulator, record: NavigationOwner, target: NavigationTarget, fieldPath: string) => {
   if (target.kind === "page") validatePageTarget(runtime, record, target, fieldPath, new Set());
   if (target.kind === "panel") validatePanelTarget(runtime, record, target, fieldPath);
   if (target.kind !== "compound") return;
@@ -252,5 +249,20 @@ const validateTarget = (
 export const validatePageNavigationTargets = (runtime: Accumulator) => {
   for (const record of runtime.navigationItems) {
     validateTarget(runtime, record, record.contribution.action, `navigationItems.${record.localId}.action`);
+  }
+  for (const record of runtime.pages) {
+    const empty = record.contribution.main.empty;
+    if (!empty || !("view" in empty)) continue;
+    for (const [groupIndex, group] of (empty.breadcrumb?.menu ?? []).entries()) {
+      for (const [rowIndex, row] of group.rows.entries()) {
+        if (row.action)
+          validateTarget(
+            runtime,
+            record,
+            row.action,
+            `pages.${record.localId}.main.empty.breadcrumb.menu.${groupIndex}.rows.${rowIndex}.action`,
+          );
+      }
+    }
   }
 };

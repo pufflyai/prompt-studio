@@ -59,9 +59,7 @@ test("reload restores an optional view's closure for its document", () => {
   s.w.pageLocations.dispose();
   const restored = fixture(s.saved);
   restored.navigateDocument("a");
-  expect(restored.w.layout.getLayout().regions.main.widgets).toEqual([
-    expect.objectContaining({ placementIdentity: expect.objectContaining({ slotId: "$main" }) }),
-  ]);
+  expect(restored.w.layout.getLayout().regions.main.widgets).toEqual([]);
   restored.navigateDocument("b");
   expect(restored.w.layout.getLayout().regions.main.widgets).toEqual([
     expect.objectContaining({ placementIdentity: expect.objectContaining({ slotId: "inspector" }) }),

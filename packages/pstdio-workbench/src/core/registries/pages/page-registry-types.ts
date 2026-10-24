@@ -2,6 +2,7 @@ import type {
   DockedWorkbenchRegion,
   FileRendererSectionTarget,
   Localizable,
+  PageContribution,
   PageDocumentDeclaration,
   PageLocation,
   PageMain,
@@ -13,8 +14,10 @@ import type {
   PlacementIdentity,
   ResourceConstraint,
   ResourceRef,
+  ViewRef,
 } from "@pstdio/sdk/extensions";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
+import type { WorkbenchTabSnapshot } from "../layout/layout-types";
 import type { OwnedPlacementReconciliation, ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import type { WorkbenchPlacementPresentation } from "../views/view-placement";
 
@@ -23,9 +26,16 @@ export interface WorkbenchPageSlot extends Omit<PageSlot, "tab"> {
   readonly tab?: WorkbenchPlacementPresentation["tab"];
 }
 
+export type WorkbenchPagePlaceholder =
+  | ViewRef
+  | { readonly view: ViewRef; readonly breadcrumb?: Pick<WorkbenchTabSnapshot, "label" | "icon" | "menu"> };
+
 export type WorkbenchPageMain = PageMain extends infer Main
   ? Main extends PageMain
-    ? Omit<Main, "tab"> & { readonly tab?: WorkbenchPlacementPresentation["tab"] }
+    ? Omit<Main, "tab" | "empty"> & {
+        readonly tab?: WorkbenchPlacementPresentation["tab"];
+        readonly empty?: WorkbenchPagePlaceholder;
+      }
     : never
   : never;
 
@@ -40,6 +50,7 @@ export interface WorkbenchPageContribution {
   resource?: ResourceConstraint;
   document?: PageDocumentDeclaration;
   params?: Readonly<Record<string, PageParamDefinition>>;
+  regionSettings?: PageContribution["regionSettings"];
   main: WorkbenchPageMain;
   slots: readonly WorkbenchPageSlot[];
 }

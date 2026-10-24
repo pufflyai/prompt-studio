@@ -46,7 +46,7 @@ test("adding a Session to Bottom never changes Side", async () => {
   const unsubscribe = workbench.layout.store.subscribe(() => observed.push(sessionPlacements(workbench).length));
   const add = workbench.composition
     .panelsFor("secondary")
-    .addable.find((panel) => panel.contribution.title === "Session");
+    .addable.find((panel) => panel.contribution.rendererId === dashboardWidgetIds.sessionBubble);
   expect(add?.open).toBeDefined();
   await add!.open!();
   unsubscribe();

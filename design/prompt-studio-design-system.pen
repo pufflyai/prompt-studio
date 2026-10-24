@@ -217026,7 +217026,7 @@
                           "icon": "arrow-left"
                         },
                         "ROY2j": {
-                          "content": "Project"
+                          "content": "Back to project"
                         }
                       }
                     },
@@ -217175,7 +217175,7 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "The first entry in the main navigation content shows ← and the current mode name, with the same spacing as other entries. It cannot be moved or hidden. Selecting it returns to the last root-level page.",
+          "content": "The first entry in the main navigation content shows an arrow and Back to followed by the current mode name, with the same spacing as other entries. It cannot be moved or hidden. Selecting it returns to the last root-level page.",
           "lineHeight": 1.4,
           "fontFamily": "$font-body",
           "fontSize": 12,
@@ -217575,6 +217575,149 @@
           "fontFamily": "$font-body",
           "fontSize": 12,
           "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "MvL0j",
+      "x": 62710,
+      "y": 0,
+      "name": "Empty panel · Available tab cards",
+      "context": "Default panel cards have no heading. The chooser is aligned to the top with 32 px padding and centered horizontally at a maximum width of 512 px. Cards retain two columns and immediate hover entry and exit.",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1000,
+      "height": 600,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 32,
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "RUgE0",
+          "name": "Top-aligned centered tool chooser",
+          "width": 512,
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "xOhJE",
+              "name": "Two-column tool grid",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "E9enHE",
+                  "name": "Tools first row",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "U8NHW",
+                      "name": "cmp/SimpleCard · Action",
+                      "context": "Compact SimpleCard action variant: borderless surface, radius xs, body padding xs, label/M/regular, 14 px icon. Match Start Recent row density. Hover uses bg.hover; pressed uses bg.active; focus has an outside ring. Default panel grid stays two columns and collapses in narrow panels.",
+                      "reusable": true,
+                      "width": "fill_container",
+                      "height": 37,
+                      "fill": "$ds-surface",
+                      "cornerRadius": 4,
+                      "gap": 8,
+                      "padding": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Juuks",
+                          "name": "Icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "file-diff",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Rhcur",
+                          "name": "Label",
+                          "fill": "$ds-fg",
+                          "content": "Changes",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "H7uL9",
+                      "type": "ref",
+                      "ref": "U8NHW",
+                      "name": "Terminal hover",
+                      "width": "fill_container",
+                      "fill": "$ds-surface-hover",
+                      "descendants": {
+                        "Juuks": {
+                          "icon": "terminal"
+                        },
+                        "Rhcur": {
+                          "content": "Terminal"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "xoEgg",
+                  "name": "Tools second row",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "id": "UOWPO",
+                      "type": "ref",
+                      "ref": "U8NHW",
+                      "name": "Files",
+                      "width": "fill_container",
+                      "descendants": {
+                        "Juuks": {
+                          "icon": "folders"
+                        },
+                        "Rhcur": {
+                          "content": "Files"
+                        }
+                      }
+                    },
+                    {
+                      "id": "Mb2B3",
+                      "type": "ref",
+                      "ref": "U8NHW",
+                      "name": "Page contribution",
+                      "width": "fill_container",
+                      "stroke": "$ds-accent",
+                      "strokeWidth": 2,
+                      "descendants": {
+                        "Juuks": {
+                          "icon": "file-plus"
+                        },
+                        "Rhcur": {
+                          "content": "New page"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     }

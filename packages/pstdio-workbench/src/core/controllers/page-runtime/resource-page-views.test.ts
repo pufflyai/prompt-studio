@@ -44,7 +44,7 @@ test("closing a moved optional view changes only its source resource", () => {
       .regions.main.widgets.map((tab) =>
         tab.placementIdentity?.kind === "page" ? tab.placementIdentity.slotId : undefined,
       ),
-  ).toEqual(["$main"]);
+  ).toEqual([]);
   s.navigate("collection", "b");
   expect(
     s.w.layout
@@ -68,7 +68,7 @@ test("reload does not reopen a resource's closed view because another resource h
       .regions.main.widgets.map((tab) =>
         tab.placementIdentity?.kind === "page" ? tab.placementIdentity.slotId : undefined,
       ),
-  ).toEqual(["$main"]);
+  ).toEqual([]);
   s.w.pageLocations.dispose();
   const restored = fixture("open", s.saved);
   restored.navigate("collection", "a");
@@ -79,7 +79,7 @@ test("reload does not reopen a resource's closed view because another resource h
       .regions.main.widgets.map((tab) =>
         tab.placementIdentity?.kind === "page" ? tab.placementIdentity.slotId : undefined,
       ),
-  ).toEqual(["$main"]);
+  ).toEqual([]);
 });
 
 test.each(["side", "secondary"] as const)("a moved fixed view retains its resource in %s", (region) => {

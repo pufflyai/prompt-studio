@@ -11,6 +11,9 @@ export interface ResourceContextAction {
   commandId?: string;
   group?: { id: string; label?: string };
   isSelected?: boolean;
+  /** Apply a state change at selection, before the closing animation or navigation. */
+  onSelect?: () => void;
+  /** Run after a closing menu releases focus, or immediately if it stays open. */
   onClick?: () => Promise<void> | void;
   /** Nested actions, opened by hover or the arrow keys. */
   items?: ResourceContextAction[];
@@ -70,6 +73,7 @@ const useResourceMenuActions = (closeOnSelect: boolean | undefined) => {
   const pendingAction = useRef<ResourceContextAction | null>(null);
   return {
     onSelect: (action: ResourceContextAction) => {
+      action.onSelect?.();
       if (action.closeOnSelect ?? closeOnSelect ?? true) pendingAction.current = action;
       else void action.onClick?.();
     },

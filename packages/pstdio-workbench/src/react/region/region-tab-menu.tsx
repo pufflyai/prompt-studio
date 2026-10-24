@@ -31,25 +31,30 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     if (placement.placementIdentity) workbench.closePlacement(placement.placementIdentity);
     else workbench.layout.closePanel(placement.widgetId);
   };
-  const tabAction = (key: string, title: string, icon: string, onClick: () => void) => ({
+  const tabAction = (
+    key: string,
+    title: string,
+    icon: string,
+    action: Pick<ResourceContextAction, "onClick" | "onSelect">,
+  ) => ({
     key,
     label: title,
     icon: <WorkbenchIcon name={icon} size={14} />,
     group: { id: "tab", label: "Tab" },
-    onClick,
+    ...action,
   });
   const actions = [
     ...createWorkbenchResourceMenu(workbench, placement.resource, { menu: groups }),
     ...(placement.tabRetention
-      ? [tabAction("pin", placement.tabRetention === "preview" ? "Pin tab" : "Unpin tab", "pin", pin)]
+      ? [tabAction("pin", placement.tabRetention === "preview" ? "Pin tab" : "Unpin tab", "pin", { onSelect: pin })]
       : []),
     ...destinations.map((region) =>
-      tabAction(`move-${region}`, `Move to ${getPanelLabel(region)}`, "ArrowRight", () =>
-        workbench.movePanel(placement.widgetId, region),
-      ),
+      tabAction(`move-${region}`, `Move to ${getPanelLabel(region)}`, "ArrowRight", {
+        onClick: () => workbench.movePanel(placement.widgetId, region),
+      }),
     ),
-    ...(placement.closable ? [tabAction("close", "Close tab", "x", close)] : []),
-    tabAction("reset-layout", "Reset layout", "RotateCcw", () => workbench.resetLayout()),
+    ...(placement.closable ? [tabAction("close", "Close tab", "x", { onClick: close })] : []),
+    tabAction("reset-layout", "Reset layout", "RotateCcw", { onClick: () => workbench.resetLayout() }),
   ];
   return (
     <Menu.RootProvider
@@ -74,6 +79,7 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
               actions={actions}
               onSelect={(action) => {
                 pending.current = action;
+                void action.onSelect?.();
               }}
             />
           </Menu.Content>

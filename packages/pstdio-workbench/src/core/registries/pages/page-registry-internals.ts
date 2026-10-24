@@ -17,18 +17,12 @@ export interface WorkbenchPageLocationCommitInput extends WorkbenchPageOpenInput
   pageStates?: Readonly<Record<string, WorkbenchPageRuntimeState>>;
 }
 
-export type WorkbenchPageCloseResolution =
-  | {
-      kind: "stay";
-      pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
-      target: WorkbenchPageOpenInput;
-      locationChanged: boolean;
-    }
-  | {
-      kind: "parent";
-      pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
-      parentId: string;
-    };
+export interface WorkbenchPageCloseResolution {
+  kind: "stay";
+  pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
+  target: WorkbenchPageOpenInput;
+  locationChanged: boolean;
+}
 
 export interface WorkbenchPageRegistryInternals<Value> {
   resources: WorkbenchPageResourceCodec;

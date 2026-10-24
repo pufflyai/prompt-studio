@@ -1,10 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../core";
 import { openPanelWidget } from "./panel-widget-open";
 
 describe("openPanelWidget", () => {
-  test("titles an added tab by its widget, not the location resource it binds to", () => {
+  test("titles an added tool with its declared title", () => {
     const workbench = createWorkbench();
     workbench.layout.registerPanel({
       id: "chrome.overview",
@@ -19,7 +18,6 @@ describe("openPanelWidget", () => {
       region: "main",
       singleton: true,
       eligibleLocations: {},
-      resourceKinds: ["chrome.view"],
       rendererId: "chrome.timeline",
     });
     const location = {
@@ -41,8 +39,6 @@ describe("openPanelWidget", () => {
       .getLayout()
       .regions.main.widgets.find((candidate) => candidate.contributionId === "chrome.timeline");
     expect(placement?.title).toBe("Timeline");
-    // The location resource still binds the tab to where it was added.
-    expect(placement?.resourceKey).toBe(resourceKey(location));
   });
   test("gives a composition panel the role implied by its destination region", () => {
     const workbench = createWorkbench();

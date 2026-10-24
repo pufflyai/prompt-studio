@@ -24,8 +24,7 @@ export const resolvePagePlacementClose = <Value>(input: {
   const closedActivePrimary = slot.role === "primary" && pageState.activePrimaryInstanceKey === identity.instanceKey;
   const result = closePageSlot({ page, slot, state: pageState, instanceKey: identity.instanceKey });
   const pageStates = { ...state.pageStates, [input.stateKey]: result.state };
-  if (result.kind === "parent") return { kind: "parent", pageStates, parentId: result.parentId };
-  if (slot.role === "auxiliary") {
+  if (slot.role === "auxiliary" || !result.activateInstanceKey) {
     if (!state.location) throw new Error("Active page has no canonical location");
     return {
       kind: "stay",

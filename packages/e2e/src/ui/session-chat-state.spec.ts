@@ -55,7 +55,7 @@ test("turns a New session tab into the created session when the request ends aft
   const side = page.locator('[data-workbench-region="side"]');
   const editor = side.getByTestId("content-editable").last();
   await header.getByRole("button", { name: "Add panel", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Session", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
   const draftTab = header.getByRole("tab", { name: "New session", exact: true });
   await expect(draftTab).toHaveAttribute("aria-selected", "true");
 
