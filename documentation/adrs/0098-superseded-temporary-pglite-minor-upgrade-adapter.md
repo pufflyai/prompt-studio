@@ -2,7 +2,7 @@
 
 Proposed: 2026-10-23
 
-Status: SUPERSEDED on 2026-10-24 by [ADR 0102](0102-database-baseline-replaces-in-place-upgrades.md). The transfer could not import real databases whose rows broke their own foreign keys, and the storage upgrade that ran after it exhausted PGlite memory. Release 0.46 exports old homes to JSON instead of transferring them.
+Status: SUPERSEDED on 2026-10-24 by [ADR 0103](0103-database-baseline-replaces-in-place-upgrades.md). The transfer could not import real databases whose rows broke their own foreign keys, and the storage upgrade that ran after it exhausted PGlite memory. Release 0.46 exports old homes to JSON instead of transferring them.
 
 ## Context
 
