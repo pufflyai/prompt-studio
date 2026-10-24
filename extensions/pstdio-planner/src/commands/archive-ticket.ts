@@ -1,11 +1,11 @@
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
+import { withTicketTagIds } from "../data/ticket-tags";
 import type { Ticket } from "../data/types";
 import { plannerTicketsChanged } from "../events";
 import { ticketMenuSlots } from "../resource-kinds";
 import { ticketRefFromCommandContext } from "./ticket-command-ref";
-
 import { deleteUnusedLinkedWorkspaces, type TicketCleanupContext } from "./ticket-workspace-cleanup";
 
 const ARCHIVE_ALL_COLUMN_ACTION = "archive_all";
@@ -47,7 +47,7 @@ export const archiveTicketCommand = defineCommand({
     await deleteUnusedLinkedWorkspaces(ctx, [next]);
     await ctx.events.emit(plannerTicketsChanged, { ticketId: next.id });
 
-    return next;
+    return withTicketTagIds(next);
   },
 });
 

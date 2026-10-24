@@ -81,7 +81,7 @@ describe("buildTicketPropertiesControls", () => {
     const { statuses, tags } = await seed();
     const priority = tags.find((tag) => tag.id === "default-priority")!;
     const high = priority.options.find((option) => option.id === "default-priority-high")!;
-    const ticket = baseTicket({ tagIds: [high.id] });
+    const ticket = baseTicket({ tags: { [priority.id]: high.id } });
 
     const { params } = buildTicketPropertiesControls({ ticket, statuses, tags, dependencies: [], parent: null });
 

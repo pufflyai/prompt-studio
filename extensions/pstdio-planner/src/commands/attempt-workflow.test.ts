@@ -30,7 +30,7 @@ const setup = async () => {
     title: "Attempt workflow",
     content: "# Attempt workflow",
     statusId: "in-progress",
-    tagIds: [],
+    tags: {},
     attachments: [],
     parentId: null,
     dependsOn: [],
@@ -266,7 +266,7 @@ describe("attempt workflow commands", () => {
     expect((await readAttempt(fixture.storage, "workspace-1"))?.revisions[0]?.reviews[0]?.verdict).toBe("passed");
     const ticket = await findTicket(ticketContext(fixture.storage), "ticket-1");
     expect(ticket?.statusId).toBe("in-progress");
-    expect(ticket?.tagIds).toEqual([]);
+    expect(ticket?.tags).toEqual({});
     expect(fixture.addedAnchors).toEqual([]);
     expect(fixture.followups).toEqual([]);
     await expect(runReviewCommand.run(...fixture.context({ workspaceId: "workspace-1" }))).rejects.toThrow(

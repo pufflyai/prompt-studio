@@ -59,7 +59,7 @@ describe("setTicketAttributeCommand", () => {
     );
 
     expect(updated?.tagIds).toEqual([high.id]);
-    expect((await ticketsCollection(storage).get(created.id))?.tagIds).toEqual([high.id]);
+    expect((await ticketsCollection(storage).get(created.id))?.tags).toEqual({ "default-priority": high.id });
   });
 
   test("updates a multi-select tag without replacing unrelated tag values", async () => {
@@ -82,6 +82,9 @@ describe("setTicketAttributeCommand", () => {
     );
 
     expect(updated?.tagIds).toEqual([high.id, api.id, dashboard.id]);
-    expect((await ticketsCollection(storage).get(created.id))?.tagIds).toEqual([high.id, api.id, dashboard.id]);
+    expect((await ticketsCollection(storage).get(created.id))?.tags).toEqual({
+      "default-priority": high.id,
+      [surface.id]: [api.id, dashboard.id],
+    });
   });
 });

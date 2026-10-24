@@ -37,10 +37,15 @@ describe("runTicketsQuery with a timeline Track that the timeline cannot use", (
   ])("returns active and archived tickets when Track is %s", async (_case, tags) => {
     const storage = createMemoryStorage();
     for (const tag of tags) await putTag(storage, tag);
-    await putTicket(storage, ticket({ shorthand: "T-1", tagIds: ["track-product", "track-platform"] }));
+    await putTicket(storage, ticket({ shorthand: "T-1", tags: { [tags[0].id]: ["track-product", "track-platform"] } }));
     await putTicket(
       storage,
-      ticket({ shorthand: "T-2", sortOrder: 1, archived: true, tagIds: ["track-product", "track-platform"] }),
+      ticket({
+        shorthand: "T-2",
+        sortOrder: 1,
+        archived: true,
+        tags: { [tags[0].id]: ["track-product", "track-platform"] },
+      }),
     );
 
     const result = await runTicketsQuery({ ...ticketContext(storage), projectId: "proj-1" });

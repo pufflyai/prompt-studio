@@ -27,7 +27,7 @@ const seedTicket = async (storage: ReturnType<typeof createMemoryStorage>, overr
     title: "Ticket",
     content: "# Ticket",
     statusId: "backlog",
-    tagIds: [],
+    tags: {},
     attachments: [],
     parentId: null,
     dependsOn: null,
