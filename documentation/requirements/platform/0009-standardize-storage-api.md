@@ -240,9 +240,9 @@ Keep `storage.scope`, `migrate` and `readLegacy`.
 
 ### Data conversion
 
-On `main`, KV and collection rows already live in records. The host imports old rows into the
-owner's journal on first access and deletes them in the same transaction
-([legacy-import.ts](../../../packages/pstdio-db/src/services/extension-storage/legacy-import.ts)).
+On `main`, KV and collection rows already live in records. Since 0.46 the host starts with a new
+database, so there are no old KV or collection rows to import
+([ADR 0102](../../adrs/0102-database-baseline-replaces-in-place-upgrades.md)).
 
 - KV needs no data conversion. A key's record ID equals `records.id(key)` in the same scope, and the
   value is unchanged. Callers switch to `records.read` and `save`.

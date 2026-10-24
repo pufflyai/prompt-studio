@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { preparePgliteHome } from "./pglite-home-recovery";
+import { engineIdentity, preparePgliteHome } from "./pglite-home-recovery";
 import { acquirePgliteLock } from "./pglite-lock";
 
 const run = async (active: string, phase = "") => {
@@ -17,39 +17,18 @@ const run = async (active: string, phase = "") => {
   const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
   return { exitCode, stderr };
 };
-const fixture = async (legacy: boolean) => {
+const fixture = async (old: boolean) => {
   const directory = await mkdtemp(join(tmpdir(), "pglite-home-recovery-"));
   const active = join(directory, "database");
-  if (legacy) {
+  if (old) {
     await mkdir(active);
     await writeFile(join(active, "record"), "original value");
   }
-  return { directory, active, transition: `${active}.engine-transfer` };
+  return { directory, active, staging: `${active}.staging`, retired: join(directory, "retired") };
 };
+const markCurrent = (home: string) => writeFile(join(home, ".pstdio-engine.json"), JSON.stringify(engineIdentity));
 
-test("interrupted publication recovers at every directory boundary without losing original records", async () => {
-  for (const phase of [
-    "staging-created",
-    "candidate-created",
-    "candidate-verified",
-    "original-moved",
-    "candidate-published",
-    "cleanup-complete",
-  ]) {
-    const f = await fixture(true);
-    try {
-      expect((await run(f.active, phase)).exitCode).toBe(73);
-      expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
-      expect(await readFile(join(f.active, "record"), "utf8")).toBe("original value");
-      expect(await Bun.file(join(f.active, ".pstdio-engine.json")).json()).toEqual({ format: 1, engine: "pglite-0.4" });
-      expect(await Bun.file(join(f.transition, "owner.json")).exists()).toBe(false);
-    } finally {
-      await rm(f.directory, { recursive: true, force: true });
-    }
-  }
-});
-
-test("first-run interruption never exposes a partially initialized new home as legacy", async () => {
+test("first-run interruption never exposes a partially initialized home", async () => {
   for (const phase of ["staging-created", "candidate-created", "candidate-verified", "candidate-published"]) {
     const f = await fixture(false);
     try {
@@ -57,192 +36,115 @@ test("first-run interruption never exposes a partially initialized new home as l
       if (phase !== "candidate-published") expect(await readdir(f.directory)).not.toContain("database");
       expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
       expect(await readFile(join(f.active, "record"), "utf8")).toBe("first value");
+      expect(await Bun.file(join(f.active, ".pstdio-engine.json")).json()).toEqual(engineIdentity);
+      expect(await Bun.file(join(f.staging, "owner.json")).exists()).toBe(false);
     } finally {
       await rm(f.directory, { recursive: true, force: true });
     }
   }
 });
 
-test("published homes keep later writes when interrupted cleanup resumes", async () => {
-  const f = await fixture(true);
-  try {
-    expect((await run(f.active, "candidate-published")).exitCode).toBe(73);
-    await writeFile(join(f.active, "record"), "later committed value");
-    expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
-    expect(await readFile(join(f.active, "record"), "utf8")).toBe("later committed value");
-  } finally {
-    await rm(f.directory, { recursive: true, force: true });
+test("a home from another release is retired before a new one is created", async () => {
+  for (const marker of [undefined, '{"format":1,"engine":"pglite-0.4"}', '{"format":']) {
+    const f = await fixture(true);
+    try {
+      if (marker) await writeFile(join(f.active, ".pstdio-engine.json"), marker);
+      expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
+      expect(await readFile(join(f.retired, "record"), "utf8")).toBe("original value");
+      expect(await readFile(join(f.active, "record"), "utf8")).toBe("first value");
+    } finally {
+      await rm(f.directory, { recursive: true, force: true });
+    }
   }
 });
 
-test("missing verified targets restore the original and report the failed publication", async () => {
+test("an interrupted retirement keeps the old home in place and retires it on the next start", async () => {
   const f = await fixture(true);
   try {
-    expect((await run(f.active, "original-moved")).exitCode).toBe(73);
-    await rm(join(f.transition, "target"), { recursive: true });
-    const result = await run(f.active);
-    expect(result.exitCode).not.toBe(0);
-    expect(result.stderr).toContain("restored the original");
+    expect((await run(f.active, "retire-started")).exitCode).toBe(73);
     expect(await readFile(join(f.active, "record"), "utf8")).toBe("original value");
+    expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
+    expect(await readFile(join(f.retired, "record"), "utf8")).toBe("original value");
   } finally {
     await rm(f.directory, { recursive: true, force: true });
   }
 });
 
-test("an unmarked replacement and the original are both preserved as ambiguous", async () => {
-  const f = await fixture(true);
-  try {
-    expect((await run(f.active, "original-moved")).exitCode).toBe(73);
-    await mkdir(f.active);
-    await writeFile(join(f.active, "record"), "another writer");
-    expect((await run(f.active)).stderr).toContain("Ambiguous");
-    expect(await readFile(join(f.active, "record"), "utf8")).toBe("another writer");
-    expect(await readFile(join(f.transition, "original", "record"), "utf8")).toBe("original value");
-  } finally {
-    await rm(f.directory, { recursive: true, force: true });
+test("a current home opens as it is and keeps later writes when interrupted cleanup resumes", async () => {
+  for (const phase of ["candidate-published", "cleanup-contents-removed", "cleanup-owner-removed"]) {
+    const f = await fixture(false);
+    try {
+      expect((await run(f.active, phase)).exitCode).toBe(73);
+      await writeFile(join(f.active, "record"), "later committed value");
+      expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
+      expect(await readFile(join(f.active, "record"), "utf8")).toBe("later committed value");
+      expect(await Bun.file(f.staging).exists()).toBe(false);
+    } finally {
+      await rm(f.directory, { recursive: true, force: true });
+    }
   }
 });
 
-test("missing originals do not promote an old prepared copy and foreign staging is preserved", async () => {
-  const f = await fixture(true);
+test("staged candidates never replace data and partial ones are rebuilt", async () => {
+  const f = await fixture(false);
   try {
     expect((await run(f.active, "candidate-verified")).exitCode).toBe(73);
+    await mkdir(f.active);
+    await writeFile(join(f.active, "record"), "another writer");
+    await markCurrent(f.active);
+    expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
+    expect(await readFile(join(f.active, "record"), "utf8")).toBe("another writer");
     await rm(f.active, { recursive: true });
-    expect((await run(f.active)).stderr).toContain("Missing original");
-    await writeFile(join(f.transition, "owner.json"), JSON.stringify({ activePath: "/another/home" }));
-    expect((await run(f.active)).stderr).toContain("Unrecognized");
-    expect(await Bun.file(join(f.transition, "target", "record")).exists()).toBe(true);
+    expect((await run(f.active, "candidate-verified")).exitCode).toBe(73);
+    await writeFile(join(f.staging, "target", ".pstdio-engine.json"), '{"format":');
+    expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
+    expect(await Bun.file(join(f.active, ".pstdio-engine.json")).json()).toEqual(engineIdentity);
   } finally {
     await rm(f.directory, { recursive: true, force: true });
   }
 });
 
-test("preparation failure preserves the original and the external lock excludes another process", async () => {
-  const f = await fixture(true);
+test("a start stopped while it wrote staging ownership does not block the next start", async () => {
+  const f = await fixture(false);
+  try {
+    await mkdir(f.staging);
+    await writeFile(join(f.staging, "owner.json.partial"), '{"format":');
+    expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
+    expect(await readFile(join(f.active, "record"), "utf8")).toBe("first value");
+    expect(await Bun.file(f.staging).exists()).toBe(false);
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("foreign staging is preserved for inspection", async () => {
+  const f = await fixture(false);
+  try {
+    expect((await run(f.active, "staging-created")).exitCode).toBe(73);
+    await writeFile(join(f.staging, "owner.json"), JSON.stringify({ format: 1, activePath: "/another/home" }));
+    await writeFile(join(f.staging, "unknown"), "preserve me");
+    expect((await run(f.active)).stderr).toContain("Unrecognized database staging");
+    expect(await readFile(join(f.staging, "unknown"), "utf8")).toBe("preserve me");
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("preparation failure leaves no home and the external lock excludes another process", async () => {
+  const f = await fixture(false);
   const release = acquirePgliteLock(f.active);
   try {
     expect((await run(f.active)).stderr).toContain("in use");
     await expect(
       preparePgliteHome({
         activePath: f.active,
+        retire: async () => {},
         prepare: async () => {
           throw new Error("disk full");
         },
       }),
     ).rejects.toThrow("disk full");
-    expect(await readFile(join(f.active, "record"), "utf8")).toBe("original value");
-  } finally {
-    release();
-    await rm(f.directory, { recursive: true, force: true });
-  }
-});
-
-test("an empty active directory left by startup does not block recovery between renames", async () => {
-  const f = await fixture(true);
-  try {
-    expect((await run(f.active, "original-moved")).exitCode).toBe(73);
-    await mkdir(f.active);
-    expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
-    expect(await readFile(join(f.active, "record"), "utf8")).toBe("original value");
-  } finally {
-    await rm(f.directory, { recursive: true, force: true });
-  }
-});
-
-test("interrupted cleanup never leaves a valid current home blocked by its own transfer directory", async () => {
-  for (const phase of ["cleanup-contents-removed", "cleanup-owner-removed"]) {
-    const f = await fixture(true);
-    try {
-      expect((await run(f.active, phase)).exitCode).toBe(73);
-      await writeFile(join(f.active, "record"), "newer write");
-      expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
-      expect(await readFile(join(f.active, "record"), "utf8")).toBe("newer write");
-    } finally {
-      await rm(f.directory, { recursive: true, force: true });
-    }
-  }
-});
-
-test("partial candidate identities never block rebuilding an initial home or restoring an original", async () => {
-  for (const legacy of [false, true]) {
-    const f = await fixture(legacy);
-    try {
-      expect((await run(f.active, legacy ? "original-moved" : "candidate-verified")).exitCode).toBe(73);
-      await writeFile(join(f.transition, "target", ".pstdio-engine.json"), '{"format":');
-      const result = await run(f.active);
-      if (legacy) {
-        expect(result.stderr).toContain("restored the original");
-        expect(await readFile(join(f.active, "record"), "utf8")).toBe("original value");
-      } else {
-        expect(result).toEqual({ exitCode: 0, stderr: "" });
-        expect(await readFile(join(f.active, "record"), "utf8")).toBe("first value");
-      }
-    } finally {
-      await rm(f.directory, { recursive: true, force: true });
-    }
-  }
-});
-
-test("a start stopped while it wrote transfer ownership does not block the next start", async () => {
-  for (const legacy of [false, true]) {
-    const f = await fixture(legacy);
-    try {
-      await mkdir(f.transition);
-      await writeFile(join(f.transition, "owner.json.partial"), '{"format":');
-      expect(await run(f.active)).toEqual({ exitCode: 0, stderr: "" });
-      expect(await readFile(join(f.active, "record"), "utf8")).toBe(legacy ? "original value" : "first value");
-      expect(await Bun.file(f.transition).exists()).toBe(false);
-    } finally {
-      await rm(f.directory, { recursive: true, force: true });
-    }
-  }
-});
-
-test("partial ownership and active engine identities fail without deleting unknown data", async () => {
-  const f = await fixture(true);
-  try {
-    expect((await run(f.active, "staging-created")).exitCode).toBe(73);
-    await writeFile(join(f.transition, "owner.json"), '{"format":');
-    await writeFile(join(f.transition, "unknown"), "preserve me");
-    expect((await run(f.active)).stderr).toContain("Unrecognized engine transfer");
-    expect(await readFile(join(f.transition, "unknown"), "utf8")).toBe("preserve me");
-    expect(await readFile(join(f.active, "record"), "utf8")).toBe("original value");
-    await rm(f.transition, { recursive: true });
-    await writeFile(join(f.active, ".pstdio-engine.json"), '{"format":');
-    expect((await run(f.active)).exitCode).not.toBe(0);
-    expect(await readFile(join(f.active, "record"), "utf8")).toBe("original value");
-  } finally {
-    await rm(f.directory, { recursive: true, force: true });
-  }
-});
-
-test("cancellation between renames leaves a recoverable original and does not publish early", async () => {
-  const f = await fixture(true);
-  const release = acquirePgliteLock(f.active);
-  const controller = new AbortController();
-  try {
-    await expect(
-      preparePgliteHome({
-        activePath: f.active,
-        signal: controller.signal,
-        prepare: async ({ target }) => {
-          await mkdir(target);
-          await writeFile(join(target, "record"), "original value");
-        },
-        onPhase: (phase) => {
-          if (phase === "original-moved") controller.abort(new Error("cancelled publication"));
-        },
-      }),
-    ).rejects.toThrow("cancelled publication");
-    expect(await Bun.file(join(f.active, "record")).exists()).toBe(false);
-    expect(await readFile(join(f.transition, "original", "record"), "utf8")).toBe("original value");
-    await preparePgliteHome({
-      activePath: f.active,
-      prepare: async () => {
-        throw new Error("verified candidate already exists");
-      },
-    });
-    expect(await readFile(join(f.active, "record"), "utf8")).toBe("original value");
+    expect(await readdir(f.directory)).not.toContain("database");
   } finally {
     release();
     await rm(f.directory, { recursive: true, force: true });

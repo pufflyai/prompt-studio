@@ -26,7 +26,6 @@ export const createRecordStreamStore = (
   db: DbClient,
   owner: StorageOwner,
   deps: {
-    upgrade: () => Promise<void>;
     statistics: ReturnType<typeof createProjectionStatistics>;
     /** Notifies owner watchers after downloaded records change. */
     changed: () => void;
@@ -55,7 +54,6 @@ export const createRecordStreamStore = (
   const write = async (
     run: (tx: Transaction, revision: number) => Promise<{ projected: number; changed: boolean; rejected: string[] }>,
   ) => {
-    await deps.upgrade();
     const result = await db.transaction(async (tx) => run(tx, await lockRecordOwner(tx, owner)));
     if (result.projected) deps.statistics.record(result.projected);
     if (result.changed) deps.changed();
@@ -97,7 +95,6 @@ export const createRecordStreamStore = (
   return {
     references,
     async open() {
-      await deps.upgrade();
       await db
         .insert(storage_record_sync)
         .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId })
@@ -148,7 +145,6 @@ export const createRecordStreamStore = (
       await dropRecordOutbox(db, owner, sequence);
     },
     async snapshot() {
-      await deps.upgrade();
       return db.transaction(async (tx) => {
         const [{ outbox }] = (await tx
           .select({ outbox: max(storage_record_outbox.sequence) })

@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "workspaces_active_root_path_idx" ON "workspaces" USING btree ("root_path") WHERE "workspaces"."deleted_at" is null;

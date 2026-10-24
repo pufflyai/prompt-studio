@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { resolvePgliteOptions } from "./connection.pglite";
 import { openPglite } from "./open-pglite";
-import { prepareCurrentPgliteHome } from "./pglite-upgrade";
+import { prepareCurrentPgliteHome } from "./pglite-current-home";
 
 test("source memory creation loads full ICU only for the active engine", async () => {
   const runtime = await resolvePgliteOptions([]);
