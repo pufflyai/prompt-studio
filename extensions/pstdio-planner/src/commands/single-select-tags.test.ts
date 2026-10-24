@@ -126,6 +126,15 @@ describe("writing a single-select property", () => {
   });
 
   // Another device can change the tag's type while this ticket still holds a list.
+  test("accepts the stored values of such a list and keeps the first in option order", async () => {
+    const { run, storedTags } = await singleSelect();
+
+    await run(updateTicketCommand, { id: "T-1", content: "# Edited", tagIds: ["platform", "product", "ui"] });
+
+    expect((await storedTags())["T-1"]).toEqual({ track: "product", area: ["ui"] });
+  });
+
+  // Another device can change the tag's type while this ticket still holds a list.
   test("replaces a list left on a single-select with the chosen value", async () => {
     const { run, storedTags } = await singleSelect();
 

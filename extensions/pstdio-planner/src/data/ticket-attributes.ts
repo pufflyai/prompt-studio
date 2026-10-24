@@ -29,7 +29,7 @@ export const ticketWithAttributes = async (
     const tag = tagDefinitions.find((tag) => tag.id === attributeId || ticketTagAttributeId(tag) === attributeId);
     if (!tag) continue;
     const selected = selectedTagOptions(value, new Set(tag.options.map(({ id }) => id)));
-    assertOneTagValue(tag, selected);
+    assertOneTagValue(tag, selected, tags[tag.id]);
     // Only this tag's key changes, so an edit to another tag on another device still merges.
     tags = withTagValue(tags, tag.id, tagValue(tag, selected, tags[tag.id]));
   }

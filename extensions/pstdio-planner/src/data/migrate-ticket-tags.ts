@@ -18,6 +18,7 @@ export const migrateTicketTags = async (storage: ExtensionStorageApi) => {
     const current = await tickets.get(listed.id);
     if (!current || !("tagIds" in current)) continue;
     const { tagIds, ...ticket } = current;
-    await tickets.put(ticket.id, { ...ticket, tags: ticketTagsFromIds(tags, tagIds ?? []) });
+    // `tags` can only come from a newer edit that ran before this upgrade, so it wins.
+    await tickets.put(ticket.id, { ...ticket, tags: { ...ticketTagsFromIds(tags, tagIds ?? []), ...ticket.tags } });
   }
 };

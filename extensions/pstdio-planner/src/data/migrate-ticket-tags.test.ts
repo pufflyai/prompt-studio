@@ -53,6 +53,8 @@ const tickets = {
   draft: ticket("draft", ["ui", "api", "default-priority-low"], { draft: true }),
   archived: ticket("archived", ["ui"], { archived: true }),
   untagged: ticket("untagged", []),
+  // A newer edit that ran before the upgrade wrote `tags` next to the old list.
+  edited: ticket("edited", ["default-priority-low", "ui"], { tags: { "default-priority": "default-priority-high" } }),
 };
 
 const seed = { collections: { [TAGS_COLLECTION]: tags, [TICKETS_COLLECTION]: tickets } };
@@ -62,6 +64,7 @@ const expected = {
   draft: { "default-priority": "default-priority-low", track: "api" },
   archived: { track: "ui" },
   untagged: {},
+  edited: { "default-priority": "default-priority-high", track: "ui" },
 };
 
 const storedTags = async (storage: Parameters<typeof ticketsCollection>[0]) =>

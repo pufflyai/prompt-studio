@@ -148,7 +148,8 @@ describe("tag operations", () => {
     expect(updated.options.find((option) => option.name === "Critical")).toMatchObject({ color: "red", icon: "flame" });
 
     const { ticketsCollection } = await import("./ticket-context.fixture");
-    expect((await ticketsCollection(storage).get(ticketRecord.id))?.tags).toEqual({});
+    // Priority is now multi-select, so the emptied list stays and can merge later additions.
+    expect((await ticketsCollection(storage).get(ticketRecord.id))?.tags).toEqual({ [priority.id]: [] });
     // The value moves to the multi-select shape with the tag.
     expect((await ticketsCollection(storage).get(kept.id))?.tags).toEqual({ [priority.id]: [renameTarget.id] });
   });

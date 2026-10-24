@@ -16,17 +16,22 @@ export const tagValueIds = (value: TagValue | undefined) => {
 export const ticketTagIds = (ticket: Pick<StoredTicket, "tags">) =>
   Object.values(ticket.tags ?? {}).flatMap(tagValueIds);
 
-export const assertOneTagValue = (tag: StoredTag, optionIds: readonly string[]) => {
+// A list that a type change on another device left on a single-select stays editable: a write
+// may keep or shrink it, but not add a value.
+export const assertOneTagValue = (tag: StoredTag, optionIds: readonly string[], previous?: TagValue) => {
   if (!isSingleSelectTicketTag(tag)) return;
-  const names = tag.options.filter(({ id }) => optionIds.includes(id)).map(({ name }) => name);
-  if (names.length > 1) throw new Error(`${tag.name} allows one value. Choose one of: ${names.join(", ")}.`);
+  const selected = tag.options.filter(({ id }) => optionIds.includes(id));
+  const stored = tagValueIds(previous);
+  if (selected.length < 2 || selected.every(({ id }) => stored.includes(id))) return;
+  throw new Error(`${tag.name} allows one value. Choose one of: ${selected.map(({ name }) => name).join(", ")}.`);
 };
 
-// A multi-select keeps its existing items in place, so a save adds and removes only the items
-// that changed and merges with another device's edits to the same list.
+// A single-select keeps the first selected option in option order, so every device keeps the
+// same one. A multi-select keeps its existing items in place, so a save adds and removes only
+// the items that changed. An emptied list stays, so another device's additions still merge in.
 export const tagValue = (tag: StoredTag, selected: readonly string[], previous?: TagValue) => {
-  if (selected.length === 0) return undefined;
-  if (isSingleSelectTicketTag(tag)) return selected[0];
+  if (isSingleSelectTicketTag(tag)) return sortedBySortOrder(tag.options).find(({ id }) => selected.includes(id))?.id;
+  if (selected.length === 0 && previous === undefined) return undefined;
   const kept = tagValueIds(previous).filter((id) => selected.includes(id));
   return [...kept, ...selected.filter((id) => !kept.includes(id))];
 };
@@ -43,8 +48,7 @@ export const sameTicketTags = (left: StoredTicketTags = {}, right: StoredTicketT
 
 /**
  * Commands keep the flat `tagIds` surface and translate it to the stored object. Option IDs
- * that belong to no tag are dropped. When a single-select receives several values, the first in
- * the tag's option order wins, so every device keeps the same one.
+ * that belong to no tag are dropped.
  */
 export const ticketTagsFromIds = (tags: StoredTag[], tagIds: readonly string[], previous: StoredTicketTags = {}) =>
   tags.reduce<StoredTicketTags>((next, tag) => {

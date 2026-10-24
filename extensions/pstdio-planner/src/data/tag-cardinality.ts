@@ -49,6 +49,6 @@ export const ticketTagsForIds = async (
   previous?: StoredTicketTags,
 ) => {
   const tags = await seedDefaultTags(storage);
-  for (const tag of tags) assertOneTagValue(tag, tagIds);
+  for (const tag of tags) assertOneTagValue(tag, tagIds, previous?.[tag.id]);
   return ticketTagsFromIds(tags, tagIds, previous);
 };

@@ -99,4 +99,14 @@ describe("tag edits from two offline devices", () => {
       expect(new Set((await tagsOn(device))?.flags)).toEqual(new Set(["risky", "blocked-upstream", "needs-docs"]));
     }
   });
+
+  test("clearing every flag on one device keeps a flag that the other device adds", async () => {
+    const { pair, set, tagsOn } = await offlineDevices();
+
+    await set(0, "flags", []);
+    await set(1, "flags", ["risky", "needs-docs"]);
+    await pair.merge();
+
+    for (const device of [0, 1] as const) expect((await tagsOn(device))?.flags).toEqual(["needs-docs"]);
+  });
 });

@@ -13,6 +13,7 @@ import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
 import { ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
+import { withTicketTagIds } from "../data/ticket-tags";
 import type { Ticket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
 import { ticketMenuSlots } from "../resource-kinds";
@@ -236,7 +237,7 @@ export const proposalRefinedCommand = defineCommand({
     const ticket = await findTicket(ctx, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
     await notifyProposalRefined(ctx, ticket);
-    return { ticket, notified: true };
+    return { ticket: withTicketTagIds(ticket), notified: true };
   },
 });
 
@@ -251,7 +252,7 @@ export const approveProposalCommand = defineCommand({
     const ticket = await findTicket(ctx, ticketRef);
     if (!ticket) throw new Error(`Unknown ticket "${ticketRef}"`);
     await resolveProposalRefinedNotification(ctx, ticket);
-    return { ticket, approved: true };
+    return { ticket: withTicketTagIds(ticket), approved: true };
   },
 });
 
