@@ -19,7 +19,6 @@ export interface FailedRun {
 
 export interface QueueApi {
   readPull: (number: number) => Promise<PullQueueState>;
-  listOpenPulls: () => Promise<PullQueueState[]>;
   readFailedRun: (number: number, before: string) => Promise<FailedRun | null>;
   addLabel: (number: number) => Promise<void>;
   removeLabel: (number: number) => Promise<void>;
@@ -57,18 +56,14 @@ const reconcile = async (api: QueueApi, pull: PullQueueState) => {
   const labelled = pull.labels.includes(REMOVED_LABEL);
   // The label marks a reported removal, so each removal is commented on once.
   if (removal && !labelled) {
-    await api.addLabel(pull.number);
     const run = removal.reason === "failed_checks" ? await api.readFailedRun(pull.number, removal.at) : null;
     await api.comment(pull.number, removalComment(removal, run));
+    await api.addLabel(pull.number);
   }
   if (!removal && labelled) await api.removeLabel(pull.number);
 };
 
 export const reconcilePull = async (api: QueueApi, number: number) => reconcile(api, await api.readPull(number));
-
-export const reconcileOpenPulls = async (api: QueueApi) => {
-  for (const pull of await api.listOpenPulls()) await reconcile(api, pull);
-};
 
 const pullFields = `number state labels(first: 100) { nodes { name } }
   timelineItems(last: 20, itemTypes: [ADDED_TO_MERGE_QUEUE_EVENT, REMOVED_FROM_MERGE_QUEUE_EVENT]) {
@@ -127,21 +122,6 @@ export const createApi = (options: { apiUrl: string; graphqlUrl: string; reposit
         { owner, name, number },
       );
       return toState(data.repository.pullRequest);
-    },
-    listOpenPulls: async () => {
-      const pulls: PullQueueState[] = [];
-      let after: string | null = null;
-      do {
-        const data = await graphql(
-          `query($owner: String!, $name: String!, $after: String) { repository(owner: $owner, name: $name) {
-            pullRequests(states: OPEN, first: 50, after: $after) { pageInfo { hasNextPage endCursor } nodes { ${pullFields} } } } }`,
-          { owner, name, after },
-        );
-        const page = data.repository.pullRequests;
-        pulls.push(...page.nodes.map(toState));
-        after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
-      } while (after);
-      return pulls;
     },
     readFailedRun: async (number, before) => {
       const { workflow_runs: runs } = await rest("actions/runs?event=merge_group&status=failure&per_page=100");

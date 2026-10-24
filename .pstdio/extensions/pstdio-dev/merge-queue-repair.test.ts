@@ -112,3 +112,18 @@ test("repairs in older or archived session history are not started again", async
     { includeArchived: true, cursor: "older-sessions" },
   ]);
 });
+
+test("one failed branch is reported after the other pull requests start their repairs", async () => {
+  const { ctx, sessions } = fixture([]);
+  const run = ctx.process.runOrThrow;
+  ctx.process.runOrThrow = async (input) => {
+    if (input.command[0] === "git" && input.command.at(-1) === "bugfix/windows") {
+      throw new Error("Remote branch not found");
+    }
+    return run(input);
+  };
+
+  await expect(command?.run(ctx as never, {})).rejects.toThrow("#1363: Remote branch not found");
+
+  expect(sessions.map((session) => session.title)).toEqual(["Repair merge queue removal: #1371 at 787e8ec0f"]);
+});

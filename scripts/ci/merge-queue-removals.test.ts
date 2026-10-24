@@ -1,19 +1,11 @@
 import { expect, test } from "bun:test";
-import {
-  type PullQueueState,
-  type QueueApi,
-  REMOVED_LABEL,
-  reconcileOpenPulls,
-  reconcilePull,
-} from "./merge-queue-removals";
+import { type PullQueueState, type QueueApi, REMOVED_LABEL, reconcilePull } from "./merge-queue-removals";
 
 const fixture = (pulls: PullQueueState[]) => {
   const state = new Map(pulls.map((pull) => [pull.number, structuredClone(pull)]));
   const comments: Array<{ number: number; body: string }> = [];
   const api: QueueApi = {
     readPull: async (number) => structuredClone(state.get(number)!),
-    listOpenPulls: async () =>
-      [...state.values()].filter((pull) => pull.state === "OPEN").map((pull) => structuredClone(pull)),
     readFailedRun: async (number) =>
       number === 1363
         ? {
@@ -92,23 +84,6 @@ test("a later removal after a new queue attempt is reported again", async () => 
   expect(comments[0]!.body).toContain("a required check failed");
 });
 
-test("manual reconciliation labels every removed open pull request and leaves the others alone", async () => {
-  const { api, state } = fixture([
-    {
-      number: 10,
-      state: "OPEN",
-      labels: [],
-      events: [added("2026-10-23T10:00:00Z"), removed("2026-10-23T10:20:00Z", "manual")],
-    },
-    { number: 11, state: "OPEN", labels: [], events: [] },
-    { number: 12, state: "OPEN", labels: ["ci:full"], events: [added("2026-10-23T10:00:00Z")] },
-  ]);
-
-  await reconcileOpenPulls(api);
-
-  expect([10, 11, 12].map((number) => state.get(number)!.labels)).toEqual([[REMOVED_LABEL], [], ["ci:full"]]);
-});
-
 test("a manual removal is reported without blaming an earlier failed run", async () => {
   const { api, comments } = fixture([
     {
@@ -128,3 +103,31 @@ test("a manual removal is reported without blaming an earlier failed run", async
   expect(comments[0]!.body).toContain("someone removed it");
   expect(comments[0]!.body).not.toContain("actions/runs");
 });
+
+for (const failure of ["readFailedRun", "comment"] as const) {
+  test(`a failed ${failure} can be recovered without losing the removal explanation`, async () => {
+    const { api, state, comments } = fixture([
+      {
+        number: 1363,
+        state: "OPEN",
+        labels: [],
+        events: [removed("2026-10-23T22:57:00Z", "failed_checks")],
+      },
+    ]);
+    const operation = api[failure];
+    api[failure] = async () => {
+      throw new Error("GitHub temporarily unavailable");
+    };
+
+    await expect(reconcilePull(api, 1363)).rejects.toThrow("GitHub temporarily unavailable");
+    expect(state.get(1363)!.labels).toEqual([]);
+    expect(comments).toEqual([]);
+
+    Object.assign(api, { [failure]: operation });
+    await reconcilePull(api, 1363);
+    await reconcilePull(api, 1363);
+
+    expect(state.get(1363)!.labels).toEqual([REMOVED_LABEL]);
+    expect(comments).toHaveLength(1);
+  });
+}

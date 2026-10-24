@@ -55,22 +55,28 @@ export const repairRemovedCommand = defineCommand({
       cursor = page.nextCursor ?? undefined;
     } while (cursor);
     const sessionIds: string[] = [];
+    const failures: string[] = [];
     for (const pull of JSON.parse(stdout) as RemovedPull[]) {
       // A fork's branch cannot be pushed from here.
       if (pull.isCrossRepository || started.has(sessionTitle(pull))) continue;
-      await ctx.process.runOrThrow({ command: ["git", "fetch", "origin", pull.headRefName], cwd: root });
-      const workspace = await ctx.workspaces.create({
-        shorthand_base: `PR-${pull.number}`,
-        provider_id: "pstdio.worktree",
-        params: { base: `origin/${pull.headRefName}` },
-      });
-      const session = await ctx.sessions.create({
-        title: sessionTitle(pull),
-        prompt: repairPrompt(pull),
-        workspaceId: workspace.id,
-      });
-      sessionIds.push(session.id);
+      try {
+        await ctx.process.runOrThrow({ command: ["git", "fetch", "origin", pull.headRefName], cwd: root });
+        const workspace = await ctx.workspaces.create({
+          shorthand_base: `PR-${pull.number}`,
+          provider_id: "pstdio.worktree",
+          params: { base: `origin/${pull.headRefName}` },
+        });
+        const session = await ctx.sessions.create({
+          title: sessionTitle(pull),
+          prompt: repairPrompt(pull),
+          workspaceId: workspace.id,
+        });
+        sessionIds.push(session.id);
+      } catch (error) {
+        failures.push(`#${pull.number}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
+    if (failures.length) throw new Error(`Could not start merge queue repairs:\n${failures.join("\n")}`);
     return { sessionIds };
   },
 });

@@ -1,11 +1,16 @@
 name: Merge queue removals
 
 # Labels pull requests that GitHub removed from the merge queue and explains why. Queue events
-# update one pull request; a manual dispatch reconciles all open pull requests.
+# and manual dispatches update one pull request at a time.
 on:
   pull_request_target:
     types: [enqueued, dequeued, closed]
   workflow_dispatch:
+    inputs:
+      pr-number:
+        description: Pull request number to reconcile
+        required: true
+        type: number
 
 permissions:
   actions: read
@@ -14,7 +19,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: merge-queue-removals-${{ github.event.pull_request.number || 'manual' }}
+  group: merge-queue-removals-${{ github.event.pull_request.number || inputs.pr-number }}
   cancel-in-progress: false
 
 jobs:
@@ -28,7 +33,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          PULL_NUMBER: ${{ github.event.pull_request.number }}
+          PULL_NUMBER: ${{ github.event.pull_request.number || inputs.pr-number }}
         with:
           script: |
             const { stripTypeScriptTypes } = await import('node:module');
@@ -48,5 +53,4 @@ jobs:
               repository: `${context.repo.owner}/${context.repo.repo}`,
               token: process.env.GITHUB_TOKEN,
             });
-            if (process.env.PULL_NUMBER) await queue.reconcilePull(api, Number(process.env.PULL_NUMBER));
-            else await queue.reconcileOpenPulls(api);
+            await queue.reconcilePull(api, Number(process.env.PULL_NUMBER));
