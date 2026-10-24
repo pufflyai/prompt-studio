@@ -32,6 +32,7 @@ const followSharedSet = async (deps: ExtensionsRouteDeps, projectId: string, cat
       if (!(error instanceof SharedSetChanged)) throw error;
     }
   }
+  throw new Error(`The shared extension set kept changing after ${sharedSetAttempts} attempts`);
 };
 
 const proposedEntry = async (catalog: Catalog, input: CatalogChange) => {
