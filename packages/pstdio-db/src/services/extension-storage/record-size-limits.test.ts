@@ -79,6 +79,27 @@ test("shared text counts toward the record limit", async () => {
   }
 });
 
+test("a restored record is measured with the content it had before it was deleted", async () => {
+  for (const { name, records } of await implementations()) {
+    const text = "y".repeat(storageLimits.recordBytes - 1_000);
+    await records.commit({
+      operationId: `${name}-text`,
+      edits: [{ recordId: "note", shared: [{ kind: "text.insert", index: 0, text }] }],
+    });
+    await records.commit({ operationId: `${name}-delete`, edits: [{ recordId: "note", deleted: true }] });
+    const error = await refusal(
+      records.commit({
+        operationId: `${name}-restore`,
+        edits: [
+          { recordId: "note", deleted: false, shared: [{ kind: "text.insert", index: 0, text: "z".repeat(2_000) }] },
+        ],
+      }),
+    );
+    expect(error.data.recordId).toBe("note");
+    expect((await records.read("note")).deleted).toBe(true);
+  }
+});
+
 test("a commit up to 4 MiB saves, and a larger commit is refused without writing", async () => {
   const group = (operationId: string, count: number, prefix: string): StorageGroup => ({
     operationId,

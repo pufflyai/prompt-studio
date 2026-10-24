@@ -6,6 +6,7 @@ import {
   type StorageRecord,
 } from "pstdio-sync-contracts";
 import type * as Y from "yjs";
+import { recordTypeName } from "./document-edits";
 import { normalizeDocumentJson } from "./document-json";
 import { readValue } from "./document-values";
 
@@ -56,7 +57,11 @@ const validateEdit = (document: Y.Doc, edit: StorageGroup["edits"][number]) => {
   if (!Object.hasOwn(edit, "replace") && edit.asset === undefined && edit.deleted === undefined && !edit.shared?.length)
     throw new Error("Empty record edit");
   if (Object.hasOwn(edit, "replace")) canonicalJson(edit.replace!);
-  const name = document.getMap<string>("records").get(edit.recordId);
+  const live = document.getMap<string>("records").get(edit.recordId);
+  const tombstoned = !live && document.getMap("deleted").has(edit.recordId);
+  // A restored record reconnects the content its document kept when it was deleted.
+  const retained = recordTypeName(edit.recordId);
+  const name = live ?? (tombstoned && edit.deleted === false && document.share.has(retained) ? retained : undefined);
   const record = name ? document.getMap(name) : undefined;
   let kind = record?.get("sharedKind") as string | undefined;
   let value: Json = record ? readValue(record.get("shared"), document) : null;
@@ -69,8 +74,7 @@ const validateEdit = (document: Y.Doc, edit: StorageGroup["edits"][number]) => {
   }
   let saved: Json = record ? readValue(record.get("value"), document) : null;
   if (Object.hasOwn(edit, "replace")) saved = normalizeDocumentJson(edit.replace!);
-  const deleted =
-    edit.deleted === true || (!record && document.getMap("deleted").has(edit.recordId) && edit.deleted !== false);
+  const deleted = edit.deleted === true || (tombstoned && edit.deleted !== false);
   return {
     recordId: edit.recordId,
     deleted,
