@@ -72,6 +72,7 @@
   "settings.workflow.statuses.description": "Choisissez les statuts du workflow dans l’onglet Paramètres de cette extension. Les libellés ne définissent pas le comportement.",
   "commands.autoBuild.pause": "Mettre Auto Build en pause",
   "commands.autoBuild.resume": "Reprendre Auto Build",
+  "commands.autoBuild.stop": "Arrêter Auto Build",
   "timeline.autoBuild.pause": "Pause",
   "timeline.autoBuild.paused": "En pause",
   "timeline.autoBuild.resume": "Reprendre",
