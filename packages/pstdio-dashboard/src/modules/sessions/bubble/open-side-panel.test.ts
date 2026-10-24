@@ -40,7 +40,6 @@ test("opens an empty chat panel with a workspace session draft and reuses it on 
 test("opens the session draft in the Side Panel while a session page is open", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
   workbench.registerModule(createWorkspacesModule());
-  workbench.registerModule(createSessionBubbleModule());
   workbench.registerModule(createSessionsModule());
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
   openSessionsPage(workbench, createDashboardResource("session", "session-1", "Session", "MessageCircle", "project-1"));
