@@ -51,7 +51,6 @@ export const createDocumentStorageDBService = (
   const isResourceDocument = (id: string) => id.startsWith(resourceDocumentId("").slice(0, -2));
   return {
     transaction,
-    upgrade,
     observer,
     getEnvironment,
     flushStatistics: statistics.flush,

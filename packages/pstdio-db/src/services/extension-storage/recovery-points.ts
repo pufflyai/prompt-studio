@@ -90,15 +90,8 @@ export const createRecoveryPoints = (
     }
   };
 
-  // Moves records out of old owner documents first; the capture transaction then reads only SQL rows.
-  const upgradeOwners = async (projectId: string) => {
-    for (const extensionId of await dataOwners(db, projectId))
-      await documents.upgrade({ workbenchId: projectId, extensionId });
-  };
-
   const capture = async (projectId: string, now: Date) => {
     if (!dueRecoveryHours(await savedPoints(db, projectId), now).length) return;
-    await upgradeOwners(projectId);
     const write = (room?: number) =>
       db.transaction(async (tx) => {
         const content = await readProjectContent(tx, projectId);
@@ -120,7 +113,6 @@ export const createRecoveryPoints = (
 
   // Keeps the state a restore replaces, so the restore itself can be undone without a fourth point.
   const keepCurrent = async (projectId: string, hours: RecoveryHours) => {
-    await upgradeOwners(projectId);
     try {
       await db.transaction(async (tx) => {
         const content = await readProjectContent(tx, projectId);
