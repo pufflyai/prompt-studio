@@ -1,4 +1,5 @@
 import type { RouteDeps } from "../deps";
+import { AlwaysEnabledExtensionError } from "../extensions/always-on-extensions";
 
 type Deps = Pick<RouteDeps, "extensionService" | "harnessRegistry">;
 
@@ -25,6 +26,11 @@ export const applyProjectHarnessSelection = async (
   const instances = await deps.extensionService.listProjectExtensionInstances(input.projectId);
   for (const { installedSource, instance } of instances) {
     if (!disabledExtensionIds.includes(installedSource.extension_id)) continue;
-    await deps.extensionService.setProjectExtensionEnabled(instance.id, false);
+    try {
+      await deps.extensionService.setProjectExtensionEnabled(instance.id, false);
+    } catch (error) {
+      // Host-required extensions stay enabled even when their harnesses are not selected.
+      if (!(error instanceof AlwaysEnabledExtensionError)) throw error;
+    }
   }
 };

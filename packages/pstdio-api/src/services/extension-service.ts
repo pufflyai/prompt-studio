@@ -207,8 +207,8 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
         attachInstalledSource(source, notify),
       );
       const candidate = existing ?? (await createProjectInstance(input, installedSource));
-      if (!(await isAlwaysEnabledExtensionSource(installedSource)) || candidate.enabled) {
-        if (!existing) emitExtensionInstance(candidate);
+      if (!existing) emitExtensionInstance(candidate);
+      if (candidate.enabled || !(await isAlwaysEnabledExtensionSource(installedSource))) {
         return { installedSource, instance: candidate };
       }
       await deps.validateResourcePrefixes?.(input.projectId, installedSource);

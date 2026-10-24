@@ -91,6 +91,8 @@ belong to the installed extension. Device values belong to the extension identit
 on this host, so they are shared across its projects and installed copies, persist
 across restarts, and never enter synced project data. Another device starts with
 the declared default. A remote host stores values on that host, not in the browser.
+Every installed copy with the same extension ID reads the same device values, so
+store only values that any copy of the extension may read.
 
 Commands use `ctx.settings.all()`, `get(key)`, `set(key, value)`, and `delete(key)`.
 Webviews use the same methods on `client.settings` and declare the matching
