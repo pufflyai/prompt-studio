@@ -20,6 +20,8 @@ binary produced by the native toolchain job.
 
 The repeated runs also found Apple Silicon project-tab lifecycle variance: the same commit passed in 15.719 seconds and exceeded 30 seconds after an 18-second cold startup. That case is isolated only on `darwin`/`arm64`, inside the existing native build job. Its other platforms remain blocking. Performance budgets are not quarantined; collection readiness runs in its own untraced benchmark with the existing one-second budget.
 
+Merge groups on 2026-10-24 added three more native cases. The DMG cleanup fixture stalls in `diskutil unmount force` on Intel macOS runners only. Its separate step in the native build job now runs through the shared Bun runner, so the register decides the stable and quarantine selections there too. Two Apple Silicon navigation relaunch cases also exhausted 30 seconds, like the project-tab case. One more Windows packaged browser case shares the browser validation path that is already quarantined.
+
 ## Limitations
 
 Quarantine temporarily removes these specific cases from merge protection on the affected platforms. It does not prove the product works there. Other platforms and the packaged released-data upgrade contract remain blocking. Every quarantined case still executes without retries or prewarming, at its existing limit, and retains first-attempt evidence. A quarantine failure must be reported separately from stable CI success.

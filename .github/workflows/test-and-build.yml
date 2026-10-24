@@ -921,16 +921,33 @@ jobs:
       - name: Test native DMG attachment cleanup
         id: dmg_cleanup
         if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
+        working-directory: clients/desktop
+        # A machine whose only case is quarantined selects no stable case here.
         run: |
           set -o pipefail
-          bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts 2>&1 | tee native-dmg-cleanup.log
+          bun ../../scripts/ci/run-bun-tests.ts src/packaging/dmg-device-cleanup.test.ts --pass-with-no-tests 2>&1 | tee ../../native-dmg-cleanup.log
+
+      - name: Run quarantined native DMG cleanup cases
+        id: dmg_cleanup_quarantine
+        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
+        continue-on-error: true
+        env:
+          E2E_TEST_LANE: quarantine
+        working-directory: clients/desktop
+        run: |
+          set -o pipefail
+          bun ../../scripts/ci/run-bun-tests.ts 2>&1 | tee ../../native-dmg-cleanup-quarantine.log
+
+      - name: Require every quarantined native DMG case to have executed
+        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
+        run: bun scripts/ci/verify-quarantine-reports.ts bun
 
       - name: Preserve failed native DMG cleanup log
-        if: failure() && steps.dmg_cleanup.outcome == 'failure'
+        if: ${{ !cancelled() && (steps.dmg_cleanup.outcome == 'failure' || steps.dmg_cleanup_quarantine.outcome == 'failure') }}
         uses: actions/upload-artifact@v4
         with:
           name: native-dmg-cleanup-${{ matrix.target }}-attempt-${{ github.run_attempt }}
-          path: native-dmg-cleanup.log
+          path: native-dmg-cleanup*.log
           if-no-files-found: error
 
       - name: Build monorepo
