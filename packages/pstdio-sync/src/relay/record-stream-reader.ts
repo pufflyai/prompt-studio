@@ -1,6 +1,6 @@
 import { recordStreamStateSchema, type StateInfo, type StoredUpdate } from "pstdio-sync-contracts";
 import * as Y from "yjs";
-import { openBlob, openState, openSummary, openUpdate, type SyncSpace } from "../encryption";
+import { openBlob, openState, openSummary, openUpdate, type SyncSpace, UnreadableSyncData } from "../encryption";
 import type { DocumentRelay, SyncFailure } from "./document-sync-types";
 import type { createRecordAssets } from "./record-assets";
 import { decodeRecordFrame as decodeFrame, type RecordFrame } from "./record-frames";
@@ -26,6 +26,17 @@ const decodeRecordFrame = (bytes: Uint8Array) => {
   const frame = decodeFrame(bytes);
   for (const record of frame.records) Y.decodeUpdate(record.bytes);
   return frame;
+};
+
+/** False when a referenced file cannot be decrypted or does not match; network errors still throw. */
+const downloaded = async (files: ReturnType<typeof createRecordAssets>, frames: RecordFrame[]) => {
+  try {
+    for (const frame of frames) await files.download(frame.assets);
+    return true;
+  } catch (error) {
+    if (error instanceof UnreadableSyncData) return false;
+    throw error;
+  }
 };
 
 /** Opens data as `decode` reads it, or null when the bytes cannot be decrypted or decoded. */
@@ -62,8 +73,7 @@ export const createRecordStreamReader = (input: {
       frame = await readable(async () => decodeRecordFrame(await openBlob(space, blobId, bytes)));
       if (!frame) return unreadable();
     }
-    await files.download(frame.assets);
-    return frame;
+    return (await downloaded(files, [frame])) ? frame : unreadable();
   };
   return {
     openFrames: (updates: StoredUpdate[]) => mapLimited(updates, openFrame),
@@ -86,8 +96,7 @@ export const createRecordStreamReader = (input: {
       });
       if (chunks.some((chunk) => !chunk)) return unreadable();
       const frames = chunks as RecordFrame[];
-      for (const frame of frames) await files.download(frame.assets);
-      return frames;
+      return (await downloaded(files, frames)) ? frames : unreadable();
     },
     /** What a latest state's summary says about it; an unreadable summary counts as empty. */
     async summary(state: StateInfo) {
