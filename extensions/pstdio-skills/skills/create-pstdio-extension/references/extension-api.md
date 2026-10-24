@@ -27,7 +27,7 @@ In `pst extensions check --json`, `versions.extensionApi` is always the API vers
 | --- | --- | --- |
 | `ctx.storage.collection(name)` | Every 0.1 and 0.2 host. Deprecated from API 0.2.0. | Use it. |
 | `ctx.storage.records`, `ctx.storage.assets`, `client.assets` | API 0.2.0 and newer. Published 0.1.x SDKs do not have them. | Use `ctx.storage.collection`. |
-| `ctx.extensionFiles` root | API 0.1: `.pstdio/ext/<publisher>.<name>/`. API 0.2: `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. | Use relative paths only; the methods are the same. |
+| `ctx.extensionFiles` root | API 0.1: `.pstdio/ext/<publisher>.<name>/`. API 0.2 (0.44, 0.45): `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. From 0.46: `.pstdio/extension-storage/<publisher>.<name>/`. | Use relative paths only; the methods are the same. |
 | `statuses` contributions (`defineStatuses`) | Deprecated from API 0.1.3. Removed on `main`, so the release after 0.43.x no longer has it. | Do not add new ones. Return enum attributes from the query instead. |
 | Setting `options` loaded from a command | API 0.1.2 and newer. | Use fixed `enum` choices. |
 

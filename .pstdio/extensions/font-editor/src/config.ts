@@ -1,4 +1,4 @@
-export const FONT_EDITOR_CONFIG_PATH = ".pstdio/extension-storage/font-editor/config.json";
+export const FONT_EDITOR_CONFIG_PATH = ".pstdio/extension-storage/pstdio.font-editor/config.json";
 
 export const fontFormats = ["eot", "svg", "ttf", "woff", "woff2"] as const;
 

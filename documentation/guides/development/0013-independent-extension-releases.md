@@ -16,11 +16,16 @@ Do not edit package versions by hand. The next host release notes include each
 extension whose version changed since the previous host release.
 
 The compatibility check discovers releasable extension manifests outside the
-host fixed group and checks their declared published SDK and UI dependencies:
+host fixed group. It also typechecks against the first released SDK supported
+by each term in engines.pstdio. Fetch stable host tags before running it:
 
 ~~~bash
 bun run --cwd scripts verify:published-extensions
 ~~~
+
+If code uses an API absent from that baseline, raise the manifest's minimum to the
+first API that provides it. A declaration with no released compatible host cannot
+publish yet. A range for which no host ever shipped adds no baseline.
 
 ## Publish to PSX
 

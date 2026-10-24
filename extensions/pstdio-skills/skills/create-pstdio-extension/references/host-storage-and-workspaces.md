@@ -27,7 +27,7 @@ Project data belongs in `ctx.storage` instead.
 
 ## Store extension-owned project files
 
-Keep configuration, caches, drafts, prototypes, evidence, and backups under `.pstdio/extension-storage/<package-name>/`. Never create another data folder directly under `.pstdio/`, and never write runtime data into extension source folders.
+Keep configuration, caches, drafts, prototypes, evidence, and backups under `.pstdio/extension-storage/<publisher>.<name>/`. Never create another data folder directly under `.pstdio/`, and never write runtime data into extension source folders.
 
 Declare an artifact mount when a view needs to read the files or react to changes:
 

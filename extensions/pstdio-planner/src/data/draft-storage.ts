@@ -6,7 +6,7 @@ import { applyFrontmatter, buildTicketFrontmatter } from "./frontmatter";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
 import type { StoredTicket } from "./types";
 
-export const TICKETS_DIR = ".pstdio/extension-storage/pstdio-planner/tickets";
+export const TICKETS_DIR = ".pstdio/extension-storage/pstdio.pstdio-planner/tickets";
 
 const layout = createDraftLayout(TICKETS_DIR, "ticket");
 export const ticketMarkdownPath = layout.markdown;
@@ -17,7 +17,7 @@ export const ensureTicketDraftsIgnored = async (projectFiles: ArtifactMount) => 
   const path = ".pstdio/.gitignore";
   const existing = (await projectFiles.exists(path)) ? await projectFiles.readText(path) : "";
   const lines = existing.split("\n").filter(Boolean);
-  const entry = "/extension-storage/pstdio-planner/";
+  const entry = "/extension-storage/pstdio.pstdio-planner/";
   if (lines.includes("/extension-storage") || lines.includes("/extension-storage/") || lines.includes(entry)) return;
   await projectFiles.writeText(path, `${[...lines, entry].join("\n")}\n`);
 };
@@ -40,7 +40,7 @@ const parentShorthandForId = async (storage: ExtensionStorageApi, parentId: stri
 const dependencyShorthandsForIds = async (storage: ExtensionStorageApi, dependencyIds: string[]) =>
   Promise.all(dependencyIds.map(async (id) => (await ticketsCollection(storage).get(id))?.shorthand ?? id));
 
-// Renders a stored ticket to its `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/ticket.md` content:
+// Renders a stored ticket to its `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md` content:
 // the YAML frontmatter (with tag ids resolved to names, parent id to shorthand)
 // applied over the ticket body.
 export const ticketToMarkdown = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
