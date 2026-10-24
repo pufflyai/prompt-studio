@@ -3,6 +3,7 @@ import type * as Y from "yjs";
 import type { DocumentHistory } from "./document-history";
 
 // Deterministic authors use 49 bits, above Yjs's random 32-bit device IDs.
+export const deterministicAuthors = 2 ** 48;
 export const documentAuthorId = (key: string) => {
   let first = 2166136261;
   let second = 3339675911;
@@ -10,7 +11,7 @@ export const documentAuthorId = (key: string) => {
     first = Math.imul(first ^ key.charCodeAt(index), 16777619) >>> 0;
     second = Math.imul(second ^ key.charCodeAt(index), 2246822519) >>> 0;
   }
-  return 2 ** 48 + first * 65536 + (second >>> 16);
+  return deterministicAuthors + first * 65536 + (second >>> 16);
 };
 export type DocumentAuthor = <T>(parent: string, key: string, value: Json, action: () => T) => T;
 export const migrationAuthor = (document: Y.Doc, seed?: string, history?: DocumentHistory) => {

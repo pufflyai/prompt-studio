@@ -144,6 +144,19 @@ describe("workspace file readiness", () => {
     expect(requests).toEqual(["/v1/workspaces/readiness-workspace/file?path=notes.md"]);
   });
 
+  test("a tree opened before its project had a folder loads files once the folder is attached", async () => {
+    const { workbench, row, writer } = createFixture();
+    // A cloud project from another device starts without a folder on this device.
+    writer.upsert({ ...row, provider_id: "pstdio.root", is_default: true, root_path: null });
+    const openedWith = workbench.getPrimaryResource();
+    const load = () => treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, { resource: openedWith });
+    expect((await load())[0]?.nodes[0]?.id).toBe("choose-project-folder");
+
+    writer.upsert({ ...row, provider_id: "pstdio.root", is_default: true });
+
+    expect((await load())[0]?.nodes[0]?.id).toBe("notes.md");
+  });
+
   test.each([
     "setup",
     "provider",
