@@ -1,23 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { scopeRecordStorage } from "pstdio-sync";
-import { extension_kv } from "../../db/schemas.pg";
 import type { createExtensionStorageDBService } from "./extension-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 
-type StorageFixture = Awaited<ReturnType<typeof createExtensionStorageFixture>>;
-
 let close: (() => Promise<void>) | undefined;
-let db: StorageFixture["db"];
 let svc: ReturnType<typeof createExtensionStorageDBService>;
 let projectAId: string;
 let projectBId: string;
 let instanceAId: string;
 let instanceBId: string;
 
-const nowTimestamp = () => new Date().toISOString();
-
 beforeEach(async () => {
-  ({ db, close, svc, projectAId, projectBId, instanceAId, instanceBId } = await createExtensionStorageFixture());
+  ({ close, svc, projectAId, projectBId, instanceAId, instanceBId } = await createExtensionStorageFixture());
 });
 
 afterEach(async () => {
@@ -41,25 +35,6 @@ test("legacy writes and records share one document and accept an earlier caller 
     ).status,
   ).toBe("saved-locally");
   expect((await svc.getKv(scope, "setting"))?.value_json).toBe("open caller");
-  expect(await db.select().from(extension_kv)).toHaveLength(0);
-});
-
-test("existing KV rows move atomically into the owner document without a second writable copy", async () => {
-  const scope = { extension_instance_id: instanceAId, scope_type: "project", scope_id: projectAId };
-  const timestamp = nowTimestamp();
-  await db.insert(extension_kv).values({
-    ...scope,
-    key: "existing",
-    value_json: { saved: true },
-    project_id: projectAId,
-    created_at: timestamp,
-    updated_at: timestamp,
-  });
-  const storage = await svc.open({ owner: { workbenchId: projectAId, extensionId: "ext.example" } });
-  const records = scopeRecordStorage(storage.records, ["project", projectAId, "kv"]);
-  expect((await records.read(records.id("existing"))).value).toEqual({ saved: true });
-  expect((await svc.getKv(scope, "existing"))?.value_json).toEqual({ saved: true });
-  expect(await db.select().from(extension_kv)).toHaveLength(0);
 });
 
 test("legacy structured writes preserve JSON serialization of optional object and array values", async () => {

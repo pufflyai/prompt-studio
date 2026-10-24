@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import type {
   createExtensionInstancesDBService,
+  createExtensionStorageDBService,
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
@@ -80,6 +81,8 @@ type ExtensionServiceDeps = {
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
+  /** Deleting an extension's data waits for a running capture or restore of its project. */
+  recovery: Pick<ReturnType<typeof createExtensionStorageDBService>["recovery"], "exclusive">;
   eventBus?: EventBus;
   hashExtension?: typeof hashExtensionSource;
   onInstalledSourcesChanged?: (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void> | void;

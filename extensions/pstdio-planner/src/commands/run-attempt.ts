@@ -131,7 +131,7 @@ async function launchAttempt(
   });
   if (readiness.decision === "wait") {
     const message = attemptWaitMessage(ticketIdentity.shorthand, readiness, capacity);
-    const storedTicket = await findTicket(ctx.storage, ticketRef);
+    const storedTicket = await findTicket(ctx, ticketRef);
     if (storedTicket?.statusId && humanReadinessReasons.has(readiness.reason as HumanRequestReason)) {
       // The readiness reason is what the person who started the attempt needs, so a
       // failed handoff must not replace it.

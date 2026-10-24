@@ -4,7 +4,7 @@ Proposed: 2026-09-26
 
 ## Status
 
-Accepted for PS-410. The core extension release policy is superseded by [ADR 0104](0104-independent-core-extension-delivery.md). The host package group remains shared.
+Accepted for PS-410. The core extension release policy is superseded by [ADR 0106](0106-independent-core-extension-delivery.md). The host package group remains shared.
 
 ## Context
 

@@ -1,5 +1,5 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
-import type { StoredTicket } from "../data/types";
+import type { Ticket } from "../data/types";
 
 const readLinkedPullRequest = async (ctx: Pick<CommandContext, "process">, url: string) => {
   const result = await ctx.process.run({
@@ -23,7 +23,7 @@ const readLinkedPullRequest = async (ctx: Pick<CommandContext, "process">, url: 
 
 export const readPullRequestEvidence = async (
   ctx: Pick<CommandContext, "process">,
-  ticket: StoredTicket,
+  ticket: Ticket,
   expectedHead?: string,
 ) => {
   const links = ticket.reviewLinks?.filter((link) => link.provider === "github" && link.kind === "pull_request") ?? [];

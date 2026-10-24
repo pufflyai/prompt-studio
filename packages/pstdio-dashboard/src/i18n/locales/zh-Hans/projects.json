@@ -160,6 +160,7 @@
     }
   },
   "list": {
+    "settings": "设置",
     "createProject": "创建项目",
     "noProjectsYet": "暂无项目",
     "noProjectsDescription": "创建您的第一个项目以开始使用。"

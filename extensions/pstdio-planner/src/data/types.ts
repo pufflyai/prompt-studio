@@ -18,7 +18,8 @@ export interface StoredTicketAttachment {
 export interface StoredTicketFile {
   id: string;
   name: string;
-  content: string;
+  /** The ticket-scoped blob that holds the file body; see ticket-file-content.ts. */
+  blobId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,7 +40,6 @@ export interface StoredTicketReviewLink {
 
 export interface StoredTicket {
   id: string;
-  shorthand: string;
   title: string;
   content: string;
   statusId: string | null;
@@ -60,6 +60,11 @@ export interface StoredTicket {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Ticket extends StoredTicket {
+  shorthand: string;
+  aliases?: string[];
 }
 
 export interface StoredStatus {

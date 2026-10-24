@@ -33,7 +33,6 @@ export const createResourceRecords = (
   owner: StorageOwner,
   deps: {
     /** Resolves once the owner's records no longer live in its owner document. */
-    upgrade: () => Promise<void>;
     statistics: ReturnType<typeof createProjectionStatistics>;
     /** Notifies owner watchers after a commit. */
     changed: () => void;
@@ -43,7 +42,7 @@ export const createResourceRecords = (
   },
 ) => {
   const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: "records" };
-  const queries = createRecordQueries(db, owner, deps.upgrade, deps.diagnostics);
+  const queries = createRecordQueries(db, owner, deps.diagnostics);
   const receipt = (tx: Pick<DbClient, "select">, operationId: string) =>
     tx
       .select({ fingerprint: storage_document_operations.fingerprint })
@@ -101,7 +100,6 @@ export const createResourceRecords = (
       if (!deps.assets) throw new Error("Asset verification is unavailable");
       await deps.assets.verifyComplete(assets);
     }
-    await deps.upgrade();
     return fingerprint(group.edits.map(({ expectedRevision: _revision, ...edit }) => edit));
   };
   const published = (
@@ -122,21 +120,17 @@ export const createResourceRecords = (
   return {
     ...queries,
     readMany: async (ids: string[]) => {
-      await deps.upgrade();
       return queries.readMany(ids);
     },
     read: async (id: string, _branch?: { operationId: string }) => {
-      await deps.upgrade();
       return read(db, id);
     },
     list: async (prefix = "") => {
-      await deps.upgrade();
       const records = await listProjectedRecords(db, owner, prefix);
       for (const record of records) deps.observer?.read(owner, record);
       return records;
     },
     outcome: async (id: string) => {
-      await deps.upgrade();
       const [row] = await receipt(db, id);
       return row ? outcome(id) : undefined;
     },
@@ -151,7 +145,6 @@ export const createResourceRecords = (
         commit: (group: StorageGroup) => Promise<ReturnType<typeof outcome>>;
       }) => Promise<T>,
     ) => {
-      await deps.upgrade();
       const committed: { result: Awaited<ReturnType<typeof commitIn>>; operationId: string }[] = [];
       const value = await db.transaction(async (tx) => {
         await lockRecordOwner(tx, owner);

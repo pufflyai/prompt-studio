@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { putTicket } from "../data/collections";
+import { putTicket } from "../data/ticket-context.fixture";
+
 import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand } from "./auto-build-mode";

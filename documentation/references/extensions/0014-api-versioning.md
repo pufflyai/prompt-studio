@@ -25,7 +25,7 @@ The host decides what loads. It compares its own extension API version with `eng
 | 0.43.1 | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
 | 0.44.0 | 0.2.0 | A breaking step. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
 | 0.45.0 | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
-| `main` | 0.2.2 | Adds account feature grants, full project-scoped `ctx.sessions` operations, indexed record queries and batches, optional paged collection views, device performance capture and Developer settings contributions, and always allows Kanban dragging. Existing `^0.2.0` ranges still load. |
+| `main` | 0.2.2 | Adds account feature grants, full project-scoped `ctx.sessions` operations, indexed record queries and batches, optional paged collection views, device performance capture and Developer settings contributions, project recovery methods on `/client`, and always allows Kanban dragging. Existing `^0.2.0` ranges still load. |
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
@@ -287,3 +287,10 @@ contract. Storage queries also accept optional `offset` and expected `revision`
 for direct page jumps. This shares the next compatible release step with indexed
 storage queries; it does not add another API version step before that release.
 See [paged tables and boards](0004-contribution-api.md#paged-tables-and-boards).
+
+## Project recovery in API 0.2.2
+
+The `/client` project methods add `recoveryPoints(projectId)` and `restore(projectId, input)`.
+The `/api` entry exports `ProjectRecoveryPoint`, `RestoreProjectInput` and `RestoreProjectResult`.
+Agents use them to list and restore the same recovery points as project settings. These
+additions ship in the release after 0.45.0. See [Restore project data](../../guides/concepts/0006-restore-project-data.md).

@@ -139,6 +139,37 @@ Yjs text document even for single-line content. Binding native editor collaborat
 that port is separate from this storage implementation; ordinary artifact files still
 use verified asset references.
 
+## Recovery points
+
+[Recovery points](../../../packages/pstdio-db/src/services/extension-storage/recovery-points.ts)
+let a person restore a cloud project, or one extension in it, after a mistake has synced. A
+point covers one project. For each extension with data it keeps:
+
+- the live records at one owner revision, read from `storage_current_records`;
+- the text of its text documents;
+- its data migration markers from the owner document.
+
+A point never encodes record documents. One transaction reads the whole project and holds the
+owners' projection rows, so every owner is captured at one revision. An owner whose revision has
+not changed since a kept point reuses those saved records. Capture and restore of one project run
+one at a time, so a point never holds a half-finished restore.
+
+`recovery_points` has one row per kept point and `recovery_point_owners` one row per extension
+in it. The slots are fixed: the last hour, 12 hours and day, so a project never has more than
+three points. A point is replaced when it is older than its period. When the free disk space
+cannot hold every due point, or a write fails because the disk is full, only the 12-hour point
+stays. There is no fixed quota or reserve. A cloud project gets its first point after its first
+full download. Projects with points keep rotating them while the device runs, even offline.
+
+A restore first checks that every saved file is still on the device, and changes nothing when one
+is missing. It then compares the saved records with the current projection and commits the difference
+with normal `records.commit` groups for each owner. These commits notify storage listeners and
+sync like any other edit. A record brought back after deletion gets a second pass, because its
+document keeps its old shared value. Text documents and migration markers are set back through
+their documents. Before it writes, the restore saves the current state in the hour point, or in
+the 12-hour point when there is no hour point, so the restore can be undone without a fourth
+point. A restore that would change nothing keeps every point. Purging an extension's data also removes it from recovery points.
+
 ## Record stream
 
 Each extension owner syncs its records through one relay document, named

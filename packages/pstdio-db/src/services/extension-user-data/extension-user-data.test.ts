@@ -1,13 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
-import {
-  extension_collection_items,
-  extension_files,
-  extension_kv,
-  extension_skill_preferences,
-  files,
-  projects,
-} from "../../db/schemas.pg";
+import { extension_files, extension_skill_preferences, files, projects } from "../../db/schemas.pg";
 import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
 import { createDocumentStorageDBService } from "../extension-storage/document-storage";
 import { createExtensionStorageDBService } from "../extension-storage/extension-storage";
@@ -32,27 +25,6 @@ const seedAllTables = async () => {
     file_kind: "document",
     storage_path: "doc.md",
     size_bytes: 1,
-    created_at: timestamp,
-    updated_at: timestamp,
-  });
-  await db.insert(extension_collection_items).values({
-    project_id: projectId,
-    extension_instance_id: instanceId,
-    scope_type: "project",
-    scope_id: projectId,
-    collection: "tickets",
-    item_id: "T-1",
-    value_json: { title: "Keep me" },
-    created_at: timestamp,
-    updated_at: timestamp,
-  });
-  await db.insert(extension_kv).values({
-    project_id: projectId,
-    extension_instance_id: instanceId,
-    scope_type: "project",
-    scope_id: projectId,
-    key: "k",
-    value_json: { v: 1 },
     created_at: timestamp,
     updated_at: timestamp,
   });

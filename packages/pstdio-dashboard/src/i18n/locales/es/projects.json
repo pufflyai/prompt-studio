@@ -162,6 +162,7 @@
     }
   },
   "list": {
+    "settings": "Configuración",
     "createProject": "Crear proyecto",
     "noProjectsYet": "Aún no hay proyectos",
     "noProjectsDescription": "Crea tu primer proyecto para comenzar."

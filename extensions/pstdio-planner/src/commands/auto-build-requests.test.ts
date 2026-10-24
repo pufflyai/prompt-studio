@@ -33,7 +33,7 @@ test("supervisor-linked input stays visible after an unstarted ticket leaves eli
   const { autoBuildCommand } = await import("./auto-build");
   const { readAutoBuildSupervisor } = await import("../data/auto-build-supervisor");
   const { putTicket } = await import("../data/collections");
-  const { ctx, ticket, storage } = await supervisorFixture();
+  const { ctx, ticket } = await supervisorFixture();
   const task = await ticket("Choose a tool");
   await autoBuildCommand.run(ctx, {});
   const owner = (await readAutoBuildSupervisor(ctx)).sessionId!;
@@ -44,6 +44,6 @@ test("supervisor-linked input stays visible after an unstarted ticket leaves eli
     request: { kind: "task" },
     sessionId: owner,
   });
-  await putTicket(storage, { ...task, statusId: "blocked", blockedReason: "Waiting for input" });
+  await putTicket(ctx, { ...task, statusId: "blocked", blockedReason: "Waiting for input" });
   expect((await readAutoBuildCommand.run(ctx, {})).reviewRequests.map((request) => request.id)).toContain(request.id);
 });

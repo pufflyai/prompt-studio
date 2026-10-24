@@ -13,7 +13,10 @@ import { readTicketReviewRequests } from "../data/review-request-storage";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { isLiveSession } from "./auto-build-sessions";
 
-type ReadinessContext = Pick<CommandContext, "process" | "workspaces" | "sessions" | "settings" | "storage" | "logger">;
+type ReadinessContext = Pick<
+  CommandContext,
+  "process" | "workspaces" | "sessions" | "settings" | "storage" | "logger" | "resources"
+>;
 
 interface ReadinessParams {
   base?: string;
@@ -44,7 +47,7 @@ const loadDependencyInput = async (
   deliveryReads?: DependencyDeliveryReads,
 ) => {
   const [storedTickets, attempts, selections, statuses, home, providers, requests, events] = await Promise.all([
-    ticketsCollection(ctx.storage).list(),
+    ticketsCollection(ctx).list(),
     listAttempts(ctx.storage),
     attemptSelectionsCollection(ctx.storage).list(),
     readWorkflowStatuses(ctx),
@@ -53,7 +56,7 @@ const loadDependencyInput = async (
     readTicketReviewRequests(ctx.storage),
     attemptEventsCollection(ctx.storage).list(),
   ]);
-  const storedTarget = await findTicket(ctx.storage, ticketRef);
+  const storedTarget = await findTicket(ctx, ticketRef);
   const target: AttemptReadinessTicket = storedTarget ?? {
     id: ticketRef,
     shorthand: ticketRef,

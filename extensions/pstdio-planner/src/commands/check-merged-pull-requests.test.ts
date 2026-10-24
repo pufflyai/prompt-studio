@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { attemptEventsCollection, putAttempt } from "../data/attempt-storage";
-import { statusesCollection, ticketsCollection } from "../data/collections";
-import type { StoredTicket } from "../data/types";
+import { statusesCollection } from "../data/collections";
+import { seedTicketIdentity, ticketsCollection } from "../data/ticket-context.fixture";
+import type { Ticket } from "../data/types";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
 import { makeCommandArgs } from "./command-context.fixture";
@@ -56,7 +57,7 @@ test("a merged GitHub review link marks its ticket Done", async () => {
 
 test("checks many linked PRs with bounded parallel processes", async () => {
   const now = new Date().toISOString();
-  const tickets: StoredTicket[] = Array.from({ length: 30 }, (_, index) => {
+  const tickets: Ticket[] = Array.from({ length: 30 }, (_, index) => {
     const number = index + 1;
     return {
       id: `ticket-${number}`,
@@ -89,6 +90,7 @@ test("checks many linked PRs with bounded parallel processes", async () => {
       tickets: Object.fromEntries(tickets.map((ticket) => [ticket.id, ticket])),
     },
   });
+  for (const ticket of tickets) seedTicketIdentity(storage, ticket);
   let active = 0;
   let maxActive = 0;
   let calls = 0;

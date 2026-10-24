@@ -1,6 +1,6 @@
-import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "./collections";
-import type { StoredTicket } from "./types";
+import type { TicketContext } from "./ticket-identity";
+import type { Ticket } from "./types";
 
 export type TicketDependencyValue = string | string[] | null | undefined;
 
@@ -9,13 +9,9 @@ export const normalizeTicketDependencies = (value: TicketDependencyValue) => {
   return values.map((id) => id.trim()).filter((id) => id.length > 0 && id !== "[]");
 };
 
-export const validateTicketDependencies = async (
-  storage: ExtensionStorageApi,
-  ticket: StoredTicket,
-  dependsOn: string[],
-) => {
+export const validateTicketDependencies = async (ctx: TicketContext, ticket: Ticket, dependsOn: string[]) => {
   if (dependsOn.length === 0) return;
-  const tickets = new Map((await ticketsCollection(storage).list()).map((stored) => [stored.id, stored]));
+  const tickets = new Map((await ticketsCollection(ctx).list()).map((stored) => [stored.id, stored]));
   const pending = [...dependsOn];
   const visited = new Set<string>();
 

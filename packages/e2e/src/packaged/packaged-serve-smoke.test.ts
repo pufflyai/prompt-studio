@@ -35,11 +35,12 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // Core extension checks cover extension-owned draft storage, versioned template edits, and allocated file roots.
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
 // packaged-command-palette.spec.ts checks theme selection from the palette and persistence after reload.
-// packaged-main-fullscreen.spec.ts checks Main fullscreen, its minimized Side bubble, keyboard exit and reload state.
+// packaged-main-fullscreen.spec.ts checks the empty picker, Settings, creation without reinstalling defaults or a reload, hidden chrome,
+// Main fullscreen, its minimized Side bubble, keyboard exit and reload state.
 // Desktop packaged-project-tabs.spec.ts checks the title-bar maximize control and focus after fullscreen exit.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // grouped ticket settings and icons, cleanup/merge settings, image save/pull round trips, ticket-save refresh events,
-// saved document links with file ancestry, and ticket/workspace navigation.
+// saved document links with file ancestry, core ticket number/path lookup, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 // Document sync checks local, synced and needs-attention states plus strict leaf uploads to an older relay.
 import { registerDeviceAutomationSmokeTests } from "./packaged-device-automations-smoke";
@@ -57,8 +58,8 @@ import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smo
 // Resource allocation, identity lookup, shorthand lookup and renumbering event exports survive packaging and restart.
 // scripts/verify/storage-package-consumer.ts checks the packaged SDK's two-device merge and replacement report.
 // Selected storage queries preserve case-insensitive text equality and negation through restart.
-// packaged-storage-upgrade.test.ts checks the released 0.45 engine transition, nested records, assets,
-// operation retries and tombstones through index installation and restart, plus upgrade progress phases.
+// packaged-database-retirement.test.ts checks that a released 0.45 home is exported as JSON, moved aside and
+// replaced by an empty current database, once.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.

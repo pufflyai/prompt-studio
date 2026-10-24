@@ -1,13 +1,13 @@
 import { expect, test } from "bun:test";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTicket, ticketsCollection } from "../data/collections";
 import { ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
-import type { StoredTicket } from "../data/types";
+import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
+import type { Ticket } from "../data/types";
 import { makeCommandArgs } from "./command-context.fixture";
 import { resolveTicketPathCommand } from "./resolve-ticket-path";
 
-const storedTicket = (id: string, shorthand: string, extra: Partial<StoredTicket> = {}) =>
+const storedTicket = (id: string, shorthand: string, extra: Partial<Ticket> = {}) =>
   ({
     id,
     shorthand,
@@ -19,7 +19,7 @@ const storedTicket = (id: string, shorthand: string, extra: Partial<StoredTicket
     createdAt: "2026-10-16",
     updatedAt: "2026-10-16",
     ...extra,
-  }) satisfies StoredTicket;
+  }) satisfies Ticket;
 
 // Counts full reads of the ticket list on a real in-memory storage.
 const countTicketLists = (storage: ExtensionStorageApi) => {
@@ -51,7 +51,7 @@ const countTicketLists = (storage: ExtensionStorageApi) => {
 const resolver = (storage: ExtensionStorageApi, projectId: string) => (path: string) =>
   resolveTicketPathCommand.run(...makeCommandArgs({ storage, projectId, params: { path, workspaceId: "workspace" } }));
 
-test("after one full read, ticket paths and their parents resolve without reading every ticket", async () => {
+test("ticket paths and their parents resolve without reading every ticket", async () => {
   const storage = createMemoryStorage();
   await putTicket(storage, storedTicket("parent", "T-1", { title: "Epic" }));
   await putTicket(storage, storedTicket("child", "T-2", { parentId: "parent" }));
@@ -69,7 +69,7 @@ test("after one full read, ticket paths and their parents resolve without readin
   expect(counter.lists()).toBe(0);
 });
 
-test("a ticket created after the last full read is found, then without reading every ticket", async () => {
+test("new tickets resolve without reading every ticket", async () => {
   const storage = createMemoryStorage();
   await putTicket(storage, storedTicket("first", "T-1"));
   const counter = countTicketLists(storage);
@@ -82,7 +82,7 @@ test("a ticket created after the last full read is found, then without reading e
   expect(counter.lists()).toBe(0);
 });
 
-test("lookups that start together share one full read", async () => {
+test("concurrent lookups use core without reading every ticket", async () => {
   const storage = createMemoryStorage();
   await putTicket(storage, storedTicket("one", "T-1"));
   await putTicket(storage, storedTicket("two", "T-2"));
@@ -90,7 +90,7 @@ test("lookups that start together share one full read", async () => {
   const resolve = resolver(storage, "together-project");
   const results = await Promise.all([resolve(ticketMarkdownPath("T-1")), resolve(ticketMarkdownPath("T-2"))]);
   expect(results).toMatchObject([{ resource: { id: "one" } }, { resource: { id: "two" } }]);
-  expect(counter.lists()).toBe(1);
+  expect(counter.lists()).toBe(0);
 });
 
 test("a parent cycle stops the parent walk", async () => {
@@ -113,7 +113,7 @@ test("a renumbered ticket no longer answers to its old shorthand", async () => {
 test("ticket draft paths open the ticket and saved file paths select the document", async () => {
   const storage = createMemoryStorage();
   const ticket = storedTicket("ticket-1", "T-1", {
-    files: [{ id: "notes", name: "notes.md", content: "", createdAt: "2026-10-16", updatedAt: "2026-10-16" }],
+    files: [{ id: "notes", name: "notes.md", blobId: "unused", createdAt: "2026-10-16", updatedAt: "2026-10-16" }],
   });
   await ticketsCollection(storage).put(ticket.id, ticket);
   const resolve = resolver(storage, "draft-project");

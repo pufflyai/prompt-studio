@@ -13,7 +13,7 @@ const changeLink = async (ctx: CommandContext, input: LinkParams, unlink: boolea
   if (Boolean(input.workspace) === Boolean(input.session)) {
     throw new Error("Exactly one of --workspace and --session is required.");
   }
-  const ticket = await findTicket(ctx.storage, input.id);
+  const ticket = await findTicket(ctx, input.id);
   if (!ticket) throw new Error(`Unknown ticket "${input.id}"`);
 
   const workspace = input.workspace

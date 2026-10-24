@@ -1,15 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionSessionsApi, ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTicket } from "../data/collections";
 import { seedDefaultStatuses } from "../data/seed";
 import { countStorageWrites } from "../data/storage-writes.fixture";
-import type { StoredTicket } from "../data/types";
+import { putTicket } from "../data/ticket-context.fixture";
+import type { Ticket } from "../data/types";
 import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
 import { queryTicketsCommand } from "./query-tickets";
 import { sessionQuery } from "./session-query.fixture";
 
-const makeTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
+const makeTicket = (overrides: Partial<Ticket>): Ticket => ({
   id: "ticket-1",
   shorthand: "T-1",
   title: "Ticket",
