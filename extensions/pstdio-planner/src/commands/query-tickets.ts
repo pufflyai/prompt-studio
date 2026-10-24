@@ -7,7 +7,10 @@ import { loadLatestWorkspaceSessions } from "../data/workspace-sessions";
 import { resolveWorkspaceTicketAnchors } from "../data/workspace-ticket-link";
 
 export const queryTickets = async (
-  ctx: Pick<ExtensionContextBase, "files" | "projectId" | "sessions" | "storage" | "workspaces" | "settings" | "resources">,
+  ctx: Pick<
+    ExtensionContextBase,
+    "files" | "projectId" | "sessions" | "storage" | "workspaces" | "settings" | "resources"
+  >,
   input: { filter?: ViewFilterGroup },
 ) => {
   await migratePlannerStorage(ctx);

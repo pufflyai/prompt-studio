@@ -1,11 +1,10 @@
-import { ticketContext, ticketsCollection } from "./ticket-context.fixture";
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-
 import { findTicket, resolveStatusId, resolveTagId, resolveTagOptionIds, resolveTicketId } from "./resolve";
 import { reviewRequestsCollection } from "./review-request-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import { observeStorageReads } from "./storage-reads.fixture";
+import { ticketContext, ticketsCollection } from "./ticket-context.fixture";
 
 describe("resolveStatusId", () => {
   test("resolves by id and by case-insensitive name", async () => {

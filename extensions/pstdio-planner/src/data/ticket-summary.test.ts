@@ -1,9 +1,8 @@
-import { ticketContext, ticketsCollection } from "./ticket-context.fixture";
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-
 import { createTicketParentLookup, createTicketWorkspaceLookup, ticketToRow } from "./mappers";
 import { observeStorageReads } from "./storage-reads.fixture";
+import { ticketContext, ticketsCollection } from "./ticket-context.fixture";
 import { readTicketParentLookup } from "./ticket-resource-hierarchy";
 import { ticketSummary } from "./ticket-summary";
 import type { StoredTag, Ticket } from "./types";

@@ -1,4 +1,3 @@
-
 import { expect, test } from "bun:test";
 import { appendAttemptEvent, putAttempt, readAttempt } from "../data/attempt-storage";
 

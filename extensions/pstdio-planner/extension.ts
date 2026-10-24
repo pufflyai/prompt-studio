@@ -161,6 +161,7 @@ export default defineExtension({
 
   schedules: [mergedPullRequestsSchedule, autoBuildSchedule],
   hooks: [
+    ticketRenumberedHook,
     ...dependencyBlockerHooks,
     ...autoBuildHooks,
     gitMergedHook,

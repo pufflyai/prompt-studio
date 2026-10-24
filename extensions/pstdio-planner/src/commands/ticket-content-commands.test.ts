@@ -1,8 +1,7 @@
-import { ticketsCollection } from "../data/ticket-context.fixture";
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-
 import { observeStorageReads } from "../data/storage-reads.fixture";
+import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { getTicketContentCommand } from "./get-ticket-content";
@@ -27,7 +26,7 @@ describe("ticket body file-renderer commands", () => {
       ...makeCommandArgs({
         storage: observed.storage,
         params: {},
-        overrides: { resource: { type: "ticket", id: ticket.id } },
+        overrides: { resource: { type: "ticket", id: ticket.id }, resources: ticketContext(storage).resources },
       }),
     );
 

@@ -22,7 +22,12 @@ export const readTicketParentLookup = async (
     // Missing parents are visited too, so another branch cannot fetch them again.
     for (const id of ids) visited.add(id);
     const ancestors = await Promise.all([...ids].map((id) => collection.get(id)));
-    pending = (await withTicketIdentities(ctx, ancestors.filter((ticket) => ticket !== undefined))).map(ticketSummary);
+    pending = (
+      await withTicketIdentities(
+        ctx,
+        ancestors.filter((ticket) => ticket !== undefined),
+      )
+    ).map(ticketSummary);
     for (const ticket of pending) lookup.set(ticket.id, ticket);
   }
   return lookup;

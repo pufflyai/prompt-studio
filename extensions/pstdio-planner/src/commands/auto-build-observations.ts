@@ -157,12 +157,7 @@ const observeStoppedWork = async (
   return result;
 };
 
-const observeVariant = async (
-  ctx: CommandContext,
-  ticket: Ticket,
-  attempt: AttemptRecord,
-  input: ObserveInput,
-) => {
+const observeVariant = async (ctx: CommandContext, ticket: Ticket, attempt: AttemptRecord, input: ObserveInput) => {
   const session = await ctx.sessions.get(attempt.implementationSessionId);
   if (isLiveSession(session))
     return observation(attempt, "Execution is active.", "The current owner continues, including PR and CI work.");

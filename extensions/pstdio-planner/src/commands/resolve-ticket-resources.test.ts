@@ -1,8 +1,7 @@
-import { ticketsCollection } from "../data/ticket-context.fixture";
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-
 import { observeStorageReads } from "../data/storage-reads.fixture";
+import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { resolveTicketResourcesCommand } from "./resolve-ticket-resources";
@@ -20,7 +19,13 @@ test("resolves a saved document identity to its current name, body parent, and t
   const observed = observeStorageReads(storage);
   const resources = [{ type: "ticket", id: ticket.id, metadata: { documentId: file.id } }];
   const resolve = () =>
-    resolveTicketResourcesCommand.run(...makeCommandArgs({ storage: observed.storage, params: { resources } }));
+    resolveTicketResourcesCommand.run(
+      ...makeCommandArgs({
+        storage: observed.storage,
+        params: { resources },
+        overrides: { resources: ticketContext(storage).resources },
+      }),
+    );
   expect(await resolve()).toMatchObject([
     {
       resource: { id: ticket.id, label: "notes.md", icon: "FileText", metadata: { documentId: file.id } },
@@ -82,7 +87,11 @@ test("batch resolution reads a shared ancestor once and stops at cycles", async 
   ];
 
   const resolved = await resolveTicketResourcesCommand.run(
-    ...makeCommandArgs({ storage: observed.storage, params: { resources } }),
+    ...makeCommandArgs({
+      storage: observed.storage,
+      params: { resources },
+      overrides: { resources: ticketContext(storage).resources },
+    }),
   );
 
   expect(resolved.map(({ resource }) => resource.id)).toEqual([child.id, parent.id, child.id]);
@@ -112,7 +121,11 @@ test("batch resolution reads a missing ancestor once across different branch dep
   const observed = observeStorageReads(storage);
   const resources = ["a", "b", "a", "missing"].map((id) => ({ type: "ticket", id }));
   const resolved = await resolveTicketResourcesCommand.run(
-    ...makeCommandArgs({ storage: observed.storage, params: { resources } }),
+    ...makeCommandArgs({
+      storage: observed.storage,
+      params: { resources },
+      overrides: { resources: ticketContext(storage).resources },
+    }),
   );
 
   expect(resolved.map(({ resource }) => resource.id)).toEqual(["a", "b", "a"]);

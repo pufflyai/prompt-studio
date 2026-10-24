@@ -87,11 +87,12 @@ test("workspace recovery preserves a user stop after its final eligibility check
         detail: "Missing workspace",
       },
       async () => {
-        f.ctx.sessions.get = async () => sessionRecord({
-          ...f.old.session,
-          status: "cancelled",
-          last_exit: { cause: "user_stop", startedAt: null, endedAt: "2026-10-22T10:00:00.000Z" },
-        });
+        f.ctx.sessions.get = async () =>
+          sessionRecord({
+            ...f.old.session,
+            status: "cancelled",
+            last_exit: { cause: "user_stop", startedAt: null, endedAt: "2026-10-22T10:00:00.000Z" },
+          });
       },
     ),
   ).rejects.toThrow("stopped");
@@ -155,7 +156,8 @@ test.each([
     const prerequisite = await createTicketCommand.run(f.ctx, { title: "Unfinished prerequisite", statusId: "ready" });
     await putTicket(f.storage, { ...f.ticket, dependsOn: [prerequisite.id] });
   }
-  if (reason === "live owner") f.ctx.sessions.get = async () => sessionRecord({ ...f.old.session, status: "in_progress" });
+  if (reason === "live owner")
+    f.ctx.sessions.get = async () => sessionRecord({ ...f.old.session, status: "in_progress" });
   if (reason === "ambiguous") await putAttempt(f.storage, { ...f.previous, workspaceId: "other" });
   expect((await nextTicketsCommand.run(f.ctx, {})).tickets.some(({ id }) => id === f.ticket.id)).toBe(false);
   expect(await autoBuildDispatchCommand.run(f.ctx, { ticket: f.ticket.id, revision: "test" })).toMatchObject({

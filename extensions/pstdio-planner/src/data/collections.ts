@@ -17,6 +17,15 @@ export const ticketsCollection = (ctx: TicketContext) => {
       const record = await records.get(id);
       return record ? withTicketIdentity(ctx, record) : undefined;
     },
+    getMany: async (ids: string[]) => {
+      const selected = await Promise.all(ids.map((id) => records.get(id)));
+      const tickets = await withTicketIdentities(
+        ctx,
+        selected.filter((ticket) => ticket !== undefined),
+      );
+      const byId = new Map(tickets.map((ticket) => [ticket.id, ticket]));
+      return ids.map((id) => byId.get(id));
+    },
     list: async () => withTicketIdentities(ctx, await records.list()),
     put: (id: string, ticket: StoredTicket) => records.put(id, ticketRecord(ticket)),
     update: (id: string, ticket: StoredTicket) => records.update(id, ticketRecord(ticket)),
@@ -63,8 +72,7 @@ export const readTicketSnapshot = async (ctx: TicketContext) => {
 
 export const readTicketsWithReviewState = async (ctx: TicketContext) => (await readTicketSnapshot(ctx)).tickets;
 
-export const withDerivedTicketState = async (ctx: TicketContext, ticket: Ticket) =>
-  withIndependentBlocker(ctx, ticket);
+export const withDerivedTicketState = async (ctx: TicketContext, ticket: Ticket) => withIndependentBlocker(ctx, ticket);
 
 const withIndependentBlocker = async (ctx: TicketContext, ticket: Ticket) => {
   if (!dependencyBlockerRefs(ticket.blockedReason)) return ticket;

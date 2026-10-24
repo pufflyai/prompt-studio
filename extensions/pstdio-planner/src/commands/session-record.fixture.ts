@@ -2,7 +2,9 @@ import type { ExtensionSessionsApi } from "@pstdio/sdk/extensions";
 
 type Session = NonNullable<Awaited<ReturnType<ExtensionSessionsApi["get"]>>>;
 
-export const sessionRecord = (input: Pick<Session, "id" | "title" | "status"> & Partial<Session> & { type?: "session" }) => ({
+export const sessionRecord = (
+  input: Pick<Session, "id" | "title" | "status"> & Partial<Session> & { type?: "session" },
+) => ({
   type: "session" as const,
   archived: false,
   agent: null,

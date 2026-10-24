@@ -13,9 +13,7 @@ export const getTicketContent = async (
 ) => {
   const ticketId = input.id ?? (input.resource?.type === "ticket" ? input.resource.id : undefined);
   if (!ticketId) return { content: "", placeholder: BODY_PLACEHOLDER };
-  const ticket = input.id
-    ? await findStoredTicket(ctx, input.id)
-    : await ticketsCollection(ctx).get(ticketId);
+  const ticket = input.id ? await findStoredTicket(ctx, input.id) : await ticketsCollection(ctx).get(ticketId);
   if (!ticket) return { content: "", placeholder: BODY_PLACEHOLDER };
 
   const documentId = selectedDocumentFromResource(input.resource);

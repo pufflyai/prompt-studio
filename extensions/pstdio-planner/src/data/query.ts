@@ -23,8 +23,8 @@ import {
 import { hasPendingInput, readTicketReviewRequests } from "./review-request-storage";
 import { REVIEW_REQUEST_ITEMS_ATTRIBUTE, reviewRequestBadgeItems } from "./review-request-summary";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
-import { ticketActivationTarget } from "./ticket-page-target";
 import type { TicketContext } from "./ticket-identity";
+import { ticketActivationTarget } from "./ticket-page-target";
 import { emptyWorkflowStatuses, type WorkflowStatusSelections } from "./workflow-statuses";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 import { resolveWorkspaceTicketAnchors } from "./workspace-ticket-link";

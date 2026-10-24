@@ -1,4 +1,3 @@
-
 import { expect, test } from "bun:test";
 import type { BoardView } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";

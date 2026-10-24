@@ -1,9 +1,4 @@
-import {
-  defineCommand,
-  type ExtensionContextBase,
-  type ExtensionStorageApi,
-  type ResourceRef,
-} from "@pstdio/sdk/extensions";
+import { defineCommand, type ExtensionContextBase, type ResourceRef } from "@pstdio/sdk/extensions";
 import { migratePlannerStorage } from "../../data/migrate-storage";
 import { findTicket } from "../../data/resolve";
 import { readTicketStatuses } from "../../data/status-operations";

@@ -1,4 +1,3 @@
-
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { fixture } from "../commands/auto-build.fixture";
