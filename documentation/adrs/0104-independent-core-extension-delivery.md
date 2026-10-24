@@ -1,4 +1,4 @@
-# ADR 0101: Deliver core extension releases independently through PSX
+# ADR 0104: Deliver core extension releases independently through PSX
 
 Proposed: 2026-10-22
 
@@ -52,15 +52,16 @@ IDs, resource-kind record IDs, allocated files and artifact roots must not colli
 when two publishers choose the same name. A resource's local type still belongs
 to its explicit extension owner.
 
-Move project storage to the full ID. Keep deprecated name-only routes and the
-allocated-file publisher layout as aliases to the same data until the next
-breaking extension API release. Refuse ambiguous aliases. Encode Windows device
-names with a leading underscore in the storage directory; an underscore cannot
-start an accepted publisher ID, so this mapping stays distinct.
-Apply this mapping to package filenames and both staging and installed folders.
-Discover persisted publisher ownership before moving legacy folders, including
-disabled and uninstalled owners. Read-only workspaces keep reading the legacy
-layout until an authorised write can migrate it.
+Store project files under the full ID, in
+`.pstdio/extension-storage/<publisher>.<name>/`. 0.46 starts every device with an
+empty database (PR #1405), so the host does not move earlier project files either.
+Each extension starts fresh in its full-ID folder. Earlier `<name>/` folders stay
+on disk untouched and are no longer read. Keep deprecated name-only aliases for
+CLI command namespaces and resource-kind references until the next breaking
+extension API release. Refuse ambiguous aliases. Encode Windows device names with a leading
+underscore in the storage directory; an underscore cannot start an accepted
+publisher ID, so this mapping stays distinct. Apply this mapping to package
+filenames and both staging and installed folders.
 
 ## Consequences
 
@@ -69,6 +70,8 @@ layout until an authorised write can migrate it.
   release, desktop build or host tag.
 - Extension publication has its own workflow. It checks published dependencies.
 - A package contains one extension and identifies it by full ID and version.
+- Files in earlier name-only storage folders are not moved or read. A user who
+  needs them moves them into the full-ID folder by hand.
 - New registry sources record the registry, full ID and installed version.
 - Historical Git records do not record whether the catalog or an explicit
   install chose their source. On a registry host, a Git install whose repository

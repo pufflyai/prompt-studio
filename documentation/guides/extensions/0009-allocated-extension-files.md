@@ -4,21 +4,18 @@ Extension files belong to their full publisher and name. Use the context file me
 
 ## Full extension IDs
 
-Prompt Studio 0.46 moves allocated
-files and artifact mounts under
+Prompt Studio 0.46 roots allocated files and artifact mounts at
 `.pstdio/extension-storage/<publisher>.<name>/`.
-For example, Planner tickets move from
-`.pstdio/extension-storage/pstdio-planner/tickets/` to
-`.pstdio/extension-storage/pstdio.pstdio-planner/tickets/`.
+For example, Planner tickets live in
+`.pstdio/extension-storage/pstdio.pstdio-planner/tickets/` instead of
+`.pstdio/extension-storage/pstdio-planner/tickets/`.
 
-The host moves existing data without keeping a second copy. Deprecated
-name-only paths and `.publishers/<publisher>/` paths resolve to the same owned
-data until the next breaking extension API release. Use the full ID in new
-scripts. An ambiguous name-only path cannot select either publisher.
-
-Migration preserves publisher folders even when their extensions are disabled or
-uninstalled. Read-only workspaces read the earlier layout without moving files or
-writing ignore rules. Migration runs when the workspace permits writes.
+0.46 starts every device with an empty database and does not move project files.
+Each extension starts fresh in its full-ID folder. Earlier `<name>/` and
+`.publishers/<publisher>/` folders stay on disk untouched, and the host no longer
+reads them. To keep earlier files, move them into the full-ID folder by hand. A
+name-only path passed to `ctx.projectFiles` is an ordinary project path. It does
+not point to the full-ID folder.
 
 Windows reserves device names even before a dot. A publisher such as
 `con.notes` uses the portable directory `_con.notes`. Let the host return

@@ -4,4 +4,4 @@
 "@pstdio/workbench": patch
 ---
 
-Version core extensions independently, own extension data by full publisher and name ID, and add opt-in PSX registry installs.
+Version core extensions independently, store extension data under full `<publisher>.<name>` IDs where each extension starts fresh, and add opt-in PSX registry installs.
