@@ -1,5 +1,5 @@
 import * as Y from "yjs";
-import { migrationAuthor } from "./document-author";
+import { deterministicAuthors, migrationAuthor } from "./document-author";
 import { applyDocumentEdit } from "./document-edits";
 import { type DocumentHistory, documentHistory } from "./document-history";
 import { readDocumentRecord } from "./document-record";
@@ -92,11 +92,14 @@ const missingFrom = (document: Y.Doc, states: Uint8Array[]) => {
   }
 };
 
+// Only a device's own edits prove a shared history. Every device that runs the same data migration
+// writes with the same deterministic author, even on records whose histories are unrelated.
 const sharesHistory = (local: Uint8Array[], remote: Y.Doc) => {
-  const clients = Y.encodeStateVector(remote);
-  const known = Y.decodeStateVector(clients);
+  const known = Y.decodeStateVector(Y.encodeStateVector(remote));
   return local.some((state) =>
-    [...Y.decodeStateVector(Y.encodeStateVectorFromUpdate(state)).keys()].some((client) => known.has(client)),
+    [...Y.decodeStateVector(Y.encodeStateVectorFromUpdate(state)).keys()].some(
+      (client) => client < deterministicAuthors && known.has(client),
+    ),
   );
 };
 

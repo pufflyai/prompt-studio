@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { createSyncSpace, editResourceDocument, sealUpdate } from "pstdio-sync";
-import { createRecordStreamSync, encodeRecordFrame } from "pstdio-sync/relay";
+import { createRecordStreamSync, encodeRecordFrame, type RecordStreamStore } from "pstdio-sync/relay";
 import type { Asset, ReadResult, StateEnvelope, StateInfo, StoredUpdate, UpdateEnvelope } from "pstdio-sync-contracts";
 import { createDb } from "../../db/connection.pglite";
 import { projects, storage_record_sync } from "../../db/schemas.pg";
@@ -24,6 +24,8 @@ const createRelay = () => {
   let latest: (StateEnvelope & StateInfo) | null = null;
   let sequence = 0;
   let updates: StoredUpdate[] = [];
+  let damagedState: (StateEnvelope & StateInfo) | null = null;
+  let failUpdates = false;
   const blobs = new Map<string, Uint8Array>();
   const requests = { reads: 0, blobs: 0, updates: 0, states: 0 };
   const relay = {
@@ -35,6 +37,9 @@ const createRelay = () => {
     },
     state: async () => decode(latest!.payload),
     update: async (update: UpdateEnvelope) => {
+      if (failUpdates) throw new Error("Network unavailable");
+      // The blind relay rejects an update whose payload is larger than 1 MiB.
+      if (decode(update.payload).length > 1_048_576) throw new Error("Update is too large");
       requests.updates++;
       updates.push({ ...update, sequence: ++sequence, deviceId: "device", createdAt: new Date().toISOString() });
       return { sequence, duplicate: false };
@@ -73,8 +78,17 @@ const createRelay = () => {
         blobs.get(blobId)!.map((byte) => byte ^ 1),
       );
     },
+    latest: () => latest,
     damageState: () => {
+      damagedState = latest;
       latest = { ...latest!, payload: Buffer.from("not a latest state").toString("base64") };
+    },
+    repairState: () => {
+      latest = damagedState;
+    },
+    /** Later updates fail as if the network dropped, so a test can stop a device mid-sync. */
+    failUpdates: (failing: boolean) => {
+      failUpdates = failing;
     },
     /** The relay loses every stored copy of the stream. */
     lose: () => {
@@ -111,7 +125,11 @@ const createAssets = () => {
   };
 };
 
-const device = async (relay: ReturnType<typeof createRelay>["relay"], limits?: { bytes: number; updates: number }) => {
+const device = async (
+  relay: ReturnType<typeof createRelay>["relay"],
+  limits?: { bytes: number; updates: number },
+  wrap: (store: RecordStreamStore) => RecordStreamStore = (store) => store,
+) => {
   const { db, close } = await createDb({ path: ":memory:" });
   cleanup.push(close);
   const timestamp = new Date().toISOString();
@@ -121,20 +139,22 @@ const device = async (relay: ReturnType<typeof createRelay>["relay"], limits?: {
   const service = createDocumentStorageDBService(db);
   const assets = createAssets();
   const failures: unknown[] = [];
-  const sync = createRecordStreamSync({
-    space,
-    documentId,
-    relay,
-    store: service.documents.recordStream(owner),
-    assets: assets.store,
-    limits,
-    quarantine: async (failure) => {
-      failures.push(failure);
-    },
-  });
+  const start = (startLimits = limits) =>
+    createRecordStreamSync({
+      space,
+      documentId,
+      relay,
+      store: wrap(service.documents.recordStream(owner)),
+      assets: assets.store,
+      limits: startLimits,
+      quarantine: async (failure) => {
+        failures.push(failure);
+      },
+    });
   const records = service.open({ owner, assets: assets.store }).records;
   const value = async (recordId: string) => (await records.read(recordId)).value;
-  return { db, records, sync, assets, failures, value };
+  // `restart` starts a new sync over the same database, as after an app restart or a reconnect.
+  return { db, records, sync: start(), restart: start, assets, failures, value };
 };
 
 test("records saved offline on two devices reach both, and a multi-record save arrives whole", async () => {
@@ -403,4 +423,135 @@ test("a device does not join while the stream's latest state cannot be read", as
   // Uploading its own history of "note" now would duplicate the text once the state is readable.
   expect(fixture.updates()).toEqual([]);
   expect((await second.sync.status()).needsAttention).toBe(true);
+});
+
+// Every pass that finds updates after the latest state replaces it.
+const compactEveryPass = { bytes: 1_048_576, updates: 0 };
+
+const file = (text: string) => {
+  const bytes = new TextEncoder().encode(text);
+  const hash = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
+  return { bytes, asset: { sha256: hash, byteLength: bytes.length, mediaType: "image/png" } };
+};
+
+test("a joined device retries a latest state it could not read instead of skipping its records", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay, compactEveryPass);
+  const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  for (const peer of [first, second]) await peer.sync.synchronize();
+  await first.records.commit({ operationId: "missed", edits: [{ recordId: "missed", replace: "in the state" }] });
+  await first.sync.synchronize();
+  // The relay removed the update, so the second device must load the latest state.
+  fixture.trim();
+  fixture.damageState();
+  const updates = fixture.updates().length;
+  await second.sync.synchronize();
+  // Uploading its records against an unread state would repeat what the stream already holds.
+  expect(fixture.updates().length).toBe(updates);
+  expect((await second.sync.status()).needsAttention).toBe(true);
+  fixture.repairState();
+  await second.sync.synchronize();
+  expect(await second.value("missed")).toBe("in the state");
+});
+
+test("a device that skipped an update does not replace the latest state after a restart", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  for (const peer of [first, second]) await peer.sync.synchronize();
+  const frame = encodeRecordFrame({ records: [{ recordId: "b", bytes: new Uint8Array([255, 1, 2, 3]) }], assets: [] });
+  await fixture.relay.update(await sealUpdate(space, documentId, frame, []));
+  await second.sync.synchronize();
+  const latest = fixture.latest();
+  const restarted = second.restart(compactEveryPass);
+  await second.records.commit({ operationId: "later", edits: [{ recordId: "later", replace: 2 }] });
+  await restarted.synchronize();
+  // A latest state from this device would claim to cover the update it never applied.
+  expect(fixture.latest()).toBe(latest);
+  expect((await restarted.status()).needsAttention).toBe(true);
+});
+
+test("a latest state lists the files its records point to, even when a file changes while it uploads", async () => {
+  const fixture = createRelay();
+  const cover = file("first cover");
+  const replacement = file("second cover");
+  let racing = false;
+  let first: Awaited<ReturnType<typeof device>>;
+  first = await device(fixture.relay, compactEveryPass, (store) => ({
+    ...store,
+    async snapshot() {
+      const snapshot = await store.snapshot();
+      if (racing) {
+        racing = false;
+        // The user replaces the file after the latest state read its records.
+        first.assets.files.set(replacement.asset.sha256, replacement.bytes);
+        await first.records.commit({
+          operationId: "replace",
+          edits: [{ recordId: "image", replace: "cover", asset: replacement.asset }],
+        });
+        fixture.failUpdates(true);
+      }
+      return snapshot;
+    },
+  }));
+  first.assets.files.set(cover.asset.sha256, cover.bytes);
+  await first.records.commit({
+    operationId: "image",
+    edits: [{ recordId: "image", replace: "cover", asset: cover.asset }],
+  });
+  await first.sync.synchronize();
+  await first.records.commit({ operationId: "other", edits: [{ recordId: "other", replace: 1 }] });
+  racing = true;
+  await expect(first.sync.synchronize()).rejects.toThrow("Network unavailable");
+  fixture.failUpdates(false);
+  const second = await device(fixture.relay);
+  await second.sync.synchronize();
+  expect((await second.records.read("image")).asset).toEqual(cover.asset);
+  expect(second.assets.files.get(cover.asset.sha256)).toEqual(cover.bytes);
+});
+
+test("a save with thousands of files still fits in one relay update", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  for (const peer of [first, second]) await peer.sync.synchronize();
+  const edits = Array.from({ length: 4_500 }, (_, index) => {
+    const { bytes, asset } = file(`image ${index}`);
+    first.assets.files.set(asset.sha256, bytes);
+    return { recordId: `image-${index}`, replace: index, asset };
+  });
+  await first.records.commit({ operationId: "import", edits });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect((await second.records.read("image-4499")).asset).toEqual(edits[4_499]!.asset);
+}, 60_000);
+
+test("devices that ran the same data migration on unrelated histories adopt instead of duplicating text", async () => {
+  const { relay } = createRelay();
+  const first = await device(relay);
+  const second = await device(relay);
+  for (const peer of [first, second]) {
+    // Each device moved the record into its own document separately.
+    await peer.records.commit({
+      operationId: "upgrade",
+      edits: [{ recordId: "note", replace: { body: "line 1\nline 2" } }],
+    });
+    // The migration adds the same new field on both devices, written by the same deterministic author.
+    await dataMigrationContext.run(
+      { key: JSON.stringify([owner.extensionId, "project", projectId, 4]), histories: new Map() },
+      () =>
+        peer.records.commit({
+          operationId: crypto.randomUUID(),
+          edits: [{ recordId: "note", replace: { body: "line 1\nline 2", track: "now" } }],
+        }),
+    );
+  }
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  await first.sync.synchronize();
+  for (const peer of [first, second])
+    expect(await peer.value("note")).toEqual({ body: "line 1\nline 2", track: "now" });
 });

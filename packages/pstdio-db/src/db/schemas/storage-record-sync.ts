@@ -18,6 +18,8 @@ export const storage_record_sync = pgTable(
     pending_bytes: bigint("pending_bytes", { mode: "number" }).notNull().default(0),
     // Encrypted size of that latest state, which sets when the update tail is large enough to replace.
     state_bytes: bigint("state_bytes", { mode: "number" }).notNull().default(0),
+    // Set while this device lacks a frame or record the stream holds, so it builds no latest state.
+    skipped: boolean("skipped").notNull().default(false),
   },
   (table) => [primaryKey({ columns: [table.workbench_id, table.extension_id] })],
 );

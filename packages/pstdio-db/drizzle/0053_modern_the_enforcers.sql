@@ -15,6 +15,7 @@ CREATE TABLE "storage_record_sync" (
 	"through" bigint DEFAULT 0 NOT NULL,
 	"pending_bytes" bigint DEFAULT 0 NOT NULL,
 	"state_bytes" bigint DEFAULT 0 NOT NULL,
+	"skipped" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "storage_record_sync_workbench_id_extension_id_pk" PRIMARY KEY("workbench_id","extension_id")
 );
 --> statement-breakpoint
