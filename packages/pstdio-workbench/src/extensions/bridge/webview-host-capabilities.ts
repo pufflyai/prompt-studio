@@ -1,4 +1,3 @@
-import type { PageLocation } from "pstdio-api-contracts/extension-kernel";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import type { WorkbenchCore, WorkbenchPanelInstance } from "../../core";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
@@ -42,8 +41,7 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
         const state = workbench.pages.store.getState();
         if (!state.location) throw new Error("page_params_no_page");
         if (!extensionId || extensionId !== state.location.page.extensionId) throw new Error("page_params_not_owner");
-        const location: PageLocation = workbench.pageLocations.updateParams(patch);
-        return location;
+        return workbench.pageLocations.updateParams(patch);
       },
     },
     navigation: {

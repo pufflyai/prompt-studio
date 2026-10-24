@@ -7,9 +7,10 @@ import type {
   PageQuery,
   ProjectCreateRequest,
   ProjectDetails,
-  ProjectSnapshot,
+  ProjectRecoveryPoint,
   ProjectUpdateRequest,
   RestoreProjectInput,
+  RestoreProjectResult,
   UpdateProjectInput,
 } from "pstdio-api-contracts";
 import type { ExtensionWorkspace } from "pstdio-api-contracts/extension-kernel";
@@ -18,8 +19,10 @@ import { pageQuery } from "./page-query";
 import type { RequestFn } from "./request";
 
 export type ProjectClient = {
-  snapshots(projectId: string): Promise<ProjectSnapshot[]>;
-  restore(projectId: string, input: RestoreProjectInput): Promise<{ restored: number }>;
+  /** Lists this device's recovery points for a cloud project, with their capture times. */
+  recoveryPoints(projectId: string): Promise<ProjectRecoveryPoint[]>;
+  /** Restores the project, or one extension, to a listed recovery point. The restore syncs like any edit. */
+  restore(projectId: string, input: RestoreProjectInput): Promise<RestoreProjectResult>;
   query(input?: PageQuery): Promise<Page<Project & ProjectDetails>>;
   /** @deprecated Use query to read one bounded page. */
   list(): Promise<Project[]>;
@@ -39,7 +42,7 @@ export type ProjectClient = {
 };
 
 export const createProjectClient = (request: RequestFn): ProjectClient => ({
-  snapshots: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/snapshots`),
+  recoveryPoints: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/recovery-points`),
   restore: (projectId, input) =>
     request(`/v1/projects/${encodeURIComponent(projectId)}/restore`, { method: "POST", body: input }),
   query: (input) => request(`/v1/projects/query${pageQuery(input)}`),

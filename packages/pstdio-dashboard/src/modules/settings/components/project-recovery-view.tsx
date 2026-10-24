@@ -1,10 +1,10 @@
 import { Button, CloseButton, Dialog, HStack, Portal, Spinner, Stack, Text } from "@chakra-ui/react";
-import type { ProjectSnapshot, RestoreProjectInput } from "@pstdio/sdk/api";
+import type { ProjectRecoveryPoint, RestoreProjectInput } from "@pstdio/sdk/api";
 import { AlertMessage, SearchableMenu } from "@pstdio/ui";
 import { useState } from "react";
 
 interface ProjectRecoveryViewProps {
-  snapshots: ProjectSnapshot[];
+  points: ProjectRecoveryPoint[];
   loading?: boolean;
   error?: string;
   extensionNames?: Record<string, string>;
@@ -12,11 +12,11 @@ interface ProjectRecoveryViewProps {
   onRestore: (input: RestoreProjectInput) => Promise<unknown>;
 }
 
-const snapshotLabel = (hours: number) => (hours === 24 ? "Last day" : `Last ${hours === 1 ? "hour" : "12 hours"}`);
+const pointLabel = (hours: number) => (hours === 24 ? "Last day" : `Last ${hours === 1 ? "hour" : "12 hours"}`);
 
 export const ProjectRecoveryView = (props: ProjectRecoveryViewProps) => {
-  const { snapshots, loading, error, extensionNames, onRefresh, onRestore } = props;
-  const [selected, setSelected] = useState<ProjectSnapshot>();
+  const { points, loading, error, extensionNames, onRefresh, onRestore } = props;
+  const [selected, setSelected] = useState<ProjectRecoveryPoint>();
   const [extensionId, setExtensionId] = useState("");
   const [pending, setPending] = useState(false);
   const [restoreError, setRestoreError] = useState("");
@@ -53,24 +53,24 @@ export const ProjectRecoveryView = (props: ProjectRecoveryViewProps) => {
           The restored data will sync to your other devices.
         </AlertMessage>
       ) : null}
-      {!loading && !error && snapshots.length === 0 ? (
+      {!loading && !error && points.length === 0 ? (
         <Text color="fg.muted">
           No recovery points on this device yet. Cloud projects capture them automatically while this device is running.
         </Text>
       ) : null}
-      {snapshots.map((snapshot) => (
-        <HStack key={snapshot.hours} gap="md" py="sm">
+      {points.map((point) => (
+        <HStack key={point.hours} gap="md" py="sm">
           <Stack flex="1" gap="2xs" minW="0">
-            <Text textStyle="label/M/medium">{snapshotLabel(snapshot.hours)}</Text>
+            <Text textStyle="label/M/medium">{pointLabel(point.hours)}</Text>
             <Text textStyle="paragraph/S/regular" color="fg.muted">
-              {new Date(snapshot.capturedAt).toLocaleString()}
+              {new Date(point.capturedAt).toLocaleString()}
             </Text>
           </Stack>
           <Button
             size="sm"
             variant="outline"
             onClick={() => {
-              setSelected(snapshot);
+              setSelected(point);
               setExtensionId("");
               setRestoreError("");
               setSuccess(false);

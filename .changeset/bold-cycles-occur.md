@@ -3,4 +3,4 @@
 "@pstdio/sdk": minor
 ---
 
-Restore cloud project data from hourly, 12-hour, and daily recovery snapshots.
+Restore a cloud project, or one extension in it, to a recovery point from the last hour, 12 hours or day, in project settings or with `pst projects restore`.

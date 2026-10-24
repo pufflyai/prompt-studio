@@ -20,16 +20,16 @@ test("recovery offers project and extension scope, reports stale points, and sho
     capturedAt: new Date(Date.UTC(2026, 9, 22, 24 - hours)).toISOString(),
     extensions: ["pstdio-planner", "pstdio-notes"],
   }));
-  let snapshots = all;
+  let points = all;
   let rejectRestore = true;
   let restored: unknown;
-  await page.route(`**/v1/projects/${projectId}/snapshots`, (route) => route.fulfill({ json: snapshots }));
+  await page.route(`**/v1/projects/${projectId}/recovery-points`, (route) => route.fulfill({ json: points }));
   await page.route(`**/v1/projects/${projectId}/restore`, async (route) => {
     restored = route.request().postDataJSON();
     await route.fulfill(
       rejectRestore
-        ? { status: 409, json: { error: "Snapshot changed. Refresh recovery points." } }
-        : { json: { restored: 1 } },
+        ? { status: 409, json: { error: "This recovery point changed or is no longer available. Refresh the list." } }
+        : { json: { extensions: ["pstdio-notes"], records: 1 } },
     );
   });
   await page.goto(`/projects/${projectId}`);
@@ -42,18 +42,18 @@ test("recovery offers project and extension scope, reports stale points, and sho
   await confirmation.getByRole("button", { name: "Restore scope" }).click();
   await page.getByRole("menuitem", { name: "pstdio-notes", exact: true }).click();
   await confirmation.getByRole("button", { name: "Restore", exact: true }).click();
-  await expect(confirmation.getByText("Snapshot changed. Refresh recovery points.")).toBeVisible();
+  await expect(confirmation.getByText("This recovery point changed or is no longer available. Refresh the list.")).toBeVisible();
   expect(restored).toEqual({ hours: 1, capturedAt: all[0]!.capturedAt, extensionId: "pstdio-notes" });
   rejectRestore = false;
   await confirmation.getByRole("button", { name: "Restore", exact: true }).click();
   await expect(page.getByText("Restore saved", { exact: true })).toBeVisible();
-  snapshots = [all[1]!];
+  points = [all[1]!];
   await page.getByRole("button", { name: "Refresh recovery points" }).click();
   await expect(page.getByRole("button", { name: "Choose", exact: true })).toHaveCount(1);
   await page.getByRole("button", { name: "Choose", exact: true }).click();
   await page.getByRole("dialog").last().getByRole("button", { name: "Restore", exact: true }).click();
   expect(restored).toEqual({ hours: 12, capturedAt: all[1]!.capturedAt });
-  snapshots = [];
+  points = [];
   await page.getByRole("button", { name: "Refresh recovery points" }).click();
   await expect(page.getByText(/No recovery points on this device yet/)).toBeVisible();
 });

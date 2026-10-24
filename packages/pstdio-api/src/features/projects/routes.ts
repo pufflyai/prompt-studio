@@ -14,8 +14,8 @@ import {
 import { listProjectsHandler, listProjectsRoute } from "./endpoints/list-projects";
 import { queryProjectsHandler, queryProjectsRoute } from "./endpoints/query-projects";
 import {
-  listSnapshotsHandler,
-  listSnapshotsRoute,
+  listRecoveryPointsHandler,
+  listRecoveryPointsRoute,
   restoreProjectHandler,
   restoreProjectRoute,
 } from "./endpoints/recovery";
@@ -25,7 +25,7 @@ import { updateProjectHandler, updateProjectRoute } from "./endpoints/update-pro
 
 export const createProjectRoutes = (deps: ProjectsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
-  routes.openapi(listSnapshotsRoute, listSnapshotsHandler(deps));
+  routes.openapi(listRecoveryPointsRoute, listRecoveryPointsHandler(deps));
   routes.openapi(restoreProjectRoute, restoreProjectHandler(deps));
 
   routes.openapi(queryProjectsRoute, queryProjectsHandler(deps));

@@ -21,8 +21,8 @@ export {
   createExtensionSettingsDBService,
   type ExtensionSettingOwnerType,
 } from "./services/extension-settings/extension-settings";
-export { SnapshotSelectionError } from "./services/extension-storage/document-snapshots";
 export { createExtensionStorageDBService } from "./services/extension-storage/extension-storage";
+export { RecoveryPointError } from "./services/extension-storage/recovery-points";
 export { createExtensionUserDataDBService } from "./services/extension-user-data/extension-user-data";
 export { createFilesDBService } from "./services/files/files";
 export { createInstalledExtensionSourcesDBService } from "./services/installed-extension-sources/installed-extension-sources";

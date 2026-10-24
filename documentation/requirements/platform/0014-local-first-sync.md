@@ -239,7 +239,7 @@ anything.
 - R46. After resetting or replacing a device, or installing Prompt Studio on a new one, a
   user logs in with Google and gets every cloud project back. Their private project data
   comes back too once it syncs in phase 2.
-- R53. Each device keeps at most three recovery snapshots of every cloud document:
+- R53. Each device keeps at most three recovery snapshots of every cloud project:
   one captured hourly, one every 12 hours, and one daily. Show their actual capture
   times. Use the disk capacity the device supports, with no fixed snapshot byte
   quota or free-space reserve. If space cannot hold three snapshots, keep only the
