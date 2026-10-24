@@ -163,7 +163,9 @@ const prepareDefaultExtensions = (deps: InstallDefaultExtensionsDeps, mode: Defa
         const extensionsRoot = join(resolvePstdioHome({ env }), "extensions");
         // Missing-only requests inspect disk after startup's queued source refresh finishes.
         // Project sync discovers installed sources and keeps their recorded Git origin.
-        const defaultExtensions = entries.filter((entry) => needsDefaultExtensionInstall(entry, extensionsRoot, mode));
+        const defaultExtensions = entries
+          .filter((entry) => needsDefaultExtensionInstall(entry, extensionsRoot, mode))
+          .map((entry) => (mode === "ensure" && typeof entry !== "string" ? { ...entry, force: false } : entry));
         const context = {
           config: { defaultExtensions },
           env,
