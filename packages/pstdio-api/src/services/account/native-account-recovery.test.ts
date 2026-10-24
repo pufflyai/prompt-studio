@@ -34,10 +34,16 @@ const fixture = async () => {
     }),
   );
   const local = new Set(["here"]);
+  const lookup = { fails: false };
   const account = createNativeAccount({
     file,
     environment: { get: async () => ({ environmentId: "device" }) },
-    projects: { get: async (id: string) => (local.has(id) ? ({ id } as never) : (null as never)) },
+    projects: {
+      get: async (id: string) => {
+        if (lookup.fails && id === "elsewhere") throw new Error("Database busy");
+        return local.has(id) ? ({ id } as never) : (null as never);
+      },
+    },
   });
   let synced: string[] = [];
   const recoveries: { id: string; signal: AbortSignal; done: ReturnType<typeof Promise.withResolvers<void>> }[] = [];
@@ -55,6 +61,7 @@ const fixture = async () => {
   return {
     account,
     local,
+    lookup,
     recoveries,
     synced: () => synced,
     close: async () => {
@@ -95,6 +102,23 @@ test("a failed recovery is tried again on the next account refresh", async () =>
     await device.account.refresh();
     await waitFor(() => device.recoveries.length === 2);
     expect(device.recoveries[1]!.id).toBe("elsewhere");
+  } finally {
+    await device.close();
+  }
+});
+
+test("a failed project lookup after a recovery is tried again on the next account refresh", async () => {
+  const device = await fixture();
+  try {
+    await device.account.refresh();
+    await waitFor(() => device.recoveries.length === 1);
+    device.lookup.fails = true;
+    device.recoveries[0]!.done.resolve();
+    await Bun.sleep(10);
+
+    device.lookup.fails = false;
+    await device.account.refresh();
+    await waitFor(() => device.recoveries.length === 2);
   } finally {
     await device.close();
   }

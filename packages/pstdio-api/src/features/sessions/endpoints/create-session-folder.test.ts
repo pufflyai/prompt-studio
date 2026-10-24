@@ -51,6 +51,9 @@ test("a session that works on files asks for the project's folder on a device wi
   });
   expect(startCoder).not.toHaveBeenCalled();
 
-  // A harness that needs no folder still starts.
+  // A harness that needs no folder still starts, without a working folder.
   expect((await createSession(project.id, testHarnessId("chat"))).status).toBe(201);
+  while (startChat.mock.calls.length === 0) await Bun.sleep(10);
+  const [start] = startChat.mock.calls[0] as unknown as [{ cwd?: string; workspace?: unknown }];
+  expect([start.cwd, start.workspace]).toEqual([undefined, undefined]);
 });

@@ -90,3 +90,17 @@ test("a project without a folder uses an existing checkout only when it holds th
   expect(response.status).toBe(201);
   expect((await handle.deps.workspaceService.getDefault(project.id))?.root_path).toBe(await realpath(checkout));
 });
+
+test("a project never clones into a folder that another workspace still records", async () => {
+  root = await mkdtemp(join(tmpdir(), "project-folder-"));
+  const remote = await repository("origin");
+  const target = join(root, "checkout");
+  expect((await choose((await recoveredProject(remote)).id, { path: target, clone: true })).status).toBe(201);
+  // The first project's files were removed, but its workspace still records the folder.
+  await rm(target, { recursive: true, force: true });
+
+  const response = await choose((await recoveredProject(remote)).id, { path: target, clone: true });
+
+  expect(response.status).toBe(409);
+  expect(await Bun.file(join(target, "README.md")).exists()).toBe(false);
+});

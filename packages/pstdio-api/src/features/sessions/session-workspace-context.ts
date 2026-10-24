@@ -11,9 +11,10 @@ type WorkspaceRecord = {
   is_default?: boolean;
 };
 
+// A harness that needs no folder runs without one in a project whose folder is not on this device yet.
 export const toHarnessWorkspaceContext = (
   workspace: WorkspaceRecord | null | undefined,
-  _cwd?: string,
+  cwdRequirement: "required" | "optional" = "required",
 ): HarnessWorkspaceContext | undefined => {
   if (!workspace) return undefined;
 
@@ -34,7 +35,10 @@ export const toHarnessWorkspaceContext = (
   }
 
   const rootPath = workspace.root_path;
-  if (!rootPath && workspace.is_default) throw new ProjectFolderMissingError();
+  if (!rootPath && workspace.is_default) {
+    if (cwdRequirement === "optional") return undefined;
+    throw new ProjectFolderMissingError();
+  }
   if (!rootPath) throw new Error(`Workspace ${workspace.id} has no local execution target.`);
 
   return {
@@ -52,5 +56,5 @@ export const resolveSessionWorkspaceContext = async (
     getWorkspaceBySessionId(sessionId: string): Promise<WorkspaceRecord | null>;
   },
   sessionId: string,
-  _cwd?: string,
-) => toHarnessWorkspaceContext(await workspaceSessionService.getWorkspaceBySessionId(sessionId), _cwd);
+  cwdRequirement?: "required" | "optional",
+) => toHarnessWorkspaceContext(await workspaceSessionService.getWorkspaceBySessionId(sessionId), cwdRequirement);

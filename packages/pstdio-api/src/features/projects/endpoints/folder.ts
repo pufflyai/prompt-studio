@@ -1,4 +1,5 @@
-import { isAbsolute } from "node:path";
+import { realpath } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import { chooseProjectFolderInputSchema, projectFolderSchema } from "pstdio-api-contracts";
 import { expandHomePath } from "pstdio-paths";
@@ -59,7 +60,7 @@ export const chooseProjectFolderRoute = createRoute({
 const message = (cause: unknown) => (cause instanceof Error ? cause.message : String(cause));
 
 // Puts the project's repository in the folder, or explains why the folder cannot hold it.
-const prepareFolder = async (gitRemote: string | undefined, path: string, clone: boolean) => {
+const prepareFolder = async (deps: ProjectsRouteDeps, gitRemote: string | undefined, path: string, clone: boolean) => {
   if (!clone) {
     const local = gitRemote ? await readGitRemote(path) : undefined;
     if (gitRemote && !(local && sameRepository(local, gitRemote)))
@@ -67,6 +68,10 @@ const prepareFolder = async (gitRemote: string | undefined, path: string, clone:
     return null;
   }
   if (!gitRemote) return { status: 409, error: "This project has no git remote to clone." } as const;
+  // A workspace keeps its folder after the files are removed. Check before cloning, so no clone is left behind.
+  const target = join(await realpath(dirname(path)).catch(() => dirname(path)), basename(path));
+  if (await deps.workspaceService.findByPath(target))
+    return { status: 409, error: "This folder already belongs to another workspace." } as const;
   try {
     await cloneGitRemote(gitRemote, path);
     return null;
@@ -89,7 +94,8 @@ export const chooseProjectFolderHandler =
         const home = await deps.workspaceService.getDefault(id);
         if (home?.root_path || home?.provider_ref_json || home?.provider_operation_id)
           return c.json({ error: "This project already has a folder on this device." }, 409);
-        const refused = await prepareFolder((await deps.projectInfoService.read(id)).gitRemote, path, clone);
+        const { gitRemote } = await deps.projectInfoService.read(id);
+        const refused = await prepareFolder(deps, gitRemote, path, clone);
         if (refused) return c.json({ error: refused.error }, refused.status);
         let initial: Awaited<ReturnType<typeof resolveInitialWorkspace>>;
         try {

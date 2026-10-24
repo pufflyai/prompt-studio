@@ -32,7 +32,8 @@ export const createMissingProjectRecovery = (input: {
               "Recovery will retry",
             ),
           );
-          if (await input.exists(connection.workbenchId)) created = true;
+          // A failed recovery can still have created the project. A failed lookup waits for the next refresh.
+          if (await input.exists(connection.workbenchId).catch(() => false)) created = true;
         }
         if (created && !shutdown.signal.aborted) input.recovered();
       })().finally(() => {
