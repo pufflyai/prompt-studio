@@ -8,8 +8,9 @@
  * consume it directly.
  */
 
-// The storage layer owns the limits; extensions read them through the SDK.
-export { isStorageLimitError, type StorageLimitError, storageLimits } from "pstdio-sync-contracts";
+// The storage layer owns the limits; extensions read them through the SDK. The subpath keeps
+// the sync protocol and its schemas out of extension bundles.
+export { isStorageLimitError, type StorageLimitError, storageLimits } from "pstdio-sync-contracts/storage-limits";
 export { parseExtensionApiDeclaration, supportsExtensionApiVersion } from "./api-versions";
 export { normalizeBooleanViewRule } from "./boolean-view-filter";
 export {
