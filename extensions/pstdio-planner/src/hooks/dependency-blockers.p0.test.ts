@@ -17,7 +17,7 @@ for (const hook of dependencyBlockerHooks) {
     });
     await hook.run(
       { ...ctx, eventId: hook.event.id, deliveryId: "dependency-blocker-check" },
-      { projectId: ctx.projectId, ticketId: prerequisite.id },
+      { projectId: ctx.projectId },
     );
     expect(await collection.get(child.id)).toMatchObject({ blockedReason: null, dependsOn: [prerequisite.id] });
   });
