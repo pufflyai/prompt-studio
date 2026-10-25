@@ -87,6 +87,17 @@ if (projectNavigation.resourceScope !== "project") throw new Error("Navigation l
         ? `
 import { createElement } from "react";
 import { BubblePanel, ListRow, TreeList } from "@pstdio/ui";
+import { Canvas, zoomCanvas, type CanvasCamera } from "@pstdio/ui/canvas";
+import { DependencyTimeline } from "@pstdio/ui/dependency-timeline";
+let camera: CanvasCamera = { x: 0, y: 0, zoom: 1 };
+const canvas = createElement(Canvas, {
+  "aria-label": "Design canvas", variant: "pan", zoom: camera.zoom, minZoom: 0.1, maxZoom: 4,
+  onPan: (delta) => { camera = { ...camera, x: camera.x + delta.x, y: camera.y + delta.y }; },
+  onZoom: (change) => { camera = zoomCanvas(camera, change, { minZoom: 0.1, maxZoom: 4 }); },
+});
+canvas.props.onZoom({ factor: 2, anchor: { x: 100, y: 50 } });
+if (camera.zoom !== 2 || camera.x !== -100 || camera.y !== -50) throw new Error("Canvas zoom lost its anchor");
+const timeline = createElement(DependencyTimeline, { today: "2026-10-10", tracks: [{ id: "work", label: "Work" }], sections: [{ id: "release", header: "Release", items: [{ id: "item", trackId: "work", dependencies: [], content: createElement("button", null, "Item") }] }] });
 const outliner = createElement(TreeList, {
   sections: [{ id: "layers", nodes: [{ id: "image", label: "Image", startContent: createElement("span"),
     actionsVisibility: "always", actions: [{ id: "visibility", label: "Visibility", pressed: true, disabled: false }] }] }],
@@ -95,7 +106,7 @@ const outliner = createElement(TreeList, {
 });
 const groupRow = createElement(ListRow, { label: "Group", isContainer: true, showExpandToggle: true,
   expandOnClick: false, onToggleExpand: () => {}, startContent: createElement("span") });
-void [outliner, groupRow];
+void [canvas, timeline, outliner, groupRow];
 import { CollectionViewBar, EMPTY_VIEW_FILTER, filterRowsByView, withTitleField } from "@pstdio/ui/collection-view";
 const panelOverlay = createElement(BubblePanel, { isOpen: true, overlay: createElement("div", { "data-drop-feedback": true }) });
 void panelOverlay;
@@ -158,6 +169,7 @@ export default defineConfig({ build: { lib: { entry: ${JSON.stringify(dependenci
     );
     run(directory, ["node_modules/vite/bin/vite.js", "build"]);
     if (dependencies["@pstdio/ui"]) {
+      process.stdout.write(run(directory, [join(repoRoot, "scripts/verify/ui-bundle-boundaries.ts")]));
       const monaco = verifyMonacoPackageAssets(directory);
       console.log(`Resolved @pstdio/ui Monaco files with ${monaco.workers} workers and ${monaco.fonts} fonts.`);
     }

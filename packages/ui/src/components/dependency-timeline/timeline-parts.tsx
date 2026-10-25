@@ -1,0 +1,28 @@
+import { type BoxProps, createSlotRecipeContext, type RecipeVariantProps } from "@chakra-ui/react";
+import { dependencyTimelineRecipe } from "../../theme/recipes/dependency-timeline";
+
+const { withProvider, withContext } = createSlotRecipeContext({ recipe: dependencyTimelineRecipe });
+type PartProps = BoxProps & RecipeVariantProps<typeof dependencyTimelineRecipe>;
+export const TimelineRoot = withProvider<HTMLDivElement, BoxProps>("div", "root");
+export const TimelineTracks = withContext<HTMLDivElement, BoxProps>("div", "tracks");
+export const TimelineGutterCorner = withContext<HTMLDivElement, BoxProps>("div", "gutterCorner");
+export const TimelineTrack = withContext<HTMLDivElement, BoxProps>("div", "track");
+export const TimelineTrackName = withContext<HTMLDivElement, BoxProps>("div", "trackName");
+export const TimelineTrackLabel = withContext<HTMLDivElement, BoxProps>("div", "trackLabel");
+export const TimelineColumn = withContext<HTMLDivElement, BoxProps>("div", "columns");
+export const TimelineColumnLabel = withContext<HTMLDivElement, BoxProps>("div", "columnLabel");
+export const TimelineSeparator = withContext<HTMLDivElement, BoxProps>("div", "separator");
+export const TimelineSurface = withContext<HTMLDivElement, BoxProps>("div", "content");
+export const TimelineItemBox = withContext<HTMLDivElement, BoxProps>("div", "item");
+export const TimelineSectionBox = withContext<HTMLDivElement, BoxProps>("div", "section");
+export const TimelineSectionHeader = withContext<HTMLDivElement, BoxProps>("div", "sectionHeader");
+export const TimelineSectionLabel = withContext<HTMLDivElement, BoxProps>("div", "sectionLabel");
+export const TimelineDate = withContext<HTMLDivElement, BoxProps>("div", "date");
+export const TimelineMarker = withProvider<HTMLDivElement, PartProps>("div", "marker");
+export const TimelineGutter = withContext<HTMLDivElement, BoxProps>("div", "gutter");
+export const TimelineLine = withProvider<HTMLDivElement, PartProps>("div", "line");
+export const TimelinePreview = withContext<HTMLDivElement, BoxProps>("div", "preview");
+export const TimelineHighlight = withContext<HTMLDivElement, BoxProps>("div", "highlight");
+export const TimelineHighlightRow = withContext<HTMLDivElement, BoxProps>("div", "highlightRow");
+export const TimelineHighlightTrack = withContext<HTMLDivElement, BoxProps>("div", "highlightTrack");
+export const TimelineHighlightCell = withContext<HTMLDivElement, BoxProps>("div", "highlightCell");
