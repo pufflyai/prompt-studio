@@ -816,7 +816,9 @@ jobs:
       - name: Run quarantined extension cases with their existing limits
         if: runner.os == 'Windows'
         continue-on-error: true
-        run: bun run --cwd extensions/harness-codex test --timeout=15000
+        run: |
+          bun run --cwd extensions/harness-codex test --timeout=15000
+          bun run --cwd extensions/pstdio-planner test --timeout=15000
 
       - name: Require every registered case to have executed
         run: bun scripts/ci/verify-quarantine-reports.ts bun
