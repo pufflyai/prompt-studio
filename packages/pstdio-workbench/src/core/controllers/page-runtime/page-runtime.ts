@@ -31,7 +31,7 @@ import { createDisposable } from "../../shared/disposable";
 import { restoreModePanelLayout } from "./mode-panel-layout";
 import { preparePageContentTrays } from "./page-content-layout";
 import { validatePageLandingDeclaration } from "./page-landing-declaration";
-import { pageContextChanged } from "./page-main-tabs";
+import { belongsToActivePageContext, pageContextChanged } from "./page-main-tabs";
 import { preparePageLanding, validatePagePanelView } from "./page-panel-view";
 import { departingPagePreviews } from "./page-preview-lifetime";
 import { normalizePageRuntimeState } from "./page-runtime-normalization";
@@ -77,8 +77,10 @@ const syncOwnedPanelMenus = (layout: LayoutModel) => {
 const bindPlacementsToActivePageLocation = (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) => {
   const ownerResourceKey = resourceKey(state.location?.resource);
   if (!ownerResourceKey) return state.placements;
+  // Tabs a shared tray retained from other pages or resources do not close with this Location.
   return state.placements.map((placement) =>
-    placement.value.role === "sub-panel" && placement.identity.kind === "page"
+    placement.value.role === "sub-panel" &&
+    belongsToActivePageContext({ ...placement.value, placementIdentity: placement.identity }, state)
       ? { ...placement, value: { ...placement.value, ownerResourceKey } }
       : placement,
   );

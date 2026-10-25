@@ -182,7 +182,7 @@ Declare `floatingPanels: "hidden"` on the mode to prevent floating side panels. 
 
 `regionSettings[region].collapsible: false` prevents dragging the region closed. The shared navigation buttons can still hide and reopen it. Hiding preserves its placements. Docked content stays mounted through hide and reopen. It does not close a tab or change the page.
 
-`alwaysShowTabs` is deprecated. Use `main.presentation` to choose page-owned content or a tabbed Main panel. Tab support does not affect panel visibility or floating permission.
+`alwaysShowTabs` is deprecated. Use `main.presentation` to choose page-owned content or a tabbed Main panel, and `showHeader` to show or hide a tab tray. Until its removal, `alwaysShowTabs: false` hides the tab tray when `showHeader` is omitted. Tab support does not affect panel visibility or floating permission.
 
 The host's Project mode and the workbench's [showcase examples](../../../packages/pstdio-workbench/src/examples/showcases/showcases.stories.tsx) use these policies:
 

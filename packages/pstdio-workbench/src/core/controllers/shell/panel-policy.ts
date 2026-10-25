@@ -22,6 +22,8 @@ export const resolvePanelPolicy = (input: {
   const fixedSize = size?.minPx !== undefined && size.minPx === size.maxPx;
   const canOpen = provided && settings.canOpen !== false;
   const canClose = provided && !main && settings.canClose !== false;
+  // Deprecated extension API: alwaysShowTabs false keeps hiding the tab tray until its batched removal.
+  const declaredHeader = settings.showHeader ?? (settings.alwaysShowTabs === false ? false : undefined);
   return {
     provided,
     open: provided && (main || state.visible),
@@ -32,7 +34,7 @@ export const resolvePanelPolicy = (input: {
     movable: provided && settings.movable !== false,
     resizable: provided && !fixedSize && settings.resizable !== false,
     floatable: provided && region === "side" && (settings.floatable ?? input.legacyFloatable ?? true),
-    showHeader: provided && (state.headerVisible ?? input.pageShowHeader ?? settings.showHeader ?? true),
+    showHeader: provided && (state.headerVisible ?? input.pageShowHeader ?? declaredHeader ?? true),
   };
 };
 

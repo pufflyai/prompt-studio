@@ -48,7 +48,7 @@ export const verifyPackagedCollectionBreadcrumb = async (
     history.pushState(null, "", url);
     dispatchEvent(new PopStateEvent("popstate"));
   }, sessions.href);
-  await expect(breadcrumbs).toContainText("New session");
+  await expect(breadcrumbs).toContainText("Sessions");
   expect(await searchBefore!.evaluate((row) => row.isConnected)).toBe(true);
   const modeReturn = sidenav.getByRole("button", { name: "Back to project", exact: true });
   await expect(modeReturn).toBeVisible();

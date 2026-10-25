@@ -42,7 +42,8 @@ test("dragging a terminal into headerless Main retains its live view and shell s
   await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 });
   await expect(page.locator('[data-workbench-tab-drop="main"][data-drop-active]')).toBeVisible();
   await page.mouse.up();
-  await expect(mainHeader.getByRole("tab")).toHaveCount(2);
+  // Start shows its home content without a tab, so the moved terminal is the only Main tab.
+  await expect(mainHeader.getByRole("tab")).toHaveCount(1);
   const moved = mainHeader.locator(`[data-workbench-tab="${instanceId}"]`).getByRole("tab");
   await expect(moved).toHaveAttribute("aria-selected", "true");
   expect(

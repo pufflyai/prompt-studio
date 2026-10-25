@@ -53,9 +53,9 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
     history.pushState(null, "", url);
     dispatchEvent(new PopStateEvent("popstate"));
   }, destination.href);
-  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Sessions");
   await expect(
-    page.locator('[data-workbench-panel="main"]').getByTestId("content-editable").filter({ visible: true }),
+    page.locator('[data-workbench-panel="main"]').getByRole("button", { name: "New session", exact: true }),
   ).toBeVisible();
   await expect(terminalInput).toHaveCount(0);
   await page.goBack();
