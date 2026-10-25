@@ -1,4 +1,8 @@
 import { expect, test } from "bun:test";
+import {
+  getActiveWorkbenchLocationPanel,
+  isWorkbenchPanelPlacementVisible,
+} from "../../registries/layout/panel-widget-eligibility";
 import { modePanelFixture, pageRef } from "./mode-panel-state.fixture";
 
 const pages = [
@@ -106,4 +110,83 @@ test("closing the last detail tab stays closed when its route reloads", () => {
   const restored = modePanelFixture(s.saved, true, [...pages], "", { load: () => ({ location }), save() {} });
   restored.w.pageLocations.boot("project");
   expect(restored.ids("main")).toEqual([]);
+});
+
+const library = pageRef("library");
+const redirect = pageRef("redirect");
+// A resource route whose view immediately opens the resource in its parent collection.
+const redirectPages = [
+  {
+    id: "library",
+    ref: library,
+    path: "library",
+    modeId: "alpha",
+    main: { kind: "panels" },
+    slots: [
+      { id: "list", region: "main", item: { kind: "view", view: { kind: "view", id: "document" }, presence: "open" } },
+      {
+        id: "item",
+        region: "main",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [{ kind: "resource-kind", id: "document" }],
+            view: { kind: "view", id: "document" },
+            cardinality: "many",
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: "redirect",
+    ref: redirect,
+    path: "redirect",
+    modeId: "alpha",
+    parentId: "library",
+    resource: { kinds: [{ kind: "resource-kind", id: "document" }] },
+    main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" },
+    slots: [],
+  },
+] as const;
+const openThroughRedirect = async (w: ReturnType<typeof modePanelFixture>["w"], id: string) => {
+  const item = { type: "document", id, label: id };
+  await w.navigation.openTarget({ kind: "page", page: redirect, resource: item });
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [
+      { kind: "page", page: library },
+      { kind: "panel", panel: { kind: "page-slot", page: library, id: "item" }, resource: item, open: "pin" },
+    ],
+  });
+};
+const visibleMainTabs = (w: ReturnType<typeof modePanelFixture>["w"]) => {
+  const layout = w.layout.getLayout();
+  return layout.regions.main.widgets
+    .filter((placement) =>
+      isWorkbenchPanelPlacementVisible(w.layout.getWidget(placement.contributionId)!, undefined, "alpha", placement, {
+        location: getActiveWorkbenchLocationPanel(layout),
+      }),
+    )
+    .map((placement) => {
+      const identity = placement.placementIdentity;
+      return identity?.kind === "page" ? `${identity.pageId}:${identity.slotId}:${placement.resource?.id ?? ""}` : "";
+    });
+};
+
+test("a collection shows its own resource tabs after a detail route redirects into it", async () => {
+  const s = modePanelFixture(undefined, true, [...redirectPages], "library");
+  await openThroughRedirect(s.w, "a");
+  expect(visibleMainTabs(s.w)).toEqual(["redirect:$main:a", "library:item:a", "library:list:"]);
+  expect(s.w.layout.getActivePanel("main")?.placementIdentity).toMatchObject({ pageId: "library", slotId: "item" });
+});
+
+test("visiting a detail route keeps the collection's own tabs after reload", async () => {
+  const s = modePanelFixture(undefined, true, [...redirectPages], "library");
+  await openThroughRedirect(s.w, "a");
+  const restored = modePanelFixture(s.saved, true, [...redirectPages], "library");
+  await openThroughRedirect(restored.w, "b");
+  expect(visibleMainTabs(restored.w)).toEqual(
+    expect.arrayContaining(["library:list:", "library:item:a", "library:item:b"]),
+  );
 });

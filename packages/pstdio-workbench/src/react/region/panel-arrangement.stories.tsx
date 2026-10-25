@@ -10,7 +10,7 @@ import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 export const createArrangementWorkbench = (
   crowded = false,
   pageContent: ReactNode = <Text p="md">Page without a header</Text>,
-  presentation: "tabs" | "page" = "tabs",
+  mainAcceptsTabs = true,
   bottomInitiallyOpen = true,
   sourceRegion: WorkbenchPanelRegion = "side",
 ) => {
@@ -23,7 +23,7 @@ export const createArrangementWorkbench = (
   w.modes.registerMode({
     id: "arrangement",
     label: "Arrange tabs",
-    regionSettings: { main: { showHeader: false } },
+    regionSettings: { main: { showHeader: false, acceptsTabs: mainAcceptsTabs } },
     activate() {},
   });
   w.views.registerView({
@@ -56,7 +56,7 @@ export const createArrangementWorkbench = (
     ref: page,
     path: "arrangement",
     modeId: "arrangement",
-    main: { kind: "view", view: { kind: "view", id: "page" }, cardinality: "one", presentation },
+    main: { kind: "view", view: { kind: "view", id: "page" }, cardinality: "one" },
     slots: [],
   });
   w.commands.registerCommand(
@@ -160,7 +160,7 @@ export const HeaderlessWebview: Story = {
 };
 export const DisallowedWebviewDestination: Story = {
   ...HeaderlessWebview,
-  args: { workbench: createArrangementWorkbench(false, headerlessWebview, "page") },
+  args: { workbench: createArrangementWorkbench(false, headerlessWebview, false) },
 };
 export const Crowded: Story = { args: { workbench: createArrangementWorkbench(true) } };
 const secondaryWorkbench = createArrangementWorkbench();

@@ -47,7 +47,7 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
   }, projectId);
 };
 
-const openSessionsView = async (page: import("@playwright/test").Page) => {
+const openNewSessionDraft = async (page: import("@playwright/test").Page) => {
   await page.goto("/");
   await expect(page.locator('[data-workbench-region="main"]')).toBeVisible();
   await page.keyboard.press("ControlOrMeta+KeyP");
@@ -55,6 +55,10 @@ const openSessionsView = async (page: import("@playwright/test").Page) => {
   await expect(dialog).toBeVisible();
   await dialog.getByRole("textbox").fill("> open sessions");
   await page.locator("text=Open sessions").first().click();
+  await page
+    .locator('[data-workbench-panel="main"]')
+    .getByRole("button", { name: "New session", exact: true })
+    .click();
 };
 
 const fetchConversationMessages = async (request: import("@playwright/test").APIRequestContext, sessionId: string) => {
@@ -76,7 +80,7 @@ test.describe("Session attachments", () => {
 
   test("previews, removes, submits, and persists draft attachments for the agent", async ({ page, request }) => {
     await bypassOnboarding(page, projectId);
-    await openSessionsView(page);
+    await openNewSessionDraft(page);
 
     await page.locator("input[type='file']").setInputFiles([
       {

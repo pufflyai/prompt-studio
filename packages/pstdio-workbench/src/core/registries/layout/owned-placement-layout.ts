@@ -277,8 +277,10 @@ const normalizeRemovedState = (input: {
 };
 
 const bindOwnedSubPanelsToLocation = (layout: WorkbenchLayout, desired: readonly RenderedOwnedPlacement[]) => {
-  const ownerResourceKey = getActiveLocationPlacement(layout)?.resourceKey;
+  const location = getActiveLocationPlacement(layout);
+  const ownerResourceKey = location?.resourceKey;
   if (!ownerResourceKey) return layout;
+  const locationIdentity = location.placementIdentity;
   const desiredByKey = new Map(desired.map((entry) => [placementIdentityKey(entry.identity), entry]));
   const regions = Object.fromEntries(
     Object.entries(layout.regions).map(([regionId, region]) => [
@@ -291,6 +293,14 @@ const bindOwnedSubPanelsToLocation = (layout: WorkbenchLayout, desired: readonly
           if (!desiredPlacement) return placement;
           // Shared resources own their content; visiting a page does not make it their owner.
           if (desiredPlacement.identity.kind !== "page") return placement;
+          // A shared page tray keeps other pages' tabs and the page's views of other
+          // resources; they do not close with this Location.
+          if (
+            locationIdentity?.kind === "page" &&
+            (desiredPlacement.identity.pageId !== locationIdentity.pageId ||
+              desiredPlacement.identity.slotId === locationIdentity.slotId)
+          )
+            return placement;
           return { ...placement, ownerResourceKey };
         }),
       },
