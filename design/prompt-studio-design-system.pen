@@ -218118,6 +218118,4904 @@
     },
     {
       "type": "frame",
+      "id": "h8ugrL",
+      "x": 65200,
+      "y": 0,
+      "name": "Canvas · dotted workspace and zoom",
+      "width": 1440,
+      "height": 540,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 32,
+      "children": [
+        {
+          "type": "text",
+          "id": "jKzRc",
+          "fill": "$ds-fg",
+          "content": "Canvas",
+          "fontFamily": "$font-label",
+          "fontSize": 24,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "L8vFn",
+          "name": "Light and dark surfaces",
+          "width": "fill_container",
+          "height": 420,
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "eWwya",
+              "name": "cmp/Canvas",
+              "theme": {
+                "mode": "light"
+              },
+              "reusable": true,
+              "clip": true,
+              "width": 664,
+              "height": 420,
+              "fill": "$ds-bg",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "vHgy9",
+                  "x": 11,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "jOkZx",
+                  "x": 35,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "AyXuH",
+                  "x": 59,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "lCxXe",
+                  "x": 83,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "JmxYS",
+                  "x": 107,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "lscBt",
+                  "x": 131,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "RTSOY",
+                  "x": 155,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Gs1jr",
+                  "x": 179,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "dkCeD",
+                  "x": 203,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "KoGYI",
+                  "x": 227,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "U3rLO",
+                  "x": 251,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "fsyyW",
+                  "x": 275,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Lw8Di",
+                  "x": 299,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "UIdbF",
+                  "x": 323,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "vB4Z0",
+                  "x": 347,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "l5H1Xh",
+                  "x": 371,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "C7pj9",
+                  "x": 395,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "VNYBl",
+                  "x": 419,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "qJJyy",
+                  "x": 443,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "K0jIHB",
+                  "x": 467,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ojwKa",
+                  "x": 491,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ajF4F",
+                  "x": 515,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Fck6S",
+                  "x": 539,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "zYqlR",
+                  "x": 563,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ALEfv",
+                  "x": 587,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "i5pRq",
+                  "x": 611,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "n8NRzj",
+                  "x": 635,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "SXiUw",
+                  "x": 659,
+                  "y": 11,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ho3Vm",
+                  "x": 11,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "y8l03",
+                  "x": 35,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DRkf9",
+                  "x": 59,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "obYN6",
+                  "x": 83,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Mj2Gj",
+                  "x": 107,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "spvfv",
+                  "x": 131,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "b8mjD",
+                  "x": 155,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ylIgb",
+                  "x": 179,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "iwVyr",
+                  "x": 203,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "QBxDf",
+                  "x": 227,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "BfEXw",
+                  "x": 251,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "EMkUI",
+                  "x": 275,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "I5Tz6",
+                  "x": 299,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "v4rtb",
+                  "x": 323,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "o5Tflr",
+                  "x": 347,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "UIwyl",
+                  "x": 371,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "f2Jru",
+                  "x": 395,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "JTPxM",
+                  "x": 419,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "LKz0x",
+                  "x": 443,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "F3781o",
+                  "x": 467,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ddGcn",
+                  "x": 491,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "XzouR",
+                  "x": 515,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "HpsD6",
+                  "x": 539,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "M7zfTG",
+                  "x": 563,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "PsiaW",
+                  "x": 587,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "v8Ggdm",
+                  "x": 611,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "jIIJ6",
+                  "x": 635,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "l7DXtj",
+                  "x": 659,
+                  "y": 35,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Q87kk",
+                  "x": 11,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Tmvzm",
+                  "x": 35,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "CLm3n",
+                  "x": 59,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "g0yw6I",
+                  "x": 83,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "xWJP5",
+                  "x": 107,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "K3hCem",
+                  "x": 131,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "hDsiS",
+                  "x": 155,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "z7gIM",
+                  "x": 179,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ZMpNh",
+                  "x": 203,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "xbO2Y",
+                  "x": 227,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "d14U2",
+                  "x": 251,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "V8fXQ",
+                  "x": 275,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "kvr4t",
+                  "x": 299,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "FVY21",
+                  "x": 323,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "MehQ6",
+                  "x": 347,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "clnB1",
+                  "x": 371,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "zM0mH",
+                  "x": 395,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "A0WXfG",
+                  "x": 419,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ZdO79",
+                  "x": 443,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "XmUyG",
+                  "x": 467,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "gyW4J",
+                  "x": 491,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "KhpOa",
+                  "x": 515,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "BmMSQ",
+                  "x": 539,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "aF1Cq",
+                  "x": 563,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "utAyV",
+                  "x": 587,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "e5RtP",
+                  "x": 611,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "PLzNR",
+                  "x": 635,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "K6ucAZ",
+                  "x": 659,
+                  "y": 59,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "z9nf66",
+                  "x": 11,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "RUzdl",
+                  "x": 35,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "g1aeKJ",
+                  "x": 59,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "iSWj9",
+                  "x": 83,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "i7u5B",
+                  "x": 107,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "EsJfN",
+                  "x": 131,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "i2Jezn",
+                  "x": 155,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "f987Y",
+                  "x": 179,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "xedBg",
+                  "x": 203,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "V9zRSi",
+                  "x": 227,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "tLjsu",
+                  "x": 251,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "JKpxH",
+                  "x": 275,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "hkNJh",
+                  "x": 299,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "g2Q4Ug",
+                  "x": 323,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "l4Pvf",
+                  "x": 347,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "jb14W",
+                  "x": 371,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "keo94",
+                  "x": 395,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "C3xpV",
+                  "x": 419,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "BKcS7",
+                  "x": 443,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "IOFeo",
+                  "x": 467,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "rETc4",
+                  "x": 491,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "YwQB1",
+                  "x": 515,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "tyNzO",
+                  "x": 539,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "EP5ff",
+                  "x": 563,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "c0Swk",
+                  "x": 587,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "HUoPi",
+                  "x": 611,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "aNwEx",
+                  "x": 635,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "k1qMEk",
+                  "x": 659,
+                  "y": 83,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "SgIB8",
+                  "x": 11,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "V8SNkW",
+                  "x": 35,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "UIwNZ",
+                  "x": 59,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "qvxCa",
+                  "x": 83,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "QQFJM",
+                  "x": 107,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "V6LDT7",
+                  "x": 131,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "J5pgy",
+                  "x": 155,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "QJM6R",
+                  "x": 179,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ednk5",
+                  "x": 203,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "fCFjm",
+                  "x": 227,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "lYikC",
+                  "x": 251,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "TO4N7",
+                  "x": 275,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "IB8HO",
+                  "x": 299,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "sX3Ej",
+                  "x": 323,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "bCmAJ",
+                  "x": 347,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "kA1lG",
+                  "x": 371,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "NxLSw",
+                  "x": 395,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ArBOI",
+                  "x": 419,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "y6wDJ",
+                  "x": 443,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "FmZV6",
+                  "x": 467,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ghrFB",
+                  "x": 491,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "GnHV7",
+                  "x": 515,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "QwXOX",
+                  "x": 539,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "s9UJ1",
+                  "x": 563,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Lhx09",
+                  "x": 587,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "B8km5F",
+                  "x": 611,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "sUqtp",
+                  "x": 635,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "N3pKyo",
+                  "x": 659,
+                  "y": 107,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "KLArB",
+                  "x": 11,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "N8PvgV",
+                  "x": 35,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "oqxXP",
+                  "x": 59,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "T6Mnz",
+                  "x": 83,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "m6iss",
+                  "x": 107,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "qtwya",
+                  "x": 131,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "mrR7F",
+                  "x": 155,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "WHYNa",
+                  "x": 179,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ozcjM",
+                  "x": 203,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "wX9GT",
+                  "x": 227,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "g0ULDw",
+                  "x": 251,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "H4tw0v",
+                  "x": 275,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DMcQU",
+                  "x": 299,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "QW3bT",
+                  "x": 323,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "KlI00",
+                  "x": 347,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "bQdBw",
+                  "x": 371,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "j5K7x",
+                  "x": 395,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Fxptr",
+                  "x": 419,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "J09y1",
+                  "x": 443,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "AdnDE",
+                  "x": 467,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "rNULg",
+                  "x": 491,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "t7dkQT",
+                  "x": 515,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Eaqh9",
+                  "x": 539,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "rkPQ2",
+                  "x": 563,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "v2M8T",
+                  "x": 587,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "sEgL5",
+                  "x": 611,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "o5dxn",
+                  "x": 635,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "h5ApGl",
+                  "x": 659,
+                  "y": 131,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "x8Irv",
+                  "x": 11,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "m6AWsg",
+                  "x": 35,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ukDqa",
+                  "x": 59,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "OqITy",
+                  "x": 83,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "j3YjPa",
+                  "x": 107,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "KyuL6",
+                  "x": 131,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "VI3fW",
+                  "x": 155,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "VBkHi",
+                  "x": 179,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "G1G317",
+                  "x": 203,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "q5Rb0r",
+                  "x": 227,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ZswmK",
+                  "x": 251,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "iJLeD",
+                  "x": 275,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DzXv3",
+                  "x": 299,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "OMYh7",
+                  "x": 323,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "V7OpNS",
+                  "x": 347,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "sUkOw",
+                  "x": 371,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "yMRXI",
+                  "x": 395,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "yhnWA",
+                  "x": 419,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Z8NvIQ",
+                  "x": 443,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "VzagO",
+                  "x": 467,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "nmUOR",
+                  "x": 491,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "tIqe5",
+                  "x": 515,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "kTOYZ",
+                  "x": 539,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "kezwD",
+                  "x": 563,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "OzfkM",
+                  "x": 587,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "e6yHwq",
+                  "x": 611,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "z8v0ti",
+                  "x": 635,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "fQF1c",
+                  "x": 659,
+                  "y": 155,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ZwIAO",
+                  "x": 11,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ofiM8",
+                  "x": 35,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "qoyFN",
+                  "x": 59,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "n6rrE",
+                  "x": 83,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "lLwBN",
+                  "x": 107,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "uPegd",
+                  "x": 131,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "y6FaL8",
+                  "x": 155,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "me7v9",
+                  "x": 179,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "R185M",
+                  "x": 203,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "i7KYjl",
+                  "x": 227,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "FIA6O",
+                  "x": 251,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "M9ng4x",
+                  "x": 275,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "hXrPf",
+                  "x": 299,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "UGwwg",
+                  "x": 323,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "f6ekH",
+                  "x": 347,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ke8lC",
+                  "x": 371,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "OeO2u",
+                  "x": 395,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "RNP1I",
+                  "x": 419,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "V2RkYt",
+                  "x": 443,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "PP1pX",
+                  "x": 467,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "r2rZfC",
+                  "x": 491,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "zL7ri",
+                  "x": 515,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "wbW8B",
+                  "x": 539,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "a3P0Xc",
+                  "x": 563,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "cW1JN",
+                  "x": 587,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "lmfFv",
+                  "x": 611,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "J4e5Y",
+                  "x": 635,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "pMpqL",
+                  "x": 659,
+                  "y": 179,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "F4jli",
+                  "x": 11,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "n8ZluO",
+                  "x": 35,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "qED1I",
+                  "x": 59,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Rfd0o",
+                  "x": 83,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "LKKNW",
+                  "x": 107,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "yFbdH",
+                  "x": 131,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "YbxtF",
+                  "x": 155,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "MWKfY",
+                  "x": 179,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "TiYuc",
+                  "x": 203,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "PnsuU",
+                  "x": 227,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "wzDxw",
+                  "x": 251,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Dyq1g",
+                  "x": 275,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "MV03N",
+                  "x": 299,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "K6Kzwe",
+                  "x": 323,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "oQvJN",
+                  "x": 347,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Yy1vJ",
+                  "x": 371,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "c7bOq",
+                  "x": 395,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "xYYtS",
+                  "x": 419,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "m4Rsu8",
+                  "x": 443,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "zHmTO",
+                  "x": 467,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Ytq01",
+                  "x": 491,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "CWq8u",
+                  "x": 515,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "loDXr",
+                  "x": 539,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "KVi8S",
+                  "x": 563,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "tLD17",
+                  "x": 587,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "eBNOM",
+                  "x": 611,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ELCb0",
+                  "x": 635,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "vvoef",
+                  "x": 659,
+                  "y": 203,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "vJ8Us",
+                  "x": 11,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "rohwT",
+                  "x": 35,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "G3Nyi",
+                  "x": 59,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "VTqqw",
+                  "x": 83,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "X9oNUO",
+                  "x": 107,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "xamwa",
+                  "x": 131,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "AZG3g",
+                  "x": 155,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "W37Yr",
+                  "x": 179,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "p4K9eB",
+                  "x": 203,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "lTAfZ",
+                  "x": 227,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "NovrZ",
+                  "x": 251,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "YkQOX",
+                  "x": 275,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "WzIV9",
+                  "x": 299,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "wbDmm",
+                  "x": 323,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "CLMK7",
+                  "x": 347,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "bFIBk",
+                  "x": 371,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "sgGOd",
+                  "x": 395,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "QqjJ6",
+                  "x": 419,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "q5M3iY",
+                  "x": 443,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "E7DbW",
+                  "x": 467,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "U7AlP4",
+                  "x": 491,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "xdukT",
+                  "x": 515,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "xZ7Ht",
+                  "x": 539,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "fHht2",
+                  "x": 563,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "SMFeg",
+                  "x": 587,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "x6ywf",
+                  "x": 611,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "tYcsE",
+                  "x": 635,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "d6dzd",
+                  "x": 659,
+                  "y": 227,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Ule8R",
+                  "x": 11,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "UJ7NG",
+                  "x": 35,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "r1gVR",
+                  "x": 59,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Dkaga",
+                  "x": 83,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "b5OIS",
+                  "x": 107,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "eSHGl",
+                  "x": 131,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "fLoWO",
+                  "x": 155,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DfWAF",
+                  "x": 179,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "y1zoiB",
+                  "x": 203,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ybncN",
+                  "x": 227,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DWj4C",
+                  "x": 251,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "xWTce",
+                  "x": 275,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "N31mvw",
+                  "x": 299,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Q0Jc3z",
+                  "x": 323,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "x2Yti",
+                  "x": 347,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "RCLUM",
+                  "x": 371,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "b4nKh",
+                  "x": 395,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "E2b7u6",
+                  "x": 419,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "qjgy3",
+                  "x": 443,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "b4Mab",
+                  "x": 467,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "dcv6K",
+                  "x": 491,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "zrC4w",
+                  "x": 515,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "htcms",
+                  "x": 539,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "uRc1d",
+                  "x": 563,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "mtUFm",
+                  "x": 587,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "PnKIg",
+                  "x": 611,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "YcYWh",
+                  "x": 635,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "V6MrU",
+                  "x": 659,
+                  "y": 251,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Kgidq",
+                  "x": 11,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "FLfGB",
+                  "x": 35,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "PgPva",
+                  "x": 59,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "JJPGW",
+                  "x": 83,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "FIVRC",
+                  "x": 107,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "cz1V4",
+                  "x": 131,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Eo6KQ",
+                  "x": 155,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "vXHYA",
+                  "x": 179,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "WeBeg",
+                  "x": 203,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DACD3",
+                  "x": 227,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "JRmys",
+                  "x": 251,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "GxETE",
+                  "x": 275,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ILzvG",
+                  "x": 299,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "auLnN",
+                  "x": 323,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "MwKKz",
+                  "x": 347,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "J9c2fp",
+                  "x": 371,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "r3kwgA",
+                  "x": 395,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "iFcOA",
+                  "x": 419,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "HLWDN",
+                  "x": 443,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "kgGK8",
+                  "x": 467,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "E3DYY",
+                  "x": 491,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "vli4I",
+                  "x": 515,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DRYV6",
+                  "x": 539,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ZrlG6",
+                  "x": 563,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "FhqyZ",
+                  "x": 587,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "gQ5Z7",
+                  "x": 611,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "hGN2u",
+                  "x": 635,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ZEZPp",
+                  "x": 659,
+                  "y": 275,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "uMLky",
+                  "x": 11,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "TJx82",
+                  "x": 35,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DOH9G",
+                  "x": 59,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "gfrsD",
+                  "x": 83,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "pQycH",
+                  "x": 107,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "u0SDRF",
+                  "x": 131,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "T3W704",
+                  "x": 155,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "U2Ahp",
+                  "x": 179,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "my8Ps",
+                  "x": 203,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Bk7ya",
+                  "x": 227,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "AsZuO",
+                  "x": 251,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "nEikk",
+                  "x": 275,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "SRNJi",
+                  "x": 299,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "BdZiZ",
+                  "x": 323,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "UqkOp",
+                  "x": 347,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "umm7b",
+                  "x": 371,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Rh3vy",
+                  "x": 395,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "erPPg",
+                  "x": 419,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "mEovd",
+                  "x": 443,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "NfqGu",
+                  "x": 467,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "or6Bq",
+                  "x": 491,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "aWQby",
+                  "x": 515,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "IjTpo",
+                  "x": 539,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "oz1zX",
+                  "x": 563,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "O2Gp7k",
+                  "x": 587,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Do3WG",
+                  "x": 611,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "f3VLTI",
+                  "x": 635,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "QLS8O",
+                  "x": 659,
+                  "y": 299,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "aXoCA",
+                  "x": 11,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "XosoW",
+                  "x": 35,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "e1nJH",
+                  "x": 59,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "pON0z",
+                  "x": 83,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "q3Taf",
+                  "x": 107,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "v9TOY",
+                  "x": 131,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "g7xcAo",
+                  "x": 155,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Q3JsXW",
+                  "x": 179,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "gFOFt",
+                  "x": 203,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "H4adG",
+                  "x": 227,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "g1afl",
+                  "x": 251,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "qEj3W",
+                  "x": 275,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "U3Mixc",
+                  "x": 299,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "eX4fS",
+                  "x": 323,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "dHhqp",
+                  "x": 347,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "UoDJ5",
+                  "x": 371,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "GpMS2",
+                  "x": 395,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "mSfa1",
+                  "x": 419,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "C6KwY",
+                  "x": 443,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "r5JWh4",
+                  "x": 467,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "w1jUQl",
+                  "x": 491,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "rEDVS",
+                  "x": 515,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "dne6b",
+                  "x": 539,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "xH58t",
+                  "x": 563,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "m7T2fE",
+                  "x": 587,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "P2kN1",
+                  "x": 611,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "pRaa8",
+                  "x": 635,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "mBRgG",
+                  "x": 659,
+                  "y": 323,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "iksre",
+                  "x": 11,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "dtpRy",
+                  "x": 35,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "uSel4",
+                  "x": 59,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "C7jeT4",
+                  "x": 83,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ivL9g",
+                  "x": 107,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "l1zQX",
+                  "x": 131,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "now6A",
+                  "x": 155,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "UhUEe",
+                  "x": 179,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "E5Ly5n",
+                  "x": 203,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "x7nev",
+                  "x": 227,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "s7Q6J",
+                  "x": 251,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "T9hkQP",
+                  "x": 275,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Dm66u",
+                  "x": 299,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "SYH8z",
+                  "x": 323,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Z52dQ",
+                  "x": 347,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "cyQoA",
+                  "x": 371,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "diD03",
+                  "x": 395,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Z7IPsb",
+                  "x": 419,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "v4AgDv",
+                  "x": 443,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "eOZfs",
+                  "x": 467,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "S3DaM",
+                  "x": 491,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Hn3h5",
+                  "x": 515,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "INg2B",
+                  "x": 539,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "A2cWIS",
+                  "x": 563,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "pvsOz",
+                  "x": 587,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "W8yL4s",
+                  "x": 611,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DIuge",
+                  "x": 635,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "IvrIn",
+                  "x": 659,
+                  "y": 347,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "M1WiSq",
+                  "x": 11,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "fPYyp",
+                  "x": 35,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "inpAE",
+                  "x": 59,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "bOHgR",
+                  "x": 83,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "agHdS",
+                  "x": 107,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "fDOAY",
+                  "x": 131,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "pf6Qa",
+                  "x": 155,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "NZaUB",
+                  "x": 179,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "jquTu",
+                  "x": 203,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "fou7f",
+                  "x": 227,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "jvDL7",
+                  "x": 251,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ojDpc",
+                  "x": 275,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "YBU8s",
+                  "x": 299,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Kwg3g",
+                  "x": 323,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "ioW9s",
+                  "x": 347,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "D3YtX",
+                  "x": 371,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DpecS",
+                  "x": 395,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "dgDOA",
+                  "x": 419,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "TJ5WE",
+                  "x": 443,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Fcb7K",
+                  "x": 467,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "XgOZG",
+                  "x": 491,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "zqwH9",
+                  "x": 515,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "b6UFE",
+                  "x": 539,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "F4hs1",
+                  "x": 563,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "qY54Q",
+                  "x": 587,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "yjZpm",
+                  "x": 611,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "lNg9g",
+                  "x": 635,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "F7XYQE",
+                  "x": 659,
+                  "y": 371,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "URXs4",
+                  "x": 11,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "rq4zD",
+                  "x": 35,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "STV5E",
+                  "x": 59,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "eZQex",
+                  "x": 83,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "vFipJ",
+                  "x": 107,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "hwyYI",
+                  "x": 131,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "HCrec",
+                  "x": 155,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "x5fd4A",
+                  "x": 179,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "v7JZN",
+                  "x": 203,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DYIbl",
+                  "x": 227,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "hwqnM",
+                  "x": 251,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "S57Udh",
+                  "x": 275,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "eXxhQ",
+                  "x": 299,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "oXMol",
+                  "x": 323,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "iJ87E",
+                  "x": 347,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "rYZEg",
+                  "x": 371,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "vVs3F",
+                  "x": 395,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "u5hFK",
+                  "x": 419,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "OoYRs",
+                  "x": 443,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "FmDC1",
+                  "x": 467,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Ay0F9",
+                  "x": 491,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "hfGlb",
+                  "x": 515,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "XiR6Y",
+                  "x": 539,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "mE4Qc",
+                  "x": 563,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Dx3ee",
+                  "x": 587,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "whin8",
+                  "x": 611,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "KQPsx",
+                  "x": 635,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "ellipse",
+                  "id": "kasnO",
+                  "x": 659,
+                  "y": 395,
+                  "name": "Background dot",
+                  "fill": "$ds-canvas-dot",
+                  "width": 2,
+                  "height": 2
+                },
+                {
+                  "type": "frame",
+                  "id": "W9dYfF",
+                  "x": 275,
+                  "y": 370,
+                  "name": "Canvas zoom",
+                  "height": 38,
+                  "fill": "$ds-bg",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "gap": 4,
+                  "padding": 4,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "rWdIo",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Zoom out",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "minus",
+                          "width": 14,
+                          "height": 14
+                        }
+                      }
+                    },
+                    {
+                      "id": "bPfye",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Reset zoom to 100%",
+                      "width": "fit_content",
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "100%"
+                        }
+                      }
+                    },
+                    {
+                      "id": "C3e5UT",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Zoom in · maximum reached",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs",
+                        "btn-interaction": "disabled"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "plus",
+                          "width": 14,
+                          "height": 14
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "a5FLw0",
+              "type": "ref",
+              "ref": "eWwya",
+              "name": "Canvas · dark",
+              "width": 664,
+              "height": 420,
+              "theme": {
+                "mode": "dark"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
       "id": "MvL0j",
       "x": 62710,
       "y": 0,
@@ -227638,6 +232536,47 @@
           "value": false,
           "theme": {
             "menu": "disabled"
+          }
+        }
+      ]
+    },
+    "ds-canvas-dot": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#EAEAEA",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#22252C",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#22252C",
+          "theme": {
+            "mode": "monokai"
+          }
+        },
+        {
+          "value": "#22252C",
+          "theme": {
+            "mode": "dracula"
+          }
+        },
+        {
+          "value": "#22252C",
+          "theme": {
+            "mode": "solarized-dark"
+          }
+        },
+        {
+          "value": "#EAEAEA",
+          "theme": {
+            "mode": "solarized-light"
           }
         }
       ]

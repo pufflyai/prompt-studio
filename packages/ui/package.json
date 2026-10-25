@@ -76,7 +76,15 @@
       "types": "./dist/terminal.d.ts"
     },
     "./style.css": "./dist/style.css",
-    "./monaco/*": "./dist-monaco/*"
+    "./monaco/*": "./dist-monaco/*",
+    "./canvas": {
+      "import": "./dist/canvas.js",
+      "types": "./dist/canvas.d.ts"
+    },
+    "./dependency-timeline": {
+      "import": "./dist/dependency-timeline.js",
+      "types": "./dist/dependency-timeline.d.ts"
+    }
   },
   "scripts": {
     "build": "bun run typegen:tokens && bun run build:monaco && cross-env NODE_ENV=production vite build && rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist && bun ../../scripts/release/stage-package.ts .",
