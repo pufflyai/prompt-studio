@@ -1,7 +1,8 @@
-import { type BoxProps, createSlotRecipeContext } from "@chakra-ui/react";
+import { type BoxProps, createSlotRecipeContext, type RecipeVariantProps } from "@chakra-ui/react";
 import { dependencyTimelineRecipe } from "../../theme/recipes/dependency-timeline";
 
 const { withProvider, withContext } = createSlotRecipeContext({ recipe: dependencyTimelineRecipe });
+type PartProps = BoxProps & RecipeVariantProps<typeof dependencyTimelineRecipe>;
 export const TimelineRoot = withProvider<HTMLDivElement, BoxProps>("div", "root");
 export const TimelineTracks = withContext<HTMLDivElement, BoxProps>("div", "tracks");
 export const TimelineGutterCorner = withContext<HTMLDivElement, BoxProps>("div", "gutterCorner");
@@ -17,9 +18,9 @@ export const TimelineSectionBox = withContext<HTMLDivElement, BoxProps>("div", "
 export const TimelineSectionHeader = withContext<HTMLDivElement, BoxProps>("div", "sectionHeader");
 export const TimelineSectionLabel = withContext<HTMLDivElement, BoxProps>("div", "sectionLabel");
 export const TimelineDate = withContext<HTMLDivElement, BoxProps>("div", "date");
-export const TimelineMarker = withContext<HTMLDivElement, BoxProps>("div", "marker");
+export const TimelineMarker = withProvider<HTMLDivElement, PartProps>("div", "marker");
 export const TimelineGutter = withContext<HTMLDivElement, BoxProps>("div", "gutter");
-export const TimelineLine = withContext<HTMLDivElement, BoxProps>("div", "line");
+export const TimelineLine = withProvider<HTMLDivElement, PartProps>("div", "line");
 export const TimelinePreview = withContext<HTMLDivElement, BoxProps>("div", "preview");
 export const TimelineHighlight = withContext<HTMLDivElement, BoxProps>("div", "highlight");
 export const TimelineHighlightRow = withContext<HTMLDivElement, BoxProps>("div", "highlightRow");

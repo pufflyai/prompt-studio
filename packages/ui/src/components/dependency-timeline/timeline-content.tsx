@@ -73,6 +73,7 @@ export const TimelineContent = (props: ContentProps) => {
       <DropHighlight {...props} width={canvasWidth} height={canvasHeight} />
       <TimelineSections {...props} width={width / zoom} headerLeft={headerLeft} />
       <TimelineEdges
+        bounds={bounds}
         items={items}
         positions={box.positions}
         width={box.width}

@@ -1,16 +1,19 @@
 import type { CanvasNavigation, CanvasPoint } from "./canvas.types";
+import { isCanvasControl } from "./canvas-targets";
 
 interface TouchOptions {
   viewport: HTMLElement;
   navigation: () => CanvasNavigation;
-  hasPointer: () => boolean;
-  finishPointer: () => void;
+  pan: (delta: CanvasPoint) => boolean;
   markMoved: () => void;
   finish: () => void;
 }
 export const installCanvasTouch = (options: TouchOptions) => {
-  const { viewport, navigation, hasPointer, finishPointer, markMoved, finish } = options;
-  let previous: { center: CanvasPoint; distance: number } | undefined;
+  const { viewport, navigation, pan, markMoved, finish } = options;
+  let gesture:
+    | { kind: "pan"; point: CanvasPoint }
+    | { kind: "pinch"; center: CanvasPoint; distance: number }
+    | undefined;
   let bounds = { left: 0, top: 0 };
   const position = (touches: TouchList) => ({
     center: {
@@ -20,42 +23,61 @@ export const installCanvasTouch = (options: TouchOptions) => {
     distance: Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY),
   });
   const cancel = () => {
-    if (previous) finish();
-    previous = undefined;
+    if (gesture) finish();
+    gesture = undefined;
   };
   const start = (event: TouchEvent) => {
+    if (event.defaultPrevented || !event.cancelable) return;
     if (event.touches.length === 1) {
-      // Only an owned background gesture blocks native one-finger preview scrolling.
-      if (hasPointer() && event.cancelable) event.preventDefault();
+      // Preview controls keep native one-finger scrolling.
+      if (isCanvasControl(event.target)) return;
+      const touch = event.touches[0];
+      gesture = { kind: "pan", point: { x: touch.clientX, y: touch.clientY } };
+      viewport.focus({ preventScroll: true, focusVisible: false });
+      event.preventDefault();
       return;
     }
-    cancel();
-    if (event.touches.length !== 2 || !event.cancelable) return;
+    if (event.touches.length !== 2) {
+      cancel();
+      return;
+    }
     if (![...event.touches].every((touch) => touch.target instanceof Node && viewport.contains(touch.target))) return;
-    finishPointer();
     bounds = viewport.getBoundingClientRect();
-    previous = position(event.touches);
+    gesture = { kind: "pinch", ...position(event.touches) };
     event.preventDefault();
   };
   const move = (event: TouchEvent) => {
-    if (!previous || event.touches.length !== 2) return;
+    if (event.defaultPrevented || !gesture) return;
     if (!event.cancelable) {
       cancel();
       return;
     }
-    const next = position(event.touches);
     event.preventDefault();
+    if (gesture.kind === "pan") {
+      const touch = event.touches[0];
+      const delta = { x: touch.clientX - gesture.point.x, y: touch.clientY - gesture.point.y };
+      if (pan(delta)) gesture.point = { x: touch.clientX, y: touch.clientY };
+      return;
+    }
+    const next = position(event.touches);
     markMoved();
     navigation().onZoom({
-      factor: next.distance / Math.max(1, previous.distance),
-      anchor: previous.center,
+      factor: next.distance / Math.max(1, gesture.distance),
+      anchor: gesture.center,
       targetAnchor: next.center,
     });
-    previous = next;
+    gesture = { kind: "pinch", ...next };
+  };
+  const end = (event: TouchEvent) => {
+    if (!gesture) return;
+    if (gesture.kind === "pinch" && event.touches.length === 1) {
+      const touch = event.touches[0];
+      gesture = { kind: "pan", point: { x: touch.clientX, y: touch.clientY } };
+    } else cancel();
   };
   viewport.addEventListener("touchstart", start, { passive: false });
   viewport.addEventListener("touchmove", move, { passive: false });
-  viewport.addEventListener("touchend", cancel);
+  viewport.addEventListener("touchend", end);
   viewport.addEventListener("touchcancel", cancel);
   return {
     cancel,
@@ -63,7 +85,7 @@ export const installCanvasTouch = (options: TouchOptions) => {
       cancel();
       viewport.removeEventListener("touchstart", start);
       viewport.removeEventListener("touchmove", move);
-      viewport.removeEventListener("touchend", cancel);
+      viewport.removeEventListener("touchend", end);
       viewport.removeEventListener("touchcancel", cancel);
     },
   };

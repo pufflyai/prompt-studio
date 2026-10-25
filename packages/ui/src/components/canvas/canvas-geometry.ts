@@ -6,6 +6,7 @@ export const clampCanvasZoom = (zoom: number, limits: CanvasZoomLimits) =>
   Math.min(limits.maxZoom, Math.max(limits.minZoom, zoom));
 
 export const constrainCanvasZoom = (zoom: number, change: CanvasZoomChange, limits: CanvasZoomLimits) => {
+  if (!Number.isFinite(zoom) || zoom <= 0) return;
   if (!Number.isFinite(change.factor) || change.factor <= 0) return;
   const next = clampCanvasZoom(zoom * change.factor, limits);
   return { zoom: next, change: { ...change, factor: next / zoom } };

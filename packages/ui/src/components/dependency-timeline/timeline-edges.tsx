@@ -3,6 +3,7 @@ import { chakra } from "@chakra-ui/react";
 import type { TimelineItem } from "./dependency-timeline.types";
 import { edgePath, type NodeBox } from "./edge-path";
 import { timelineLayers } from "./timeline-layers";
+import { edgeIntersectsWindow } from "./timeline-window";
 
 interface TimelineEdgesProps {
   items: TimelineItem[];
@@ -10,16 +11,17 @@ interface TimelineEdgesProps {
   width: number;
   height: number;
   selectedId?: string;
+  bounds: NodeBox;
 }
 
 export function TimelineEdges(props: TimelineEdgesProps) {
-  const { items, positions, width, height, selectedId } = props;
+  const { items, positions, width, height, selectedId, bounds } = props;
   const relatedIds = new Set(items.filter(({ related }) => related).map(({ id }) => id));
   const edges = items.flatMap((row) =>
     row.dependencies.flatMap((dependency) => {
       const from = positions.get(dependency.id);
       const to = positions.get(row.id);
-      return from && to
+      return from && to && edgeIntersectsWindow(from, to, bounds)
         ? [
             {
               key: `${dependency.id}-${row.id}`,

@@ -16,7 +16,7 @@ export const canScrollCanvasChild = (target: EventTarget | null, viewport: HTMLE
       /auto|scroll/.test(style.overflowY) &&
       ((y < 0 && element.scrollTop > 0) ||
         (y > 0 && element.scrollTop + element.clientHeight < element.scrollHeight - 1));
-    if (Math.abs(x) > Math.abs(y) ? horizontal : vertical) return true;
+    if (horizontal || vertical) return true;
     element = element.parentElement;
   }
   return false;

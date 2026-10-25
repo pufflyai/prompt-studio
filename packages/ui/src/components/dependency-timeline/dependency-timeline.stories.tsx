@@ -77,12 +77,16 @@ export const NoTracks: Story = {
 };
 export const SelectedDependencies: Story = { args: { selectedId: "ship" } };
 export const LargePlan: Story = {
+  tags: ["!manifest"],
   render: () => <DependencyTimelineExample large />,
   play: async ({ canvasElement }) => {
     const viewport = canvasElement.querySelector<HTMLElement>("[data-timeline-viewport]")!;
     await waitFor(() => expect(viewport.querySelectorAll("[data-timeline-item]").length).toBeLessThan(15));
+    await expect(viewport.querySelectorAll("[data-edge-layer] path").length).toBeLessThan(60);
     viewport.scrollTop = viewport.scrollHeight;
     await waitFor(() => expect(viewport.querySelector('[data-timeline-item="work-999"]')).not.toBeNull());
+    await expect(viewport.querySelectorAll("[data-edge-layer] path").length).toBeGreaterThan(0);
+    await expect(viewport.querySelectorAll("[data-edge-layer] path").length).toBeLessThan(60);
   },
 };
 

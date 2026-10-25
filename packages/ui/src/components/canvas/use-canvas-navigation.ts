@@ -37,7 +37,8 @@ export const useCanvasNavigation = (props: CanvasProps, viewport: RefObject<HTML
         anchor: { x: viewport.current!.clientWidth / 2, y: viewport.current!.clientHeight / 2 },
       },
       { minZoom, maxZoom },
-    )!;
+    );
+    if (!next) return;
     current.current = next.zoom;
     latest.current.onZoom(next.change);
     latest.current.onNavigationEnd?.();

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { graphWindow, intersectsWindow, visibleGraphRows } from "./timeline-window";
+import { edgeIntersectsWindow, graphWindow, intersectsWindow, visibleGraphRows } from "./timeline-window";
 
 test("the visible graph window follows pan and zoom in canvas coordinates", () => {
   const bounds = graphWindow({ left: 200, top: 400, width: 600, height: 300, zoom: 2 });
@@ -17,4 +17,14 @@ test("large plans mount nearby cards and retain selection, focus, and the dragge
   expect(visible.some(({ id }) => id === "999")).toBe(false);
   const later = graphWindow({ left: 0, top: 119000, width: 800, height: 600, zoom: 1 });
   expect(visibleGraphRows(rows, positions, later, new Set()).map(({ id }) => id)).toContain("995");
+});
+
+test("dependency edges remain visible when they cross the window between offscreen cards", () => {
+  const bounds = { x: 100, y: 100, width: 400, height: 400 };
+  const above = { x: 200, y: 0, width: 100, height: 40 };
+  const below = { x: 200, y: 600, width: 100, height: 40 };
+  const beside = { x: 600, y: 200, width: 100, height: 40 };
+  expect(edgeIntersectsWindow(above, below, bounds)).toBe(true);
+  expect(edgeIntersectsWindow(below, above, bounds)).toBe(true);
+  expect(edgeIntersectsWindow(beside, { ...beside, y: 400 }, bounds)).toBe(false);
 });

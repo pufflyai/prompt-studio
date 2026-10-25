@@ -23,6 +23,17 @@ export const intersectsWindow = (box: NodeBox, window: NodeBox) =>
   box.y <= window.y + window.height &&
   box.y + box.height >= window.y;
 
+export const edgeIntersectsWindow = (from: NodeBox, to: NodeBox, window: NodeBox) =>
+  intersectsWindow(
+    {
+      x: Math.min(from.x, to.x),
+      y: Math.min(from.y, to.y),
+      width: Math.max(from.x + from.width, to.x + to.width) - Math.min(from.x, to.x),
+      height: Math.max(from.y + from.height, to.y + to.height) - Math.min(from.y, to.y),
+    },
+    window,
+  );
+
 export const visibleGraphRows = <T extends { id: string }>(
   rows: T[],
   positions: Map<string, NodeBox>,

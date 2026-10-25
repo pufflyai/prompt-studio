@@ -45,3 +45,12 @@ test("canvas zoom respects the caller's scale limits and rejects invalid factors
     expect(zoomCanvas(camera, { factor, anchor })).toEqual(camera);
   }
 });
+
+test("canvas zoom rejects invalid controlled scales", () => {
+  for (const zoom of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const camera = { x: 10, y: 20, zoom };
+    const change = { factor: 2, anchor: { x: 100, y: 50 } };
+    expect(constrainCanvasZoom(zoom, change, { minZoom: 0.25, maxZoom: 1 })).toBeUndefined();
+    expect(zoomCanvas(camera, change)).toBe(camera);
+  }
+});

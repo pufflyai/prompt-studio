@@ -41,7 +41,7 @@ export interface CanvasProps
     CanvasNavigation,
     RecipeVariantProps<typeof canvasRecipe> {
   ref?: Ref<HTMLDivElement>;
-  /** Controlled current scale. Update this when onZoom changes the caller's camera. */
+  /** Positive, finite controlled scale. Update this when onZoom changes the caller's camera. */
   zoom: number;
   /** Positive lower scale bound. Defaults to 0.25 (25%). */
   minZoom?: number;

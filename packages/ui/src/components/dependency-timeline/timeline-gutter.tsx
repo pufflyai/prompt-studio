@@ -58,21 +58,15 @@ export const MilestoneGutter = (props: GutterProps) => {
         onMouseLeave={leave}
         onClick={() => ghost && onCreateSection?.(ghost.date)}
       >
-        <TimelineLine left={`${lineX - 1}px`} top={`${first}px`} h={`${last - first}px`} borderStyle="solid" />
+        <TimelineLine left={`${lineX - 1}px`} top={`${first}px`} h={`${last - first}px`} lineStyle="solid" />
         <TimelineLine
           left={`${lineX - 1}px`}
           top={`${last}px`}
           h={`${Math.max(0, height - last)}px`}
-          borderStyle="dotted"
+          lineStyle="dotted"
         />
         {ghost && onCreateSection ? (
-          <TimelineMarker
-            left={`${lineX}px`}
-            top={`${ghost.y}px`}
-            bg="bg"
-            borderStyle="dashed"
-            borderColor="bg.accent-primary.default"
-          />
+          <TimelineMarker left={`${lineX}px`} top={`${ghost.y}px`} markerStyle="ghost" />
         ) : null}
       </TimelineGutter>
       {ghost && onCreateSection ? (

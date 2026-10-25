@@ -6,7 +6,7 @@ import { installCanvasTouch } from "./canvas-touch";
 
 type PointerInput = Pick<
   PointerEvent,
-  "pointerId" | "target" | "button" | "clientX" | "clientY" | "preventDefault" | "stopPropagation"
+  "pointerId" | "pointerType" | "target" | "button" | "clientX" | "clientY" | "preventDefault" | "stopPropagation"
 >;
 type ClickInput = Pick<MouseEvent, "target" | "detail" | "button" | "preventDefault" | "stopPropagation">;
 
@@ -23,6 +23,12 @@ export const createCanvasInteractions = (viewport: HTMLElement, navigation: () =
     if (moved) return;
     moved = true;
     viewport.setAttribute("data-panning", "");
+  };
+  const pan = (delta: { x: number; y: number }) => {
+    if (!moved && Math.hypot(delta.x, delta.y) < 4) return false;
+    markMoved();
+    navigation().onPan(delta);
+    return true;
   };
   const finish = () => {
     viewport.removeAttribute("data-panning");
@@ -49,8 +55,7 @@ export const createCanvasInteractions = (viewport: HTMLElement, navigation: () =
   const touch = installCanvasTouch({
     viewport,
     navigation,
-    hasPointer: () => pointer !== undefined,
-    finishPointer,
+    pan,
     markMoved,
     finish,
   });
@@ -74,6 +79,7 @@ export const createCanvasInteractions = (viewport: HTMLElement, navigation: () =
     if (navigateCanvasKey(event, viewport, navigation())) endAfterIdle();
   };
   const wheel = (event: WheelEvent) => {
+    if (event.defaultPrevented) return;
     const unit = [1, 16, viewport.clientHeight][event.deltaMode] ?? 1;
     const x = event.deltaX * unit;
     const y = event.deltaY * unit;
@@ -98,6 +104,8 @@ export const createCanvasInteractions = (viewport: HTMLElement, navigation: () =
   const restoreOverscroll = preventCanvasOverscroll(document);
   return {
     pointerDown: (event: PointerInput) => {
+      // Touch events own the full gesture, including switching between pan and pinch.
+      if (event.pointerType === "touch") return;
       if (pointer || !inside(event.target) || (event.button !== 0 && event.button !== 1)) return;
       suppressClick = 0;
       const explicit = event.button === 1 || (space && !isCanvasControl(document.activeElement));
@@ -111,9 +119,7 @@ export const createCanvasInteractions = (viewport: HTMLElement, navigation: () =
     pointerMove: (event: PointerInput) => {
       if (!pointer || pointer.id !== event.pointerId) return;
       const delta = { x: event.clientX - pointer.x, y: event.clientY - pointer.y };
-      if (!moved && Math.hypot(delta.x, delta.y) < 4) return;
-      markMoved();
-      navigation().onPan(delta);
+      if (!pan(delta)) return;
       pointer.x = event.clientX;
       pointer.y = event.clientY;
       event.preventDefault();

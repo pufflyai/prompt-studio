@@ -146,4 +146,14 @@ export const dependencyTimelineRecipe = defineSlotRecipe({
     highlightTrack: { position: "absolute", top: "0", bg: "bg.accent-subtle/50" },
     highlightCell: { position: "absolute", bg: "bg.accent-subtle" },
   },
+  variants: {
+    lineStyle: {
+      solid: { line: { borderStyle: "solid" } },
+      dotted: { line: { borderStyle: "dotted" } },
+    },
+    markerStyle: {
+      ghost: { marker: { bg: "bg", borderStyle: "dashed", borderColor: "bg.accent-primary.default" } },
+    },
+  },
+  defaultVariants: { lineStyle: "solid" },
 });
