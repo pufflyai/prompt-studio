@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { TerminalWebSocketServerMessage } from "pstdio-api-contracts";
@@ -131,6 +131,21 @@ test("missing Chromium produces a setup result without changing source", async (
 test("interruption stops the browser and host while retaining requested evidence", async () => {
   const root = mkdtempSync(join(tmpdir(), "extension-smoke-signal-"));
   const source = writeSmokeExtension(root);
+  const held = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const gate = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch() {
+      held.resolve();
+      await release.promise;
+      return new Response(null, { headers: { "access-control-allow-origin": "*" } });
+    },
+  });
+  writeFileSync(
+    join(source, "view.ts"),
+    `export default {async mount(mount) {await fetch(${JSON.stringify(gate.url.href)}); mount.textContent="Released"; return ()=>{};}};`,
+  );
   const controlHome = join(root, "control");
   mkdirSync(controlHome);
   const control = await startPackagedServe(controlHome);
@@ -177,24 +192,33 @@ test("interruption stops the browser and host while retaining requested evidence
   };
   try {
     let output = "";
-    while (!output.includes("Extension smoke: dashboard")) {
-      const message = await next();
-      if (message.type === "exit") throw new Error(`Smoke process exited before browser startup: ${output}`);
-      if (message.type === "data") output += Buffer.from(message.chunk, "base64").toString();
-    }
+    const exited = (async () => {
+      while (true) {
+        const message = await next();
+        if (message.type === "exit") return message;
+        if (message.type === "data") output += Buffer.from(message.chunk, "base64").toString();
+      }
+    })();
+    await Promise.race([
+      held.promise,
+      exited.then(() => {
+        throw new Error(`Smoke process exited before reaching the held webview: ${output}`);
+      }),
+    ]);
+    logTestPhase("interrupt held extension webview");
     const retained = join(root, readdirSync(root).find((name) => name.startsWith("pstdio-extension-test-"))!);
     const descriptor = JSON.parse(readFileSync(join(retained, "home/runtime.json"), "utf8"));
     // Drive a real Ctrl+C through the host terminal on every platform. On Windows,
     // child.kill("SIGTERM") force-terminates a process without running its signal handler.
     terminal.send(JSON.stringify({ type: "write", data: Buffer.from("\u0003").toString("base64") }));
-    let message = await next();
-    while (message.type !== "exit") message = await next();
-    expect(message.code ?? message.signal).not.toBeNull();
-    expect(message.code ?? message.signal).not.toBe(0);
+    const message = await exited;
+    expect({ code: message.code, output }).toMatchObject({ code: 130 });
     expect(() => process.kill(descriptor.pid, 0)).toThrow();
     expect(existsSync(join(retained, "browser-profile"))).toBe(true);
     expect(existsSync(join(retained, "home/runtime.json"))).toBe(false);
   } finally {
+    release.resolve();
+    await gate.stop(true);
     terminal.onopen = null;
     terminal.onmessage = null;
     terminal.onerror = null;

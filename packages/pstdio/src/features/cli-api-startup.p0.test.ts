@@ -18,6 +18,10 @@ describe("shouldEnsureApiForCommand", () => {
     expect(shouldEnsureApiForCommand({ _: ["extensions", "install-browser"] })).toBe(false);
   });
 
+  test("packs an extension without starting a runtime", () => {
+    expect(shouldEnsureApiForCommand({ _: ["extensions", "pack"] })).toBe(false);
+  });
+
   test("skips local logs command", () => {
     expect(shouldEnsureApiForCommand({ _: ["logs"] })).toBe(false);
   });
