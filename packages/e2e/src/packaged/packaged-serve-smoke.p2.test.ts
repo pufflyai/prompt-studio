@@ -50,7 +50,7 @@ test("includes extension development, smoke test, browser setup and update comma
 });
 
 test(
-  "loads default extension dependencies, native actions and command-backed workspace choices",
+  "loads default extensions for concurrent projects, native actions and command-backed workspace choices",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
     let child: ChildProcess | null = null;
@@ -78,15 +78,30 @@ test(
       child = started.child;
 
       const projectFolder = join(tempRoot, "project");
+      const peerFolder = join(tempRoot, "peer-project");
       mkdirSync(projectFolder, { recursive: true });
-      const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
-        method: "POST",
-        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify(folderProjectInput({ name: "packaged-extension-project" }, projectFolder)),
-      });
+      mkdirSync(peerFolder, { recursive: true });
+      const [createRes, peerRes] = await Promise.all(
+        [projectFolder, peerFolder].map((folder) =>
+          fetch(`${started.baseUrl}/v1/projects`, {
+            method: "POST",
+            headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+            body: JSON.stringify(folderProjectInput({ name: "packaged-extension-project" }, folder)),
+          }),
+        ),
+      );
       expect(createRes.status).toBe(201);
+      expect(peerRes.status).toBe(201);
 
       const project = (await createRes.json()) as { id: string };
+      const peer = (await peerRes.json()) as { id: string };
+      const peerExtensions = await fetch(`${started.baseUrl}/v1/projects/${peer.id}/extensions`, {
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(peerExtensions.status).toBe(200);
+      expect((await peerExtensions.json()).extensions).toContainEqual(
+        expect.objectContaining({ enabled: true, installName: "dep-ext" }),
+      );
       const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
         headers: runtimeAuthorization(started.descriptor),
       });

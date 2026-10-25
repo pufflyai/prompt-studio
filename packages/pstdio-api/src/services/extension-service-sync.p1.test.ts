@@ -60,6 +60,50 @@ afterEach(async () => {
 });
 
 describe("extensionService installed source sync", () => {
+  test("attaches a committed source while another project's webviews are refreshing", async () => {
+    const firstProject = await projectService.create({ name: "First" });
+    const secondProject = await projectService.create({ name: "Second" });
+    const refreshing = Promise.withResolvers<void>();
+    const releaseRefresh = Promise.withResolvers<void>();
+    const concurrentService = createExtensionService({
+      sourceExists: () => true,
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
+      projectService,
+      onInstalledSourcesChanged: async (sourcePath) => {
+        if (!sourcePath) return;
+        refreshing.resolve();
+        await releaseRefresh.promise;
+      },
+    });
+    const first = concurrentService.syncInstalledSourceForProject(createServiceInput(firstProject.id));
+    await refreshing.promise;
+    const second = concurrentService.syncInstalledSourceForProject(createServiceInput(secondProject.id));
+    try {
+      const attached = await Promise.race([
+        second,
+        Bun.sleep(1000).then(() => {
+          throw new Error("Project attachment waited for unrelated webview compilation");
+        }),
+      ]);
+      expect(attached?.instance.scope_id).toBe(secondProject.id);
+      expect(attached?.instance.enabled).toBe(false);
+      const removed = await concurrentService.uninstallProjectExtension({
+        projectId: secondProject.id,
+        instanceId: attached!.instance.id,
+        deleteUserData: true,
+      });
+      expect(removed).not.toBeNull();
+    } finally {
+      releaseRefresh.resolve();
+      await Promise.all([first, second]);
+    }
+    expect(await installedExtensionSourcesService.getByInstallName("planner")).toBeNull();
+    expect(await extensionInstancesService.list()).toEqual([]);
+  });
+
   test("syncs an installed source as a disabled project instance", async () => {
     const project = await projectService.create({ name: "Extension Project" });
 

@@ -1,5 +1,6 @@
 import { isAbsolute } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
+import { publishedExtensionsId } from "../features/extensions/publication/types";
 import type { RegisterInstalledSourceInput } from "./extension-service";
 
 /** The parts of a registration that name the record it belongs to. */
@@ -102,3 +103,43 @@ export const registrationValues = (
   last_loaded_at: new Date().toISOString(),
   last_error_json: null,
 });
+
+export const createInstalledSourceRegistrar = (deps: {
+  sources: ReturnType<typeof createInstalledExtensionSourcesDBService>;
+  emitInstalledSource: (source: unknown) => void;
+}) => {
+  const { emitInstalledSource } = deps;
+  return async (input: RegisterInstalledSourceInput, notify: (sourcePath?: string) => Promise<void>) => {
+    if (input.extensionId === publishedExtensionsId) throw new Error("Reserved platform extension identity");
+    const existing = await findInstalledSourceForRegistration(deps.sources, input);
+    const values = registrationValues(input, existing);
+
+    if (existing) {
+      if (hasUnchangedInstalledSourceRegistration(existing, values)) return existing;
+
+      const updated = await deps.sources.updateRegistration(existing.id, values);
+      if (!updated) throw new Error(`Installed extension not found: ${input.installName}`);
+      emitInstalledSource(updated);
+      await notify(refreshPathForRegistration(existing.source_path, input));
+      return updated;
+    }
+
+    try {
+      const registered = await deps.sources.register({
+        install_name: input.installName,
+        ...values,
+      });
+      emitInstalledSource(registered);
+      await notify(input.sourcePath);
+      return registered;
+    } catch (error) {
+      const raced = await deps.sources.getBySourcePath(input.sourcePath);
+      if (!raced) throw error;
+      const updated = await deps.sources.updateRegistration(raced.id, values);
+      if (!updated) throw error;
+      emitInstalledSource(updated);
+      await notify(input.sourcePath);
+      return updated;
+    }
+  };
+};
