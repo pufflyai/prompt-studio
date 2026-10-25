@@ -90,8 +90,61 @@ describe("executeWebviewCommand", () => {
   });
 });
 
+test("webview command results replace the captured caller through the public navigation contract", async () => {
+  const workbench = createWorkbench();
+  const owner = "example.records";
+  const panel = { kind: "placement" as const, extensionId: owner, id: "viewer" };
+  const resource = (id: string) => ({ type: "record", id, extensionId: owner, projectId: "project" });
+  workbench.modes.registerMode({ id: "project", activate() {} });
+  workbench.views.registerView({ id: "record", title: "Record", body: { kind: "react", render: () => null } });
+  workbench.modePlacements.registerPlacement({
+    id: "viewer",
+    ref: panel,
+    modeId: "project",
+    region: "side",
+    item: {
+      kind: "binding",
+      binding: {
+        cardinality: "many",
+        view: { kind: "view", id: "record" },
+        kinds: [{ kind: "resource-kind", extensionId: owner, id: "record" }],
+      },
+    },
+  });
+  const page = { kind: "page" as const, extensionId: owner, id: "home" };
+  workbench.pages.registerPage({
+    id: "home",
+    ref: page,
+    path: "",
+    modeId: "project",
+    main: { kind: "panels" },
+    slots: [],
+  });
+  workbench.pageLocations.setProject("project");
+  workbench.pageLocations.navigate({ kind: "page", page });
+  workbench.modePlacements.openPlacement({ panel, resource: resource("draft"), open: "pin" });
+  const caller = workbench.layout.getActivePanel("side")!;
+  await executeWebviewCommand({
+    commandId: `${owner}.command.create`,
+    projectId: "project",
+    workbench,
+    placement: caller.placementIdentity,
+    executeExtensionCommand: async () => ({
+      outcome: {
+        status: "success",
+        navigationRequests: [
+          { kind: "viewer", operation: "replace", from: resource("draft"), resource: resource("created") },
+        ],
+      },
+    }),
+  });
+  expect(workbench.layout.getActivePanel("side")?.instanceId).toBe(caller.instanceId);
+  expect(workbench.layout.getActivePanel("side")?.resource?.id).toBe("created");
+});
+
 test("applies extension navigation once and preserves the webview response", async () => {
   const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project");
   let navigations = 0;
   workbench.commands.registerCommand(
     { id: "workbench.test.open", label: "Open" },

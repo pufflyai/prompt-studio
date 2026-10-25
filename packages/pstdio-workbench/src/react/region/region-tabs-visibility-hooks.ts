@@ -12,6 +12,7 @@ import {
   workbenchPanelRegions,
   workbenchRegionTabLeadingMenuPath,
 } from "../../core";
+import { isSingleViewPage } from "../../core/registries/pages/page-main";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
@@ -71,6 +72,8 @@ export const useWorkbenchRegionTabsState = (
     return () => subscription.dispose();
   }, [workbench, storageKey]);
   const regionState = layoutState.layout.regions[region];
+  const pageState = useWorkbenchStore(workbench.pages.store, (state) => state);
+  const pageContent = region === "main" && isSingleViewPage(pageState.pages[pageState.activePageId ?? ""]);
   const subPanelPlacements = regionState.widgets.filter(
     (placement) =>
       placement.role === "sub-panel" &&
@@ -92,9 +95,11 @@ export const useWorkbenchRegionTabsState = (
   );
   const panelRegion = isWorkbenchPanelRegion(region) ? region : undefined;
   const eligibleSubPanels = panelRegion ? compositionPanels[panelRegion].addable : [];
-  const showTabs = !suppressesSidenavTabStrip(region, visiblePlacements) && shouldShowRegionTabs(visiblePlacements);
+  const showTabs =
+    !pageContent && !suppressesSidenavTabStrip(region, visiblePlacements) && shouldShowRegionTabs(visiblePlacements);
   const hasActions =
-    leadingItems.length > 0 || (eligibleSubPanels.length > 0 && (visiblePlacements.length === 0 || showTabs));
+    !pageContent &&
+    (leadingItems.length > 0 || (eligibleSubPanels.length > 0 && (visiblePlacements.length === 0 || showTabs)));
   const hasTrailingActions =
     region === "main" &&
     listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, headerTrailingMenuPath(region), {

@@ -1,6 +1,7 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import { removeViewContextResources } from "../../registries/pages/page-location-resource-removal";
 import { getOwnedPlacementPreparation } from "../../registries/placements/owned-placement-preparation";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { WorkbenchCore } from "../../workbench-core-types";
@@ -10,7 +11,7 @@ const removeActiveWorkbenchResource = (
   resource: ResourceRef,
   retained: readonly PlacementIdentity[],
 ) => {
-  if (resource.projectId !== core.pages.store.getState().projectId) return;
+  if (resource.projectId && resource.projectId !== core.pages.store.getState().projectId) return;
   const retainedKeys = new Set(retained.map(placementIdentityKey));
   batchWorkbenchChanges(() => {
     for (const kind of ["mode", "shell"] as const) {
@@ -20,25 +21,32 @@ const removeActiveWorkbenchResource = (
       const resourceInstances = new Map(
         [...state.resourceInstances].map(([placementId, instances]) => [
           placementId,
-          instances.filter((instance) => {
-            if (resourceKey(instance.resource) !== resourceKey(resource)) return true;
-            const identity: PlacementIdentity =
-              kind === "shell"
-                ? { kind, placementId, instanceKey: instance.instanceKey }
-                : {
-                    kind,
-                    placementId,
-                    instanceKey: instance.instanceKey,
-                    modeId: core.modePlacements.listPlacements().find((placement) => placement.id === placementId)!
-                      .modeId,
-                  };
-            return retainedKeys.has(placementIdentityKey(identity));
-          }),
+          instances
+            .filter((instance) => {
+              if (resourceKey(instance.resource) !== resourceKey(resource)) return true;
+              const identity: PlacementIdentity =
+                kind === "shell"
+                  ? { kind, placementId, instanceKey: instance.instanceKey }
+                  : {
+                      kind,
+                      placementId,
+                      instanceKey: instance.instanceKey,
+                      modeId: core.modePlacements.listPlacements().find((placement) => placement.id === placementId)!
+                        .modeId,
+                    };
+              return retainedKeys.has(placementIdentityKey(identity));
+            })
+            .map((instance) =>
+              removeViewContextResources(
+                instance,
+                core.pages.listPages(),
+                (value) => resourceKey(value) === resourceKey(resource),
+              ),
+            ),
         ]),
       );
       preparation.apply({ ...state, resourceInstances });
     }
-    core.pageLocations.removeResource(resource, retained);
   });
 };
 
@@ -50,5 +58,6 @@ export const removeWorkbenchResource = (
 ) =>
   batchWorkbenchChanges(() => {
     removeActiveWorkbenchResource(core, resource, retained);
+    core.pageLocations.removeResource(resource, retained);
     removeCached(resource);
   });

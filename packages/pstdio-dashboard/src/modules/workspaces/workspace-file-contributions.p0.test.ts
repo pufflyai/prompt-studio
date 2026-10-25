@@ -18,6 +18,8 @@ let apiBaseUrlId = 0;
 const workspaceResource = (metadata: Record<string, unknown> = {}): ResourceRef => ({
   type: "workspace",
   id: "workspace-1",
+  extensionId: "pstdio",
+  projectId: "project-1",
   label: "PS-118_A5",
   metadata: {
     workspaceProviderState: "ready",

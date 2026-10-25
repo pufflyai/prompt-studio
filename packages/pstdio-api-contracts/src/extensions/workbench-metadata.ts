@@ -130,6 +130,7 @@ const workbenchExtensionModeRecordSchema = z.object({
   icon: z.string().optional(),
   regions: z.array(z.enum(extensionPanelRegions)),
   floatingPanels: z.enum(["visible", "hidden"]).optional(),
+  canFullscreen: z.boolean().optional(),
   regionSettings: z.partialRecord(z.enum(dockedWorkbenchRegions), regionSettingsSchema).optional(),
   defaultTheme: contributionRefSchema("theme").optional(),
   chrome: z
@@ -138,6 +139,7 @@ const workbenchExtensionModeRecordSchema = z.object({
 });
 
 const workbenchExtensionPlacementRecordSchema = workbenchPlacementPresentationSchema.extend({
+  replaces: z.array(z.object({ kind: z.literal("page-slot"), page: pageRefSchema, id: z.string() })).optional(),
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),

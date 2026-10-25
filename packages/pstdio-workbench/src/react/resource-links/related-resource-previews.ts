@@ -156,8 +156,6 @@ export const registerRelatedResourcePreviews = (
   const navigation = ctx.navigation.onDidOpenTarget((target) => {
     if (openingPreviews) return;
     const resource = targetResource(target);
-    const routed = ctx.pages.store.getState().location?.resource;
-    if (resource && routed && resourceKey(canonicalize(resource)) === resourceKey(canonicalize(routed))) return;
     if (resource) void open(resource);
     else if (target.kind === "page" || target.kind === "panel" || target.kind === "compound") abortAll();
   });

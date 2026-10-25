@@ -30,6 +30,7 @@ test("publishes qualified mode theme and chrome references through the metadata 
     regions: ["main"],
     defaultTheme: theme.ref,
     floatingPanels: "hidden",
+    canFullscreen: false,
     chrome: { sidenav: view.ref, nav: false, activity: false },
     regionSettings: { sidenav: { size: { defaultPx: 240 }, collapsible: false } },
   });
@@ -52,6 +53,7 @@ test("publishes qualified mode theme and chrome references through the metadata 
   const metadata = workbenchExtensionMetadataSchema.parse(createWorkbenchExtensionMetadata({ runtime }));
   await rm(packagePath, { recursive: true, force: true });
   expect(metadata.modes[0]).toMatchObject({
+    canFullscreen: false,
     floatingPanels: "hidden",
     defaultTheme: { extensionId: "example.notes", kind: "theme", id: "paper" },
     chrome: { sidenav: { extensionId: "example.notes", kind: "view", id: "navigation" }, nav: false, activity: false },

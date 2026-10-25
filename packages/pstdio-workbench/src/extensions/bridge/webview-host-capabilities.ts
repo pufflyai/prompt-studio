@@ -19,25 +19,48 @@ interface CreateWorkbenchWebviewHostAdaptersInput {
 
 export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebviewHostAdaptersInput) => {
   const { workbench, placement, extensionId, projectId, hostEvents } = input;
+  const invocation = workbench.viewers.captureContext(placement?.placementIdentity);
+  const requireCurrentViewer = () => {
+    if (projectId && projectId !== workbench.pages.store.getState().projectId)
+      throw new Error("The calling view belongs to another project");
+    if (invocation.isViewerCurrent?.() === false) throw new Error("The calling viewer is no longer open");
+  };
+  const resourceActions = createWebviewResourceActions(workbench, projectId, hostEvents, placement?.placementIdentity);
   return {
-    resourceActions: createWebviewResourceActions(workbench, projectId, hostEvents),
+    resourceActions: async (request) => {
+      requireCurrentViewer();
+      return resourceActions(request);
+    },
     hostEvents,
     editing: createWorkbenchEditingSessionAdapter(input),
-    executeCommand: async (request, signal) => ({
-      outcome: {
-        ok: true,
-        status: "success",
-        value: await workbench.commands.executeCommand(request.commandId, request.params, {
-          resource: request.resource,
-          signal,
-        }),
-      },
-    }),
+    executeCommand: async (request, signal) => {
+      requireCurrentViewer();
+      return {
+        outcome: {
+          ok: true,
+          status: "success",
+          value: await workbench.commands.executeCommand(request.commandId, request.params, {
+            resource: request.resource ?? placement?.resource,
+            placement: placement?.placementIdentity,
+            projectId,
+            signal,
+            removalVersion: invocation.removalVersion,
+            isViewerCurrent: invocation.isViewerCurrent,
+          }),
+        },
+      };
+    },
     placement: placement?.placementIdentity
-      ? { close: () => workbench.closePlacement(placement.placementIdentity!) }
+      ? {
+          close: () => {
+            requireCurrentViewer();
+            return workbench.closePlacement(placement.placementIdentity!);
+          },
+        }
       : undefined,
     pageParams: {
       update: (patch) => {
+        requireCurrentViewer();
         const state = workbench.pages.store.getState();
         if (!state.location) throw new Error("page_params_no_page");
         if (!extensionId || extensionId !== state.location.page.extensionId) throw new Error("page_params_not_owner");
@@ -46,7 +69,10 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
     },
     navigation: {
       open: (target) =>
-        workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId })),
+        workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId }), {
+          ...invocation,
+          projectId: projectId ?? invocation.projectId,
+        }),
     },
     notifications: {
       show: (notice) => {

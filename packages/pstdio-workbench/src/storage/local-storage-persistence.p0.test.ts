@@ -130,9 +130,19 @@ describe("local storage workbench persistence", () => {
     persistence.snapshotPersistence.setSnapshot({ layout }, "project:one");
     persistence.snapshotPersistence.flush?.();
     persistence.treePersistence.setTreeStates(trees);
+    const remembered = [
+      {
+        page: pageLocation.page,
+        resource: pageLocation.resource,
+        parent: pageLocation.parent,
+        modeId: "planner",
+        location: pageLocation,
+      },
+    ];
     persistence.pageLocationPersistence.save("project:one", {
       location: pageLocation,
       rootLevel: { page: { extensionId: "acme.planner", kind: "page", id: "tickets" } },
+      remembered,
     });
 
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
@@ -145,6 +155,7 @@ describe("local storage workbench persistence", () => {
     expect(persistence.pageLocationPersistence.load("project:one")).toEqual({
       location: pageLocation,
       rootLevel: { page: { extensionId: "acme.planner", kind: "page", id: "tickets" } },
+      remembered,
     });
     expect(persistence.pageLocationPersistence.load("project:two")).toBeUndefined();
   });

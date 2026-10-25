@@ -12,7 +12,9 @@ import {
 import { createPortal } from "react-dom";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
 import { workbenchPanelRegions } from "../../core";
+import { resolvePageContent } from "../../core/registries/pages/page-content";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
+import { useOpenPlacementIds } from "../shared/use-open-placement-ids";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { movePanelHost } from "./move-panel-host";
 import { RegionScrollArea } from "./region-scroll-area";
@@ -89,6 +91,10 @@ const PanelViewPortal = (props: {
     [host],
   );
   const activate = () => {
+    if (workbench.pages.getContent()?.widgetId === placement.widgetId) {
+      workbench.focus.setActiveRegion("main");
+      return;
+    }
     if (workbench.layout.getLayout().activeWidgetId !== placement.widgetId)
       workbench.layout.activatePanel(placement.widgetId);
   };
@@ -121,11 +127,33 @@ const PanelViewPortal = (props: {
   );
 };
 
+const PageContentViewHosts = (props: {
+  workbench: WorkbenchCore;
+  content?: WorkbenchWidgetPlacement;
+  slot?: HTMLElement;
+  open: ReadonlySet<string>;
+}) => {
+  const { workbench, content, slot, open } = props;
+  const retained = useRetainedViewPlacements(workbench, content ? [content] : [], open);
+  return retained.map((placement) => (
+    <PanelViewPortal
+      key={placement.widgetId}
+      workbench={workbench}
+      placement={placement}
+      region="main"
+      slot={slot}
+      active={content?.widgetId === placement.widgetId}
+    />
+  ));
+};
+
 export const WorkbenchPanelViewHosts = (props: { workbench: WorkbenchCore; children: ReactNode }) => {
   const { workbench, children } = props;
   const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
-  useWorkbenchStore(workbench.pages.store, (state) => state.location);
+  const pageState = useWorkbenchStore(workbench.pages.store, (state) => state);
+  const content = resolvePageContent(pageState);
+  const open = useOpenPlacementIds(workbench);
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const [slots, setSlots] = useState<Partial<Record<WorkbenchPanelRegion, HTMLDivElement>>>({});
   const [registry] = useState<PanelViewSlots>(() => ({
@@ -145,10 +173,17 @@ export const WorkbenchPanelViewHosts = (props: { workbench: WorkbenchCore; child
     const selected = eligible.find((p) => p.widgetId === state.activeWidgetId) ?? eligible[0];
     return eligible.filter((p) => p.widgetId === selected?.widgetId || p.mountStrategy === "keep-mounted");
   });
-  const retained = useRetainedViewPlacements(workbench, current, workbench.host.getOpenPlacementIds());
+  const retained = useRetainedViewPlacements(workbench, current, open);
   return (
     <PanelViewContext value={registry}>
       {children}
+      <PageContentViewHosts
+        key={pageState.projectId}
+        workbench={workbench}
+        content={content}
+        slot={slots.main}
+        open={open}
+      />
       {retained.map((placement) => {
         const region = workbenchPanelRegions.find((id) =>
           layout.regions[id].widgets.some((p) => p.widgetId === placement.widgetId),

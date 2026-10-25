@@ -4,6 +4,17 @@ import type { ResourceRef } from "../resources/resource-registry";
 import { createCommandRegistry } from "./command-registry";
 
 describe("createCommandRegistry", () => {
+  test("rejects captured commands after their project changes", async () => {
+    let projectId = "a";
+    const commands = createCommandRegistry({ getProjectId: () => projectId });
+    let calls = 0;
+    commands.registerCommand({ id: "create", label: "Create" }, { execute: () => ++calls });
+    const captured = { projectId };
+    projectId = "b";
+    await expect(commands.executeCommand("create", undefined, captured)).rejects.toThrow("project");
+    expect(calls).toBe(0);
+    await expect(commands.executeCommand("create", undefined, { projectId })).resolves.toBe(1);
+  });
   test("checks availability against the same subject used for execution", async () => {
     const commands = createCommandRegistry();
     const context = { resource: { type: "note", id: "b" } };

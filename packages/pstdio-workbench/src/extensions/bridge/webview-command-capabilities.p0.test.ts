@@ -62,7 +62,7 @@ describe("extension webview command adapters", () => {
     const capabilities = createCapabilities({
       executeCommand: async () => ({}),
       extensionIdForWebview: () => "pstdio.lab",
-      projectId: "proj-1",
+      projectId: "project-1",
       slotKind: "panel",
     })({
       placement: { resource: undefined },
@@ -76,6 +76,7 @@ describe("extension webview command adapters", () => {
 
 test("webview command calls apply navigation once and preserve the response envelope", async () => {
   const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project");
   let opened = 0;
   workbench.commands.registerCommand(
     { id: "open", label: "Open" },

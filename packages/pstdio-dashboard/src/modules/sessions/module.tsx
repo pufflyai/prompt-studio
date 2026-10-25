@@ -192,7 +192,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       registerSessionPages(ctx);
       registerSidenavSessions(ctx);
       registerSessionResourceActions(ctx);
-      const unsubscribeResourceSync = registerSessionResourceSync(ctx, input.sessionSelectionPersistence);
+      const unsubscribeResourceSync = registerSessionResourceSync(ctx);
       const unsubscribeRetention = registerSessionResourceRetention(ctx);
       if (ctx.commands.getCommand(dashboardCommandIds.createSession)) {
         ctx.keybindings.registerKeybinding({

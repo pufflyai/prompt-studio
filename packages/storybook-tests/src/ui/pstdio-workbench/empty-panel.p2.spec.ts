@@ -42,13 +42,13 @@ for (const region of ["main", "side", "bottom"]) {
   });
 }
 
-test("cards remain usable with a hidden header and in a narrow panel", async ({ page }) => {
+test("cards remain usable in a narrow panel", async ({ page }) => {
   await page.setViewportSize({ width: 750, height: 650 });
-  await page.goto(storyUrl(baseUrl, `${prefix}hidden-header`));
+  await page.goto(storyUrl(baseUrl, `${prefix}narrow-panel`));
   await waitForStoryPlayback(page);
   const main = page.locator('[data-workbench-panel="main"]');
   await expect(main.getByRole("button", { name: "Terminal", exact: true })).toBeVisible();
-  await expect(page.getByLabel("Main header edge", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Main panel header", { exact: true })).toBeVisible();
   const card = main.getByRole("button", { name: "Terminal", exact: true });
   await card.focus();
   await card.press("Enter");

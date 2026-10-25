@@ -174,6 +174,7 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
     panelRegions: mode.regions,
     regionSettings: mode.regionSettings,
     floatingPanels: mode.floatingPanels,
+    canFullscreen: mode.canFullscreen,
     ...(mode.defaultTheme ? { defaultTheme: contributionRefId(mode.defaultTheme) } : {}),
     ...(mode.chrome
       ? {
@@ -207,6 +208,7 @@ export const toInternalWorkbenchExtensionMetadata = (
       id: placement.id,
       ref: { extensionId: placement.extensionId, kind: "placement", id: placement.localId },
       modeId: contributionRefId(placement.mode),
+      replaces: placement.replaces,
       item: placement.item,
       region: placement.region,
       order: placement.order,

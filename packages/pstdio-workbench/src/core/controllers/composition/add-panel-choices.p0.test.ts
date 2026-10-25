@@ -48,6 +48,32 @@ test.each(["shell", "mode", "page"] as const)("%s resource bindings require an e
   expect(choices()).toEqual([]);
 });
 
+test("creation choices use the command presentation without renaming the resource renderer", async () => {
+  const { w, choices } = fixture("page", {
+    kind: "binding",
+    binding: {
+      kinds: [{ kind: "resource-kind", id: "tool" }],
+      view: { kind: "view", id: "tool" },
+      cardinality: "many",
+      add: { kind: "command", target: { command: { kind: "command", id: "create-tool" } } },
+    },
+  });
+  let created = false;
+  w.commands.registerCommand(
+    { id: "create-tool", label: "New tool", icon: "Plus" },
+    {
+      execute: () => {
+        created = true;
+      },
+    },
+  );
+  const choice = choices()[0]!;
+  expect(choice.contribution).toMatchObject({ title: "New tool", icon: "Plus" });
+  expect(w.layout.getWidget(choice.panelId)?.title).toBe("Tool");
+  await choice.open!();
+  expect(created).toBe(true);
+});
+
 test.each([
   "shell",
   "mode",

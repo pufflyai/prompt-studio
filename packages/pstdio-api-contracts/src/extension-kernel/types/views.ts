@@ -8,6 +8,7 @@ import type { DataTableRendererContribution } from "./data-table-renderer";
 import type { FileRendererContribution } from "./file-renderer";
 import type { JsonObject, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
+import type { PageSlotRef } from "./pages";
 import type { RendererEventReference } from "./renderer-base";
 import type { ResourceBinding } from "./resource-binding";
 import type { TreeRendererContribution } from "./tree-renderer";
@@ -114,6 +115,8 @@ export interface PlacementPresentation {
 }
 
 export interface PlacementContribution extends ContributionDefinition<"placement">, PlacementPresentation {
+  /** Previous page-slot owners. Saved tabs and existing links use this placement instead. */
+  readonly replaces?: readonly PageSlotRef[];
   readonly mode: ModeRef;
   readonly item: PlacementItem;
   readonly region: ExtensionPanelRegion;

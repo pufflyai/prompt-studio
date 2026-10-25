@@ -16,8 +16,14 @@ export const departingPagePreviews = (next: State, previous: State, layout: Work
     !pageContextChanged(next, previous)
   )
     return [];
+  // Back and Forward can select a cached preview as the destination.
+  const activated = new Set(next.reconciliation.activate.map((placement) => placementIdentityKey(placement.identity)));
   return Object.values(layout.regions).flatMap((region) =>
-    region.widgets.filter((widget) => widget.tabRetention === "preview"),
+    region.widgets.filter(
+      (widget) =>
+        widget.tabRetention === "preview" &&
+        (!widget.placementIdentity || !activated.has(placementIdentityKey(widget.placementIdentity))),
+    ),
   );
 };
 

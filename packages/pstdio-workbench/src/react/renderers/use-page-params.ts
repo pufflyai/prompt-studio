@@ -9,15 +9,22 @@ export const PageViewOwnerContext = createContext<string | undefined>(undefined)
 
 export const usePageParams = (workbench: WorkbenchCore, placement?: WorkbenchPanelInstance) => {
   const owner = placement?.placementIdentity;
+  const context = placement?.pageContext;
   const inheritedPageId = useContext(PageViewOwnerContext);
   const placementPageId = owner?.kind === "page" ? owner.pageId : undefined;
-  const pageId = owner ? placementPageId : inheritedPageId;
+  const pageId = useWorkbenchStore(workbench.pages.store, (state) => {
+    if (context)
+      return Object.values(state.pages).find(
+        (page) => page.ref.id === context.page.id && page.ref.extensionId === context.page.extensionId,
+      )?.id;
+    return owner ? placementPageId : inheritedPageId;
+  });
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
   const params = useWorkbenchStore(
     workbench.pages.store,
     useShallow((state) =>
-      pageId && pageId === state.activePageId
-        ? resolvePageParams(state.pages[pageId]?.params, state.location?.params)
+      pageId && (context || pageId === state.activePageId)
+        ? resolvePageParams(state.pages[pageId]?.params, context ? context.params : state.location?.params)
         : undefined,
     ),
   );

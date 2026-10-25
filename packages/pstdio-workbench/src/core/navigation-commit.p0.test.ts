@@ -3,7 +3,7 @@ import type {
   PersistedWorkbenchPageLocation,
   WorkbenchPageBrowserEntry,
 } from "./controllers/page-location/page-location-controller";
-import { createWorkbench } from "./workbench-core";
+import { createWorkbench, type WorkbenchCore } from "./workbench-core";
 
 const page = (id: string) => ({ kind: "page" as const, extensionId: "test", id });
 const shared = { kind: "placement" as const, extensionId: "test", id: "shared" };
@@ -16,6 +16,7 @@ const target = {
 };
 function harness(
   failure: "browser" | "location-cache" | "layout-cache" | "menu-read" | "menu-write" | "mode-hook" | "subscriber",
+  prepare?: (workbench: WorkbenchCore) => void,
 ) {
   let armed = false;
   let saved: PersistedWorkbenchPageLocation | undefined;
@@ -109,6 +110,7 @@ function harness(
     entries: structuredClone(entries),
     changes: [...changes],
   });
+  prepare?.(workbench);
   armed = true;
   return { workbench, snapshot, entries, changes };
 }
@@ -154,4 +156,26 @@ test("every navigation observer reads the final page breadcrumbs", async () => {
   expect(seen.every((value) => JSON.stringify(value) === JSON.stringify({ page: "edit", breadcrumbs: ["edit"] }))).toBe(
     true,
   );
+});
+
+test("a rejected compound navigation cannot pin its reused preview", async () => {
+  const { workbench, snapshot } = harness("browser", (workbench) => {
+    workbench.pageLocations.navigate({ kind: "page", page: page("edit") });
+    workbench.modePlacements.openPlacement({
+      panel: shared,
+      resource: { type: "file", id: "readme" },
+      open: "preview",
+    });
+  });
+  const before = snapshot();
+  await expect(
+    workbench.navigation.openTarget({
+      kind: "compound",
+      targets: [
+        { kind: "panel", panel: shared, resource: { type: "file", id: "readme" }, open: "pin" },
+        { kind: "page", page: page("home") },
+      ],
+    }),
+  ).rejects.toThrow("Cannot write browser history");
+  expect(snapshot()).toEqual(before);
 });

@@ -29,6 +29,15 @@ export interface CreateWorkbenchStoreInput<TState> {
   initialState: TState;
 }
 
+const transitionSubscriptions = new WeakMap<object, (listener: () => void) => () => void>();
+
+/** Lifecycle guards observe each committed transition, before UI notifications are batched. */
+export const observeWorkbenchStoreTransitions = <TState>(store: WorkbenchStore<TState>, listener: () => void) => {
+  const subscribe = transitionSubscriptions.get(store);
+  if (!subscribe) throw new Error("Unknown workbench store");
+  return subscribe(listener);
+};
+
 const defaultEquality = <TValue>(left: TValue, right: TValue) => Object.is(left, right);
 
 export const createWorkbenchStore = <TState>(
@@ -56,7 +65,7 @@ export const createWorkbenchStore = <TState>(
     });
   };
 
-  return {
+  const store = {
     getState: api.getState,
     getInitialState: api.getInitialState,
     subscribe,
@@ -64,4 +73,6 @@ export const createWorkbenchStore = <TState>(
     setState: api.setState,
     api,
   };
+  transitionSubscriptions.set(store, (listener) => api.subscribe(listener));
+  return store;
 };

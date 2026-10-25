@@ -1,24 +1,21 @@
-import type { ResourceContextAction } from "@pstdio/ui";
 import { createElement } from "react";
 import { getWorkbenchRenderers, rendererReadKey, type WorkbenchCore } from "../../../core";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
+import type { SidenavContextActionsChange } from "../../shared/sidenav-context-actions";
 import { WorkbenchTreeView } from "./tree-view";
 
 interface InstallWorkbenchTreeRendererInput {
   renderParamField?: CommandParamFieldRenderer;
-  onSidenavContextActionsChange?: (actions: ResourceContextAction[]) => void;
+  onSidenavContextActionsChange?: SidenavContextActionsChange;
 }
 
 interface WorkbenchTreeRendererInstallation {
   renderParamField: CommandParamFieldRenderer | undefined;
-  onSidenavContextActionsChange: ((actions: ResourceContextAction[]) => void) | undefined;
+  onSidenavContextActionsChange: SidenavContextActionsChange | undefined;
 }
 
 // Track per-core installation so repeated <Workbench> renders are idempotent.
 const installed = new WeakMap<WorkbenchCore, WorkbenchTreeRendererInstallation>();
-
-const isSidenavPlacement = (workbench: WorkbenchCore, instanceId: string) =>
-  workbench.layout.getLayout().regions.sidenav.widgets.some((placement) => placement.widgetId === instanceId);
 
 const viewContextId = (workbench: WorkbenchCore, panelId: string, viewId: string | undefined) => {
   const config = workbench.layout.getPanel(panelId)?.config;
@@ -45,7 +42,7 @@ export const installWorkbenchTreeRenderer = (
     onSidenavContextActionsChange: input.onSidenavContextActionsChange,
   };
   installed.set(workbench, installation);
-  getWorkbenchRenderers(workbench).setTreeRendererImplementation(({ workbench: scope, instance, treeId }) =>
+  getWorkbenchRenderers(workbench).setTreeRendererImplementation(({ workbench: scope, panel, instance, treeId }) =>
     createElement(WorkbenchTreeView, {
       workbench: scope,
       treeViewId: treeId,
@@ -54,9 +51,8 @@ export const installWorkbenchTreeRenderer = (
       resource: instance.resource,
       viewId: viewContextId(scope, instance.panelId, instance.viewId),
       renderParamField: installation.renderParamField,
-      onSidenavContextActionsChange: isSidenavPlacement(scope, instance.instanceId)
-        ? installation.onSidenavContextActionsChange
-        : undefined,
+      onSidenavContextActionsChange:
+        panel.region === "sidenav" ? installation.onSidenavContextActionsChange : undefined,
     }),
   );
 };

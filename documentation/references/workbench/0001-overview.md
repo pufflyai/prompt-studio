@@ -32,14 +32,26 @@ use it for that open, including reuse of an existing tab. Omit it on ordinary op
 to retain the live layout's placement. Extension command navigation
 results inherit the destination from the Add action.
 
+Main tabs and their selection persist separately for each tabbed page. Resource
+routes under a tabbed collection share that collection's Main tray. Side and
+Bottom stay shared within the mode. A static page browser declared in Main
+is offered only in that collection's Main. Resource viewers with an Add command
+remain available in other eligible pages. Independent panel views declared in
+Side or Bottom remain available across pages. These Add rules do not restrict
+where an existing tab can move.
+
+A resource binding with an Add command uses the command's label and icon in the
+**+** menu and default placeholder cards. The opened resource keeps the view's
+own tab presentation.
+
 Hover over a tab or focus it with the keyboard to see its full title in a tooltip.
 The tooltip appears below the tab after 300 ms.
 
-Every Main, Side, and Secondary view has a closable tab. The header setting
-controls whether its tray and panel menu openers are visible.
+Views in tab panels have closable tabs. A page with `main.presentation: "page"`
+owns Main content directly and has no header or tab strip. Tabbed pages keep their header.
 
-Tabs can be dragged onto panel content, including webviews in panels without a
-tab strip. During a tab drag, the workbench catches pointer events over panels
+Tabs can be dragged onto other tab panels, including webview content. Tabless pages
+do not accept drops. During a tab drag, the workbench catches pointer events over panels
 so iframe content cannot interrupt the drop, even at a disallowed destination.
 Outside tab drags, webviews receive their normal pointer events and native file drops.
 

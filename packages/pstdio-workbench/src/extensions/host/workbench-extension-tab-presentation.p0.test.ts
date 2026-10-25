@@ -4,6 +4,39 @@ import { emptyWorkbenchExtensionMetadata } from "../contributions/extension-cont
 import type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
 import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-tab-presentation";
 
+test("a reused viewer queries its new resource and rejects an old resource's late tab presentation", async () => {
+  const requests: Array<ReturnType<typeof Promise.withResolvers<unknown>>> = [];
+  const tab = createWorkbenchExtensionTabPresentation(
+    {
+      workbench: createWorkbench(),
+      projectId: "project",
+      metadata: emptyWorkbenchExtensionMetadata,
+      executeCommand: () => {
+        const pending = Promise.withResolvers<unknown>();
+        requests.push(pending);
+        return pending.promise;
+      },
+    },
+    { extensionId: "notes", placementId: "reader", queryHandlerId: "title" },
+  );
+  const first: WorkbenchPanelInstance = {
+    instanceId: "viewer",
+    panelId: "reader",
+    closable: true,
+    resource: { type: "note", id: "a" },
+  };
+  const second = { ...first, resource: { type: "note", id: "b" } };
+  tab.getSnapshot(first);
+  tab.getSnapshot(second);
+  expect(requests).toHaveLength(2);
+  requests[1].resolve({ label: "B" });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(tab.getSnapshot(second).label).toBe("B");
+  requests[0].resolve({ label: "A" });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(tab.getSnapshot(second).label).toBe("B");
+});
+
 test("keeps the loaded tab title and actions while an autosave refresh is pending", async () => {
   const requests: Array<ReturnType<typeof Promise.withResolvers<unknown>>> = [];
   let refresh!: (event: { id: string }) => void;

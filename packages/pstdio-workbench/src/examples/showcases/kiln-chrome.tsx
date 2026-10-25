@@ -2,7 +2,7 @@ import { Box, HStack, Text } from "@chakra-ui/react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { kilnObjects } from "./kiln-data";
-import { usePrimaryResource } from "./showcase-store";
+import { usePageSelection } from "./showcase-store";
 
 export const KilnNav = () => (
   <HStack h="full" px="md" gap="md">
@@ -19,7 +19,7 @@ export const KilnNav = () => (
 
 export const KilnStatus = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
-  const selectedId = usePrimaryResource(workbench)?.id;
+  const selectedId = usePageSelection(workbench);
   const selected = kilnObjects.find((object) => object.id === selectedId) ?? kilnObjects[0];
   return (
     <HStack h="full" px="sm" gap="md">

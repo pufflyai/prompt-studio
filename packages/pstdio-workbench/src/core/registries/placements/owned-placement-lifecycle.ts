@@ -1,4 +1,4 @@
-import type { PageOpenIntent, PlacementItem } from "@pstdio/sdk/extensions";
+import type { PageOpenIntent, PlacementItem, ViewLocation } from "@pstdio/sdk/extensions";
 import { contributionRefId, resourceKey } from "@pstdio/sdk/extensions";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { type WorkbenchRegion, workbenchPanelRegions } from "../layout/layout-types";
@@ -17,7 +17,7 @@ export const placementItemViewId = (item: PlacementItem) =>
   contributionRefId(item.kind === "view" ? item.view : item.binding.view);
 /** A user's explicit open or close of an optional static placement. */
 export type StaticPlacementOverride = "open" | "closed";
-export interface OwnedResourceInstance {
+export interface OwnedResourceInstance extends ViewLocation {
   instanceKey: string;
   resource: ResourceRef;
   open?: PageOpenIntent;
@@ -85,9 +85,13 @@ const retainResourceInstances = (
 };
 // An instance keeps the key it opened with while updates change its resource, so an open
 // resource is found by what the instance shows now. A new instance never reuses a taken key.
-const resourceInstanceKey = (current: readonly OwnedResourceInstance[], resource: ResourceRef) => {
-  const key = resourceKey(resource);
-  const shown = current.find((instance) => resourceKey(instance.resource) === key);
+const resourceInstanceKey = (
+  current: readonly OwnedResourceInstance[],
+  resource: ResourceRef,
+  keyOfResource: (resource: ResourceRef) => string = resourceKey,
+) => {
+  const key = keyOfResource(resource);
+  const shown = current.find((instance) => keyOfResource(instance.resource) === key);
   if (shown) return shown.instanceKey;
   const taken = new Set(current.map((instance) => instance.instanceKey));
   let instanceKey = key;
@@ -103,6 +107,8 @@ export const openResourcePlacement = (input: {
   open?: PageOpenIntent;
   title?: string;
   relatedSource?: string;
+  location?: ViewLocation;
+  keyOfResource?(resource: ResourceRef): string;
 }) => {
   const { id, item, label, state } = input;
   if (item.kind !== "binding") throw new Error(`${label} "${id}" is not resource-backed`);
@@ -116,8 +122,11 @@ export const openResourcePlacement = (input: {
   const current = state.resourceInstances.get(id) ?? [];
   const instance: OwnedResourceInstance = {
     instanceKey:
-      item.binding.cardinality === "one" ? SINGLE_RESOURCE_INSTANCE_KEY : resourceInstanceKey(current, input.resource),
+      item.binding.cardinality === "one"
+        ? SINGLE_RESOURCE_INSTANCE_KEY
+        : resourceInstanceKey(current, input.resource, input.keyOfResource),
     resource: input.resource,
+    ...input.location,
     ...(item.binding.cardinality === "many" ? { open: input.open ?? ("preview" as const) } : {}),
     ...(input.title ? { title: input.title } : {}),
     ...(input.relatedSource && input.open !== "pin" ? { relatedSource: input.relatedSource } : {}),
@@ -151,6 +160,8 @@ export const updateResourcePlacementInstance = (input: {
   resource?: ResourceRef;
   title?: string;
   open?: PageOpenIntent;
+  location?: ViewLocation;
+  keyOfResource?(resource: ResourceRef): string;
 }) => {
   const { id, item, label, state } = input;
   if (input.instanceKey === "default" || item.kind !== "binding") return;
@@ -158,21 +169,31 @@ export const updateResourcePlacementInstance = (input: {
     throw new Error(`${label} "${id}" does not accept resource kind "${input.resource.type}"`);
   }
   const instances = state.resourceInstances.get(id) ?? [];
+  const keyOfResource = input.keyOfResource ?? resourceKey;
   state.resourceInstances.set(
     id,
-    instances.map((instance) =>
-      instance.instanceKey === input.instanceKey
-        ? {
-            ...instance,
-            ...(input.open ? { open: input.open } : {}),
-            ...(input.open || (input.resource && resourceKey(input.resource) !== resourceKey(instance.resource))
-              ? { relatedSource: undefined }
-              : {}),
-            ...(input.resource ? { resource: input.resource } : {}),
-            ...(input.title === undefined ? {} : { title: input.title }),
-          }
-        : instance,
-    ),
+    instances.map((instance) => {
+      if (instance.instanceKey !== input.instanceKey) return instance;
+      const changedResource = Boolean(
+        input.resource && keyOfResource(input.resource) !== keyOfResource(instance.resource),
+      );
+      const location =
+        input.location || changedResource
+          ? {
+              section: input.location?.section,
+              position: input.location?.position,
+              pageContext: input.location?.pageContext ?? instance.pageContext,
+            }
+          : undefined;
+      return {
+        ...instance,
+        ...location,
+        ...(input.open ? { open: input.open } : {}),
+        ...(input.open || changedResource ? { relatedSource: undefined } : {}),
+        ...(input.resource ? { resource: input.resource } : {}),
+        ...(input.title === undefined ? {} : { title: input.title }),
+      };
+    }),
   );
 };
 export const clearOwnedPlacementState = (state: OwnedPlacementState, id: string) => {

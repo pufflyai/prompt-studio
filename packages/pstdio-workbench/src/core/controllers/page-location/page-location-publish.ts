@@ -9,7 +9,11 @@ import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createPageHistoryEntry } from "./page-location-history-entry";
 import { workbenchPageLocationsEqual } from "./page-location-normalization";
 import { refreshOpenPageInstances } from "./page-location-refresh";
-import type { CreateWorkbenchPageLocationControllerInput, ResolvedPageLocation } from "./page-location-types";
+import type {
+  CreateWorkbenchPageLocationControllerInput,
+  RememberedWorkbenchPageLocation,
+  ResolvedPageLocation,
+} from "./page-location-types";
 
 export const createPageLocationPublisher = <Value>(
   input: CreateWorkbenchPageLocationControllerInput<Value>,
@@ -20,6 +24,7 @@ export const createPageLocationPublisher = <Value>(
     entry: ReturnType<typeof createPageHistoryEntry>;
     publish(): void;
     rememberRootLevel(location: PageLocation): PageLocation | undefined;
+    rememberLocation(location: PageLocation): readonly RememberedWorkbenchPageLocation[];
   },
 ) => {
   return (
@@ -28,6 +33,7 @@ export const createPageLocationPublisher = <Value>(
     history: "push" | "replace" | "none",
     action: string,
     beforePublish?: () => void,
+    operation: "navigate" | "select" = "navigate",
   ) =>
     batchWorkbenchChanges(() => {
       const location = state.location;
@@ -38,10 +44,11 @@ export const createPageLocationPublisher = <Value>(
       if (history !== "none") input.browser[history](hooks.entry(projectId, location, nextIndex));
       hooks.commitIndex(nextIndex, history === "push");
       beforePublish?.();
-      internals.publish(state, action);
+      internals.publish(state, action, operation);
       const rootLevel = hooks.rememberRootLevel(location);
+      const remembered = hooks.rememberLocation(location);
       runWorkbenchEffect(`page location cache for ${projectId}`, () =>
-        input.persistence.save(projectId, { location, ...(rootLevel ? { rootLevel } : {}) }),
+        input.persistence.save(projectId, { location, remembered, ...(rootLevel ? { rootLevel } : {}) }),
       );
       if (history !== "none") hooks.publish();
       return { ok: true, location } as const;
@@ -53,6 +60,7 @@ export const createPageLocationReplayer =
     registry: WorkbenchPageRegistry<Value>;
     prepare(projectId: string, resolved: ResolvedPageLocation, action: string): WorkbenchPageRegistryStoreState<Value>;
     publish: ReturnType<typeof createPageLocationPublisher<Value>>;
+    consumeRemembered?(location: PageLocation | undefined): void;
   }) =>
   (projectId: string, resolved: ResolvedPageLocation) => {
     const action = "replayWorkbenchPageHistory";
@@ -72,7 +80,9 @@ export const createPageLocationReplayer =
           action,
         })
       : state;
-    return input.publish(projectId, next, "replace", action);
+    return input.publish(projectId, next, "replace", action, () =>
+      input.consumeRemembered?.(resolved.consumeRemembered),
+    );
   };
 
 export const createPageLocationPreparer = <Value>(registry: WorkbenchPageRegistry<Value>) => {
@@ -85,12 +95,30 @@ export const createPageLocationPreparer = <Value>(registry: WorkbenchPageRegistr
     open: resolved.open,
     resource: resolved.location.resource,
     section: resolved.location.section,
+    position: resolved.location.position,
     pageStates: resolved.pageStates,
   });
   return {
+    select: (projectId: string, resolved: ResolvedPageLocation, action: string) =>
+      internals.prepare.selection(target(projectId, resolved, action), registry.store.getState()),
     open: (projectId: string, resolved: ResolvedPageLocation, action: string) =>
       internals.prepare.location(target(projectId, resolved, action), registry.store.getState()),
     restore: (projectId: string, resolved: ResolvedPageLocation, action: string) =>
       internals.prepare.restore(target(projectId, resolved, action), registry.store.getState()),
   };
 };
+
+export const createMainViewSelector =
+  <Value>(input: {
+    prepare: ReturnType<typeof createPageLocationPreparer<Value>>["select"];
+    publish: ReturnType<typeof createPageLocationPublisher<Value>>;
+  }) =>
+  (projectId: string, resolved: ResolvedPageLocation) =>
+    input.publish(
+      projectId,
+      input.prepare(projectId, resolved, "selectMainView"),
+      "replace",
+      "selectMainView",
+      undefined,
+      "select",
+    );

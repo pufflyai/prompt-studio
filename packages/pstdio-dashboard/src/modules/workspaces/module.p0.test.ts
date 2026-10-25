@@ -7,6 +7,7 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { dataTableViewBody, treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
@@ -87,15 +88,18 @@ describe("createWorkspacesModule", () => {
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
     expect(dataTableViewBody(workbench, dashboardWidgetIds.workspaces)).toBeDefined();
-    const workspace = createDashboardResource("workspace", "workspace-1", "PS-296_A1", "GitBranch", "project-1", {
-      workspaceId: "workspace-1",
-      workspaceSupportsFiles: true,
-      workspaceShorthand: "PS-296_A1",
-      workspaceIsDefault: false,
-      workspaceExecutionKind: "local",
-      workspaceProviderState: "ready",
-      workspaceSupportsDelete: true,
-    });
+    const workspace = canonicalDashboardResource(
+      createDashboardResource("workspace", "workspace-1", "PS-296_A1", "GitBranch", "project-1", {
+        workspaceId: "workspace-1",
+        workspaceSupportsFiles: true,
+        workspaceShorthand: "PS-296_A1",
+        workspaceIsDefault: false,
+        workspaceExecutionKind: "local",
+        workspaceProviderState: "ready",
+        workspaceSupportsDelete: true,
+      }),
+      "project-1",
+    );
     expect(createWorkbenchResourceActions(workbench, workspace).map((action) => action.label)).toEqual([
       "Open terminal",
       "Rename workspace",
@@ -104,12 +108,15 @@ describe("createWorkspacesModule", () => {
   });
   test("opens workspace resources in project mode", async () => {
     const workbench = createWorkbench();
-    const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
-      workspaceId: "workspace-1",
-      workspaceSupportsFiles: true,
-      workspaceSupportsDiff: true,
-      workspaceShorthand: "PS-307_A1",
-    });
+    const workspace = canonicalDashboardResource(
+      createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
+        workspaceId: "workspace-1",
+        workspaceSupportsFiles: true,
+        workspaceSupportsDiff: true,
+        workspaceShorthand: "PS-307_A1",
+      }),
+      "project-1",
+    );
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -168,12 +175,15 @@ describe("createWorkspacesModule", () => {
   });
   test("opens same-URI workspace file metadata in Files without changing workspace ownership", async () => {
     const workbench = createWorkbench();
-    const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
-      workspaceId: "workspace-1",
-      workspaceSupportsFiles: true,
-      workspaceSupportsDiff: true,
-      workspaceShorthand: "PS-307_A1",
-    });
+    const workspace = canonicalDashboardResource(
+      createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
+        workspaceId: "workspace-1",
+        workspaceSupportsFiles: true,
+        workspaceSupportsDiff: true,
+        workspaceShorthand: "PS-307_A1",
+      }),
+      "project-1",
+    );
     const fileResource = {
       ...workspace,
       metadata: { ...workspace.metadata, workspaceView: "files", workspaceFilePath: "src/index.ts" },
@@ -266,11 +276,14 @@ describe("createWorkspacesModule navigation", () => {
 describe("createWorkspacesModule sidenav state", () => {
   test("keeps persistent Side Panel tabs when a workspace resource opens", async () => {
     const workbench = createWorkbench();
-    const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
-      workspaceId: "workspace-1",
-      workspaceSupportsFiles: true,
-      workspaceShorthand: "PS-307_A1",
-    });
+    const workspace = canonicalDashboardResource(
+      createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
+        workspaceId: "workspace-1",
+        workspaceSupportsFiles: true,
+        workspaceShorthand: "PS-307_A1",
+      }),
+      "project-1",
+    );
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -289,11 +302,14 @@ describe("createWorkspacesModule sidenav state", () => {
   });
   test("keeps the sidenav collapsed when a workspace resource opens", async () => {
     const workbench = createWorkbench();
-    const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
-      workspaceId: "workspace-1",
-      workspaceSupportsFiles: true,
-      workspaceShorthand: "PS-307_A1",
-    });
+    const workspace = canonicalDashboardResource(
+      createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
+        workspaceId: "workspace-1",
+        workspaceSupportsFiles: true,
+        workspaceShorthand: "PS-307_A1",
+      }),
+      "project-1",
+    );
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -308,16 +324,19 @@ describe("createWorkspacesModule sidenav state", () => {
 describe("createWorkspacesModule breadcrumbs", () => {
   test("nests workspace breadcrumbs under the ticket when opened from a ticket", async () => {
     const workbench = createWorkbench();
-    const workspace = createDashboardResource("workspace", "workspace-direct", "PS-307_A1", "GitBranch", "project-1", {
-      workspaceId: "workspace-direct",
-      workspaceShorthand: "PS-307_A1",
-      resourceParent: {
-        type: "ticket",
-        id: "ticket-1",
-        label: "PS-307 Dashboard workbench datalayer",
-        metadata: { shorthand: "PS-307" },
-      },
-    });
+    const workspace = canonicalDashboardResource(
+      createDashboardResource("workspace", "workspace-direct", "PS-307_A1", "GitBranch", "project-1", {
+        workspaceId: "workspace-direct",
+        workspaceShorthand: "PS-307_A1",
+        resourceParent: {
+          type: "ticket",
+          id: "ticket-1",
+          label: "PS-307 Dashboard workbench datalayer",
+          metadata: { shorthand: "PS-307" },
+        },
+      }),
+      "project-1",
+    );
     workbench.registerModule(createWorkspacesModule());
     registerTicketHierarchy(workbench);
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -344,24 +363,27 @@ describe("createWorkspacesModule breadcrumbs", () => {
   });
   test("uses planner ticket ancestry when opening a ticket-linked workspace", async () => {
     const workbench = createWorkbench();
-    const workspace = createDashboardResource("workspace", "workspace-child", "PS-308_A1", "GitBranch", "project-1", {
-      workspaceId: "workspace-child",
-      workspaceShorthand: "PS-308_A1",
-      resourceParent: {
-        type: "ticket",
-        id: "ticket-child",
-        label: "PS-308 Child",
-        metadata: {
-          shorthand: "PS-308",
-          resourceParent: {
-            type: "ticket",
-            id: "ticket-parent",
-            label: "PS-307 Parent",
-            metadata: { shorthand: "PS-307" },
+    const workspace = canonicalDashboardResource(
+      createDashboardResource("workspace", "workspace-child", "PS-308_A1", "GitBranch", "project-1", {
+        workspaceId: "workspace-child",
+        workspaceShorthand: "PS-308_A1",
+        resourceParent: {
+          type: "ticket",
+          id: "ticket-child",
+          label: "PS-308 Child",
+          metadata: {
+            shorthand: "PS-308",
+            resourceParent: {
+              type: "ticket",
+              id: "ticket-parent",
+              label: "PS-307 Parent",
+              metadata: { shorthand: "PS-307" },
+            },
           },
         },
-      },
-    });
+      }),
+      "project-1",
+    );
     workbench.registerModule(createWorkspacesModule());
     registerTicketHierarchy(workbench);
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -432,10 +454,13 @@ describe("createWorkspacesModule breadcrumbs", () => {
   });
   test("keeps the ticket ancestry when opening a file inside a ticket-linked workspace", async () => {
     const workbench = createWorkbench();
-    const workspace = createDashboardResource("workspace", "workspace-direct", "PS-307_A1", "GitBranch", "project-1", {
-      workspaceId: "workspace-direct",
-      workspaceShorthand: "PS-307_A1",
-    });
+    const workspace = canonicalDashboardResource(
+      createDashboardResource("workspace", "workspace-direct", "PS-307_A1", "GitBranch", "project-1", {
+        workspaceId: "workspace-direct",
+        workspaceShorthand: "PS-307_A1",
+      }),
+      "project-1",
+    );
     workbench.registerModule(createWorkspacesModule());
     registerTicketHierarchy(workbench);
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });

@@ -295,7 +295,7 @@ test.describe("Extension webviews", () => {
       const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
       if (await showSecondary.isVisible()) await showSecondary.click();
       await secondaryHeader.getByRole("button", { name: "Add panel" }).click();
-      await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+      await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
     };
 
     await addTerminal();

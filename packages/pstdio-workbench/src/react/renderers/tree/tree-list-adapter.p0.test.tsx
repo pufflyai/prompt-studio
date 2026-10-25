@@ -192,13 +192,16 @@ describe("toTreeListSection", () => {
     expect(requestParams).toHaveBeenCalledWith(
       expect.objectContaining({
         request: expect.objectContaining({
-          context: { resource: workspace },
+          context: expect.objectContaining({ resource: workspace }),
         }),
       }),
     );
     const request = requestParams.mock.calls[0]?.[0];
     await request?.run({ harness: { harnessId: "codex" } });
-    expect(execute).toHaveBeenCalledWith({ harness: { harnessId: "codex" } }, { resource: workspace });
+    expect(execute).toHaveBeenCalledWith(
+      { harness: { harnessId: "codex" } },
+      expect.objectContaining({ resource: workspace }),
+    );
   });
   test("uses the same action set for row overflow and right-click menus", () => {
     const workbench = createWorkbench();
