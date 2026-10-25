@@ -117,6 +117,32 @@
       },
       "default": true,
       "extensionId": "pstdio.pstdio-skills"
+    },
+    {
+      "installName": "extension-lab",
+      "extensionId": "pstdio.extension-lab",
+      "displayName": "Extension Lab",
+      "description": "Five complete example tools built with public extension pages, resources, modes, and themes.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/extension-lab",
+        "ref": "{hostRelease}"
+      },
+      "default": false
+    },
+    {
+      "installName": "remote-workspaces",
+      "extensionId": "pstdio.remote-workspaces",
+      "displayName": "Remote Workspaces",
+      "description": "Run agent sessions in PocketCoder workspaces on another machine.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/remote-workspaces",
+        "ref": "{hostRelease}"
+      },
+      "default": false
     }
   ]
 }

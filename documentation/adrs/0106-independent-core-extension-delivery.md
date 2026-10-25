@@ -68,7 +68,8 @@ filenames and both staging and installed folders.
 - Until stable hosts default to PSX, extension changes reach users with the next
   host release, as before. Once they do, compatible extension fixes need no host
   release, desktop build or host tag.
-- Extension publication has its own workflow. It checks published dependencies.
+- Extension publication has its own workflow. It checks published dependencies
+  and the first released SDK supported by each declared API range.
 - A package contains one extension and identifies it by full ID and version.
 - Files in earlier name-only storage folders are not moved or read. A user who
   needs them moves them into the full-ID folder by hand.

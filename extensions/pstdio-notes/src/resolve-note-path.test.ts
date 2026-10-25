@@ -32,7 +32,7 @@ test("note content paths open the note editor and other files stay workspace fil
   const { mount, claim, resolve } = fixture();
   const created = await createNote(mount, "Launch plan");
 
-  expect(claim.prefix).toBe(".pstdio/extension-storage/pstdio-notes/documents/");
+  expect(claim.prefix).toBe(".pstdio/extension-storage/pstdio.pstdio-notes/documents/");
   expect(resolveNotePathCommand.id).toBe(claim.resolve.id);
   expect(await resolve(`${created.id}/content.md`)).toMatchObject({
     resource: { type: "note", id: created.id, label: "Launch plan", metadata: { writable: true } },

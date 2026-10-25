@@ -363,7 +363,7 @@
       "name": "remote-workspaces",
       "version": "0.45.0",
       "dependencies": {
-        "@pstdio/sdk": "^0.35.0",
+        "@pstdio/sdk": "^0.44.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -5886,7 +5886,7 @@
 
     "relay-demo/@pstdio/sdk": ["@pstdio/sdk@0.43.1", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-4ois6kvGhcnaT/W6pM1i565rXl/UhjyvA7HnZb5ZKG+tdPfio3uKmemzYzJuWaU9v7mcVZu5f2TVSkJCd9n7HQ=="],
 
-    "remote-workspaces/@pstdio/sdk": ["@pstdio/sdk@0.35.0", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-txkUZ6NloEJwRfJF3kovdXO5yqz6LmbzXw2Jlfb/15GFKqRB0gblDDDlBwWc/VB0ju6u02rd/QhgR3kjPEzegg=="],
+    "remote-workspaces/@pstdio/sdk": ["@pstdio/sdk@0.44.0", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-LwU/bo9I9XqqFXCOZZKWfn7CYEixoRsziJ/uucvbIeK5Hjdq6zL2wUCIUnzBVVKv+M883gHJpbqeqJ9GHCY3/w=="],
 
     "rimraf/glob": ["glob@7.2.3", "", { "dependencies": { "fs.realpath": "^1.0.0", "inflight": "^1.0.4", "inherits": "2", "minimatch": "^3.1.1", "once": "^1.3.0", "path-is-absolute": "^1.0.0" } }, "sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q=="],
 
