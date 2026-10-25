@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
-import { buildRuntime, makeStorage, stubEnvironment } from "./test-helpers.test";
+import { buildRuntime, makeStorage, stubEnvironment } from "./runner.test-fixture";
 
 describe("createCommandRunner: workspace context", () => {
   test("passes the selected workspace to the environment and exposes its file mounts", async () => {

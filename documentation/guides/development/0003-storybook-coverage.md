@@ -30,6 +30,8 @@ In another terminal:
 bun run --cwd packages/ui test-storybook
 ```
 
+Browser interactions shared across story owners live in `packages/storybook-tests`. Run one with `bun run --cwd packages/storybook-tests test:browser -- src/ui/panel-tabs.spec.ts`. This suite owns Storybook startup and playback waits independently from app E2E. Story source stays beside the component.
+
 Build the static Storybook with `bun run --cwd packages/ui build-storybook`. Use the owning package's scripts for dashboard or workbench stories; their ports and setup differ.
 
 For changes visible in the application, also use [manual Playwright validation](0001-setup.md#playwright-validation). Check actual sizing, focus, navigation, themes, and resource switching. Passing a component story does not replace the affected installed-product walkthrough.

@@ -1,0 +1,10 @@
+{
+  "extends": "./packages/workbench-fixture/tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@pstdio/sdk/extensions": ["./packages/sdk/dist/extensions.d.ts"],
+      "@pstdio/sdk/testing": ["./packages/sdk/dist/testing.d.ts"],
+      "@pstdio/ui": ["./packages/ui/dist/index.d.ts"]
+    }
+  }
+}

@@ -281,7 +281,7 @@ bun run --cwd clients/landing-page build
 PSTDIO_VERIFY_PLATFORM_PKG=cli-linux-x64 bun run --cwd scripts verify:packages
 ```
 
-Use [packaged auto-start tests](../../../packages/e2e/src/packaged/packaged.test.ts), [runtime lifecycle tests](../../../packages/e2e/src/packaged/runtime-lifecycle.test.ts), [core extension smoke checks](../../../packages/e2e/src/packaged/packaged-core-extensions-smoke.ts), and [packaged serve checks](../../../packages/e2e/src/packaged/packaged-serve-smoke.test.ts) to select the focused regression runs. Browser runs use `bun run dev:playwright` and its printed URL; stop with `bun run dev:playwright:down`. Never start the app directly or inspect its live database.
+Use [packaged auto-start tests](../../../packages/e2e/src/packaged/packaged.test.ts), [runtime lifecycle tests](../../../packages/e2e/src/packaged/runtime-lifecycle.test.ts), [core extension smoke checks](../../../packages/e2e/src/packaged/packaged-core-extensions-smoke.test.ts), and [packaged serve checks](../../../packages/e2e/src/packaged/packaged-serve-smoke.test.ts) to select the focused regression runs. Browser runs use `bun run dev:playwright` and its printed URL; stop with `bun run dev:playwright:down`. Never start the app directly or inspect its live database.
 
 ## Implementation handoff checklist
 

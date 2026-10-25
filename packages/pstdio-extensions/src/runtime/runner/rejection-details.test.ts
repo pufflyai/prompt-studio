@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { CommandFailureDetails } from "pstdio-api-contracts/extension-kernel";
-import { makeRunner } from "./test-helpers.test";
+import { makeRunner } from "./runner.test-fixture";
 
 for (const host of [false, true]) {
   test(`${host ? "host" : "extension"} command rejections retain complete details and collected notices`, async () => {

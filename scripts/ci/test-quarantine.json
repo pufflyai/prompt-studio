@@ -260,7 +260,7 @@
   },
   {
     "runner": "packaged-bun",
-    "file": "packages/e2e/src/packaged/packaged-serve-smoke.test.ts",
+    "file": "packages/e2e/src/packaged/packaged-planner-smoke.test.ts",
     "name": "packaged Planner recovers missing workspaces without losing submitted work",
     "platforms": ["linux"],
     "owner": "PS-907 / packaged runtime shutdown",

@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.2 AS build
+FROM oven/bun:1.4.4 AS build
 WORKDIR /build
 COPY package.json bun.lock bunfig.toml ./
 COPY services/telemetry/package.json ./services/telemetry/package.json
@@ -14,7 +14,7 @@ RUN bun build services/account-manager/scripts/account-feature.ts --target bun -
 
 RUN bun build services/telemetry/src/telemetry.test.ts --target bun --outfile dist/telemetry.test.js
 
-FROM oven/bun:1.4.2
+FROM oven/bun:1.4.4
 WORKDIR /app
 COPY --from=build --chown=bun:bun /build/dist/telemetry.test.js ./telemetry.test.js
 COPY --from=build --chown=bun:bun /build/dist/src/index.js ./authority.js

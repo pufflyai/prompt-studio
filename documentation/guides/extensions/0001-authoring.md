@@ -22,7 +22,7 @@ These steps are tested with exactly these versions. If `pst --version` prints an
 
 You need:
 
-- **Bun 1.4.2 or newer.** The steps use it to install packages, check types, and run tests. If you only have the desktop app, write `BUN_BE_BUN=1 pst` instead of `bun`. For example, `bun install` becomes `BUN_BE_BUN=1 pst install`.
+- **Bun 1.4.4 or newer.** The steps use it to install packages, check types, and run tests. If you only have the desktop app, write `BUN_BE_BUN=1 pst` instead of `bun`. For example, `bun install` becomes `BUN_BE_BUN=1 pst install`.
 - **The `pst` command.** The desktop app includes it. Without the app, run `bun add --global pstdio@0.43.1`. That package starts `pst` through Node.js, so Node.js must also be on your `PATH`. See [Install Prompt Studio](../getting-started/0001-install.md).
 - **Git.** When you create your first project, Prompt Studio downloads its default extensions from GitHub with Git. Your project folder does not need to be a Git repository.
 
@@ -84,14 +84,14 @@ Create `package.json`:
     "pstdio": "^0.1.6 || ^0.2.0 || ^0.3.0"
   },
   "scripts": {
-    "lint": "tsc --noEmit",
+    "lint": "bun check",
     "test": "bun test"
   },
   "dependencies": {
     "@pstdio/sdk": "0.43.1"
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "typescript": "6.0.2"
   }
 }
@@ -360,7 +360,7 @@ Check the types:
 bun run lint
 ```
 
-It prints `$ tsc --noEmit` and nothing else. A type error names the file and line.
+It prints `$ bun check` and a result. A type error names the file and line.
 
 ## 6. Install it in the project
 

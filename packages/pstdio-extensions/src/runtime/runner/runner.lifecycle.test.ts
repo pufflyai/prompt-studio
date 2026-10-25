@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { makeRunner } from "./test-helpers.test";
+import { makeRunner } from "./runner.test-fixture";
 
 describe("createCommandRunner: lifecycle", () => {
   test("runs a command and emits requested/started/completed lifecycle events", async () => {

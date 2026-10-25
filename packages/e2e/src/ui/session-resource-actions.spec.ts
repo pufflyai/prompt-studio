@@ -1,5 +1,4 @@
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
-import { getSharedStorybookBaseUrl } from "../scripts/storybook-server";
 import {
   createResourceActionsProject,
   openSessionSidePanel,
@@ -20,17 +19,6 @@ const row = (page: Page, title: string) =>
 const menuItem = (page: Page, name: string) =>
   page.locator("[role=menu][data-state=open]").getByRole("menuitem", { name, exact: true });
 const breadcrumbMenu = async (page: Page) => page.locator("[data-workbench-breadcrumb-resource-actions]").click();
-
-test("breadcrumb resource actions compose with contributed panel actions without duplicate commands", async ({
-  page,
-}) => {
-  const baseUrl = getSharedStorybookBaseUrl("pstdio-workbench");
-  await page.goto(
-    `${baseUrl}/iframe.html?id=pstdio-workbench-reference-core-api-breadcrumb-actions--contributed-panel-actions`,
-  );
-  await page.getByRole("menuitem", { name: "Panel details", exact: true }).waitFor();
-  await expect(page.getByRole("menuitem")).toHaveText(["Archive", "Panel details", "Copy link"]);
-});
 
 test("drafts omit management actions and workspace session rows explain guarded deletion", async ({
   page,

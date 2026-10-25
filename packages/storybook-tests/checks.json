@@ -1,0 +1,4 @@
+[
+  { "id": "storybook-servers", "command": ["bun", "run", "test:scripts"] },
+  { "id": "storybook-browser", "command": ["bun", "run", "test:browser"] }
+]

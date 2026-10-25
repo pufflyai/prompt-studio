@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { params } from "@pstdio/sdk/extensions";
-import { makeRunner } from "./test-helpers.test";
+import { makeRunner } from "./runner.test-fixture";
 
 describe("createCommandRunner: param validation", () => {
   test("rejects invalid params before the handler runs and emits command.rejected", async () => {

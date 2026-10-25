@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.2
+FROM oven/bun:1.4.4
 
 COPY --from=node:24.19.0-slim /usr/local/bin/node /usr/local/bin/node
 

@@ -59,7 +59,7 @@ export async function verifyPublishedExtension(root: string, dir: string, releas
       const resolved = await Bun.file(join(destination, "node_modules", name, "package.json")).json();
       console.log(`${dir}: ${name} ${dependencies[name]} -> ${resolved.version}`);
     }
-    await run(destination, ["bun", "run", "--no-install", "tsc", "--noEmit"]);
+    await run(destination, ["bun", "check"]);
     await run(destination, ["bun", "test", "--pass-with-no-tests"]);
     const packagePath = join(destination, "package.json");
     const manifest = await Bun.file(packagePath).json();

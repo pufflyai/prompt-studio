@@ -19,6 +19,7 @@ const pattern = new RegExp(
 );
 
 export default defineConfig({
+  maxFailures: process.env.CI_PRIORITY === "P1" ? 1 : 0,
   ...(quarantine ? { grep: pattern } : { grepInvert: pattern }),
   outputDir: quarantine ? "test-results/packaged-quarantine" : "test-results/packaged",
   testDir: "src/e2e",

@@ -72,7 +72,7 @@ export const benchmarkReads = async (kind: Workload, count: number, root: string
   };
   const sample = async (phase: string, operation: ColdOperation, extra: object = {}, cursor?: string) => {
     const before = await counters();
-    const measured = await measure(() =>
+    const measured = await measure(async () =>
       operation === "all-owner-burst" ? burst() : reader.run(operation as ReadOperation, cursor),
     );
     const after = await counters();

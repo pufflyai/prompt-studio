@@ -5,7 +5,7 @@ This project is a Bun + TypeScript monorepo using workspaces, Lerna, and Nx cach
 ## Prerequisites
 
 - Git. The isolated stack mounts the checkout's Git folder, and core extensions are downloaded with Git.
-- Bun `1.4.2`, matching the root `packageManager` pin, CI, and Docker images
+- Bun `1.4.4`, matching the root `packageManager` pin, CI, and Docker images
 - Node `24` for native build tooling, desktop development, and Storybook
 - Docker with the Compose v2 plugin (`docker compose version`). The isolated stack needs BuildKit and Compose 2.17 or newer, because its build uses an extra build context. Docker Desktop includes both.
 - Free disk space for Docker. See [Disk space](#disk-space).

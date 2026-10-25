@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.2 AS build
+FROM oven/bun:1.4.4 AS build
 WORKDIR /build
 COPY package.json bun.lock bunfig.toml ./
 COPY services/telemetry/package.json ./services/telemetry/package.json
@@ -14,7 +14,7 @@ COPY services/account-manager/scripts/account-feature.ts ./services/account-mana
 RUN bun build services/account-manager/scripts/account-feature.ts --target bun --outfile dist/account-feature.js
 RUN bun build services/account-manager/src/server.ts services/account-manager/src/index.ts services/account-manager/src/environment-access.ts --target bun --outdir dist
 
-FROM oven/bun:1.4.2-slim
+FROM oven/bun:1.4.4-slim
 WORKDIR /app
 COPY --from=build --chown=bun:bun /build/dist ./dist
 COPY --chown=bun:bun services/account-manager/drizzle ./drizzle

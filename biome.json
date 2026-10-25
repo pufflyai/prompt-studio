@@ -17,6 +17,8 @@
       "!!packages/pstdio-dashboard/chakra-config.json",
       "!!packages/e2e/playwright-report",
       "!!packages/e2e/test-results",
+      "!!packages/storybook-tests/playwright-report",
+      "!!packages/storybook-tests/test-results",
       "!!packages/pstdio-extensions/src/bridge/webview-runtime/runtime.bundle.js",
       "!!packages/pstdio-agents/src/providers/opencode/mocks/full-conversation.json"
     ]

@@ -3,7 +3,7 @@ import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
 import { createMemoryResources } from "@pstdio/sdk/testing";
 import { normalizeExtensionSources } from "../normalize";
 import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
-import { makeStorage, stubEnvironment } from "./test-helpers.test";
+import { makeStorage, stubEnvironment } from "./runner.test-fixture";
 
 const storage = makeStorage().api;
 

@@ -19,7 +19,7 @@ const args = [
   `${root}:/owned`,
   "-w",
   "/work",
-  "oven/bun:1.4.2",
+  "oven/bun:1.4.4",
   "bun",
   "-e",
 ];

@@ -33,7 +33,7 @@ const config = {
       },
     },
     tester: {
-      image: "oven/bun:1.4.2",
+      image: "oven/bun:1.4.4",
       working_dir: "/repo/services/account-manager",
       volumes: [`${root}:/repo:ro`],
       environment: {

@@ -1,9 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
-import { getSharedStorybookBaseUrl } from "../scripts/storybook-server";
 import { uiOrigin as apiBase } from "../ui-server";
-import { waitForStoryPlayback } from "./mermaid-renderer-storybook";
 
 const getVerticalMenuGap = async (
   tab: import("@playwright/test").Locator,
@@ -34,14 +32,6 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
 };
-
-test("tab actions hand off dialogs and preserve focus after outside dismissal", async ({ page }) => {
-  const baseUrl = getSharedStorybookBaseUrl("pstdio-workbench");
-  await page.goto(`${baseUrl}/iframe.html?id=pstdio-workbench-guides-tab-actions--editable-title-and-bound-resource`);
-  await waitForStoryPlayback(page);
-  await expect(page.getByText("Deleted note-1", { exact: true })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Draft outside the menu" })).toBeFocused();
-});
 
 test("opens the Session tab context menu while normal clicks only select", async ({ page, request }) => {
   await deleteAllProjects(request);

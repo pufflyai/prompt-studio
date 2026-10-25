@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { type ExtensionTerminalApi, type TerminalSessionHandle, workspaceEvents } from "@pstdio/sdk/extensions";
 import { createCommandRunner } from "./runner";
-import { buildRuntime, makeStorage, stubEnvironment } from "./test-helpers.test";
+import { buildRuntime, makeStorage, stubEnvironment } from "./runner.test-fixture";
 
 // A host terminal that hands every session it opens to the invocation scope, the way the
 // API host does. The log records what stayed open and the order sessions were released in.

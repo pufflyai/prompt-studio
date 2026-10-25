@@ -14,11 +14,11 @@
     "./collections": "./src/collections.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun test --silent",
-    "test:coverage": "bun test --coverage"
+    "test": "bun ../../scripts/ci/run-bun-tests.ts --silent",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage"
   },
   "dependencies": {
     "@noble/hashes": "^2.4.0",
@@ -26,7 +26,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "typescript": "6.0.2"
   }
 }

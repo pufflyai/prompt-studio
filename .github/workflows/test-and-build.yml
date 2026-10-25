@@ -1,46 +1,61 @@
 name: Test and Build
-
-# Pull requests select fast package, browser and native checks from their affected inputs.
-# Merge groups, main, manual runs and ci:full pull requests run the full stage, so main
-# receives only commits that passed every check main runs.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
-  merge_group:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+  merge_group: null
   push:
     branches:
       - main
       - test/ci-reliability/**
   workflow_dispatch:
-
+    inputs:
+      profile:
+        type: choice
+        options:
+          - production
+          - merge_queue
+        default: production
+        description: Validation profile
+      source_sha:
+        type: string
+        default: ""
+        description: Optional exact merged source for full diagnostics
+  workflow_call:
+    inputs:
+      profile:
+        type: string
+        default: production
+        description: Production functional validation or merge_queue diagnostics
+      source_sha:
+        type: string
+        default: ""
+        description: Exact candidate version commit
+      original_source_sha:
+        type: string
+        default: ""
+        description: Source revision before release version preparation
+      artifact_run_id:
+        type: string
+        default: ""
+        description: Run that produced immutable release artifacts
+      artifact_attempt:
+        type: string
+        default: "1"
+        description: Attempt that produced immutable release artifacts
+      release_channel:
+        type: string
+        default: stable
+        description: Candidate release channel
 concurrency:
-  # Only a newer event on the same pull request replaces a run. Every queue and main commit keeps
-  # its own run until it finishes, so a red commit can always be traced.
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'latest' || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 env:
   NX_DAEMON: "false"
-
 jobs:
-  # The final success gate waits for every suite. Queue runs can stop sooner after a terminal failure.
-  # PR and main runs keep all diagnostics. Only this queue-only job can cancel a workflow run.
-  queue_fail_fast:
-    if: ${{ !cancelled() && github.event_name == 'merge_group' }}
-    permissions:
-      contents: read
-      actions: write
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-      - name: Stop remaining queue work after a job fails
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: node scripts/ci/merge-queue-fail-fast.ts
-
   scope:
     permissions:
       contents: read
@@ -59,162 +74,162 @@ jobs:
       browser_smoke: ${{ steps.scope.outputs.browserSmoke }}
       browser_checks: ${{ steps.scope.outputs.browserChecks }}
       browser_matrix: ${{ steps.scope.outputs.browserMatrix }}
-      native_checks: ${{ steps.scope.outputs.nativeChecks }}
       package_checks: ${{ steps.scope.outputs.packageChecks }}
+      package_matrix: ${{ steps.scope.outputs.packageMatrix }}
       required_jobs: ${{ steps.scope.outputs.requiredJobs }}
+      production: ${{ steps.scope.outputs.production }}
+      component_checks: ${{ steps.scope.outputs.componentChecks }}
+      component_files: ${{ steps.scope.outputs.componentFiles }}
+      component_shards: ${{ steps.scope.outputs.componentShards }}
+      sdk_api_report: ${{ steps.scope.outputs.sdkApiReport }}
+      gate_plan: ${{ steps.scope.outputs.gatePlan }}
+      client_matrix: ${{ steps.scope.outputs.clientMatrix }}
+      database_matrix: ${{ steps.scope.outputs.databaseMatrix }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: "24"
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
       - name: Choose the stage, jobs, and packages to test
         id: scope
         env:
           PULL_REQUEST_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
           GH_TOKEN: ${{ github.token }}
+          CI_PROFILE: ${{ inputs.profile || '' }}
         run: bun scripts/ci/pull-request-ci-scope.ts
-
-  # Whole-repo checks that give the same result for the same commit. Every stage runs them.
+    env:
+      CI_PRIORITY: P0
+      GH_TOKEN: ${{ github.token }}
   static_checks:
+    permissions:
+      contents: read
+      actions: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
         with:
-          # The extension API report compares with the last release tag.
+          ref: ${{ inputs.source_sha || github.sha }}
           fetch-depth: 0
-
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Install dependencies and restore build cache
-        uses: ./.github/actions/setup-ci-cache
-
-      - name: Check formatting
-        run: bun run format:check
-
-      # Offline and deterministic, so every stage runs them. A code rename can break a documentation link
-      # without touching a Markdown file. External sites are checked by the Documentation links workflow.
-      - name: Check documentation links, published routes, and exported skills
-        run: bun run --cwd scripts verify:docs-links
-
-      - name: Check that the SDK references name every public method
-        run: bun run --cwd scripts verify:sdk-reference
-
-      - name: Check that guide code blocks match their maintained examples
-        run: bun run --cwd scripts verify:docs-snippets
-
-      - name: Check package boundaries and browser test origins
-        run: bun run verify:boundaries
-
-      - name: Check for unused files, exports, and dependencies
-        run: bun run knip
-
-      - name: Check lockfile and extension API version
-        run: bun run verify:lockfile && bun run verify:extension-api-version
-
-      - name: Compare public SDK APIs with the last release
-        id: sdk_api_report
-        run: bun run verify:extension-api-report
-
-      - name: Upload public SDK API comparison
-        if: ${{ !cancelled() && steps.sdk_api_report.outcome != 'skipped' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: sdk-api-report
-          path: .api-report/
-          include-hidden-files: true
-          if-no-files-found: warn
-
-      - name: Validate changesets
-        run: bun run validate:changesets
-
-      - name: Build monorepo
-        run: bun run build
-
-      # Some build outputs, such as the webview runtime bundle, are committed. A stale copy ships old code.
-      - name: Check committed build outputs are up to date
-        run: git diff --exit-code
-
-      - name: Check translations
-        run: bun run verify:translations
-
-  lint:
-    needs: scope
-    if: needs.scope.outputs.package_checks == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          # A scoped run lints and tests the packages changed since the target branch.
-          fetch-depth: 0
-
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Install dependencies and restore build cache
-        uses: ./.github/actions/setup-ci-cache
-
-      - name: Build the tested packages and their dependencies
-        run: bun run build -- ${{ needs.scope.outputs.lerna_filter }} --include-dependencies
-
-      - name: Lint monorepo
-        run: bunx lerna run lint ${{ needs.scope.outputs.lerna_filter }}
-
-  unit_tests:
-    needs: scope
-    if: needs.scope.outputs.package_checks == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
-      - uses: oven-sh/setup-bun@v2
+      - &a1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - uses: ./.github/actions/setup-ci-cache
-
-      - name: Build tested packages and their dependencies
-        run: bun run build -- ${{ needs.scope.outputs.lerna_filter }} --include-dependencies
-
-      - name: Test monorepo (non-e2e)
-        # Stream failures as they happen; buffered task output can be lost when the runner exits.
-        # The API and database suites take minutes, so database_tests runs them in shards.
-        run: bunx lerna run test --ignore e2e --ignore pstdio-api --ignore pstdio-db ${{ needs.scope.outputs.lerna_filter }} --stream
-
-      - name: Test synchronization protocol with isolated storage
-        run: bunx lerna run test:conformance ${{ needs.scope.outputs.lerna_filter }} --stream
-
+        if: needs.scope.outputs.stage != 'main'
+      - name: Collect independent repository checks
+        if: needs.scope.outputs.stage != 'main'
+        run: bun scripts/ci/run-static-checks.ts
+      - name: Verify tested merge content and inputs
+        if: needs.scope.outputs.stage == 'main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bun scripts/ci/verify-main-provenance.ts
+        id: provenance
+      - name: Preserve static outcomes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-results-attempt-${{ github.run_attempt }}
+          path: test-results/ci
+          if-no-files-found: ignore
+      - name: Copy certified host build archives
+        if: needs.scope.outputs.stage == 'main'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ci-build-host-*-attempt-${{ steps.provenance.outputs.attempt }}
+          run-id: ${{ steps.provenance.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: .cache/ci-build
+          merge-multiple: true
+      - name: Publish certified host build cache on the default branch
+        if: needs.scope.outputs.stage == 'main'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/ci-build
+          key: nx-${{ runner.os }}-${{ runner.arch }}-host-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha }}-provenance
+      - name: Publish certified Intel Mac host build cache on the default branch
+        if: needs.scope.outputs.stage == 'main'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/ci-build
+          key: nx-macOS-X64-host-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha }}-provenance
+      - name: Publish certified Apple Silicon host build cache on the default branch
+        if: needs.scope.outputs.stage == 'main'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/ci-build
+          key: nx-macOS-ARM64-host-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha }}-provenance
+    needs: scope
+    env:
+      CI_PRIORITY: P0
+      GH_TOKEN: ${{ github.token }}
+  package_checks:
+    name: package_checks (${{ matrix.shard }})
+    needs: scope
+    if: needs.scope.outputs.package_checks == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.scope.outputs.package_matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.source_sha || github.sha }}
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Install dependencies and restore build cache
+        uses: ./.github/actions/setup-ci-cache
+      - name: Build the tested packages and their dependencies
+        id: build_packages
+        run: bun run build -- ${{ matrix.lernaFilter }} --include-dependencies --no-bail
+      - name: Collect independent lint, unit, and synchronization results
+        if: ${{ !cancelled() }}
+        run: bun scripts/ci/run-package-group.ts
+        env:
+          LERNA_FILTER: ${{ matrix.lernaFilter }}
+      - name: Preserve file and case execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package_checks-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
+          path: test-results/ci
+          if-no-files-found: warn
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
+      - name: Share tested host build cache with main
+        if: ${{ !cancelled() && steps.build_packages.outcome == 'success' && needs.scope.outputs.stage == 'merge_queue' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-build-host-package-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
+          path: .cache/ci-build
+          include-hidden-files: true
+          compression-level: 0
+          if-no-files-found: error
+    env:
+      CI_PRIORITY: P0
+      GH_TOKEN: ${{ github.token }}
   relay_smoke:
     needs: scope
     if: needs.scope.outputs.relay_smoke == 'true'
@@ -222,38 +237,65 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
-
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-
       - name: Test database ownership across container restarts
-        run: bun packages/pstdio-db/src/db/pglite-container-lock.integration.ts
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun packages/pstdio-db/src/db/pglite-container-lock.integration.ts
+        shell: bash
       - name: Test built relay with disposable PostgreSQL and object storage
-        run: bun run --cwd services/relay test:isolated
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd services/relay test:isolated
+        shell: bash
       - name: Install dependencies for storage and private account authority checks
-        run: bun install --frozen-lockfile
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun install --frozen-lockfile
+        shell: bash
       - name: Test PostgreSQL publication and process recovery
-        run: bun run --cwd services/relay test:storage
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd services/relay test:storage
+        shell: bash
       - name: Test durable streaming assets and object storage contract
-        run: bun run --cwd services/relay test:assets
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd services/relay test:assets
+        shell: bash
       - name: Test authenticated relay HTTP and finite WebSocket subscriptions
-        run: bun run --cwd services/relay test:transport
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd services/relay test:transport
+        shell: bash
       - name: Test the blind sync store, its cleanup and its protocol
-        run: bun run --cwd services/relay test:sync
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd services/relay test:sync
+        shell: bash
       - name: Test private account authority and its built image with disposable PostgreSQL
-        run: bun run --cwd services/account-manager test:isolated
-
-  # Together these suites took 6 to 8 minutes in one job, where they also slowed each other down.
-  # Shards keep each job near the PR stage's 5-minute target.
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd services/account-manager test:isolated
+        shell: bash
+    env:
+      CI_PRIORITY: P1
+      GH_TOKEN: ${{ github.token }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
   database_tests:
     name: database_tests (${{ matrix.package }} ${{ matrix.shard }})
     needs: scope
@@ -261,38 +303,60 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
-      fail-fast: ${{ github.event_name == 'merge_group' }}
+      fail-fast: true
       matrix:
-        include:
-          - { package: pstdio-api, shard: 1/4 }
-          - { package: pstdio-api, shard: 2/4 }
-          - { package: pstdio-api, shard: 3/4 }
-          - { package: pstdio-api, shard: 4/4 }
-          - { package: pstdio-db, shard: 1/3 }
-          - { package: pstdio-db, shard: 2/3 }
-          - { package: pstdio-db, shard: 3/3 }
+        include: ${{ fromJSON(needs.scope.outputs.database_matrix) }}
     steps:
       - uses: actions/checkout@v5
-
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: "24"
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
-
       - name: Build ${{ matrix.package }} and its dependencies
-        run: bun run build -- --scope ${{ matrix.package }} --include-dependencies
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run build -- --scope ${{ matrix.package }} --include-dependencies
+        shell: bash
       - name: Test ${{ matrix.package }} shard ${{ matrix.shard }}
-        run: bun run --cwd packages/${{ matrix.package }} test --shard=${{ matrix.shard }}
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        if: needs.scope.outputs.stage == 'pull_request'
+        env:
+          CI_TEST_PACKAGE: ${{ matrix.package }}
+          CI_TEST_FILES_JSON: ${{ matrix.files }}
+          CI_CHECK_COMMAND: bun scripts/ci/run-pr-database.ts
+        shell: bash
+      - name: Test complete merge-critical shard
+        if: needs.scope.outputs.stage != 'pull_request'
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd packages/${{ matrix.package }} test --shard=${{ matrix.shard }}
+        shell: bash
+      - name: Preserve file and case execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database_tests-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
+          path: test-results/ci
+          if-no-files-found: warn
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
+    env:
+      CI_PRIORITY: P1
+      GH_TOKEN: ${{ github.token }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
   published_extensions:
     needs: scope
     if: needs.scope.outputs.published_extensions == 'true'
@@ -302,170 +366,230 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-
       - name: Check extensions against published SDK and UI packages
-        run: bun run --cwd scripts verify:published-extensions
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd scripts verify:published-extensions
+        shell: bash
+    env:
+      CI_PRIORITY: P1
+      GH_TOKEN: ${{ github.token }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
   harness_cli_support:
     needs: scope
     if: needs.scope.outputs.harness_cli == 'true'
     uses: ./.github/workflows/harness-cli-support.yml
     with:
-      ref: ${{ github.sha }}
-      versions: '["minimum"]'
-
+      ref: ${{ inputs.source_sha || github.sha }}
+      versions: '["minimum","latest"]'
   windows_test_and_build:
     name: windows_test_and_build (${{ matrix.check }})
     needs: scope
-    if: needs.scope.outputs.stage == 'full'
+    if: needs.scope.outputs.production == 'true'
     runs-on: windows-latest
     timeout-minutes: 25
     strategy:
-      fail-fast: ${{ github.event_name == 'merge_group' }}
+      fail-fast: false
       matrix:
         include:
-          - { check: lint, lane: lint }
-          - { check: unit-1, lane: unit, shard: 1/4 }
-          - { check: unit-2, lane: unit, shard: 2/4 }
-          - { check: unit-3, lane: unit, shard: 3/4 }
-          - { check: unit-4, lane: unit, shard: 4/4 }
+          - check: lint
+            lane: lint
+          - check: unit-1
+            lane: unit
+            shard: 1/4
+          - check: unit-2
+            lane: unit
+            shard: 2/4
+          - check: unit-3
+            lane: unit
+            shard: 3/4
+          - check: unit-4
+            lane: unit
+            shard: 4/4
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           fetch-depth: 0
-
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Node
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: "24"
-
       - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version-file: package.json
-
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
-
-      # A fresh runner's first Windows PowerShell start prepares its modules and C# compiler. That one-time cost
-      # is usually about 4 s but has stalled past the 15 s test limit, so pay it before the tests that use PowerShell.
       - name: Warm up Windows PowerShell
         if: matrix.lane != 'lint'
-        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
-
+        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static
+          class PromptStudioWarmUp {}'"
       - name: Build monorepo
         run: bun run build
-
       - name: Lint monorepo
         if: matrix.lane == 'lint'
-        run: bunx lerna run lint
-
+        run: bunx lerna run lint --no-bail --concurrency=2
       - name: Test monorepo shard ${{ matrix.shard }} (non-e2e)
-        if: matrix.lane == 'unit'
-        # ADR 0044: hosted Windows runner variance exceeds Bun's 5 s default.
-        # Every package uses bun test; split its files without adding workers on the same runner.
-        run: bunx lerna run test --ignore e2e --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api --stream --concurrency=1 -- --shard=${{ matrix.shard }} --timeout=15000
-
+        if: ${{ !cancelled() && (matrix.lane == 'unit') }}
+        run: bunx lerna run test --ignore e2e --ignore storybook-tests --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api --stream
+          --concurrency=1 --no-bail -- --shard=${{ matrix.shard }} --timeout=15000
       - name: Test Git worktree shard ${{ matrix.shard }} with its existing 30-second limit
-        if: matrix.lane == 'unit'
+        if: ${{ !cancelled() && (matrix.lane == 'unit') }}
         run: bun run --cwd packages/pstdio-wt test --shard=${{ matrix.shard }}
-
+      - name: Preserve file and case execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_test_and_build-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
+          path: test-results/ci
+          if-no-files-found: warn
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
+    env:
+      CI_PRIORITY: P2
+      GH_TOKEN: ${{ github.token }}
   windows_database_tests:
     name: windows_database_tests (${{ matrix.package }} ${{ matrix.shard }})
     needs: scope
-    if: needs.scope.outputs.stage == 'full'
+    if: needs.scope.outputs.production == 'true'
     runs-on: windows-latest
     timeout-minutes: 25
     strategy:
-      fail-fast: ${{ github.event_name == 'merge_group' }}
+      fail-fast: false
       matrix:
         include:
-          - { package: pstdio-api, shard: 1/8 }
-          - { package: pstdio-api, shard: 2/8 }
-          - { package: pstdio-api, shard: 3/8 }
-          - { package: pstdio-api, shard: 4/8 }
-          - { package: pstdio-api, shard: 5/8 }
-          - { package: pstdio-api, shard: 6/8 }
-          - { package: pstdio-api, shard: 7/8 }
-          - { package: pstdio-api, shard: 8/8 }
-          - { package: pstdio-db, shard: 1/4 }
-          - { package: pstdio-db, shard: 2/4 }
-          - { package: pstdio-db, shard: 3/4 }
-          - { package: pstdio-db, shard: 4/4 }
+          - package: pstdio-api
+            shard: 1/8
+          - package: pstdio-api
+            shard: 2/8
+          - package: pstdio-api
+            shard: 3/8
+          - package: pstdio-api
+            shard: 4/8
+          - package: pstdio-api
+            shard: 5/8
+          - package: pstdio-api
+            shard: 6/8
+          - package: pstdio-api
+            shard: 7/8
+          - package: pstdio-api
+            shard: 8/8
+          - package: pstdio-db
+            shard: 1/4
+          - package: pstdio-db
+            shard: 2/4
+          - package: pstdio-db
+            shard: 3/4
+          - package: pstdio-db
+            shard: 4/4
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           fetch-depth: 0
-
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Node
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: "24"
-
       - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version-file: package.json
-
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
-
       - name: Build ${{ matrix.package }} and its dependencies
         run: bun run build -- --scope ${{ matrix.package }} --include-dependencies
-
-      # Each API shard has a fresh runner. Keep PowerShell setup outside its test limits.
       - name: Warm up Windows PowerShell
         if: matrix.package == 'pstdio-api'
-        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
-
-      # Split PGlite initialization across runners without adding workers within a shard.
+        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static
+          class PromptStudioWarmUp {}'"
       - name: Test ${{ matrix.package }} shard ${{ matrix.shard }}
-        # ADR 0044: retain the existing Windows default and the API runner's own limit.
         run: bun run --cwd packages/${{ matrix.package }} test --shard=${{ matrix.shard }} --timeout=15000
-
+        if: ${{ !cancelled() }}
+      - name: Preserve file and case execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_database_tests-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
+          path: test-results/ci
+          if-no-files-found: warn
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
+    env:
+      CI_PRIORITY: P2
+      GH_TOKEN: ${{ github.token }}
   storybooks:
+    name: storybooks (${{ matrix.package }})
     needs: scope
-    if: needs.scope.outputs.stage == 'full'
+    if: needs.scope.outputs.component_checks == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - package: ui
+            project: "@pstdio/ui"
+          - package: pstdio-dashboard
+            project: pstdio-dashboard
+          - package: pstdio-workbench
+            project: "@pstdio/workbench"
     steps:
       - uses: actions/checkout@v5
-
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: "24"
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
-
-      - name: Build Storybook dependencies
-        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-
-      - name: Build shared Storybooks
-        run: bun packages/e2e/src/scripts/build-storybooks.ts
-
-      - name: Share prebuilt Storybooks with UI shards
+      - name: Build owner Storybook and dependencies
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun x --no-install lerna run build-storybook --scope '${{ matrix.project }}'
+        shell: bash
+      - name: Archive the owner output at its original path
+        run: bun packages/storybook-tests/src/scripts/storybook-artifacts.ts pack '${{ matrix.package }}'
+      - name: Share the owner Storybook with component shards
         uses: actions/upload-artifact@v4
         with:
-          name: storybook-static
-          overwrite: true
-          path: |
-            packages/ui/storybook-static
-            packages/pstdio-dashboard/storybook-static
-            packages/pstdio-workbench/storybook-static
+          name: storybook-static-${{ matrix.package }}-attempt-${{ github.run_attempt }}
+          path: .cache/storybook-artifacts/storybook-${{ matrix.package }}.tar.gz
+          include-hidden-files: true
+          compression-level: 0
           if-no-files-found: error
-
+      - name: Preserve owner build archives for certified main promotion
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-build-host-storybook-${{ matrix.package }}-attempt-${{ github.run_attempt }}
+          path: .cache/ci-build
+          include-hidden-files: true
+          compression-level: 0
+          if-no-files-found: error
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
+    env:
+      CI_PRIORITY: P1
+      GH_TOKEN: ${{ github.token }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
   browser_smoke:
     needs: scope
     if: needs.scope.outputs.browser_smoke == 'true'
@@ -477,28 +601,27 @@ jobs:
     env:
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      CI_PRIORITY: P0
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
-
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: "24"
-
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
-
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
         with:
           profile: playwright
-
       - name: Build dashboard browser test dependencies
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-
       - name: Test basic dashboard flows
         run: bun run --cwd packages/e2e test:smoke
-
+        if: ${{ !cancelled() }}
       - name: Preserve browser smoke reports and failure traces
         if: always()
         uses: actions/upload-artifact@v4
@@ -508,7 +631,21 @@ jobs:
             packages/e2e/test-results
             packages/e2e/playwright-report
           if-no-files-found: warn
-
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
+      - name: Cache browser builds after main smoke
+        if: needs.scope.outputs.stage == 'main'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/ci-build
+          key: nx-${{ runner.os }}-${{ runner.arch }}-playwright-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha }}-smoke
+      - name: Cache dependency downloads after main smoke
+        if: needs.scope.outputs.stage == 'main'
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/pstdio-ci-bun-cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock', 'package.json') }}
   browser_regressions:
     name: browser_regressions (${{ matrix.shard }})
     needs: scope
@@ -519,14 +656,20 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
       options: --user 1001 --init --ipc=host
     strategy:
-      fail-fast: ${{ github.event_name == 'merge_group' }}
+      fail-fast: true
       matrix:
         include: ${{ fromJSON(needs.scope.outputs.browser_matrix) }}
     env:
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      CI_PRIORITY: P1
+      GH_TOKEN: ${{ github.token }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
@@ -536,16 +679,23 @@ jobs:
         with:
           profile: playwright
       - name: Build browser dependencies
-        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+        shell: bash
       - name: Test affected browser behavior
         env:
           PR_BROWSER_SPECS: ${{ matrix.specs }}
-        run: |
-          status=0
-          for spec in $PR_BROWSER_SPECS; do
-            bun run --cwd packages/e2e test:pr -- "$spec" || status=1
-          done
-          exit "$status"
+          CI_CHECK_COMMAND: |
+            status=0
+            for spec in $PR_BROWSER_SPECS; do
+              bun run --cwd packages/e2e test:pr -- "$spec" || status=1
+            done
+            exit "$status"
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        shell: bash
       - name: Preserve browser regression evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -555,103 +705,77 @@ jobs:
             packages/e2e/test-results
             packages/e2e/playwright-report
           if-no-files-found: warn
-
-  native_contracts:
-    needs: scope
-    if: needs.scope.outputs.native_checks != '[]'
-    runs-on: windows-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - uses: ./.github/actions/setup-ci-cache
-      - name: Build SDK contracts used by native fixtures
-        run: bun run build -- --scope @pstdio/sdk --include-dependencies
-      - name: Test Windows release paths and default extension reuse
-        run: >-
-          bun --conditions=source test
-          scripts/release/align-release-baseline.test.ts
-          packages/pstdio-api/src/features/extensions/default-extensions.test.ts
-          packages/pstdio-api/src/features/extensions/default-extensions-reuse.test.ts
-          packages/pstdio-api/src/features/extensions/repo-default-extensions.test.ts
-      - name: Prepare Windows PowerShell
-        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
-      - name: Test dependency installs, workspace links, watchers, and attachments
-        if: contains(fromJSON(needs.scope.outputs.native_checks), 'filesystem')
-        run: bun test --timeout 15000 scripts/ci/install-native-dependencies.test.ts packages/pstdio-extensions/src/runtime/loader-node-modules.test.ts packages/pstdio-extensions/src/authoring/extension-source-watcher-dependencies.test.ts packages/pstdio-api/src/features/sessions/session-attachments.test.ts packages/pstdio-db/src/db/rename-pglite-home.test.ts
-      - name: Test native process discovery and command shims
-        if: contains(fromJSON(needs.scope.outputs.native_checks), 'process')
-        run: bun --conditions=source test --timeout 15000 packages/pstdio-api/src/features/extensions/process-command.test.ts packages/pstdio-api/src/features/extensions/process-command.windows.test.ts packages/pstdio-api/src/features/extensions/process-discovery.test.ts packages/pstdio-extensions/src/runtime/process-environment.test.ts packages/pstdio-api-runtime-host/src/harness-registry.test.ts
-      - name: Test Windows desktop platform integrations
-        if: contains(fromJSON(needs.scope.outputs.native_checks), 'desktop')
-        run: bun test --timeout 15000 clients/desktop/src/cli clients/desktop/src/performance
-
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
   e2e:
-    needs: [scope, storybooks]
-    if: needs.scope.outputs.stage == 'full'
+    needs: scope
+    if: needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
       options: --user 1001 --init --ipc=host
     strategy:
-      fail-fast: ${{ github.event_name == 'merge_group' }}
+      fail-fast: true
       matrix:
-        shard: [1, 2, 3]
+        shard:
+          - 1
+          - 2
+          - 3
+          - 4
+          - 5
+          - 6
     env:
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      CI_PRIORITY: P1
+      GH_TOKEN: ${{ github.token }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: "24"
-
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
-
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
         with:
           profile: playwright
-
       - name: Build end-to-end dependencies
-        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+        shell: bash
       - name: Test desktop readiness helpers with the shared browser image
         if: matrix.shard == 1
-        run: bun test clients/desktop/src/e2e/desktop-pages.test.ts
-
-      - name: Download prebuilt shared Storybooks
-        uses: actions/download-artifact@v4
-        with:
-          name: storybook-static
-          path: packages
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun test clients/desktop/src/e2e/desktop-pages.test.ts
+        shell: bash
       - name: Test UI e2e
-        run: bun run --cwd packages/e2e test:ui -- --shard=${{ matrix.shard }}/3
-
-      # One shard runs the registered UI cases, so each executes exactly once per run.
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd packages/e2e test:ui -- --shard=${{ matrix.shard }}/6
+        shell: bash
       - name: Run quarantined UI cases without retries
         if: matrix.shard == 1 && !cancelled()
         continue-on-error: true
         env:
           E2E_TEST_LANE: quarantine
         run: bun run --cwd packages/e2e test:ui -- --pass-with-no-tests
-
       - name: Require first-attempt UI quarantine execution
         if: matrix.shard == 1 && !cancelled()
         run: bun scripts/ci/verify-quarantine-reports.ts playwright-ui
-
       - name: Preserve UI test reports and failure traces
         if: always()
         uses: actions/upload-artifact@v4
@@ -661,10 +785,12 @@ jobs:
             packages/e2e/test-results
             packages/e2e/playwright-report
           if-no-files-found: warn
-
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
   e2e_cli:
     needs: scope
-    if: needs.scope.outputs.stage == 'full'
+    if: needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -673,129 +799,166 @@ jobs:
     env:
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      CI_PRIORITY: P1
+      GH_TOKEN: ${{ github.token }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
     steps:
       - uses: actions/checkout@v5
-
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
-
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
-
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
         with:
           profile: playwright
-
       - name: Build end-to-end dependencies
-        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+        shell: bash
       - name: Test e2e scripts
-        run: bun run --cwd packages/e2e test:scripts
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd packages/e2e test:scripts
+        shell: bash
       - name: Test CLI e2e
-        run: bun run --cwd packages/e2e test:cli
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd packages/e2e test:cli
+        shell: bash
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
   packaged_and_vite_e2e:
+    name: packaged_and_vite_e2e (${{ matrix.suite }} ${{ matrix.shard }})
     needs: scope
-    if: needs.scope.outputs.stage == 'full'
+    if: needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     strategy:
-      fail-fast: ${{ github.event_name == 'merge_group' }}
+      fail-fast: ${{ needs.scope.outputs.production != 'true' }}
       matrix:
-        suite: [cli, browser]
+        include:
+          - { suite: cli, shard: "1/2" }
+          - { suite: cli, shard: "2/2" }
+          - { suite: browser, shard: "1/3" }
+          - { suite: browser, shard: "2/3" }
+          - { suite: browser, shard: "3/3" }
+          - { suite: vite, shard: "1/1" }
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
       options: --user 1001 --init --ipc=host
     env:
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      CI_PRIORITY: P1
+      GH_TOKEN: ${{ github.token }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: "24"
-
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
-
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
         with:
           profile: playwright
-
       - name: Build packaged and Vite test dependencies
-        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+        shell: bash
       - name: Test Vite terminal e2e
-        if: matrix.suite == 'cli'
-        run: bun run --cwd packages/e2e test:vite-terminal
-
+        if: matrix.suite == 'vite'
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd packages/e2e test:vite-terminal
+        shell: bash
       - name: Compile the packaged test CLI once
         id: packaged_cli
-        run: bun run --cwd scripts build:host
-
-      - name: Benchmark packaged collection readiness without traces
-        if: matrix.suite == 'browser' && !cancelled() && steps.packaged_cli.outcome == 'success'
+        if: matrix.suite != 'vite'
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
         env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
-        run: bun run --cwd packages/e2e test:packaged:benchmark
-
-      - name: Test packaged ${{ matrix.suite }} e2e
-        if: ${{ !cancelled() && steps.packaged_cli.outcome == 'success' }}
+          CI_CHECK_COMMAND: bun run --cwd scripts build:host
+        shell: bash
+      - name: Test packaged ${{ matrix.suite }} e2e (${{ matrix.shard }})
+        if: ${{ !cancelled() && matrix.suite != 'vite' && steps.packaged_cli.outcome == 'success' }}
         env:
           DEBUG: pw:browser
           E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
-          # The nightly-home test lists releases; a token avoids the anonymous API rate limit.
+          # The nightly-home test lists releases; avoid the anonymous API rate limit.
           GH_TOKEN: ${{ github.token }}
-        run: bun run --cwd packages/e2e test:packaged:${{ matrix.suite }}
-
+          CI_CHECK_COMMAND: E2E_PACKAGED_BINARY_PATH="$GITHUB_WORKSPACE/dist/pstdio" bun run --cwd packages/e2e test:packaged:${{ matrix.suite }} --shard=${{ matrix.shard }}
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        shell: bash
       - name: Run quarantined packaged CLI cases
-        if: matrix.suite == 'cli' && !cancelled() && steps.packaged_cli.outcome == 'success'
+        if: needs.scope.outputs.production == 'true' && matrix.suite == 'cli' && matrix.shard == '1/2' && !cancelled() && steps.packaged_cli.outcome == 'success'
         continue-on-error: true
         env:
+          CI_PRIORITY: P2
           E2E_TEST_LANE: quarantine
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
-        run: bun run --cwd packages/e2e test:packaged:cli
+        run: E2E_PACKAGED_BINARY_PATH="$GITHUB_WORKSPACE/dist/pstdio" bun run --cwd packages/e2e test:packaged:cli
 
       - name: Require every packaged CLI quarantine case to have executed
-        if: matrix.suite == 'cli' && !cancelled() && steps.packaged_cli.outcome == 'success'
+        if: needs.scope.outputs.production == 'true' && matrix.suite == 'cli' && matrix.shard == '1/2' && !cancelled() && steps.packaged_cli.outcome == 'success'
+        env:
+          CI_PRIORITY: P2
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun
-
       - name: Preserve packaged and Vite test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: packaged-vite-e2e-${{ matrix.suite }}-results-attempt-${{ github.run_attempt }}
+          name: packaged-vite-e2e-${{ matrix.suite }}-${{ strategy.job-index }}-results-attempt-${{ github.run_attempt }}
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report
+            test-results/quarantine
           if-no-files-found: warn
-
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
   quarantined_bun_tests:
     needs: scope
-    if: needs.scope.outputs.stage == 'full' || needs.scope.outputs.package_checks == 'true'
+    if: needs.scope.outputs.production == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
-      fail-fast: ${{ github.event_name == 'merge_group' }}
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os:
+          - ubuntu-latest
+          - windows-latest
     env:
       E2E_TEST_LANE: quarantine
+      CI_PRIORITY: P2
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: "24"
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version-file: package.json
       - uses: ./.github/actions/setup-ci-cache
@@ -818,9 +981,7 @@ jobs:
       - name: Run quarantined extension cases with their existing limits
         if: runner.os == 'Windows'
         continue-on-error: true
-        run: |
-          bun run --cwd extensions/harness-codex test --timeout=15000
-          bun run --cwd extensions/pstdio-planner test --timeout=15000
+        run: bun run --cwd extensions/harness-codex test --timeout=15000
 
       - name: Require every registered case to have executed
         run: bun scripts/ci/verify-quarantine-reports.ts bun
@@ -831,10 +992,13 @@ jobs:
           name: quarantined-bun-${{ runner.os }}-results-attempt-${{ github.run_attempt }}
           path: test-results/quarantine
           if-no-files-found: warn
-
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
+    name: quarantined_bun_tests (${{ matrix.os }})
   quarantined_browser_tests:
     needs: scope
-    if: needs.scope.outputs.stage == 'full'
+    if: needs.scope.outputs.production == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -844,11 +1008,14 @@ jobs:
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_TEST_LANE: quarantine
+      CI_PRIORITY: P2
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+          ref: ${{ inputs.source_sha || github.sha }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: "24"
       - name: Setup Bun
@@ -864,8 +1031,7 @@ jobs:
         continue-on-error: true
         env:
           E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
-        run: bun run --cwd packages/e2e test:packaged:browser
+        run: E2E_PACKAGED_BINARY_PATH="$GITHUB_WORKSPACE/dist/pstdio" bun run --cwd packages/e2e test:packaged:browser
       - name: Require first-attempt browser execution
         run: bun scripts/ci/verify-quarantine-reports.ts playwright
       - name: Preserve quarantine evidence
@@ -877,7 +1043,9 @@ jobs:
             packages/e2e/test-results
             packages/e2e/playwright-report
           if-no-files-found: warn
-
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
   license_check:
     needs: scope
     if: needs.scope.outputs.license == 'true'
@@ -885,18 +1053,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
-
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
       - name: Generate license report
         run: bunx license-checker --production --csv > npm-license-checker.csv
-
       - name: Check license report
         id: license_check_report
         uses: pilosus/action-pip-license-checker@v2
@@ -909,72 +1075,74 @@ jobs:
           totals: true
           verbose: 1
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Echo error
         if: failure()
         run: echo "::error::${{ steps.license_check_report.outputs.report }}"
-
-  # Builds every client without signing, because signing secrets are trusted only on main and
-  # release tags. Hosted Intel runners are slow, so the full stage tests on the other three.
+    env:
+      CI_PRIORITY: P0
+      GH_TOKEN: ${{ github.token }}
   build_clients:
     name: build_clients (${{ matrix.target }})
     needs: scope
-    if: needs.scope.outputs.stage != 'pull_request'
+    if: needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true'
     runs-on: ${{ matrix.os }}
-    # Measured full-stage rows (run 38230274646): win32 11.9 min, darwin-arm64 9.8, darwin-x64 5.8, linux 5.7.
-    # Release runs took up to 11.8 min for the same steps on darwin-arm64. 20 min leaves about 70% headroom.
     timeout-minutes: 20
     env:
-      # Packaged apps install this commit's core extensions, not those of the last release tag.
-      PSTDIO_EXTENSION_RELEASE_REF: ${{ github.sha }}
+      PSTDIO_EXTENSION_RELEASE_REF: ${{ inputs.source_sha || github.sha }}
+      CI_PRIORITY: ${{ matrix.platform == 'win32' && 'P2' || 'P1' }}
+      GH_TOKEN: ${{ github.token }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
     strategy:
-      fail-fast: ${{ github.event_name == 'merge_group' }}
+      fail-fast: ${{ needs.scope.outputs.production != 'true' }}
       matrix:
-        include:
-          - { target: linux-x64, os: ubuntu-latest, platform: linux, arch: x64, tests: true }
-          - { target: darwin-arm64, os: macos-15, platform: darwin, arch: arm64, tests: true }
-          - { target: darwin-x64, os: macos-15-intel, platform: darwin, arch: x64, tests: false }
-          - { target: win32-x64, os: windows-2025, platform: win32, arch: x64, tests: true }
+        include: ${{ fromJSON(needs.scope.outputs.client_matrix) }}
     steps:
       - uses: actions/checkout@v5
-
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: "24"
-
-      - name: Install dependencies
-        run: node scripts/ci/install-native-dependencies.ts
-
+      - name: Install native dependencies and restore host build cache
+        id: install_native_dependencies
+        uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
       - name: Test native DMG attachment cleanup
         id: dmg_cleanup
-        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
+        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.platform == 'darwin'
         working-directory: clients/desktop
-        # A machine whose only case is quarantined selects no stable case here.
-        run: |
-          set -o pipefail
-          bun ../../scripts/ci/run-bun-tests.ts src/packaging/dmg-device-cleanup.test.ts --pass-with-no-tests 2>&1 | tee ../../native-dmg-cleanup.log
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: >
+            set -o pipefail
 
+            bun ../../scripts/ci/run-bun-tests.ts src/packaging/dmg-device-cleanup.test.ts --pass-with-no-tests 2>&1 | tee
+            ../../native-dmg-cleanup.log
+        shell: bash
       - name: Run quarantined native DMG cleanup cases
         id: dmg_cleanup_quarantine
-        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
+        if: needs.scope.outputs.production == 'true' && matrix.platform == 'darwin' && !cancelled() && steps.install_native_dependencies.outcome == 'success'
         continue-on-error: true
         env:
+          CI_PRIORITY: P2
           E2E_TEST_LANE: quarantine
         working-directory: clients/desktop
         run: |
           set -o pipefail
           bun ../../scripts/ci/run-bun-tests.ts 2>&1 | tee ../../native-dmg-cleanup-quarantine.log
-
       - name: Require every quarantined native DMG case to have executed
-        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
+        if: needs.scope.outputs.production == 'true' && matrix.platform == 'darwin' && !cancelled() && steps.install_native_dependencies.outcome == 'success'
+        env:
+          CI_PRIORITY: P2
         run: bun scripts/ci/verify-quarantine-reports.ts bun
-
       - name: Preserve failed native DMG cleanup log
         if: ${{ !cancelled() && (steps.dmg_cleanup.outcome == 'failure' || steps.dmg_cleanup_quarantine.outcome == 'failure') }}
         uses: actions/upload-artifact@v4
@@ -982,84 +1150,109 @@ jobs:
           name: native-dmg-cleanup-${{ matrix.target }}-attempt-${{ github.run_attempt }}
           path: native-dmg-cleanup*.log
           if-no-files-found: error
-
       - name: Build monorepo
-        if: matrix.platform == 'linux'
-        run: bun run build
-
+        if: needs.scope.outputs.production == 'true' && matrix.platform == 'linux'
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run build
+        shell: bash
       - name: Compile CLI binaries for every platform
-        if: matrix.platform == 'linux'
-        run: bun run --cwd scripts build:all
-
+        if: needs.scope.outputs.production == 'true' && matrix.platform == 'linux'
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd scripts build:all
+        shell: bash
       - name: Scaffold platform packages
-        if: matrix.platform == 'linux'
-        run: bun run --cwd scripts release:platforms:scaffold
-
+        if: needs.scope.outputs.production == 'true' && matrix.platform == 'linux'
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd scripts release:platforms:scaffold
+        shell: bash
       - name: Build unsigned desktop app
         id: desktop
         env:
           DEBUG: electron-installer-dmg
-        run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
-
+          CI_CHECK_COMMAND: bun run --cwd clients/desktop package -- --arch=${{ matrix.arch }}
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        shell: bash
       - name: Record disk images after a failed macOS desktop build
         if: failure() && matrix.platform == 'darwin' && steps.desktop.outcome == 'failure'
         run: hdiutil info -plist
-
-      # Chromium refuses to start on Linux unless its sandbox helper is owned by root and setuid.
       - name: Configure the Linux Chromium sandboxes
-        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'linux'
-        run: |
-          set -euo pipefail
-          (cd clients/desktop && bun -e 'require("electron")')
-          for sandbox in clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox clients/desktop/node_modules/electron/dist/chrome-sandbox; do
-            sudo chown root:root "$sandbox"
-            sudo chmod 4755 "$sandbox"
-          done
+        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.platform == 'linux'
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: >
+            set -euo pipefail
 
+            (cd clients/desktop && bun -e 'require("electron")')
+
+            for sandbox in clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox
+            clients/desktop/node_modules/electron/dist/chrome-sandbox; do
+              sudo chown root:root "$sandbox"
+              sudo chmod 4755 "$sandbox"
+            done
+        shell: bash
       - name: Set up Windows desktop tests
-        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'win32'
+        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.platform == 'win32'
         uses: ./.github/actions/setup-windows-desktop-tests
-
-      # The source suite reuses the desktop build from packaging.
       - name: Test source Electron
-        if: needs.scope.outputs.stage == 'full' && matrix.tests
+        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.tests
         working-directory: clients/desktop
-        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.config.ts
-
-      - name: Benchmark packaged renderers
-        if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
-        working-directory: clients/desktop
-        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.benchmark.config.ts packaged-renderer.bench.ts
-
-      # A source failure must not hide the packaged results for the same build. The job still fails.
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.config.ts
+        shell: bash
       - name: Smoke packaged desktop app
-        if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
+        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.tests && !cancelled() &&
+          steps.desktop.outcome == 'success'
         env:
           DEBUG: pw:api,pw:browser
+          CI_CHECK_COMMAND: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged --grep @essential
         working-directory: clients/desktop
-        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged
-
-      # Machines without registered cases select nothing here.
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        shell: bash
       - name: Run quarantined packaged desktop cases
-        if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
+        if: needs.scope.outputs.production == 'true' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
         continue-on-error: true
         env:
+          CI_PRIORITY: P2
           E2E_TEST_LANE: quarantine
         working-directory: clients/desktop
         run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged --pass-with-no-tests
-
       - name: Require first-attempt packaged desktop quarantine execution
-        if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
+        if: needs.scope.outputs.production == 'true' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
+        env:
+          CI_PRIORITY: P2
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop
-
       - name: Preserve desktop test reports and traces
-        if: always() && needs.scope.outputs.stage == 'full' && matrix.tests
+        if: always() && (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.tests
         uses: actions/upload-artifact@v4
         with:
           name: desktop-test-results-${{ matrix.target }}-attempt-${{ github.run_attempt }}
-          path: clients/desktop/test-results
+          path: |
+            clients/desktop/test-results
+            test-results/quarantine/clients/desktop
           if-no-files-found: warn
-
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
+      - name: Share native desktop build archives with certified main promotion
+        if: ${{ !cancelled() && needs.scope.outputs.stage == 'merge_queue' && steps.desktop.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-build-host-native-desktop-${{ runner.os }}-${{ runner.arch }}-attempt-${{ github.run_attempt }}
+          path: .cache/ci-build
+          include-hidden-files: true
+          compression-level: 0
+          if-no-files-found: error
   build_docker:
     needs: scope
     if: needs.scope.outputs.docker_build == 'true'
@@ -1072,74 +1265,209 @@ jobs:
             dockerfile: clients/landing-page/Dockerfile
           - image: pstdio/api
             dockerfile: packages/pstdio-api/Dockerfile
+      fail-fast: false
     steps:
       - uses: actions/checkout@v5
-
-      # ADR 0043: Docker Hub resets anonymous pulls from shared runner IPs. The daemon tries
-      # Google's public Docker Hub cache first and falls back to Docker Hub. Temporary workaround.
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
       - name: Pull Docker Hub images through a mirror
-        run: |
+        run: >
           config=$(sudo cat /etc/docker/daemon.json 2>/dev/null || echo '{}')
-          echo "$config" | jq '.["registry-mirrors"] = ((.["registry-mirrors"] // []) + ["https://mirror.gcr.io"] | unique)' | sudo tee /etc/docker/daemon.json
-          sudo systemctl restart docker
-          docker info --format 'Registry mirrors: {{.RegistryConfig.Mirrors}}'
 
+          echo "$config" | jq '.["registry-mirrors"] = ((.["registry-mirrors"] // []) + ["https://mirror.gcr.io"] | unique)' | sudo tee
+          /etc/docker/daemon.json
+
+          sudo systemctl restart docker
+
+          docker info --format 'Registry mirrors: {{.RegistryConfig.Mirrors}}'
       - name: Build ${{ matrix.image }} image
         run: docker build -t ${{ matrix.image }}:${{ github.sha }} -f ${{ matrix.dockerfile }} .
-
       - name: Verify API runtime imports
         if: matrix.image == 'pstdio/api'
         run: docker run --rm --entrypoint bun pstdio/api:${{ github.sha }} -e 'await import("./src/app.ts");'
-
-  # The compiled CLI on Linux, Intel macOS and Windows, as the release checks it.
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
+    name: build_docker (${{ matrix.image }})
+    env:
+      CI_PRIORITY: P2
+      GH_TOKEN: ${{ github.token }}
   packaged_toolchain:
     needs: scope
-    if: needs.scope.outputs.stage == 'full'
+    if: needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true'
     uses: ./.github/workflows/verify-packaged-toolchain.yml
     with:
-      ref: ${{ github.sha }}
-
-  # The one status check the main ruleset and merge queue require. Job and matrix names can
-  # change without touching the ruleset. It must run whenever the run finishes, because GitHub
-  # treats a skipped required check as passing and jobs are skipped when a job they need fails.
-  # A run cancelled by a newer run on the same commit (for example after a label is added)
-  # reports nothing, so its stale failure does not sit next to the newer run's result.
-  # The scope lists required jobs explicitly. A selected check that skips cannot pass this gate.
+      ref: ${{ inputs.source_sha || github.sha }}
+      platforms: ${{ needs.scope.outputs.production == 'true' &&
+        '[{"os":"ubuntu-24.04","platform_pkg":"cli-linux-x64"},{"os":"macos-15-intel","platform_pkg":"cli-darwin-x64"},{"os":"ubuntu-24.04-arm","platform_pkg":"cli-linux-arm64"},{"os":"macos-15","platform_pkg":"cli-darwin-arm64"},{"os":"windows-latest","platform_pkg":"cli-win-x64"},{"os":"windows-11-arm","platform_pkg":"cli-win-arm64"}]'
+        || '[{"os":"ubuntu-24.04","platform_pkg":"cli-linux-x64"},{"os":"macos-15-intel","platform_pkg":"cli-darwin-x64"}]' }}
+      artifact_run_id: ${{ inputs.artifact_run_id || '' }}
+      artifact_attempt: ${{ inputs.artifact_attempt || '1' }}
+      profile: ${{ needs.scope.outputs.production == 'true' && 'full' || 'integrity' }}
+      priority: ${{ needs.scope.outputs.production == 'true' && 'P2' || 'P1' }}
+      gate_plan: ${{ needs.scope.outputs.gate_plan }}
   ci_passed:
     if: ${{ !cancelled() }}
     needs:
       - scope
-      - static_checks
-      - lint
-      - unit_tests
-      - relay_smoke
-      - database_tests
-      - published_extensions
-      - harness_cli_support
-      - windows_test_and_build
-      - windows_database_tests
-      - storybooks
-      - browser_smoke
-      - browser_regressions
-      - native_contracts
-      - e2e
-      - e2e_cli
-      - packaged_and_vite_e2e
-      - license_check
-      - build_clients
-      - build_docker
-      - packaged_toolchain
-      - quarantined_bun_tests
-      - quarantined_browser_tests
+      - validation_results
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          fetch-depth: 0
+      - *a1
+      - name: Require complete selected validation
+        env:
+          VALIDATION_RESULT: ${{ needs.validation_results.result }}
+        run: bun -e 'if (process.env.VALIDATION_RESULT !== "success") throw new Error("Incomplete selected validation")'
+      - name: Download production build identity
+        if: ${{ !cancelled() && needs.scope.outputs.production == 'true' && inputs.artifact_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: release-build-attempt-${{ inputs.artifact_attempt }}
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+      - name: Attest functional candidate consumption
+        if: ${{ !cancelled() && needs.scope.outputs.production == 'true' && inputs.artifact_run_id != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.original_source_sha }}
+          ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
+          ARTIFACT_ATTEMPT: ${{ inputs.artifact_attempt }}
+          CHANNEL: ${{ inputs.release_channel }}
+          OUTCOME: ${{ needs.validation_results.result }}
+        run: bun scripts/ci/production-evidence.ts --check functional --outcome "$OUTCOME"
+      - if: ${{ !cancelled() && needs.scope.outputs.production == 'true' && inputs.artifact_run_id != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-evidence-functional-attempt-${{ github.run_attempt }}
+          path: production-evidence/functional.json
+          if-no-files-found: error
+    env:
+      CI_PRIORITY: P1
+      GH_TOKEN: ${{ github.token }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
+    name: ${{ needs.scope.outputs.production == 'true' && 'production_ci_passed' || 'ci_passed' }}
+  sdk_api_report:
+    needs: scope
+    if: needs.scope.outputs.sdk_api_report == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
-      - name: Require every selected job to succeed
+      - *a1
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Compare public APIs with last release
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
         env:
-          REQUIRED_JOBS: ${{ needs.scope.outputs.required_jobs }}
-          CI_RESULTS: ${{ toJSON(needs) }}
-        run: node scripts/ci/required-ci-jobs.ts
+          CI_CHECK_COMMAND: bun run verify:extension-api-report
+        shell: bash
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-api-report
+          path: .api-report/
+          include-hidden-files: true
+          if-no-files-found: warn
+    env:
+      CI_PRIORITY: P1
+      GH_TOKEN: ${{ github.token }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
+  storybook_tests:
+    name: storybook_tests (${{ matrix.shard }})
+    needs:
+      - scope
+      - storybooks
+    if: needs.scope.outputs.component_checks == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    strategy:
+      fail-fast: true
+      matrix:
+        shard: ${{ fromJSON(needs.scope.outputs.component_shards == '1' && '[1]' || needs.scope.outputs.component_shards == '2' && '[1,2]' || '[1,2,3]') }}
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      CI_PRIORITY: P1
+      GH_TOKEN: ${{ github.token }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
+      COMPONENT_TEST_FILES: ${{ needs.scope.outputs.component_files }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Setup Bun
+        run: node scripts/ci/setup-container-bun.ts
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Restore component artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: storybook-static-*-attempt-${{ github.run_attempt }}
+          merge-multiple: true
+          path: .cache/storybook-artifacts
+      - name: Require and extract every owner Storybook
+        run: bun packages/storybook-tests/src/scripts/storybook-artifacts.ts restore
+      - name: Test component interactions
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+        env:
+          CI_CHECK_COMMAND: bun run --cwd packages/storybook-tests test:browser -- --shard=${{ matrix.shard }}/${{ needs.scope.outputs.component_shards }}
+        shell: bash
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: component-results-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
+          path: |-
+            packages/storybook-tests/test-results
+            packages/storybook-tests/playwright-report
+          if-no-files-found: warn
+  validation_results:
+    needs: scope
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - *a1
+      - name: Observe selected jobs; report only P1 failure early
+        run: bun scripts/ci/monitor-ci-gates.ts
+      - name: Preserve plan, results, and source identity
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-validation-attempt-${{ github.run_attempt }}
+          path: test-results/ci/gate-results.json
+          if-no-files-found: error
+permissions:
+  contents: read
+  actions: read

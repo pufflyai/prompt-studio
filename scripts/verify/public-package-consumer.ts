@@ -171,6 +171,7 @@ void [invalidAttribute, invalidColumn];
     }),
   );
   run(directory, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
+  run(directory, ["check", "-p", "tsconfig.json"]);
   if (react) {
     writeFileSync(
       join(directory, "vite.config.ts"),
