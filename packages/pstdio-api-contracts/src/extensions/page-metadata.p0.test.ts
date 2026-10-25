@@ -19,8 +19,11 @@ const page = (main: object) => ({
 test.each([
   { kind: "view", view, cardinality: "many" },
   { kind: "view", view, cardinality: "one", empty: view },
+  { kind: "view", view, cardinality: "one", presentation: "page", empty: view },
+  { kind: "view", view, cardinality: "one", presentation: "tabs" },
   { kind: "panels" },
   { kind: "panels", empty: view },
+  { kind: "group", default: { kind: "page", extensionId: "example", id: "compose" } },
 ])("preserves routed resource context with Main presentation %j", (main) => {
   const parsed = workbenchExtensionPageRecordSchema.parse(page(main));
   expect(parsed.resource).toEqual(resource);
@@ -30,6 +33,7 @@ test.each([
 test.each([
   [{ kind: "view", cardinality: "one" }, "view"],
   [{ kind: "view", view, cardinality: "several" }, "cardinality"],
+  [{ kind: "view", view, cardinality: "one", presentation: "floating" }, "presentation"],
 ])("reports missing or invalid Main content %j", (main, field) => {
   const result = workbenchExtensionPageRecordSchema.safeParse(page(main));
   expect(result.success).toBe(false);

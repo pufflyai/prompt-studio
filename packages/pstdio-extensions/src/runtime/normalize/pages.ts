@@ -1,4 +1,4 @@
-import type { PageContribution, PageMain, PageSlot } from "@pstdio/sdk/extensions";
+import type { PageContribution, PageMain, PagePlaceholder, PageSlot } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension, RuntimePageMain, RuntimePageSlot } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import type { Accumulator, RegistryIndex } from "./accumulator";
@@ -17,7 +17,7 @@ interface NormalizePageInput {
   index: RegistryIndex;
   pageId: string;
 }
-const normalizeEmpty = (input: NormalizePageInput, empty: PageMain["empty"]) => {
+const normalizeEmpty = (input: NormalizePageInput, empty: PagePlaceholder | undefined) => {
   if (!empty) return undefined;
   if (!("view" in empty)) return normalizeContributionRef(input.ext, empty);
   return {
@@ -37,7 +37,16 @@ const normalizeEmpty = (input: NormalizePageInput, empty: PageMain["empty"]) => 
   };
 };
 const normalizeMain = (input: NormalizePageInput, main: PageMain): RuntimePageMain => {
-  if (main.kind === "panels") return { ...main, empty: normalizeEmpty(input, main.empty) };
+  if (main.kind === "group") return { ...main, default: normalizeContributionRef(input.ext, main.default) };
+  if (main.kind === "panels")
+    return {
+      ...main,
+      empty: normalizeEmpty(input, main.empty),
+      landing:
+        main.landing && typeof main.landing !== "string"
+          ? normalizeContributionRef(input.ext, main.landing)
+          : main.landing,
+    };
   const { tab, ...presentation } = main;
   return {
     ...presentation,
@@ -80,6 +89,7 @@ export const registerPages = (
       contribution: {
         ...contribution,
         ref,
+        ...(contribution.panelView ? { panelView: normalizeContributionRef(ext, contribution.panelView) } : {}),
         mode: normalizeContributionRef(ext, contribution.mode),
         ...(contribution.parent ? { parent: normalizeContributionRef(ext, contribution.parent) } : {}),
         ...(contribution.resource

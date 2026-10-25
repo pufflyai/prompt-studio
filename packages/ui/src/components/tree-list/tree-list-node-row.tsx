@@ -67,12 +67,13 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
 
   const handleActivate = () => {
     if (isDisabled) return;
-    if (hasChildren) {
-      onToggleNode?.(node.id);
+    if (isNavigable && onNavigate) {
+      if (hasChildren) onToggleNode?.(node.id);
+      onNavigate({ sectionId, nodeId: node.id, node, intent: node.navigationIntent });
       return;
     }
-    if (isNavigable && onNavigate) {
-      onNavigate({ sectionId, nodeId: node.id, node, intent: node.navigationIntent });
+    if (hasChildren) {
+      onToggleNode?.(node.id);
       return;
     }
     node.onActivate?.();
@@ -148,7 +149,7 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
           }
         : undefined,
     onActivate: handleActivate,
-    onToggleExpand: () => onToggleNode?.(node.id),
+    onToggleExpand: selection ? () => onToggleNode?.(node.id) : handleActivate,
   };
 
   const row =

@@ -30,6 +30,7 @@ describe("withDashboardWebviewUrls", () => {
 describe("registerExtensionContributions", () => {
   test("applies explicit navigation from a registered extension action and returns its data", async () => {
     const workbench = createWorkbench();
+    workbench.pageLocations.setProject("project-1");
     const opened: unknown[] = [];
     workbench.commands.registerCommand(
       { id: dashboardCommandIds.openSessionPanel, label: "Open session" },

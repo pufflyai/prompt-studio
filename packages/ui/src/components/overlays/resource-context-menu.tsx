@@ -132,7 +132,15 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
       // Positioned context menus do not restore trigger focus themselves.
       const trigger = keyboardTrigger.current;
       keyboardTrigger.current = null;
-      if (trigger) requestAnimationFrame(() => trigger.focus());
+      const previousFocus = document.activeElement;
+      if (trigger) {
+        requestAnimationFrame(() => {
+          // A later focus choice belongs to its caller, even before the menu finishes closing.
+          if (document.activeElement === previousFocus || document.activeElement === document.body) {
+            trigger.focus({ preventScroll: true });
+          }
+        });
+      }
     },
   });
   const triggerProps = menu.api.getContextTriggerProps();

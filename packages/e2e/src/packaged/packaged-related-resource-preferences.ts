@@ -19,7 +19,7 @@ export const verifyClosedSidePreference = async (page: Page, preview: Locator, l
     const showBottom = page.getByRole("button", { name: "Show Bottom Panel", exact: true });
     if (await showBottom.isVisible()) await showBottom.click();
     await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
-    await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
     const bottomTab = page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab").first();
     await tabAction(page, bottomTab, "Reset layout");
     await expect(bottomTab).toHaveCount(0);

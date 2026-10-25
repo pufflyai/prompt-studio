@@ -28,7 +28,14 @@ export const withLeadingSeparator = <T extends { separatorBefore?: boolean }>(it
 // Menu state without presentation, so native menus and webview bridges share one
 // source for visibility, availability, and execution.
 export const resolveMenuEntries = (input: ResolveMenuEntriesInput) => {
-  const { context, menuPath, onRequestParams, workbench } = input;
+  const { menuPath, onRequestParams, workbench } = input;
+  const captured = workbench.viewers.captureContext(input.context?.placement);
+  const context = {
+    projectId: captured.projectId,
+    removalVersion: captured.removalVersion,
+    isViewerCurrent: captured.isViewerCurrent,
+    ...input.context,
+  };
   const contextValues = commandContextValues(workbench, context);
   const shortcuts = new Map(workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]));
 

@@ -102,6 +102,7 @@ export const TreeListSectionHeader = (props: TreeListSectionHeaderProps) => {
         }
       >
         <HStack gap="1" flex="1" minW="0">
+          {section.icon}
           <Text textStyle="label/XS" textTransform="uppercase" color="fg.muted" letterSpacing="0.08em" truncate>
             {section.label}
           </Text>

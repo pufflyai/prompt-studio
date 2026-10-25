@@ -20,7 +20,7 @@ test("opens one Panel tab within the interaction budget", async ({ page, request
   await page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
   const header = page.locator(headerSelector);
   await header.getByRole("button", { name: "Add panel", exact: true }).click();
-  const terminalItem = page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", { name: "Terminal" });
+  const terminalItem = page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", { name: "Open terminal" });
   await resetInteraction(page);
   const initialTabs = await terminalItem.evaluate(
     (element, { startAttribute, selector }) => {

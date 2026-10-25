@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { shellPlacementContributionId } from "../../registries/placements/shell-placement-registry";
 import { createWorkbench } from "../../workbench-core";
 import { createOwnedAddablePanels } from "./owned-addable-panels";
 
@@ -45,7 +46,7 @@ for (const source of ["side", "secondary"] as const) {
       layout: w.layout.getLayout(),
       region: destination,
       resource: { type: "tool", id: "current" },
-    }).find((item) => item.contribution.title === "Tool");
+    }).find((item) => item.panelId === shellPlacementContributionId("tool"));
     expect(panel?.open).toBeDefined();
     await panel!.open!({ type: "tool", id: "current" });
     unsubscribe();

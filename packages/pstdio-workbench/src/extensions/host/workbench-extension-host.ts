@@ -64,10 +64,12 @@ const registerCommands = (
           prepareCommandArgs(context, command.id, args, executionContext, onArgsChange),
         execute: (args, executionContext) =>
           executeWorkbenchExtensionCommand(context, command.id, {
+            ...executionContext,
             params: asParams(args),
             resource: executionContext?.resource,
             signal: executionContext?.signal,
             region: executionContext?.region,
+            placement: executionContext?.placement,
           }),
       },
     ),
@@ -98,6 +100,7 @@ const registerMenus = (
         prepareCommandArgs(context, registration.targetCommandId, args, executionContext, onArgsChange),
       execute: (args, executionContext) =>
         executeWorkbenchExtensionCommand(context, registration.targetCommandId, {
+          ...executionContext,
           params: { ...(registration.contribution.params ?? {}), ...(asParams(args) ?? {}) },
           resource: menuCommandResource(input, executionContext),
           slot: createExtensionSlot({
@@ -124,6 +127,7 @@ const registerCommandPaletteContributions = (
         prepareCommandArgs(context, registration.targetCommandId, args, executionContext, onArgsChange),
       execute: (args, executionContext) =>
         executeWorkbenchExtensionCommand(context, registration.targetCommandId, {
+          ...executionContext,
           params: { ...(registration.contribution.params ?? {}), ...(asParams(args) ?? {}) },
           resource: menuCommandResource(input, executionContext),
           slot: createExtensionSlot({
@@ -179,6 +183,7 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
       panels: mode.panelRegions,
       regionSettings: mode.regionSettings,
       floatingPanels: mode.floatingPanels,
+      canFullscreen: mode.canFullscreen,
       defaultTheme: mode.defaultTheme,
       chrome: mode.chrome,
       activate: () => undefined,
@@ -248,9 +253,9 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     }
     disposables.push(...registerStatusBarItems(input));
     disposables.push(...registerResourceKinds(input));
-    disposables.push(...registerPages(input));
     disposables.push(...registerModes(input));
     disposables.push(...registerModePlacements(input));
+    disposables.push(...registerPages(input));
     return {
       dispose() {
         disposeAll(disposables);

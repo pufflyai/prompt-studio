@@ -9,6 +9,35 @@ const qualified = (id: string): NavigationTarget => ({
 });
 
 describe("handler navigation", () => {
+  test("viewer commands use the same navigation channel and qualify their resource identities", async () => {
+    const command = defineCommand({
+      id: "switch",
+      title: "Switch",
+      run(ctx) {
+        ctx.navigation.open({
+          kind: "viewer",
+          operation: "switch",
+          from: { type: "record", id: "x" },
+          resource: { type: "record", id: "y" },
+        });
+      },
+    });
+    const result = await makeRunner({ commands: [command] }).execute({
+      commandId: "pstdio.lab.command.switch",
+      projectId: "p1",
+      source: "dashboard",
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      navigationRequests: [
+        {
+          kind: "viewer",
+          from: { extensionId: "pstdio.lab", projectId: "p1" },
+          resource: { extensionId: "pstdio.lab", projectId: "p1" },
+        },
+      ],
+    });
+  });
   test("delivers explicit navigation separately from command data", async () => {
     const create = defineCommand({
       id: "create",

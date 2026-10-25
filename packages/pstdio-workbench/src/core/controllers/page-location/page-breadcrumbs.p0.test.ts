@@ -36,6 +36,97 @@ const page = (id: string, title: string): WorkbenchPageContribution => ({
   main: { kind: "view", view: { kind: "view", id: "content" }, cardinality: "one" },
   slots: [],
 });
+
+test("a tabless browser remains reachable from a resource breadcrumb", () => {
+  const browser: WorkbenchPageContribution = {
+    ...page("browser", "Library"),
+    main: { kind: "view", view: { kind: "view", id: "list" }, cardinality: "one", presentation: "page" },
+  };
+  const reader = page("reader", "Document");
+  const targets: NavigationTargetPage[] = [];
+  const items = createWorkbenchPageBreadcrumbItems({
+    location: { page: reader.ref, resource: { type: "document", id: "one" }, parent: { page: browser.ref } },
+    pages: [browser, reader],
+    navigationTrees,
+    layout,
+    modes,
+    resources,
+    navigate: (target) => targets.push(target),
+  });
+  items[0]?.onClick?.();
+  expect(targets).toEqual([{ kind: "page", page: browser.ref }]);
+});
+
+test("a collection without a landing view remains a breadcrumb label", () => {
+  const collection: WorkbenchPageContribution = { ...page("collection", "Documents"), main: { kind: "panels" } };
+  const reader = page("reader", "Document");
+  const items = createWorkbenchPageBreadcrumbItems({
+    location: { page: reader.ref, resource: { type: "document", id: "one" }, parent: { page: collection.ref } },
+    pages: [collection, reader],
+    navigationTrees,
+    layout,
+    modes,
+    resources,
+    navigate() {},
+  });
+  expect(items[0]?.onClick).toBeUndefined();
+});
+
+test("an ancestor resource breadcrumb keeps its query when opened", () => {
+  const compose: WorkbenchPageContribution = {
+    ...page("compose", "Messages"),
+    params: { filter: { type: "string", default: "all" } },
+    main: {
+      kind: "view",
+      presentation: "page",
+      view: { kind: "view", id: "content" },
+      cardinality: "one",
+      tab: { getSnapshot: () => ({ label: "New message" }) },
+    },
+  };
+  const targets: NavigationTargetPage[] = [];
+  const items = createWorkbenchPageBreadcrumbItems({
+    location: {
+      page: page("message", "Message").ref,
+      parent: { page: compose.ref, resource: { type: "message", id: "one" }, params: { filter: "mine" } },
+    },
+    pages: [compose],
+    navigationTrees,
+    layout,
+    modes,
+    resources,
+    navigate: (target) => targets.push(target),
+  });
+  items[0]?.onClick?.();
+  expect(targets).toEqual([
+    { kind: "page", page: compose.ref, resource: { type: "message", id: "one" }, params: { filter: "mine" } },
+  ]);
+});
+test("a page-owned resource uses its resource breadcrumb even though Main has no tabs", () => {
+  const document: WorkbenchPageContribution = {
+    ...page("document", "Document"),
+    resource: { kinds: [{ kind: "resource-kind", id: "document" }] },
+    main: {
+      kind: "view",
+      view: { kind: "view", id: "content" },
+      cardinality: "one",
+      presentation: "page",
+      empty: { view: { kind: "view", id: "empty" }, breadcrumb: { label: "New document" } },
+    },
+  };
+  const resource = { type: "document", id: "x", label: "Document X" };
+  const items = createWorkbenchPageBreadcrumbItems({
+    location: { page: document.ref, resource },
+    pages: [document],
+    navigationTrees,
+    layout,
+    modes,
+    resources,
+    navigate() {},
+  });
+  expect(items[0].title).toBe("Document X");
+  expect(items[0].resource).toEqual(resource);
+});
 test("a current page supplies breadcrumb actions without owning a tab or resource", () => {
   const sessions = {
     ...page("sessions", "Sessions"),

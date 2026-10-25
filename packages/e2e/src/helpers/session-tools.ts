@@ -32,7 +32,7 @@ export const verifySessionTools = async (page: Page) => {
       .evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute("data-workbench-tab")));
   const beforeTerminal = await tabIds();
   await main.getByRole("button", { name: "Add panel", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
   await expect(main.locator("[data-workbench-tab]")).toHaveCount(beforeTerminal.length + 1);
   const terminalId = (await tabIds()).find((id) => !beforeTerminal.includes(id));
   expect(terminalId).toBeTruthy();
@@ -62,7 +62,7 @@ export const verifySessionTools = async (page: Page) => {
   await main.getByRole("button", { name: "Add panel", exact: true }).click();
   const menu = page.getByRole("menu", { name: "Add panel", exact: true });
   await expect(menu.getByRole("menuitem")).toHaveCount(2);
-  await expect(menu.getByRole("menuitem", { name: "Terminal", exact: true })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Open terminal", exact: true })).toBeVisible();
   await menu.getByRole("menuitem", { name: "New session", exact: true }).click();
   await expect(main.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await expect(editor).toBeVisible();

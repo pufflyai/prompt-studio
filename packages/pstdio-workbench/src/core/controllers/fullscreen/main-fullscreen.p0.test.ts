@@ -1,6 +1,20 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "../../workbench-core";
 
+test("modes can forbid Main fullscreen through commands and the controller", () => {
+  const w = createWorkbench();
+  w.modes.registerMode({ id: "player", canFullscreen: false, activate() {} });
+  w.modes.setActiveMode("player");
+  expect(() => w.fullscreen.enter()).toThrow("Fullscreen is not available in this mode");
+  expect(w.commands.isCommandEnabled("workbench.enterMainFullscreen")).toBe(false);
+  expect(w.fullscreen.store.getState().active).toBe(false);
+  w.modes.setActiveMode(undefined);
+  expect(w.fullscreen.canEnter()).toBe(true);
+  expect(w.commands.isCommandEnabled("workbench.enterMainFullscreen")).toBe(true);
+  w.fullscreen.enter();
+  expect(w.fullscreen.store.getState().active).toBe(true);
+});
+
 for (const presentation of ["attached", "floating", "closed"] as const) {
   test(`fullscreen preserves the ${presentation} Side layout without writes`, async () => {
     const w = createWorkbench();

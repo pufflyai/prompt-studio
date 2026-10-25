@@ -66,7 +66,7 @@ const validateResourceInput = (
   }
 };
 
-const slotDestination = (slot: RuntimePageSlot): Destination => ({
+const slotDestination = (slot: Pick<RuntimePageSlot, "item">): Destination => ({
   bindingKinds: slot.item.kind === "binding" ? slot.item.binding.kinds.map((kind) => kind.id) : [],
   cardinality: slot.item.kind === "binding" ? slot.item.binding.cardinality : "one",
 });
@@ -109,9 +109,17 @@ const resolvePageDestination = (
     });
     return undefined;
   }
+  const main = page.contribution.main;
+  let cardinality: Destination["cardinality"] = "one";
+  if (main.kind === "view") cardinality = main.cardinality;
+  else if (main.kind === "panels" && main.landing && typeof main.landing !== "string") {
+    const id = normalizedRefId(main.landing, page.extensionId);
+    const item = runtime.placements.find((placement) => placement.id === id)?.contribution.item;
+    if (item?.kind === "binding") cardinality = item.binding.cardinality;
+  }
   return {
     bindingKinds: page.contribution.resource?.kinds.map((kind) => kind.id) ?? [],
-    cardinality: page.contribution.main.kind === "view" ? page.contribution.main.cardinality : "one",
+    cardinality,
   } satisfies Destination;
 };
 
@@ -161,6 +169,16 @@ const resolvePlacementDestination = (
     const panel = target.panel;
     const owner = panel.page.extensionId ?? record.extensionId;
     if (owner !== record.extensionId) return undefined;
+    const replacement = runtime.placements.find(
+      (placement) =>
+        placement.extensionId === record.extensionId &&
+        placement.contribution.replaces?.some(
+          (previous) =>
+            previous.id === panel.id &&
+            normalizedRefId(previous.page, placement.extensionId) === normalizedRefId(panel.page, record.extensionId),
+        ),
+    );
+    if (replacement) return slotDestination(replacement.contribution);
     const page = runtime.pages.find((candidate) => candidate.id === normalizedRefId(panel.page, record.extensionId));
     const slot = page?.contribution.slots.find((candidate) => candidate.id === panel.id);
     if (!slot) {
@@ -251,7 +269,8 @@ export const validatePageNavigationTargets = (runtime: Accumulator) => {
     validateTarget(runtime, record, record.contribution.action, `navigationItems.${record.localId}.action`);
   }
   for (const record of runtime.pages) {
-    const empty = record.contribution.main.empty;
+    const main = record.contribution.main;
+    const empty = main.kind === "group" ? undefined : main.empty;
     if (!empty || !("view" in empty)) continue;
     for (const [groupIndex, group] of (empty.breadcrumb?.menu ?? []).entries()) {
       for (const [rowIndex, row] of group.rows.entries()) {

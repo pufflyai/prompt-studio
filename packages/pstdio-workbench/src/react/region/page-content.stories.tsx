@@ -4,7 +4,11 @@ import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
-const createPageWorkbench = (empty?: "closed" | "moved" | "custom", showHeader = true) => {
+const createPageWorkbench = (
+  empty?: "closed" | "moved" | "custom",
+  showHeader = true,
+  presentation: "page" | "tabs" = "tabs",
+) => {
   const workbench = createWorkbench();
   workbench.modes.registerMode({ id: "page", activate() {}, regionSettings: { main: { showHeader: false } } });
   for (const [id, title] of [
@@ -29,6 +33,7 @@ const createPageWorkbench = (empty?: "closed" | "moved" | "custom", showHeader =
       kind: "view",
       view: { kind: "view", id: "editor" },
       cardinality: "one",
+      presentation,
       ...(empty === "custom" ? { empty: { kind: "view" as const, id: "empty" } } : {}),
     },
     slots: [],
@@ -50,7 +55,52 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const SinglePageTab: Story = { args: { workbench: createPageWorkbench() } };
-export const PageHeaderDefault: Story = { args: { workbench: createPageWorkbench(undefined, false) } };
+export const SingleViewPage: Story = {
+  tags: ["page-header-policy"],
+  args: { workbench: createPageWorkbench(undefined, true, "page") },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Document content")).toBeVisible();
+    await expect(canvas.queryByLabelText("Main panel header")).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tab")).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("button", { name: "Add panel" })).not.toBeInTheDocument();
+    expect(args.workbench.layout.getLayout().regions.main.widgets).toEqual([]);
+    expect(args.workbench.pages.getContent()?.viewId).toBe("editor");
+    const original = canvas.getByText("Document content");
+    args.workbench.views.registerView({
+      id: "other",
+      title: "Other",
+      body: { kind: "react", render: () => <Text p="md">Other content</Text> },
+    });
+    const other = { kind: "page", extensionId: "example", id: "other" } as const;
+    args.workbench.pages.registerPage({
+      id: "other",
+      ref: other,
+      modeId: "page",
+      path: "other",
+      main: { kind: "view", view: { kind: "view", id: "other" }, cardinality: "one", presentation: "page" },
+      slots: [],
+    });
+    args.workbench.pageLocations.navigate({ kind: "page", page: other });
+    await expect(await canvas.findByText("Other content")).toBeVisible();
+    await expect(original).not.toBeVisible();
+    args.workbench.pageLocations.navigate({
+      kind: "page",
+      page: { kind: "page", extensionId: "example", id: "document" },
+    });
+    await expect(await canvas.findByText("Document content")).toBeVisible();
+    expect(canvas.getByText("Document content")).toBe(original);
+  },
+};
+export const PageHeaderDefault: Story = {
+  tags: ["page-header-policy"],
+  args: { workbench: createPageWorkbench(undefined, false) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByLabelText("Main panel header")).toBeVisible();
+    await expect(canvas.getByRole("tab", { name: "Document" })).toBeVisible();
+  },
+};
 export const ReopenContent: Story = {
   args: { workbench: createPageWorkbench("closed") },
   play: async ({ canvasElement }) => {

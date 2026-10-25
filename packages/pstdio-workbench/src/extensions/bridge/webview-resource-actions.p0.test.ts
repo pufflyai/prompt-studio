@@ -6,6 +6,7 @@ import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilit
 
 test("webviews use the same current resource actions and command forms as native cards", async () => {
   const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project-1");
   const resource = { type: "ticket", id: "ticket-1", extensionId: "planner", projectId: "project-1" };
   let received: unknown;
   workbench.commands.registerCommand(
@@ -31,6 +32,7 @@ test("webviews use the same current resource actions and command forms as native
 
 test("webviews cannot execute an action that is no longer available", async () => {
   const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project-1");
   let enabled = true;
   let calls = 0;
   workbench.commands.registerCommand(
@@ -55,6 +57,8 @@ test("webviews cannot execute an action that is no longer available", async () =
 
 test("webviews receive the failure of an action they execute", async () => {
   const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project-1");
+  workbench.pageLocations.setProject("project-1");
   workbench.commands.registerCommand(
     { id: "archive", label: "Archive" },
     {
@@ -76,6 +80,7 @@ test("webviews receive the failure of an action they execute", async () => {
 
 test("webviews list the menu item's own icon and the reason it is disabled", async () => {
   const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project-1");
   workbench.commands.registerCommand({ id: "archive", label: "Archive", icon: "Trash" }, { execute: () => {} });
   workbench.layout.registerMenuItem(resourceContextMenuPath("ticket"), {
     id: "archive-ticket",
@@ -94,6 +99,7 @@ test("webviews list the menu item's own icon and the reason it is disabled", asy
 
 test("webview resource actions do not attribute a resource to the calling extension", async () => {
   const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project-1");
   workbench.commands.registerCommand({ id: "open", label: "Open" }, { execute: () => {} });
   workbench.layout.registerMenuItem(resourceContextMenuPath("session"), {
     id: "open-lab-session",
@@ -112,6 +118,7 @@ test("webview resource actions do not attribute a resource to the calling extens
 
 test("webviews hear when listed resource actions may have changed until they disconnect", async () => {
   const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project-1");
   const hostEvents = createHostEventPublisher();
   const events: unknown[] = [];
   hostEvents.bind((event) => events.push(event));

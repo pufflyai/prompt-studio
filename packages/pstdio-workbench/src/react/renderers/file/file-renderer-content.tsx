@@ -42,7 +42,7 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
     if (!editorKey || sectionNavigation) return;
     const node = rendererRef.current;
     if (!node) return;
-    requestAnimationFrame(() => {
+    const frame = requestAnimationFrame(() => {
       let current = node.parentElement;
       while (current) {
         const overflowY = getComputedStyle(current).overflowY;
@@ -52,6 +52,7 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
         current = current.parentElement;
       }
     });
+    return () => cancelAnimationFrame(frame);
   }, [editorKey, sectionNavigation, rendererRef]);
   if (!content) return <FileRendererLoading />;
   const presentation = resolveFileRendererPresentation(content, contributionCanSave);

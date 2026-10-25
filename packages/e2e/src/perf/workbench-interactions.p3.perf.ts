@@ -48,7 +48,10 @@ test("resizes, closes, and reopens the Secondary Panel within the interaction bu
   const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();
   await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
-  await page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem", { name: "Terminal", exact: true }).click();
+  await page
+    .getByRole("menu", { name: "Add panel" })
+    .getByRole("menuitem", { name: "Open terminal", exact: true })
+    .click();
   const separator = page.getByRole("separator", { name: "Resize Secondary Panel" });
   await expect(separator).toBeVisible();
   await expect(page.locator(".xterm").first()).toBeVisible();

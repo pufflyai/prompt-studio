@@ -3,6 +3,7 @@ import type {
   NavigationTarget,
   NavigationTargetPage,
   PageContribution,
+  PagePlaceholder,
   PlacementItem,
   PlacementPresentation,
 } from "@pstdio/sdk/extensions";
@@ -21,6 +22,7 @@ const pageTarget = (target: NavigationTargetPage): Extract<MetadataTarget, { kin
 });
 export const previewNavigationTarget = (target: NavigationTarget): MetadataTarget => {
   if (target.kind === "page") return pageTarget(target);
+  if (target.kind === "viewer") return { ...target, page: target.page ? previewRef(target.page) : undefined };
   if (target.kind === "panel")
     return {
       ...target,
@@ -59,7 +61,7 @@ const previewItem = (item: PlacementItem): MetadataPage["slots"][number]["item"]
           add: item.binding.add ? previewNavigationTarget(item.binding.add) : undefined,
         },
       };
-const previewEmpty = (empty: PageContribution["main"]["empty"]) => {
+const previewEmpty = (empty: PagePlaceholder | undefined) => {
   if (!empty) return undefined;
   if (!("view" in empty)) return previewRef(empty);
   return {
@@ -93,15 +95,8 @@ export const previewPage = (
   mode: previewRef(page.mode),
   parent: page.parent ? previewRef(page.parent) : undefined,
   resource: page.resource ? { kinds: page.resource.kinds.map(previewRef) } : undefined,
-  main:
-    page.main.kind === "panels"
-      ? { ...page.main, empty: previewEmpty(page.main.empty) }
-      : {
-          ...page.main,
-          view: previewRef(page.main.view),
-          empty: previewEmpty(page.main.empty),
-          tab: tab(`${page.id}.$main`, page.main.tab),
-        },
+  panelView: page.panelView ? previewRef(page.panelView) : undefined,
+  main: previewMain(page.main, tab, page.id),
   slots: page.slots.map((slot) => ({
     ...slot,
     addableIn: slot.addableIn ? [...slot.addableIn] : undefined,
@@ -110,3 +105,22 @@ export const previewPage = (
     tab: tab(`${page.id}.${slot.id}`, slot.tab),
   })),
 });
+const previewMain = (
+  main: PageContribution["main"],
+  tab: (id: string, value: PlacementPresentation["tab"]) => MetadataPage["slots"][number]["tab"],
+  pageId: string,
+) => {
+  if (main.kind === "group") return { ...main, default: previewRef(main.default) };
+  return main.kind === "panels"
+    ? {
+        ...main,
+        empty: previewEmpty(main.empty),
+        landing: main.landing && typeof main.landing !== "string" ? previewRef(main.landing) : main.landing,
+      }
+    : {
+        ...main,
+        view: previewRef(main.view),
+        empty: previewEmpty(main.empty),
+        tab: tab(`${pageId}.$main`, main.tab),
+      };
+};

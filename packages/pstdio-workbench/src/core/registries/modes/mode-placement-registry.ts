@@ -1,4 +1,11 @@
-import type { DockedWorkbenchRegion, PageOpenIntent, PlacementIdentity, PlacementRef } from "@pstdio/sdk/extensions";
+import type {
+  DockedWorkbenchRegion,
+  PageOpenIntent,
+  PageSlotRef,
+  PlacementIdentity,
+  PlacementRef,
+  ViewLocation,
+} from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { notifyWorkbenchChange } from "../../shared/store/workbench-batch";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
@@ -39,6 +46,7 @@ import type { WorkbenchViewRegistry } from "../views/view-registry";
 import { copyPlacement, placementRefKey, validatePlacement } from "./mode-placement-declarations";
 
 export interface WorkbenchModePlacementContribution extends WorkbenchPlacementPresentation {
+  readonly replaces?: readonly PageSlotRef[];
   readonly id: string;
   readonly ref: PlacementRef;
   readonly modeId: string;
@@ -57,6 +65,7 @@ interface OpenModePlacementTarget {
   resource?: ResourceRef;
   open?: PageOpenIntent;
   relatedSource?: string;
+  location?: ViewLocation;
 }
 
 export interface WorkbenchModePlacementRegistry {
@@ -66,7 +75,7 @@ export interface WorkbenchModePlacementRegistry {
   openPlacement(input: OpenModePlacementTarget): PlacementIdentity;
   updatePlacement(
     identity: PlacementIdentity,
-    input: { resource?: ResourceRef; title?: string; open?: PageOpenIntent },
+    input: { resource?: ResourceRef; title?: string; open?: PageOpenIntent; location?: ViewLocation },
   ): void;
   closePlacement(identity: PlacementIdentity): void;
   resolvePlacements(
@@ -91,6 +100,7 @@ const tabState = (open: PageOpenIntent | undefined) => {
 
 export const createWorkbenchModePlacementRegistry = (input: {
   views: WorkbenchViewRegistry;
+  resourceReferenceKey?(resource: ResourceRef): string;
   getProjectId?(): string | undefined;
   loadLayout?(context: OwnedPlacementLocationContext): WorkbenchLayout | undefined;
   viewMenus?: WorkbenchViewMenuRegistry;
@@ -127,6 +137,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
     open?: PageOpenIntent,
     title?: string,
     relatedSource?: string,
+    location?: ViewLocation,
   ): ResolvedOwnedPlacement<WorkbenchWidgetPlacement> => {
     const view = input.views.getView(placementItemViewId(placement.item));
     if (!view)
@@ -153,6 +164,9 @@ export const createWorkbenchModePlacementRegistry = (input: {
           },
         ),
         ...(relatedSource ? { relatedSource } : {}),
+        section: location?.section,
+        position: location?.position,
+        pageContext: location?.pageContext,
       },
     };
   };
@@ -198,6 +212,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
         target,
         item: placement.item,
         current,
+        keyOfResource: input.resourceReferenceKey,
         identityFor: (instanceKey) => identityFor(placement, instanceKey),
       });
     },
@@ -219,6 +234,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
             instance.open,
             instance.title,
             instance.relatedSource,
+            instance,
           ),
         );
       });
@@ -301,6 +317,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
         item: placement.item,
         state,
         instanceKey: identity.instanceKey,
+        keyOfResource: input.resourceReferenceKey,
         ...update,
       });
       emitChange();

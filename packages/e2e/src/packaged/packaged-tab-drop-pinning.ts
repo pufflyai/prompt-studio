@@ -32,7 +32,7 @@ export const verifyTabDropPinning = async (page: Page, preview: Locator) => {
   const showBottom = page.getByRole("button", { name: "Show Bottom Panel", exact: true });
   if (await showBottom.isVisible()) await showBottom.click();
   await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
-  await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
   const bottomTabs = page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab");
   await expect(bottomTabs).toHaveCount(1);
   await bottomTabs.first().focus();

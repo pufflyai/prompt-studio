@@ -242,6 +242,7 @@ export const createZiplineWorkbench = () => {
   workbench.views.registerView({
     id: "zipline.board",
     title: "My issues",
+    icon: "ListTodo",
     body: {
       kind: "kanban",
       resourceKind: "zipline.issue",

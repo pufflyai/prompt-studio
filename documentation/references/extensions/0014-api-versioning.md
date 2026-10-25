@@ -29,6 +29,8 @@ The host decides what loads. It compares its own extension API version with `eng
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
+The page and panel additions share the planned API 0.3.0 release: page-owned empty views and landing slots, non-rendering page groups with default children, closable fixed tabs, tabless Main presentation, independent panel views, declarative slot replacements, caller-relative viewer navigation, and mode-owned fullscreen permission. They do not add another version step before that release.
+
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |

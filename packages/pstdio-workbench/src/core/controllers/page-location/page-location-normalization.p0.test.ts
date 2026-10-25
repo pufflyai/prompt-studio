@@ -50,6 +50,50 @@ const sessionPage = (): WorkbenchPageContribution => ({
   slots: [],
 });
 const pages = [page("root"), page("detail", "root"), page("workspace", "root"), sessionPage(), page("sessions")];
+
+test("a group opens its default child while remaining in the parent trail", () => {
+  const child = page("compose", "messages");
+  const group: WorkbenchPageContribution = {
+    ...page("messages"),
+    params: { filter: { type: "string", default: "all" } },
+    main: { kind: "group", default: child.ref },
+  };
+  const declarations = [group, child];
+  const target = normalizeWorkbenchPageTarget({
+    target: { kind: "page", page: group.ref, params: { filter: "mine" } },
+    pages: declarations,
+    resources,
+  });
+  expect(target).toMatchObject({
+    pageId: child.id,
+    location: { page: child.ref, parent: { page: group.ref, params: { filter: "mine" } } },
+  });
+  expect(normalizeWorkbenchPageLocation({ location: target.location, pages: declarations, resources })).toEqual(target);
+  expect(normalizeWorkbenchPageLocation({ location: { page: group.ref }, pages: declarations, resources }).pageId).toBe(
+    child.id,
+  );
+});
+
+test("a group default must be an available child that opens without a resource", () => {
+  const group: WorkbenchPageContribution = {
+    ...page("messages"),
+    main: { kind: "group", default: page("compose").ref },
+  };
+  for (const child of [
+    undefined,
+    page("compose"),
+    { ...page("compose", group.id), resource: sessionPage().resource },
+  ]) {
+    expect(() =>
+      normalizeWorkbenchPageTarget({
+        target: { kind: "page", page: group.ref },
+        pages: [group, ...(child ? [child] : [])],
+        resources,
+      }),
+    ).toThrow();
+  }
+});
+
 describe("page location normalization", () => {
   test("uses canonical route identity without parent context and full equality with it", () => {
     const declared = normalizeWorkbenchPageTarget({

@@ -51,7 +51,8 @@ export const createLocalStoragePageLocationPersistence = (
         workbenchStoragePersistenceKey(input.namespace, "page-location", projectId),
       );
       if (stored?.version !== WORKBENCH_PAGE_LOCATION_VERSION) return undefined;
-      return { location: stored.location, ...(stored.rootLevel ? { rootLevel: stored.rootLevel } : {}) };
+      const { version: _version, ...persisted } = stored;
+      return persisted;
     },
     save: (projectId, persisted) => {
       const stored: StoredWorkbenchPageLocation = { version: WORKBENCH_PAGE_LOCATION_VERSION, ...persisted };

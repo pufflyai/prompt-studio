@@ -44,7 +44,7 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     ...action,
   });
   const actions = [
-    ...createWorkbenchResourceMenu(workbench, placement.resource, { menu: groups }),
+    ...createWorkbenchResourceMenu(workbench, placement.resource, { menu: groups }, placement),
     ...(placement.tabRetention
       ? [tabAction("pin", placement.tabRetention === "preview" ? "Pin tab" : "Unpin tab", "pin", { onSelect: pin })]
       : []),
@@ -65,8 +65,14 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
         const action = pending.current;
         pending.current = null;
         if (action) {
-          const triggerId = menu.api.getTriggerProps().id;
-          if (triggerId) document.getElementById(triggerId)?.focus({ preventScroll: true });
+          const contentId = menu.api.getContentProps().id;
+          const content = contentId ? document.getElementById(contentId) : null;
+          const focused = document.activeElement;
+          // A newer menu or input keeps the focus it received while this menu was closing.
+          if (focused === document.body || content?.contains(focused)) {
+            const triggerId = menu.api.getTriggerProps().id;
+            if (triggerId) document.getElementById(triggerId)?.focus({ preventScroll: true });
+          }
         }
         void action?.onClick?.();
       }}
@@ -75,13 +81,15 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
         <Menu.Positioner>
           <Menu.Content aria-labelledby={labelId}>
             <VisuallyHidden id={labelId}>{label} context menu</VisuallyHidden>
-            <ResourceMenuItems
-              actions={actions}
-              onSelect={(action) => {
-                pending.current = action;
-                void action.onSelect?.();
-              }}
-            />
+            {menu.api.open ? (
+              <ResourceMenuItems
+                actions={actions}
+                onSelect={(action) => {
+                  pending.current = action;
+                  void action.onSelect?.();
+                }}
+              />
+            ) : null}
           </Menu.Content>
         </Menu.Positioner>
       </Portal>

@@ -142,3 +142,52 @@ test.each([
   expect(restored?.regions.main.activeWidgetId).toBe("foreign-pin");
   s.persistence.dispose?.();
 });
+
+test("saved-layout observers receive only the normalized snapshot", () => {
+  const page: WorkbenchPageContribution = {
+    id: "reader",
+    ref: { kind: "page", id: "reader" },
+    path: "reader",
+    modeId: "project",
+    main: { kind: "view", view: { kind: "view", id: "reader" }, cardinality: "many", presentation: "page" },
+    slots: [],
+  };
+  const snapshots: number[] = [];
+  let listener:
+    | ((
+        scope: string | undefined,
+        value: import("../../registries/layout/layout-types").WorkbenchLayout | undefined,
+      ) => void)
+    | undefined;
+  const cache = createWorkbenchLayoutCache(
+    {
+      layoutPersistence: {
+        getLayout: () => undefined,
+        setLayout: (value, scope) => {
+          snapshots.push(value.regions.main.widgets.length);
+          listener?.(scope, value);
+        },
+        onDidChangeLayout: (callback) => {
+          listener = callback;
+          return () => {
+            listener = undefined;
+          };
+        },
+      },
+    },
+    () => undefined,
+    () => undefined,
+    () => [page],
+  );
+  const layout = createDefaultWorkbenchLayout();
+  layout.regions.main.widgets = [
+    {
+      widgetId: "old-content",
+      contributionId: "reader",
+      placementIdentity: { kind: "page", pageId: "reader", slotId: "$main", instanceKey: "one" },
+    },
+  ];
+  cache.layout.setLayout(layout, "project");
+  expect(snapshots).toEqual([0]);
+  cache.layout.dispose?.();
+});

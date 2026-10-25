@@ -142,7 +142,7 @@ export const SelectionAction: Story = {
   play: async ({ canvasElement, args }) => {
     fireEvent.contextMenu(within(canvasElement).getByText("Right-click here"));
     const action = await screen.findByRole("menuitem", { name: "Toggle visibility" });
-    fireEvent.click(action);
+    await userEvent.click(action);
     expect(args.actions[0].onSelect).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   },
@@ -245,6 +245,33 @@ export const LongMenuScrolls: Story = {
     const menu = await screen.findByRole("menu");
     await waitFor(() => expect(menu.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight));
     await expect(screen.getByRole("menuitem", { name: "Sidenav entry 60" })).toBeInTheDocument();
+  },
+};
+
+export const EscapeRespectsNewFocus: Story = {
+  tags: ["!manifest", "menu-escape-focus"],
+  render: () => (
+    <Stack>
+      <ResourceContextMenu actions={createActions(1)}>
+        <Box tabIndex={0} p="md">
+          Context target
+        </Box>
+      </ResourceContextMenu>
+      <Input aria-label="Next control" />
+    </Stack>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    canvas.getByText("Context target").focus();
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+    const menu = await screen.findByRole("menu");
+    await waitFor(() => expect(menu).toHaveFocus());
+    fireEvent.keyDown(menu, { key: "Escape" });
+    const next = canvas.getByRole("textbox", { name: "Next control" });
+    next.focus();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    await expect(next).toHaveFocus();
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   },
 };
 

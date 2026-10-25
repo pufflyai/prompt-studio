@@ -22,7 +22,7 @@ export const serveWebServer = {
   // One process now boots the API, the dashboard, and the extension runtime,
   // so it keeps the 30s budget the previous dashboard-boot server already
   // used (the API-only server it replaced needed less).
-  command: `bun run --cwd ../../packages/pstdio pstdio -- serve --foreground --host ${serverUrl.hostname} --port ${serverUrl.port}`,
+  command: `bun src/scripts/serve-ui.ts --host ${serverUrl.hostname} --port ${serverUrl.port}`,
   url: `${uiOrigin}/healthz`,
   reuseExistingServer: false,
   timeout: 30_000,

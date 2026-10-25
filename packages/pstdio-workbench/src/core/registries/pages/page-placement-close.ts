@@ -1,5 +1,6 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { placementIdentityKey } from "../layout/placement-reconciliation";
+import { isPageContent } from "./page-main";
 import type { WorkbenchPageCloseResolution } from "./page-registry-internals";
 import type { WorkbenchPageContribution, WorkbenchPageRegistryStoreState } from "./page-registry-types";
 import { closePageSlot, emptyPageState, requirePageSlot } from "./page-slot-lifecycle";
@@ -12,6 +13,7 @@ export const resolvePagePlacementClose = <Value>(input: {
   stateKey: string;
 }): WorkbenchPageCloseResolution => {
   const { identity, page, state } = input;
+  if (isPageContent(page, identity)) throw new Error("Page content closes through navigation");
   if (identity.kind !== "page") throw new Error("Page registry can close only page-owned placements");
   if (state.activePageId !== identity.pageId) throw new Error(`Page is not active: ${identity.pageId}`);
   const slot = requirePageSlot(page, identity.slotId);
@@ -33,6 +35,8 @@ export const resolvePagePlacementClose = <Value>(input: {
         pageId: page.id,
         ...(state.location.resource ? { resource: state.location.resource } : {}),
         ...(state.location.section ? { section: state.location.section } : {}),
+        position: state.location.position,
+        pageContext: { page: state.location.page, parent: state.location.parent, params: state.location.params },
       },
       locationChanged: false,
     };
@@ -48,6 +52,8 @@ export const resolvePagePlacementClose = <Value>(input: {
       pageId: page.id,
       ...(activeInstance?.resource ? { resource: activeInstance.resource } : {}),
       ...(activeInstance?.section ? { section: activeInstance.section } : {}),
+      position: activeInstance?.position,
+      pageContext: activeInstance?.pageContext,
       ...(activeInstance?.open ? { open: activeInstance.open } : {}),
     },
     locationChanged: closedActivePrimary,

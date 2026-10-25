@@ -3,13 +3,9 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium, expect, test } from "@playwright/test";
+import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
-import {
-  expectNoDefaultHomePlaceholder,
-  observeHomeLoading,
-  verifyFastHeaderNavigation,
-  verifyPageHeaderChoices,
-} from "../helpers/home-loading";
+import { expectNoDefaultHomePlaceholder, observeHomeLoading } from "../helpers/home-loading";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { verifyEmptyPanelAddition } from "./packaged-empty-panel-addition";
 import { buildBinary } from "./packaged-helpers";
@@ -30,7 +26,7 @@ test("adding a tool keeps the other empty panel open", async () => {
   let browser: Browser | null = null;
   try {
     const started = await test.step("Start the packaged runtime", () =>
-      startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: "[]" }));
+      startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-artifacts") }));
     child = started.child;
     phase("runtime ready; create project");
     const folder = join(root, "project");
@@ -53,23 +49,15 @@ test("adding a tool keeps the other empty panel open", async () => {
     await page.goto(`${started.baseUrl}/projects/${project.id}/`);
     await expect(page.getByText("Project home", { exact: true })).toBeVisible();
     await expectNoDefaultHomePlaceholder(page);
-    await verifyPageHeaderChoices(page);
-    await verifyFastHeaderNavigation(page);
-    const mainEdge = page.getByLabel("Main header edge", { exact: true });
-    await expect(mainEdge).toBeVisible();
-    await mainEdge.focus();
-    await mainEdge.press("Shift+F10");
-    await page.getByRole("menuitem", { name: "Show header", exact: true }).click();
-    const mainHeader = page.getByLabel("Main panel header", { exact: true });
-    await expect(mainHeader).toBeVisible();
-    await expect(mainHeader.getByRole("tab")).toHaveCount(0);
-    await mainHeader.focus();
-    await mainHeader.press("Shift+F10");
-    await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
-    await expect(mainEdge).toBeVisible();
     phase("project ready; check panel additions");
     await test.step("Add tools while preserving the other empty panel", () => verifyEmptyPanelAddition(page));
     phase("panel additions checked");
+    await page.getByRole("option", { name: "Artifacts", exact: true }).click();
+    await page
+      .locator('[data-workbench-panel="main"]')
+      .getByRole("tab", { name: "Artifacts", exact: true })
+      .getByRole("button", { name: "Close Artifacts", exact: true })
+      .click();
     await test.step("Place panels and cancel from the grab point", () => verifyPanelInsertionTargets(page));
   } finally {
     phase("cleanup");

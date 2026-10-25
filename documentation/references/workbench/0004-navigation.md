@@ -30,7 +30,11 @@ Navigation validates the complete target before changing state. An unresolved pa
 
 Browser Back and Forward replay canonical `PageLocation` values. Replay replaces the active owner set and does not push another history entry. Refreshing metadata for the same logical location preserves the selected panel; replaying a different document or location activates its destination.
 
-The routed page owns its breadcrumb and page actions. A collection page uses Main's selected document for its document context. Focusing Side or Secondary does not replace that context. A resource-bound page keeps its routed resource as the breadcrumb subject, even when Main renders another resource.
+History entries record the resource-removal clock that existed when they were captured. Replay removes deleted resources from the full contextual parent chain. A clock from an earlier workbench instance cannot hide a deletion in the current instance. Resource viewers keep their page parameters and contextual parents when switching resources on the same page. An explicit viewer page change follows the destination page's normal navigation rules.
+
+A parent breadcrumb is navigable when its contribution renders its own Main view, names a resource, or declares a collection landing view. Tab presentation does not affect this rule. Page groups and panel collections without a landing view remain labels. A group declares `main: { kind: "group", default: childPage.ref }`; opening its route resolves to that child in one navigation. The child must be in the same mode and open without a resource. The group stays in the breadcrumb parent chain and can own navigation trees, but has no content, resource, slots, or panel view of its own. Breadcrumbs use each contribution's declared icon; a resource type does not replace it with a status indicator.
+
+The routed page owns its breadcrumb and page actions. A collection page uses Main's selected document for its document context. Focusing Side or Secondary does not replace that context. A resource-bound page keeps its routed resource as the breadcrumb subject, even when Main renders another resource. An independent resource viewer can supply its resource label and icon. Static context views keep their tab controls without renaming the routed resource.
 
 ## Mounted views
 
@@ -61,6 +65,8 @@ Retention is local to the current project and workbench. Removing a view contrib
 Resource removal uses the shared registry cleanup for page, mode and shell placements. It matches the full resource identity, including project and extension, and invalidates pending related openings. Session deletion and archive use this same cleanup; closing a Session view alone does not delete or stop the Session. Resource cleanup does not save a manual panel closure. A retained dirty editor may stay visible while its pending related lookup is cancelled.
 
 Tree selection follows Main's selected document or the routed page resource when Main has no document. A node's declared `selected` value distinguishes documents that share a resource identity, but applies only while that resource or page is active. Rows without a resource or navigation target keep their declared selection. Contextual parent trees remain visible without overriding the current workspace selection. Returning to the parent restores its active document selection.
+
+Clicking a tree row with a navigation target opens that target, including rows with children. Its chevron expands or collapses the children separately. Rows without a navigation target continue to expand or collapse when clicked.
 
 Tree reads belong to the mounted placement. Changing its resource or navigation level refreshes its data while keeping the current rows until the complete replacement arrives. Rows with the same identity keep their DOM, focus, and scroll position. A changed read scope cancels older reads and ignores their late results. Opening a different tree or project starts a new snapshot. A changed search filter also starts a new snapshot, so results from the previous query cannot be clicked while its replacement loads.
 
@@ -113,7 +119,7 @@ Global panel controls render in the web navigation header: closed Sidenav recove
 | `workbench.resizePanel` | `region: sidenav, secondary, side`, `size: number` in pixels |
 | `workbench.setSidePanelPresentation` | `presentation: attached, floating, closed` |
 
-The matching shell methods enforce the same permissions. Header show/hide also has a context menu on the header or hidden top edge with keyboard and touch access. Explicitly showing a header also shows its tabs, including a single Start page. Header choices stay in the mode layout and layout reset clears them. Optional panels collapse after their last tab closes, including panels previously opened empty.
+The matching shell methods enforce the same permissions. Main headers follow page presentation: tabless pages have no header, while tabbed pages keep theirs. Header menus offer placement actions without a visibility toggle. `setPanelHeaderVisible` and `shell.setHeaderVisible` remain for legacy auxiliary integrations and cannot override a page's Main header policy. Optional panels collapse after their last tab closes, including panels previously opened empty.
 
 ## Panel placement and closed-edge drops
 

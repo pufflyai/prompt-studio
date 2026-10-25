@@ -52,7 +52,7 @@ for (const scoped of [true, false]) {
   });
 }
 
-test("single-resource collection tabs use normal pin state and keep header choices per page", () => {
+test("single-resource collection tabs use normal pin state", () => {
   const s = modePanelFixture(undefined, true, [...pages], "collection");
   s.navigate("detail", "a");
   const tab = s.w.layout.getActivePanel("main")!;
@@ -60,12 +60,10 @@ test("single-resource collection tabs use normal pin state and keep header choic
   s.w.pinPlacement(tab.placementIdentity!, false);
   expect(s.w.layout.getActivePanel("main")?.tabRetention).toBe("preview");
   s.w.pinPlacement(tab.placementIdentity!);
-  s.w.shell.setHeaderVisible("main", false);
   s.navigate("collection");
   expect(s.ids("main")).toEqual(["a"]);
-  expect(s.w.shell.getPanelPolicy("main").showHeader).toBe(true);
   s.navigate("detail", "a");
-  expect(s.w.shell.getPanelPolicy("main").showHeader).toBe(false);
+  expect(s.w.layout.getActivePanel("main")?.tabRetention).toBe("persistent");
 });
 
 test.each([
