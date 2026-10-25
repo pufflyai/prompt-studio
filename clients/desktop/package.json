@@ -23,7 +23,7 @@
     "storybook": "storybook dev -p 6009",
     "prebuild-storybook": "bun run --cwd ../../packages/ui build",
     "build-storybook": "storybook build",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts src --silent --path-ignore-patterns='**/e2e/**'",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts --pass-with-no-tests --silent --path-ignore-patterns='**/e2e/**'",
     "test:electron": "bun run build && playwright test --config playwright.config.ts",
     "test:benchmark": "playwright test --config playwright.benchmark.config.ts",
     "test:packaged": "playwright test --config playwright.packaged.config.ts",
@@ -64,6 +64,7 @@
     "storybook": "^10.6.0",
     "typescript": "6.0.2",
     "vite": "7.3.7",
-    "workbench-fixture": "workspace:*"
+    "workbench-fixture": "workspace:*",
+    "pstdio-scripts": "workspace:*"
   }
 }

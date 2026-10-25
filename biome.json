@@ -104,6 +104,7 @@
         "**/*.bench.ts",
         "**/*.perf.ts",
         "**/*.stress.ts",
+        "**/*.diagnostic.ts",
         "**/*test-utils.ts",
         "**/test-utils/**",
         "**/mocks/**",

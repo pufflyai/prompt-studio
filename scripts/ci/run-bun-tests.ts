@@ -1,16 +1,37 @@
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { bunRunIdentity, junitCases, registeredUnselectedScope } from "./bun-test-evidence";
-import { bunTestSelection, narrowStablePattern, verifyQuarantineReport } from "./test-quarantine";
+import { assertStableQuarantineExclusions, verifyQuarantineReport } from "./quarantine-reports";
+import { priorityIgnorePatterns, readTestPriorities } from "./test-discovery";
+import { bunTestSelection, narrowStablePattern, quarantineDirectory } from "./test-quarantine";
 import cases from "./test-quarantine.json";
 
 const root = resolve(import.meta.dir, "../..");
 const quarantine = process.env.E2E_TEST_LANE === "quarantine";
 const packageDir = relative(root, process.cwd()).replaceAll("\\", "/");
 const runner = packageDir === "packages/e2e" ? "packaged-bun" : "bun";
-const priority = process.env.CI_PRIORITY ?? "P1";
+const priority = quarantine ? "P2" : (process.env.CI_PRIORITY ?? "P1");
 if (!["P0", "P1", "P2", "P3"].includes(priority)) throw new Error(`Unknown test priority: ${priority}`);
-const selection = bunTestSelection(cases, packageDir, process.platform, quarantine, runner);
+const forwarded = process.argv.slice(2);
+const packageCases = cases.filter((entry) => entry.runner === runner && entry.file.startsWith(`${packageDir}/`));
+const scopedPaths = forwarded.filter(
+  (arg) =>
+    !arg.startsWith("-") &&
+    (/\.test\.tsx?$/.test(arg) ||
+      packageCases.some((entry) => {
+        const file = relative(process.cwd(), resolve(root, entry.file)).replaceAll("\\", "/");
+        const path = arg.replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/$/, "");
+        return file === path || file.startsWith(`${path}/`);
+      })),
+);
+const selection = bunTestSelection(
+  cases,
+  packageDir,
+  process.platform,
+  quarantine,
+  runner,
+  quarantine ? scopedPaths : undefined,
+);
 if (quarantine && !selection.files.length) {
   console.log(`No quarantined Bun tests for ${packageDir} on ${process.platform}.`);
 } else {
@@ -18,7 +39,6 @@ if (quarantine && !selection.files.length) {
     console.log(`${quarantine ? "Running" : "Separating"} quarantined tests: ${selection.files.join(", ")}`);
     console.log("Evidence and removal criteria: scripts/ci/test-quarantine.json");
   }
-  const forwarded = process.argv.slice(2);
   const args: string[] = [];
   let suppliedReport: string | undefined;
   for (let index = 0; index < forwarded.length; index++) {
@@ -41,7 +61,7 @@ if (quarantine && !selection.files.length) {
       continue;
     }
     if (arg.startsWith("--reporter=")) continue;
-    args.push(arg);
+    if (!quarantine || !scopedPaths.includes(arg)) args.push(arg);
   }
   const filterAt = args.findIndex((arg) => arg === "-t" || arg.startsWith("--test-name-pattern"));
   let pattern = selection.pattern;
@@ -52,21 +72,24 @@ if (quarantine && !selection.files.length) {
     args.splice(filterAt, equals === -1 ? 2 : 1);
     pattern = narrowStablePattern(pattern, filter!);
   }
-  const defaultDirectory = resolve(
-    root,
-    "test-results/ci/bun",
-    packageDir.replaceAll("../", "_"),
-    `${process.env.GITHUB_JOB ?? "local"}-${process.pid}`,
-  );
+  const defaultDirectory = quarantine
+    ? quarantineDirectory(root, runner, packageDir)
+    : resolve(
+        root,
+        "test-results/ci/bun",
+        packageDir.replaceAll("../", "_"),
+        `${process.env.GITHUB_JOB ?? "local"}-${process.pid}`,
+      );
   const evidencePath = resolve(process.env.BUN_TEST_EVIDENCE_FILE ?? `${defaultDirectory}/cases.json`);
-  const report = resolve(
-    suppliedReport ??
-      (quarantine
-        ? resolve(root, "test-results/quarantine", packageDir, "results.xml")
-        : `${dirname(evidencePath)}/results.xml`),
-  );
+  const report = resolve(suppliedReport ?? `${dirname(evidencePath)}/results.xml`);
   mkdirSync(dirname(report), { recursive: true });
   mkdirSync(dirname(evidencePath), { recursive: true });
+  rmSync(report, { force: true });
+  rmSync(evidencePath, { force: true });
+  if (quarantine) {
+    const { assertNoQuarantineRetries } = await import("./quarantine-retries");
+    for (const file of selection.files) assertNoQuarantineRetries(readFileSync(resolve(file), "utf8"), forwarded);
+  }
   const timings = process.env.BUN_TEST_TIMINGS ?? `${dirname(evidencePath)}/timings.json`;
   const timingArgs = args.some((arg) => arg.startsWith("--timings"))
     ? []
@@ -74,8 +97,11 @@ if (quarantine && !selection.files.length) {
   const command = [
     "test",
     ...args,
+    ...(quarantine ? [] : priorityIgnorePatterns(readTestPriorities())).map(
+      (pattern) => `--path-ignore-patterns=${pattern}`,
+    ),
     ...(priority === "P1" ? ["--bail=1"] : []),
-    ...(quarantine ? selection.files : []),
+    ...(quarantine ? selection.files.map((file) => `./${file}`) : []),
     ...(pattern ? ["--test-name-pattern", pattern] : []),
     "--reporter=junit",
     "--reporter-outfile",
@@ -87,10 +113,15 @@ if (quarantine && !selection.files.length) {
   let reported: ReturnType<typeof junitCases> = [];
   let reportError: string | null = null;
   try {
-    reported = junitCases(await Bun.file(report).text()).map((entry) => {
+    const xml = await Bun.file(report).text();
+    reported = junitCases(xml).map((entry) => {
       const file = relative(root, resolve(entry.file)).replaceAll("\\", "/");
       return { ...entry, file, id: `${file}${entry.id.slice(entry.file.length)}` };
     });
+    if (quarantine) {
+      const summary = verifyQuarantineReport(xml, selection.cases, root, process.cwd());
+      if (exitCode !== 0 && summary.failures === 0) throw new Error("Quarantine failed outside its registered cases");
+    } else assertStableQuarantineExclusions(reported, selection.cases);
   } catch (error) {
     reportError = String(error);
   }
@@ -105,6 +136,7 @@ if (quarantine && !selection.files.length) {
     `${JSON.stringify(
       {
         ...bunRunIdentity(root),
+        quarantineAttempt: quarantine ? process.env.CI_QUARANTINE_ATTEMPT : undefined,
         priority,
         packageDir,
         lane: quarantine ? "quarantine" : "stable",
@@ -131,5 +163,4 @@ if (quarantine && !selection.files.length) {
     )}\n`,
   );
   process.exitCode = reportError || !reported.length ? 1 : exitCode;
-  if (quarantine && process.exitCode === 0) verifyQuarantineReport(await Bun.file(report).text(), selection.count);
 }

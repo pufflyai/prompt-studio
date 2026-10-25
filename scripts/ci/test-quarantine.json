@@ -1,7 +1,7 @@
 [
   {
     "runner": "bun",
-    "file": "scripts/release/version-patch.test.ts",
+    "file": "scripts/release/version-patch.p0.test.ts",
     "name": "uses a patch bump even when the selected fix has a minor changeset",
     "platforms": ["linux"],
     "owner": "PS-907 / release tooling",
@@ -14,7 +14,7 @@
   },
   {
     "runner": "bun",
-    "file": "scripts/release/version-patch.test.ts",
+    "file": "scripts/release/version-patch.p0.test.ts",
     "name": "keeps the real fixed group in sync and preserves extension SDK and UI ranges",
     "platforms": ["linux"],
     "owner": "PS-907 / release tooling",
@@ -27,7 +27,7 @@
   },
   {
     "runner": "playwright",
-    "file": "packages/e2e/src/packaged/packaged-editing-sessions.spec.ts",
+    "file": "packages/e2e/src/packaged/packaged-editing-sessions.p2.spec.ts",
     "name": "packaged editing sessions preview, coalesce saves and cancel gestures in chromium",
     "platforms": ["linux"],
     "owner": "PS-907 / extension editing sessions",
@@ -40,7 +40,7 @@
   },
   {
     "runner": "playwright",
-    "file": "packages/e2e/src/packaged/packaged-editing-sessions.spec.ts",
+    "file": "packages/e2e/src/packaged/packaged-editing-sessions.p2.spec.ts",
     "name": "packaged editing sessions preview, coalesce saves and cancel gestures in webkit",
     "platforms": ["linux"],
     "owner": "PS-907 / extension page routing",
@@ -53,7 +53,7 @@
   },
   {
     "runner": "playwright",
-    "file": "packages/e2e/src/packaged/packaged-webview-browsers.spec.ts",
+    "file": "packages/e2e/src/packaged/packaged-webview-browsers.p2.spec.ts",
     "name": "persists commands and settings through authenticated opaque webviews in WebKit (Safari engine)",
     "platforms": ["linux"],
     "owner": "PS-907 / extension settings lifecycle",
@@ -66,7 +66,7 @@
   },
   {
     "runner": "packaged-desktop",
-    "file": "clients/desktop/src/e2e/packaged-project-tabs.spec.ts",
+    "file": "clients/desktop/src/e2e/packaged-project-tabs.p2.spec.ts",
     "name": "opens and closes project tabs while preserving pages and terminals",
     "platforms": ["darwin"],
     "arch": "arm64",
@@ -80,7 +80,7 @@
   },
   {
     "runner": "bun",
-    "file": "extensions/pstdio-planner/src/commands/dependency-stacks.test.ts",
+    "file": "extensions/pstdio-planner/src/commands/dependency-stacks.p0.test.ts",
     "name": "the owner can reconcile conflicting dependencies and submit without a human request",
     "platforms": ["win32"],
     "owner": "PS-907 / Planner dependency stacks",
@@ -90,7 +90,7 @@
   },
   {
     "runner": "packaged-bun",
-    "file": "packages/e2e/src/packaged/codex-transport.test.ts",
+    "file": "packages/e2e/src/packaged/codex-transport.p1.test.ts",
     "name": "the packaged Codex harness preserves protocol loss and independent provider failure",
     "platforms": ["win32"],
     "owner": "PS-907 / Codex transport",
@@ -103,7 +103,7 @@
   },
   {
     "runner": "packaged-bun",
-    "file": "packages/e2e/src/packaged/extension-browser-install.test.ts",
+    "file": "packages/e2e/src/packaged/extension-browser-install.p2.test.ts",
     "name": "installs the smoke browser without external JavaScript runtimes",
     "platforms": ["win32"],
     "owner": "PS-907 / packaged browser installation",
@@ -116,7 +116,7 @@
   },
   {
     "runner": "packaged-bun",
-    "file": "packages/e2e/src/packaged/extension-browser-install.test.ts",
+    "file": "packages/e2e/src/packaged/extension-browser-install.p2.test.ts",
     "name": "the installed Playwright cache runs a packaged extension page outside the checkout",
     "platforms": ["win32"],
     "owner": "PS-907 / packaged browser installation",
@@ -129,7 +129,7 @@
   },
   {
     "runner": "bun",
-    "file": "packages/pstdio-api/src/features/sessions/endpoints/get-session-conversation.test.ts",
+    "file": "packages/pstdio-api/src/features/sessions/endpoints/get-session-conversation.p1.test.ts",
     "name": "preserves conversation history before the persisted queued follow-up prompt",
     "platforms": ["win32"],
     "owner": "PS-907 / session conversation",
@@ -142,7 +142,7 @@
   },
   {
     "runner": "bun",
-    "file": "packages/pstdio-api/src/startup/index.test.ts",
+    "file": "packages/pstdio-api/src/startup/index.p1.test.ts",
     "platforms": ["win32"],
     "owner": "PS-907 / startup default extensions",
     "name": "refreshes local default extensions when an existing project starts in source mode",
@@ -152,7 +152,7 @@
   },
   {
     "runner": "bun",
-    "file": "packages/pstdio-api/src/startup/index.test.ts",
+    "file": "packages/pstdio-api/src/startup/index.p1.test.ts",
     "platforms": ["win32"],
     "owner": "PS-907 / startup default extensions",
     "name": "refreshes local default extensions when running from source",
@@ -162,7 +162,7 @@
   },
   {
     "runner": "bun",
-    "file": "packages/pstdio-api/src/features/extensions/extension-terminal-runtime.test.ts",
+    "file": "packages/pstdio-api/src/features/extensions/extension-terminal-runtime.p0.test.ts",
     "name": "counts a program that replaces the interactive shell",
     "platforms": ["linux"],
     "owner": "PS-907 / terminal activity",
@@ -172,7 +172,7 @@
   },
   {
     "runner": "bun",
-    "file": "clients/desktop/src/packaging/dmg-device-cleanup.test.ts",
+    "file": "clients/desktop/src/packaging/dmg-device-cleanup.p1.test.ts",
     "name": "detaches its image after the volume is unmounted",
     "platforms": ["darwin"],
     "arch": "x64",
@@ -188,7 +188,7 @@
   },
   {
     "runner": "packaged-desktop",
-    "file": "clients/desktop/src/e2e/packaged-navigation-customization.spec.ts",
+    "file": "clients/desktop/src/e2e/packaged-navigation-customization.p2.spec.ts",
     "name": "restores each project's navigation order, placement, and visibility after relaunch",
     "platforms": ["darwin"],
     "arch": "arm64",
@@ -199,7 +199,7 @@
   },
   {
     "runner": "packaged-desktop",
-    "file": "clients/desktop/src/e2e/packaged-navigation-customization.spec.ts",
+    "file": "clients/desktop/src/e2e/packaged-navigation-customization.p2.spec.ts",
     "name": "keeps a navigation reset after relaunch without changing another project",
     "platforms": ["darwin"],
     "arch": "arm64",
@@ -210,7 +210,7 @@
   },
   {
     "runner": "packaged-desktop",
-    "file": "clients/desktop/src/e2e/packaged-startup-recovery.spec.ts",
+    "file": "clients/desktop/src/e2e/packaged-startup-recovery.p1.spec.ts",
     "name": "keeps an uncertain runtime owner intact until its descriptor is repaired",
     "platforms": ["win32"],
     "owner": "PS-907 / desktop startup recovery",
@@ -220,7 +220,7 @@
   },
   {
     "runner": "bun",
-    "file": "packages/pstdio-db/src/db/rename-pglite-home.test.ts",
+    "file": "packages/pstdio-db/src/db/rename-pglite-home.p1.test.ts",
     "platforms": ["win32"],
     "owner": "PS-907 / Windows database publication",
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40128973926/job/120976509591"],
@@ -230,7 +230,7 @@
   },
   {
     "runner": "bun",
-    "file": "packages/pstdio-db/src/db/rename-pglite-home.test.ts",
+    "file": "packages/pstdio-db/src/db/rename-pglite-home.p1.test.ts",
     "platforms": ["win32"],
     "owner": "PS-907 / Windows database publication",
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40128973926/job/120976509591"],
@@ -240,7 +240,7 @@
   },
   {
     "runner": "bun",
-    "file": "packages/pstdio-db/src/db/rename-pglite-home.test.ts",
+    "file": "packages/pstdio-db/src/db/rename-pglite-home.p1.test.ts",
     "platforms": ["win32"],
     "owner": "PS-907 / Windows database publication",
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40128973926/job/120976509591"],
@@ -250,7 +250,7 @@
   },
   {
     "runner": "bun",
-    "file": "extensions/harness-codex/src/question-confirmation.test.ts",
+    "file": "extensions/harness-codex/src/question-confirmation.p0.test.ts",
     "name": "confirms an answer persisted during a transcript read before the turn ends",
     "platforms": ["win32"],
     "owner": "PS-907 / Codex question confirmation",
@@ -260,7 +260,7 @@
   },
   {
     "runner": "packaged-bun",
-    "file": "packages/e2e/src/packaged/packaged-planner-smoke.test.ts",
+    "file": "packages/e2e/src/packaged/packaged-planner-smoke.p2.test.ts",
     "name": "packaged Planner recovers missing workspaces without losing submitted work",
     "platforms": ["linux"],
     "owner": "PS-907 / packaged runtime shutdown",
@@ -270,7 +270,7 @@
   },
   {
     "runner": "packaged-desktop",
-    "file": "clients/desktop/src/e2e/packaged-attached-recovery.spec.ts",
+    "file": "clients/desktop/src/e2e/packaged-attached-recovery.p1.spec.ts",
     "name": "automatically recovers a CLI-started backend and restores the open project",
     "platforms": ["win32"],
     "owner": "PS-907 / desktop attached recovery",
@@ -280,7 +280,7 @@
   },
   {
     "runner": "playwright-ui",
-    "file": "packages/e2e/src/ui/session-chat-state.spec.ts",
+    "file": "packages/e2e/src/ui/session-chat-state.p1.spec.ts",
     "name": "turns a New session tab into the created session when the request ends after leaving the tab",
     "platforms": ["linux"],
     "owner": "PS-907 / session chat drafts",

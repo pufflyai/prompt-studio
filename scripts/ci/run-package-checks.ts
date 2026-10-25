@@ -1,38 +1,38 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createPriorityPlan } from "./priority-plan";
 import { runCiChecks } from "./run-ci-checks";
+import { discoverTestFiles } from "./test-discovery";
 import { readWorkspacePackages } from "./workspace-packages";
 
 const mode = process.argv[2];
+if (!["unit", "lint"].includes(mode ?? "")) throw new Error("Choose unit or lint");
+const root = process.cwd();
 const filters = (process.env.LERNA_FILTER ?? "").split(/\s+/).filter(Boolean);
 const scoped = filters.filter((_, index) => filters[index - 1] === "--scope");
-const excluded = ["--ignore", "e2e", "--ignore", "storybook-tests"];
-const lerna = ["bunx", "lerna", "run"];
-const common = ["--no-bail", "--stream", "--concurrency=2", ...filters];
-const checks =
-  mode === "unit"
-    ? [
-        {
-          id: "package-tests",
-          command: [...lerna, "test", ...excluded, "--ignore", "pstdio-api", "--ignore", "pstdio-db", ...common],
-        },
-        { id: "sync-conformance", command: [...lerna, "test:conformance", ...common] },
-      ]
-    : [{ id: "package-lint", command: [...lerna, "lint", ...common] }];
-if (mode === "unit" && (!scoped.length || scoped.includes("storybook-tests")))
-  checks.push({
-    id: "storybook-server-tests",
-    command: ["bun", "run", "--cwd", "packages/storybook-tests", "test:scripts"],
-  });
-if (mode === "lint") {
-  for (const pkg of readWorkspacePackages(process.cwd())) {
-    if (scoped.length && !scoped.includes(pkg.name)) continue;
-    const manifest = JSON.parse(readFileSync(join(pkg.dir, "package.json"), "utf8"));
-    if (manifest.scripts?.typecheck && !manifest.scripts?.lint)
-      checks.push({ id: `${pkg.name}:typecheck`, command: ["bun", "run", "--cwd", pkg.dir, "typecheck"] });
-  }
+const packages = readWorkspacePackages(root).map((pkg) => ({
+  ...pkg,
+  scripts: JSON.parse(readFileSync(join(pkg.dir, "package.json"), "utf8")).scripts ?? {},
+}));
+// Dependencies were built before this phase. Nx lint targets schedule dependency
+// builds again, which can replace files while the independent unit checks read them.
+let checks = packages.flatMap((pkg) => {
+  if (scoped.length && !scoped.includes(pkg.name)) return [];
+  const script = pkg.scripts.lint ? "lint" : "typecheck";
+  if (!pkg.scripts[script]) return [];
+  return [{ id: `${pkg.name}:${script}`, command: ["bun", "run", "--cwd", pkg.dir, script], cwd: root }];
+});
+if (mode === "unit") {
+  const files = discoverTestFiles(root).filter((file) => !/^packages\/pstdio-(?:api|db)\//.test(file));
+  checks = createPriorityPlan(files, packages, "P0", {
+    runner: "bun",
+    ...(scoped.length ? { scope: scoped.join(",") } : {}),
+  })
+    .filter((run) => run.owner !== "repository")
+    .map((run) => ({ id: run.id, command: run.command, cwd: join(root, run.cwd) }));
 }
-if (!["unit", "lint"].includes(mode ?? "")) throw new Error("Choose unit or lint");
-const result = await runCiChecks(checks, { priority: "P0", concurrency: 1 });
+const result = checks.length
+  ? await runCiChecks(checks, { priority: "P0", concurrency: 2, env: { TEST_PRIORITIES: "P0" } })
+  : { outcome: "success", results: [], selection: "No P0 Bun tests in these owners" };
 await Bun.write(`test-results/ci/${mode}-results.json`, JSON.stringify(result, null, 2));
 process.exitCode = result.outcome === "success" ? 0 : 1;

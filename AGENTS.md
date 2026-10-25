@@ -169,7 +169,7 @@ Always validate UI changes using Playwright.
 ### 5. Test packaged files
 
 - If bundled runtime behavior, assets, or file inclusion change, update the relevant packaged smoke test. This includes built-in templates, prompts, skills, and other packaged defaults. Documentation-reference-only edits do not require packaged tests.
-- Keep `packages/e2e/src/packaged/packaged-serve-smoke.test.ts` in sync with the packaged files.
+- Keep `packages/e2e/src/packaged/packaged-serve-smoke.p2.test.ts` in sync with the packaged files.
 - For those runtime or package changes, run `bun run --cwd scripts verify:packages` to check packaged output.
 
 ### 6. Changesets
@@ -233,6 +233,8 @@ A pull request may contain only one migration entry. If the tools create more th
 ### Testing rules
 
 - Name test files and test or suite titles after the feature or behavior they cover. Do not prefix them with ticket IDs.
+- Declare one priority in every maintained test filename, such as `session.p0.test.ts` or `startup.p1.spec.ts`. See [test priorities](documentation/guides/development/0013-ci-stages.md#contracts-and-naming).
+- Run one group with `bun test:p0`, `bun test:p1`, `bun test:p2`, or `bun test:p3`. Use `--scope <workspace>` and `--runner <kind>` for targeted work. Discovery owns membership; do not add test filename lists to workflows.
 - Put each test **next to the file it tests**.
 - Avoid mocks. Test real behavior when possible.
 - For a bug fix, add a test that reproduces the bug before changing the code.

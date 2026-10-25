@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 // Benchmarks measure the packaged app without traces. One worker runs files in name order and
-// tests in declaration order; packaged-launch.bench.ts relies on that order for its cold start.
+// tests in declaration order; packaged-launch.p3.bench.ts relies on that order for its cold start.
 export default defineConfig({
   outputDir: "test-results/benchmark",
   testDir: "src/e2e",

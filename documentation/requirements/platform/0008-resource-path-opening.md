@@ -124,7 +124,7 @@ Checked on 2026-10-19 against main commit `2527821f`. The newest stable release 
 | Host path claims and resolution | Delivered in source | #1155, merged 2026-10-17. Longest whole-segment matching, owner and project qualification, and fallback live in `packages/pstdio-dashboard/src/modules/sessions/chat/resource-path-resolution.ts` and `session-link-handler.ts`. Metadata normalization lives in `packages/pstdio-extensions/src/runtime/normalize/`. |
 | SDK and metadata schema | Delivered in source | `paths` on `ResourceKindDefinition` and the metadata schema, as listed under Schema above. Published in `@pstdio/sdk@0.44.0`. |
 | Message UI | Delivered in source | Resource bubbles and prose path detection in `packages/ui/src/components/chat-ui/links/` and `packages/ui/src/components/rich-text/shared/`. |
-| Packaged contract | Delivered in source | `packages/e2e/src/packaged/packaged-resource-links-smoke.test.ts` loads an independent fixture declaration and calls its resolver through the command API. |
+| Packaged contract | Delivered in source | `packages/e2e/src/packaged/packaged-resource-links-smoke.p2.test.ts` loads an independent fixture declaration and calls its resolver through the command API. |
 | Planner declarations and resolver | In review | #1156 adds them and passes `published_extensions` against 0.44.0. It finds a ticket by shorthand without reading every ticket. |
 | Notes and Artifacts declarations and resolvers | In review | #1240 claims note `content.md` files and artifact snapshot files. |
 | Guards and legacy cleanup | Not in scope here | Planner guards and the removal of old anchor methods belong to [general resource linking](0006-resource-linking.md#delivery-record). |
@@ -133,4 +133,4 @@ Acceptance 3, 4, 6, and 7 have unit or packaged test coverage. That is not an en
 
 A claimed path with a line number, such as `.../documents/<note-id>/content.md:3`, used to fail with "Page location has an invalid source position", because the host added the position to every page target. Since #1242 (PS-835), the host applies a position only to pages that open a document, and other pages open without it.
 
-Evidence: unit tests, passed locally on 2026-10-18: `resource-path-resolution.test.ts` (owner resolution, icon override, longest prefix, fallback, foreign identity rejection, compound targets, source positions). Message UI tests such as `chat-text-link-transform.test.ts` and the packaged smoke run in CI and were not rerun here.
+Evidence: unit tests, passed locally on 2026-10-18: `resource-path-resolution.p0.test.ts` (owner resolution, icon override, longest prefix, fallback, foreign identity rejection, compound targets, source positions). Message UI tests such as `chat-text-link-transform.p0.test.ts` and the packaged smoke run in CI and were not rerun here.

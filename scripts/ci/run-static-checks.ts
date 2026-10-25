@@ -9,6 +9,10 @@ const scripts = [
   "knip",
 ];
 const checks = [
+  {
+    id: "repository-tests",
+    command: ["bun", "scripts/ci/run-priority-tests.ts", "p0", "--scope", "repository", "--prebuilt"],
+  },
   ...scripts.map((script) => ({ id: script, command: ["bun", "run", script] })),
   { id: "verify:translations", command: ["bun", "scripts/ci/run-translation-check.ts"] },
   ...["verify:docs-links", "verify:sdk-reference", "verify:docs-snippets"].map((script) => ({

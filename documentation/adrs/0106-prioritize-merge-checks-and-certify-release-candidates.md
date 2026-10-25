@@ -12,11 +12,11 @@ The core owns CI for its shared platform and extension contracts. This change do
 
 ## Decision
 
-Use four priorities. P0 contains fast static, unit, type, lint, and basic smoke checks. P1 contains merge-critical functional and integrity contracts; unknown functional work defaults to P1. P2 owns comprehensive production permutations and Windows execution. P3 owns timing, memory, throughput, and stress measurements. A test is not P2 merely because it is slow.
+Use four priorities. P0 contains fast static, focused unit, type, lint, and public declaration checks. Startup smoke belongs to P1. P1 contains merge-critical functional and integrity contracts; unknown functional work defaults to P1. P2 owns comprehensive production permutations and Windows execution. P3 owns timing, memory, throughput, and stress measurements. A test is not P2 merely because it is slow.
 
 | Stage | Required proof | Target wall time |
 | --- | --- | --- |
-| Pull request | Affected P0 checks and focused owner regressions, including selected browser and component contracts | Less than 180 seconds |
+| Pull request | Affected P0 rules, types, lint and public contracts | Less than 180 seconds |
 | Merge queue | Complete Linux/macOS P0/P1 contracts on the actual merge candidate | Less than 480 seconds |
 | Main | Matching successful queue provenance and a small app smoke run | No repeated full suite |
 | Production candidate | Exact-candidate P0/P1, all required P2 platforms and permutations, and P3 measurements | Less than 2,400 seconds |
@@ -25,11 +25,11 @@ These targets measure active execution, including installation, builds, artifact
 
 ### Selection and execution
 
-Read workspace manifests before installation. Follow dependency names and explicit Nx dependencies, including consumers that declare released SDK/UI ranges. PR API/database selection uses adjacent or nearest-owner tests and a whole-package fallback when no narrower owner exists. It never drops tests because time has elapsed.
+Read workspace manifests before installation. Follow dependency names and explicit Nx dependencies, including consumers that declare released SDK/UI ranges. Each test filename declares one priority: `.p0.test.ts`, `.p1.spec.ts`, `.p2.integration.ts`, or `.p3.bench.ts`, for example. Discovery selects affected P0 contracts through owning packages and their consumers for PRs. The required queue runs every P0/P1 contract. This keeps fast local rules in PR feedback and integrated product checks before merging. It rejects unclassified test files. Runner adapters own setup, so workflow files need no test filename lists. The same discovery powers `bun test:p0` through `bun test:p3`. It never drops tests because time has elapsed.
 
 Keep API tests in fresh per-file processes under [ADR 0018](0018-temporary-api-test-process-isolation.md), with at most two active files and the existing 30-second per-test limit. Optional timing metadata balances complete files across shards; it does not reduce the workload.
 
-App E2E has six queue shards and no Storybook dependency. Component browser checks have three separate shards in `packages/storybook-tests`. Story source stays with its UI, dashboard, or workbench owner. The queue also retains native Linux/macOS source checks and essential built CLI, desktop startup, and delivered-default integrity. Production owns the full six native CLI targets and Windows breadth.
+App E2E has up to two critical P1 queue shards and no Storybook dependency. Production adds up to six P2 shards. Component browser checks build and test one source owner and priority together in a browser container. Critical interactions are P1; comprehensive component permutations are P2. Component specs live in `packages/storybook-tests/src/ui/<owner>/`. Story source stays with its UI, dashboard, or workbench owner. The queue also retains native Linux/macOS source checks and essential built CLI, desktop startup, and delivered-default integrity. Production owns the full six native CLI targets and Windows breadth.
 
 An internal PR can request separate full functional diagnostics with `ci:full`. A trusted label handler dispatches the base-branch workflow definition with the exact PR merge SHA as its checkout input and reports `production_ci_passed` without replacing the fast required `ci_passed` result. Forks use an explicit maintainer-driven diagnostic path. This functional profile does not stand in for a release certificate or P3 validation.
 
@@ -59,7 +59,7 @@ Daily nightly publication keeps basic artifact integrity and all-or-nothing publ
 
 ## Qualification and consequences
 
-Local evidence for this change includes 6,566 unit cases, discovery of 173 app cases, 127 component browser cases, and full packaged verification. These are local results and inventories, not proof that every production platform ran or that any wall-time target was achieved.
+The local qualification record includes runner and gate behavior tests, targeted owning-package checks, all seven critical component browser cases, and 106 relay integration cases using one disposable stack with a separate database per file. These results do not prove that every production platform ran or that any wall-time target was achieved. Hosted measurements remain required.
 
 Hosted qualification must exercise representative source, SDK/UI, extension, tooling, and native changes; cold and warm build paths; an early P1 failure with slower P0 work; missing matrix rows; stale candidates/artifacts; and production P2/P3 failure collection. Preserve first-attempt logs and queue/setup/build/test/report/cleanup timings. A passing rerun does not establish reliability.
 

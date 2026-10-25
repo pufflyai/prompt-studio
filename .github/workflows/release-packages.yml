@@ -68,9 +68,9 @@ jobs:
         run: bunx lerna run build --scope @pstdio/sdk --scope @pstdio/ui --include-dependencies
       - name: Check preview release contracts
         run: >-
-          bun test scripts/release/package-preview-version.test.ts
-          scripts/release/package-preview-publish.test.ts
-          scripts/verify/extension-api-registry.test.ts scripts/verify/extension-api-baselines.test.ts
+          bun test scripts/release/package-preview-version.p0.test.ts
+          scripts/release/package-preview-publish.p0.test.ts
+          scripts/verify/extension-api-registry.p0.test.ts scripts/verify/extension-api-baselines.p0.test.ts
       - name: Check packed public API exports
         run: bun scripts/verify/published-type-exports.ts sdk ui
       - name: Install, typecheck, and bundle packed SDK/UI consumers

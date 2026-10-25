@@ -1,7 +1,6 @@
 // PowerShell startup must not compete with PGlite cold starts. Keep this boundary
 // in the scheduler so every API suite caller follows the same isolation rule.
-const isolatedFiles = new Set(["src/features/extensions/process-discovery.test.ts"]);
-const runsAlone = (file: string) => isolatedFiles.has(file.replaceAll("\\", "/"));
+const runsAlone = (file: string) => /\.exclusive\.p[0-3]\.test\.ts$/.test(file);
 
 interface SchedulerOptions {
   priority?: string;

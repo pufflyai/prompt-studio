@@ -51,7 +51,7 @@ Test an extension using new host APIs with a host that provides those APIs.
 ## Validate changes to this release path
 
 ~~~bash
-bun test scripts/release/package-preview-version.test.ts scripts/release/package-preview-publish.test.ts scripts/verify/extension-api-registry.test.ts scripts/verify/extension-api-baselines.test.ts
+bun test scripts/release/package-preview-version.p0.test.ts scripts/release/package-preview-publish.p0.test.ts scripts/verify/extension-api-registry.p0.test.ts scripts/verify/extension-api-baselines.p0.test.ts
 bunx lerna run build --scope @pstdio/sdk --scope @pstdio/ui --include-dependencies
 bun scripts/verify/published-type-exports.ts sdk ui
 bun scripts/verify/public-package-consumer.ts sdk ui

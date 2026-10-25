@@ -16,7 +16,7 @@ const priorities: Record<string, TestPriority> = {
   static_checks: "P0",
   package_checks: "P0",
   license_check: "P0",
-  browser_smoke: "P0",
+  browser_smoke: "P1",
   windows_test_and_build: "P2",
   windows_database_tests: "P2",
   harness_cli_support: "P2",
@@ -26,17 +26,18 @@ const priorities: Record<string, TestPriority> = {
   performance: "P3",
   database_tests: "P1",
   storybooks: "P1",
-  storybook_tests: "P1",
-  sdk_api_report: "P1",
-  relay_smoke: "P1",
+  sdk_api_report: "P0",
+  published_extensions: "P0",
   e2e: "P1",
   e2e_cli: "P1",
   packaged_and_vite_e2e: "P1",
-  packaged_toolchain: "P1",
+  packaged_toolchain: "P2",
   build_clients: "P1",
 };
 
 export const priorityForJob = (name: string): TestPriority => {
+  const explicit = name.match(/_P([0-3])(?:\b|_)/)?.[1];
+  if (explicit) return `P${explicit}` as TestPriority;
   if (/windows_|win32|cli-win/.test(name)) return "P2";
   for (const part of name.split(" / ").reverse()) {
     const id = part.split(" (")[0] ?? part;

@@ -1,7 +1,12 @@
 {
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
-    "production": ["default", "!{projectRoot}/**/*.{test,spec}.{ts,tsx,js,jsx}", "!{projectRoot}/**/__tests__/**"],
+    "production": [
+      "default",
+      "!{projectRoot}/**/*.{test,spec}.{ts,tsx,js,jsx}",
+      "!{projectRoot}/**/__tests__/**",
+      "!{projectRoot}/**/*.{integration,bench,perf,diagnostic}.ts"
+    ],
     "sharedGlobals": [
       "{workspaceRoot}/package.json",
       "{workspaceRoot}/bun.lock",
@@ -11,9 +16,15 @@
       "{workspaceRoot}/nx.json",
       "{workspaceRoot}/scripts/build/**/*",
       "{workspaceRoot}/scripts/release/stage-package.ts",
-      { "runtime": "bun --version" },
-      { "runtime": "node --version" },
-      { "runtime": "node -p \"process.platform + '-' + process.arch\"" }
+      {
+        "runtime": "bun --version"
+      },
+      {
+        "runtime": "node --version"
+      },
+      {
+        "runtime": "node -p \"process.platform + '-' + process.arch\""
+      }
     ]
   },
   "targetDefaults": {
@@ -21,11 +32,17 @@
       "cache": true,
       "dependsOn": ["^build"],
       "inputs": [
-        "default",
-        "^default",
-        { "env": "NODE_ENV" },
-        { "env": "PSTDIO_API_URL" },
-        { "env": "PSTDIO_TERMINAL_WEBSOCKET_URL" }
+        "production",
+        "^production",
+        {
+          "env": "NODE_ENV"
+        },
+        {
+          "env": "PSTDIO_API_URL"
+        },
+        {
+          "env": "PSTDIO_TERMINAL_WEBSOCKET_URL"
+        }
       ],
       "outputs": ["{projectRoot}/storybook-static"]
     },
@@ -33,11 +50,17 @@
       "cache": true,
       "dependsOn": ["^build"],
       "inputs": [
-        "default",
-        "^default",
-        { "env": "NODE_ENV" },
-        { "env": "PSTDIO_API_URL" },
-        { "env": "PSTDIO_TERMINAL_WEBSOCKET_URL" }
+        "production",
+        "^production",
+        {
+          "env": "NODE_ENV"
+        },
+        {
+          "env": "PSTDIO_API_URL"
+        },
+        {
+          "env": "PSTDIO_TERMINAL_WEBSOCKET_URL"
+        }
       ],
       "outputs": ["{projectRoot}/dist", "{projectRoot}/.publish"]
     },
@@ -51,7 +74,9 @@
         "{workspaceRoot}/scripts/ci/run-bun-tests.ts",
         "{workspaceRoot}/scripts/ci/test-quarantine.ts",
         "{workspaceRoot}/scripts/ci/test-quarantine.json",
-        { "env": "E2E_TEST_LANE" },
+        {
+          "env": "E2E_TEST_LANE"
+        },
         "{workspaceRoot}/bunfig.toml",
         "{workspaceRoot}/bun.lock",
         {
@@ -59,7 +84,7 @@
         }
       ]
     },
-    "test:conformance": {
+    "test:integration": {
       "cache": false
     },
     "test:coverage": {

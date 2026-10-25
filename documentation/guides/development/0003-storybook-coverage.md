@@ -30,7 +30,7 @@ In another terminal:
 bun run --cwd packages/ui test-storybook
 ```
 
-Browser interactions shared across story owners live in `packages/storybook-tests`. Run one with `bun run --cwd packages/storybook-tests test:browser -- src/ui/panel-tabs.spec.ts`. This suite owns Storybook startup and playback waits independently from app E2E. Story source stays beside the component.
+Browser interactions shared across story owners live in `packages/storybook-tests`. Run one with `bun run --cwd packages/storybook-tests test:browser -- src/ui/pstdio-workbench/panel-tabs.p1.spec.ts`. This suite owns Storybook startup and playback waits independently from app E2E. Story source stays beside the component.
 
 Build the static Storybook with `bun run --cwd packages/ui build-storybook`. Use the owning package's scripts for dashboard or workbench stories; their ports and setup differ.
 

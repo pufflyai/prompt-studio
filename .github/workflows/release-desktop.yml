@@ -126,7 +126,16 @@ jobs:
 
       - name: Test native DMG attachment cleanup
         if: matrix.platform == 'darwin'
-        run: bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts
+        run: bun scripts/ci/run-priority-tests.ts p1 --scope @pstdio/desktop --runner bun --prebuilt
+
+      - name: Run registered native Bun quarantine once
+        if: matrix.platform == 'darwin'
+        continue-on-error: true
+        run: bun scripts/ci/run-quarantined-tests.ts bun --scope @pstdio/desktop --prebuilt
+
+      - name: Require native quarantine execution evidence
+        if: matrix.platform == 'darwin' && !cancelled()
+        run: bun scripts/ci/verify-quarantine-reports.ts bun --scope @pstdio/desktop
 
       - name: Verify release version
         env:

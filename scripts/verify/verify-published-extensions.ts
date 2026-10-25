@@ -1,6 +1,7 @@
 import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
+import { priorityIgnorePatterns, readTestPriorities } from "../ci/test-discovery";
 import { type ApiBaseline, releasedApiBaselines, selectApiBaselines } from "./extension-api-baselines";
 import { freshInstallArgs } from "./fresh-install";
 
@@ -60,7 +61,12 @@ export async function verifyPublishedExtension(root: string, dir: string, releas
       console.log(`${dir}: ${name} ${dependencies[name]} -> ${resolved.version}`);
     }
     await run(destination, ["bun", "check"]);
-    await run(destination, ["bun", "test", "--pass-with-no-tests"]);
+    await run(destination, [
+      "bun",
+      "test",
+      "--pass-with-no-tests",
+      ...priorityIgnorePatterns(readTestPriorities()).map((pattern) => `--path-ignore-patterns=${pattern}`),
+    ]);
     const packagePath = join(destination, "package.json");
     const manifest = await Bun.file(packagePath).json();
     const baselines = selectApiBaselines(manifest.engines.pstdio, releases, manifest.dependencies["@pstdio/sdk"]);

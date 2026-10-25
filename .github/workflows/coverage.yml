@@ -33,7 +33,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - run: bun test scripts/badges/coverage-badge.test.ts scripts/badges/coverage-report.test.ts
+      - run: bun test scripts/badges/coverage-badge.p0.test.ts scripts/badges/coverage-report.p0.test.ts
 
   measure:
     if: github.event_name != 'pull_request'

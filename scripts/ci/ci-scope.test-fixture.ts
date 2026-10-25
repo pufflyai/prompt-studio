@@ -1,0 +1,28 @@
+export const scopeFixture = () => ({
+  event: "pull_request",
+  labels: [] as string[],
+  changedFiles: ["packages/example/src/value.ts"],
+  packages: [
+    { name: "example", dir: "packages/example", dependencies: [] },
+    { name: "pstdio-api", dir: "packages/pstdio-api", dependencies: ["example"] },
+    { name: "pstdio-db", dir: "packages/pstdio-db", dependencies: [] },
+    { name: "@pstdio/ui", dir: "packages/ui", dependencies: [] },
+    { name: "pstdio-dashboard", dir: "packages/pstdio-dashboard", dependencies: ["@pstdio/ui"] },
+    { name: "storybook-tests", dir: "packages/storybook-tests", dependencies: ["@pstdio/ui", "pstdio-dashboard"] },
+    { name: "e2e", dir: "packages/e2e", dependencies: ["example", "pstdio-dashboard"] },
+  ],
+  tests: [
+    "packages/example/src/value.p0.test.ts",
+    "packages/pstdio-api/src/state.p0.test.ts",
+    "packages/pstdio-api/src/isolation.p1.test.ts",
+    "packages/pstdio-db/src/records.p1.test.ts",
+    "packages/e2e/src/ui/startup.p1.spec.ts",
+    "packages/e2e/src/ui/session.p1.spec.ts",
+    "packages/e2e/src/ui/feature.p2.spec.ts",
+    "packages/e2e/src/packaged/startup.p1.test.ts",
+    "packages/e2e/src/packaged/feature.p2.test.ts",
+    "packages/storybook-tests/src/ui/ui/menu.p1.spec.ts",
+    "packages/storybook-tests/src/ui/ui/menu-permutations.p2.spec.ts",
+    "packages/storybook-tests/src/ui/pstdio-dashboard/navigation.p1.spec.ts",
+  ],
+});
