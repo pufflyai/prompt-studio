@@ -21,8 +21,8 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "^0.45.0",
-    "@pstdio/ui": "0.45.0",
+    "@pstdio/sdk": "0.46.0-preview.sha-a593437a7f44586600c9791575aeef776dc8010b",
+    "@pstdio/ui": "0.46.0-preview.sha-a593437a7f44586600c9791575aeef776dc8010b",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.185.1",
