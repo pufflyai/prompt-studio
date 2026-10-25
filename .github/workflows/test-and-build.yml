@@ -753,6 +753,8 @@ jobs:
           DEBUG: pw:browser
           E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+          # The nightly-home test lists releases; a token avoids the anonymous API rate limit.
+          GH_TOKEN: ${{ github.token }}
         run: bun run --cwd packages/e2e test:packaged:${{ matrix.suite }}
 
       - name: Run quarantined packaged CLI cases
