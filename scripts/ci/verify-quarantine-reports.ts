@@ -30,11 +30,13 @@ if (runner === "bun" || runner === "packaged-bun") {
     const xml = await Bun.file(resolve(root, "test-results/quarantine", packageDir, "results.xml")).text();
     record(packageDir, verifyQuarantineReport(xml, selection.count));
   }
-} else if (runner === "playwright" || runner === "packaged-desktop") {
-  const file =
-    runner === "playwright"
-      ? "packages/e2e/test-results/packaged-browser-quarantine/results.json"
-      : "clients/desktop/test-results/packaged-quarantine-readiness.json";
+} else if (runner === "playwright" || runner === "playwright-ui" || runner === "packaged-desktop") {
+  const files: Record<string, string> = {
+    playwright: "packages/e2e/test-results/packaged-browser-quarantine/results.json",
+    "playwright-ui": "packages/e2e/test-results/ui-quarantine/results.json",
+    "packaged-desktop": "clients/desktop/test-results/packaged-quarantine-readiness.json",
+  };
+  const file = files[runner];
   const report = await Bun.file(resolve(root, file)).json();
   record(
     runner,
@@ -44,5 +46,5 @@ if (runner === "bun" || runner === "packaged-bun") {
     ),
   );
 } else {
-  throw new Error("Choose bun, packaged-bun, playwright or packaged-desktop quarantine reports.");
+  throw new Error("Choose bun, packaged-bun, playwright, playwright-ui or packaged-desktop quarantine reports.");
 }
