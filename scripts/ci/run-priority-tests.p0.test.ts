@@ -21,6 +21,21 @@ test("prebuilt priority runs preserve the binary selected by the caller", async 
        test("selected artifact reaches the test process", () => expect(process.env.E2E_PACKAGED_BINARY_PATH).toBe(${JSON.stringify(binary)}));`,
     );
     execFileSync("git", ["init", "--quiet"], { cwd: root });
+    execFileSync(
+      "git",
+      [
+        "-c",
+        "user.name=Fixture",
+        "-c",
+        "user.email=fixture@example.test",
+        "commit",
+        "--allow-empty",
+        "--quiet",
+        "-m",
+        "fixture",
+      ],
+      { cwd: root },
+    );
     const child = Bun.spawn([process.execPath, join(scripts, "run-priority-tests.ts"), "p0", "--prebuilt"], {
       cwd: root,
       env: { ...process.env, E2E_PACKAGED_BINARY_PATH: binary },

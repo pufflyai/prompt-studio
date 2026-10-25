@@ -24,6 +24,11 @@ on:
         type: string
         default: ""
         description: Optional exact merged source for full diagnostics
+      release_channel:
+        type: choice
+        options: [stable, nightly]
+        default: stable
+        description: Source diagnostic policy; nightly also measures coverage and publishes no release
   workflow_call:
     inputs:
       profile:
@@ -76,6 +81,8 @@ jobs:
       package_matrix: ${{ steps.scope.outputs.packageMatrix }}
       required_jobs: ${{ steps.scope.outputs.requiredJobs }}
       production: ${{ steps.scope.outputs.production }}
+      source_coverage: ${{ steps.scope.outputs.sourceCoverage }}
+      coverage_artifacts: ${{ steps.scope.outputs.coverageArtifacts }}
       component_checks: ${{ steps.scope.outputs.componentChecks }}
       sdk_api_report: ${{ steps.scope.outputs.sdkApiReport }}
       gate_plan: ${{ steps.scope.outputs.gatePlan }}
@@ -231,6 +238,7 @@ jobs:
     env:
       CI_PRIORITY: P0
       GH_TOKEN: ${{ github.token }}
+      CI_SOURCE_COVERAGE: ${{ needs.scope.outputs.source_coverage == 'true' && '1' || '0' }}
   integration_contracts:
     name: integration_contracts_${{ matrix.priority }} (${{ matrix.package }})
     needs: scope
@@ -288,6 +296,7 @@ jobs:
         include: ${{ fromJSON(needs.scope.outputs.bun_contract_matrix) }}
     env:
       CI_PRIORITY: ${{ matrix.priority }}
+      CI_SOURCE_COVERAGE: ${{ needs.scope.outputs.source_coverage == 'true' && '1' || '0' }}
       TEST_PRIORITIES: ${{ matrix.priority }}
       GH_TOKEN: ${{ github.token }}
       CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
@@ -370,6 +379,7 @@ jobs:
         run: git diff --exit-code
     env:
       CI_PRIORITY: ${{ matrix.priority }}
+      CI_SOURCE_COVERAGE: ${{ needs.scope.outputs.source_coverage == 'true' && '1' || '0' }}
       TEST_PRIORITIES: ${{ matrix.priority }}
       GH_TOKEN: ${{ github.token }}
       CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
@@ -470,6 +480,7 @@ jobs:
         run: git diff --exit-code
     env:
       CI_PRIORITY: P2
+      CI_SOURCE_COVERAGE: ${{ needs.scope.outputs.source_coverage == 'true' && '1' || '0' }}
       GH_TOKEN: ${{ github.token }}
   windows_database_tests:
     name: windows_database_tests (${{ matrix.package }} ${{ matrix.shard }})
@@ -541,6 +552,7 @@ jobs:
         run: git diff --exit-code
     env:
       CI_PRIORITY: P2
+      CI_SOURCE_COVERAGE: ${{ needs.scope.outputs.source_coverage == 'true' && '1' || '0' }}
       GH_TOKEN: ${{ github.token }}
   storybooks:
     name: storybooks_${{ matrix.priority }} (${{ matrix.package }})
@@ -1245,6 +1257,40 @@ jobs:
       platforms: ${{ needs.scope.outputs.toolchain_matrix }}
       priority: P2
       gate_plan: ${{ needs.scope.outputs.gate_plan }}
+  source_coverage:
+    needs: [scope, package_checks, bun_contracts, database_tests, windows_test_and_build, windows_database_tests]
+    if: >-
+      !cancelled() && needs.scope.outputs.source_coverage == 'true' &&
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Download measured source producers from this attempt
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '{package_checks,bun-contract-results,database_tests,windows_test_and_build,windows_database_tests}-*-attempt-${{ github.run_attempt }}'
+          path: test-results/coverage-inputs
+      - name: Require matching complete source evidence and merge line hits
+        env:
+          CI_COVERAGE_SOURCE_SHA: ${{ inputs.source_sha || github.sha }}
+          CI_COVERAGE_ARTIFACTS: ${{ needs.scope.outputs.coverage_artifacts }}
+        run: bun scripts/badges/nightly-source-coverage.ts test-results/coverage-inputs test-results/coverage/coverage.json
+      - name: Preserve the full nightly source measurement
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-source-coverage-attempt-${{ github.run_attempt }}
+          path: test-results/coverage/*.json
+          if-no-files-found: error
   ci_passed:
     if: ${{ !cancelled() }}
     needs:
