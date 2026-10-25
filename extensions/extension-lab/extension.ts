@@ -11,10 +11,10 @@ import { commands } from "./src/state-commands";
 const examples = [scribble, boombox, zipline, pigeon, kiln, marmalade];
 export default defineExtension({
   defaultLocale: "en",
-  commands: [...Object.values(commands), ...Object.values(marmaladeCommands)],
+  commands: [...Object.values(commands), ...Object.values(marmaladeCommands), ...scribble.commands],
   statusBarItems: [...scribble.statusBarItems, ...zipline.statusBarItems, ...kiln.statusBarItems],
   modes: examples.flatMap((example) => example.modes),
-  placements: [...boombox.placements, ...kiln.placements],
+  placements: [...scribble.placements, ...boombox.placements, ...kiln.placements],
   themes: examples.flatMap((example) => example.themes),
   resourceKinds: examples.flatMap((example) => example.resourceKinds),
   views: examples.flatMap<ViewContribution>((example) => example.views),

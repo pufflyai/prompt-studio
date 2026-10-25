@@ -11,15 +11,15 @@ import type { ExampleName } from "./state-defaults";
 import { examplesChanged } from "./state-events";
 import type { ExampleProps } from "./view-context";
 
-export { usePageResource } from "./view-context";
-
 export const createExampleStore = <State extends object>(name: ExampleName, initial: State) => {
   let session: WebviewEditingSession<State> | undefined;
   const listeners = new Set<() => void>();
   let onError: (error: unknown) => void = () => {};
+  let refreshCurrent = async () => {};
   const getState = () => session?.getSnapshot().value ?? initial;
   return {
     getState,
+    refresh: () => refreshCurrent(),
     getPendingCount: () => {
       const snapshot = session?.getSnapshot();
       return snapshot ? snapshot.revision - snapshot.savedRevision : 0;
@@ -63,12 +63,13 @@ export const createExampleStore = <State extends object>(name: ExampleName, init
         onReady?.();
       })();
       void ready.catch(onError);
+      const refresh = async () => {
+        await ready;
+        if (active) await connection?.refresh(read);
+      };
+      refreshCurrent = refresh;
       const unsubscribe = client.events.subscribe(examplesChanged, () => {
-        void ready
-          .then(() => {
-            if (active) return connection?.refresh(read);
-          })
-          .catch(onError);
+        void refresh().catch(onError);
       });
       return () => {
         active = false;
