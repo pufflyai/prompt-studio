@@ -41,7 +41,6 @@ jobs:
     name: verify (${{ matrix.platform_pkg }})
     env:
       CI_PRIORITY: ${{ inputs.priority }}
-      VERIFY_PROFILE: ${{ inputs.profile }}
       CI_GATE_PLAN: ${{ inputs.gate_plan }}
       GH_TOKEN: ${{ github.token }}
     runs-on: ${{ matrix.os }}
