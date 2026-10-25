@@ -197,6 +197,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       const handle: TerminalSessionHandle = {
         id,
         write: (data) => {
+          console.error(`TERMINAL WRITE ${data.byteLength} ${data[0] === 3} CLOSED ${closed}`);
           if (closed) return;
           shellState.onInput(data);
           terminal.write(data);

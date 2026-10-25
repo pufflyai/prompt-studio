@@ -17,6 +17,9 @@ export const runExtensionSmoke = async (input: {
   keepHome?: boolean;
   signal: AbortSignal;
 }) => {
+  const ffi = process.platform === "win32" ? await import("bun:ffi") : undefined;
+  const kernel = ffi?.dlopen("kernel32.dll", {GetStdHandle:{args:["u32"],returns:"u64"},GetConsoleMode:{args:["u64","ptr"],returns:"bool"}});
+  const mode = new Uint32Array(1);
   const result: SmokeResult = {
     host: { version: CLI_VERSION },
     result: "failed",
@@ -36,6 +39,7 @@ export const runExtensionSmoke = async (input: {
     started = performance.now();
     process.stderr.write(`Extension smoke: ${name}\n`);
     process.stderr.write(`SIGNAL LISTENERS ${process.listenerCount("SIGINT")} STDIN ${process.stdin.isTTY}\n`);
+    if (kernel && ffi) {kernel.symbols.GetConsoleMode(kernel.symbols.GetStdHandle(0xfffffff6),ffi.ptr(mode));process.stderr.write(`CONSOLE MODE ${mode[0]} RAW ${process.stdin.isRaw}\n`);}
   };
   try {
     const { chromium } = loadSmokePlaywright();
