@@ -10,8 +10,5 @@ export function isDay(value: string) {
   return dayPattern.test(value) && !Number.isNaN(time) && toDay(new Date(time).toISOString()) === value;
 }
 
-export const addDays = (day: string, count: number) =>
-  toDay(new Date(Date.parse(`${day}T00:00:00Z`) + count * dayMs).toISOString());
-
 export const daysBetween = (from: string, to: string) =>
   Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / dayMs);
