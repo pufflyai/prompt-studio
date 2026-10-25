@@ -103,7 +103,11 @@ describe("performance endpoint", () => {
     const path = endpointPath();
     const endpoint = await openPerformanceEndpoint(path, () => ({ ok: true }));
     try {
-      const identity = execFileSync("whoami", ["/user", "/fo", "csv", "/nh"], { encoding: "utf8" });
+      const identity = execFileSync(
+        join(process.env.SystemRoot ?? "C:\\Windows", "System32", "whoami.exe"),
+        ["/user", "/fo", "csv", "/nh"],
+        { encoding: "utf8" },
+      );
       const sid = identity.match(/S-1-5-\d+(?:-\d+)+/)![0]!;
       const targets = [
         [dirname(path), "Directory"],
