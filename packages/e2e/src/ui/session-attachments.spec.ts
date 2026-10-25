@@ -55,10 +55,7 @@ const openNewSessionDraft = async (page: import("@playwright/test").Page) => {
   await expect(dialog).toBeVisible();
   await dialog.getByRole("textbox").fill("> open sessions");
   await page.locator("text=Open sessions").first().click();
-  await page
-    .locator('[data-workbench-panel="main"]')
-    .getByRole("button", { name: "New session", exact: true })
-    .click();
+  await page.locator('[data-workbench-panel="main"]').getByRole("button", { name: "New session", exact: true }).click();
 };
 
 const fetchConversationMessages = async (request: import("@playwright/test").APIRequestContext, sessionId: string) => {
