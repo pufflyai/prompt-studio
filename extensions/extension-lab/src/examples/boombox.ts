@@ -1,5 +1,5 @@
 import { defineExtension, definePlacement } from "@pstdio/sdk/extensions";
-import { defineExample, webview } from "../definition";
+import { definePageExample, webview } from "../definition";
 
 const views = [
   webview("boombox-playlist", "Lazy Sunday"),
@@ -8,17 +8,18 @@ const views = [
   webview("boombox-rail", "Library"),
   webview("boombox-queue", "Queue"),
 ];
-const example = defineExample({
+const example = definePageExample({
   name: "boombox",
   label: "Boombox",
   icon: "Radio",
   primary: views[0].ref,
+  canFullscreen: false,
+  params: { selection: { type: "string" } },
   chrome: { nav: views[2].ref, sidenav: false, activity: views[3].ref },
   regionSettings: {
     side: { size: { defaultPx: 300, minPx: 240, maxPx: 440 }, canClose: false, floatable: false, showHeader: false },
     secondary: { size: { defaultPx: 88, minPx: 88, maxPx: 88 }, canClose: false, resizable: false, showHeader: false },
   },
-  initialResource: true,
 });
 export default defineExtension({
   placements: [
@@ -38,7 +39,7 @@ export default defineExtension({
   modes: [example.mode],
   themes: [example.theme],
   resourceKinds: [example.resourceKind],
-  pages: [example.homePage, example.page],
+  pages: [example.page],
   views: [...views],
   navigationItems: [example.navigation],
 });

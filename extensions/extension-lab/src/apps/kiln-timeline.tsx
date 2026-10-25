@@ -1,9 +1,9 @@
 import { Box, Button, chakra, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react";
-import { useExampleStore, usePageResource } from "../example-store";
+import { useExampleStore } from "../example-store";
 import { ExampleIcon } from "../icon";
-import type { ExampleHost } from "../view-context";
+import { type ExampleHost, usePageSelection } from "../view-context";
 import { kilnFrameCount, kilnFrameRate, kilnTracks } from "./kiln-animation";
-import { kilnObjects, kilnPage, kilnResource } from "./kiln-data";
+import { kilnObjects } from "./kiln-data";
 import { kilnStore } from "./kiln-state";
 
 const ticks = [1, 24, 48, 72, 96, 120];
@@ -55,7 +55,7 @@ const KilnPlayback = () => {
 export const KilnTimeline = (props: { host: ExampleHost }) => {
   const { host } = props;
   const state = useExampleStore(kilnStore);
-  const selectedId = usePageResource(host)?.id;
+  const selectedId = usePageSelection(host);
   const timecode = `${String(Math.floor((state.frame - 1) / kilnFrameRate)).padStart(2, "0")}:${String((state.frame - 1) % kilnFrameRate).padStart(2, "0")}`;
 
   return (
@@ -97,7 +97,7 @@ export const KilnTimeline = (props: { host: ExampleHost }) => {
                 px="md"
                 aria-label={`Select ${object.name} animation`}
                 aria-pressed={selectedId === object.id}
-                onClick={() => host.navigate({ kind: "page", page: kilnPage, resource: kilnResource(object) })}
+                onClick={() => host.page.updateParams({ selection: object.id })}
               >
                 <ExampleIcon name={object.icon} color={`${object.tint}.300`} size={13} />
                 <Text>{object.name}</Text>
@@ -191,11 +191,7 @@ export const KilnTimeline = (props: { host: ExampleHost }) => {
                       _focusVisible={{ outline: "2px solid", outlineColor: "border.accent", outlineOffset: "2px" }}
                       onClick={() => {
                         seek(key.frame);
-                        host.navigate({
-                          kind: "page",
-                          page: kilnPage,
-                          resource: kilnResource(object),
-                        });
+                        void host.page.updateParams({ selection: object.id });
                       }}
                     />
                   ))}

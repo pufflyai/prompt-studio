@@ -73,6 +73,7 @@ const boardSettings = {
 export const board = defineView({
   id: "zipline-board",
   title: l10n("views.zipline-board", "My issues"),
+  icon: "ListTodo",
   body: {
     kind: "kanban",
     attributes: boardAttributes,
