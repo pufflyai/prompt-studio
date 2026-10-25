@@ -85,18 +85,14 @@ jobs:
         run: bunx playwright@1.60.0 install chromium --with-deps
       - name: Verify packaged Bun toolchain
         id: toolchain
-        shell: bash
         env:
           PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
-          CI_CHECK_COMMAND: >
-            set -o pipefail
-
-            mkdir -p packages/e2e/test-results/packaged-toolchain
-
-            bun run --cwd scripts verify:packages --profile "$VERIFY_PROFILE" ${{ inputs.artifact_run_id != '' && '--prebuilt' || '' }} 2>&1
-            | tee packages/e2e/test-results/packaged-toolchain/verification.log
-        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
-          "$CI_CHECK_COMMAND"
+        # Git Bash pipelines give Windows children an inherited Ctrl+C-ignore attribute.
+        # Use the native shell and direct arguments so real terminal interrupts reach the CLI.
+        run: >-
+          bun scripts/ci/run-ci-checks.ts --observe-peers --
+          bun run --cwd scripts verify:packages --profile "${{ inputs.profile }}"
+          ${{ inputs.artifact_run_id != '' && '--prebuilt' || '' }}
       - name: Run quarantined Windows compiled CLI cases
         if: inputs.profile == 'full' && runner.os == 'Windows' && !cancelled() && steps.toolchain.outcome == 'success'
         continue-on-error: true
