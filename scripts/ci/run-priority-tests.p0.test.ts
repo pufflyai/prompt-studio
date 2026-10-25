@@ -1,26 +1,17 @@
 import { expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { copyCiRuntime } from "./copy-ci-runtime.test-fixture";
 
 test("prebuilt priority runs preserve the binary selected by the caller", async () => {
   const root = await mkdtemp(join(tmpdir(), "priority-prebuilt-"));
   try {
     const scripts = join(root, "scripts/ci");
     const owner = join(root, "packages/fixture");
-    await mkdir(scripts, { recursive: true });
+    await copyCiRuntime(root);
     await mkdir(join(owner, "src"), { recursive: true });
-    for (const file of [
-      "run-priority-tests.ts",
-      "priority-plan.ts",
-      "run-ci-checks.ts",
-      "p1-fail-fast.ts",
-      "test-policy.ts",
-      "test-discovery.ts",
-      "workspace-packages.ts",
-    ])
-      await cp(join(import.meta.dir, file), join(scripts, file));
     await writeFile(join(root, "package.json"), JSON.stringify({ workspaces: ["packages/*"] }));
     await writeFile(join(owner, "package.json"), JSON.stringify({ name: "fixture", scripts: { test: "bun test" } }));
     const binary = join(root, "selected artifact", process.platform === "win32" ? "pstdio.exe" : "pstdio");

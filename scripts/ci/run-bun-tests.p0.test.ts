@@ -1,26 +1,17 @@
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { copyCiRuntime } from "./copy-ci-runtime.test-fixture";
 
 const registeredFixture = async (source?: string) => {
   const root = await mkdtemp(join(tmpdir(), "registered-empty-"));
   const scripts = join(root, "scripts/ci");
   const cwd = join(root, "packages/fixture");
-  await mkdir(scripts, { recursive: true });
+  await copyCiRuntime(root);
   await mkdir(cwd, { recursive: true });
-  for (const name of [
-    "run-bun-tests.ts",
-    "bun-test-evidence.ts",
-    "test-quarantine.ts",
-    "quarantine-reports.ts",
-    "quarantine-retries.ts",
-    "test-policy.ts",
-    "test-discovery.ts",
-  ])
-    await cp(join(import.meta.dir, name), join(scripts, name));
   await writeFile(
     join(scripts, "test-quarantine.json"),
     JSON.stringify([
@@ -89,14 +80,6 @@ test.each([
       expect(process.env.PSTDIO_DEFAULT_EXTENSIONS).toBe(${JSON.stringify(defaults)});
     });`);
   try {
-    for (const name of [
-      "run-quarantined-tests.ts",
-      "verify-quarantine-reports.ts",
-      "workspace-packages.ts",
-      "run-ci-checks.ts",
-      "p1-fail-fast.ts",
-    ])
-      await cp(join(import.meta.dir, name), join(fixture.root, "scripts/ci", name));
     await writeFile(join(fixture.root, "package.json"), JSON.stringify({ workspaces: ["packages/*"] }));
     await writeFile(
       join(fixture.cwd, "package.json"),
