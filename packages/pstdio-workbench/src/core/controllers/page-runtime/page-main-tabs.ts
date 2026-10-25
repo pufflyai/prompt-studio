@@ -10,6 +10,7 @@ import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/pag
 import { pageResourceContextKey } from "../../registries/pages/page-resource-context";
 import { ownsStaticPageInstance } from "../../registries/pages/page-state-key";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
+import { collectionMainOwner } from "./collection-main-owner";
 
 type State = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
 
@@ -78,6 +79,12 @@ const mainTabNeedsCache = (widget: WorkbenchWidgetPlacement, state: State, chang
   );
 };
 
+/** True when a tab is content of the active page and resource, not one a shared tray retained. */
+export const belongsToActivePageContext = (widget: WorkbenchWidgetPlacement, state: State) =>
+  widget.placementIdentity?.kind === "page" &&
+  widget.placementIdentity.pageId === state.activePageId &&
+  !mainTabNeedsCache(widget, state, false);
+
 const restoreMainTabs = (input: PageTabsInput, current: State["placements"], shared: ReadonlySet<string>) => {
   const { state, previous, layout, pageLayout } = input;
   const changingPage = pageContextChanged(state, previous);
@@ -92,11 +99,17 @@ const restoreMainTabs = (input: PageTabsInput, current: State["placements"], sha
     if (shared.has(key)) continue;
     const existing = placements.find((entry) => placementIdentityKey(entry.identity) === key);
     placements = placements.filter((entry) => placementIdentityKey(entry.identity) !== key);
+    const value = activated.has(key) && existing ? existing.value : refreshPageTab(input, widget);
     placements.push({
       identity,
       region: "main",
       order,
-      value: activated.has(key) && existing ? existing.value : refreshPageTab(input, widget),
+      // Another page's primary view is an ordinary tab here. As a Location it would
+      // own this page's resource context and hide the page's own tabs.
+      value:
+        value.role === "location" && identity.kind === "page" && identity.pageId !== state.activePageId
+          ? { ...value, role: "sub-panel" as const }
+          : value,
     });
   }
   return placements;
@@ -167,7 +180,15 @@ export const scopePageMainTabs = (input: PageTabsInput) => {
   const changingPage = pageContextChanged(state, previous);
   const sameMode = state.projectId === previous.projectId && state.activeModeId === previous.activeModeId;
   const sharedLayout = sameMode ? layout : modeLayout;
-  const departing = previous.activePageId ? sharedKeys(layout, true) : new Set<string>();
+  const pages = Object.values(state.pages);
+  const owner = collectionMainOwner(state.pages[state.activePageId], pages);
+  // A collection and its detail routes keep one Main tray, so their tabs never depart it.
+  const sameTray =
+    sameMode &&
+    owner?.main.kind === "panels" &&
+    !owner.resource &&
+    owner === collectionMainOwner(previous.pages[previous.activePageId ?? ""], pages);
+  const departing = previous.activePageId && !sameTray ? sharedKeys(layout, true) : new Set<string>();
   const shared = sharedKeys(sharedLayout, false);
   const activated = new Set(state.reconciliation.activate.map((entry) => placementIdentityKey(entry.identity)));
   const retained = state.placements.filter((entry) => {
