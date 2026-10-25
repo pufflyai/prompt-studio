@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { getExtensionApiVersionError } from "pstdio-extensions";
+import { traceSetupPhase } from "../../lib/setup-phase";
 import type { PruneProjectExtensionInstancesInput, SyncInstalledSourceInput } from "../../services/extension-service";
 import { hashExtensionSource, loadExtensionSource, readExtensionSourceMetadata } from "./extension-runtime";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
@@ -67,7 +68,7 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
 
     let loaded: Awaited<ReturnType<typeof loadExtensionSource>>;
     try {
-      loaded = await load(sourcePath);
+      loaded = await traceSetupPhase("extension.discovery.load", { extension: entry.name }, () => load(sourcePath));
     } catch (error) {
       try {
         const metadataOnly = readExtensionSourceMetadata(sourcePath);
@@ -81,13 +82,16 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
     }
 
     presentSourcePaths.push(sourcePath);
+    const sourceHash = await traceSetupPhase("extension.discovery.hash", { extension: entry.name }, async () =>
+      hash(sourcePath),
+    );
     discovered.push({
       installName: entry.name,
       displayName: loaded.metadata.displayName,
       extensionId: loaded.metadata.id,
       manifest: loaded.manifest,
       name: loaded.metadata.name,
-      sourceHash: hash(sourcePath),
+      sourceHash,
       sourcePath,
       version: loaded.metadata.version,
     });
@@ -108,10 +112,15 @@ const syncSnapshotForProject = async (
   const synced: SyncedInstalledExtension[] = [];
 
   for (const extension of discovered) {
-    const result = await deps.extensionService.syncInstalledSourceForProject({
-      ...extension,
-      projectId: deps.projectId,
-    });
+    const result = await traceSetupPhase(
+      "extension.discovery.sync",
+      { extension: extension.installName, project_id: deps.projectId },
+      () =>
+        deps.extensionService.syncInstalledSourceForProject({
+          ...extension,
+          projectId: deps.projectId,
+        }),
+    );
     if (result === null) continue;
     // The hash of the folder as it is on disk, which the caller compares against the adopted hash.
     synced.push({ installName: extension.installName, sourceHash: extension.sourceHash ?? null });
