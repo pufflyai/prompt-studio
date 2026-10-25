@@ -44,6 +44,11 @@ jobs:
           artifact_id=$(jq -r --arg name "nightly-source-coverage-attempt-$attempt" \
             '[.[].artifacts[] | select(.name == $name and .expired == false)] |
             if length == 0 then "" elif length == 1 then .[0].id else error("Ambiguous nightly coverage") end' artifacts.json)
+          # Other releases have no measurement and skip, but a requested run must publish.
+          if [ -z "$artifact_id" ] && [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "::error::Run $SOURCE_RUN_ID has no unexpired nightly-source-coverage-attempt-$attempt artifact."
+            exit 1
+          fi
           echo "run_id=$(jq -r '.id' run.json)" >> "$GITHUB_OUTPUT"
           echo "artifact_id=$artifact_id" >> "$GITHUB_OUTPUT"
 

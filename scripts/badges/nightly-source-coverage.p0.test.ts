@@ -69,6 +69,25 @@ test("each producer needs execution evidence or an explicit empty selection", ()
   }
 });
 
+test("evidence from packages in hidden folders counts toward its producer's selection", () => {
+  const root = mkdtempSync(join(tmpdir(), "nightly-hidden-source-"));
+  const reportedFiles = [".pstdio/extensions/example/src/value.p0.test.ts"];
+  try {
+    writeProducer(
+      root,
+      "package-checks/bun/.pstdio/extensions/example/job",
+      evidence({ packageDir: ".pstdio/extensions/example", reportedFiles }),
+    );
+    writeFileSync(
+      join(root, "package-checks/unit-results.json"),
+      JSON.stringify({ sourceSha: source, outcome: "success", selectedFiles: reportedFiles }),
+    );
+    expect(collectNightlySourceCoverage(root, root, source, ["package-checks"])).toHaveLength(1);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("an API aggregate cannot hide a missing selected file's process evidence", () => {
   const root = mkdtempSync(join(tmpdir(), "nightly-api-source-"));
   const apiEvidence = evidence({

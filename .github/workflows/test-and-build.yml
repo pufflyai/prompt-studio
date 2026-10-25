@@ -223,6 +223,7 @@ jobs:
           name: package_checks-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
           path: test-results/ci
           if-no-files-found: warn
+          include-hidden-files: true
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
         run: git diff --exit-code
@@ -327,6 +328,7 @@ jobs:
           name: bun-contract-results-${{ matrix.priority }}-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
           path: test-results/ci
           if-no-files-found: warn
+          include-hidden-files: true
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
         run: git diff --exit-code
@@ -475,6 +477,7 @@ jobs:
           name: windows_test_and_build-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
           path: test-results/ci
           if-no-files-found: warn
+          include-hidden-files: true
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
         run: git diff --exit-code
