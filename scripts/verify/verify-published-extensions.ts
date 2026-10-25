@@ -1,7 +1,7 @@
 import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { releasedApiBaselines, selectApiBaselines } from "./extension-api-baselines";
+import { type ApiBaseline, releasedApiBaselines, selectApiBaselines } from "./extension-api-baselines";
 import { freshInstallArgs } from "./fresh-install";
 
 interface ExtensionManifest {
@@ -46,7 +46,7 @@ async function run(dir: string, command: string[]) {
   if ((await child.exited) !== 0) throw new Error(`${command.join(" ")} failed`);
 }
 
-export async function verifyPublishedExtension(root: string, dir: string) {
+export async function verifyPublishedExtension(root: string, dir: string, releases: ApiBaseline[]) {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "pstdio-published-extension-"));
   const started = performance.now();
   try {
@@ -63,7 +63,7 @@ export async function verifyPublishedExtension(root: string, dir: string) {
     await run(destination, ["bun", "test", "--pass-with-no-tests"]);
     const packagePath = join(destination, "package.json");
     const manifest = await Bun.file(packagePath).json();
-    const baselines = selectApiBaselines(manifest.engines.pstdio, releasedApiBaselines(root));
+    const baselines = selectApiBaselines(manifest.engines.pstdio, releases, manifest.dependencies["@pstdio/sdk"]);
     for (const baseline of baselines) {
       console.log(`${dir}: checking API ${baseline.api} with SDK ${baseline.sdk}`);
       const pinned = { ...manifest, dependencies: { ...manifest.dependencies, "@pstdio/sdk": baseline.sdk } };
@@ -91,10 +91,11 @@ export async function verifyPublishedExtension(root: string, dir: string) {
 
 if (import.meta.main) {
   const root = resolve(import.meta.dir, "../..");
+  const releases = await releasedApiBaselines(root);
   let failed = false;
   for (const dir of await publishedExtensionDirs(root)) {
     try {
-      await verifyPublishedExtension(root, dir);
+      await verifyPublishedExtension(root, dir, releases);
     } catch (error) {
       console.error(error instanceof Error ? error.message : error);
       failed = true;

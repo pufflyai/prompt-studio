@@ -8,6 +8,8 @@
     "coverage:badge": "bun --cwd .. ./scripts/badges/coverage-badge.ts",
     "lint": "bun run typecheck && biome check .",
     "release:notes": "bun --cwd .. ./scripts/release/release-notes.ts",
+    "release:packages:version": "bun --cwd .. ./scripts/release/package-preview-version.ts",
+    "release:packages:publish": "bun --cwd .. ./scripts/release/package-preview-publish.ts",
     "release:checksums": "bun --cwd .. ./scripts/release/generate-checksums.ts",
     "release:extension-lockfiles:sync": "bun --cwd .. ./scripts/release/sync-extension-lockfiles.ts",
     "release:lockfile:sync": "bun --cwd .. ./scripts/release/sync-lockfile-workspace-dependencies.ts",
