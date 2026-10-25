@@ -12,7 +12,7 @@
   },
   "scripts": {
     "lint": "bun check",
-    "test": "bun ../../../../scripts/ci/run-bun-tests.ts"
+    "test": "bun test"
   },
   "dependencies": {
     "@pstdio/sdk": "0.43.1"
