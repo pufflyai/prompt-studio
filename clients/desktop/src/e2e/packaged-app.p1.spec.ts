@@ -1,0 +1,225 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { expect } from "@playwright/test";
+import { test } from "../testing/packaged-fixture";
+import { allowPageClose } from "./lifecycle-actions";
+import {
+  createPackagedHome,
+  desktopVersion,
+  disposePackagedApp,
+  launchPackagedApp,
+  type PackagedApp,
+  readDescriptor,
+  removePackagedHome,
+  runPackagedCli,
+  waitForDescriptor,
+  waitForExit,
+} from "./packaged-app-helpers";
+import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
+import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
+
+// Startup, warm attach, and recovery timings are benchmarks in packaged-launch.p3.bench.ts.
+test("starts without editors and serves both authenticated transport paths", { tag: "@essential" }, async ({
+  browserName: _browserName,
+}) => {
+  const home = createPackagedHome();
+  let app: PackagedApp | null = null;
+  try {
+    app = await launchPackagedApp(home);
+    const startupEditors = await app.page.evaluate(() =>
+      performance.getEntriesByType("resource").filter((entry) => entry.name.includes("/monaco-browser-")),
+    );
+    expect(startupEditors).toEqual([]);
+    expect(new URL(app.runtime.origin).hostname).toBe("127.0.0.1");
+    expect(app.runtime.ownerType).toBe("desktop");
+
+    expect((await fetch(`${app.runtime.origin}/runtime/ready`)).status).toBe(401);
+    expect(
+      (
+        await fetch(`${app.runtime.origin}/v1/projects`, {
+          headers: { authorization: `Bearer ${app.runtime.token}`, origin: "https://example.invalid" },
+        })
+      ).status,
+    ).toBe(403);
+
+    await createPackagedProject(app, "Packaged transport project");
+    // A later project must discover the defaults installed for the first one too.
+    const nextProject = await createPackagedProject(app, "Packaged second project");
+    await openPackagedProject(app.page, nextProject);
+    await expect(app.page.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
+    expect(await app.page.evaluate(() => document.cookie)).toBe("");
+    expect((await app.page.content()).includes(app.runtime.token)).toBe(false);
+    expect(app.page.url().includes(app.runtime.token)).toBe(false);
+    expect(
+      await app.page.evaluate(() => {
+        const encodedConfig = document.querySelector<HTMLMetaElement>('meta[name="pstdio-config"]')?.content;
+        return encodedConfig ? (JSON.parse(decodeURIComponent(encodedConfig)) as { version?: string }).version : null;
+      }),
+    ).toBe(desktopVersion);
+
+    const list = await runPackagedCli(home, ["projects", "list"]);
+    expect(list.exitCode).toBe(0);
+    expect(list.stdout).toContain("Packaged transport project");
+
+    await app.finishTrace();
+    const close = runPackagedCli(home, ["close"]);
+    await waitForExit(app.child);
+    expect(await close).toMatchObject({ exitCode: 0, stdout: expect.stringContaining("Runtime stopped.") });
+    expect(existsSync(join(home, "runtime.json"))).toBe(false);
+  } finally {
+    await disposePackagedApp(app);
+    await removePackagedHome(home);
+  }
+});
+
+test("promotes ownership, detaches, and preserves data through a warm relaunch", async ({
+  browserName: _browserName,
+}) => {
+  const home = createPackagedHome();
+  let first: PackagedApp | null = null;
+  let second: PackagedApp | null = null;
+  try {
+    first = await launchPackagedApp(home);
+    const created = await createPackagedProject(first, "Relaunch persistence project");
+    const projectId = created.id;
+    if (!projectId) throw new Error("Packaged project creation did not return an id");
+    await openPackagedProject(first.page, { id: projectId, name: "Relaunch persistence project" });
+    await first.page.getByRole("option", { name: "Sessions", exact: true }).click();
+    await expect(first.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+    await expect(first.page.getByRole("button", { name: "Show Side Panel", exact: true })).toBeVisible();
+    const selectedProjectKey = "dashboard-wb2:selected-project:global";
+    const pageLocationKey = `dashboard-wb2:page-location:${projectId}`;
+    await expect
+      .poll(
+        async () =>
+          (await first!.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState())).values[selectedProjectKey],
+      )
+      .toBe(projectId);
+    const { values: firstValues } = await first.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
+    const pageLocation = firstValues[pageLocationKey];
+    expect(JSON.parse(pageLocation ?? "null")).toMatchObject({
+      version: 1,
+      location: { page: { id: "session-composer", kind: "page" } },
+    });
+    // The opposite of the default proves the restored theme is the saved choice, not the system mode.
+    const chosenTheme = await test.step("Choose the theme opposite to the one shown", async () => {
+      const page = first!.page;
+      const theme =
+        (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark" ? "pstdio-light" : "pstdio-dark";
+      await page.evaluate(() =>
+        (
+          window as unknown as {
+            __pstdioDashboardWorkbench: { commands: { executeCommand: (id: string) => Promise<unknown> } };
+          }
+        ).__pstdioDashboardWorkbench.commands.executeCommand("workbench.action.changeTheme"),
+      );
+      await page.getByRole("option", { name: theme }).click();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await expect
+        .poll(() => page.evaluate(() => window.promptStudioDesktop.getWorkbenchState()))
+        .toMatchObject({ values: { "theme-preference": theme } });
+      return theme;
+    });
+
+    const originalPid = first.runtime.pid;
+    await test.step("Promote the running sidecar through the packaged CLI", async () => {
+      expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
+    });
+    const persistent = await test.step("Read the persistent runtime descriptor", () =>
+      waitForDescriptor(home, (descriptor) => descriptor.ownerType === "persistent"));
+    expect(persistent.pid).toBe(originalPid);
+
+    await test.step("Save the first window trace before Quit", () => first!.finishTrace());
+    await test.step("Change the Side Panel and immediately Quit the first desktop window", () =>
+      allowPageClose(first!.page, () =>
+        first!.page.evaluate(() => {
+          const { sidePanel } = (
+            window as unknown as { __pstdioDashboardWorkbench: { sidePanel: { setMode(mode: "attached"): void } } }
+          ).__pstdioDashboardWorkbench;
+          sidePanel.setMode("attached");
+          void window.promptStudioDesktop.quitApp();
+        }),
+      ));
+    await test.step("Wait for the first desktop process to exit", () => waitForExit(first!.child));
+    await test.step("Probe the persistent runtime after desktop exit", async () => {
+      expect(
+        (
+          await fetch(`${persistent.origin}/runtime/ready`, {
+            headers: { authorization: `Bearer ${persistent.token}` },
+          })
+        ).ok,
+      ).toBe(true);
+    });
+    await test.step("Disconnect from the first desktop browser", () => first!.browser.close());
+    first = null;
+
+    second = await test.step("Relaunch the desktop against the persistent runtime", () => launchPackagedApp(home));
+    expect(second.runtime.pid).toBe(originalPid);
+    expect(second.runtime.ownerType).toBe("persistent");
+    expect(await second.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState())).toMatchObject({
+      values: { [pageLocationKey]: pageLocation, [selectedProjectKey]: projectId },
+    });
+    expect(
+      await second.page.evaluate(
+        async () =>
+          (await (
+            await fetch("/v1/projects", {
+              headers: { authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}` },
+            })
+          ).json()) as Array<{ name: string }>,
+      ),
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Relaunch persistence project" })]));
+    await expect(second.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+    await expect(second.page.getByTestId("workbench-side-panel-attached")).toBeVisible();
+    await test.step("Restore the chosen theme on every desktop screen", async () => {
+      const servedLifecycle = await second!.lifecyclePage.evaluate(() =>
+        fetch("pstdio://lifecycle/index.html").then((response) => response.text()),
+      );
+      expect(servedLifecycle).toContain(`data-theme="${chosenTheme}"`);
+      await expect(second!.page.locator("html")).toHaveAttribute("data-theme", chosenTheme);
+    });
+
+    await second.finishTrace();
+    const close = runPackagedCli(home, ["close"]);
+    await waitForExit(second.child);
+    expect(await close).toMatchObject({ exitCode: 0 });
+    expect(readDescriptor(home)).toBeNull();
+  } finally {
+    await disposePackagedApp(first);
+    await disposePackagedApp(second);
+    await removePackagedHome(home);
+  }
+});
+
+test("restarts a crashed sidecar once and offers Retry after another crash in the same Electron process", async ({
+  browserName: _browserName,
+}) => {
+  const home = createPackagedHome();
+  let app: PackagedApp | null = null;
+  try {
+    app = await launchPackagedApp(home);
+    const lifecycleStartedAt = await app.lifecyclePage.evaluate(() => performance.timeOrigin);
+    crashPackagedRuntime(app.runtime.pid);
+    await waitForAutomaticRecovery(app);
+    const originalInstanceId = app.runtime.instanceId;
+    crashPackagedRuntime(app.runtime.pid);
+    await expect(
+      app.lifecyclePage.getByRole("alert").getByRole("heading", { name: "Prompt Studio needs attention", exact: true }),
+    ).toBeVisible();
+    expect(await app.lifecyclePage.evaluate(() => performance.timeOrigin)).toBe(lifecycleStartedAt);
+
+    await app.lifecyclePage.getByRole("button", { name: "Retry" }).click();
+    const replacement = await waitForDescriptor(home, (descriptor) => descriptor.instanceId !== originalInstanceId);
+    await app.page.waitForURL(`${replacement.origin}/`);
+    await expect(app.page.locator("#root")).not.toBeEmpty();
+    await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
+
+    await app.finishTrace();
+    const close = runPackagedCli(home, ["close"]);
+    await waitForExit(app.child);
+    expect(await close).toMatchObject({ exitCode: 0 });
+  } finally {
+    await disposePackagedApp(app);
+    await removePackagedHome(home);
+  }
+});

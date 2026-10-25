@@ -8,6 +8,7 @@ import type { DataTableRendererContribution } from "./data-table-renderer";
 import type { FileRendererContribution } from "./file-renderer";
 import type { JsonObject, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
+import type { PageSlotRef } from "./pages";
 import type { RendererEventReference } from "./renderer-base";
 import type { ResourceBinding } from "./resource-binding";
 import type { TreeRendererContribution } from "./tree-renderer";
@@ -61,10 +62,10 @@ export interface NavigationTreeContribution extends ContributionDefinition<"navi
 
 /**
  * Initial presence of a static placement inside its owner scope.
- * - "fixed": always open while the owner is active; the user cannot close it.
+ * - "fixed": deprecated alias for "open". Use "open" for closable tabs.
  * - "open": open when the owner has no saved state; the user may close it.
  * - "closed": closed until the user opens it (for example through the Add panel).
- * A saved user choice wins over "open" and "closed" on the next visit.
+ * A saved user choice wins on the next visit. Chrome placements stay visible with their owner.
  */
 export type PlacementPresence = "fixed" | "open" | "closed";
 
@@ -114,10 +115,15 @@ export interface PlacementPresentation {
 }
 
 export interface PlacementContribution extends ContributionDefinition<"placement">, PlacementPresentation {
+  /** Previous page-slot owners. Saved tabs and existing links use this placement instead. */
+  readonly replaces?: readonly PageSlotRef[];
   readonly mode: ModeRef;
   readonly item: PlacementItem;
   readonly region: ExtensionPanelRegion;
   readonly order?: number;
+  /** Regions whose Add menu and default placeholder offer this placement. */
+  readonly addableIn?: readonly ExtensionPanelRegion[];
+  /** @deprecated Use addableIn. This legacy value scopes Add choices, never tab movement. */
   readonly movableTo?: readonly ExtensionPanelRegion[];
 }
 

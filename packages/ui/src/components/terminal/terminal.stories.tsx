@@ -1,6 +1,7 @@
+import { Button, Input, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { expect, fireEvent, spyOn, waitFor } from "storybook/test";
+import { useEffect, useRef, useState } from "react";
+import { expect, fireEvent, spyOn, userEvent, waitFor, within } from "storybook/test";
 import { createScriptedTerminalBridge, type ScriptedTerminalStep } from "./scripted-bridge";
 import { Terminal } from "./terminal";
 import type { TerminalBridge } from "./types";
@@ -39,6 +40,35 @@ const TerminalStory = ({ bridgeFactory, theme }: { bridgeFactory: () => Terminal
       <Terminal bridge={bridge} theme={theme} />
     </TerminalFrame>
   );
+};
+
+const DeferredFocusFixture = () => {
+  const [bridge] = useState(() => createScriptedTerminalBridge({ initial: [{ data: "Focus fixture ready\r\n" }] }));
+  const [generation, setGeneration] = useState(0);
+  const next = useRef<HTMLInputElement | null>(null);
+  // Parent effects run after Terminal requests focus and before its deferred construction.
+  useEffect(() => next.current?.focus(), []);
+  return (
+    <Stack>
+      <Input ref={next} aria-label="Next control" />
+      <Button onClick={() => setGeneration(generation + 1)}>Open another terminal</Button>
+      <TerminalFrame>
+        <Terminal key={generation} bridge={bridge} />
+      </TerminalFrame>
+    </Stack>
+  );
+};
+
+export const DeferredFocusRespectsNewChoice: Story = {
+  tags: ["!manifest", "terminal-deferred-focus"],
+  render: () => <DeferredFocusFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvasElement.querySelector(".xterm-rows")).toHaveTextContent("Focus fixture ready"));
+    expect(canvas.getByRole("textbox", { name: "Next control" })).toHaveFocus();
+    await userEvent.click(canvas.getByRole("button", { name: "Open another terminal" }));
+    await waitFor(() => expect(canvas.getByRole("textbox", { name: "Terminal input" })).toHaveFocus());
+  },
 };
 
 export const Default: Story = {

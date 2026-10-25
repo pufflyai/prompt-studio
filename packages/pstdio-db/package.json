@@ -20,7 +20,7 @@
     "analyze-bundle": "bun build ./src/index.ts --outdir ./dist --target bun --metafile=./dist/bundle-meta.json --metafile-md=./dist/bundle-meta.md",
     "db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
-    "typecheck": "tsc --noEmit --project ./tsconfig.json",
+    "typecheck": "bun check -p ./tsconfig.json",
     "studio": "drizzle-kit studio --config ./drizzle.config.ts",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "3.1152.0",
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/pg": "^8.18.0",
     "drizzle-kit": "^0.31.9",
     "pstdio-relay": "workspace:*",

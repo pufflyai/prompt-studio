@@ -65,7 +65,7 @@ The tree `body` inside `ctx.views.registerView(...)` supplies the tree data:
 - `item.presence: "fixed"` keeps the tree open while the mode is active. The user cannot close it and the Add panel
   does not offer it.
 - `region` puts the placement in the `sidenav` region.
-- `movableTo` lists the regions the user may move the placement to. `["sidenav"]` keeps it where it is.
+- Sidenav sections are navigation chrome. Content tabs use Main, Side, and Secondary and can move between them.
 
 Owners can restrict drop targets in their tree data. The renderer applies that policy; it does not hard-code
 extension or mode ownership rules.

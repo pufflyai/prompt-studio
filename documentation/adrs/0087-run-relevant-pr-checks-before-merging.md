@@ -2,7 +2,7 @@
 
 Proposed: 2026-10-20
 
-Status: Accepted. Supersedes the PR and merge-queue stage decisions in [ADR 0072](0072-gate-merges-on-builds-and-publish-releases-all-or-nothing.md). Its release decisions still apply. Changed on 2026-10-24: merge groups run the full stage; see [Full stage in the merge queue](#full-stage-in-the-merge-queue).
+Status: Superseded on 2026-10-25 by [ADR 0106](0106-prioritize-merge-checks-and-certify-release-candidates.md). The decision below records the previous relevant-PR/full-queue design, including its 2026-10-24 queue change. Preserve it as history; current stage and failure guarantees are in ADR 0106.
 
 ## Context
 

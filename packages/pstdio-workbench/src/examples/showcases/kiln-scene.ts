@@ -3,8 +3,9 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { WorkbenchCore } from "../../core";
 import { kilnTracks, sampleKilnTrack } from "./kiln-animation";
-import { kilnObjects, kilnPage, kilnResource } from "./kiln-data";
+import { kilnObjects } from "./kiln-data";
 import { kilnStore } from "./kiln-state";
+import { showcaseSelection } from "./showcase-store";
 import { kilnTheme } from "./themes";
 
 export const createKilnScene = (canvas: HTMLCanvasElement, workbench: WorkbenchCore) => {
@@ -124,7 +125,7 @@ export const createKilnScene = (canvas: HTMLCanvasElement, workbench: WorkbenchC
       const value = sampleKilnTrack(track.keys, state.frame);
       object[track.property].z += track.property === "rotation" ? THREE.MathUtils.degToRad(value) : value;
     }
-    const selectedId = workbench.getPrimaryResource()?.id ?? kilnObjects[0].id;
+    const selectedId = showcaseSelection(workbench) ?? kilnObjects[0].id;
     const selected = objects.get(selectedId);
     for (const [id, outline] of outlines) outline.visible = id === selectedId;
     selection.visible = Boolean(selected?.visible) && !outlines.has(selectedId);
@@ -143,7 +144,7 @@ export const createKilnScene = (canvas: HTMLCanvasElement, workbench: WorkbenchC
   observer.observe(canvas);
   controls.addEventListener("change", render);
   const unsubscribe = kilnStore.subscribe(sync);
-  const resourceListener = workbench.onDidChangePrimaryResource(sync);
+  const unsubscribeSelection = workbench.pages.store.subscribe(sync);
 
   const pointerStart = new THREE.Vector2();
   const pointerDown = (event: PointerEvent) => pointerStart.set(event.clientX, event.clientY);
@@ -161,7 +162,7 @@ export const createKilnScene = (canvas: HTMLCanvasElement, workbench: WorkbenchC
     let target: THREE.Object3D | undefined = hit?.object;
     while (target && !target.userData.objectId) target = target.parent ?? undefined;
     const object = kilnObjects.find((item) => item.id === target?.userData.objectId);
-    if (object) workbench.pageLocations.navigate({ kind: "page", page: kilnPage, resource: kilnResource(object) });
+    if (object) workbench.pageLocations.updateParams({ selection: object.id });
   };
   canvas.addEventListener("pointerdown", pointerDown);
   canvas.addEventListener("pointerup", select);
@@ -181,7 +182,7 @@ export const createKilnScene = (canvas: HTMLCanvasElement, workbench: WorkbenchC
     dispose: () => {
       observer.disconnect();
       unsubscribe();
-      resourceListener.dispose();
+      unsubscribeSelection();
       canvas.removeEventListener("pointerdown", pointerDown);
       canvas.removeEventListener("pointerup", select);
       controls.dispose();

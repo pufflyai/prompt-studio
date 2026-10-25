@@ -82,6 +82,7 @@ if (notes.extensionId !== "verify.review-provider" || inspector.page.extensionId
   );
   run(consumer, freshInstallArgs(repoRoot, consumer));
   run(consumer, ["node_modules/typescript/bin/tsc", "--noEmit"]);
+  run(consumer, ["check"]);
   run(consumer, ["consumer.ts"]);
   console.log("Verified provider page, panel, and typed command refs through separately installed packages.");
 };

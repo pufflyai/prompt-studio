@@ -112,7 +112,7 @@ export const CollapsedMenuWithTab: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("button", { name: "Open Main left menu" })).toBeVisible();
     await expect(canvas.getByRole("tab", { name: "Files" })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Close Files" })).toBeNull();
+    await expect(canvas.getByRole("button", { name: "Close Files" })).toBeVisible();
   },
 };
 
@@ -121,7 +121,7 @@ export const HeaderActionWithoutTabs: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("button", { name: "Refresh files" })).toBeVisible();
-    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+    await expect(canvas.getByRole("tab", { name: "Files" })).toBeVisible();
   },
 };
 

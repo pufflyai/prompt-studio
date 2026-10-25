@@ -1,26 +1,24 @@
 name: Release Packages
 
-# One pipeline publishes stable releases and nightlies. It builds and verifies every
-# artifact from one commit first, and publishes npm packages and desktop apps together
-# only when everything passed. A failed release resumes with "Re-run failed jobs" or
-# with the next push to main. See ADR 0072.
+# Host releases build and verify every artifact before publishing. The manual packages
+# channel publishes only SDK/UI previews. See ADRs 0072 and 0107.
 on:
   push:
     branches:
       - main
-  # Nightly builds live here, not in their own workflow, because npm trusted
-  # publishing allows one publisher per package and names this workflow file.
+  # Nightlies and SDK/UI previews reuse this workflow's existing npm publisher trust.
   schedule:
     - cron: "0 3 * * *"
   workflow_dispatch:
     inputs:
       channel:
-        description: Release a version on main, build a nightly, or patch the current stable release
+        description: Release stable, nightly, a stable patch, or SDK/UI previews only (packages)
         type: choice
         options:
           - stable
           - nightly
           - patch
+          - packages
         default: stable
       base_tag:
         description: "Patch only: current stable tag, such as pstdio@0.43.1"
@@ -40,13 +38,50 @@ on:
 # replaces a run of the same channel that is still waiting. A queued nightly never replaces
 # a queued stable run.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ (github.event_name == 'schedule' || inputs.channel == 'nightly') && 'nightly' || 'stable' }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.channel == 'packages' && 'packages' || (github.event_name == 'schedule' || inputs.channel == 'nightly') && 'nightly' || 'stable' }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  package_previews:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.channel == 'packages'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: node scripts/ci/install-native-dependencies.ts
+      - name: Give SDK/UI previews a source-based version
+        run: bun run --cwd scripts release:packages:version
+      - name: Build SDK and UI with their dependencies
+        run: bunx lerna run build --scope @pstdio/sdk --scope @pstdio/ui --include-dependencies
+      - name: Check preview release contracts
+        run: >-
+          bun test scripts/release/package-preview-version.p0.test.ts
+          scripts/release/package-preview-publish.p0.test.ts
+          scripts/verify/extension-api-registry.p0.test.ts scripts/verify/extension-api-baselines.p0.test.ts
+      - name: Check packed public API exports
+        run: bun scripts/verify/published-type-exports.ts sdk ui
+      - name: Install, typecheck, and bundle packed SDK/UI consumers
+        run: bun scripts/verify/public-package-consumer.ts sdk ui
+      - name: Pack both previews before publication
+        run: bun run --cwd scripts release:packages:publish --dry-run
+      - name: Publish only SDK and UI with the preview tag
+        env:
+          NPM_CONFIG_PROVENANCE: true
+        run: bun run --cwd scripts release:packages:publish
+
   # The workflow stays on main for signing trust. Only the build checkout changes.
   prepare_patch:
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.channel == 'patch'
@@ -88,6 +123,7 @@ jobs:
     needs: prepare_patch
     if: >-
       ${{ !cancelled() && github.ref == 'refs/heads/main' &&
+      inputs.channel != 'packages' &&
       (needs.prepare_patch.result == 'success' || needs.prepare_patch.result == 'skipped') }}
     runs-on: ubuntu-latest
     # These are the limits of the plan and nightly jobs this job replaces. The nightly path
@@ -95,16 +131,20 @@ jobs:
     timeout-minutes: ${{ (github.event_name == 'schedule' || inputs.channel == 'nightly') && 30 || 5 }}
     permissions:
       contents: write
+      actions: read
     outputs:
       release: ${{ needs.prepare_patch.outputs.release || steps.stable.outputs.release || steps.nightly.outputs.release }}
       channel: ${{ steps.channel.outputs.channel }}
-      version: ${{ needs.prepare_patch.outputs.version || steps.stable.outputs.version || steps.nightly.outputs.version }}
-      tag: ${{ needs.prepare_patch.outputs.tag || steps.stable.outputs.tag || steps.nightly.outputs.tag }}
-      commit: ${{ needs.prepare_patch.outputs.commit || steps.stable.outputs.commit || steps.nightly.outputs.commit }}
+      version: ${{ needs.prepare_patch.outputs.version || steps.stable.outputs.version || steps.nightly.outputs.version || steps.existing.outputs.version }}
+      tag: ${{ needs.prepare_patch.outputs.tag || steps.stable.outputs.tag || steps.nightly.outputs.tag || steps.existing.outputs.tag }}
+      commit: ${{ needs.prepare_patch.outputs.commit || steps.stable.outputs.commit || steps.nightly.outputs.commit || steps.existing.outputs.commit }}
       previous_tag: ${{ needs.prepare_patch.outputs.previous_tag || steps.stable.outputs.previous_tag }}
+      candidate_run_id: ${{ steps.existing.outputs.artifact_run_id }}
+      candidate_attempt: ${{ steps.existing.outputs.artifact_attempt }}
+      source_sha: ${{ inputs.channel == 'patch' && inputs.source_sha || (steps.channel.outputs.channel == 'nightly' && github.sha || steps.stable.outputs.commit) }}
       # Nightly tags are pruned, so nightly builds install core extensions from the main commit.
       extension_ref: ${{ steps.channel.outputs.channel == 'nightly' && github.sha || needs.prepare_patch.outputs.tag || steps.stable.outputs.tag }}
-      targets: ${{ steps.channel.outputs.channel == 'nightly' && '["darwin-arm64","darwin-x64","linux-x64"]' || '["darwin-arm64","darwin-x64","linux-x64","win32-x64"]' }}
+      targets: ${{ steps.channel.outputs.channel == 'nightly' && '["darwin-arm64","linux-x64"]' || '["darwin-arm64","darwin-x64","linux-x64","win32-x64"]' }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
@@ -153,18 +193,27 @@ jobs:
           if [ -n "$LAST_TAG" ] && [ "$(gh api "repos/$GH_REPO/commits/$LAST_TAG" --jq '.parents[0].sha')" = "$GITHUB_SHA" ]; then
             echo "Main has not changed since $LAST_TAG."
             echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "previous_candidate_tag=$LAST_TAG" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Recover exact artifacts for daily unchanged-candidate validation
+        id: existing
+        continue-on-error: true
+        if: steps.changed.outputs.changed == 'false'
+        env:
+          LAST_TAG: ${{ steps.changed.outputs.previous_candidate_tag }}
+        run: bun scripts/ci/production-existing-candidate.ts "$LAST_TAG" "$GITHUB_SHA"
+
       - name: Install dependencies
-        if: steps.changed.outputs.changed == 'true'
+        if: steps.changed.outputs.changed == 'true' || (steps.changed.outputs.changed == 'false' && steps.existing.outcome == 'failure')
         run: node scripts/ci/install-native-dependencies.ts
 
       # The version change is never pushed to main. The tag keeps it so every job builds the same versions.
       - name: Version and tag the nightly
         id: nightly
-        if: steps.changed.outputs.changed == 'true'
+        if: steps.changed.outputs.changed == 'true' || (steps.changed.outputs.changed == 'false' && steps.existing.outcome == 'failure')
         run: |
           set -euo pipefail
           PSTDIO_STABLE_TAG=$(gh release view --json tagName --jq .tagName)
@@ -184,20 +233,51 @@ jobs:
             echo "commit=$(git rev-parse HEAD)"
           } >> "$GITHUB_OUTPUT"
 
-  packaged_toolchain:
+  release_build:
     needs: plan
     if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release == 'true' }}
-    uses: ./.github/workflows/verify-packaged-toolchain.yml
-    with:
-      ref: ${{ needs.plan.outputs.commit }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      artifact_attempt: ${{ steps.identity.outputs.attempt }}
+    env:
+      PSTDIO_EXTENSION_RELEASE_REF: ${{ needs.plan.outputs.extension_ref }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.plan.outputs.commit }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Build and verify immutable publication artifacts
+        uses: ./.github/actions/build-release
+      - name: Record source and build identity
+        id: identity
+        env:
+          SOURCE_SHA: ${{ needs.plan.outputs.source_sha }}
+          VERSION_SHA: ${{ needs.plan.outputs.commit }}
+        run: |
+          bun -e 'await Bun.write("production-build-identity.json", JSON.stringify({sourceSha: process.env.SOURCE_SHA, versionSha: process.env.VERSION_SHA, toolchain: "bun-" + Bun.version}))'
+          echo "attempt=$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - name: Archive outputs once for validation and publication
+        run: bun scripts/ci/production-archive.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-build-attempt-${{ github.run_attempt }}
+          path: |
+            release-build.tar.gz
+            production-build-identity.json
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-build-identity-attempt-${{ github.run_attempt }}
+          path: production-build-identity.json
+          if-no-files-found: error
 
-  harness_cli_support:
-    needs: plan
-    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release == 'true' }}
-    uses: ./.github/workflows/harness-cli-support.yml
-    with:
-      ref: ${{ needs.plan.outputs.commit }}
-      versions: '["minimum", "latest"]'
 
   containers:
     needs: plan
@@ -206,6 +286,7 @@ jobs:
     with:
       ref: ${{ needs.plan.outputs.commit }}
       version: ${{ needs.plan.outputs.version }}
+      original_source_sha: ${{ needs.plan.outputs.source_sha }}
 
   desktop:
     needs: plan
@@ -216,6 +297,7 @@ jobs:
     uses: ./.github/workflows/release-desktop.yml
     with:
       version: ${{ needs.plan.outputs.version }}
+      original_source_sha: ${{ needs.plan.outputs.source_sha }}
       tag: ${{ needs.plan.outputs.tag }}
       ref: ${{ needs.plan.outputs.commit }}
       targets: ${{ needs.plan.outputs.targets }}
@@ -240,15 +322,48 @@ jobs:
       previous-tag: ${{ needs.plan.outputs.previous_tag }}
       candidate-ref: ${{ needs.plan.outputs.commit }}
 
+  # A daily nightly and every stable candidate get the same deep diagnostics.
+  # Publication below waits for this job only for stable releases.
+  production:
+    needs: [plan, release_build, containers, desktop]
+    if: ${{ !cancelled() && needs.plan.outputs.release == 'true' }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    uses: ./.github/workflows/production-validation.yml
+    with:
+      ref: ${{ needs.plan.outputs.commit }}
+      source_sha: ${{ needs.plan.outputs.source_sha }}
+      artifact_run_id: ${{ github.run_id }}
+      artifact_attempt: ${{ needs.release_build.outputs.artifact_attempt }}
+      channel: ${{ needs.plan.outputs.channel }}
+
+  production_unchanged:
+    needs: plan
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release != 'true' && needs.plan.outputs.channel == 'nightly' }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    uses: ./.github/workflows/production-validation.yml
+    with:
+      ref: ${{ needs.plan.outputs.commit }}
+      source_sha: ${{ needs.plan.outputs.source_sha }}
+      artifact_run_id: ${{ needs.plan.outputs.candidate_run_id }}
+      artifact_attempt: ${{ needs.plan.outputs.candidate_attempt }}
+      channel: nightly
+
   # Publishes only when every check passed. Each step skips work an earlier attempt finished,
   # so re-running this job completes a release that stopped halfway. The GitHub release is
   # published last: a published release means npm and every desktop asset shipped.
   publish:
-    needs: [plan, packaged_toolchain, harness_cli_support, containers, desktop, windows_update]
+    needs: [plan, release_build, containers, desktop, windows_update, production]
     if: >-
-      ${{ !cancelled() && needs.plan.outputs.release == 'true' &&
+      ${{ !cancelled() && needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'stable' &&
       (inputs.channel != 'patch' || inputs.publish_patch) &&
-      needs.packaged_toolchain.result == 'success' && needs.harness_cli_support.result == 'success' &&
+      needs.release_build.result == 'success' &&
+      (needs.plan.outputs.channel == 'nightly' || needs.production.result == 'success') &&
       needs.containers.result == 'success' &&
       needs.desktop.result == 'success' &&
       (needs.windows_update.result == 'success' || (needs.plan.outputs.channel == 'nightly' && needs.windows_update.result == 'skipped')) }}
@@ -257,6 +372,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
+      actions: read
       id-token: write
       packages: write
     env:
@@ -271,148 +387,66 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ needs.plan.outputs.commit }}
-          # Packaged checks in build-release read older release tags, such as the Planner upgrade check.
           fetch-depth: 0
-
-      - name: Confirm the patch still targets the current stable release
-        if: inputs.channel == 'patch'
-        env:
-          BASE_TAG: ${{ needs.plan.outputs.previous_tag }}
-        run: |
-          CURRENT=$(gh release view --json tagName --jq .tagName)
-          if [ "$CURRENT" != "$BASE_TAG" ]; then
-            echo "::error::Only the current stable release can be patched. Stable is now $CURRENT."
-            exit 1
-          fi
-
-      # A newer attempt of the same unpublished version moves the tag and owns the release.
-      - name: Check that this run still owns the release tag
-        run: |
-          set -euo pipefail
-          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
-          TAGGED=$(git rev-parse "refs/tags/$TAG^{commit}")
-          if [ "$TAGGED" != "$COMMIT" ]; then
-            echo "::error::$TAG now points at $TAGGED, not $COMMIT. A newer run releases this version."
-            exit 1
-          fi
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/download-artifact@v4
         with:
-          bun-version-file: package.json
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+          name: release-build-attempt-${{ needs.release_build.outputs.artifact_attempt }}
+      - uses: ./.github/actions/publish-release
         with:
-          node-version: "24"
-
-      - name: Pin npm for trusted publishing
-        run: npm i -g npm@11.16.0
-
-      - name: Build release artifacts
-        uses: ./.github/actions/build-release
-
-      - name: Download verified desktop artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: desktop-*
-          path: desktop-release
-
-      - name: Verify the desktop release set
-        env:
-          TARGETS: ${{ needs.plan.outputs.targets }}
-        run: |
-          set -euo pipefail
-          bun clients/desktop/scripts/verify-release-set.ts desktop-release --targets "$(jq -r 'join(",")' <<< "$TARGETS")"
-          mkdir desktop-publish
-          find desktop-release -type f -exec cp '{}' desktop-publish/ \;
-          cd desktop-publish
-          for checksums in checksums-*.sha256; do sha256sum -c "$checksums"; done
-          cat checksums-*.sha256 | sort > "checksums-desktop-${{ needs.plan.outputs.version }}.sha256"
-
-      # Packing errors must stop the release before the first package reaches npm.
-      - name: Dry-run the npm packages that are not published yet
-        env:
-          NPM_CONFIG_PROVENANCE: false
-        run: |
-          set -euo pipefail
-          for manifest in $(jq -r '.workspaces[] | sub("/$"; "") + "/package.json"' package.json); do
-            [ -f "$manifest" ] || continue
-            [ "$(jq -r '.private // false' "$manifest")" = "true" ] && continue
-            NAME=$(jq -r .name "$manifest")
-            VERSION=$(jq -r .version "$manifest")
-            if npm view "$NAME@$VERSION" version > /dev/null 2>&1; then continue; fi
-            (cd "$(dirname "$manifest")" && npm publish --dry-run --tag "$DIST_TAG")
-          done
-
-      - name: Publish platform packages
-        run: bun run --cwd scripts release:platforms:publish "$DIST_TAG"
-
-      # Publishes only versions npm does not have yet. Only the pstdio tag is pushed, by plan.
-      - name: Publish npm packages
-        run: bunx changeset publish --tag "$DIST_TAG" --no-git-tag
-
-      - name: Download verified service images
-        uses: actions/download-artifact@v4
-        with:
-          pattern: service-container-*
-          path: service-images
-          merge-multiple: true
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish verified service images
-        env:
-          VERSION: ${{ needs.plan.outputs.version }}
-        run: |
-          set -euo pipefail
-          for service in relay account-manager; do
-            docker load --input "service-images/$service.tar"
-            docker push "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION"
-          done
-
-      # Self-hosters pull these images without logging in. GitHub creates a new package as
-      # private and has no API to change that, so an organization owner makes it public once.
-      - name: Check that anyone can pull the service images
-        env:
-          VERSION: ${{ needs.plan.outputs.version }}
-        run: |
-          set -euo pipefail
-          docker logout ghcr.io
-          for service in relay account-manager; do
-            if ! docker manifest inspect "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION" > /dev/null; then
-              echo "::error::ghcr.io/$GITHUB_REPOSITORY/$service is private. In its package settings, choose Danger Zone > Change visibility > Public, then re-run this job."
-              exit 1
-            fi
-          done
-
-      - name: Create the draft GitHub release with CLI assets
-        uses: ./.github/actions/create-pstdio-release
-        with:
+          certificate-name: ${{ needs.production.outputs.certificate_name }}
+          artifact-attempt: ${{ needs.release_build.outputs.artifact_attempt }}
+          commit: ${{ needs.plan.outputs.commit }}
           version: ${{ needs.plan.outputs.version }}
-          prerelease: ${{ needs.plan.outputs.channel == 'nightly' }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          targets: ${{ needs.plan.outputs.targets }}
+          channel: ${{ needs.plan.outputs.channel }}
+          previous-tag: ${{ needs.plan.outputs.previous_tag }}
+          patch: ${{ inputs.channel == 'patch' }}
 
-      - name: Attach desktop assets and publish the release
-        run: |
-          set -euo pipefail
-          test "$(gh release view "$TAG" --json isDraft -q .isDraft)" = "true"
-          gh release upload "$TAG" desktop-publish/* --clobber
-          if [ "$PRERELEASE" = "true" ]; then
-            gh release edit "$TAG" --draft=false --prerelease --latest=false
-          else
-            gh release edit "$TAG" --draft=false
-          fi
+  publish_nightly:
+    needs: [plan, release_build, containers, desktop]
+    if: >-
+      ${{ !cancelled() && needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'nightly' &&
+      (inputs.channel != 'patch' || inputs.publish_patch) &&
+      needs.release_build.result == 'success' &&
+      needs.containers.result == 'success' &&
+      needs.desktop.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+      packages: write
+    env:
+      NPM_CONFIG_PROVENANCE: true
+      PSTDIO_EXTENSION_RELEASE_REF: ${{ needs.plan.outputs.extension_ref }}
+      DIST_TAG: ${{ needs.plan.outputs.channel == 'nightly' && 'nightly' || 'latest' }}
+      PRERELEASE: ${{ needs.plan.outputs.channel == 'nightly' }}
+      TAG: ${{ needs.plan.outputs.tag }}
+      COMMIT: ${{ needs.plan.outputs.commit }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.plan.outputs.commit }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-build-attempt-${{ needs.release_build.outputs.artifact_attempt }}
+      - uses: ./.github/actions/publish-release
+        with:
+          artifact-attempt: ${{ needs.release_build.outputs.artifact_attempt }}
+          commit: ${{ needs.plan.outputs.commit }}
+          version: ${{ needs.plan.outputs.version }}
+          targets: ${{ needs.plan.outputs.targets }}
+          channel: ${{ needs.plan.outputs.channel }}
+          previous-tag: ${{ needs.plan.outputs.previous_tag }}
+          patch: ${{ inputs.channel == 'patch' }}
 
   # Runs only after a nightly published with every asset.
   nightly_prune:
-    needs: [plan, publish]
-    if: ${{ !cancelled() && needs.plan.outputs.channel == 'nightly' && needs.publish.result == 'success' }}
+    needs: [plan, publish_nightly]
+    if: ${{ !cancelled() && needs.plan.outputs.channel == 'nightly' && needs.publish_nightly.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -436,7 +470,7 @@ jobs:
     needs: [prepare_patch, publish]
     if: >-
       ${{ !cancelled() && github.ref == 'refs/heads/main' &&
-      github.event_name != 'schedule' && inputs.channel != 'nightly' &&
+      github.event_name != 'schedule' && inputs.channel != 'nightly' && inputs.channel != 'packages' &&
       needs.prepare_patch.result != 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15

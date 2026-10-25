@@ -321,8 +321,8 @@ copies the closed fixture before its fresh worker and unchanged 60-second watchd
 The standalone database commands use the same boundary:
 
 ```sh
-bun packages/pstdio-db/src/services/extension-storage/document-scale.bench.ts small 100000 /absolute/disposable/owner-fixture prepare
-bun packages/pstdio-db/src/services/extension-storage/document-scale.bench.ts small 100000 /absolute/disposable/owner-sample-01 sample /absolute/disposable/owner-fixture
+bun packages/pstdio-db/src/services/extension-storage/document-scale.diagnostic.ts small 100000 /absolute/disposable/owner-fixture prepare
+bun packages/pstdio-db/src/services/extension-storage/document-scale.diagnostic.ts small 100000 /absolute/disposable/owner-sample-01 sample /absolute/disposable/owner-fixture
 ```
 
 Add `churn` to both commands for the separate create/edit/delete variant. Repeat
@@ -335,7 +335,7 @@ history receipts, the owner revision, one document per record, gap-free update t
 and that each rebuilt record matches the generator and its projection row. It runs only
 in preparation; the first resource access in a sample remains its measured write.
 
-`record-read-scale.bench.ts` measures indexed reads on the same fixtures. It is a
+`record-read-scale.diagnostic.ts` measures indexed reads on the same fixtures. It is a
 diagnostic and does not take the timing window. `PSTDIO_SCALE_READ_COLD` selects the first
 read in the fresh process: `view`, `second-page`, `point`, `aggregate` or `all-owner-burst`.
 A view is one 100-row page plus its selected and total counts. Each sample then records ten
@@ -344,8 +344,8 @@ receives the contract's write rate, and views while a 100-row write and a compac
 hold the database. Every read reports the projection rows Postgres visited.
 
 ```sh
-bun packages/pstdio-db/src/services/extension-storage/record-read-scale.bench.ts small 100000 /absolute/disposable/read-fixture prepare
-PSTDIO_SCALE_READ_COLD=view bun packages/pstdio-db/src/services/extension-storage/record-read-scale.bench.ts small 100000 /absolute/disposable/read-sample-01 sample /absolute/disposable/read-fixture
+bun packages/pstdio-db/src/services/extension-storage/record-read-scale.diagnostic.ts small 100000 /absolute/disposable/read-fixture prepare
+PSTDIO_SCALE_READ_COLD=view bun packages/pstdio-db/src/services/extension-storage/record-read-scale.diagnostic.ts small 100000 /absolute/disposable/read-sample-01 sample /absolute/disposable/read-fixture
 ```
 Preparation duration and memory are separate from sample measurements. A failed
 preparation cannot create the completion manifest, and mutable sample copies cannot

@@ -74,6 +74,31 @@ export const MinimumWidth: Story = {
   ),
 };
 
+export const ScrollingStaysInPanel: Story = {
+  tags: ["!manifest", "tab-strip-scroll"],
+  args: { workbench: createCrowdedWorkbench() },
+  render: (args) => (
+    <ChakraProvider value={psTheme}>
+      <Box data-testid="outer-viewport" width="xs" overflow="hidden">
+        <Box width="sm">
+          <WorkbenchStory {...args} />
+        </Box>
+      </Box>
+    </ChakraProvider>
+  ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const tab = await canvas.findByRole("tab", { name: "Design" });
+    const viewport = tab.closest<HTMLElement>('[data-part="viewport"]');
+    expect(viewport).not.toBeNull();
+    const panel = args.workbench.layout.getLayout().regions.secondary.widgets.find((p) => p.viewId === "tab-7")!;
+    args.workbench.layout.activatePanel(panel.widgetId);
+    await waitFor(() => expect(tab).toHaveAttribute("aria-selected", "true"));
+    await waitFor(() => expect(viewport!.scrollLeft).toBeGreaterThan(0));
+    expect(canvas.getByTestId("outer-viewport").scrollLeft).toBe(0);
+  },
+};
+
 export const FullTitle: Story = {
   ...SharedWidth,
   args: { workbench: createCrowdedWorkbench() },

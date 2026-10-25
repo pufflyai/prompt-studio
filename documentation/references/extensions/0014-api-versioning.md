@@ -14,7 +14,7 @@ Three version numbers matter when you build or install an extension. They answer
 | SDK package version | The `@pstdio/sdk` package in your extension's `package.json`. It gives your code its types and helpers. | `version` in `node_modules/@pstdio/sdk/package.json`. |
 | Extension API version | `EXTENSION_API_VERSION`, the extension contract that a host supports. Your manifest's `engines.pstdio` names the API versions your extension works with. | `pst extensions check` prints the API version of the `pst` you ran. The runtime's version is not printed; find it from the app version. `@pstdio/sdk/extensions` exports the constant. |
 
-The app and the SDK are released together with the same number. The extension API has its own number, because it changes only when the contract changes. For example, release 0.43.1 ships extension API 0.1.6.
+Stable app and SDK releases share the same number. SDK and UI previews can be published separately, with versions ending in `-preview.sha-<commit>`. Pin exact preview versions in extension dependencies. Each new SDK package records its extension API in `pstdio.extensionApiVersion` in its package manifest. The extension API has its own number, because it changes only when the contract changes. For example, release 0.43.1 ships extension API 0.1.6.
 
 The host decides what loads. It compares its own extension API version with `engines.pstdio`. Updating `@pstdio/sdk` in your extension does not update the app. A newer SDK can compile code that calls APIs your app does not have yet.
 
@@ -25,9 +25,11 @@ The host decides what loads. It compares its own extension API version with `eng
 | 0.43.1 | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
 | 0.44.0 | 0.2.0 | A breaking step. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
 | 0.45.0 | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
-| `main` | 0.2.2 | Adds account feature grants, full project-scoped `ctx.sessions` operations, indexed record queries and batches, optional paged collection views, device performance capture and Developer settings contributions, project recovery methods on `/client`, and always allows Kanban dragging. Existing `^0.2.0` ranges still load. |
+| `main`, planned for 0.46.0 | 0.3.0 | A breaking step. See [Storage size limits in API 0.3](#storage-size-limits-in-api-03). Manifests need `^0.3.0`. It also has the additions listed for API 0.2.2, which no release shipped: account feature grants, full project-scoped `ctx.sessions` operations, indexed record queries and batches, optional paged collection views, device performance capture and Developer settings contributions, project recovery methods on `/client`, and Kanban dragging in every column. |
 
 Pages that describe APIs from `main` say so and name the first release that has them.
+
+The page and panel additions share the planned API 0.3.0 release: page-owned empty views and landing slots, non-rendering page groups with default children, closable fixed tabs, tabless Main presentation, independent panel views, declarative slot replacements, caller-relative viewer navigation, and mode-owned fullscreen permission. They do not add another version step before that release.
 
 ### Which version each check uses
 
@@ -224,6 +226,29 @@ the same. 0.46 starts with an empty database and does not move or read earlier
 storage paths themselves must use the full-ID folder. Name-only CLI namespaces
 and resource-kind references remain deprecated aliases when unambiguous;
 full-ID forms replace them. Declared global aliases keep their short form.
+
+## Storage size limits in API 0.3
+
+API 0.3 is on `main` and is planned for 0.46. Earlier releases have no limits.
+
+Records hold small structured data. The host now refuses a storage save over either limit:
+
+| Limit | Size | What counts |
+| --- | --- | --- |
+| One record | 256 KiB | UTF-8 bytes of the JSON of the saved record's `value` and `shared` content. Asset references do not count. |
+| One commit | 4 MiB | The sum for every record in one `records.commit` group, one collection write, or one `set`. |
+
+The whole save fails and nothing in it is written. The error has `code: "storage_limit_exceeded"` and names the record, its size, the limit, and what to use instead. Deleting a record is never refused. `createMemoryStorage` from `@pstdio/sdk/testing` applies the same limits, so tests fail the same way.
+
+This is a breaking change, because writes that saved before are now refused. The additive part is `storageLimits` and `isStorageLimitError` in `@pstdio/sdk/extensions`.
+
+Move large content out of records before you declare `^0.3.0`:
+
+- Attachments of an item, such as file bodies and images: `ctx.storage.files`, or the files of a resource scope. Keep the returned ID in the record.
+- Files that people or agents open, such as drafts, logs and generated pages: `ctx.extensionFiles` or an artifact mount.
+- Large imports: several smaller commits.
+
+An extension whose records already stay small can declare `^0.2.0 || ^0.3.0`. See [Size limits](../sdk/0004-storage.md#size-limits).
 
 ## Independent panel permissions in API 0.2.1
 

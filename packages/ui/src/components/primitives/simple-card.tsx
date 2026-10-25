@@ -1,12 +1,15 @@
-import { Box, type BoxProps } from "@chakra-ui/react";
+import { Box, type BoxProps, type RecipeVariantProps, useRecipe } from "@chakra-ui/react";
+import { simpleCardRecipe } from "../../theme/recipes/simple-card";
 
-export type SimpleCardProps = BoxProps;
+export interface SimpleCardProps extends BoxProps, RecipeVariantProps<typeof simpleCardRecipe> {}
 
 export const SimpleCard = (props: SimpleCardProps) => {
   const { children, ...rest } = props;
+  const recipe = useRecipe({ recipe: simpleCardRecipe });
+  const [variants, boxProps] = recipe.splitVariantProps(rest);
 
   return (
-    <Box borderWidth="1px" borderColor="border.subtle" borderRadius="xs" bg="bg" {...rest}>
+    <Box css={recipe(variants)} {...boxProps}>
       {children}
     </Box>
   );
@@ -18,7 +21,7 @@ export const SimpleCardBody = (props: SimpleCardBodyProps) => {
   const { children, ...rest } = props;
 
   return (
-    <Box p="md" {...rest}>
+    <Box p="var(--simple-card-body-padding, var(--chakra-spacing-md))" {...rest}>
       {children}
     </Box>
   );

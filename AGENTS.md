@@ -144,7 +144,7 @@ Run tests often, but run only the tests for the code you changed:
 - One package: `bun run --cwd packages/<name> test`
 - One e2e spec: `bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts`
 
-Choose the smallest test scope that covers the changed behavior. Include affected callers or integration tests when the change crosses a package boundary. Do not run the full monorepo tests, full e2e suites, or `bun run validate` unless the user explicitly asks for full validation.
+Choose the smallest test scope that covers the changed behavior. Include affected callers or integration tests when the change crosses a package boundary. Run all tests only when the feature is ready, before the PR is marked ready. See [Finishing a pull request](#finishing-a-pull-request). Do not run `bun run validate` unless the user explicitly asks for full validation.
 
 ### 3. Refactor: clean up
 
@@ -169,7 +169,7 @@ Always validate UI changes using Playwright.
 ### 5. Test packaged files
 
 - If bundled runtime behavior, assets, or file inclusion change, update the relevant packaged smoke test. This includes built-in templates, prompts, skills, and other packaged defaults. Documentation-reference-only edits do not require packaged tests.
-- Keep `packages/e2e/src/packaged/packaged-serve-smoke.test.ts` in sync with the packaged files.
+- Keep `packages/e2e/src/packaged/packaged-serve-smoke.p2.test.ts` in sync with the packaged files.
 - For those runtime or package changes, run `bun run --cwd scripts verify:packages` to check packaged output.
 
 ### 6. Changesets
@@ -233,6 +233,8 @@ A pull request may contain only one migration entry. If the tools create more th
 ### Testing rules
 
 - Name test files and test or suite titles after the feature or behavior they cover. Do not prefix them with ticket IDs.
+- Declare one priority in every maintained test filename, such as `session.p0.test.ts` or `startup.p1.spec.ts`. See [test priorities](documentation/guides/development/0013-ci-stages.md#contracts-and-naming).
+- Run one group with `bun test:p0`, `bun test:p1`, `bun test:p2`, or `bun test:p3`. Use `--scope <workspace>` and `--runner <kind>` for targeted work. Discovery owns membership; do not add test filename lists to workflows.
 - Put each test **next to the file it tests**.
 - Avoid mocks. Test real behavior when possible.
 - For a bug fix, add a test that reproduces the bug before changing the code.
@@ -258,6 +260,18 @@ Do not write:
 ## Manual Playwright validation
 
 Run `bun run dev:playwright`. Open the dashboard URL printed by the command with Playwright or another browser tool. When finished, stop it with `bun run dev:playwright:down`.
+
+## Finishing a pull request
+
+Build each feature with the [test-driven workflow](#required-workflow-test-driven-development). While you develop, run only the tests relevant to your change. When the feature is ready:
+
+1. **Open the PR.** Push the branch and open a draft PR, as described in [Git](#git).
+2. **Run all tests.** Run `bun run test`. It runs every package's tests, builds what the E2E suites need, then runs the E2E script, CLI, UI and Vite terminal suites. Run it again after merging `main` into the branch, because a merge can combine changes that each passed alone. Fix every failure your PR causes and push the fix.
+   - If a test fails for a reason unrelated to your PR, check that it also fails on `main`. Then look for an open PR that already fixes it. If there is none, open a separate PR that fixes it. Link that PR in your PR's description. Do not fix unrelated failures in your PR.
+3. **Mark the PR ready.** Run `gh pr ready` only when CI is green on the latest commit and all tests pass, apart from unrelated failures that have a linked fix PR. See [CI completion](#ci-completion).
+4. **Answer review comments.** Read every review comment on the PR, including inline comments on the code. `gh pr view <number> --comments` shows the conversation, and `gh api repos/pufflyai/prompt-studio/pulls/<number>/comments` shows the inline comments. Fix the valid ones and reply to each comment. After a fix, rerun the affected tests and wait for CI on the new commit.
+
+Documentation-only PRs skip step 2.
 
 ## CI completion
 

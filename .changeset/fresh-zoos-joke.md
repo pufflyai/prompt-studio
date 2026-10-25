@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Let database upgrades finish after temporary Windows file readers release their handles.
+Move an older database aside on Windows after temporary file readers release their handles.

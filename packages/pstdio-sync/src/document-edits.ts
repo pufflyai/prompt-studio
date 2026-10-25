@@ -42,6 +42,9 @@ const applyShared = (
   }
 };
 
+/** A record's named map. It stays in the document after the record is deleted. */
+export const recordTypeName = (recordId: string) => JSON.stringify(["record", recordId]);
+
 export const applyDocumentEdit = (document: Y.Doc, edit: GroupCommit["edits"][number], author?: DocumentAuthor) => {
   const records = document.getMap<string>("records");
   if (edit.deleted) {
@@ -52,7 +55,7 @@ export const applyDocumentEdit = (document: Y.Doc, edit: GroupCommit["edits"][nu
   let name = records.get(edit.recordId);
   if (!name) {
     if (document.getMap("deleted").has(edit.recordId) && edit.deleted !== false) return;
-    name = JSON.stringify(["record", edit.recordId]);
+    name = recordTypeName(edit.recordId);
     records.set(edit.recordId, name);
     document.getMap("deleted").delete(edit.recordId);
   }

@@ -54,4 +54,4 @@ Checked on 2026-10-18 against main commit `45580feb`. The newest stable release 
 | Implementation | `packages/pstdio-api/src/features/extensions/project-extension-runtime-catalog.ts` owns loading, sharing, and invalidation. The snapshot contract is in `project-extension-runtime-snapshot.ts`. Consumers moved to the catalog in #537; the snapshot type came with #576. |
 | Availability | #537 shipped in `pstdio@0.26.0` and #576 in `pstdio@0.27.0`. |
 | Remaining work | None known in source. A recorded pass of the manual installed-user walkthrough is still missing. |
-| Evidence | Unit tests, passed locally on 2026-10-18: `project-extension-runtime-catalog.test.ts` (same identity on repeated reads, shared cold loads, discarded in-flight loads, per-source invalidation) and `project-extension-runtime-snapshot.test.ts`. |
+| Evidence | Unit tests, passed locally on 2026-10-18: `project-extension-runtime-catalog.p0.test.ts` (same identity on repeated reads, shared cold loads, discarded in-flight loads, per-source invalidation) and `project-extension-runtime-snapshot.p0.test.ts`. |

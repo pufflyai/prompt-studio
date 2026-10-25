@@ -24,6 +24,7 @@ import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/sessi
 import { updatePendingFollowUp } from "../chat/session-chat-state";
 import { sessionDraftSubmission } from "../chat/session-draft-submission";
 import { sessionUnsentActions } from "../chat/session-unsent-actions";
+import type { SessionViewContext } from "../chat/session-view-context";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import type { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
@@ -42,7 +43,7 @@ import { useSessionDraftAttachments } from "./use-session-draft-attachments";
 import { useSessionModelSelection } from "./use-session-model-selection";
 
 interface DashboardSessionChatPanelProps {
-  input: WorkbenchPanelRenderInput;
+  input: SessionViewContext;
   view: DashboardSessionView;
   history: ReturnType<typeof useDashboardSessionMessages>;
   emptyStateTitle: string;
@@ -125,8 +126,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   });
   const chatDraft = useSessionChatDraft(drafts, view.draftKey);
   const openCreatedSession = (createdSessionId: string, prompt: string) => {
-    if (projectId)
-      openCreatedSessionFromDraft({ input, draftKey: view.draftKey, sessionId: createdSessionId, prompt, projectId });
+    if (projectId) openCreatedSessionFromDraft({ input, sessionId: createdSessionId, prompt, projectId });
   };
   const commandDraft = projectId
     ? {
@@ -156,7 +156,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     view.lastRequestStarted,
     view.status === "in_progress",
   );
-  const openWorkspaceOnSelection = input.panel.region !== "side";
+  const openWorkspaceOnSelection = input.region !== "side";
 
   const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId, queue, pendingFollowUp);
   const chatMessages = useApiFileParts(splitDisplay.messages);

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "storybook-servers",
+    "command": ["bun", "run", "test:scripts"]
+  },
+  {
+    "id": "storybook-build",
+    "command": ["bun", "run", "build:stories"]
+  },
+  {
+    "id": "storybook-browser",
+    "command": ["bun", "run", "test:browser"]
+  }
+]

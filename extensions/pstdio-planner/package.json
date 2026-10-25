@@ -11,9 +11,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
-    "test:coverage": "bun test --coverage",
-    "typecheck": "tsc --noEmit"
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage",
+    "typecheck": "bun check"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@storybook/react": "^10.6.0",
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "storybook": "^10.6.0",

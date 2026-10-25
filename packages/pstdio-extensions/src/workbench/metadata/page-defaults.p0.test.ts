@@ -1,0 +1,199 @@
+import { expect, test } from "bun:test";
+import { defineExtension, definePage, defineView, packageAsset, workbenchModes } from "@pstdio/sdk/extensions";
+import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
+import type { LoadedExtensionSource } from "../../runtime/loader";
+import { normalizeExtensionSources } from "../../runtime/normalize";
+import { createWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
+
+test("page header defaults and empty views survive normalization and metadata serialization", () => {
+  const view = defineView({
+    id: "editor",
+    title: "Editor",
+    body: { kind: "webview", entry: packageAsset("./editor.tsx", import.meta.url) },
+  });
+  const page = definePage({
+    id: "editor",
+    title: "Editor",
+    path: "editor",
+    mode: workbenchModes.project,
+    regionSettings: { main: { showHeader: false }, side: { showHeader: true } },
+    main: {
+      kind: "view",
+      view: view.ref,
+      cardinality: "one",
+      empty: {
+        view: view.ref,
+        breadcrumb: {
+          label: "New session",
+          menu: [
+            {
+              id: "actions",
+              rows: [
+                { id: "new", label: "New session", action: { kind: "page", page: { kind: "page", id: "editor" } } },
+              ],
+            },
+          ],
+        },
+      },
+    },
+    slots: [],
+  });
+  const source: LoadedExtensionSource = {
+    packagePath: "/fake/lab",
+    sourcePath: "/fake/lab/extension.ts",
+    sourceKind: "local_path",
+    manifest: {
+      id: "example.lab",
+      name: "lab",
+      publisher: "example",
+      version: "1.0.0",
+      main: "./extension.ts",
+      enginesPstdio: "^0.2.0",
+    },
+    definition: defineExtension({ views: [view], pages: [page] }),
+  };
+  const runtime = normalizeExtensionSources([source]);
+  expect(runtime.diagnostics).toEqual([]);
+  const metadata = workbenchExtensionMetadataSchema.parse(
+    JSON.parse(JSON.stringify(createWorkbenchExtensionMetadata({ runtime }))),
+  );
+  expect(metadata.pages[0].regionSettings).toEqual(page.regionSettings);
+  const main = metadata.pages[0].main;
+  expect(main.kind === "view" && main.empty).toMatchObject({
+    view: { extensionId: "example.lab", kind: "view", id: "editor" },
+    breadcrumb: {
+      label: "New session",
+      menu: [
+        { id: "actions", rows: [{ action: { kind: "page", page: { extensionId: "example.lab", id: "editor" } } }] },
+      ],
+    },
+  });
+});
+
+test("extension page groups preserve their default child through metadata serialization", () => {
+  const group = definePage({
+    id: "messages",
+    title: "Messages",
+    path: "messages",
+    mode: workbenchModes.project,
+    main: { kind: "group", default: { kind: "page", id: "compose" } },
+    slots: [],
+  });
+  const child = definePage({
+    id: "compose",
+    title: "New message",
+    path: "compose",
+    mode: workbenchModes.project,
+    parent: group.ref,
+    main: { kind: "panels" },
+    slots: [],
+  });
+  const source: LoadedExtensionSource = {
+    packagePath: "/fake/lab",
+    sourcePath: "/fake/lab/extension.ts",
+    sourceKind: "local_path",
+    manifest: {
+      id: "example.lab",
+      name: "lab",
+      publisher: "example",
+      version: "1.0.0",
+      main: "./extension.ts",
+      enginesPstdio: "^0.3.0",
+    },
+    definition: defineExtension({ pages: [group, child] }),
+  };
+  const runtime = normalizeExtensionSources([source]);
+  expect(runtime.diagnostics).toEqual([]);
+  const metadata = workbenchExtensionMetadataSchema.parse(
+    JSON.parse(JSON.stringify(createWorkbenchExtensionMetadata({ runtime }))),
+  );
+  expect(metadata.pages[0].main).toEqual({
+    kind: "group",
+    default: { extensionId: "example.lab", kind: "page", id: "compose" },
+  });
+  const missing = normalizeExtensionSources([{ ...source, definition: defineExtension({ pages: [group] }) }]);
+  expect(missing.diagnostics).toContainEqual(
+    expect.objectContaining({
+      code: "extension_page_group_invalid",
+      metadata: expect.objectContaining({ fieldPath: "pages.messages.main.default" }),
+    }),
+  );
+});
+
+test("a collection can use the host placeholder without declaring an empty view", () => {
+  const page = definePage({
+    id: "collection",
+    title: "Collection",
+    path: "collection",
+    mode: workbenchModes.project,
+    main: { kind: "panels" },
+    slots: [],
+  });
+  const runtime = normalizeExtensionSources([
+    {
+      packagePath: "/fake/lab",
+      sourcePath: "/fake/lab/extension.ts",
+      sourceKind: "local_path",
+      manifest: {
+        id: "example.lab",
+        name: "lab",
+        publisher: "example",
+        version: "1.0.0",
+        main: "./extension.ts",
+        enginesPstdio: "^0.2.0",
+      },
+      definition: defineExtension({ pages: [page] }),
+    },
+  ]);
+  expect(runtime.diagnostics).toEqual([]);
+  const metadata = workbenchExtensionMetadataSchema.parse(
+    JSON.parse(JSON.stringify(createWorkbenchExtensionMetadata({ runtime }))),
+  );
+  expect(metadata.pages[0].main).toEqual({ kind: "panels" });
+});
+
+test("placeholder breadcrumb targets are validated against page declarations", () => {
+  const view = defineView({
+    id: "empty",
+    title: "Empty",
+    body: { kind: "webview", entry: packageAsset("./empty.tsx", import.meta.url) },
+  });
+  const page = definePage({
+    id: "collection",
+    title: "Collection",
+    path: "collection",
+    mode: workbenchModes.project,
+    main: {
+      kind: "panels",
+      empty: {
+        view: view.ref,
+        breadcrumb: {
+          menu: [
+            {
+              id: "actions",
+              rows: [{ id: "missing", label: "Open", action: { kind: "page", page: { kind: "page", id: "missing" } } }],
+            },
+          ],
+        },
+      },
+    },
+    slots: [],
+  });
+  const runtime = normalizeExtensionSources([
+    {
+      packagePath: "/fake/lab",
+      sourcePath: "/fake/lab/extension.ts",
+      sourceKind: "local_path",
+      manifest: {
+        id: "example.lab",
+        name: "lab",
+        publisher: "example",
+        version: "1.0.0",
+        main: "./extension.ts",
+        enginesPstdio: "^0.2.0",
+      },
+      definition: defineExtension({ views: [view], pages: [page] }),
+    },
+  ]);
+  expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "extension_page_missing" }));
+});

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { type AssetStore, editResourceDocument, type StorageObserver, type StorageOwner } from "pstdio-sync";
 import {
+  assertStorageLimits,
   fingerprint,
   type StorageConflict,
   type StorageConflictInspection,
@@ -83,6 +84,7 @@ export const createResourceRecords = (
       }),
     );
     const records = prepared.map((value) => value.record);
+    assertStorageLimits(records);
     const projected = await saveRecordChanges(tx, owner, revision, prepared);
     await queueRecordUpload(tx, owner, prepared);
     await tx

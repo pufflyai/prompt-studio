@@ -25,6 +25,9 @@ const normalizePlacement = (input: {
     ...contribution,
     ref: normalizeRef(input.contribution.ref),
     mode: normalizeRef(input.contribution.mode),
+    ...(input.contribution.replaces
+      ? { replaces: input.contribution.replaces.map((ref) => ({ ...ref, page: normalizeRef(ref.page) })) }
+      : {}),
     ...(tab ? { tab } : {}),
     item: normalizePlacementItem(input.ext, input.contribution.item),
   };

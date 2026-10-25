@@ -115,6 +115,14 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(webReference).toHaveAttribute("target", "_blank");
     await expect(webReference.locator('[data-scope="tooltip"]')).toHaveCount(0);
 
+    await plainPath.click();
+    await expect(page.locator(".monaco-editor .view-lines")).toContainText("export");
+    await page.reload();
+    await expect(page.locator(".monaco-editor .view-lines")).toContainText("export");
+    await page.goBack();
+    await expect(plainPath).toBeVisible();
+    phase("conversation restored through file navigation, reload and Back");
+
     await editor.fill(
       "| Task | Details |\n| --- | --- |\n| Review | Read the changes and confirm that shared tools work together for people who never read code. |",
     );

@@ -25,10 +25,23 @@ export const buildPlaywrightEnv = (
   };
 };
 
-export const getPlaywrightCommand = (args: string[]) => ({
-  cmd: process.execPath,
-  args: ["x", "playwright", "test", ...args],
-});
+export const getPlaywrightCommand = (args: string[], priority = process.env.CI_PRIORITY ?? "P1") => {
+  if (!["P0", "P1", "P2", "P3"].includes(priority)) throw new Error(`Unknown test priority: ${priority}`);
+  const selected: string[] = [];
+  for (let index = 0; index < args.length; index++) {
+    if (args[index] === "-x") continue;
+    if (args[index] === "--max-failures") {
+      index++;
+      continue;
+    }
+    if (args[index]?.startsWith("--max-failures=")) continue;
+    selected.push(args[index]!);
+  }
+  return {
+    cmd: process.execPath,
+    args: ["x", "--no-install", "playwright", "test", ...selected, `--max-failures=${priority === "P1" ? 1 : 0}`],
+  };
+};
 
 const forwardedArgs = sanitizeForwardedArgs(process.argv.slice(2));
 

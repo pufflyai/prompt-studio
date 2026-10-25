@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page } from "@playwright/test";
+import { switchSession } from "../helpers/session-side-panel";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { expectPackagedChatHistory } from "./packaged-chat-history-smoke";
 
@@ -94,7 +95,14 @@ export const expectPackagedStreamingMotion = async (
   expect(response.ok).toBe(true);
   const session = (await response.json()) as { id: string };
   logTestPhase("Packaged chat stream: open replay");
-  await page.getByRole("option", { name: "Motion replay", exact: true }).click();
+  await page.goto(`${baseUrl}/projects/${projectId}/`);
+  await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+  const side = page.locator('[data-workbench-panel="side"]');
+  await side.getByRole("button", { name: "Add panel", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
+  await side.getByRole("tab", { name: "New session", exact: true }).click({ button: "right" });
+  await switchSession(page, "Motion replay");
+  await side.getByRole("tab", { name: "Motion replay", exact: true }).dblclick();
   const transcript = page.getByRole("log").filter({ visible: true }).first();
   await expect(transcript.locator('[data-scope="scroll-area"][data-part="viewport"]').first()).toBeVisible();
   const text = page

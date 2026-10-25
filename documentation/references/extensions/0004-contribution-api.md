@@ -128,6 +128,7 @@ Dashboard UI contributions have one ownership model:
 
 - a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`
 - a page owns a route, mode, optional resource constraint, Main presentation, and extra slots
+- a non-rendering parent uses `main: { kind: "group", default: child.ref }`; the default child opens without a resource in the same mode, while the group remains a breadcrumb label and navigation-tree owner
 - a placement owns a shared mode panel with a static-view or resource-binding item
 - a navigation item uses a typed action instead of encoded route or command fields
 - a navigation tree adds a tree view to a mode or page in the shared Sidenav
@@ -522,7 +523,7 @@ export default defineExtension({
 
 The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels.
 
-Inside a level, the shared Sidenav adds a fixed left-arrow button labeled with the current mode name, such as Project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
+Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
 
 Users can hide and reorder a level's labeled sections, but its rows keep the order their owner gives them.
 

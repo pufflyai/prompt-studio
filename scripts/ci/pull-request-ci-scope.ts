@@ -1,160 +1,116 @@
-import { spawnSync } from "node:child_process";
-import { appendFileSync, readFileSync } from "node:fs";
-import { basename, relative } from "node:path";
-import { allBrowserChecks, selectBrowserChecks } from "./browser-checks";
-import { affectedPackages as selectAffectedPackages } from "./ci-packages";
-import { requiredCiJobs } from "./required-ci-jobs";
-
-// Repository tooling, such as the test preload and build scripts, affects every package.
-const REPOSITORY_TOOLING_DIR = "scripts";
-
-// A person adds this label to run the full suite on a pull request before it reaches the queue.
-const FULL_RUN_LABEL = "ci:full";
-
-// Their test suites take minutes, so they run in sharded jobs of their own.
-const SHARDED_TEST_PACKAGES = ["pstdio-api", "pstdio-db"];
+import { execFileSync } from "node:child_process";
+import { appendFileSync } from "node:fs";
+import { basename } from "node:path";
+import { affectedPackages } from "./ci-packages";
+import { partitionPackageChecks } from "./package-check-matrix";
+import { productionDesktopPlatforms, productionToolchainPlatforms } from "./production-platforms";
+import { plannedCiJobs, requiredCiJobs } from "./required-ci-jobs";
+import { sourceCoverageArtifacts } from "./source-coverage-artifacts";
+import { discoverTestFiles, priorityFromFile } from "./test-discovery";
+import { createTestMatrices } from "./test-matrices";
+import type { TestPriority } from "./test-policy";
+import { readWorkspacePackages } from "./workspace-packages";
 
 interface CiScopeInput {
   event: string;
   labels: string[];
   changedFiles: string[];
-  packageDirs: string[];
-  // Packages changed since the target branch and their dependents.
-  affectedPackages: string[];
+  packages: ReturnType<typeof readWorkspacePackages>;
+  tests: string[];
+  profile?: string;
+  releaseChannel?: string;
 }
+const documentation = (file: string) =>
+  /\.(md|mdx|txt)$/.test(file) || file.startsWith("design/") || file === "LICENSE";
 
-const isInside = (file: string, dir: string) => file.startsWith(`${dir}/`);
-const isPackageFile = (file: string, packageDirs: string[]) =>
-  !isInside(file, REPOSITORY_TOOLING_DIR) && packageDirs.some((dir) => isInside(file, dir));
-const isDocumentation = (file: string) => file.endsWith(".md") || file.startsWith("design/") || file === "LICENSE";
+const stageFor = (event: string, production: boolean, profile?: string) => {
+  if (production) return "full";
+  if (event === "pull_request") return "pull_request";
+  if (event === "push" && profile !== "merge_queue") return "main";
+  return "merge_queue";
+};
 
-// Pull requests run the checks their changes select. The merge queue and main run everything, so
-// main receives only commits that passed the full suite.
-export function resolveCiScope({ event, labels, changedFiles, packageDirs, affectedPackages }: CiScopeInput) {
-  const everyCheck = {
-    dockerBuild: true,
-    relaySmoke: true,
-    lernaFilter: "",
-    license: true,
-    publishedExtensions: true,
-    harnessCli: true,
-    databaseTests: true,
-    browserSmoke: true,
-    browserChecks: allBrowserChecks,
-    nativeChecks: ["filesystem", "process", "desktop"],
-    packageChecks: true,
-  };
-  if (event !== "pull_request" || labels.includes(FULL_RUN_LABEL)) {
-    // Full UI and Windows suites already include these targeted checks.
-    return {
-      stage: "full",
-      ...everyCheck,
-      browserSmoke: false,
-      browserChecks: [] as string[],
-      nativeChecks: [] as string[],
-    };
-  }
-  const stage = "pull_request";
-
-  // Files outside every package, such as the lockfile or workflows, can affect any package.
-  if (changedFiles.some((file) => !isPackageFile(file, packageDirs) && !isDocumentation(file))) {
-    return { stage, ...everyCheck };
-  }
-
-  // Prose cannot change how an extension compiles or detects a CLI. The changed package still runs its own tests,
-  // and static_checks validates every documentation link.
-  const changedCode = changedFiles.filter((file) => !isDocumentation(file));
-  const browserSmoke =
-    changedCode.some((file) => ["packages/pstdio-dashboard", "packages/e2e"].some((dir) => isInside(file, dir))) ||
-    (changedCode.length > 0 && affectedPackages.some((name) => ["pstdio-dashboard", "e2e"].includes(name)));
-  const nativeChecks = new Set<string>();
-  for (const file of changedCode) {
-    if (/^clients\/desktop\//.test(file)) nativeChecks.add("desktop");
-    if (/^extensions\/harness-|^packages\/pstdio(?:-api|-api-runtime-host)?\//.test(file)) nativeChecks.add("process");
-    if (/^packages\/pstdio-(?:db|extensions|storage|paths|wt)\//.test(file)) nativeChecks.add("filesystem");
-    if (/^packages\/(sdk|pstdio-api-contracts)\//.test(file)) {
-      nativeChecks.add("filesystem");
-      nativeChecks.add("process");
-    }
-  }
-
+export const resolveCiScope = (input: CiScopeInput) => {
+  const { event, labels, changedFiles, packages, tests, profile, releaseChannel = "stable" } = input;
+  for (const file of tests) priorityFromFile(file);
+  const production = profile === "production" || (event === "workflow_dispatch" && profile !== "merge_queue");
+  const stage = stageFor(event, production, profile);
+  const code = changedFiles.filter((file) => !documentation(file));
+  const shared = code.some(
+    (file) => file.startsWith("scripts/") || !packages.some((pkg) => file.startsWith(`${pkg.dir}/`)),
+  );
+  let affectedOwners = affectedPackages(packages, code);
+  if (shared || stage !== "pull_request") affectedOwners = packages.map((pkg) => pkg.name).sort();
+  if (stage === "main") affectedOwners = [];
+  let priorities: TestPriority[] = ["P0", "P1"];
+  if (stage === "pull_request") priorities = ["P0"];
+  if (production) priorities = ["P0", "P1", "P2"];
+  const matrices = createTestMatrices(tests, packages, affectedOwners, priorities);
+  const browserSmoke = stage === "main";
+  const clientMatrix = productionDesktopPlatforms(production ? releaseChannel : "nightly")
+    .filter((row) => production || row.platform !== "win32")
+    .map((row) => ({ ...row, os: row.platform === "linux" ? "ubuntu-latest" : row.os, tests: true }));
   return {
     stage,
+    production,
+    sourceCoverage: production && releaseChannel === "nightly",
+    affectedOwners,
+    ...matrices,
+    appMatrix: stage === "pull_request" ? [] : matrices.appMatrix,
+    packagedMatrix: stage === "pull_request" ? [] : matrices.packagedMatrix,
+    clientMatrix,
+    toolchainMatrix: productionToolchainPlatforms(releaseChannel),
+    componentChecks: matrices.componentMatrix.length > 0,
+    databaseTests: matrices.databaseMatrix.length > 0,
+    packageChecks: affectedOwners.length > 0,
+    packageMatrix: partitionPackageChecks(affectedOwners),
+    lernaFilter: affectedOwners.map((name) => `--scope ${name}`).join(" "),
+    dockerBuild: production,
+    harnessCli: production,
+    license:
+      stage !== "main" &&
+      (stage !== "pull_request" || changedFiles.some((file) => ["package.json", "bun.lock"].includes(basename(file)))),
+    publishedExtensions:
+      stage !== "main" &&
+      (shared ||
+        stage !== "pull_request" ||
+        code.some((file) => /^(extensions|packages\/(sdk|ui|pstdio-api-contracts))\//.test(file))),
+    sdkApiReport:
+      stage !== "main" &&
+      (shared ||
+        stage !== "pull_request" ||
+        code.some((file) => /^packages\/(sdk|ui|pstdio-api-contracts)\//.test(file))),
     browserSmoke,
-    browserChecks: selectBrowserChecks(changedCode, browserSmoke),
-    nativeChecks: [...nativeChecks].sort(),
-    // E2E has no lint target and the unit job excludes it from its package filter.
-    packageChecks: affectedPackages.some((name) => name !== "e2e"),
-    dockerBuild: changedFiles.some((file) => ["package.json", "bun.lock", "Dockerfile"].includes(basename(file))),
-    lernaFilter: affectedPackages.map((name) => `--scope ${name}`).join(" "),
-    relaySmoke: affectedPackages.some((name) => ["pstdio-relay", "pstdio-db", "pstdio-account-manager"].includes(name)),
-    databaseTests: affectedPackages.some((name) => SHARDED_TEST_PACKAGES.includes(name)),
-    publishedExtensions: changedCode.some((file) =>
-      ["extensions", "packages/sdk", "packages/ui", "packages/pstdio-api-contracts"].some((dir) => isInside(file, dir)),
-    ),
-    license: changedFiles.some((file) => ["bun.lock", "package.json"].includes(basename(file))),
-    harnessCli: changedCode.some((file) =>
-      ["extensions/harness-codex", "extensions/harness-claude-code", "extensions/harness-open-code"].some((dir) =>
-        isInside(file, dir),
-      ),
-    ),
+    deepDiagnostics: labels.includes("ci:full"),
   };
-}
-
-function run(command: string, args: string[]) {
-  const result = spawnSync(command, args, { encoding: "utf8" });
-  if (result.status !== 0) throw new Error(`${command} ${args.join(" ")} failed:\n${result.stderr}`);
-  return result.stdout;
-}
+};
 
 if (import.meta.main) {
-  const event = process.env.GITHUB_EVENT_NAME ?? "";
-  // A pull request is checked out as its merge commit, so its first parent is the target branch. Other
-  // events run every check and ignore the diff.
-  const changedFiles = run("git", ["diff", "--name-only", "--no-renames", "HEAD~1", "HEAD"])
-    .split("\n")
-    .filter(Boolean);
-  const labels: string[] = JSON.parse(process.env.PULL_REQUEST_LABELS || "[]");
-  const lernaPackages = (...filters: string[]) =>
-    JSON.parse(run("bunx", ["lerna", "ls", "--all", "--json", "--loglevel", "silent", ...filters])) as Array<{
-      name: string;
-      location: string;
-    }>;
-  const packages = lernaPackages().map((pkg) => {
-    const manifest = JSON.parse(readFileSync(`${pkg.location}/package.json`, "utf8"));
-    return {
-      name: pkg.name,
-      dir: relative(process.cwd(), pkg.location),
-      dependencies: [
-        ...Object.keys(manifest.dependencies ?? {}),
-        ...Object.keys(manifest.devDependencies ?? {}),
-        ...Object.keys(manifest.peerDependencies ?? {}),
-        ...Object.keys(manifest.optionalDependencies ?? {}),
-        ...(manifest.nx?.implicitDependencies ?? []),
-      ],
-    };
-  });
-  const packageDirs = packages.map((pkg) => pkg.dir);
-  const affectedPackages = selectAffectedPackages(packages, changedFiles);
-  const scope = resolveCiScope({ event, labels, changedFiles, packageDirs, affectedPackages });
-
-  const outputs = Object.entries(scope).map(
-    ([key, value]) => `${key}=${Array.isArray(value) ? JSON.stringify(value) : value}`,
-  );
-  const browserMatrix = [];
-  for (let index = 0; index < scope.browserChecks.length; index += 2) {
-    browserMatrix.push({
-      shard: index / 2 + 1,
-      specs: scope.browserChecks
-        .slice(index, index + 2)
-        .map((spec) => `src/ui/${spec}`)
-        .join(" "),
-    });
+  let profile = process.env.CI_PROFILE || undefined;
+  if (!profile && process.env.GITHUB_REF?.startsWith("refs/heads/test/ci-reliability/")) {
+    profile = "production";
+    if (process.env.GITHUB_REF.startsWith("refs/heads/test/ci-reliability/merge/")) profile = "merge_queue";
   }
-  outputs.push(`browserMatrix=${JSON.stringify(browserMatrix)}`);
-  outputs.push(`requiredJobs=${JSON.stringify(requiredCiJobs(scope))}`);
+  const scope = resolveCiScope({
+    event: process.env.GITHUB_EVENT_NAME ?? "",
+    labels: JSON.parse(process.env.PULL_REQUEST_LABELS || "[]"),
+    changedFiles: execFileSync("git", ["diff", "--name-only", "--no-renames", "HEAD~1", "HEAD"], { encoding: "utf8" })
+      .trim()
+      .split("\n")
+      .filter(Boolean),
+    packages: readWorkspacePackages(process.cwd()),
+    tests: discoverTestFiles(process.cwd()),
+    profile,
+    releaseChannel: process.env.RELEASE_CHANNEL || undefined,
+  });
+  const outputs = Object.entries({
+    ...scope,
+    requiredJobs: requiredCiJobs(scope),
+    gatePlan: plannedCiJobs(scope),
+    coverageArtifacts: sourceCoverageArtifacts(scope, Number(process.env.GITHUB_RUN_ATTEMPT ?? 1)),
+  }).map(([key, value]) => `${key}=${Array.isArray(value) ? JSON.stringify(value) : value}`);
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `${outputs.join("\n")}\n`);
-  const summary = [`## CI scope (${event})`, ...outputs.map((line) => `- ${line}`)];
-  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary.join("\n")}\n`);
-  console.log(summary.join("\n"));
+  const summary = [`## CI scope (${scope.stage})`, ...outputs.map((line) => `- ${line}`)].join("\n");
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`);
+  console.log(summary);
 }

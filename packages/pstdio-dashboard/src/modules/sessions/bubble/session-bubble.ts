@@ -1,17 +1,14 @@
-import { type PlacementIdentity, resourceKey } from "@pstdio/sdk/extensions";
+import { type PlacementIdentity, workbenchPages } from "@pstdio/sdk/extensions";
 import type {
   ResourceRef,
   WorkbenchModuleContext,
   WorkbenchPanelRegion,
   WorkbenchTabRetention,
 } from "@pstdio/workbench";
-import { rememberDashboardSessionResource } from "@/modules/sessions/state/session-selection";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { sessionPanelRef } from "./session-panel-placements";
 
 interface OpenSessionBubbleWidgetsInput {
   resource?: ResourceRef;
-  title?: string;
   tabRetention?: WorkbenchTabRetention;
   region?: WorkbenchPanelRegion;
 }
@@ -28,54 +25,27 @@ export const openSessionBubbleWidgets = (
     region: input.region,
   });
 };
-export const selectSidenavSessionNode = (ctx: WorkbenchModuleContext, resource: ResourceRef | undefined) => {
-  const nodeId = resource?.type === "session" ? resourceKey(resource) : undefined;
-  if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) {
-    ctx.treeViews.setSelectedNode(dashboardWidgetIds.dashboardSidenav, nodeId);
-  }
-};
 interface OpenDashboardSessionPanelInput extends OpenSessionBubbleWidgetsInput {
   resource: ResourceRef;
-  preservePanelMode?: boolean;
   replacePanel?: PlacementIdentity;
+  from?: ResourceRef;
 }
-// A tab's own session menu switches that tab; a session already open elsewhere keeps its one tab.
-const replaceSessionPanel = (ctx: WorkbenchModuleContext, input: OpenDashboardSessionPanelInput) => {
-  const identity = input.replacePanel;
-  if (identity?.kind !== "mode") return undefined;
-  const placements = Object.values(ctx.layout.getLayout().regions).flatMap((region) => region.widgets);
-  const destination = placements.find(
-    (placement) =>
-      placement.viewId === dashboardWidgetIds.sessionBubble &&
-      placement.resource?.type === "session" &&
-      placement.resource.id === input.resource.id,
-  );
-  if (destination) return ctx.layout.activatePanel(destination.widgetId);
-  const origin = placements.find(
-    (placement) =>
-      placement.placementIdentity?.kind === "mode" &&
-      placement.placementIdentity.placementId === identity.placementId &&
-      placement.placementIdentity.instanceKey === identity.instanceKey,
-  );
-  if (!origin) return undefined;
-  ctx.modePlacements.updatePlacement(identity, { resource: input.resource, title: input.resource.label });
-  return ctx.layout.activatePanel(origin.widgetId);
-};
-// The single path every session open goes through: remember the selection, place the tab,
-// mirror it into the sidenav, and reveal the Side Panel unless the caller keeps it as-is.
 export const openDashboardSessionPanel = (ctx: WorkbenchModuleContext, input: OpenDashboardSessionPanelInput) => {
-  rememberDashboardSessionResource(ctx, input.resource);
-  const previousPanelMode = ctx.sidePanel.getMode();
-  const bubble =
-    replaceSessionPanel(ctx, input) ??
-    openSessionBubbleWidgets(ctx, {
-      resource: input.resource,
-      title: input.resource.label,
-      tabRetention: input.tabRetention,
-    });
-  selectSidenavSessionNode(ctx, input.resource);
-  if (input.preservePanelMode && ctx.sidePanel.getMode() !== previousPanelMode) {
-    ctx.sidePanel.setMode(previousPanelMode);
-  }
+  const bubble = input.replacePanel
+    ? ctx.navigation.openTarget(
+        {
+          kind: "viewer",
+          operation: "switch",
+          from: input.from,
+          resource: input.resource,
+          ...(input.replacePanel.kind === "page" ? { page: workbenchPages.session } : {}),
+        },
+        { viewer: input.replacePanel, projectId: input.from?.projectId },
+      )
+    : openSessionBubbleWidgets(ctx, {
+        resource: input.resource,
+        tabRetention: input.tabRetention,
+        region: input.region,
+      });
   return bubble;
 };

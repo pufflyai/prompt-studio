@@ -1,4 +1,5 @@
 import type { AssetStore, StorageOwner } from "pstdio-sync";
+import { type StorageGroup, storageLimits, storageRecordBytes } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import type { createDocumentStorageDBService } from "./document-storage";
 import { type RecoveryMetadata, textFileIds } from "./recovery-content";
@@ -11,6 +12,25 @@ export interface SavedOwner {
 }
 // Keeps each restore commit to a bounded number of record documents.
 const groupSize = 100;
+
+/** Splits restore edits so no commit is over the record-count bound or the storage commit limit. */
+const restoreGroups = (edits: StorageGroup["edits"], saved: RecoveryRecord[]) => {
+  const sizes = new Map(saved.map((record) => [record.recordId, storageRecordBytes(record)]));
+  const groups: StorageGroup["edits"][] = [];
+  let bytes = 0;
+  for (const edit of edits) {
+    const size = edit.deleted ? 0 : (sizes.get(edit.recordId) ?? 0);
+    const group = groups.at(-1);
+    if (!group || group.length >= groupSize || bytes + size > storageLimits.commitBytes) {
+      groups.push([edit]);
+      bytes = size;
+    } else {
+      group.push(edit);
+      bytes += size;
+    }
+  }
+  return groups;
+};
 const empty: SavedOwner = { records: [], metadata: { texts: {}, dataVersions: [] } };
 
 /** Writes one owner back to its saved content through normal record commits and document edits. */
@@ -32,11 +52,8 @@ export const createOwnerRestore = (db: DbClient, documents: Documents) => {
     // A revived record needs a second pass to restore the shared value its document kept.
     for (let pass = 0; pass < 2; pass++) {
       const { edits, revived } = recoveryEdits(await records.list(), saved);
-      for (let index = 0; index < edits.length; index += groupSize)
-        await records.commit({
-          operationId: `recovery:${restoreId}:${pass}:${index}`,
-          edits: edits.slice(index, index + groupSize),
-        });
+      for (const [index, group] of restoreGroups(edits, saved).entries())
+        await records.commit({ operationId: `recovery:${restoreId}:${pass}:${index}`, edits: group });
       for (const edit of edits) restored.add(edit.recordId);
       if (!revived) break;
     }

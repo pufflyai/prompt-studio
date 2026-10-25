@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { basename } from "node:path";
+import { registryNotesEngines } from "./registry-notes.fixture";
 
 // The portable smoke checks the host's HTTP contract. The service-container job runs
 // the same scenario against the production PSX image with PostgreSQL and S3.
@@ -39,7 +40,7 @@ export const startRegistryWireFixture = async () => {
       versions.push({
         id: "pstdio.pstdio-notes",
         version,
-        enginesPstdio: "^0.2.0",
+        enginesPstdio: registryNotesEngines,
         sha256: createHash("sha256").update(bytes).digest("hex"),
         withdrawn: false,
       });

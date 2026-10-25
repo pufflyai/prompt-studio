@@ -11,7 +11,7 @@ The relay also serves the blind sync protocol from [PRD 0014](../../requirements
 Run the real PostgreSQL and object storage checks:
 
 ```sh
-bun run --cwd services/relay test:sync
+bun run --cwd services/relay test:integration
 ```
 
 They cover duplicate updates, rejected stale latest states, blobs kept for the grace period, a storage dump with no plaintext from a seeded project, the storage bound across ten compaction cycles, protocol version errors, access to private project data, live forwarding and rate limits.
@@ -20,7 +20,7 @@ The full 10,000-update storage check is a manual benchmark: `bun run --cwd servi
 
 ## Build and check
 
-Use Bun 1.4.2 and Docker with the Compose plugin. From the repository root:
+Use Bun 1.4.4 and Docker with the Compose plugin. From the repository root:
 
 ```sh
 bun install --frozen-lockfile
@@ -51,12 +51,12 @@ Never edit generated SQL by hand. Operators call `migrateRelayStorage(databaseUr
 Run the focused real PostgreSQL checks:
 
 ```sh
-bun run --cwd services/relay test:storage
+bun run --cwd services/relay test:integration
 ```
 
 The storage checks use disposable PostgreSQL and RustFS. They cover independent connections, grouped conflicts, missing assets, scope isolation, historical asset requirements, replay/restore lineage, and killing a publishing process at the commit boundary. The Docker runner mounts repository source read-only and removes its own stack; it never opens the application's database.
 
-`bun run --cwd packages/pstdio-sync-contracts test:conformance` runs the reference relay suite (`src/conformance/reference.integration.ts`). `SYNC_TEST_ENTRY` selects a different test file for the runner. Since 0.46 the app has no grouped local storage, so there are no local-store conformance entries in `pstdio-db`.
+`bun run --cwd packages/pstdio-sync-contracts test:integration` runs the reference relay suite (`src/conformance/reference.p1.integration.ts`). Pass an explicit file or directory to the runner to narrow discovery. Since 0.46 the app has no grouped local storage, so there are no local-store conformance entries in `pstdio-db`.
 
 The runner waits for `http://objects:9000/health` before it starts the tests. It prints `Test object storage ready at http://objects:9000` when the check passes. When it fails, the error names the endpoint and the last HTTP status or connection error. Docker passes a proxy from Docker Desktop or `~/.docker/config.json` into every container. The runner sets `NO_PROXY` for its services and for loopback addresses, so requests between containers and to the tests' own servers stay on the run's network. An HTTP 403 such as `No approved upstream IPv4 address` in that error means a request went to the proxy instead; check that the runner's `NO_PROXY` still lists the host. The relay fixtures in `compose.test.yaml` set the same list. Do not turn off the proxy or other network controls to get past it.
 
@@ -94,14 +94,14 @@ can repeat cancellation to finish cleanup from the durable cancelled row.
 Run real-store coverage with the existing test allowances:
 
 ```sh
-bun run --cwd services/relay test:assets
+bun run --cwd services/relay test:integration
 ```
 
 This starts disposable PostgreSQL and RustFS. It checks scoped reads, multipart resume, process kills, lost acknowledgments, corrupt and truncated bytes, denied credentials, cancellation, mixed group publication, restore checks and incremental transfer. Resource observations are diagnostic; this is not the parent's 10,000-record/5 GiB acceptance workload or a performance budget.
 
 ## Provider contract
 
-The reusable `src/assets/objects.contract.ts` probe checks the exact S3 operations used by the adapter: multipart creation/listing/recovery, streamed parts, completion, full reads, conditional ETag reads, immutable byte ranges, empty objects, abort, part-list verification and deletion. It creates random keys under `relay-storage-contract/` and deletes only those probe keys and uploads. The local `test:assets` command runs it against RustFS.
+The reusable `src/assets/objects.contract.ts` probe checks the exact S3 operations used by the adapter: multipart creation/listing/recovery, streamed parts, completion, full reads, conditional ETag reads, immutable byte ranges, empty objects, abort, part-list verification and deletion. It creates random keys under `relay-storage-contract/` and deletes only those probe keys and uploads. The local `test:integration` command runs it against RustFS.
 
 Probe cleanup discovers uploads for every owned key, including lost creation responses. It attempts every key and object deletion even if another cleanup step fails, and reports both the original failure and cleanup failures. A permission failure can still leave temporary data; the error identifies the probe key for later authorized cleanup.
 
@@ -151,12 +151,12 @@ Subscriptions retain the verified access expiry and close with1008 at that deadl
 
 Responses use no-store and sanitized errors. Missing/invalid credentials return 401 with a generic Bearer challenge; identity mismatch returns 403, malformed input 400, method mismatch 405 with Allow, unavailable subscription 503, and rejected content operations 409. Missing assets return 404. Unsupported routes return 404.
 
-Run `bun run --cwd services/relay test:transport` for real HTTP, native WebSockets, separate authority/content roles, overlapping account identities, multipart disconnect/resume/cancel, committed hints, idle expiry under content locks, manager outage, restore and failure coverage. It uses the existing conformance runner's disposable PostgreSQL/RustFS stack on default subnet 10.254.236.0/24. Run these fixtures sequentially. It adds no test allowance or reduced workload.
+Run `bun run --cwd services/relay test:integration` for real HTTP, native WebSockets, separate authority/content roles, overlapping account identities, multipart disconnect/resume/cancel, committed hints, idle expiry under content locks, manager outage, restore and failure coverage. It uses the existing conformance runner's disposable PostgreSQL/RustFS stack on default subnet 10.254.236.0/24. Run these fixtures sequentially. It adds no test allowance or reduced workload.
 
 ## Run the isolated smoke check
 
 ```sh
-bun run --cwd services/relay test:isolated
+bun run --cwd services/relay test:integration
 ```
 
 This command builds the Docker runtime and smoke images, starts PostgreSQL and RustFS, creates a test bucket, and checks:

@@ -1,4 +1,4 @@
-import type { ResourceRef } from "@pstdio/sdk/extensions";
+import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import {
   composeOwnedPlacements,
   type ResolvedOwnedPlacement,
@@ -9,7 +9,10 @@ import type { WorkbenchPageLocationCommitInput } from "./page-registry-internals
 import { type PageRegistryCommitInput, resolveModePlacementSet } from "./page-registry-state";
 import type {
   CreateWorkbenchPageRegistryInput,
+  WorkbenchPageContribution,
   WorkbenchPageRegistryStoreState,
+  WorkbenchPageResourceCodec,
+  WorkbenchPageRuntimeState,
   WorkbenchPageSlotOpenInput,
 } from "./page-registry-types";
 import { pageResourceContextKey, pageResourceInstanceKey } from "./page-resource-context";
@@ -25,9 +28,35 @@ import {
 import { pageStateKey, staticPageInstanceKey } from "./page-state-key";
 
 export interface PreparedOwnedPlacements<Value> {
-  shell: readonly ResolvedOwnedPlacement<Value>[];
+  shell?: readonly ResolvedOwnedPlacement<Value>[];
   mode: readonly ResolvedOwnedPlacement<Value>[];
+  landing?: PlacementIdentity;
 }
+const locationActivations = (
+  page: WorkbenchPageContribution,
+  state: WorkbenchPageRuntimeState,
+  target: WorkbenchPageLocationCommitInput,
+  resources: WorkbenchPageResourceCodec,
+  openFollowers: boolean,
+) => {
+  const primary = primarySlot(page);
+  const instanceKey = state.activePrimaryInstanceKey;
+  const main = page.main;
+  const landing =
+    main.kind === "panels" && !target.pageStates
+      ? page.slots.find((slot) => slot.id === main.landing && (!slot.isAvailable || slot.isAvailable(target.resource)))
+      : undefined;
+  const followers = openFollowers
+    ? pageFollowerIdentities(page, target.resource, (resource) => pageResourceInstanceKey(page, resource, resources))
+    : [];
+  return [
+    ...(primary && instanceKey ? [pagePlacementIdentity(page.id, primary.id, instanceKey)] : []),
+    ...(landing
+      ? [pagePlacementIdentity(page.id, landing.id, staticPageInstanceKey(page, target.resource, resources))]
+      : []),
+    ...followers,
+  ];
+};
 export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryInput<Value>) => {
   const normalizeResource = input.resources.normalize;
   const requirePage = (current: WorkbenchPageRegistryStoreState<Value>, pageId: string) => {
@@ -112,25 +141,27 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     const resourceKey = (resource: ResourceRef) => pageResourceInstanceKey(page, resource, input.resources);
     const normalizedTarget = {
       ...target,
+      pageContext: { page: target.location.page, parent: target.location.parent, params: target.location.params },
       ...(target.resource ? { resource: normalizeResource(target.resource) } : {}),
     };
     const stateKey = pageStateKey(page, target.location, input.resources);
     const currentPageState =
       pageStates[stateKey] ?? input.restorePageState?.(page, target.location, target.projectId) ?? emptyPageState(page);
-    const primaryState = selectPrimaryTarget({ page, state: currentPageState, target: normalizedTarget, resourceKey });
+    const primaryState = target.pageStates
+      ? currentPageState
+      : selectPrimaryTarget({ page, state: currentPageState, target: normalizedTarget, resourceKey });
     const openFollowers =
       !target.pageStates ||
       current.activePageId !== page.id ||
       pageResourceContextKey(page, current.location?.resource) !==
         pageResourceContextKey(page, normalizedTarget.resource) ||
-      current.pageStates[stateKey]?.activePrimaryInstanceKey !== primaryState.activePrimaryInstanceKey;
+      (primaryState.activePrimaryInstanceKey !== undefined &&
+        current.pageStates[stateKey]?.activePrimaryInstanceKey !== primaryState.activePrimaryInstanceKey);
     const pageState = openFollowers
       ? openPageResourceBindings({ page, state: primaryState, target: normalizedTarget, resourceKey })
       : primaryState;
-    const primary = primarySlot(page);
-    const instanceKey = pageState.activePrimaryInstanceKey;
-    const followers = openFollowers ? pageFollowerIdentities(page, normalizedTarget.resource, resourceKey) : [];
-    return compose(
+    const independentLanding = prepareLanding(page, target, owned);
+    const prepared = compose(
       current,
       {
         pageStates: { ...pageStates, [stateKey]: pageState },
@@ -139,13 +170,25 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
         activePageId: page.id,
         activeModeId: page.modeId,
         activate: [
-          ...(primary && instanceKey ? [pagePlacementIdentity(page.id, primary.id, instanceKey)] : []),
-          ...followers,
+          ...(independentLanding ? [independentLanding.identity] : []),
+          ...(owned?.landing ? [owned.landing] : []),
+          ...locationActivations(page, pageState, normalizedTarget, input.resources, openFollowers),
         ],
         action: target.action,
       },
-      owned,
+      independentLanding ? { mode: independentLanding.placements } : owned,
     );
+    const landingIdentity = independentLanding?.identity ?? owned?.landing;
+    if (landingIdentity) input.validateLanding?.(prepared, landingIdentity);
+    return prepared;
+  };
+  const prepareLanding = (
+    page: WorkbenchPageContribution,
+    target: WorkbenchPageLocationCommitInput,
+    owned?: PreparedOwnedPlacements<Value>,
+  ) => {
+    if (owned || target.pageStates) return undefined;
+    return input.resolveLanding?.(page, { projectId: target.projectId, location: target.location, open: target.open });
   };
   const slot = (
     target: WorkbenchPageSlotOpenInput,
@@ -156,7 +199,6 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     const page = requirePage(current, target.pageId);
     const resourceKey = (resource: ResourceRef) => pageResourceInstanceKey(page, resource, input.resources);
     const slot = requirePageSlot(page, target.slotId);
-    if (slot.role !== "auxiliary") throw new Error(`Page slot is not an auxiliary panel: ${page.id}.${slot.id}`);
     const stateKey = pageStateKey(page, current.location, input.resources);
     let pageState = current.pageStates[stateKey] ?? emptyPageState(page);
     let instanceKey = staticPageInstanceKey(page, current.location?.resource, input.resources);
@@ -172,7 +214,7 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     } else {
       if (slot.item.kind === "binding") throw new Error(`Page slot "${slot.id}" requires a resource`);
       if (target.open) throw new Error(`Page slot "${slot.id}" accepts open intent only with a resource`);
-      if (slot.item.presence !== "fixed") pageState = setStaticSlotOpen(pageState, slot.id, true);
+      pageState = setStaticSlotOpen(pageState, slot.id, true);
     }
     return compose(
       current,
@@ -203,5 +245,14 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
       action: target.action,
     });
   };
-  return { compose, location, restore, slot };
+  const selection = (target: WorkbenchPageLocationCommitInput, current: WorkbenchPageRegistryStoreState<Value>) => {
+    const page = requirePage(current, target.pageId);
+    const context = { modeId: page.modeId, pageId: page.id, projectId: target.projectId, location: target.location };
+    const selected = target.resource ? target : { ...target, pageStates: current.pageStates };
+    return location(selected, current, {
+      shell: input.resolveShellPlacements(context),
+      mode: input.resolveModePlacements(page.modeId, target.location, target.projectId, page.id),
+    });
+  };
+  return { compose, location, restore, selection, slot };
 };

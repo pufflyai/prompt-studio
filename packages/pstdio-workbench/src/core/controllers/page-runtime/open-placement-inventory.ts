@@ -29,15 +29,22 @@ export const createOpenPlacementInventory = () => {
     placementList = undefined;
   };
 
+  const referencedKeys = (placement: WorkbenchWidgetPlacement) => {
+    const keys = placement.resource ? [resourceKey(placement.resource)] : [];
+    let parent = placement.pageContext?.parent;
+    while (parent) {
+      if (parent.resource) keys.push(resourceKey(parent.resource));
+      parent = parent.parent;
+    }
+    return keys;
+  };
   const updateResources = (
     owner: Owner,
     previous: Map<string, WorkbenchWidgetPlacement>,
     next: Map<string, WorkbenchWidgetPlacement>,
   ) => {
-    const previousResources = new Set(
-      [...previous.values()].flatMap((p) => (p.resource ? [resourceKey(p.resource)] : [])),
-    );
-    const nextResources = new Set([...next.values()].flatMap((p) => (p.resource ? [resourceKey(p.resource)] : [])));
+    const previousResources = new Set([...previous.values()].flatMap(referencedKeys));
+    const nextResources = new Set([...next.values()].flatMap(referencedKeys));
     for (const key of previousResources) {
       if (nextResources.has(key)) continue;
       const entries = resourceOwners.get(key)!;

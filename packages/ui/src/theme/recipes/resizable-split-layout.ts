@@ -59,7 +59,7 @@ export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
         root: {
           flexDirection: "var(--split-direction)",
           height: "full",
-          overflow: "hidden",
+          overflow: "clip",
           gap: "0",
           transition: "--split-size {durations.panel-open} {easings.enter}",
           "&[data-collapsed=true]": {

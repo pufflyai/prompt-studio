@@ -34,11 +34,12 @@ export const createStartModule = () =>
         modeId: "project",
         main: {
           kind: "view",
+          cardinality: "one",
+          presentation: "page",
           view: {
             kind: "view",
             id: dashboardWidgetIds.start,
           },
-          cardinality: "one",
         },
         slots: [],
       });

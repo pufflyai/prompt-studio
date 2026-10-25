@@ -2,7 +2,7 @@ import { Box, Icon, Input, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Eye } from "lucide-react";
 import { useState } from "react";
-import { expect, fireEvent, screen, userEvent, waitFor, within } from "storybook/test";
+import { expect, fireEvent, fn, screen, userEvent, waitFor, within } from "storybook/test";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { getIconComponent } from "@/components/primitives/icon-options";
 
@@ -134,6 +134,20 @@ export const Default: Story = {
   render: () => <ResourceContextMenu actions={createActions(4)}>{menuTarget}</ResourceContextMenu>,
 };
 
+export const SelectionAction: Story = {
+  args: {
+    children: menuTarget,
+    actions: [{ key: "toggle", label: "Toggle visibility", onSelect: fn() }],
+  },
+  play: async ({ canvasElement, args }) => {
+    fireEvent.contextMenu(within(canvasElement).getByText("Right-click here"));
+    const action = await screen.findByRole("menuitem", { name: "Toggle visibility" });
+    await userEvent.click(action);
+    expect(args.actions[0].onSelect).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+  },
+};
+
 export const VisibilitySubmenu: Story = {
   render: () => <NestedVisibilityMenu />,
   play: async ({ canvasElement }) => {
@@ -231,6 +245,33 @@ export const LongMenuScrolls: Story = {
     const menu = await screen.findByRole("menu");
     await waitFor(() => expect(menu.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight));
     await expect(screen.getByRole("menuitem", { name: "Sidenav entry 60" })).toBeInTheDocument();
+  },
+};
+
+export const EscapeRespectsNewFocus: Story = {
+  tags: ["!manifest", "menu-escape-focus"],
+  render: () => (
+    <Stack>
+      <ResourceContextMenu actions={createActions(1)}>
+        <Box tabIndex={0} p="md">
+          Context target
+        </Box>
+      </ResourceContextMenu>
+      <Input aria-label="Next control" />
+    </Stack>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    canvas.getByText("Context target").focus();
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+    const menu = await screen.findByRole("menu");
+    await waitFor(() => expect(menu).toHaveFocus());
+    fireEvent.keyDown(menu, { key: "Escape" });
+    const next = canvas.getByRole("textbox", { name: "Next control" });
+    next.focus();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    await expect(next).toHaveFocus();
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   },
 };
 
