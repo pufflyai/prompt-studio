@@ -7,13 +7,11 @@ import { createDashboardResource } from "@/shared/app/resources";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionsModule } from "../module";
-import { createSessionBubbleModule } from "./module";
 
 test("session picker exposes the complete project source and navigates the invoking page", async () => {
   const workbench = createWorkbench();
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: "picker-project", name: "Picker" });
-  workbench.registerModule(createSessionBubbleModule());
   workbench.registerModule(createSessionsModule());
   const sessions = Array.from({ length: 65 }, (_, index) => ({
     id: `picker-${index}`,
@@ -31,9 +29,10 @@ test("session picker exposes the complete project source and navigates the invok
       workbench,
       createDashboardResource("session", "picker-0", "History 0", "MessageCircle", "picker-project"),
     );
-    const main = workbench.layout.listPanelInstances("main")[0]!;
+    const main = workbench.pages.getContent()!;
     await workbench.commands.executeCommand(dashboardCommandIds.switchSession, {
       placementIdentity: main.placementIdentity,
+      from: main.resource,
     });
     const entries = workbench.commandPalette.store.getState().resourceSearch!.list("");
     expect(entries).toHaveLength(65);

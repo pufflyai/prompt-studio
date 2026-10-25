@@ -76,11 +76,10 @@ describe("switching session placements", () => {
         title: "Selected session",
         status: "completed",
       });
-      await workbench.commands.executeCommand(
-        dashboardCommandIds.createSession,
-        undefined,
-        retention === "persistent" ? { source: "panel-add" } : undefined,
-      );
+      await workbench.commands.executeCommand(dashboardCommandIds.createSession, undefined, {
+        source: retention === "persistent" ? "panel-add" : undefined,
+        region: "side",
+      });
       const origin = sessionPlacements(workbench)[0]!;
       await workbench.commands.executeCommand(dashboardCommandIds.createSession, undefined, { source: "panel-add" });
       const sibling = sessionPlacements(workbench)[1]!;
@@ -229,7 +228,7 @@ describe("createSessionBubbleModule", () => {
     });
     workbench.registerModule(createSessionBubbleModule());
     await activateProjectPage(workbench);
-    await workbench.commands.executeCommand(dashboardCommandIds.createSession, { workspace });
+    await workbench.commands.executeCommand(dashboardCommandIds.createSession, { workspace, sidePanel: true });
     expect(sessionPlacements(workbench)).toEqual([
       expect.objectContaining({
         resource: expect.objectContaining({
@@ -291,7 +290,6 @@ describe("New session while a session page is open", () => {
       status: "completed",
     });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createSessionsModule());
     openSessionsPage(workbench, session);
     const location = workbench.pages.store.getState().location;
@@ -312,7 +310,6 @@ describe("New session while a session page is open", () => {
       status: "completed",
     });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createSessionsModule());
     const panelSession = createDashboardResource("session", "session-2", "Panel", "MessageCircle", "project-1");
     openSessionsPage(workbench, session);
@@ -321,6 +318,7 @@ describe("New session while a session page is open", () => {
     const origin = workbench.layout.getLayout().regions.side.widgets[0]!;
     await workbench.commands.executeCommand(dashboardCommandIds.createSession, {
       replacePanel: origin.placementIdentity,
+      from: origin.resource,
     });
     expect(workbench.layout.getLayout().regions.side.widgets).toEqual([
       expect.objectContaining({

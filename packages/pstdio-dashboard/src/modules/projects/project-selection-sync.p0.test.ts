@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -103,7 +104,7 @@ test.each([
     expect(workbench.pageLocations.navigate({ kind: "page", page: sessionsPage }).ok).toBe(true);
     await select("first");
     await select("second");
-    expect(workbench.pages.store.getState().location?.page).toEqual(sessionsPage);
+    expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.sessionComposer);
     expect(workbench.pageLocations.replay(secondLocation!).ok).toBe(true);
     await tabs.close(workbench, "first");
     await tabs.close(workbench, "second");

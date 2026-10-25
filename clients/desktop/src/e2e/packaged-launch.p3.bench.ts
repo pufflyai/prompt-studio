@@ -58,9 +58,7 @@ test("warm attach restores the workbench within budget", async () => {
         const project = await createPackagedProject(first, "Warm attach project");
         await openPackagedProject(page, project);
         await page.getByRole("option", { name: "Sessions", exact: true }).click();
-        await expect(
-          page.getByLabel("Main", { exact: true }).getByRole("button", { name: "New session", exact: true }),
-        ).toBeVisible();
+        await expect(page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
         const workbenchState = () => page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
         const pageLocationKey = `dashboard-wb2:page-location:${project.id}`;
         await expect
@@ -68,7 +66,7 @@ test("warm attach restores the workbench within budget", async () => {
             const { values } = await workbenchState();
             return [values[selectedProjectKey], JSON.parse(values[pageLocationKey] ?? "null")?.location?.page?.id];
           })
-          .toEqual([project.id, "sessions"]);
+          .toEqual([project.id, "session-composer"]);
         const theme =
           (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark" ? "pstdio-light" : "pstdio-dark";
         await page.evaluate(() =>
@@ -113,9 +111,7 @@ test("warm attach restores the workbench within budget", async () => {
     expect(await second.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState())).toMatchObject({
       values: { [selectedProjectKey]: projectId },
     });
-    await expect(
-      second.page.getByLabel("Main", { exact: true }).getByRole("button", { name: "New session", exact: true }),
-    ).toBeVisible();
+    await expect(second.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
     await expect(second.page.getByTestId("workbench-side-panel-attached")).toBeVisible();
     await expect(second.page.locator("html")).toHaveAttribute("data-theme", theme);
   } finally {

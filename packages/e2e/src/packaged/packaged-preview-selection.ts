@@ -45,7 +45,10 @@ export const verifyPackagedPreviewSelection = async (page: Page, projectId: stri
       }
       if (await reattach.isVisible()) await reattach.click();
       await addPanel.click();
-      await isolated.getByRole("menuitem", { name: "New session", exact: true }).click();
+      await isolated
+        .getByRole("menu", { name: "Add panel", exact: true })
+        .getByRole("menuitem", { name: "New session", exact: true })
+        .click();
       const newSession = header.getByRole("tab", { name: "New session", exact: true });
       await expect(newSession).toHaveAttribute("aria-selected", "true");
       await newSession.click({ button: "right" });

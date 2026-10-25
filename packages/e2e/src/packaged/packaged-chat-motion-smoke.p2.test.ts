@@ -1,3 +1,4 @@
+// Includes replay chunks, cached history, file navigation through reload and Back, and panel motion.
 import { expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";

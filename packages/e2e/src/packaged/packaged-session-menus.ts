@@ -46,18 +46,28 @@ const verifyFloatingLauncher = async (page: Page) => {
   await floating.getByRole("button", { name: "Reattach Side Panel" }).click();
 };
 
-// An explicit link focuses the Side viewer that already shows the session and leaves Main alone.
-const openSessionFromSideViewerInMain = async (page: Page, row: Locator, projectId: string, sessionId: string) => {
+const revealThenCloseSessionViewer = async (page: Page, row: Locator, projectId: string) => {
   await row.click();
-  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions$`));
-  const sideViewer = page
-    .locator('[data-workbench-panel-header="side"]')
-    .getByRole("tab", { name: /Packaged session actions/ });
-  await sideViewer.click({ button: "right" });
+  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions/compose$`));
+  const selected = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
+    name: /Packaged session actions/,
+  });
+  await expect(selected).toHaveAttribute("aria-selected", "true");
+  await selected.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
-  await expect(sideViewer).toHaveCount(0);
-  await row.click();
-  await expect(page).toHaveURL(new RegExp(sessionId));
+  await expect(selected).toHaveCount(0);
+};
+const startNewSessionInViewer = async (page: Page, preview: Locator) => {
+  await preview.focus();
+  await page.keyboard.press("ControlOrMeta+Alt+s");
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
+  await expect(page.locator('[data-workbench-panel="main"]')).toContainText("Project folder");
+  await page.goBack();
+  await expect(preview).toBeVisible();
+  await preview.focus();
+  await page.keyboard.press("Shift+F10");
+  await expect(page.getByRole("menu")).toBeVisible();
+  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
 };
 
 export const verifyPackagedSessionMenus = async (
@@ -103,8 +113,7 @@ export const verifyPackagedSessionMenus = async (
   await leaveWorkspace();
   await reopenWorkspace();
   await verifyClosedSidePreference(page, preview, leaveWorkspace, reopenWorkspace);
-  await preview.focus();
-  await page.keyboard.press("ControlOrMeta+Alt+s");
+  await startNewSessionInViewer(page, preview);
   const sideTabs = page.locator('[data-workbench-panel-header="side"]').getByRole("tab");
   await expect(sideTabs.filter({ hasText: "New session" })).toBeVisible();
   const sidePanel = page.locator('[data-workbench-panel="side"]').filter({ visible: true });
@@ -229,7 +238,9 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.getByRole("group", { name: "Sessions", exact: true })).toBeVisible();
   await expect(page.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
-  await openSessionFromSideViewerInMain(page, row, projectId, session.id);
+  await revealThenCloseSessionViewer(page, row, projectId);
+  await row.click();
+  await expect(page).toHaveURL(new RegExp(session.id));
   await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
   await page
     .locator('[role="menu"][data-state="open"]')
@@ -245,7 +256,7 @@ export const verifyPackagedSessionMenus = async (
     .getByRole("menuitem", { name: "Delete session", exact: true })
     .click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions/compose$`));
   const deleted = await fetch(`${baseUrl}/v1/sessions/${session.id}`, { headers: authorization });
   expect(deleted.status).toBe(404);
   await verifyExtensionModeSessionRestore(page, projectId);

@@ -1,5 +1,5 @@
 import { Spinner } from "@chakra-ui/react";
-import { resourceKey, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
+import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
 import {
   type ResourceRef,
   type WorkbenchModuleContext,
@@ -7,16 +7,10 @@ import {
   workbenchCommandPaletteMenuPath,
 } from "@pstdio/workbench";
 import { lazy, Suspense } from "react";
-import {
-  forgetDashboardSession,
-  getDashboardSelectedSession,
-  rememberDashboardSession,
-} from "@/modules/sessions/state/session-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
-import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
   dashboardNavigationSections,
@@ -24,6 +18,7 @@ import {
 } from "@/shared/workbench/dashboard-navigation-contribution";
 import { setDashboardSidenavSelection, updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
+import { createSessionBubbleModule } from "./bubble/module";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { subscribeSessionListData } from "./data/session-data-subscription";
 import { createSessionIndicator } from "./session-indicator";
@@ -37,24 +32,12 @@ const SessionWidget = lazy(() =>
   import("@/modules/sessions/components/session-widget").then((module) => ({ default: module.SessionWidget })),
 );
 
-const registerSessionWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardSessionDraftPersistence) => {
-  ctx.views.registerView({
-    id: dashboardWidgetIds.newSession,
-    title: "New session",
-    icon: "MessageSquarePlus",
-    body: {
-      kind: "react",
-      render: (input) => (
-        <Suspense fallback={<Spinner />}>
-          <SessionWidget input={input} drafts={drafts} />
-        </Suspense>
-      ),
-    },
-  });
+const registerSessionView = (ctx: WorkbenchModuleContext, drafts?: DashboardSessionDraftPersistence) => {
   ctx.views.registerView(
     {
       id: dashboardWidgetIds.session,
       title: "Session",
+      icon: "message-circle",
       body: {
         kind: "react",
         render: (input) => (
@@ -67,21 +50,7 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardS
     { priority: 40 },
   );
 };
-const removeMatchingSessionPanelPreview = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
-  for (const placement of Object.values(ctx.layout.getLayout().regions).flatMap((region) => region.widgets)) {
-    if (
-      placement.viewId === dashboardWidgetIds.sessionBubble &&
-      placement.resourceKey === resourceKey(resource) &&
-      placement.tabRetention === "preview"
-    ) {
-      if (placement.placementIdentity) ctx.modePlacements.closePlacement(placement.placementIdentity);
-    }
-  }
-};
-const openSessionsNavigation = (ctx: WorkbenchModuleContext) => {
-  const lastOpenedSession = getDashboardSelectedSession(ctx);
-  return openSessionsPage(ctx, lastOpenedSession?.resource);
-};
+const openSessionsNavigation = (ctx: WorkbenchModuleContext) => openSessionsPage(ctx);
 const createSessionsNavigationNode = () => ({
   id: dashboardViews.sessions.id,
   label: dashboardViews.sessions.label,
@@ -92,14 +61,16 @@ const createSessionsNavigationNode = () => ({
 const syncSessionsPageSelection = (ctx: WorkbenchModuleContext) => {
   const state = ctx.pages.store.getState();
   if (
-    ![workbenchPages.sessions.id, workbenchPages.session.id, workbenchPages.newSession.id].some(
-      (id) => id === state.activePageId,
-    )
+    ![
+      workbenchPages.sessions.id,
+      workbenchPages.sessionComposer.id,
+      workbenchPages.session.id,
+      workbenchPages.newSession.id,
+    ].some((id) => id === state.activePageId)
   )
     return;
   const resource = state.location?.resource;
   if (resource?.type !== "session") {
-    forgetDashboardSession(ctx);
     setDashboardSidenavSelection(ctx, undefined);
     return;
   }
@@ -116,14 +87,12 @@ const syncSessionsPageSelection = (ctx: WorkbenchModuleContext) => {
     });
     return;
   }
-  if (session) rememberDashboardSession(ctx, session);
   const workbenchResource: ResourceRef = session?.resource ?? {
     type: resource.type,
     id: resource.id,
     label: resource.label,
     metadata: resource.metadata,
   };
-  removeMatchingSessionPanelPreview(ctx, workbenchResource);
   updateDashboardSidenav(ctx, { selectedNode: resourceKey(workbenchResource) });
 };
 const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
@@ -151,29 +120,8 @@ const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
     },
   });
 };
-const registerSidePanelSessionPersistence = (
-  ctx: WorkbenchModuleContext,
-  persistence: DashboardSessionSelectionPersistence | undefined,
-) => {
-  if (!persistence) return () => undefined;
-  return ctx.layout.store.subscribeSelector(
-    (state) => {
-      const active = ctx.layout.getActivePanel();
-      const side = state.layout.regions.side;
-      const session =
-        active?.viewId === dashboardWidgetIds.sessionBubble
-          ? active
-          : (side.widgets.find((placement) => placement.widgetId === side.activeWidgetId) ?? side.widgets[0]);
-      return session?.viewId === dashboardWidgetIds.sessionBubble && session.resource?.type === "session"
-        ? session.resource.id
-        : undefined;
-    },
-    (sessionId) => persistence.setSelectedSessionId(sessionId),
-  );
-};
 interface CreateSessionsModuleInput {
   sessionDraftPersistence?: DashboardSessionDraftPersistence;
-  sessionSelectionPersistence?: DashboardSessionSelectionPersistence;
 }
 // The sessions slice owns the Sessions pages, sidenav level, and chat view.
 export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
@@ -187,8 +135,9 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         resolve: (resource) => findDashboardSession(resource.id)?.resource,
         subscribe: subscribeSessionListData,
       });
-      ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "MessageSquarePlus" });
-      registerSessionWidgets(ctx, input.sessionDraftPersistence);
+      ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "message-circle" });
+      ctx.registerChildModule(createSessionBubbleModule({ sessionDraftPersistence: input.sessionDraftPersistence }));
+      registerSessionView(ctx, input.sessionDraftPersistence);
       registerSessionPages(ctx);
       registerSidenavSessions(ctx);
       registerSessionResourceActions(ctx);
@@ -224,9 +173,6 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         order: 30,
       });
       const unsubscribeDashboardData = subscribeSessionListData(() => syncSessionsPageSelection(ctx));
-      // Persist the Side Panel's actual active session. Main-panel session navigation uses
-      // the same in-memory selection context, but must not create a duplicate panel on boot.
-      const unsubscribeSelection = registerSidePanelSessionPersistence(ctx, input.sessionSelectionPersistence);
       ctx.resources.registerProvider({
         id: "dashboard-workbench.sessions",
         kind: "session",
@@ -234,15 +180,9 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
           createDashboardSessions(getDashboardSelectedProjectId(ctx)).map(({ resource, status }) => ({
             resource,
             indicator: createSessionIndicator(status),
-            target: { kind: "panel", panel: workbenchPanels.projectSession, resource },
+            target: { kind: "page", page: workbenchPages.session, resource },
             group: "Sessions",
-            activate: () =>
-              ctx.navigation.openTarget({
-                kind: "panel",
-                panel: workbenchPanels.projectSession,
-                resource: resource,
-                open: "preview",
-              }),
+            activate: () => openSessionsPage(ctx, resource),
           })),
       });
       const unsubscribePage = ctx.pages.store.subscribe(() => syncSessionsPageSelection(ctx));
@@ -251,7 +191,6 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
           unsubscribeDashboardData();
           unsubscribeResourceSync();
           unsubscribeRetention();
-          unsubscribeSelection();
           unsubscribePage();
         },
       };

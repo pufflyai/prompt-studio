@@ -1,4 +1,4 @@
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -12,26 +12,50 @@ export const registerSessionPages = (ctx: WorkbenchModuleContext) => {
     icon: dashboardViews.sessions.icon,
     path: "sessions",
     modeId: "project",
-    main: { kind: "panels" },
+    main: { kind: "group", default: workbenchPages.sessionComposer },
+    slots: [],
+  });
+  ctx.pages.registerPage({
+    id: workbenchPages.sessionComposer.id,
+    ref: workbenchPages.sessionComposer,
+    title: "New session",
+    icon: "message-circle",
+    path: "sessions/compose",
+    modeId: "project",
+    parentId: dashboardViews.sessions.id,
+    main: {
+      kind: "view",
+      view: { kind: "view", id: dashboardWidgetIds.session },
+      cardinality: "one",
+      presentation: "page",
+      tab: createSessionTabPresentation(ctx),
+    },
     slots: [],
   });
   ctx.pages.registerPage({
     id: workbenchPages.newSession.id,
     ref: workbenchPages.newSession,
     title: "New session",
-    icon: "MessageSquarePlus",
+    icon: "message-circle",
     path: "sessions/new",
     modeId: "project",
     parentId: dashboardViews.sessions.id,
     resource: { kinds: [{ kind: "resource-kind", id: "session-draft" }] },
-    main: { kind: "view", view: { kind: "view", id: dashboardWidgetIds.newSession }, cardinality: "one" },
+    main: {
+      kind: "view",
+      view: { kind: "view", id: dashboardWidgetIds.session },
+      cardinality: "one",
+      presentation: "page",
+      tab: createSessionTabPresentation(ctx),
+    },
+    panelView: workbenchPanels.projectSession,
     slots: [],
   });
   return ctx.pages.registerPage({
     id: workbenchPages.session.id,
     ref: workbenchPages.session,
     title: "Session",
-    icon: dashboardViews.sessions.icon,
+    icon: "message-circle",
     path: "session",
     modeId: "project",
     parentId: dashboardViews.sessions.id,
@@ -45,8 +69,10 @@ export const registerSessionPages = (ctx: WorkbenchModuleContext) => {
       kind: "view",
       view: { kind: "view", id: dashboardWidgetIds.session },
       cardinality: "one",
+      presentation: "page",
       tab: createSessionTabPresentation(ctx),
     },
+    panelView: workbenchPanels.projectSession,
     slots: [],
   });
 };

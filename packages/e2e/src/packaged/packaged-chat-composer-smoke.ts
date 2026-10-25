@@ -32,11 +32,6 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     }, project.id);
     await page.goto(`${baseUrl}/projects/${project.id}/sessions`);
     phase("dashboard opened");
-    await page
-      .locator('[data-workbench-panel="main"]')
-      .getByRole("group", { name: "Available tabs" })
-      .getByRole("button", { name: "New session", exact: true })
-      .click();
     const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
     const send = page.getByTestId("send-message-button").filter({ visible: true }).last();
     let release!: () => void;
@@ -119,6 +114,14 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(webReference).toHaveAttribute("href", "https://example.com");
     await expect(webReference).toHaveAttribute("target", "_blank");
     await expect(webReference.locator('[data-scope="tooltip"]')).toHaveCount(0);
+
+    await plainPath.click();
+    await expect(page.locator(".monaco-editor .view-lines")).toContainText("export");
+    await page.reload();
+    await expect(page.locator(".monaco-editor .view-lines")).toContainText("export");
+    await page.goBack();
+    await expect(plainPath).toBeVisible();
+    phase("conversation restored through file navigation, reload and Back");
 
     await editor.fill(
       "| Task | Details |\n| --- | --- |\n| Review | Read the changes and confirm that shared tools work together for people who never read code. |",

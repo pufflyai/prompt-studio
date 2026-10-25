@@ -85,9 +85,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     if (!projectId) throw new Error("Packaged project creation did not return an id");
     await openPackagedProject(first.page, { id: projectId, name: "Relaunch persistence project" });
     await first.page.getByRole("option", { name: "Sessions", exact: true }).click();
-    await expect(
-      first.page.getByLabel("Main", { exact: true }).getByRole("button", { name: "New session", exact: true }),
-    ).toBeVisible();
+    await expect(first.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
     await expect(first.page.getByRole("button", { name: "Show Side Panel", exact: true })).toBeVisible();
     const selectedProjectKey = "dashboard-wb2:selected-project:global";
     const pageLocationKey = `dashboard-wb2:page-location:${projectId}`;
@@ -101,7 +99,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     const pageLocation = firstValues[pageLocationKey];
     expect(JSON.parse(pageLocation ?? "null")).toMatchObject({
       version: 1,
-      location: { page: { id: "sessions", kind: "page" } },
+      location: { page: { id: "session-composer", kind: "page" } },
     });
     // The opposite of the default proves the restored theme is the saved choice, not the system mode.
     const chosenTheme = await test.step("Choose the theme opposite to the one shown", async () => {
@@ -171,9 +169,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
           ).json()) as Array<{ name: string }>,
       ),
     ).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Relaunch persistence project" })]));
-    await expect(
-      second.page.getByLabel("Main", { exact: true }).getByRole("button", { name: "New session", exact: true }),
-    ).toBeVisible();
+    await expect(second.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
     await expect(second.page.getByTestId("workbench-side-panel-attached")).toBeVisible();
     await test.step("Restore the chosen theme on every desktop screen", async () => {
       const servedLifecycle = await second!.lifecyclePage.evaluate(() =>

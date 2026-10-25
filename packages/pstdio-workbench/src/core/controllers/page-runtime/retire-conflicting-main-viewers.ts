@@ -3,6 +3,7 @@ import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries
 import { placementIdentityKey, reconcileOwnedPlacements } from "../../registries/layout/placement-reconciliation";
 import { editPagePlacementStates } from "../../registries/pages/page-placement-state";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry-types";
+import { departingPagePreviews } from "./page-preview-lifetime";
 
 /** An auxiliary viewer owns its resource; a saved Main tray does not reserve it. */
 export const retireConflictingMainViewers = (input: {
@@ -13,11 +14,14 @@ export const retireConflictingMainViewers = (input: {
   resourceKey(resource: ResourceRef): string;
 }) => {
   const { state, previous, sharedLayout } = input;
+  const departing = new Set(
+    sharedLayout ? departingPagePreviews(state, previous, sharedLayout).map((widget) => widget.widgetId) : [],
+  );
   const auxiliary = new Map<string, string>();
   for (const region of ["side", "secondary"] as const) {
     for (const widget of sharedLayout?.regions[region].widgets ?? []) {
       const identity = widget.placementIdentity;
-      if (identity && widget.resource && input.isResourceViewer(identity))
+      if (identity && widget.resource && !departing.has(widget.widgetId) && input.isResourceViewer(identity))
         auxiliary.set(input.resourceKey(widget.resource), placementIdentityKey(identity));
     }
   }

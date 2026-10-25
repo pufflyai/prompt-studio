@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { type Browser, chromium, expect, test } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
-import { expectNoDefaultHomePlaceholder, observeHomeLoading } from "../helpers/home-loading";
+import { expectNoDefaultHomePlaceholder, observeHomeLoading, verifyPageHeaders } from "../helpers/home-loading";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { verifyEmptyPanelAddition } from "./packaged-empty-panel-addition";
 import { buildBinary } from "./packaged-helpers";
@@ -49,6 +49,7 @@ test("adding a tool keeps the other empty panel open", async () => {
     await page.goto(`${started.baseUrl}/projects/${project.id}/`);
     await expect(page.getByText("Project home", { exact: true })).toBeVisible();
     await expectNoDefaultHomePlaceholder(page);
+    await verifyPageHeaders(page);
     phase("project ready; check panel additions");
     await test.step("Add tools while preserving the other empty panel", () => verifyEmptyPanelAddition(page));
     phase("panel additions checked");
