@@ -69,20 +69,25 @@ test("each producer needs execution evidence or an explicit empty selection", ()
   }
 });
 
-test("evidence from packages in hidden folders counts toward its producer's selection", () => {
+test("hidden extension execution contributes to its selected source producer", () => {
   const root = mkdtempSync(join(tmpdir(), "nightly-hidden-source-"));
-  const reportedFiles = [".pstdio/extensions/example/src/value.p0.test.ts"];
+  const file = ".pstdio/extensions/font-editor/src/font-editor.p0.test.ts";
   try {
+    writeProducer(root, "source", evidence());
     writeProducer(
       root,
-      "package-checks/bun/.pstdio/extensions/example/job",
-      evidence({ packageDir: ".pstdio/extensions/example", reportedFiles }),
+      "source/.pstdio/extensions/font-editor",
+      evidence({ packageDir: ".pstdio/extensions/font-editor", reportedFiles: [file] }),
     );
     writeFileSync(
-      join(root, "package-checks/unit-results.json"),
-      JSON.stringify({ sourceSha: source, outcome: "success", selectedFiles: reportedFiles }),
+      join(root, "source/selection.json"),
+      JSON.stringify({
+        sourceSha: source,
+        outcome: "success",
+        selectedFiles: [...evidence().reportedFiles, file],
+      }),
     );
-    expect(collectNightlySourceCoverage(root, root, source, ["package-checks"])).toHaveLength(1);
+    expect(collectNightlySourceCoverage(root, root, source, ["source"])).toHaveLength(2);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

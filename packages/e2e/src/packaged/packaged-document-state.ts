@@ -1,4 +1,11 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
+import { selectMenuAction } from "../helpers/menu-actions";
+
+const selectTabAction = async (page: Page, tab: Locator, action: string) => {
+  await tab.focus();
+  await page.keyboard.press("Shift+F10");
+  await selectMenuAction(page, action);
+};
 
 export const verifyPackagedDocumentState = async (page: Page, origin: string, projectId: string) => {
   const resource = `pstdio://extension-resource/glass-lab-artifact/layout?extensionId=pstdio.workbench-fixture&projectId=${projectId}`;
@@ -52,9 +59,7 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
   await expect(placement).not.toHaveAttribute("data-workbench-tab", a);
   await navigate("a", "document-preview");
   await expect(placement).toHaveAttribute("data-workbench-tab", a);
-  await optional.focus();
-  await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
+  await selectTabAction(page, optional, "Move to Side");
   const side = page
     .locator('[data-workbench-panel-header="side"]')
     .getByRole("tab", { name: "Lab", exact: true })
@@ -64,22 +69,14 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
   await expect(optional).toBeVisible();
   await expect(side).toBeVisible();
   const b = (await placement.getAttribute("data-workbench-tab")) ?? "";
-  await optional.focus();
-  await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+  await selectTabAction(page, optional, "Pin tab");
   await expect(optional).toHaveCSS("font-style", "normal");
-  await side.focus();
-  await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Move to Main", exact: true }).click();
+  await selectTabAction(page, side, "Move to Main");
   const foreign = main.locator(`[data-workbench-tab=${JSON.stringify(a)}]`).getByRole("tab");
   await expect(foreign).toBeVisible();
-  await foreign.focus();
-  await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Unpin tab", exact: true }).click();
+  await selectTabAction(page, foreign, "Unpin tab");
   await expect(foreign).toHaveCSS("font-style", "italic");
-  await foreign.focus();
-  await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+  await selectTabAction(page, foreign, "Pin tab");
   await expect(foreign).toHaveCSS("font-style", "normal");
   await foreign.getByRole("button", { name: "Close Lab", exact: true }).click();
   await expect(foreign).toHaveCount(0);
@@ -88,9 +85,7 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
 
   await page.goto(url("b"));
   await expect(optional).toBeVisible();
-  await optional.focus();
-  await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
+  await selectTabAction(page, optional, "Move to Side");
   await expect(side).toBeVisible();
   const fallback = page.locator('[data-workbench-panel="main"] [data-workbench-instance]:visible').first();
   await expect(fallback).toBeVisible();
@@ -99,9 +94,7 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
   await navigate("a");
   await expect(fallback).not.toHaveAttribute("data-workbench-instance", fallbackB!);
   await expect(optional).toHaveCount(0);
-  await side.focus();
-  await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Move to Main", exact: true }).click();
+  await selectTabAction(page, side, "Move to Main");
   await expect(optional).toBeVisible();
   await optional.focus();
   await optional.getByRole("button", { name: "Close Lab", exact: true }).click();

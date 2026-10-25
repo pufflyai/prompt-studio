@@ -77,6 +77,26 @@
   },
   "overrides": [
     {
+      "includes": ["packages/e2e/src/packaged/**/*.spec.ts", "packages/e2e/src/packaged/**/*.bench.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@playwright/test": {
+                    "importNames": ["test"],
+                    "message": "Import test from ../scripts/playwright-test so runner cancellation cleans up owned processes."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/*.astro"],
       "linter": {
         "rules": {
