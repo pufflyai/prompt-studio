@@ -87,7 +87,7 @@ const requireApiSelection = (documents: Map<string, Evidence>, path: string, rev
 
 export const readNightlySourceProducer = (root: string, producer: string, revision: string) => {
   const documents = new Map(
-    Array.from(new Bun.Glob("**/*.json").scanSync({ cwd: producer, absolute: true })).map((path) => [
+    Array.from(new Bun.Glob("**/*.json").scanSync({ cwd: producer, absolute: true, dot: true })).map((path) => [
       path,
       JSON.parse(readFileSync(path, "utf8")) as Evidence,
     ]),
