@@ -48,12 +48,13 @@ export const openSessionStream = async (app: RequestApp, sessionId: string) => {
   const encoder = new TextEncoder();
   const body = new ReadableStream<Uint8Array>({
     async pull(controller) {
-      const event = await connection.next();
+      // A pull that enqueues nothing may never be called again, so skip heartbeats here.
+      let event = await connection.next();
+      while (event?.event === "heartbeat") event = await connection.next();
       if (!event) {
         controller.close();
         return;
       }
-      if (event.event === "heartbeat") return;
       const { data } = JSON.parse(event.data) as { data: unknown };
       controller.enqueue(encoder.encode(`event: ${event.event}\ndata: ${JSON.stringify(data)}\n\n`));
       if (event.event === "end" || event.event === "error") {

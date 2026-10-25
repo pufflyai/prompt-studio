@@ -1,5 +1,5 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
+import { changeTicketFiles, ticketsCollection } from "../data/collections";
 import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
 
@@ -11,19 +11,17 @@ export const attachTicketFileCommand = defineCommand({
     ref: params.json<StoredTicketAttachment, { required: true }>({ required: true }),
   },
   async run(ctx, commandParams) {
-    const collection = ticketsCollection(ctx.storage);
-    const existing = await collection.get(commandParams.ticketId);
+    const existing = await ticketsCollection(ctx).get(commandParams.ticketId);
     if (!existing) return null;
 
-    const next = {
-      ...existing,
+    const next = await changeTicketFiles(ctx, existing.id, async (stored) => ({
+      ...stored,
       attachments: [
-        ...(existing.attachments ?? []).filter((attachment) => attachment.id !== commandParams.ref.id),
+        ...(stored.attachments ?? []).filter((attachment) => attachment.id !== commandParams.ref.id),
         commandParams.ref,
       ],
       updatedAt: new Date().toISOString(),
-    };
-    await collection.update(existing.id, next);
+    }));
     await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
     return next;
   },
@@ -37,16 +35,14 @@ export const detachTicketFileCommand = defineCommand({
     fileId: params.text({ required: true }),
   },
   async run(ctx, commandParams) {
-    const collection = ticketsCollection(ctx.storage);
-    const existing = await collection.get(commandParams.ticketId);
+    const existing = await ticketsCollection(ctx).get(commandParams.ticketId);
     if (!existing) return null;
 
-    const next = {
-      ...existing,
-      attachments: (existing.attachments ?? []).filter((attachment) => attachment.id !== commandParams.fileId),
+    const next = await changeTicketFiles(ctx, existing.id, async (stored) => ({
+      ...stored,
+      attachments: (stored.attachments ?? []).filter((attachment) => attachment.id !== commandParams.fileId),
       updatedAt: new Date().toISOString(),
-    };
-    await collection.update(existing.id, next);
+    }));
     await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
     return next;
   },

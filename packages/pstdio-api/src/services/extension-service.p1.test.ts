@@ -1,0 +1,612 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import {
+  createDb,
+  createExtensionInstancesDBService,
+  createExtensionUserDataDBService,
+  createInstalledExtensionSourcesDBService,
+  createProjectsDBService,
+} from "pstdio-db";
+import { EventBus } from "../features/sync/event-bus";
+import { createExtensionService, ProjectNotFoundError } from "./extension-service";
+import { createProjectService } from "./project-service";
+import { createSyncService } from "./sync-service";
+
+let close: (() => Promise<void>) | undefined;
+let service: ReturnType<typeof createExtensionService>;
+let projectService: ReturnType<typeof createProjectService>;
+let installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
+let extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
+let extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
+
+const makeExtension = (root: string, input: { name?: string; version?: string; templateKey?: string } = {}) => {
+  mkdirSync(root, { recursive: true });
+  const displayName = input.name ?? "Reload Extension";
+  const packageName = displayName.toLowerCase().replaceAll(" ", "-");
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({
+      name: packageName,
+      version: input.version ?? "1.0.0",
+      displayName,
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+    }),
+  );
+  writeFileSync(
+    join(root, "extension.ts"),
+    `export default {
+  templates: [
+    {
+      id: "${input.templateKey ?? "ticket"}",
+      ref: { kind: "template", id: "${input.templateKey ?? "ticket"}" },
+      title: "Ticket",
+      type: "ticket",
+      source: { kind: "package-asset", path: "./ticket.md", baseUrl: import.meta.url },
+    },
+  ],
+};`,
+  );
+  writeFileSync(join(root, "ticket.md"), "# ticket\n");
+};
+
+beforeEach(async () => {
+  const result = await createDb({ path: ":memory:" });
+  close = result.close;
+  projectService = createProjectService({
+    syncService: createSyncService({ db: result.db }),
+    eventBus: new EventBus(),
+    projectsDBService: createProjectsDBService(result.db),
+  });
+  installedExtensionSourcesService = createInstalledExtensionSourcesDBService(result.db);
+  extensionInstancesService = createExtensionInstancesDBService(result.db);
+  extensionUserDataService = createExtensionUserDataDBService(result.db);
+  service = createExtensionService({
+    sourceExists: () => true,
+    extensionInstancesService,
+    installedExtensionSourcesService,
+    extensionUserDataService,
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
+    projectService,
+  });
+});
+
+afterEach(async () => {
+  await close?.();
+});
+
+describe("extensionService", () => {
+  test("registers an installed source and enables it for a project", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+
+    const result = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner",
+      version: "1.0.0",
+      sourceKind: "git",
+      sourcePath: "/home/user/.pstdio/extensions/planner",
+      sourceRef: "https://github.com/pufflyai/prompt-studio#main:extensions/planner",
+      sourceHash: "hash-1",
+      manifest: { id: "pstdio.planner", name: "planner" },
+    });
+
+    expect(result.installedSource.install_name).toBe("planner");
+    expect(result.installedSource.status).toBe("loaded");
+    expect(result.instance.scope_type).toBe("project");
+    expect(result.instance.scope_id).toBe(project.id);
+    expect(result.instance.enabled).toBe(true);
+  });
+
+  test("updates an existing install record by source path and re-enables the same project instance", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+
+    const first = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner",
+      sourceKind: "local_path",
+      sourcePath: "/one",
+      sourceHash: "hash-1",
+      manifest: {},
+    });
+    await service.setProjectExtensionEnabled(first.instance.id, false);
+
+    const second = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner",
+      version: "2.0.0",
+      sourceKind: "local_path",
+      sourcePath: "/one",
+      sourceHash: "hash-2",
+      manifest: { version: "2.0.0" },
+    });
+
+    expect(second.installedSource.id).toBe(first.installedSource.id);
+    expect(second.installedSource.source_path).toBe("/one");
+    expect(second.installedSource.version).toBe("2.0.0");
+    expect(second.instance.id).toBe(first.instance.id);
+    expect(second.instance.enabled).toBe(true);
+  });
+});
+
+describe("extensionService extension id ownership", () => {
+  const fontEditorSource = (sourcePath: string) => ({
+    displayName: "Font Editor",
+    extensionId: "pstdio.font-editor",
+    installName: "font-editor",
+    manifest: {},
+    name: "font-editor",
+    sourceKind: "local_path" as const,
+    sourcePath,
+  });
+
+  test("enabling a second source for the same extension id disables the previous provider", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+    const previous = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      ...fontEditorSource("/old-worktree/.pstdio/extensions/font-editor"),
+    });
+
+    const current = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      ...fontEditorSource("/repo/.pstdio/extensions/font-editor"),
+    });
+
+    const enabled = await service.listEnabledSourcesForProject(project.id);
+    expect(enabled.map(({ installedSource }) => installedSource.source_path)).toEqual([
+      "/repo/.pstdio/extensions/font-editor",
+    ]);
+    expect(current.instance.id).not.toBe(previous.instance.id);
+    expect((await service.getProjectExtensionInstance(project.id, previous.instance.id))?.instance.enabled).toBe(false);
+  });
+
+  test("enabling a conflicting instance from the panel disables the running provider", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+    const running = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      ...fontEditorSource("/repo-one/.pstdio/extensions/font-editor"),
+    });
+    // Discovery registers a second checkout disabled, so the panel toggle is how a user switches.
+    const discovered = await service.syncInstalledSourceForProject({
+      projectId: project.id,
+      ...fontEditorSource("/repo-two/.pstdio/extensions/font-editor"),
+    });
+    expect(discovered!.instance.enabled).toBe(false);
+
+    await service.setProjectExtensionEnabled(discovered!.instance.id, true);
+
+    const enabled = await service.listEnabledSourcesForProject(project.id);
+    expect(enabled.map(({ installedSource }) => installedSource.source_path)).toEqual([
+      "/repo-two/.pstdio/extensions/font-editor",
+    ]);
+    expect((await service.getProjectExtensionInstance(project.id, running.instance.id))?.instance.enabled).toBe(false);
+  });
+
+  test("re-enabling the same source keeps it enabled and leaves other extensions alone", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+    const planner = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      displayName: "Planner",
+      extensionId: "pstdio.planner",
+      installName: "planner",
+      manifest: {},
+      name: "planner",
+      sourceKind: "local_path",
+      sourcePath: "/repo/.pstdio/extensions/planner",
+    });
+    const fontEditor = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      ...fontEditorSource("/repo/.pstdio/extensions/font-editor"),
+    });
+
+    await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      ...fontEditorSource("/repo/.pstdio/extensions/font-editor"),
+    });
+
+    const enabled = await service.listEnabledSourcesForProject(project.id);
+    expect(enabled.map(({ instance }) => instance.id).sort()).toEqual(
+      [planner.instance.id, fontEditor.instance.id].sort(),
+    );
+  });
+});
+
+describe("extensionService source installation", () => {
+  test("materializes an unversioned source reference without replacing its project instance", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+    const migratedSource = await installedExtensionSourcesService.register({
+      install_name: "pstdio-planner",
+      extension_id: "pstdio.pstdio-planner",
+      display_name: "pstdio-planner",
+      source_kind: "local_path",
+      source_path: "registry:unresolved-package",
+      manifest_json: { id: "pstdio.pstdio-planner" },
+      status: "loaded",
+    });
+    const migratedInstance = await extensionInstancesService.create({
+      installed_extension_id: migratedSource.id,
+      scope_id: project.id,
+      scope_type: "project",
+      enabled: true,
+    });
+
+    const synced = await service.syncInstalledSourceForProject({
+      projectId: project.id,
+      installName: "pstdio-planner",
+      extensionId: "pstdio.pstdio-planner",
+      name: "pstdio-planner",
+      displayName: "Planner",
+      version: "2.0.0",
+      sourceKind: "local_path",
+      sourcePath: "/home/user/.pstdio/extensions/pstdio-planner",
+      sourceHash: "hash-2",
+      manifest: { id: "pstdio.pstdio-planner", version: "2.0.0" },
+    });
+
+    expect(synced!.installedSource.id).toBe(migratedSource.id);
+    expect(synced!.installedSource.source_path).toBe("/home/user/.pstdio/extensions/pstdio-planner");
+    expect(synced!.instance.id).toBe(migratedInstance.id);
+    expect(synced!.instance.enabled).toBe(true);
+  });
+});
+
+describe("extensionService", () => {
+  test("sync keeps the adopted registration when the folder on disk changed", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+
+    const adopted = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner",
+      version: "1.0.0",
+      sourceKind: "local_path",
+      sourcePath: "/one",
+      sourceHash: "hash-1",
+      manifest: { version: "1.0.0" },
+    });
+
+    // Discovery finds new source in the extensions root. It is an offer, not an adoption.
+    const synced = await service.syncInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner",
+      version: "2.0.0",
+      sourceKind: "local_path",
+      sourcePath: "/one",
+      sourceHash: "hash-2",
+      manifest: { version: "2.0.0" },
+    });
+
+    expect(synced!.installedSource.id).toBe(adopted.installedSource.id);
+    expect(synced!.installedSource.source_hash).toBe("hash-1");
+    expect(synced!.installedSource.version).toBe("1.0.0");
+    expect(synced!.installedSource.manifest_json).toEqual({ version: "1.0.0" });
+  });
+
+  test("sync still registers a source the project has never seen", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+
+    const synced = await service.syncInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner",
+      version: "1.0.0",
+      sourceKind: "local_path",
+      sourcePath: "/one",
+      sourceHash: "hash-1",
+      manifest: { version: "1.0.0" },
+    });
+
+    expect(synced!.installedSource.source_hash).toBe("hash-1");
+    expect(synced!.instance.enabled).toBe(false);
+  });
+
+  test("fails with ProjectNotFoundError when the project does not exist", async () => {
+    await expect(
+      service.enableInstalledSourceForProject({
+        projectId: "missing",
+        installName: "planner",
+        extensionId: "pstdio.planner",
+        name: "planner",
+        displayName: "Planner",
+        sourceKind: "local_path",
+        sourcePath: "/extensions/planner",
+        manifest: {},
+      }),
+    ).rejects.toBeInstanceOf(ProjectNotFoundError);
+  });
+
+  test("allows a project to enable same-namespace extensions from different sources", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+
+    await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner",
+      sourceKind: "local_path",
+      sourcePath: "/extensions/planner",
+      manifest: {},
+    });
+
+    await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner Fork",
+      sourceKind: "local_path",
+      sourcePath: "/repo/.pstdio/extensions/planner",
+      manifest: {},
+    });
+
+    const instances = await service.listProjectExtensionInstances(project.id);
+    const sourceIds = new Set(instances.map(({ installedSource }) => installedSource.id));
+
+    expect(instances).toHaveLength(2);
+    expect(sourceIds.size).toBe(2);
+  });
+
+  test("preserves existing source_kind and source_ref when caller omits them", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+
+    await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner",
+      sourceKind: "git",
+      sourcePath: "/extensions/planner",
+      sourceRef: "https://example/repo#main:planner",
+      manifest: {},
+    });
+
+    const second = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner",
+      sourcePath: "/extensions/planner",
+      manifest: {},
+    });
+
+    expect(second.installedSource.source_kind).toBe("git");
+    expect(second.installedSource.source_ref).toBe("https://example/repo#main:planner");
+  });
+
+  test("clears source_ref when a reinstall comes from a source without one", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+
+    await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner-local",
+      extensionId: "pstdio.planner-local",
+      name: "planner-local",
+      displayName: "Planner",
+      sourceKind: "git",
+      sourcePath: "/extensions/planner-local",
+      sourceRef: "https://example/repo#main:planner",
+      manifest: {},
+    });
+
+    const second = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner-local",
+      extensionId: "pstdio.planner-local",
+      name: "planner-local",
+      displayName: "Planner",
+      sourceKind: "local_path",
+      sourcePath: "/extensions/planner-local",
+      sourceRef: null,
+      manifest: {},
+    });
+
+    expect(second.installedSource.source_kind).toBe("local_path");
+    expect(second.installedSource.source_ref).toBeNull();
+  });
+
+  test("emits the removed project instance row with its scope", async () => {
+    const eventBus = new EventBus();
+    const events: Array<{ table: string; op: string; data: unknown }> = [];
+    eventBus.subscribe((event) => events.push(event));
+    const scopedService = createExtensionService({
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
+      projectService,
+      eventBus,
+    });
+    const project = await projectService.create({ name: "Scoped delete project" });
+    const enabled = await scopedService.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "scoped-delete",
+      extensionId: "pstdio.scoped-delete",
+      name: "scoped-delete",
+      displayName: "Scoped delete",
+      sourcePath: "/extensions/scoped-delete",
+      manifest: {},
+    });
+    events.length = 0;
+
+    await scopedService.removeProjectExtensionInstance(enabled.instance.id);
+
+    expect(events).toEqual([
+      expect.objectContaining({
+        table: "extension_instances",
+        op: "delete",
+        data: expect.objectContaining({
+          id: enabled.instance.id,
+          scope_type: "project",
+          scope_id: project.id,
+          installed_extension_id: enabled.installedSource.id,
+        }),
+      }),
+    ]);
+  });
+});
+
+describe("extensionService reload", () => {
+  test("reloads an installed source and records the updated manifest", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-service-reload-"));
+    const eventBus = new EventBus();
+    const events: { table: string; op: string; data: unknown }[] = [];
+    eventBus.subscribe((event) => events.push(event));
+    const reloadingService = createExtensionService({
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
+      projectService,
+      eventBus,
+    });
+
+    try {
+      makeExtension(root, { templateKey: "first" });
+      await reloadingService.registerInstalledSource({
+        installName: "reload",
+        displayName: "Reload Extension",
+        extensionId: "pstdio.reload",
+        manifest: { templates: ["first"] },
+        name: "reload",
+        sourceHash: "old-hash",
+        sourceKind: "local_path",
+        sourcePath: root,
+        version: "1.0.0",
+      });
+
+      makeExtension(root, { name: "Reloaded Extension", version: "1.1.0", templateKey: "second" });
+
+      const result = await reloadingService.reloadInstalledSourceBySourcePath(root);
+      const reloadEvents = await installedExtensionSourcesService.listReloadEvents(result.installedSource.id);
+      const reloadEvent = reloadEvents.at(-1);
+
+      expect(result.installedSource.status).toBe("loaded");
+      expect(result.installedSource.display_name).toBe("Reloaded Extension");
+      expect(result.installedSource.version).toBe("1.1.0");
+      expect(result.installedSource.manifest_json).toMatchObject({
+        templates: [expect.objectContaining({ id: "second", ref: { kind: "template", id: "second" } })],
+      });
+      expect(result.installedSource.source_hash).not.toBe("old-hash");
+      expect(result.installedSource.loaded_revision).toBeString();
+      expect(result.installedSource.last_error_json).toBeNull();
+      expect(reloadEvent?.status).toBe("success");
+      expect(reloadEvent?.previous_revision).toBeNull();
+      expect(reloadEvent?.next_revision).toBe(result.installedSource.loaded_revision);
+      expect(events.some((event) => event.table === "installed_extension_sources" && event.op === "set")).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("reloads duplicate install names by source path", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-service-reload-by-path-"));
+    const firstPath = join(root, "repo-a", "shared");
+    const secondPath = join(root, "repo-b", "shared");
+    const reloadingService = createExtensionService({
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
+      projectService,
+    });
+
+    try {
+      makeExtension(firstPath, { name: "Shared A", version: "1.0.0" });
+      makeExtension(secondPath, { name: "Shared B", version: "1.0.0" });
+      const first = await reloadingService.registerInstalledSource({
+        installName: "shared",
+        displayName: "Shared A",
+        extensionId: "pstdio.shared-a",
+        manifest: { id: "pstdio.shared-a" },
+        name: "shared-a",
+        sourceKind: "local_path",
+        sourcePath: firstPath,
+      });
+      const second = await reloadingService.registerInstalledSource({
+        installName: "shared",
+        displayName: "Shared B",
+        extensionId: "pstdio.shared-b",
+        manifest: { id: "pstdio.shared-b" },
+        name: "shared-b",
+        sourceKind: "local_path",
+        sourcePath: secondPath,
+      });
+
+      makeExtension(secondPath, { name: "Shared B Reloaded", version: "1.1.0" });
+
+      const result = await reloadingService.reloadInstalledSourceBySourcePath(secondPath);
+      const unchangedFirst = await installedExtensionSourcesService.get(first.id);
+      const updatedSecond = await installedExtensionSourcesService.get(second.id);
+
+      expect(result.installedSource.id).toBe(second.id);
+      expect(unchangedFirst?.display_name).toBe("Shared A");
+      expect(updatedSecond?.display_name).toBe("Shared B Reloaded");
+      expect(updatedSecond?.version).toBe("1.1.0");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("marks the installed source unhealthy when reload fails", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-service-reload-error-"));
+    const eventBus = new EventBus();
+    const reloadingService = createExtensionService({
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
+      projectService,
+      eventBus,
+    });
+
+    try {
+      makeExtension(root);
+      const registered = await reloadingService.registerInstalledSource({
+        installName: "reload",
+        displayName: "Reload Extension",
+        extensionId: "pstdio.reload",
+        manifest: { id: "pstdio.reload", templates: ["ticket"] },
+        name: "reload",
+        sourceHash: "old-hash",
+        sourceKind: "local_path",
+        sourcePath: root,
+      });
+
+      writeFileSync(join(root, "extension.ts"), "throw new Error('reload boom');\n");
+
+      const result = await reloadingService.reloadInstalledSourceBySourcePath(root);
+      const reloadEvents = await installedExtensionSourcesService.listReloadEvents(registered.id);
+
+      expect(result.installedSource.status).toBe("error");
+      expect(result.installedSource.manifest_json).toEqual({ id: "pstdio.reload", templates: ["ticket"] });
+      expect(result.installedSource.last_error_json).toMatchObject({ code: "extension_import_failed" });
+      expect(reloadEvents.at(-1)?.status).toBe("error");
+      // A refused update keeps the adopted hash, so the source still reads as having an update waiting.
+      expect(result.installedSource.source_hash).toBe("old-hash");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

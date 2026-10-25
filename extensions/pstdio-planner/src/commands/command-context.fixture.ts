@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { type CommandContextInput, makeCommandContext as makeContext } from "@pstdio/sdk/testing";
+import { ticketContext } from "../data/ticket-context.fixture";
 
 export { commandParamsFor } from "@pstdio/sdk/testing";
 export const defaultProjectRoot = resolve("/repo");
@@ -10,6 +11,14 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
     resourcePrefixes: { ticket: input.overrides?.project?.shorthand ?? "T", report: "RP" },
     overrides: {
       extensionId: "pstdio-planner",
+      resources: {
+        ...ticketContext(input.storage).resources,
+        allocate: makeContext({
+          ...input,
+          resourcePrefixes: { ticket: input.overrides?.project?.shorthand ?? "T", report: "RP" },
+          overrides: { ...input.overrides, extensionId: "pstdio-planner" },
+        }).resources.allocate,
+      },
       process: {
         run: async () => ({ exitCode: 0, stdout: "main-sha\n", stderr: "" }),
         runOrThrow: async () => ({ exitCode: 0, stdout: "main-sha\n", stderr: "" }),

@@ -8,6 +8,7 @@ const phaseCopy: Record<DesktopStartupPhase, string> = {
   environment: "Loading your local tools…",
   spawning: "Starting Prompt Studio in the background…",
   database: "Preparing your local data…",
+  retiring: "Backing up data from your previous version…",
   migrations: "Updating your local data…",
   extensions: "Loading your tools…",
   readiness: "Preparing your workbench…",

@@ -9,6 +9,7 @@ import type { SessionAttachment } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
 import { useApiFileParts } from "@/lib/api-file-url";
 import { useAgents } from "@/shared/agents/use-agents";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
@@ -23,6 +24,7 @@ import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/sessi
 import { updatePendingFollowUp } from "../chat/session-chat-state";
 import { sessionDraftSubmission } from "../chat/session-draft-submission";
 import { sessionUnsentActions } from "../chat/session-unsent-actions";
+import type { SessionViewContext } from "../chat/session-view-context";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import type { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
@@ -41,7 +43,7 @@ import { useSessionDraftAttachments } from "./use-session-draft-attachments";
 import { useSessionModelSelection } from "./use-session-model-selection";
 
 interface DashboardSessionChatPanelProps {
-  input: WorkbenchPanelRenderInput;
+  input: SessionViewContext;
   view: DashboardSessionView;
   history: ReturnType<typeof useDashboardSessionMessages>;
   emptyStateTitle: string;
@@ -95,7 +97,10 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const links = useSessionLinks(input.workbench, projectId, view.workspaceId);
 
   const { messages, loading, streaming, reconnect, refreshQueue, error, queueError, queue } = history;
-  const createSession = useCreateProjectSession();
+  // A session that works on files asks for the project's folder on a device that does not have it yet.
+  const chooseProjectFolder = () =>
+    void input.workbench.commands.executeCommand(dashboardCommandIds.chooseProjectFolder);
+  const createSession = useCreateProjectSession({ onFolderMissing: chooseProjectFolder });
   const followUp = useFollowUpSession();
   const stopSession = useStopSession();
 
@@ -121,8 +126,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   });
   const chatDraft = useSessionChatDraft(drafts, view.draftKey);
   const openCreatedSession = (createdSessionId: string, prompt: string) => {
-    if (projectId)
-      openCreatedSessionFromDraft({ input, draftKey: view.draftKey, sessionId: createdSessionId, prompt, projectId });
+    if (projectId) openCreatedSessionFromDraft({ input, sessionId: createdSessionId, prompt, projectId });
   };
   const commandDraft = projectId
     ? {
@@ -141,7 +145,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     view.status,
     view.lastRequestStarted,
     commandDraft,
-    (operation) => createDraftCommandSession(commandDraft, operation),
+    (operation) => createDraftCommandSession(commandDraft, operation, chooseProjectFolder),
     openCreatedSession,
     input,
   );
@@ -152,7 +156,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     view.lastRequestStarted,
     view.status === "in_progress",
   );
-  const openWorkspaceOnSelection = input.panel.region !== "side";
+  const openWorkspaceOnSelection = input.region !== "side";
 
   const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId, queue, pendingFollowUp);
   const chatMessages = useApiFileParts(splitDisplay.messages);

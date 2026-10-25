@@ -47,7 +47,7 @@ rm ~/.pstdio/pstdio.db/postmaster.pid
 pg_resetwal -f ~/.pstdio/pstdio.db
 ```
 
-This discards unflushed WAL. Most committed data is usually recoverable, but tables written near the interrupted shutdown can still need row-by-row salvage from backups or `.pstdio/extension-storage/pstdio-planner/tickets/` files.
+This discards unflushed WAL. Most committed data is usually recoverable, but tables written near the interrupted shutdown can still need row-by-row salvage from backups or `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/` files.
 
 If `pst` reports that the API did not become healthy, inspect the captured startup output in the CLI error and the structured `db.open.failed` entry in `logs.jsonl`. When the output includes `could not locate a valid checkpoint record` and `Aborted()`, stop all `pst` processes before copying the database directory and running recovery commands against the copy first.
 

@@ -6,7 +6,12 @@ export {
   resolveArtifactMountRoot,
 } from "./artifact-mount";
 export { isPackageAssetDescriptor } from "./asset-validation";
-export { type ExtensionStorageOwner, extensionFilesPath } from "./extension-storage-path";
+export {
+  type ExtensionStorageOwner,
+  extensionFilesPath,
+  extensionStorageDirectory,
+  isWindowsDeviceName,
+} from "./extension-storage-path";
 export {
   PackageAssetError,
   type PackageAssetKind,

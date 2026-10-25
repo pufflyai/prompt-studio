@@ -17,10 +17,13 @@ import {
   workbenchPanelMenuRegions,
   workbenchPanelRegions,
 } from "../../core";
+import { resolvePageContent } from "../../core/registries/pages/page-content";
+import { useOpenPlacementIds } from "../shared/use-open-placement-ids";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchRegionBackground } from "../theme/workbench-theme-background";
 import { ModeChromeView, useModeChrome } from "./mode-chrome";
+import { PanelPlaceholder } from "./panel-placeholder";
 import { usePanelViewSlot, WorkbenchPanelViewSlot } from "./panel-view-hosts";
 import { RegionScrollArea } from "./region-scroll-area";
 import { useRetainedViewPlacements } from "./use-retained-view-placements";
@@ -49,8 +52,11 @@ const panelMenuRegionIds = new Set<WorkbenchRegionId>(
 );
 const sidePanelRegionIds = new Set<WorkbenchRegionId>(["side", "side-header", "side-left-menu", "side-right-menu"]);
 
-const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
-  widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
+const getActivePlacement = (
+  widgets: WorkbenchWidgetPlacement[],
+  activeWidgetId?: string,
+  content?: WorkbenchWidgetPlacement,
+) => content ?? widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
 
 export const resolveRenderedRegionPlacements = (
   widgets: WorkbenchWidgetPlacement[],
@@ -134,6 +140,27 @@ const WorkbenchRegionPlacement = (props: WorkbenchRegionPlacementProps) => {
   );
 };
 
+const useRegionPageContent = (workbench: WorkbenchCore, region: WorkbenchRegionId) => {
+  const content = useWorkbenchStore(workbench.pages.store, resolvePageContent);
+  return region === "main" ? content : undefined;
+};
+
+const RegionPageContent = (props: { workbench: WorkbenchCore; content?: WorkbenchWidgetPlacement }) => {
+  const { workbench, content } = props;
+  if (!content) return null;
+  return <WorkbenchWidgetHost workbench={workbench} placement={content} region="main" />;
+};
+
+const activateRegionPlacement = (
+  workbench: WorkbenchCore,
+  content: WorkbenchWidgetPlacement | undefined,
+  target: WorkbenchWidgetPlacement | undefined,
+  activeWidgetId: string | undefined,
+) => {
+  if (content) workbench.focus.setActiveRegion("main");
+  else if (target && target.widgetId !== activeWidgetId) workbench.layout.activatePanel(target.widgetId);
+};
+
 export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const { workbench, region, title, pointerEvents = "auto", transparent = false } = props;
   const panelRegion = workbenchPanelRegions.includes(region as WorkbenchPanelRegion)
@@ -145,6 +172,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const locationResource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  const pageContent = useRegionPageContent(workbench, region);
   const currentRegionState = layout.regions[region];
   const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
   const activeSubPanel = panelMenuRegionIds.has(region)
@@ -174,17 +202,18 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
     }),
   };
   const globalActiveWidgetId = useWorkbenchStore(workbench.layout.store, (state) => state.layout.activeWidgetId);
-  const activePlacement = getActivePlacement(regionState.widgets, regionState.activeWidgetId);
+  const activePlacement = getActivePlacement(regionState.widgets, regionState.activeWidgetId, pageContent);
   const placeholder = activePlacement ? undefined : workbench.layout.getPlaceholder(region);
   const placement = activePlacement ?? (placeholder ? createPlaceholderPlacement(placeholder) : undefined);
   const renderedPlacements = activePlacement
     ? resolveRenderedRegionPlacements(regionState.widgets, activePlacement.widgetId, region)
     : [];
+  const open = useOpenPlacementIds(workbench);
 
   const retainedPlacements = useRetainedViewPlacements(
     workbench,
     chrome !== undefined || sharedViews ? [] : renderedPlacements,
-    workbench.host.getOpenPlacementIds(),
+    open,
   );
   const visibleIds = new Set(renderedPlacements.map((entry) => entry.widgetId));
 
@@ -194,16 +223,19 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   // into the Side Panel session sets it global-active) without touching the primary anchor,
   // which only follows `main`. Placeholders are not real widgets, so only activate a real
   // placement that is not already active.
-  const activatePlacement = (target: WorkbenchWidgetPlacement | undefined) => {
-    if (target && target.widgetId !== globalActiveWidgetId) {
-      workbench.layout.activatePanel(target.widgetId);
-    }
-  };
+  const activatePlacement = (target: WorkbenchWidgetPlacement | undefined) =>
+    activateRegionPlacement(workbench, pageContent, target, globalActiveWidgetId);
   const additive = region === "sidenav";
-  const placeholderView =
+  const hostPlaceholderView =
     placeholder && placement ? (
       <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
     ) : null;
+  const placeholderView =
+    !activePlacement && panelRegion ? (
+      <PanelPlaceholder workbench={workbench} region={panelRegion} fallback={hostPlaceholderView} />
+    ) : (
+      hostPlaceholderView
+    );
 
   return (
     <Flex
@@ -226,6 +258,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
         <WorkbenchPanelViewSlot slotRef={panelSlot.ref} hidden={Boolean(chrome)} placeholder={placeholderView} />
       ) : (
         <RegionScrollArea hidden={Boolean(chrome)} horizontal={scrollsHorizontally}>
+          <RegionPageContent workbench={workbench} content={pageContent} />
           {placeholderView}
           {retainedPlacements.map((renderedPlacement) => (
             <WorkbenchRegionPlacement

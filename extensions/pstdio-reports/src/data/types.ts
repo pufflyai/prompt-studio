@@ -18,7 +18,8 @@ export interface StoredReport {
   directoryName?: string;
   kind: string;
   source: string | null;
-  body: string;
+  /** Blob in the report attachments that holds the markdown body. */
+  bodyBlobId: string;
   files: StoredReportFile[];
   draft: boolean;
   createdAt: string;

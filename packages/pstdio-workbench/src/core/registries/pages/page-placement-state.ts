@@ -1,8 +1,11 @@
-import type { PlacementIdentity } from "@pstdio/sdk/extensions";
+import type { PlacementIdentity, ResourceRef, ViewLocation } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageRuntimeState } from "./page-registry-types";
 import { ownsStaticPageInstance } from "./page-state-key";
 
-export type PagePlacementEdit = { kind: "close" } | { kind: "retention"; open: "pin" | "preview" };
+export type PagePlacementEdit =
+  | { kind: "close" }
+  | { kind: "retention"; open: "pin" | "preview" }
+  | ({ kind: "reference"; resource: ResourceRef } & ViewLocation);
 
 // A shared tab can outlive its source location. Edit its owner instances without
 // assuming that the current route still belongs to that owner.
@@ -17,7 +20,18 @@ export const editPagePlacementStates = (
       const instances = current.resourceInstances[identity.slotId] ?? [];
       const remaining = instances.flatMap((instance) => {
         if (instance.instanceKey !== identity.instanceKey) return [instance];
-        return edit.kind === "close" ? [] : [{ ...instance, open: edit.open }];
+        if (edit.kind === "close") return [];
+        if (edit.kind === "reference")
+          return [
+            {
+              ...instance,
+              resource: edit.resource,
+              section: edit.section,
+              position: edit.position,
+              pageContext: edit.pageContext ?? instance.pageContext,
+            },
+          ];
+        return [{ ...instance, open: edit.open }];
       });
       return [
         key,

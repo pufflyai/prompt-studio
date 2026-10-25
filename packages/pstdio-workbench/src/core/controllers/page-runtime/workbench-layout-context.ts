@@ -26,10 +26,11 @@ export const getWorkbenchPanelLayout = (
 ) => {
   const cache = caches.get(core);
   const current = core.pages.store.getState();
+  const projectId = proposed?.projectId ?? current.projectId;
   const defaults = core.layout.store.getInitialState().layout;
   const layout =
-    modeId && modeId !== core.modes.getActiveModeId()
-      ? (cache?.readMode(current.projectId, modeId) ?? defaults)
+    modeId && (modeId !== core.modes.getActiveModeId() || projectId !== current.projectId)
+      ? (cache?.readMode(projectId, modeId) ?? defaults)
       : core.layout.getLayout();
   if (!proposed || !pageContextChanged(proposed, current)) return layout;
   const pageLayout = cache?.loadPageLayout(pageLayoutContext(proposed), proposed.pages[proposed.activePageId ?? ""]);

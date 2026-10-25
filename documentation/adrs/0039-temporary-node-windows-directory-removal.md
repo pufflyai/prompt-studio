@@ -38,9 +38,29 @@ handles Windows permission errors and uses millisecond timers. Keep the existing
 and propagate its final error. Do not add retries, increase a test limit, ignore
 failed deletion, or change product runtime behavior.
 
-This is a temporary workaround for the upstream synchronous API, isolated to the
-packaged test fixture. Cleanup yields while Windows releases handles instead of
+This is a temporary workaround for the upstream synchronous API, isolated to test fixtures. Cleanup yields while Windows releases handles instead of
 blocking the test worker. Tests still cannot finish before their home is removed.
+
+The command-discovery fixture uses the same asynchronous removal policy after
+[Windows run 40010409328](https://github.com/pufflyai/prompt-studio/actions/runs/40010409328/job/120620966481)
+completed its real Node shim assertions but failed synchronous cleanup with `EBUSY`
+on its copied executable. That Bun test failure establishes a transient file lock;
+it does not establish that Bun shares Node's implementation defect. Keep the same
+retry values, await removal, and propagate the final error.
+
+The source-default refresh scenario follows this policy after
+[Windows run 40024366194](https://github.com/pufflyai/prompt-studio/actions/runs/40024366194/job/120656896879)
+finished its refresh assertions and awaited application shutdown, then failed
+synchronous temporary-directory removal with `EPERM`. Application shutdown already
+awaits startup background tasks. The fixture still propagates exhausted cleanup.
+
+The independent-extension packaged tests follow the same policy after
+[Windows run 40210082598](https://github.com/pufflyai/prompt-studio/actions/runs/40210082598/job/121219361455)
+finished packing or upgrading extensions, awaited command close and host termination,
+then failed asynchronous removal with `EBUSY`. Their removals omitted the bounded
+retry options. Keep the same five retries and 100 ms delay; do not rerun tests or
+change their execution allowances. Runtime hosts must still shut down through
+authenticated control before removal starts.
 
 ## Removal
 

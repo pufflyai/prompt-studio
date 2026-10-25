@@ -69,6 +69,11 @@ export const createCompiledBunSmokeFixture = (rootDir = mkdtempSync(join(tmpdir(
     { mode: 0o755 },
   );
   writeFileSync(join(srcDir, "entry.ts"), "export const answer = 42;\n");
+  writeFileSync(join(srcDir, "invalid.ts"), "const answer: number = 'invalid';\nexport { answer };\n");
+  writeFileSync(
+    join(extensionDir, "tsconfig.json"),
+    JSON.stringify({ compilerOptions: { strict: true, types: [], noEmit: true }, include: ["src/entry.ts"] }),
+  );
   writeFileSync(
     join(srcDir, "entry.test.ts"),
     'import { expect, test } from "bun:test";\nimport { answer } from "./entry";\ntest("extension behavior", () => expect(answer).toBe(42));\n',
@@ -111,6 +116,18 @@ export const buildCompiledBunSmokePlan = ({ binPath, fixture }: { binPath: strin
       cwd: fixture.extensionDir,
       env,
     },
+    check: {
+      binPath,
+      args: ["check"],
+      cwd: fixture.extensionDir,
+      env,
+    },
+    invalidCheck: {
+      binPath,
+      args: ["check", "src/invalid.ts"],
+      cwd: fixture.extensionDir,
+      env,
+    },
     executable: {
       binPath,
       args: ["--cwd", fixture.extensionDir, "./node_modules/local-dep/check.ts"],
@@ -120,14 +137,14 @@ export const buildCompiledBunSmokePlan = ({ binPath, fixture }: { binPath: strin
   };
 };
 
-const runSmokeCommand = (label: string, command: SmokeCommand) => {
+const runSmokeCommand = (label: string, command: SmokeCommand, expectedStatus = 0) => {
   const result = spawnSync(command.binPath, command.args, {
     cwd: command.cwd,
     env: command.env,
     encoding: "utf8",
   });
 
-  if (result.status !== 0) {
+  if (result.status !== expectedStatus) {
     throw new Error(
       [
         `Compiled binary failed BUN_BE_BUN ${label} smoke with status ${result.status ?? "unknown"}.`,
@@ -163,10 +180,12 @@ export const runCompiledBunSmoke = (platformBinaries: PlatformBinary[]) => {
     }
 
     runSmokeCommand("test", plan.test);
+    runSmokeCommand("type check", plan.check);
+    runSmokeCommand("type error rejection", plan.invalidCheck, 1);
     runSmokeCommand("package executable", plan.executable);
 
     process.stdout.write(
-      `OK: ${binPath} runs Bun install/build/test/package files with BUN_BE_BUN=1 and no PATH tools\n`,
+      `OK: ${binPath} runs Bun install/build/test/check/package files with BUN_BE_BUN=1 and no PATH tools\n`,
     );
   } finally {
     rmSync(fixture.rootDir, { recursive: true, force: true });

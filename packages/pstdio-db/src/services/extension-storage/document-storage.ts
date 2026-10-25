@@ -14,8 +14,8 @@ import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { runDocumentTransaction } from "./document-persistence";
 import { createProjectionStatistics } from "./projection-statistics";
+import { createRecordStreamStore } from "./record-stream-store";
 import { resourceDocumentId } from "./resource-document-persistence";
-import { upgradeOwnerRecords } from "./resource-record-upgrade";
 import { createResourceRecords } from "./resource-records";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
@@ -31,12 +31,11 @@ export const createDocumentStorageDBService = (
   const getEnvironment = () => (environment ??= createEnvironmentDBService(db).get());
   const transactionFor = (documentId: string) => {
     const transaction: DocumentStore["transaction"] = async (owner, action) => {
-      const { environmentId } = await getEnvironment();
       const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: documentId };
       const key = JSON.stringify(address);
       try {
         const result = await db.transaction((tx) =>
-          runDocumentTransaction(tx, { address, owner, environmentId, cached: cache.get(key), diagnostics }, action),
+          runDocumentTransaction(tx, { address, owner, cached: cache.get(key), diagnostics }, action),
         );
         cache.publish(key, result);
         if (result.changed) for (const listener of listeners) listener(owner);
@@ -49,24 +48,6 @@ export const createDocumentStorageDBService = (
     return transaction;
   };
   const transaction = transactionFor("records");
-  const upgrades = new Map<string, Promise<void>>();
-  // Each owner's records move out of its owner document once per process, before any record operation.
-  const upgrade = (owner: StorageOwner) => {
-    const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: "records" };
-    const key = JSON.stringify(address);
-    let upgraded = upgrades.get(key);
-    if (!upgraded) {
-      // Loading the owner document first imports any journal data from before owner documents.
-      upgraded = transaction(owner, async () => {})
-        .then(() => upgradeOwnerRecords(db, owner))
-        .then((moved) => {
-          if (moved) cache.discard(key);
-        });
-      upgrades.set(key, upgraded);
-      upgraded.catch(() => upgrades.delete(key));
-    }
-    return upgraded;
-  };
   const isResourceDocument = (id: string) => id.startsWith(resourceDocumentId("").slice(0, -2));
   return {
     transaction,
@@ -75,6 +56,14 @@ export const createDocumentStorageDBService = (
     flushStatistics: statistics.flush,
     documents: {
       open: (documentId: string) => ({ transaction: transactionFor(documentId) }),
+      recordStream: (owner: StorageOwner) =>
+        createRecordStreamStore(db, owner, {
+          statistics,
+          metadata: transaction,
+          changed: () => {
+            for (const listener of listeners) listener(owner);
+          },
+        }),
       list: async (owner: StorageOwner) => {
         const local = await db
           .select({ id: storage_documents.document_id })
@@ -96,7 +85,6 @@ export const createDocumentStorageDBService = (
       },
     },
     async hasData(owner: StorageOwner) {
-      await upgrade(owner);
       const [record] = await db
         .select({ id: storage_current_records.record_id })
         .from(storage_current_records)
@@ -136,7 +124,6 @@ export const createDocumentStorageDBService = (
         dataVersion: metadata.dataVersion,
         setDataVersion: metadata.setDataVersion,
         records: createResourceRecords(db, input.owner, {
-          upgrade: () => upgrade(input.owner),
           statistics,
           observer,
           assets: input.assets,

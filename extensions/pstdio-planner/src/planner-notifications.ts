@@ -1,5 +1,5 @@
 import { type CreateNotificationInput, type ResourceAnchor, workbenchPanels } from "@pstdio/sdk/extensions";
-import type { StoredTicket } from "./data/types";
+import type { Ticket } from "./data/types";
 import { ticketPageRef } from "./resource-kinds";
 
 type PlannerNotificationInput = Omit<CreateNotificationInput, "projectId">;
@@ -24,12 +24,10 @@ const notifyAction = (ctx: NotifyActionContext, input: PlannerNotificationInput)
 const notifyResolve = (ctx: NotifyResolveContext, input: { dedupeKey: string; status: "done" }) =>
   typeof ctx.notify.resolve === "function" ? ctx.notify.resolve(input) : undefined;
 
-export const ticketNotificationDedupeKey = (ticket: StoredTicket | string, reason: string) => {
-  const shorthand = typeof ticket === "string" ? ticket : ticket.shorthand;
-  return `pstdio-planner:ticket:${shorthand}:${reason}`;
-};
+// Ticket numbers can change after an offline merge, so keys use the stable ticket ID.
+const ticketNotificationDedupeKey = (ticket: Ticket, reason: string) => `pstdio-planner:ticket:${ticket.id}:${reason}`;
 
-export const ticketAnchor = (ctx: PlannerContext, ticket: StoredTicket) =>
+export const ticketAnchor = (ctx: PlannerContext, ticket: Ticket) =>
   ({
     type: "ticket",
     id: ticket.id,
@@ -40,7 +38,7 @@ export const ticketAnchor = (ctx: PlannerContext, ticket: StoredTicket) =>
     shorthand: ticket.shorthand,
   }) satisfies ResourceAnchor;
 
-export const notifyProposalRefined = (ctx: NotifyActionContext, ticket: StoredTicket) => {
+export const notifyProposalRefined = (ctx: NotifyActionContext, ticket: Ticket) => {
   const target = ticketAnchor(ctx, ticket);
   const ticketPage = { ...ticketPageRef, extensionId: ctx.extensionId };
   return notifyAction(ctx, {
@@ -70,7 +68,7 @@ export const notifyProposalRefined = (ctx: NotifyActionContext, ticket: StoredTi
   });
 };
 
-export const notifyBlocked = (ctx: NotifyActionContext, ticket: StoredTicket, sessionId?: string) => {
+export const notifyBlocked = (ctx: NotifyActionContext, ticket: Ticket, sessionId?: string) => {
   const target = ticketAnchor(ctx, ticket);
   const ticketPage = { ...ticketPageRef, extensionId: ctx.extensionId };
   const related = sessionId
@@ -107,8 +105,8 @@ export const notifyBlocked = (ctx: NotifyActionContext, ticket: StoredTicket, se
   });
 };
 
-export const resolveProposalRefinedNotification = (ctx: NotifyResolveContext, ticket: StoredTicket) =>
+export const resolveProposalRefinedNotification = (ctx: NotifyResolveContext, ticket: Ticket) =>
   notifyResolve(ctx, { dedupeKey: ticketNotificationDedupeKey(ticket, "proposal-refined"), status: "done" });
 
-export const resolveBlockedNotification = (ctx: NotifyResolveContext, ticket: StoredTicket) =>
+export const resolveBlockedNotification = (ctx: NotifyResolveContext, ticket: Ticket) =>
   notifyResolve(ctx, { dedupeKey: ticketNotificationDedupeKey(ticket, "blocked"), status: "done" });

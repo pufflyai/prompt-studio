@@ -1,0 +1,121 @@
+name: Production desktop validation
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      artifact_run_id:
+        required: true
+        type: string
+      source_sha:
+        required: true
+        type: string
+      artifact_attempt:
+        required: true
+        type: string
+      channel:
+        required: true
+        type: string
+      kind:
+        description: functional or performance; performance always uses a fresh runner
+        required: true
+        type: string
+      platforms:
+        description: JSON desktop rows selected for this release channel
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  desktop:
+    name: ${{ inputs.kind }} (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    # Preserve the existing desktop release allowance; operation budgets remain in benchmarks.
+    timeout-minutes: 30
+    env:
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
+      ARTIFACT_ATTEMPT: ${{ inputs.artifact_attempt }}
+      CHANNEL: ${{ inputs.channel }}
+      GH_TOKEN: ${{ github.token }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.platforms) }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install native dependencies
+        run: node scripts/ci/install-native-dependencies.ts
+      - name: Build desktop test dependencies
+        run: bun run build -- --scope @pstdio/desktop --include-dependencies
+      - name: Download the exact signed release app
+        if: inputs.channel == 'stable' || matrix.platform != 'win32'
+        uses: actions/download-artifact@v4
+        with:
+          name: validation-app-${{ matrix.target }}
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+      - name: Restore the exact release app
+        if: inputs.channel == 'stable' || matrix.platform != 'win32'
+        shell: bash
+        run: |
+          bun scripts/ci/production-payload.ts check
+          tar -xzf validation-app-${{ matrix.target }}.tar.gz -C clients/desktop
+      # Nightlies publish no Windows app. Still exercise Windows each day. Stable
+      # certification above always measures its signed publication artifact.
+      - name: Build the daily Windows candidate
+        if: inputs.channel == 'nightly' && matrix.platform == 'win32'
+        shell: bash
+        run: |
+          bun run --cwd clients/desktop make -- --arch=x64
+          bun -e 'await Bun.write("production-build-identity.json", JSON.stringify({ sourceSha: process.env.SOURCE_SHA, versionSha: process.env.VERSION_SHA, toolchain: "bun-" + Bun.version }))'
+        env:
+          VERSION_SHA: ${{ inputs.ref }}
+      - name: Configure Linux sandbox
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          sudo chown root:root clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox
+          sudo chmod 4755 clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox
+      - name: Set up Windows desktop tests
+        if: matrix.platform == 'win32'
+        uses: ./.github/actions/setup-windows-desktop-tests
+      - name: Measure fixed workloads without traces or retries
+        if: inputs.kind == 'performance'
+        working-directory: clients/desktop
+        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.benchmark.config.ts
+      - name: Test every packaged functional case
+        if: inputs.kind == 'functional'
+        working-directory: clients/desktop
+        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged
+      - name: Attest actual consumer inputs and outcome
+        if: always()
+        env:
+          CHECK: ${{ inputs.kind == 'functional' && 'signed-functional' || 'performance-desktop' }}-${{ matrix.target }}
+          OUTCOME: ${{ job.status }}
+        shell: bash
+        run: bun scripts/ci/production-evidence.ts --check "$CHECK" --outcome "$OUTCOME"
+      - name: Preserve consumer attestation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-evidence-${{ inputs.kind }}-${{ matrix.target }}-attempt-${{ github.run_attempt }}
+          path: production-evidence
+          if-no-files-found: error
+      - name: Preserve all production desktop evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-desktop-${{ inputs.kind }}-${{ matrix.target }}-attempt-${{ github.run_attempt }}
+          path: clients/desktop/test-results
+          if-no-files-found: warn

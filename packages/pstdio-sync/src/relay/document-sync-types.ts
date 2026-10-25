@@ -12,6 +12,7 @@ export interface DocumentRelay {
   blobs?: {
     put(blobId: string, bytes: Uint8Array): Promise<void>;
     get(blobId: string): Promise<Uint8Array>;
+    read?(blobId: string, offset: number): Promise<ReadableStream<Uint8Array>>;
   };
 }
 export interface SyncFailure {

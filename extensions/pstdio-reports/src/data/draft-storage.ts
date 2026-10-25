@@ -4,7 +4,7 @@ import type { ArtifactMount, ExtensionContextBase } from "@pstdio/sdk/extensions
 import { applyFrontmatter, buildReportFrontmatter } from "./frontmatter";
 import type { StoredReport } from "./types";
 
-export const REPORTS_DIR = ".pstdio/extension-storage/pstdio-reports/reports";
+export const REPORTS_DIR = ".pstdio/extension-storage/pstdio.pstdio-reports/reports";
 
 const layout = createDraftLayout(REPORTS_DIR, "report");
 export const reportDir = layout.directory;
@@ -34,7 +34,7 @@ export const reportFilesPattern = (report: StoredReport) => `${reportFilesDirFor
 export const fileNameFromPath = (report: StoredReport, path: string) =>
   path.slice(`${reportFilesDirFor(report)}/`.length);
 
-export const reportToMarkdown = (report: StoredReport) =>
+export const reportToMarkdown = (report: StoredReport, body: string) =>
   applyFrontmatter(
     buildReportFrontmatter({
       reportName: report.name,
@@ -43,7 +43,7 @@ export const reportToMarkdown = (report: StoredReport) =>
       createdAt: report.createdAt,
       draft: report.draft,
     }),
-    report.body,
+    body,
   );
 
 export const readReportMarkdown = async (projectFiles: ArtifactMount, report: StoredReport) => {

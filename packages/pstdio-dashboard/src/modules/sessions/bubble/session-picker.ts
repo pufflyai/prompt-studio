@@ -1,4 +1,4 @@
-import { type PlacementIdentity, workbenchPages } from "@pstdio/sdk/extensions";
+import { type PageRef, type PlacementIdentity, workbenchPages } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -10,16 +10,25 @@ export const registerSessionPicker = (ctx: WorkbenchModuleContext) => {
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.switchSession, label: "Switch session", category: "Dashboard", icon: "Search" },
     {
-      execute: (args) => {
-        const { placementIdentity } = (args ?? {}) as { placementIdentity?: PlacementIdentity };
+      execute: (args, context) => {
+        const {
+          placementIdentity = context?.placement,
+          page,
+          from = context?.resource,
+        } = (args ?? {}) as { placementIdentity?: PlacementIdentity; page?: PageRef; from?: ResourceRef };
         const projectId = getDashboardSelectedProjectId(ctx);
         const activate = (resource: ResourceRef) => {
-          if (placementIdentity?.kind === "page")
-            return ctx.navigation.openTarget({ kind: "page", page: workbenchPages.session, resource });
-          return ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
-            resource,
-            replacePanel: placementIdentity,
-          });
+          if (!placementIdentity) return ctx.navigation.openPage({ page: page ?? workbenchPages.session, resource });
+          return ctx.navigation.openTarget(
+            {
+              kind: "viewer",
+              operation: "switch",
+              from,
+              resource,
+              ...(placementIdentity.kind === "page" ? { page: page ?? workbenchPages.session } : {}),
+            },
+            { viewer: placementIdentity, projectId },
+          );
         };
         ctx.commandPalette.open({
           resourceSearch: {

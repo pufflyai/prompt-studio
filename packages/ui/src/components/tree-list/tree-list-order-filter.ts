@@ -52,7 +52,7 @@ export const applyTreeListOrder = (
 ): TreeListSection[] => {
   const nodesById = new Map(sections.flatMap((section) => section.nodes.map((node) => [node.id, node] as const)));
   const groupedSections: TreeListSection[] = groups.length
-    ? [...sections, ...groups.map((group) => ({ ...group, canHide: true, nodes: [] }))]
+    ? [...sections, ...groups.map(({ icon: _icon, ...group }) => ({ ...group, canHide: true, nodes: [] }))]
     : sections;
   // Order entries for ids no contributor declares are bare runs users made by dropping rows behind a group.
   // They exist while at least one of their rows does.

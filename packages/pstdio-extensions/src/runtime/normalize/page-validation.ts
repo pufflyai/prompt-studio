@@ -1,8 +1,15 @@
 import type { ContributionRef } from "@pstdio/sdk/extensions";
-import { isValidLocalContributionId, workbenchModeDefinitions, workbenchPageDefinitions } from "@pstdio/sdk/extensions";
+import {
+  isValidLocalContributionId,
+  pagePlaceholderView,
+  workbenchModeDefinitions,
+  workbenchPageDefinitions,
+} from "@pstdio/sdk/extensions";
 import type { RuntimePageRecord, RuntimePageSlot } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { Accumulator } from "./accumulator";
+import { validatePageGroup } from "./page-group-validation";
+import { validatePagePanels } from "./page-panel-validation";
 
 export interface PageDiagnosticInput {
   code: string;
@@ -105,15 +112,34 @@ const validateModeAndRegions = (runtime: Accumulator, record: RuntimePageRecord)
   }
 };
 
+const validatePageMainDefaults = (runtime: Accumulator, record: RuntimePageRecord) => {
+  const page = record.contribution;
+  const main = page.main;
+  if (main.kind === "view" && main.empty)
+    ownRefMissing(runtime, record, pagePlaceholderView(main.empty)!, `pages.${record.localId}.main.empty`);
+  if (
+    main.kind === "panels" &&
+    main.landing &&
+    typeof main.landing === "string" &&
+    !page.slots.some((slot) => slot.id === main.landing && slot.region === "main" && slot.item.kind === "view")
+  ) {
+    addPageDiagnostic(runtime, {
+      code: "extension_page_main_invalid",
+      fieldPath: `pages.${record.localId}.main.landing`,
+      message: "The landing slot must be a static Main view",
+      record,
+    });
+  }
+};
+
 const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) => {
   const page = record.contribution;
   const main = page.main;
-  ownRefMissing(
-    runtime,
-    record,
-    main.kind === "view" ? main.view : main.empty,
-    `pages.${record.localId}.main.${main.kind === "view" ? "view" : "empty"}`,
-  );
+  const empty = main.kind === "group" ? undefined : main.empty;
+  const view = main.kind === "view" ? main.view : pagePlaceholderView(empty);
+  if (view)
+    ownRefMissing(runtime, record, view, `pages.${record.localId}.main.${main.kind === "view" ? "view" : "empty"}`);
+  validatePageMainDefaults(runtime, record);
   page.resource?.kinds.forEach((kind, index) => {
     ownRefMissing(runtime, record, kind, `pages.${record.localId}.resource.kinds.${index}`);
   });
@@ -129,7 +155,7 @@ const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) 
     addPageDiagnostic(runtime, {
       code: "extension_page_main_invalid",
       fieldPath: `pages.${record.localId}.parent`,
-      message: "A resource view page requires a parent to return to when its last tab closes",
+      message: "A resource view page requires a parent for breadcrumbs and the page hierarchy",
       record,
     });
   }
@@ -272,7 +298,11 @@ const validateParentCycles = (runtime: Accumulator) => {
 };
 
 export const validatePageDefinitions = (runtime: Accumulator) => {
-  for (const record of runtime.pages) validatePageStructure(runtime, record);
+  for (const record of runtime.pages) {
+    validatePageStructure(runtime, record);
+    validatePagePanels(runtime, record);
+    validatePageGroup(runtime, record);
+  }
   validatePaths(runtime);
   validateParentCycles(runtime);
 };

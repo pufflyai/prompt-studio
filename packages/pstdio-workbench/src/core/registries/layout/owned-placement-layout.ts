@@ -11,13 +11,18 @@ import {
   type WorkbenchWidgetPlacement,
   workbenchRegions,
 } from "./layout-types";
+import { indexCurrentOwnedPlacements, indexCurrentWidgetOwners } from "./owned-placement-index";
 import {
   composeOwnedPlacements,
   type PlacementDestination,
   placementIdentityKey,
   type ResolvedOwnedPlacement,
 } from "./placement-reconciliation";
+import { placementTabState } from "./placement-tab-state";
+
 import { planTrayTabs } from "./tray-tabs";
+
+export { indexCurrentOwnedPlacements } from "./owned-placement-index";
 
 export type WorkbenchOwnedWidgetPlacement = ResolvedOwnedPlacement<WorkbenchWidgetPlacement>;
 
@@ -52,19 +57,6 @@ const resolveOwnerResourceKey = (
     ? (desired.value.ownerResourceKey ?? exact?.ownerResourceKey ?? transfer?.ownerResourceKey)
     : desired.value.ownerResourceKey;
 
-export const indexCurrentOwnedPlacements = (layout: WorkbenchLayout) => {
-  const indexed = new Map<string, { region: WorkbenchRegion; placement: WorkbenchWidgetPlacement }>();
-  for (const region of Object.values(layout.regions)) {
-    for (const placement of region.widgets) {
-      if (!placement.placementIdentity) continue;
-      const key = placementIdentityKey(placement.placementIdentity);
-      if (indexed.has(key)) throw new Error(`Duplicate rendered placement identity: ${key}`);
-      indexed.set(key, { region: region.id, placement });
-    }
-  }
-  return indexed;
-};
-
 const findModePlacementTransfer = (input: {
   current: ReturnType<typeof indexCurrentOwnedPlacements>;
   desired: WorkbenchOwnedWidgetPlacement;
@@ -84,20 +76,6 @@ const findModePlacementTransfer = (input: {
       candidate.placement.contributionId === input.desired.value.contributionId &&
       candidate.placement.viewId === input.desired.value.viewId,
   );
-};
-
-const indexCurrentWidgetOwners = (layout: WorkbenchLayout) => {
-  const owners = new Map<string, string | null>();
-  for (const region of Object.values(layout.regions)) {
-    for (const placement of region.widgets) {
-      if (owners.has(placement.widgetId)) throw new Error(`Duplicate rendered widget ID: ${placement.widgetId}`);
-      owners.set(
-        placement.widgetId,
-        placement.placementIdentity ? placementIdentityKey(placement.placementIdentity) : null,
-      );
-    }
-  }
-  return owners;
 };
 
 const restoreModeWidgets = (
@@ -171,11 +149,13 @@ export const renderDesiredPlacements = (
     if (desiredWidgetIds.has(widgetId)) throw new Error(`Duplicate desired widget ID: ${widgetId}`);
     desiredWidgetIds.add(widgetId);
     const ownerResourceKey = resolveOwnerResourceKey(desired, exact?.placement, transfer?.[1].placement);
+    const region = destinations.get(key) ?? exact?.region ?? desired.region;
     rendered.push({
       identity: desired.identity,
-      region: destinations.get(key) ?? exact?.region ?? desired.region,
+      region,
       placement: {
         ...desired.value,
+        ...placementTabState(region, desired.value, exact?.placement),
         widgetId,
         placementIdentity: desired.identity,
         ...(ownerResourceKey ? { ownerResourceKey } : {}),
@@ -297,8 +277,10 @@ const normalizeRemovedState = (input: {
 };
 
 const bindOwnedSubPanelsToLocation = (layout: WorkbenchLayout, desired: readonly RenderedOwnedPlacement[]) => {
-  const ownerResourceKey = getActiveLocationPlacement(layout)?.resourceKey;
+  const location = getActiveLocationPlacement(layout);
+  const ownerResourceKey = location?.resourceKey;
   if (!ownerResourceKey) return layout;
+  const locationIdentity = location.placementIdentity;
   const desiredByKey = new Map(desired.map((entry) => [placementIdentityKey(entry.identity), entry]));
   const regions = Object.fromEntries(
     Object.entries(layout.regions).map(([regionId, region]) => [
@@ -311,6 +293,14 @@ const bindOwnedSubPanelsToLocation = (layout: WorkbenchLayout, desired: readonly
           if (!desiredPlacement) return placement;
           // Shared resources own their content; visiting a page does not make it their owner.
           if (desiredPlacement.identity.kind !== "page") return placement;
+          // A shared page tray keeps other pages' tabs and the page's views of other
+          // resources; they do not close with this Location.
+          if (
+            locationIdentity?.kind === "page" &&
+            (desiredPlacement.identity.pageId !== locationIdentity.pageId ||
+              desiredPlacement.identity.slotId === locationIdentity.slotId)
+          )
+            return placement;
           return { ...placement, ownerResourceKey };
         }),
       },
@@ -320,9 +310,6 @@ const bindOwnedSubPanelsToLocation = (layout: WorkbenchLayout, desired: readonly
 };
 
 const updateOwnedWidgetLayout = (input: ReconcileOwnedWidgetLayoutInput, removedKeys: ReadonlySet<string>) => {
-  if (input.placements.length === 0 && removedKeys.size === 0 && (input.activate?.length ?? 0) === 0) {
-    return input.layout;
-  }
   const current = indexCurrentOwnedPlacements(input.layout);
   const desired = renderDesiredPlacements(input, current);
   let layout: WorkbenchLayout = normalizeRemovedState({

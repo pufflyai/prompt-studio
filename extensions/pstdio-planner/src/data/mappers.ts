@@ -17,10 +17,10 @@ import {
   ticketDisplayTitle,
 } from "./ticket-resource-hierarchy";
 import type { TicketSummary } from "./ticket-summary";
+import { isSingleSelectTicketTag, tagValueIds } from "./ticket-tags";
 import type { StoredStatus, StoredTag } from "./types";
 import { workspacePresentation } from "./workspace-presentation";
 import type { TicketWorkspaceSession, TicketWorkspaceSessionLookup } from "./workspace-sessions";
-import { ticketShorthandsFromWorkspace } from "./workspace-ticket-link";
 
 export { ticketDisplayTitle } from "./ticket-resource-hierarchy";
 
@@ -61,9 +61,6 @@ export const ticketTagAttributeId = (tag: Pick<StoredTag, "id">) => DEFAULT_TAG_
 export const createTicketParentLookup = (tickets: TicketSummary[]) =>
   new Map(tickets.map((ticket) => [ticket.id, ticket]));
 
-// Existing projects may have seeded the planner-owned Type tag before it became scalar.
-export const isSingleSelectTicketTag = (tag: StoredTag) => tag.type === "single_select" || tag.id === "default-type";
-
 const createTagOptionsLookup = (tags: StoredTag[]) =>
   tags.map((tag) => ({
     tag,
@@ -73,7 +70,7 @@ const createTagOptionsLookup = (tags: StoredTag[]) =>
 const ticketTagValues = (ticket: TicketSummary, tagOptions: TagOptionsLookup) =>
   Object.fromEntries(
     tagOptions.map(({ optionIds, tag }) => {
-      const selected = (ticket.tagIds ?? []).filter((id) => optionIds.has(id));
+      const selected = tagValueIds(ticket.tags?.[tag.id]).filter((id) => optionIds.has(id));
       return [ticketTagAttributeId(tag), isSingleSelectTicketTag(tag) ? (selected[0] ?? "") : selected];
     }),
   );
@@ -123,10 +120,10 @@ export const createTicketWorkspaceLookup = (
   const lookup: TicketWorkspaceLookup = new Map();
 
   for (const workspace of workspaces) {
-    for (const ticketShorthand of ticketShorthandsFromWorkspace(workspace)) {
-      const items = lookup.get(ticketShorthand) ?? [];
+    for (const { id: ticketId } of (workspace.anchors_json ?? []).filter(({ type }) => type === "ticket")) {
+      const items = lookup.get(ticketId) ?? [];
       items.push(workspaceToBadgeItem(workspace, sessions.get(workspace.id)));
-      lookup.set(ticketShorthand, items);
+      lookup.set(ticketId, items);
     }
   }
 
@@ -140,7 +137,7 @@ const ticketWorkspaceValues = (
   resourceReference: TicketResourceReference,
 ) => {
   const parentMetadata = { resourceParent: resourceReference };
-  const items = (workspaceLookup.get(ticket.shorthand) ?? []).map((item) => ({
+  const items = (workspaceLookup.get(ticket.id) ?? []).map((item) => ({
     ...item,
     ...parentMetadata,
     ...(item.resource

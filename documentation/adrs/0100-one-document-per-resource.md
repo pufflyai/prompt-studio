@@ -55,11 +55,12 @@ cursors.
 
 - Write cost and memory depend on the records in the commit, not on owner size.
 - Relay sync of records stops until per-resource sync exists. Accounts with Cloud early access
-  keep their local data; their records do not sync.
+  keep their local data; their records do not sync. [ADR 0102](0102-record-stream-sync.md)
+  restores record sync.
 - Released 0.45 devices cannot merge with upgraded data. This is accepted while the relay is
   inactive.
 - Deterministic migration authors are no longer needed for records, because no other device
-  merges the same record history.
+  merges the same record history. ADR 0102 brings them back once records sync again.
 - Owner-wide record type ownership (`storage_record_types`) and owner-document projection
   tracking are removed.
 - The in-memory SDK storage keeps its single document. Conformance tests keep both

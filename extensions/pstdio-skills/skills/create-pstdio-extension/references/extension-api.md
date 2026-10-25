@@ -27,7 +27,7 @@ In `pst extensions check --json`, `versions.extensionApi` is always the API vers
 | --- | --- | --- |
 | `ctx.storage.collection(name)` | Every 0.1 and 0.2 host. Deprecated from API 0.2.0. | Use it. |
 | `ctx.storage.records`, `ctx.storage.assets`, `client.assets` | API 0.2.0 and newer. Published 0.1.x SDKs do not have them. | Use `ctx.storage.collection`. |
-| `ctx.extensionFiles` root | API 0.1: `.pstdio/ext/<publisher>.<name>/`. API 0.2: `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. | Use relative paths only; the methods are the same. |
+| `ctx.extensionFiles` root | API 0.1: `.pstdio/ext/<publisher>.<name>/`. API 0.2 (0.44, 0.45): `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. From 0.46: `.pstdio/extension-storage/<publisher>.<name>/`. | Use relative paths only; the methods are the same. |
 | `statuses` contributions (`defineStatuses`) | Deprecated from API 0.1.3. Removed on `main`, so the release after 0.43.x no longer has it. | Do not add new ones. Return enum attributes from the query instead. |
 | Setting `options` loaded from a command | API 0.1.2 and newer. | Use fixed `enum` choices. |
 
@@ -80,6 +80,8 @@ These rules hold for `ctx.storage.collection(name)`, the API every current host 
 - `put(id, value)` creates or replaces. Use it for new items.
 - `update(id, value)` replaces only an existing item. It throws if the item was deleted, so a late edit cannot bring a deleted item back. Use it for edits. Do not check `get` and then call `put`; another writer can delete the item between the two calls.
 - For mounted text files, `writeText` creates or replaces and `updateText` changes only an existing file.
+
+- Keep records small. From API 0.3 (Prompt Studio 0.46), the host refuses a record over 256 KiB and a commit over 4 MiB of JSON. Store file bodies, images, and other large content as files. See [Keep records small](host-storage-and-workspaces.md#keep-records-small).
 
 On API 0.2.0 and newer hosts, prefer `ctx.storage.records`. Read a record, keep its revision, and commit related changes as one group. Read the [save workflow](https://prompt.studio/docs/guides/sdk/storage/) before you use it.
 

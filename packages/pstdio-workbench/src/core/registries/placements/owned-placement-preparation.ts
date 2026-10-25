@@ -1,4 +1,10 @@
-import type { PageLocation, PageOpenIntent, PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
+import type {
+  PageLocation,
+  PageOpenIntent,
+  PlacementIdentity,
+  ResourceRef,
+  ViewLocation,
+} from "@pstdio/sdk/extensions";
 import type { Disposable } from "../../shared/disposable";
 import type { WorkbenchRegion, WorkbenchWidgetPlacement } from "../layout/layout-types";
 import type { PlacementDestination, ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
@@ -16,6 +22,7 @@ export interface OwnedPlacementOpenInput {
   title?: string;
   relatedSource?: string;
   region?: WorkbenchRegion;
+  location?: ViewLocation;
 }
 export interface OwnedPlacementLocationContext {
   modeId: string;
@@ -58,12 +65,20 @@ export const prepareOwnedPlacement = (input: {
   item: WorkbenchOwnedPlacementItem;
   current: OwnedPlacementState;
   identityFor(instanceKey: string): PlacementIdentity;
+  keyOfResource?(resource: ResourceRef): string;
 }) => {
   const state = {
     staticOverrides: new Map(input.current.staticOverrides),
     resourceInstances: new Map(input.current.resourceInstances),
   };
-  const operation = { ...input.target, label: input.label, id: input.target.placementId, item: input.item, state };
+  const operation = {
+    ...input.target,
+    label: input.label,
+    id: input.target.placementId,
+    item: input.item,
+    state,
+    keyOfResource: input.keyOfResource,
+  };
   let instanceKey = "default";
   if (input.item.kind === "view") openStaticPlacement(operation);
   else instanceKey = openResourcePlacement(operation);

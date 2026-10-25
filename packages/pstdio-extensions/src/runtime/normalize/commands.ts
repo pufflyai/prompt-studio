@@ -48,7 +48,11 @@ const validateCliExamples = (
   contribution: RuntimeCliContribution,
   runtime: Accumulator,
 ) => {
-  const routes = [[ext.name, ...contribution.path], ...(contribution.globalAliases ?? [])];
+  const routes = [
+    [ext.id, ...contribution.path],
+    [ext.name, ...contribution.path],
+    ...(contribution.globalAliases ?? []),
+  ];
   for (const example of contribution.examples ?? []) {
     if (exampleUsesCommandPath(example, routes)) continue;
     runtime.diagnostics.push(
@@ -80,12 +84,12 @@ const normalizeCommandCli = (
   const normalized = normalizeCliPath(customPath);
   if (!normalized) return undefined;
 
-  const pathKey = [ext.name, ...normalized.segments].join(" ");
+  const pathKey = [ext.id, ...normalized.segments].join(" ");
 
   const contribution: RuntimeCliContribution = {
     extensionId: ext.id,
     commandId,
-    name: ext.name,
+    name: ext.id,
     path: normalized.segments,
     pathKey,
     description: asLocalizableString(options.description),

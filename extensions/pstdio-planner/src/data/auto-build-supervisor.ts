@@ -15,7 +15,7 @@ interface AutoBuildSupervisor {
   scope?: { revision: string; queries: NextTicketQuery[] };
 }
 
-export const readAutoBuildSupervisor = async (ctx: Pick<ExtensionContextBase, "storage">) =>
+export const readAutoBuildSupervisor = async (ctx: Pick<ExtensionContextBase, "storage" | "resources">) =>
   (await ctx.storage.get<AutoBuildSupervisor>("auto-build-supervisor")) ?? {};
 
 export const saveAutoBuildSupervisor = async (ctx: ExtensionContextBase, supervisor: AutoBuildSupervisor) => {

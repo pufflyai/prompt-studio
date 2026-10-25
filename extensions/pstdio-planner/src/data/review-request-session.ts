@@ -58,7 +58,7 @@ const startReviewRequestSession = async (ctx: CommandContext, requestId: string)
     if (!session) throw new Error("The linked chat session was removed.");
     return session;
   }
-  const ticket = await findTicket(ctx.storage, request.ticketId);
+  const ticket = await findTicket(ctx, request.ticketId);
   if (!ticket) throw new Error("The ticket was removed.");
   const attempt = request.context.workspaceId ? await readAttempt(ctx.storage, request.context.workspaceId) : null;
   const requestAnchor: ResourceAnchor = {

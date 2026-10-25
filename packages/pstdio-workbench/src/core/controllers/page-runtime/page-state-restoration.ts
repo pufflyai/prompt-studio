@@ -53,7 +53,9 @@ export const pageStateFromLayout = (
               ? SINGLE_RESOURCE_INSTANCE_KEY
               : identity.instanceKey,
           resource: placement.resource,
-          ...(placement.section ? { section: placement.section } : {}),
+          section: placement.section,
+          position: placement.position,
+          pageContext: placement.pageContext,
           ...(binding.cardinality === "many"
             ? { open: placement.tabRetention === "preview" ? ("preview" as const) : ("pin" as const) }
             : {}),
@@ -109,7 +111,8 @@ export const createPageStateRestorer =
     const restoresSavedLocation = workbenchPageLocationsEqual(saved, location, defaultPageResourceCodec, [page]);
     if (
       !layout ||
-      (!restoresSavedLocation &&
+      (!hasPageMain &&
+        !restoresSavedLocation &&
         !Object.values(layout.regions).some((region) =>
           region.widgets.some(
             (placement) =>

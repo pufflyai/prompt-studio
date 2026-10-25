@@ -2,20 +2,20 @@ import type { TreeNode, TreeViewSection } from "@pstdio/sdk/extensions";
 import { ticketDisplayTitle } from "../data/mappers";
 import { ticketPageTarget } from "../data/ticket-page-target";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
-import type { StoredStatus, StoredTicket } from "../data/types";
+import type { StoredStatus, Ticket } from "../data/types";
 
-const ticketShorthandSort = (left: StoredTicket, right: StoredTicket) =>
+const ticketShorthandSort = (left: Ticket, right: Ticket) =>
   left.shorthand.localeCompare(right.shorthand, undefined, { numeric: true });
 
-const subTicketStatus = (ticket: StoredTicket, statusesById: Map<string, StoredStatus>) => {
+const subTicketStatus = (ticket: Ticket, statusesById: Map<string, StoredStatus>) => {
   if (!ticket.statusId) return undefined;
   return statusesById.get(ticket.statusId);
 };
 
 const subTicketNode = (
-  ticket: StoredTicket,
+  ticket: Ticket,
   statusesById: Map<string, StoredStatus>,
-  ticketsById: Map<string, StoredTicket>,
+  ticketsById: Map<string, Ticket>,
 ): TreeNode => {
   const status = subTicketStatus(ticket, statusesById);
   const label = ticketDisplayTitle(ticket);
@@ -39,7 +39,7 @@ const subTicketNode = (
 };
 
 export const buildSubTicketsSection = (input: {
-  tickets: StoredTicket[];
+  tickets: Ticket[];
   parentTicketId: string;
   statusesById: Map<string, StoredStatus>;
 }): TreeViewSection | undefined => {

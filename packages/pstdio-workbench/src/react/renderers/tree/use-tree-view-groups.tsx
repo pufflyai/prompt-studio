@@ -1,4 +1,6 @@
 import {
+  IconPicker,
+  optionIcons,
   type ResourceContextAction,
   type TreeListActionMenuItem,
   type TreeListGroup,
@@ -24,6 +26,7 @@ export const useTreeViewGroups = (
   const savedGroups = useTreeListOrderStore(storageKey, (state) => state.groups);
   const addGroup = useTreeListOrderStore(storageKey, (state) => state.addGroup);
   const renameGroup = useTreeListOrderStore(storageKey, (state) => state.renameGroup);
+  const setGroupIcon = useTreeListOrderStore(storageKey, (state) => state.setGroupIcon);
   const removeGroup = useTreeListOrderStore(storageKey, (state) => state.removeGroup);
   const [draft, setDraft] = useState<GroupDraft | null>(null);
   const currentDraft = draft?.storageKey === storageKey ? draft : null;
@@ -70,6 +73,14 @@ export const useTreeViewGroups = (
       const editing = currentDraft?.group.id === group.id;
       return {
         ...section,
+        icon: (
+          <IconPicker
+            value={group.icon ?? "folder"}
+            options={optionIcons.filter((option) => option.value !== null)}
+            aria-label="Change group icon"
+            onChange={(icon) => setGroupIcon(group.id, icon ?? undefined)}
+          />
+        ),
         canReorder: !editing,
         contextMenuItems: menuItems,
         actions: [

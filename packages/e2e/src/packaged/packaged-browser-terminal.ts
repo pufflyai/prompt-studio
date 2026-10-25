@@ -8,7 +8,7 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();
   await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
-  const choice = page.getByRole("menuitem", { name: "Terminal", exact: true });
+  const choice = page.getByRole("menuitem", { name: "Open terminal", exact: true });
   if (await choice.isVisible()) await choice.click();
   const socket = await connection;
   expect(new URL(socket.url()).origin).toBe(origin.replace(/^http/, "ws"));
@@ -23,7 +23,7 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   await terminalInput.pressSequentially("export PSTDIO_PACKAGED_STATE=retained");
   await terminalInput.press("Enter");
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
-  await expect(mainHeader).toBeHidden();
+  await expect(mainHeader).toBeVisible();
   const terminalTab = page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab");
   const start = (await terminalTab.boundingBox())!;
   const end = (await iframe.boundingBox())!;
@@ -32,6 +32,7 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   await page.mouse.move(start.x + start.width / 2 + 10, start.y + start.height / 2, { steps: 3 });
   await page.mouse.move(end.x + end.width / 2, end.y + end.height / 2, { steps: 10 });
   await page.mouse.up();
+  await expect(mainHeader).toBeVisible();
   await expect(mainHeader.getByRole("tab")).toHaveCount(2);
   await expect(
     page.locator('[data-workbench-region="main"]').getByRole("textbox", { name: "Terminal input" }),
@@ -53,8 +54,12 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
     dispatchEvent(new PopStateEvent("popstate"));
   }, destination.href);
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Sessions");
+  await expect(
+    page.locator('[data-workbench-panel="main"]').getByTestId("content-editable").filter({ visible: true }),
+  ).toBeVisible();
   await expect(terminalInput).toHaveCount(0);
   await page.goBack();
+  await expect(mainHeader).toBeVisible();
   await expect(terminalInput).toBeVisible();
   expect(
     await terminalInput.evaluate(

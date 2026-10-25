@@ -91,7 +91,9 @@ export const startActiveRuntime = async (cleanup: Array<() => void | Promise<voi
     response.write("<!doctype html><html><body>");
     dashboardRequested.resolve();
     await dashboardReleased.promise;
-    response.end('<main>Owned Prompt Studio dashboard<textarea aria-label="Draft"></textarea></main></body></html>');
+    response.end(
+      '<main id="root">Owned Prompt Studio dashboard<textarea aria-label="Draft"></textarea></main></body></html>',
+    );
   });
   await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
   cleanup.push(async () => {

@@ -9,6 +9,7 @@ import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { CreateProjectWidget } from "./components/create-project-widget";
+import { ProjectFolderWidget } from "./components/project-folder-widget";
 import { ProjectPickerWidget } from "./components/project-picker-widget";
 import { createDashboardProjects } from "./data/project-data";
 import type { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
@@ -79,12 +80,37 @@ const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
   });
 };
 
+// A project without a folder on this device asks for one the first time something needs its files.
+const registerProjectFolder = (ctx: WorkbenchModuleContext) => {
+  ctx.views.registerView({
+    id: dashboardWidgetIds.projectFolder,
+    title: "Project folder",
+    body: { kind: "react", render: (input) => <ProjectFolderWidget input={input} /> },
+  });
+  ctx.overlays.registerOverlay({
+    id: dashboardWidgetIds.projectFolder,
+    viewId: dashboardWidgetIds.projectFolder,
+    config: { size: "md", placement: "center", closeOnInteractOutside: false },
+  });
+  ctx.commands.registerCommand(
+    {
+      id: dashboardCommandIds.chooseProjectFolder,
+      label: "Choose project folder",
+      category: "Dashboard",
+      icon: "Folder",
+    },
+    { execute: () => ctx.overlays.openOverlay(dashboardWidgetIds.projectFolder, { title: "Project folder" }) },
+  );
+};
+
 const registerProjectSelectionMode = (ctx: WorkbenchModuleContext) => {
   ctx.modes.registerMode({
     id: "project-selection",
     label: "Projects",
-    chrome: { sidenav: false },
+    chrome: { nav: false, sidenav: false, activity: false, status: false },
+    floatingPanels: "hidden",
     panels: [],
+    regionSettings: { main: { showHeader: false, acceptsTabs: false } },
     activate: () => undefined,
     enter: (modeCtx) => {
       const instanceId = modeCtx.overlays.openOverlay(requiredProjectPickerOverlay, { title: "Projects" });
@@ -190,6 +216,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       );
 
       registerProjectWidgets(ctx);
+      registerProjectFolder(ctx);
       registerProjectSelectionMode(ctx);
       registerProjects(ctx);
       registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence);

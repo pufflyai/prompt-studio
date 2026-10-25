@@ -11,6 +11,9 @@ export interface ResourceContextAction {
   commandId?: string;
   group?: { id: string; label?: string };
   isSelected?: boolean;
+  /** Apply a state change at selection, before the closing animation or navigation. */
+  onSelect?: () => void;
+  /** Run after a closing menu releases focus, or immediately if it stays open. */
   onClick?: () => Promise<void> | void;
   /** Nested actions, opened by hover or the arrow keys. */
   items?: ResourceContextAction[];
@@ -70,6 +73,7 @@ const useResourceMenuActions = (closeOnSelect: boolean | undefined) => {
   const pendingAction = useRef<ResourceContextAction | null>(null);
   return {
     onSelect: (action: ResourceContextAction) => {
+      action.onSelect?.();
       if (action.closeOnSelect ?? closeOnSelect ?? true) pendingAction.current = action;
       else void action.onClick?.();
     },
@@ -128,7 +132,15 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
       // Positioned context menus do not restore trigger focus themselves.
       const trigger = keyboardTrigger.current;
       keyboardTrigger.current = null;
-      if (trigger) requestAnimationFrame(() => trigger.focus());
+      const previousFocus = document.activeElement;
+      if (trigger) {
+        requestAnimationFrame(() => {
+          // A later focus choice belongs to its caller, even before the menu finishes closing.
+          if (document.activeElement === previousFocus || document.activeElement === document.body) {
+            trigger.focus({ preventScroll: true });
+          }
+        });
+      }
     },
   });
   const triggerProps = menu.api.getContextTriggerProps();

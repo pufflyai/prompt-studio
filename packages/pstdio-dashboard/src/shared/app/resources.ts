@@ -28,5 +28,5 @@ export const createDashboardSessionResource = (
 export const dashboardViews = {
   start: { id: "start", label: "Start", icon: "House" },
   workspaces: { id: "workspaces", label: "Workspaces", icon: standardResourceIcons.workspace },
-  sessions: { id: "sessions", label: "Sessions", icon: "MessageCircle" },
+  sessions: { id: "sessions", label: "Sessions", icon: "messages-circle" },
 } as const;

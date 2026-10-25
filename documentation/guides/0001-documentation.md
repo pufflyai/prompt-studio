@@ -7,10 +7,12 @@ Prompt Studio is a workbench where people and agents build and use tools through
 - [Install Prompt Studio](getting-started/0001-install.md)
 - [Set up repository development](development/0001-setup.md)
 - [Run tests and validate changes](development/0002-testing.md)
+- [Understand CI stages and qualify changes](development/0015-ci-stages.md)
 - [Build and smoke-test the relay](development/0006-relay.md)
 - [Develop private account authority](development/0007-account-manager.md)
 - [Device login development](development/0011-device-login.md)
 - [Test the relay with two dashboards](development/0008-two-dashboard-relay.md)
+- [Publish SDK and UI previews](development/0014-sdk-ui-previews.md)
 - [Configure private service diagnostics](development/0010-service-diagnostics.md)
 - [Write an extension](extensions/0001-authoring.md)
 - [Look up SDK methods](../references/sdk/0003-api.md)
@@ -186,6 +188,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0004 — Pull request area labels](development/0004-pull-request-labels.md)
 - [0005 — Extension conformance and regression coverage](development/0005-conformance.md)
 - [0012 — Portable relay and account manager deployment](development/0012-portable-cloud-deployment.md)
+- [0013 — Independent core extension releases](development/0013-independent-extension-releases.md)
 
 ### Build extensions
 
@@ -382,6 +385,8 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0088 — Temporary tooltip hover reset](../adrs/0088-temporary-tooltip-hover-reset.md)
 - [0099 — Durable record query projections](../adrs/0099-durable-record-query-projections.md)
 - [0100 — One document per resource](../adrs/0100-one-document-per-resource.md)
+- [0106 — Deliver core extension releases independently through PSX](../adrs/0106-independent-core-extension-delivery.md)
+- [0107 — Publish SDK and UI previews without a host release](../adrs/0107-independent-sdk-ui-previews.md)
 
 ## Lessons learned
 

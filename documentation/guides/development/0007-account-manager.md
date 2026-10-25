@@ -8,7 +8,7 @@ The private account manager owns durable account and device authority separately
 
 The data owner's lifecycle methods remain internal. `createManagerAuthentication(config)` embeds Better Auth 1.7.10 for Google sign-in, persisted human sessions and signing keys. `createManagerHandler(auth, origin)` serves auth, device login and device management. Never expose private lifecycle methods directly to untrusted bodies or send the manager connection to extensions or native clients. A supplied Google subject or account ID is not permission.
 
-The component implements part of PS-735. The relay verifies the manager's signed access tokens: `bun run --cwd services/relay test:transport` and `test:isolated` run the relay against the actual manager with fixture keys and an owned HTTPS fixture. Live Google configuration, deployed role/network isolation, backups and production recovery remain separate proof. See [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
+The component implements part of PS-735. The relay verifies the manager's signed access tokens: `bun run --cwd services/relay test:integration` runs the relay against the actual manager with fixture keys and an owned HTTPS fixture. Live Google configuration, deployed role/network isolation, backups and production recovery remain separate proof. See [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
 
 ## Devices and cloud projects
 
@@ -109,7 +109,7 @@ From the repository root:
 
 ```sh
 bun install --frozen-lockfile
-bun run --cwd services/account-manager test:isolated
+bun run --cwd services/account-manager test:integration
 bun run --cwd services/account-manager lint
 bun run --cwd services/account-manager build
 ```
@@ -118,7 +118,7 @@ The isolated command starts its own PostgreSQL container, creates distinct manag
 
 The smoke imports the actual bundled authority, starts the actual bundled HTTPS manager with run-owned TLS, and runs a separately bundled verifier with an empty environment. No manager DB or secret enters that verifier. Issuance, denied renewal after device removal, retained unexpired access during manager outage and clean shutdown are proved without source mounts or runtime installs. Only the smoke image includes OpenSSL for fresh fixture certificates; the production image stays slim.
 
-The Linux isolated infrastructure CI job runs the source suite and built image explicitly, alongside the relay checks. Manager changes select that job. Cross-platform package checks still build and lint this private owner; it has no ordinary `test` target that would launch Linux containers from Windows. Existing allowances and workloads remain unchanged. For a focused source file, append its path to `test:isolated`, such as `src/recovery.test.ts`; the built smoke still follows a passing source run.
+The Linux isolated infrastructure CI job runs the source suite and built image explicitly, alongside the relay checks. Manager changes select that job. Cross-platform package checks still build and lint this private owner; it has no ordinary `test` target that would launch Linux containers from Windows. Existing allowances and workloads remain unchanged. For a focused source file, append its path to `test:integration`, such as `src/recovery.p1.integration.ts`; the built smoke still follows a passing source run.
 
 Each run prints `manager-authority-<uuid>`. Its PostgreSQL data, containers and internal network belong to that run and are removed in cleanup. It publishes no host ports and mounts source read-only only in the source tester. The built smoke has no source mount. Fixture credentials are test-only. The developer application's database and unrelated Docker projects are never opened or changed.
 

@@ -68,10 +68,10 @@ The first serial sample was slower than the next two and remains included in the
 Run from the repository root after installing dependencies. These scripts create disposable fixtures; they never open the user's database or delete existing workspaces.
 
 ```sh
-bun --conditions=source packages/pstdio-db/src/services/sessions/session-query.bench.ts
+bun --conditions=source packages/pstdio-db/src/services/sessions/session-query.p3.bench.ts
 
 BENCH_ROOT=/path/on/the/workspace/filesystem \
-  bun --conditions=source packages/pstdio-api/src/features/workspaces/worktree-cleanup.bench.ts
+  bun --conditions=source packages/pstdio-api/src/features/workspaces/worktree-cleanup.p3.bench.ts
 ```
 
 `BENCH_FILES`, `BENCH_REPEATS`, and comma-separated `BENCH_LIMITS` control the filesystem fixture. Defaults are 5,000, 3, and `1,2,4,8,28`. Each run uses an owned temporary directory inside `BENCH_ROOT` and removes it afterward. Allow space for the fixture, and run while other build/test work is idle.

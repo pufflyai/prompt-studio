@@ -1,0 +1,152 @@
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { OpenAPIHono } from "@hono/zod-openapi";
+import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
+import type { AppBindings } from "../../../types";
+import { testHarnessId } from "../../harnesses/test-harness-registry";
+
+const CLAUDE_CODE_ID = testHarnessId("claude-code");
+
+let app: OpenAPIHono<AppBindings>;
+let eventBus: Awaited<ReturnType<typeof createTestApp>>["eventBus"];
+let deps: Awaited<ReturnType<typeof createTestApp>>["deps"];
+let closeApp: () => Promise<void>;
+let tempRoot: string;
+
+beforeAll(async () => {
+  tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-update-project-test-"));
+  ({
+    app,
+    eventBus,
+    deps,
+    close: closeApp,
+  } = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
+  }));
+});
+
+afterAll(async () => {
+  await closeApp();
+  rmSync(tempRoot, { recursive: true, force: true });
+});
+
+const createProject = async (name: string) => {
+  const res = await app.request("/v1/projects", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(folderProjectInput({ name })),
+  });
+  expect(res.status).toBe(201);
+  return res.json();
+};
+
+describe("PATCH /v1/projects/:id", () => {
+  test("a rename reaches the synced project info, so other and new devices get it", async () => {
+    const project = await createProject("Notes");
+
+    const res = await app.request(`/v1/projects/${project.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Team notes" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect((await deps.projectInfoService.read(project.id)).name).toBe("Team notes");
+  });
+
+  test("returns 404 for missing project", async () => {
+    const res = await app.request("/v1/projects/missing", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ default_agent_id: CLAUDE_CODE_ID }),
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  test("persists default agent and model", async () => {
+    const project = await createProject("Patch Default Agent");
+
+    const patchRes = await app.request(`/v1/projects/${project.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        default_agent_id: CLAUDE_CODE_ID,
+        default_agent_model: "claude-3-5-sonnet",
+      }),
+    });
+
+    expect(patchRes.status).toBe(200);
+    const updated = await patchRes.json();
+    expect(updated.default_agent_id).toBe(CLAUDE_CODE_ID);
+    expect(updated.default_agent_model).toBe("claude-3-5-sonnet");
+
+    const getRes = await app.request(`/v1/projects/${project.id}`);
+    const fetched = await getRes.json();
+    expect(fetched.default_agent_id).toBe(CLAUDE_CODE_ID);
+    expect(fetched.default_agent_model).toBe("claude-3-5-sonnet");
+  });
+
+  test("publishes the new default agent to synced clients", async () => {
+    const project = await createProject("Publish Default Agent");
+    const published: unknown[] = [];
+    const unsubscribe = eventBus.subscribe((event) => {
+      if (event.table === "projects" && event.op === "set") published.push(event.data);
+    });
+
+    await app.request(`/v1/projects/${project.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ default_agent_id: CLAUDE_CODE_ID, default_agent_model: "claude-3-5-sonnet" }),
+    });
+    unsubscribe();
+
+    expect(published).toContainEqual(
+      expect.objectContaining({
+        id: project.id,
+        default_agent_id: CLAUDE_CODE_ID,
+        default_agent_model: "claude-3-5-sonnet",
+      }),
+    );
+  });
+
+  test("clears default model independently of agent", async () => {
+    const project = await createProject("Clear Default Model");
+
+    await app.request(`/v1/projects/${project.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        default_agent_id: CLAUDE_CODE_ID,
+        default_agent_model: "claude-3-5-sonnet",
+      }),
+    });
+
+    const clearRes = await app.request(`/v1/projects/${project.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ default_agent_model: null }),
+    });
+
+    expect(clearRes.status).toBe(200);
+    const updated = await clearRes.json();
+    expect(updated.default_agent_id).toBe(CLAUDE_CODE_ID);
+    expect(updated.default_agent_model).toBeNull();
+  });
+
+  test("returns 400 when body is empty", async () => {
+    const project = await createProject("Empty Patch Body");
+
+    const res = await app.request(`/v1/projects/${project.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    expect(res.status).toBe(400);
+  });
+});

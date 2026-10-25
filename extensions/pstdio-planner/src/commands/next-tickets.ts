@@ -111,7 +111,7 @@ export async function readNextTickets(
     await Promise.all([
       readPlanCommand.run(ctx, {}),
       listAttempts(ctx.storage),
-      ticketsCollection(ctx.storage).list(),
+      ticketsCollection(ctx).list(),
       readAutoBuildResumptions(ctx),
       readImplementationCapacity(ctx),
       readAutoBuildAssignments(ctx),

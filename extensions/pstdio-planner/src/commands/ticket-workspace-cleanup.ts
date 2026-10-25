@@ -1,15 +1,18 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
-import type { StoredTicket } from "../data/types";
+import type { Ticket } from "../data/types";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 
-export type TicketCleanupContext = Pick<ExtensionContextBase, "storage" | "settings" | "workspaces" | "notify">;
+export type TicketCleanupContext = Pick<
+  ExtensionContextBase,
+  "storage" | "settings" | "workspaces" | "notify" | "resources"
+>;
 
-export const deleteUnusedLinkedWorkspaces = async (ctx: TicketCleanupContext, tickets: StoredTicket[]) => {
+export const deleteUnusedLinkedWorkspaces = async (ctx: TicketCleanupContext, tickets: Ticket[]) => {
   try {
     if ((await ctx.settings.get("tickets.deleteLinkedWorkspaces")) === false) return;
     const activeIds = new Set(
-      (await ticketsCollection(ctx.storage).list()).filter((ticket) => !ticket.archived).map((ticket) => ticket.id),
+      (await ticketsCollection(ctx).list()).filter((ticket) => !ticket.archived).map((ticket) => ticket.id),
     );
     const unused = (await ctx.workspaces.list()).filter(
       (workspace) =>
@@ -18,7 +21,7 @@ export const deleteUnusedLinkedWorkspaces = async (ctx: TicketCleanupContext, ti
         tickets.some(
           (ticket) =>
             (workspace.anchors_json ?? []).some((anchor) => anchor.type === "ticket" && anchor.id === ticket.id) ||
-            isWorkspaceLinkedToTicket(workspace, ticket.shorthand),
+            isWorkspaceLinkedToTicket(workspace, ticket),
         ) &&
         (workspace.anchors_json ?? [])
           .filter((anchor) => anchor.type === "ticket")

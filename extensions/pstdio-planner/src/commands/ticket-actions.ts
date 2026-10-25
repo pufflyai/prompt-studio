@@ -13,7 +13,8 @@ import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
 import { ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
-import type { StoredTicket } from "../data/types";
+import { withTicketTagIds } from "../data/ticket-tags";
+import type { Ticket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
 import { ticketMenuSlots } from "../resource-kinds";
 
@@ -65,10 +66,10 @@ export const resolveTicket = (
 };
 
 export const resolveTicketIdentity = async (
-  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "storage">,
+  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "storage" | "resources">,
   ticketRef: string,
 ) => {
-  const ticket = await findTicket(ctx.storage, ticketRef);
+  const ticket = await findTicket(ctx, ticketRef);
   const id = ticket?.id ?? ticketRef;
   const shorthand = nonEmptyText(ticket?.shorthand) ?? ticketRef;
 
@@ -76,17 +77,17 @@ export const resolveTicketIdentity = async (
 };
 
 const ticketHierarchyMetadata = async (
-  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "storage">,
-  ticket: StoredTicket | undefined,
+  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "storage" | "resources">,
+  ticket: Ticket | undefined,
 ) => {
   if (!ticket) return undefined;
-  const tickets = await ticketsCollection(ctx.storage).list();
+  const tickets = await ticketsCollection(ctx).list();
   const parentLookup = new Map(tickets.map((candidate) => [candidate.id, candidate]));
   return ticketResourceIdentity(ticket, parentLookup).metadata;
 };
 
 export const resolveTicketAnchor = async (
-  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "extensionId" | "projectId" | "storage">,
+  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "extensionId" | "projectId" | "storage" | "resources">,
   ticketRef: string,
 ) => {
   const { id, shorthand, ticket } = await resolveTicketIdentity(ctx, ticketRef);
@@ -135,7 +136,7 @@ export const createAnchoredWorkspace = async (
       ticket?: string;
       rowId?: string;
     }>,
-    "extensionId" | "projectId" | "resource" | "attachment" | "storage" | "workspaces"
+    "extensionId" | "projectId" | "resource" | "attachment" | "storage" | "resources" | "workspaces"
   >,
   commandParams: {
     ticket?: string;
@@ -233,10 +234,10 @@ export const proposalRefinedCommand = defineCommand({
     id: params.text({ label: "Ticket", required: true }),
   },
   async run(ctx, commandParams) {
-    const ticket = await findTicket(ctx.storage, commandParams.id);
+    const ticket = await findTicket(ctx, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
     await notifyProposalRefined(ctx, ticket);
-    return { ticket, notified: true };
+    return { ticket: withTicketTagIds(ticket), notified: true };
   },
 });
 
@@ -248,10 +249,10 @@ export const approveProposalCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const ticketRef = resolveTicket(ctx, commandParams);
-    const ticket = await findTicket(ctx.storage, ticketRef);
+    const ticket = await findTicket(ctx, ticketRef);
     if (!ticket) throw new Error(`Unknown ticket "${ticketRef}"`);
     await resolveProposalRefinedNotification(ctx, ticket);
-    return { ticket, approved: true };
+    return { ticket: withTicketTagIds(ticket), approved: true };
   },
 });
 

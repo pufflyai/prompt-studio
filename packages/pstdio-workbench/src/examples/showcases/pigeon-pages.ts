@@ -1,10 +1,9 @@
-import type { PageRef, ResourceRef } from "@pstdio/sdk/extensions";
-import type { PigeonThread } from "./pigeon-data";
-
-export const pigeonResourcePage: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "pigeon-resource" };
-export const pigeonHomePage: PageRef = { ...pigeonResourcePage, id: "pigeon" };
-export const pigeonThreadResource = (thread: PigeonThread): ResourceRef => ({
-  type: "pigeon.thread",
-  id: thread.id,
-  label: thread.subject,
-});
+import type { PageRef } from "@pstdio/sdk/extensions";
+import type { WorkbenchCore } from "../../core";
+export const pigeonHomePage: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "pigeon" };
+export const selectPigeonThread = (workbench: WorkbenchCore, id: string) => {
+  workbench.pageLocations.updateParams({ selection: id });
+  return workbench.navigation.openPanel({
+    panel: { kind: "page-slot", page: pigeonHomePage, id: "reader" },
+  });
+};
