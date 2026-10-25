@@ -6,6 +6,7 @@ import {
   hashExtensionSource,
   type LoadedExtensionSnapshot,
 } from "../features/extensions/extension-runtime";
+import type { createExtensionSourceMutations } from "./extension-source-mutations";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -156,7 +157,7 @@ export const reportWebviewBuildFailure = async (
   expectedSource: ExpectedWebviewBuildSource,
 ) => {
   const existing = await deps.installedExtensionSourcesService.get(installedExtensionId);
-  if (!existing) throw new Error(`Installed extension not found: ${installedExtensionId}`);
+  if (!existing) return { status: "obsolete" as const };
   if (existing.source_path !== expectedSource.sourcePath) return { status: "obsolete" as const };
   if (existing.source_hash !== (expectedSource.sourceHash ?? null)) return { status: "source-changed" as const };
 
@@ -192,7 +193,7 @@ export const reportWebviewBuildSuccess = async (
   expectedSource: ExpectedWebviewBuildSource,
 ) => {
   const existing = await deps.installedExtensionSourcesService.get(installedExtensionId);
-  if (!existing) throw new Error(`Installed extension not found: ${installedExtensionId}`);
+  if (!existing) return { status: "obsolete" as const };
   if (existing.source_path !== expectedSource.sourcePath) return { status: "obsolete" as const };
   if (existing.source_hash !== (expectedSource.sourceHash ?? null)) return { status: "source-changed" as const };
 
@@ -218,3 +219,28 @@ export const reportWebviewBuildSuccess = async (
   deps.emitInstalledSource(updated);
   return { status: "reported" as const, source: updated };
 };
+
+export const createWebviewBuildReports = (
+  deps: ReloadDeps,
+  mutateSource: ReturnType<typeof createExtensionSourceMutations>,
+) => ({
+  // Compilation happens outside source ownership. Its database result and reload
+  // history still commit together before an uninstall can remove their source.
+  reportWebviewBuildFailure: (
+    installedExtensionId: string,
+    webviewId: string,
+    error: unknown,
+    expectedSource: ExpectedWebviewBuildSource,
+  ) =>
+    mutateSource(expectedSource.sourcePath, () =>
+      reportWebviewBuildFailure(deps, installedExtensionId, webviewId, error, expectedSource),
+    ),
+  reportWebviewBuildSuccess: (
+    installedExtensionId: string,
+    webviewId: string,
+    expectedSource: ExpectedWebviewBuildSource,
+  ) =>
+    mutateSource(expectedSource.sourcePath, () =>
+      reportWebviewBuildSuccess(deps, installedExtensionId, webviewId, expectedSource),
+    ),
+});
