@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { extensionLoadKey } from "pstdio-extensions";
 import type { LoadedExtensionSnapshot } from "./extension-runtime";
@@ -25,7 +25,6 @@ export const inspectWebviewBuild = (
   packageName: string,
   webview: CollectedExtensionWebview,
 ) => {
-  const diagnosticStarted = performance.now();
   const sourceEntryPath = resolvePackageAssetFile(webview.entry);
   const buildInputs = inspectManagedWebviewBuildInputs({
     entryPath: sourceEntryPath,
@@ -34,11 +33,6 @@ export const inspectWebviewBuild = (
     packagePath: row.source_path,
   });
   const signature = signatureFor(row, webview.id, webview.entry.path, buildInputs.signature);
-  if (process.env.NATIVE_PROFILE_LOG)
-    appendFileSync(
-      process.env.NATIVE_PROFILE_LOG,
-      `${JSON.stringify({ kind: "webview-inspect", extension: row.install_name, view: webview.id, ms: Math.round(performance.now() - diagnosticStarted) })}\n`,
-    );
   return { buildInputs, signature, sourceEntryPath };
 };
 

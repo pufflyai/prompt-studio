@@ -1,34 +1,11 @@
-name: CI native diagnostics
+name: Native qualification
 on:
   workflow_dispatch:
-    inputs:
-      signals_only:
-        type: boolean
-        default: false
 permissions:
   contents: read
   actions: read
 jobs:
-  signals:
-    if: inputs.signals_only == true
-    runs-on: windows-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-      - run: bun scripts/ci/native-signal-diagnostic.ts
-      - name: Compare inherited signal state under the native bash pipeline
-        shell: bash
-        run: |
-          set -o pipefail
-          bun scripts/ci/native-signal-diagnostic.ts 2>&1 | tee signal-pipeline.log
   native:
-    if: inputs.signals_only != true
     name: native fixtures (${{ matrix.platform_pkg }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -42,7 +19,6 @@ jobs:
             platform_pkg: cli-win-arm64
     env:
       CI_PRIORITY: P2
-      NATIVE_PROFILE_LOG: ${{ github.workspace }}/native-profile.jsonl
       PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
       E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
     steps:
@@ -61,7 +37,6 @@ jobs:
       - name: Build and verify the native compiled candidate
         run: bun run --cwd scripts verify:packages --profile integrity
       - name: Provision the compiled smoke browser
-        shell: bash
         run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke"; preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
       - name: Exercise native interruption, inherited output and archive cleanup
         working-directory: packages/e2e
@@ -74,27 +49,13 @@ jobs:
           src/packaged/packaged-board-panning-smoke.p2.test.ts
           --test-name-pattern 'interruption stops|a packaged CLI gives|a packaged host packs|fixture shutdown|runner cancellation|dependency stacks|recovers missing|adopts a feature|board pans'
           --timeout 30000 --silent
-      - name: Identify handles retained by failed archive cleanup
-        if: failure()
-        shell: pwsh
-        run: |
-          $diagnosticTools = Join-Path $env:RUNNER_TEMP 'native-handle-tools'
-          $archive = Join-Path $env:RUNNER_TEMP 'native-handle-tools.zip'
-          Invoke-WebRequest https://download.sysinternals.com/files/Handle.zip -OutFile $archive
-          Expand-Archive $archive -DestinationPath $diagnosticTools
-          $handle = Join-Path $diagnosticTools 'handle64.exe'
-          & $handle -accepteula -nobanner 'packaged-extension-reproducibility-'
-          & $handle -accepteula -nobanner 'packaged-independent-extensions-'
       - name: Preserve native evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: native-fixtures-${{ matrix.platform_pkg }}
+          name: native-qualification-${{ matrix.platform_pkg }}
           path: |
-            packages/e2e/test-results/native-fixtures.log
+            packages/e2e/test-results
             test-results/ci
-            native-profile.jsonl*
-            signal-*.log
-            packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
           include-hidden-files: true
           if-no-files-found: warn

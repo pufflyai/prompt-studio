@@ -20,6 +20,7 @@ interface ReportInput {
   trackedFiles: string[];
   reports: CoverageReport[];
   execution?: ExecutionEvidence[];
+  workflowRunId?: number;
 }
 
 const executionReport = (evidence: ExecutionEvidence, revision: string) => {
@@ -55,6 +56,7 @@ export const coverageReport = (input: ReportInput) => {
     revision: input.revision,
     scope: input.scope,
     measuredAt: input.measuredAt,
+    ...(input.workflowRunId ? { workflowRunId: input.workflowRunId } : {}),
     source: {
       denominator: "Executable lines in imported production source files only",
       coveredLines: hits.filter((count) => count > 0).length,

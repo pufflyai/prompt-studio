@@ -35,5 +35,6 @@ if (import.meta.main) {
       JSON.parse(process.env.CI_COVERAGE_ARTIFACTS ?? "[]"),
     ),
     scope: "full-nightly/P0-P2/source",
+    workflowRunId: process.env.GITHUB_RUN_ID ? Number(process.env.GITHUB_RUN_ID) : undefined,
   });
 }

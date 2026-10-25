@@ -11,5 +11,6 @@ export const collectionBadgeTarget = (
 ) => {
   const items = row.attributes[itemsAttributeId] as CollectionBadgeItem[] | undefined;
   const item = items?.find((item) => item.id === itemId);
-  return item?.target ? toWorkbenchNavigationTarget(item.target, { extensionId, projectId }) : undefined;
+  const target = item?.action ?? item?.target;
+  return target ? toWorkbenchNavigationTarget(target, { extensionId, projectId }) : undefined;
 };

@@ -1,4 +1,3 @@
-import { appendFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import { dirname } from "node:path";
 import { isPackagedRuntime } from "pstdio-paths";
@@ -67,11 +66,9 @@ const releaseBuildSlot = () => {
 // A long-running Bun process keeps package resolutions it has already read, so an in-process
 // build cannot see a replaced extension folder. Each build runs in a new Bun process (ADR 0070).
 export const buildExtensionWebview: ExtensionWebviewBuilder = async (input) => {
-  const diagnosticStarted = performance.now();
   if (input.signal.aborted) return { success: false, details: "Build aborted." };
 
   await acquireBuildSlot();
-  const acquired = performance.now();
   let result: Awaited<ReturnType<typeof runCommand>>;
   try {
     if (input.signal.aborted) return { success: false, details: "Build aborted." };
@@ -81,11 +78,6 @@ export const buildExtensionWebview: ExtensionWebviewBuilder = async (input) => {
       signal: input.signal,
     });
   } finally {
-    if (process.env.NATIVE_PROFILE_LOG)
-      appendFileSync(
-        process.env.NATIVE_PROFILE_LOG,
-        `${JSON.stringify({ kind: "webview-build", entry: input.entryPath, queueMs: Math.round(acquired - diagnosticStarted), runMs: Math.round(performance.now() - acquired) })}\n`,
-      );
     releaseBuildSlot();
   }
 
