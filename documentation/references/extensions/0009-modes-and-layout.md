@@ -46,7 +46,7 @@ const mode = defineMode({
 
 During a tab drag, only the hovered valid panel shows a faint overlay across its whole container without shifting its content. The overlay covers padding and header controls in attached and floating panels. Tab insertion keeps the shared Sidenav placement indicator.
 
-Main headers follow the page's tab policy. A page with `main.presentation: "page"` has no header; a tabbed page has a header. Saved header choices do not override that rule. There is no Show header or Hide header action. Legacy auxiliary header defaults and the programmatic setter remain accepted for existing integrations until their coordinated removal.
+Main headers follow the page's tab policy. A page with `main.presentation: "page"` has no header; a tabbed page has a header. Saved header choices do not override that rule. Until its removal, a mode's deprecated `alwaysShowTabs: false` still hides a tabbed page's Main header. There is no Show header or Hide header action. Legacy auxiliary header defaults and the programmatic setter remain accepted for existing integrations until their coordinated removal.
 
 ## User arrangement
 

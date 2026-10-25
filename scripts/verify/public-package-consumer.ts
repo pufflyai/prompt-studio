@@ -88,11 +88,12 @@ if (projectNavigation.resourceScope !== "project") throw new Error("Navigation l
 import { createWorkbench } from "@pstdio/workbench";
 const headerWorkbench = createWorkbench();
 headerWorkbench.modes.registerMode({ id: "legacy", activate() {}, regionSettings: { main: { alwaysShowTabs: false } } });
+headerWorkbench.modes.registerMode({ id: "native", activate() {}, regionSettings: { main: { showHeader: false } } });
 headerWorkbench.views.registerView({ id: "content", title: "Content", body: { kind: "react", render: () => null } });
 for (const presentation of [undefined, "page", "tabs"] as const) {
   const id = presentation ?? "legacy";
   const page = { kind: "page", extensionId: "consumer", id } as const;
-  headerWorkbench.pages.registerPage({ id, ref: page, title: id, path: id, modeId: "legacy",
+  headerWorkbench.pages.registerPage({ id, ref: page, title: id, path: id, modeId: presentation ? "native" : "legacy",
     main: { kind: "view", presentation, view: { kind: "view", id: "content" }, cardinality: "one" }, slots: [] });
   headerWorkbench.pageLocations.setProject("consumer");
   headerWorkbench.pageLocations.navigate({ kind: "page", page });
