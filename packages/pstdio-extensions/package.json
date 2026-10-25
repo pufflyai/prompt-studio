@@ -44,6 +44,7 @@
     "pstdio-api-contracts": "workspace:*",
     "pstdio-paths": "workspace:*",
     "rimless": "0.8.3",
+    "tar-stream": "3.2.2",
     "zod": "^4.1.12"
   },
   "peerDependencies": {

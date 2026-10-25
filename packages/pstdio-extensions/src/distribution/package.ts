@@ -5,6 +5,7 @@ import { gunzipSync } from "node:zlib";
 import { parseExtensionApiDeclaration } from "pstdio-api-contracts/extension-kernel";
 import { extensionStorageDirectory } from "../artifacts/extension-storage-path";
 import { createExtensionIgnoreMatcher } from "../authoring/extension-ignore";
+import { createPackageArchive } from "./package-archive";
 
 export const packageSha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 export const MAX_EXTENSION_PACKAGE_BYTES = 64 * 1024 * 1024;
@@ -102,7 +103,7 @@ export const packExtension = async (root: string) => {
     }
   };
   await visit("");
-  const bytes = await new Bun.Archive(files, { compress: "gzip" }).bytes();
+  const bytes = await createPackageArchive(files);
   await readExtensionPackage(bytes);
   return {
     bytes,
