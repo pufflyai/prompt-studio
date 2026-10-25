@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { bunRunIdentity } from "./bun-test-evidence";
 import { createPriorityPlan } from "./priority-plan";
 import { runCiChecks } from "./run-ci-checks";
 import { discoverTestFiles } from "./test-discovery";
@@ -57,7 +58,11 @@ if (import.meta.main) {
     );
     await Bun.write(
       join(root, `test-results/ci/windows-unit-${shard.replace("/", "-")}.json`),
-      JSON.stringify({ shard, plan, ...result }, null, 2),
+      JSON.stringify(
+        { ...bunRunIdentity(root), selectedFiles: plan.flatMap((run) => run.files), shard, plan, ...result },
+        null,
+        2,
+      ),
     );
     process.exitCode = result.outcome === "success" ? 0 : 1;
   }

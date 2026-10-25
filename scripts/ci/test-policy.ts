@@ -13,6 +13,7 @@ export interface ObservedJob {
 
 const priorities: Record<string, TestPriority> = {
   scope: "P0",
+  source_coverage: "P2",
   static_checks: "P0",
   package_checks: "P0",
   license_check: "P0",
