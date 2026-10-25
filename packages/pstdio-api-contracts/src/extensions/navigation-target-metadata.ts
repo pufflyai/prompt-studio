@@ -51,7 +51,17 @@ const pageTargetSchema: z.ZodType<MetadataPageTarget> = z
   )
   .meta({ id: "WorkbenchMetadataPageTarget" });
 
-const navigationOperationSchema = z.union([
+type MetadataNavigationOperation =
+  | MetadataPageTarget
+  | {
+      kind: "panel";
+      panel: z.infer<typeof panelRefSchema>;
+      resource?: z.infer<typeof extensionResourceRefSchema>;
+      open?: "preview" | "pin";
+    };
+
+// Keep declaration emission from expanding each nested navigation schema until it loses reference fields.
+const navigationOperationSchema: z.ZodType<MetadataNavigationOperation> = z.union([
   pageTargetSchema,
   z.object({
     kind: z.literal("panel"),
