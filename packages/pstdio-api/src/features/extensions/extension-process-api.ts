@@ -127,6 +127,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
   });
 
   const runToCompletion = async (input: ProcessRunInput) => {
+    const diagnosticStarted = performance.now();
     input = await resolveInput(input);
     ensureActive();
 
@@ -172,7 +173,10 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       readWithinBudget(child.stdout as ReadableStream<Uint8Array>, budget, onExceeded, gate.released),
       readWithinBudget(child.stderr as ReadableStream<Uint8Array>, budget, onExceeded, gate.released),
       child.exited,
-    ]).then(([stdout, stderr, exitCode]) => (gate.stopped ? gate.failed : { exitCode, stdout, stderr }));
+    ]).then(([stdout, stderr, exitCode]) => {
+      console.error(`[Native process ${Math.round(performance.now() - diagnosticStarted)}ms] ${JSON.stringify(input.command)}`);
+      return gate.stopped ? gate.failed : { exitCode, stdout, stderr };
+    });
     collect.catch(() => {});
 
     try {
