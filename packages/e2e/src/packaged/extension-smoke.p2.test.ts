@@ -87,7 +87,10 @@ for (const [behavior, code] of [
         expect(result.checks).toContainEqual(
           expect.objectContaining({ code: "undeclared_webview_capability", capability: "notification.show" }),
         );
-      if (retained) expect(existsSync(join(retained, "home/runtime.json"))).toBe(false);
+      if (code !== 2) {
+        expect(retained).toBeString();
+        expect(existsSync(join(retained!, "home/runtime.json"))).toBe(false);
+      }
     } finally {
       if (retained) rmSync(retained, { recursive: true, force: true });
       rmSync(root, { recursive: true, force: true });

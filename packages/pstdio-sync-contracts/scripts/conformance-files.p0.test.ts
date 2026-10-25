@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { conformanceFiles } from "./conformance-files";
 
 test("isolated conformance discovers every selected contract without a maintained file list", async () => {
@@ -14,7 +14,7 @@ test("isolated conformance discovers every selected contract without a maintaine
       "unit.p0.test.ts",
     ])
       await writeFile(join(root, file), "export {};\n");
-    expect(conformanceFiles([root], ["P1"]).map((file) => file.split("/").at(-1))).toEqual([
+    expect(conformanceFiles([root], ["P1"]).map((file) => basename(file))).toEqual([
       "first.p1.integration.ts",
       "new.p1.integration.ts",
     ]);
