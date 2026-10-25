@@ -92,7 +92,9 @@ export const registrationValues = (
 ) => ({
   display_name: input.displayName,
   extension_id: input.extensionId,
-  manifest_json: input.manifest,
+  // Runtime views carry callbacks. Compare the same JSON representation the
+  // database stores, so unchanged callbacks do not trigger adoption and builds.
+  manifest_json: JSON.parse(JSON.stringify(input.manifest)) as RegisterInstalledSourceInput["manifest"],
   source_hash: input.sourceHash ?? existing?.source_hash ?? null,
   source_kind: input.sourceKind ?? existing?.source_kind ?? "local_path",
   source_path: input.sourcePath,

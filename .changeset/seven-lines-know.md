@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Release extension source ownership before waiting for webview compilation.
+Keep extension discovery stable and release source ownership before refreshing views.
