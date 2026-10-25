@@ -22,6 +22,7 @@ const usePanelMovePositions = (workbench: WorkbenchCore, region: WorkbenchPositi
 export const usePanelPositionActions = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) => {
   return usePanelMovePositions(workbench, region).map((position) => ({
     key: `position-${position}`,
+    closeOnSelect: true,
     label: `Move ${region === "activity" ? "action bar" : "panel"} to ${position}`,
     icon: (
       <WorkbenchIcon
