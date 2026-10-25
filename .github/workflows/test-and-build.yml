@@ -224,7 +224,6 @@ jobs:
           path: test-results/ci
           include-hidden-files: true
           if-no-files-found: warn
-          include-hidden-files: true
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
         run: git diff --exit-code
@@ -330,7 +329,6 @@ jobs:
           path: test-results/ci
           include-hidden-files: true
           if-no-files-found: warn
-          include-hidden-files: true
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
         run: git diff --exit-code
@@ -481,7 +479,6 @@ jobs:
           path: test-results/ci
           include-hidden-files: true
           if-no-files-found: warn
-          include-hidden-files: true
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
         run: git diff --exit-code
