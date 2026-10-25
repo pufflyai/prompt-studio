@@ -54,6 +54,14 @@ finished its refresh assertions and awaited application shutdown, then failed
 synchronous temporary-directory removal with `EPERM`. Application shutdown already
 awaits startup background tasks. The fixture still propagates exhausted cleanup.
 
+The independent-extension packaged tests follow the same policy after
+[Windows run 40210082598](https://github.com/pufflyai/prompt-studio/actions/runs/40210082598/job/121219361455)
+finished packing or upgrading extensions, awaited command close and host termination,
+then failed asynchronous removal with `EBUSY`. Their removals omitted the bounded
+retry options. Keep the same five retries and 100 ms delay; do not rerun tests or
+change their execution allowances. Runtime hosts must still shut down through
+authenticated control before removal starts.
+
 ## Removal
 
 Recheck the upstream implementation when the CI Node version changes. Once both

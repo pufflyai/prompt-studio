@@ -3,6 +3,12 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { e2eExtensions } from "../default-extensions";
+import { folderProjectInput } from "../helpers/folder-project";
+import { verifyTreeGroups } from "../helpers/tree-groups";
+import { logTestPhase } from "../scripts/log-test-phase";
+import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import {
   type Browser,
   type BrowserType,
@@ -12,13 +18,7 @@ import {
   type LaunchOptions,
   test,
   webkit,
-} from "@playwright/test";
-import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
-import { e2eExtensions } from "../default-extensions";
-import { folderProjectInput } from "../helpers/folder-project";
-import { verifyTreeGroups } from "../helpers/tree-groups";
-import { logTestPhase } from "../scripts/log-test-phase";
-import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
+} from "../scripts/playwright-test";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { verifyPackagedCollectionBreadcrumb } from "./packaged-collection-breadcrumb";

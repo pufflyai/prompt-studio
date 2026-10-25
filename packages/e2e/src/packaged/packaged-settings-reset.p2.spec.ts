@@ -2,9 +2,9 @@ import type { ChildProcess } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type Browser, chromium, expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeWebviewSettingsExtension } from "../helpers/webview-settings-extension";
+import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 test("typed webview settings delete restores the fallback across reloads", async () => {

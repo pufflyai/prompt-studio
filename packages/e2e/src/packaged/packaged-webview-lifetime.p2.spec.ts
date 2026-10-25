@@ -2,8 +2,8 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
 import { renderInlineExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime-html";
+import { expect, test } from "../scripts/playwright-test";
 
 test("built settings frames own independent captures through replacement and disposal", async ({ page }) => {
   const root = mkdtempSync(join(tmpdir(), "webview-lifetime-"));

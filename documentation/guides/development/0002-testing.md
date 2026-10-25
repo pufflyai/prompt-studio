@@ -133,6 +133,8 @@ The PR and queue targets remain below three and eight minutes of active executio
 
 P0 package rows share their builds between lint and unit checks. API/database rows split priorities and retain API per-file process isolation. App and component suites run independently. Each component row builds and tests only its owner. Production adds functional permutations, Windows and all native CLI hosts; stable publication requires complete matching evidence for its exact artifacts.
 
+Windows unit jobs divide the complete P0/P1/P2 file set into four shards before grouping files by owner. Each owner runs only its assigned files. Package scripts must not add a broad `src` selector, because Bun combines that selector with the assigned paths and repeats other shards' tests. The existing 15-second test allowance remains unchanged; Git worktree tests keep their existing 30-second allowance.
+
 P1 alone fails fast. Other priorities complete selected independent work. Keep the existing `ci_passed` identity and ALLGREEN queue rule. `ci:full` requests separate trusted production functional diagnostics without replacing the required PR result.
 
 The Merge queue removals workflow retains first-failure links and the `removed-from-queue` label. Repair the cause before requeuing. Weekly CI failure reports retain first-attempt scheduling, setup, build, test, reporting and cleanup evidence; a later passing rerun does not resolve the underlying failure.

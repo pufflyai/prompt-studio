@@ -8,7 +8,7 @@ export const expectExtensionDraftStorage = async (input: {
   projectFolder: string;
   headers: Record<string, string>;
 }) => {
-  const projectFolder = realpathSync(input.projectFolder);
+  const projectFolder = realpathSync.native(input.projectFolder);
   const execute = async (owner: string, command: string, params: Record<string, string>) => {
     const response = await fetch(
       `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.${owner}.command.${command}/execute`,

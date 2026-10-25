@@ -6,7 +6,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts src",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check ."
   },
