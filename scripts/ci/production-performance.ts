@@ -1,17 +1,15 @@
 import { mkdirSync } from "node:fs";
 import { cpus, platform, release, totalmem } from "node:os";
 import { runCiChecks } from "./run-ci-checks";
-
-const backend = [
-  "packages/pstdio-api-runtime-host/src/harness-session-resources.bench.ts",
-  "packages/pstdio-api/src/features/workspaces/worktree-cleanup.bench.ts",
-  "packages/pstdio-workbench/src/core/controllers/page-runtime/open-resource-inventory.bench.ts",
-  "packages/pstdio-db/src/services/sessions/session-query.bench.ts",
-  "packages/pstdio-db/src/services/extension-storage/document-storage.bench.ts",
-];
+import { discoverTestFiles } from "./test-discovery";
 
 const performanceChecks = (family: string) => {
-  if (family === "backend") return backend.map((path) => ({ id: path, command: ["bun", path] }));
+  if (family === "backend")
+    return discoverTestFiles(process.cwd())
+      .filter(
+        (path) => path.startsWith("packages/") && !path.startsWith("packages/e2e/") && path.endsWith(".p3.bench.ts"),
+      )
+      .map((path) => ({ id: path, command: ["bun", path] }));
   if (family === "browser")
     return [
       { id: "chat-rendering", command: ["bun", "run", "--cwd", "packages/ui", "perf:chat"] },
@@ -68,7 +66,7 @@ if (import.meta.main) {
     measurementPolicy: "Use each benchmark's fixed default workload and existing operation budgets unchanged",
   };
   await Bun.write(`${directory}/metadata.json`, JSON.stringify(metadata, null, 2));
-  const report = await runCiChecks(checks, { priority: "P3", concurrency: 1 });
+  const report = await runCiChecks(checks, { priority: "P3", concurrency: 1, env: { UI_PERF_ASSERT_BUDGETS: "1" } });
   await Bun.write(`${directory}/results.json`, JSON.stringify(report, null, 2));
   if (report.outcome !== "success") process.exitCode = 1;
 }

@@ -1,8 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { createServer } from "node:net";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { chromium } from "@playwright/test";
 import { stopChildProcess } from "./child-process";
 import { type StorybookPackageName, sharedStorybooks } from "./storybook-config";
@@ -81,30 +79,12 @@ export const startStorybookServer = async (probeStoryId: string, packageName: St
   const repoRoot = resolve(import.meta.dirname, "../../..", "..");
   const packageRoot = resolve(repoRoot, "packages", packageName);
   const baseUrl = `http://127.0.0.1:${port}`;
-  const prebuilt = Boolean(process.env.CI);
-  let command = "bun";
-  let args = [
+  const args = [
     resolve(import.meta.dirname, "static-storybook-server.ts"),
     resolve(packageRoot, "storybook-static"),
     String(port),
   ];
-  if (!prebuilt) {
-    command = "node";
-    const manifestPath = createRequire(import.meta.url).resolve("storybook/package.json", { paths: [packageRoot] });
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { bin: string };
-    args = [
-      resolve(dirname(manifestPath), manifest.bin),
-      "dev",
-      "--config-dir",
-      resolve(packageRoot, ".storybook"),
-      "--host",
-      "127.0.0.1",
-      "--port",
-      String(port),
-      "--ci",
-    ];
-  }
-  const storybook = spawn(command, args, {
+  const storybook = spawn("bun", args, {
     cwd: packageRoot,
     env: {
       ...process.env,
@@ -154,9 +134,13 @@ export const startSharedStorybooks = async (options: StartSharedStorybooksOption
   const start = options.start ?? startStorybookServer;
   const stop = options.stop ?? stopChildProcess;
   const running: ChildProcess[] = [];
+  const selected = env.STORYBOOK_PACKAGES?.split(",");
+  if (selected?.some((owner) => !sharedStorybooks.some((storybook) => storybook.packageName === owner)))
+    throw new Error(`Unknown Storybook owner: ${env.STORYBOOK_PACKAGES}`);
 
   try {
     for (const storybook of sharedStorybooks) {
+      if (selected && !selected.includes(storybook.packageName)) continue;
       const started = await start(storybook.probeStoryId, storybook.packageName);
       running.push(started.storybook);
       env[storybook.urlEnvironmentVariable] = started.baseUrl;

@@ -74,16 +74,16 @@ Windows (`clients/desktop/src/runtime/runtime-environment.ts`).
 to the desktop runtime, CLI, and harness selector. No separate `where` command or
 Git Bash dependency is needed.
 
-The packaged desktop test `clients/desktop/src/e2e/packaged-harness-detection.spec.ts`
+The packaged desktop test `clients/desktop/src/e2e/packaged-harness-detection.p2.spec.ts`
 checks discovery from a directory containing spaces. It uses native executables on
-Windows and login-shell setup on POSIX. `packages/e2e/src/packaged/harness-npm-detection.test.ts`
+Windows and login-shell setup on POSIX. `packages/e2e/src/packaged/harness-npm-detection.p2.test.ts`
 checks npm command shims on `PATH`.
 
 ### 4. Path Separator Handling
 
 **Current behavior:** Claude transcript lookup uses native path joining and
 replaces non-alphanumeric project-path characters with hyphens, matching the
-agent's directory encoding. Regression cases in `harness.test.ts` cover Windows
+agent's directory encoding. Regression cases in `harness.p0.test.ts` cover Windows
 drive paths, spaces, and network shares.
 
 **Required behavior:** use `path.join()` and `path.sep` consistently. Where paths are sanitized for use as identifiers (e.g. project directory → filename), replace both `/` and `\`.
@@ -102,7 +102,7 @@ signals for normal shutdown.
 **Required behavior:** preserve the runtime ownership and active-work checks on
 every platform. Test forced process exits separately from normal shutdown.
 
-The stalled-runtime test (`clients/desktop/src/e2e/packaged-startup-recovery.spec.ts`)
+The stalled-runtime test (`clients/desktop/src/e2e/packaged-startup-recovery.p1.spec.ts`)
 uses POSIX suspension signals or Microsoft's signed
 [PsSuspend](https://learn.microsoft.com/sysinternals/downloads/pssuspend) tool on
 Windows. Windows test runners must put `pssuspend64.exe` on `PATH`. The

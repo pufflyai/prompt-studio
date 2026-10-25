@@ -50,7 +50,7 @@ bun run --cwd packages/storybook-tests test:browser -- src/ui/<name>.spec.ts
 Run a single dashboard test through the package script, because the dashboard runner needs two flags:
 
 ```bash
-bun run --cwd packages/pstdio-dashboard test -- src/workbench.test.ts
+bun run --cwd packages/pstdio-dashboard test -- src/workbench.p0.test.ts
 ```
 
 The script runs `bun test --conditions production --tsconfig-override tsconfig.app.json`. `--tsconfig-override tsconfig.app.json` loads the `@/*` path alias; a plain `bun test <file>` in the dashboard fails with `Cannot find module '@/...'`. `--conditions production` makes dependencies resolve their `production` export condition, as the built dashboard does. `test:coverage` uses the same flags. The dashboard imports `@pstdio/ui` and `@pstdio/workbench` from their `dist` folders, so build them first after changing them.
@@ -67,13 +67,35 @@ bun run --cwd packages/e2e playwright install --with-deps chromium firefox webki
 
 For manual app validation, use `bun run dev:playwright`, open the printed dashboard URL, and stop it with `bun run dev:playwright:down`. Do not start a development server directly or use the developer database.
 
-Run `bun run --cwd packages/e2e test:smoke` for basic dashboard browser E2E. It runs the real dashboard with isolated runtime data, without starting Storybook. Tests tagged `@smoke` cover the empty and selected project startup flows, project switching, keyboard navigation and creation forms, theme preview cancellation, and choosing a theme through the command palette with persistence after reload. These tests also run in the full UI suite.
+Run `bun run --cwd packages/e2e test:smoke` for basic dashboard browser E2E. It runs the real dashboard with isolated runtime data, without starting Storybook. The discovered startup P1 file covers empty and selected project flows and project switching. Keyboard/theme permutations remain in their P2 suite. These tests also run in the full UI suite.
 
-API tests retain one fresh Bun process per file and at most two active files, with the existing 30-second per-test limit. Run focused API regressions with `bun run --cwd packages/pstdio-api test --files='["src/app-config.test.ts"]'`. Unknown, duplicate, or empty explicit file selections fail. Without `--files`, the driver selects every API test file. `--shard=1/4` partitions that selection; optional `--timings=path.json` balances complete files from recorded durations. Timing files use Bun's `{ "version": 1, "files": { "src/example.test.ts": 120 } }` format. Missing durations use a measured fallback; no test is dropped because of elapsed time.
+API tests retain one fresh Bun process per file and at most two active files, with the existing 30-second per-test limit. Run focused API regressions with `bun run --cwd packages/pstdio-api test --files='["src/app-config.p0.test.ts"]'`. Unknown, duplicate, or empty explicit file selections fail. Without `--files`, the driver selects every API test file. `--shard=1/4` partitions that selection; optional `--timings=path.json` balances complete files from recorded durations. Timing files use Bun's `{ "version": 1, "files": { "src/example.test.ts": 120 } }` format. Missing durations use a measured fallback; no test is dropped because of elapsed time.
 
 `scripts/ci/run-bun-tests.ts` adds `--bail=1` only for `CI_PRIORITY=P1`; other priorities collect all failures. The API scheduler also stops pending P1 files and waits for active child processes to stop. App Playwright uses `maxFailures=1` only for P1. Existing test limits, source conditions, and manual quarantine selection remain unchanged.
 
 The Bun wrapper and API driver save reports under `test-results/ci/bun` and `test-results/ci/api`. Reports include actual source revision, platform, priority, JUnit case IDs and outcomes, executed counts, and per-file timings. API reports list every selected file and distinguish failures, P1 cancellation, external cancellation signals, and missing reports. A successful child without a case report fails. Bun's bailed JUnit omits later cases, so partial reports explicitly leave the unreported selected-case count unknown. Direct `bun test` calls do not produce these wrapper manifests.
+
+## Test priorities
+
+Every maintained test file declares one priority before its runner suffix: `.p0.test.ts`, `.p1.spec.ts`, `.p2.integration.ts`, or `.p3.bench.ts`. Tests remain next to the code they cover. Files with different priorities use separate fixtures. New files are discovered automatically; unclassified test filenames fail scope selection.
+
+From the repository root:
+
+```sh
+bun test:p0
+bun test:p1
+bun test:p2
+bun test:p3
+bun test:p0 --scope pstdio-paths
+bun test:p1 --runner component
+bun test:p2 --list
+```
+
+These commands run exactly the named priority on the current host and build required dependencies first. `--scope` selects workspace names or directories; `--runner` selects an execution kind; `--list` prints the plan without executing it. CI uses `--prebuilt` after its declared build. Browser and desktop tests still need their maintained system prerequisites. A local priority run is not cross-platform or signed release certification.
+
+P0 owns fast local rules and static checks. P1 owns essential integrated product contracts. P2 owns full feature, browser, platform and distribution breadth. P3 owns maintained performance and endurance acceptance workloads. A slow essential behavior stays P1. Merge duplicate assertions under one owner; do not move an assertion to nightly only because it takes time.
+
+See [CI stages and qualification](0015-ci-stages.md) for the complete contract allocation and stage rules.
 
 ## Unused code
 
@@ -98,52 +120,22 @@ A package's report also lists source files from the packages its tests import. T
 
 ## CI stages
 
-[CI stages and qualification](0015-ci-stages.md) is the operational source for stage guarantees, cancellation, provenance, candidate certification, cache promotion, and rollback. [ADR 0106](../../adrs/0106-prioritize-merge-checks-and-certify-release-candidates.md) supersedes the earlier full-queue design.
+[CI stages and qualification](0015-ci-stages.md) owns selection, failure collection, evidence, cache promotion, exact-candidate certification and rollback.
 
-| Stage | Work | Required result |
-| --- | --- | --- |
-| Pull request | Affected P0 checks and focused P1 owner regressions | Every selected check passed on that merge commit |
-| Merge queue | Complete Linux/macOS P0/P1 contracts, including app/component and essential native/package integrity | The actual merge candidate passed the complete merge-safety plan |
-| Main | Matching queue tree/input provenance and a small app smoke run | Tested queue content matches the merged tree and still starts |
-| Production | Complete functional breadth, Windows/native platforms, and separate P3 measurements for one immutable candidate | All required evidence matches before stable publication |
+| Stage | Required work |
+| --- | --- |
+| Pull request | Affected P0 rules, types, lint and public contracts selected through workspace dependencies |
+| Merge queue | Complete P0/P1 and essential Linux/macOS delivered startup |
+| Main | Matching queue provenance and startup smoke |
+| Nightly/release | Critical contracts, separate P2 breadth and P3 measurements |
 
-PR, queue, and complete production targets are less than 180, 480, and 2,400 seconds of active execution, including setup, builds, artifact transfer, tests, reports, and cleanup. GitHub queue and runner wait time is reported separately and does not count against these targets. These targets still require representative hosted evidence. Local timings and case counts do not establish them.
+The PR and queue targets remain below three and eight minutes of active execution, including setup, builds, tests, reports and cleanup. GitHub queue and runner wait time is reported separately and does not count against these targets. Complete production qualification retains its forty-minute active execution target. Hosted first-attempt results must establish those targets.
 
-P1 alone fails fast. P0, P2, and P3 finish selected independent work and report all failures. `validation_results` observes jobs in parallel and can report P1 failure before slower P0 work finishes. The required `ci_passed` context keeps its existing five-minute allowance; the monitor has a separate 40-minute allowance. P1 supervisors poll read-only job results every 15 seconds and stop their own P1 children. They never cancel the entire workflow. See [the temporary cancellation decision](../../adrs/0108-temporary-cooperative-p1-cancellation.md).
+P0 package rows share their builds between lint and unit checks. API/database rows split priorities and retain API per-file process isolation. App and component suites run independently. Each component row builds and tests only its owner. Production adds functional permutations, Windows and all native CLI hosts; stable publication requires complete matching evidence for its exact artifacts.
 
-### Pull request stage
+P1 alone fails fast. Other priorities complete selected independent work. Keep the existing `ci_passed` identity and ALLGREEN queue rule. `ci:full` requests separate trusted production functional diagnostics without replacing the required PR result.
 
-Scope discovery reads manifests before dependency installation. It compares the synthetic PR merge commit with its target parent, follows workspace package names and explicit Nx dependencies, and includes consumers of released SDK/UI ranges. Shared tooling selects broad fast checks.
-
-- `static_checks` runs repository formatting, boundaries, lockfile, extension API version, changesets, translations, knip, and offline documentation/reference checks. Builds and their committed-output checks belong to the consuming jobs.
-- `package_checks` partitions selected workspace owners into up to four balanced rows. Each row builds its packages and their producers once, then runs lint and unit checks independently, including synchronization conformance. A failed lint check does not skip unit collection. Both browser packages stay out of the unit pass.
-- `database_tests` runs explicit focused API/database files: adjacent or nearest-owner tests, or a whole-package fallback when no smaller owner exists. The full API four-shard/database three-shard matrix belongs to the queue and production.
-- `browser_smoke` runs basic dashboard flows for affected app inputs. `browser_regressions` selects session, editor, extension lifecycle, and webview families. `storybook_tests` owns selected component interactions separately from app E2E.
-- Published-extension compatibility, public SDK/UI API reports, and license checks run when their inputs select them. Windows, comprehensive native/installer permutations, Docker breadth, real minimum/latest provider compatibility, and performance measurements belong to production destinations.
-
-`ci:full` requests a separate full functional diagnostic run for an internal PR branch through the trusted label handler. Its `production_ci_passed` result does not replace the normal fast `ci_passed` gate. Fork PRs receive a manual diagnostic instruction. See [PR labels](0004-pull-request-labels.md) and [request deeper diagnostics](0015-ci-stages.md#request-deeper-diagnostics).
-
-### Merge queue stage
-
-The queue runs all Linux/macOS P0/P1 checks on the actual candidate. App E2E has six shards; component Storybook checks have three separate shards and do not block app startup. Native client rows cover Linux x64 and macOS arm64/x64. Built CLI checks retain essential startup and delivered-default integrity. Windows and P3 do not gate ordinary queue admission.
-
-Keep the existing `ci_passed` check context and ALLGREEN queue policy. The workflow change needs no weaker rule or manual replacement context. Verify the live ruleset and hosted failure behavior before treating rollout as qualified. A failed P1 check removes the candidate promptly; surviving P0 diagnostics must remain available. Cache hits still check committed generated outputs with `git diff --exit-code`.
-
-The **Merge queue removals** workflow labels open PRs removed from the queue with `removed-from-queue` and links their failed candidate evidence. The label is removed when the PR is queued again, merged, or closed. Find affected PRs with `gh pr list --label removed-from-queue`. Fix the cause before requeuing; do not retry a flaky failure to obtain green.
-
-### Full stage
-
-The internal `full` stage is the production functional profile. Production adds Windows unit/database/native work, all six native CLI targets, complete supported runtime/desktop/browser permutations, and minimum/latest provider compatibility. P2 rows collect all independent failures. P3 runs separately on suitable runners with unchanged fixed workloads and approved operation budgets.
-
-Daily nightly publication retains basic artifact integrity and all-or-nothing publication while deep P2/P3 diagnostics run independently. Stable publication requires a complete release-eligible certificate for the exact source/version commits, policy/toolchain, producer run/attempt, and artifact IDs/digests. A manual functional run or source-built nightly Windows diagnostic is not a stable release certificate.
-
-The **Weekly CI failure report** workflow collects all attempts of Test and Build and Release Packages. It preserves run/attempt/job IDs, runner labels, queue wait, setup, build, test, cache-save, report, cleanup, and unclassified time. Created-to-required-result completion measures wall time; missing completion remains unknown. Parallel job times must not be added together as wall time. First-attempt success excludes failed, cancelled, skipped, missing, and incomplete results, even if a later rerun passes.
-
-Run the report with GitHub CLI authentication:
-
-`bun scripts/ci/report-ci-failures.ts --since 2026-10-12T00:00:00Z --until 2026-10-13T00:00:00Z`
-
-Optional `--repository owner/repo` and `--output directory` choose the source and destination. The default `test-results/ci-failures` contains raw run/job data, summaries, and timing evidence. Preserve the first failed job, step/test, and artifact links on its ticket before a manual rerun. A passing rerun does not close the bug.
+The Merge queue removals workflow retains first-failure links and the `removed-from-queue` label. Repair the cause before requeuing. Weekly CI failure reports retain first-attempt scheduling, setup, build, test, reporting and cleanup evidence; a later passing rerun does not resolve the underlying failure.
 
 ## macOS release checks
 
@@ -174,7 +166,7 @@ bun run build -- --scope pstdio-dashboard --include-dependencies
 bun run --cwd scripts build:host
 export PLAYWRIGHT_BROWSERS_PATH="$(mktemp -d)" PSTDIO_HOME="$(mktemp -d)" E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
 dist/pstdio extensions install-browser
-cd packages/e2e && bun test src/packaged/packaged-serve-helpers.test.ts src/packaged/extension-browser-install.test.ts
+cd packages/e2e && bun test src/packaged/packaged-serve-helpers.p2.test.ts src/packaged/extension-browser-install.p2.test.ts
 ```
 
 Copy `dist/pstdio` to a private path and point `E2E_PACKAGED_BINARY_PATH` at the copy when another task may rebuild the binary at the same time.
@@ -194,13 +186,13 @@ The UI and Vite launchers also remove inherited runtime settings. Each run alloc
 - `E2E_BUN_CACHE_DIR` chooses the runtime install cache. Without it, UI runs use a cache per run.
 - `E2E_RUN_ID` selects the UI and Vite report directory.
 
-The packaged Planner runtime spec (`packages/e2e/src/packaged/packaged-planner-runtime.spec.ts`) installs the current Planner into a running host and seeds populated projects. It covers saved views, filter controls, Track conflicts, missing caches, and webview reload recovery. The install downloads the Planner's locked dependencies into the test home.
+The packaged Planner runtime spec (`packages/e2e/src/packaged/packaged-planner-runtime.p2.spec.ts`) installs the current Planner into a running host and seeds populated projects. It covers saved views, filter controls, Track conflicts, missing caches, and webview reload recovery. The install downloads the Planner's locked dependencies into the test home.
 
 Packaged relay checks cover shared-document replication, project sync states, encrypted uploads, and device-local record persistence. Record replication is paused until per-resource sync exists, as specified by [ADR 0100](../../adrs/0100-one-document-per-resource.md). These checks still run automatically.
 
-Full CI runs packaged CLI and packaged browser checks in separate matrix jobs with the existing 18-minute limit each. The CLI job also runs the Vite terminal checks. Both jobs compile their own current CLI, and neither suite depends on the other finishing first.
+CI separates packaged CLI, packaged browser and Vite terminal contracts by priority. Queue rows select P1; production adds P2. Each row retains its existing execution allowance and does not wait for another suite to finish.
 
-The browser job runs `test:packaged:benchmark` before the functional suite. `packaged-paged-collections.bench.ts` keeps the existing one-second collection-readiness budget for 100 rows, ten owners and the board view. Its separate Playwright configuration disables tracing while preserving the 120-second execution allowance and the full workload. Each benchmark attaches source revision, compiled binary checksum, runner, measurement boundaries, and every sample before checking the budget. The functional suite still runs after a benchmark failure, and either failure blocks CI. `test:packaged` also includes the benchmark for local full packaged validation.
+Packaged collection benchmarks run in P3 separately from functional tests. Their existing operation budget, workload, samples and execution allowance remain unchanged. `test:packaged` still includes the benchmark for an explicit full packaged run.
 
 Nx test, conformance, and coverage targets do not cache passing results. Every CI attempt executes the tests. Dependency and build caches remain enabled, including build dependencies of test targets. Do not use a global cache-bypass flag: it also repeats dependency builds.
 
@@ -218,9 +210,9 @@ Tests install local fixture extensions from `packages/e2e/src/default-extensions
 
 Playwright uses one worker and no retries. CI rejects focused Playwright tests (`test.only`). UI and Vite traces are recorded on the first run and retained on failure. This follows [Playwright's trace modes](https://playwright.dev/docs/test-use-options#recording-options).
 
-Queue and production functional CI run CLI E2E and six app browser shards in separate jobs. Three component browser shards run independently in `packages/storybook-tests`. Each app shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Docker build breadth runs in production. Both images copy the root Bun configuration and every workspace manifest so frozen installs use the same workspace graph and linking rules as the checkout. Local extension source stays outside the build context.
+Queue CI runs CLI contracts and up to two P1 app browser shards independently. Production adds up to six P2 app shards. Component owner/priority rows build and run independently in `packages/storybook-tests`. Each app shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Docker build breadth runs in production. Both images copy the root Bun configuration and every workspace manifest so frozen installs use the same workspace graph and linking rules as the checkout. Local extension source stays outside the build context.
 
-Evidence artifact names end in `-attempt-<run_attempt>` so a manual rerun keeps the earlier evidence. UI shards upload `ui-e2e-results-<shard>-attempt-<run_attempt>`; packaged/Vite uploads `packaged-vite-e2e-<suite>-results-attempt-<run_attempt>`. Component shards upload `component-results-<shard>-attempt-<run_attempt>`. Desktop test rows upload `desktop-test-results-<target>-attempt-<run_attempt>`; release rows upload `test-results-desktop-<target>-attempt-<run_attempt>`. Windows update checks upload `windows-installation-readiness-attempt-<run_attempt>`. Failed native toolchain checks upload `packaged-toolchain-<platform_pkg>-attempt-<run_attempt>`, including a timestamped `verification.log`.
+Evidence artifact names end in `-attempt-<run_attempt>` so a manual rerun keeps the earlier evidence. UI shards upload `ui-e2e-results-<shard>-attempt-<run_attempt>`; packaged/Vite uploads `packaged-vite-e2e-<suite>-results-attempt-<run_attempt>`. Component rows upload `component-results-<owner>-<priority>-attempt-<run_attempt>`. Desktop test rows upload `desktop-test-results-<target>-attempt-<run_attempt>`; release rows upload `test-results-desktop-<target>-attempt-<run_attempt>`. Windows update checks upload `windows-installation-readiness-attempt-<run_attempt>`. Failed native toolchain checks upload `packaged-toolchain-<platform_pkg>-attempt-<run_attempt>`, including a timestamped `verification.log`.
 
 App reports and traces are under `packages/e2e/playwright-report` and `packages/e2e/test-results`; component reports use those folder names under `packages/storybook-tests`. Desktop results are under `clients/desktop/test-results`. Each packaged test home attaches complete redacted copies of `logs.jsonl` and `desktop-runtime.log` as files before removal. Startup errors include the last 50 runtime output lines. Electron traces start before the lifecycle-page wait, after the sidecar startup wait has protected process isolation; an unavailable attachment states why a trace could not start or be saved. Missing evidence warns without replacing the original build or test failure.
 
@@ -247,7 +239,7 @@ For ten full CI validations, create ten refs under `test/ci-reliability/<batch>/
 To investigate a failure, keep retries disabled and repeat the affected spec:
 
 ```bash
-bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.spec.ts --repeat-each=5
+bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.p2.spec.ts --repeat-each=5
 ```
 
 To run one CI shard locally, use `bun run --cwd packages/e2e test:ui -- --shard=2/3`. Keep the same shard total when comparing runs.
@@ -255,14 +247,14 @@ To run one CI shard locally, use `bun run --cwd packages/e2e test:ui -- --shard=
 The Marketplace install/delete/disable/enable lifecycle is manual-only. Run it explicitly with:
 
 ```bash
-E2E_MANUAL_MARKETPLACE_LIFECYCLE=1 bun run --cwd packages/e2e test:ui -- src/ui/marketplace-extension-lifecycle.spec.ts --grep "deletes, installs, disables, and enables a Marketplace extension"
+E2E_MANUAL_MARKETPLACE_LIFECYCLE=1 bun run --cwd packages/e2e test:ui -- src/ui/marketplace-extension-lifecycle.p1.spec.ts --grep "deletes, installs, disables, and enables a Marketplace extension"
 ```
 
 Normal UI runs skip that lifecycle check. The separate extension automation toggle test still runs automatically.
 
 App UI tests in `packages/e2e` never build or start Storybook. Component browser interactions live in the private `packages/storybook-tests` package, while story source stays beside its component. This suite starts only Storybook servers; it has no application API, database, or app web server.
 
-Run one component spec with `bun run --cwd packages/storybook-tests test:browser -- src/ui/panel-tabs.spec.ts`. Local runs start the owners' Storybook servers. For static output, run `bun run --cwd packages/storybook-tests build:stories`, then `CI=true bun run --cwd packages/storybook-tests test:browser`. The build writes `storybook-static` under `packages/ui`, `packages/pstdio-dashboard`, and `packages/pstdio-workbench`; only the component job consumes those artifacts. Both serving paths load a real story before tests begin, preserve story play completion waits, and keep the existing 60-second startup allowance. Reports and traces live under `packages/storybook-tests/playwright-report` and `packages/storybook-tests/test-results`.
+Run critical component contracts with `bun test:p1 --runner component`. The command builds the selected owners and serves their static Storybooks. To run a single spec, build its owner with `bun run --cwd packages/pstdio-workbench build-storybook`, then use `STORYBOOK_PACKAGES=pstdio-workbench bun run --cwd packages/storybook-tests test:browser -- src/ui/pstdio-workbench/panel-tabs.p1.spec.ts`. Static output lives under each owner's `storybook-static` directory. Servers load a real story before tests begin, preserve story play completion waits, and keep the existing 60-second startup allowance. Reports and traces live under `packages/storybook-tests/playwright-report` and `packages/storybook-tests/test-results`.
 
 Read the first failure and its trace. Check setup, teardown, and server logs before attributing the failure to an assertion. Storybook startup failures include the tail of the server output. Readiness checks must cancel stalled HTTP requests within their deadline.
 
@@ -270,13 +262,13 @@ Keep the existing job and test time limits. A timeout needs an investigation of 
 
 The Windows job tests native dependency installation, relative workspace links, scoped dependency watcher events, and concurrent attachment reads before building. After building the SDK dependencies, command discovery tests exercise real process launches with PATH overrides, PATHEXT order, PowerShell siblings, explicit wrapper paths, custom npm prefixes, spaces, Unicode, shell operators, conflicting installations, missing targets, and timeout cleanup. npm fixtures use the pinned `cmd-shim` generator and check both adjacent Node and PATH fallback. Argument round trips include literal percent signs, exclamation marks, and variable-like strings with values present in the child environment. Environment tests cover Windows case-insensitive names without passing host secrets to extensions. The same portable cases run on Linux.
 
-`harness-npm-detection.test.ts` runs the compiled runtime with deterministic OpenCode, Codex, and Claude Code CLI fixtures. It checks detection, versions written to stderr or with terminal colors, a healthy harness alongside failed and hanging probes, project extension filtering, and OpenCode model discovery. It changes installations for the same project and checks discovery again after the availability cache expires. Model requests for all three harnesses must return empty lists when version probes hang, and their child processes must exit. The runtime parent stays alive, and repaired commands must recover detection and model listing in the same runtime after the existing cache expires. The version-probe deadline applies to model listing as well as availability checks. No provider accounts, API keys, or live agent services are required. Harness changes receive affected fast checks; the queue retains Linux/macOS integrity. Windows npm detection and the full native matrix run in production functional validation. Add `ci:full` to request separate full functional diagnostics for an internal PR. Keep these tests within the existing CI time limits.
+`harness-npm-detection.p2.test.ts` runs the compiled runtime with deterministic OpenCode, Codex, and Claude Code CLI fixtures. It checks detection, versions written to stderr or with terminal colors, a healthy harness alongside failed and hanging probes, project extension filtering, and OpenCode model discovery. It changes installations for the same project and checks discovery again after the availability cache expires. Model requests for all three harnesses must return empty lists when version probes hang, and their child processes must exit. The runtime parent stays alive, and repaired commands must recover detection and model listing in the same runtime after the existing cache expires. The version-probe deadline applies to model listing as well as availability checks. No provider accounts, API keys, or live agent services are required. Harness changes receive affected fast checks; the queue retains Linux/macOS integrity. Windows npm detection and the full native matrix run in production functional validation. Add `ci:full` to request separate full functional diagnostics for an internal PR. Keep these tests within the existing CI time limits.
 
 These tests simulate different inherited environments. Real Explorer/login PATH refresh, PowerShell aliases, WSL-only installations, and organization-managed execution policies still need targeted manual checks. Codex and Claude model/session protocols and OpenCode server startup use separate launch paths; this discovery suite does not establish their Windows compatibility. Those paths need dedicated protocol fixtures before changing their launch behavior.
 
 The npm `cmd-shim@7.0.0` batch wrapper assigns its installation directory without quotes. A prefix containing `&` truncates that directory and fails even when the wrapper runs directly under `cmd.exe`. A native regression checks this failure outside the process API and confirms the API reports the failure too. The healthy npm fixtures use spaces and Unicode; a separate controlled wrapper checks our launcher with `&` in its directory.
 
-Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. Each Windows database/API shard runs only one package to avoid competing database startups on the same runner. The API suite uses two file workers, then runs `process-discovery.test.ts` alone in its assigned shard so PowerShell startup does not compete with a PGlite cold start. The runner logs when that file starts alone. The separate Windows npm shim check still runs it too.
+Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. Each Windows database/API shard runs only one package to avoid competing database startups on the same runner. The API suite uses two file workers, then runs `process-discovery.p1.test.ts` alone in its assigned shard so PowerShell startup does not compete with a PGlite cold start. The runner logs when that file starts alone. The separate Windows npm shim check still runs it too.
 
 Non-recursive watcher tests remove dependency trees from another process while refreshing watches, then check that later package changes still refresh the source. This covers directory removal during a filesystem read.
 
@@ -293,7 +285,7 @@ The fixed workloads in `packages/ui/src/components/chat-ui/performance/chat-rend
 - Long turns: one rich user message followed by 1,000 or 5,000 rich responses. Each response has one Markdown repetition, reasoning, and three tools.
 - Large response: one user message and one response containing 100 repetitions of rich Markdown.
 
-Run `CPU_THROTTLE=1 bun run --cwd packages/ui perf:chat -- chat-rendering.perf.ts` for native Chromium measurements. Repeat with `CPU_THROTTLE=4` for throttled measurements. The existing config runs each workload three times in fresh contexts. Record viewport size, browser version, hardware, commit, and any competing work. Compare the same fixtures and settings before and after a change; report medians and ranges rather than one sample.
+Run `CPU_THROTTLE=1 bun run --cwd packages/ui perf:chat -- chat-rendering.p3.perf.ts` for native Chromium measurements. Repeat with `CPU_THROTTLE=4` for throttled measurements. The existing config runs each workload three times in fresh contexts. Record viewport size, browser version, hardware, commit, and any competing work. Compare the same fixtures and settings before and after a change; report medians and ranges rather than one sample.
 
 The measurement excludes module loading, fixture construction, API requests, and database work. It measures mount, scrolling to the middle, session switching, and streaming one response in 384-character chunks. Readiness requires a visible chat viewport and three animation frames. Each phase attaches a CPU profile, script/layout/style/task times, long tasks, and mounted row/editor/table/DOM counts to the Playwright report. These component timings are not end-to-end session-opening timings. A stopped or timed-out measurement is incomplete, not a performance result. Existing budgets and execution allowances remain unchanged.
 
@@ -362,21 +354,21 @@ The idle budgets catch a constant render or polling loop. On 2026-10-10 the rele
 
 The idle benchmarks turn monitoring on and off through the Settings switch, so the dashboard's slow-frame observer and frame counter run during the monitoring-on measurements. Monitoring itself runs in Electron main, which renderer metrics cannot see, so the monitoring-on benchmark also records the main process share from the snapshot. On Apple Silicon it measured 0.1–0.8% while idle with monitoring on.
 
-`clients/desktop/src/e2e/packaged-performance-monitoring.spec.ts` covers the monitoring feature without budgets. A reload test forces a 120 ms frame before and after reloading the workbench and requires both to reach the snapshot. An extension process test opens the fixture's Lab webview and requires a process that hosts only that extension, separate from the workbench process. It then pauses the extension from the status bar popover and requires the snapshot to list it in `pausedExtensionIds` and no process to host its frames. A snapshot test reads the snapshot through the preload and through `pst performance` to prove that a person and an agent receive the same measurements, then checks that turning monitoring off stops the endpoint.
+`clients/desktop/src/e2e/packaged-performance-monitoring.p2.spec.ts` covers the monitoring feature without budgets. A reload test forces a 120 ms frame before and after reloading the workbench and requires both to reach the snapshot. An extension process test opens the fixture's Lab webview and requires a process that hosts only that extension, separate from the workbench process. It then pauses the extension from the status bar popover and requires the snapshot to list it in `pausedExtensionIds` and no process to host its frames. A snapshot test reads the snapshot through the preload and through `pst performance` to prove that a person and an agent receive the same measurements, then checks that turning monitoring off stops the endpoint.
 
 The fake agent replays the long conversation when a prompt contains `__fake_long_stream__`: 30 assistant turns, 8 text updates each at 25 ms intervals, and one tool result per turn.
 
 The streaming benchmark opens an empty session before submitting that prompt. Its counter interval covers the full replay, including the last rendered turn. It does not wait for Step 1 to be visible: auto-follow can move that row out of view before an assertion sees it.
 
-`packages/e2e/src/ui/performance-monitoring.spec.ts` covers the same feature in a browser tab. It turns on the Settings switch and checks that the status bar meter appears. It opens the popover, which shows the desktop-only CPU note and lists the fixture extension's open view. It pauses the extension, checks the placeholder, and resumes it. Last, it checks that the switch survives a reload and that **Show performance** opens the setting while monitoring is off. This spec has no time budget.
+`packages/e2e/src/ui/performance-monitoring.p2.spec.ts` covers the same feature in a browser tab. It turns on the Settings switch and checks that the status bar meter appears. It opens the popover, which shows the desktop-only CPU note and lists the fixture extension's open view. It pauses the extension, checks the placeholder, and resumes it. Last, it checks that the switch survives a reload and that **Show performance** opens the setting while monitoring is off. This spec has no time budget.
 
 ## Live provider tests
 
 These commands opt into real agent sessions:
 
 ```bash
-E2E_AGENTS=claude-code bun run --cwd packages/e2e test:ui -- src/ui/session-follow-up-completion-claude.spec.ts
-E2E_AGENTS=opencode bun run --cwd packages/e2e test:ui -- src/ui/session-follow-up-ordering-opencode.spec.ts
+E2E_AGENTS=claude-code bun run --cwd packages/e2e test:ui -- src/ui/session-follow-up-completion-claude.p2.spec.ts
+E2E_AGENTS=opencode bun run --cwd packages/e2e test:ui -- src/ui/session-follow-up-ordering-opencode.p2.spec.ts
 ```
 
 They require the selected provider and its credentials. They are separate from ordinary fixture-based CI coverage.

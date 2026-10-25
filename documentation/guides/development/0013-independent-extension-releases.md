@@ -86,7 +86,7 @@ a broken release.
 ## Validate delivery
 
 ~~~bash
-bun run --cwd services/psx test:isolated
+bun run --cwd services/psx test:integration
 bun run --cwd scripts verify:packages
 ~~~
 

@@ -1,23 +1,15 @@
-import { readFileSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
 import { e2eRunId, serveWebServer } from "./src/serve-web-server";
 import { uiOrigin } from "./src/ui-server";
 
 const quarantine = process.env.E2E_TEST_LANE === "quarantine";
-const cases = JSON.parse(readFileSync(new URL("../../scripts/ci/test-quarantine.json", import.meta.url), "utf8")) as {
-  runner: string;
-  name: string;
-  platforms: string[];
-}[];
-const names = cases.filter((entry) => entry.runner === "playwright-ui" && entry.platforms.includes(process.platform));
-const pattern = new RegExp(
-  `(?:${names.map((entry) => entry.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") || "(?!)"})(?:\\s+@\\S+)*$`,
-);
-
 export default defineConfig({
-  ...(quarantine ? { grep: pattern } : { grepInvert: pattern }),
   testDir: "./src/ui",
-  testMatch: "**/*.spec.ts",
+  testMatch:
+    process.env.TEST_PRIORITIES?.split(",").map((priority) => `**/*.${priority.toLowerCase()}.spec.ts`) ??
+    "**/*.spec.ts",
+  ...playwrightQuarantineSelection("playwright-ui", "packages/e2e/src/ui", quarantine),
   expect: { timeout: 5_000 },
   fullyParallel: false,
   workers: 1,

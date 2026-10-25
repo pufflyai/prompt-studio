@@ -10,7 +10,7 @@ export const selectedComponentFiles = (json: string | undefined) => {
   for (const file of files) {
     if (
       typeof file !== "string" ||
-      !/^src\/ui\/[a-z0-9-]+\.spec\.ts$/.test(file) ||
+      !/^src\/ui\/[a-z0-9-]+\/[a-z0-9.-]+\.p[0-3]\.spec\.ts$/.test(file) ||
       !existsSync(resolve(import.meta.dir, "../..", file))
     )
       throw new Error(`Invalid component spec: ${file}`);

@@ -9,9 +9,9 @@
   "sideEffects": false,
   "scripts": {
     "test": "bun ../../scripts/ci/run-bun-tests.ts src",
-    "test:conformance": "bun scripts/isolated.ts",
     "typecheck": "bun check",
-    "lint": "bun run typecheck && biome check ."
+    "lint": "bun run typecheck && biome check .",
+    "test:integration": "bun scripts/isolated.ts"
   },
   "dependencies": {
     "zod": "^4.3.6"

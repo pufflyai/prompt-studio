@@ -12,7 +12,7 @@ COPY packages/pstdio-sync-contracts/src ./packages/pstdio-sync-contracts/src
 RUN bun build services/account-manager/src/index.ts services/account-manager/src/server.ts services/account-manager/scripts/smoke.ts services/account-manager/scripts/environment-verifier-smoke.ts --target bun --outdir dist
 RUN bun build services/account-manager/scripts/account-feature.ts --target bun --outfile dist/scripts/account-feature.js
 
-RUN bun build services/telemetry/src/telemetry.test.ts --target bun --outfile dist/telemetry.test.js
+RUN bun build services/telemetry/src/telemetry.p0.test.ts --target bun --outfile dist/telemetry.test.js
 
 FROM oven/bun:1.4.4
 WORKDIR /app

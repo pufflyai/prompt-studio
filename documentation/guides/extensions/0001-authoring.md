@@ -4,7 +4,7 @@ Build a Bookmarks tool with a native table, saved filters, and matching `pst` co
 
 The finished tool saves links, marks them read, filters unread links, and deletes links. People use it from a table in the workbench. Agents use the same commands through `pst`. Each project keeps its own bookmarks.
 
-Every code block on this page is a complete file from the [maintained Bookmarks example](../../../infra/local/extensions/bookmarks/extension.ts). Prompt Studio's checks compare these blocks with that example, and its [tests](../../../infra/local/extensions/bookmarks/extension.test.ts) run against the SDK version below.
+Every code block on this page is a complete file from the [maintained Bookmarks example](../../../infra/local/extensions/bookmarks/extension.ts). Prompt Studio's checks compare these blocks with that example, and its [tests](../../../infra/local/extensions/bookmarks/extension.p0.test.ts) run against the SDK version below.
 
 ## Versions this guide uses
 
@@ -478,7 +478,7 @@ pst extensions check ~/bookmarks
 
 It prints `Errors: 0` and lists the four commands with their CLI paths. If it reports `extension_import_failed` with `Could not resolve: "@pstdio/sdk/extensions"`, run `bun install` in `~/bookmarks` first. It reports invalid IDs, missing references, unknown icons, and features your Prompt Studio does not support. Run `pst extensions check` without a path to check every installed extension.
 
-To test the commands without Prompt Studio, copy [`extension.test.ts`](../../../infra/local/extensions/bookmarks/extension.test.ts) from the example into `~/bookmarks` and run `bun test`. It uses `@pstdio/sdk/testing`: each test calls a command's `run` with `makeCommandArgs({ storage: createMemoryStorage(), params })`, so the storage lives in memory.
+To test the commands without Prompt Studio, copy [`extension.p0.test.ts`](../../../infra/local/extensions/bookmarks/extension.p0.test.ts) from the example into `~/bookmarks` and run `bun test`. It uses `@pstdio/sdk/testing`: each test calls a command's `run` with `makeCommandArgs({ storage: createMemoryStorage(), params })`, so the storage lives in memory.
 
 [Smoke checks](0006-smoke-checks.md) explains `pst extensions test`, which opens your pages in a real browser and reports errors.
 

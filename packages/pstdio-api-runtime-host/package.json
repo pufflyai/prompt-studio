@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "bench:session-resources": "bun src/harness-session-resources.bench.ts",
+    "bench:session-resources": "bun src/harness-session-resources.p3.bench.ts",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",

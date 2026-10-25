@@ -35,7 +35,7 @@ jobs:
         with:
           node-version: "24"
       - run: bun install --frozen-lockfile
-      - run: bun run --cwd services/psx test:isolated
+      - run: bun run --cwd services/psx test:integration
       - run: docker build -f infra/psx/Dockerfile -t pstdio-psx-smoke .
       - name: Build the packaged host for the delivery smoke
         env:
@@ -54,7 +54,7 @@ jobs:
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio
           PSTDIO_PSX_REAL_SERVICE: "1"
           PSTDIO_PSX_TEST_IMAGE: pstdio-psx-smoke
-        run: bun run --cwd packages/e2e test:packaged:browser -- packaged-independent-extensions.spec.ts
+        run: bun run --cwd packages/e2e test:packaged:browser -- packaged-independent-extensions.p2.spec.ts
   build:
     # A called release producer always supplies a version, even from a PR event.
     if: github.event_name != 'pull_request' || inputs.version != ''
@@ -135,7 +135,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - run: bun test infra/container-entrypoint.test.ts infra/relay/portable-smoke-images.test.ts
+      - run: bun test infra/container-entrypoint.p0.test.ts infra/relay/portable-smoke-images.p0.test.ts
   plan:
     runs-on: ubuntu-latest
     steps:

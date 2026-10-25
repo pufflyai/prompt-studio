@@ -36,7 +36,7 @@ async function step(args: string[]) {
 try {
   await step(["build", "relay", "smoke", "initialize", "authority", "tls"]);
   await step(["run", "--rm", "--no-deps", "tls"]);
-  await step(["run", "--rm", "--no-deps", "tls", "bun", "test", "tls-validity.test.ts"]);
+  await step(["run", "--rm", "--no-deps", "tls", "bun", "test", "tls-validity.p0.test.ts"]);
   await step(["up", "--wait", "postgres", "objects"]);
   await step(["run", "--rm", "--no-deps", "bucket"]);
   await step(["run", "--rm", "--no-deps", "initialize"]);

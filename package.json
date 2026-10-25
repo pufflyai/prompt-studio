@@ -51,7 +51,11 @@
     "changeset": "changeset",
     "release": "bun run build && changeset publish",
     "dev:relay": "bun scripts/dev/relay-local.ts",
-    "test:storybook": "bun run --cwd packages/storybook-tests test"
+    "test:storybook": "bun run --cwd packages/storybook-tests test",
+    "test:p0": "bun scripts/ci/run-priority-tests.ts p0",
+    "test:p1": "bun scripts/ci/run-priority-tests.ts p1",
+    "test:p2": "bun scripts/ci/run-priority-tests.ts p2",
+    "test:p3": "bun scripts/ci/run-priority-tests.ts p3"
   },
   "engines": {
     "bun": ">=1.4.4"
