@@ -16,13 +16,15 @@ test("a runtime can write output after its Node owner exits", async () => {
   const script = join(root, "owner.mts");
   const helper = fileURLToPath(new URL("./runtime-process.ts", import.meta.url));
   const childSource = `
-import { existsSync, writeFileSync } from "node:fs";
-process.on("uncaughtException", (error) => { writeFileSync(${JSON.stringify(completed)}, String(error)); process.exit(1); });
+import { existsSync, renameSync, writeFileSync } from "node:fs";
+// Rename publishes the result atomically; the test polls for the file and must never read it half-written.
+const finish = (result) => { writeFileSync(${JSON.stringify(`${completed}.tmp`)}, result); renameSync(${JSON.stringify(`${completed}.tmp`)}, ${JSON.stringify(completed)}); };
+process.on("uncaughtException", (error) => { finish(String(error)); process.exit(1); });
 const timer = setInterval(() => {
   if (!existsSync(${JSON.stringify(release)})) return;
   clearInterval(timer);
   process.stdout.write("runtime stdout after owner exit\\n", () => {
-    process.stderr.write("runtime stderr after owner exit\\n", () => writeFileSync(${JSON.stringify(completed)}, "done"));
+    process.stderr.write("runtime stderr after owner exit\\n", () => finish("done"));
   });
 }, 10);
 `;

@@ -19,9 +19,9 @@ Reviewers own two separate labels: `breaking-change` for incompatible behavior o
 
 The PR author owns `waiting-for-release`. Add it to an extension PR that uses SDK or UI changes that are merged but not yet published to npm. Name the SDK or UI PR it waits for in the description. The `published_extensions` CI job fails on such a PR until the next release, so do not merge it. After the release, raise the extension's `@pstdio/sdk` or `@pstdio/ui` range to the published version, rerun CI, and remove the label once `published_extensions` passes. The workflow never manages this label.
 
-`removed-from-queue` is not an area label. The **Merge queue removals** workflow manages it; see [Merge queue stage](0015-ci-stages.md#stage-guarantees).
+`removed-from-queue` is not an area label. The **Merge queue removals** workflow manages it; see [When a PR leaves the queue](0015-ci-stages.md#when-a-pr-leaves-the-queue).
 
-`ci:full` is not an area label. A person adds it to request separate full functional diagnostics for a same-repository PR. The trusted label handler dispatches the trusted base-branch Test and Build workflow with `profile=production` and the exact PR merge SHA as `source_sha`. That run reports `production_ci_passed`; it does not replace or delay the ordinary required `ci_passed` fast gate. Fork PRs receive an explicit manual diagnostic instruction instead of automatic dispatch. These functional diagnostics are not an immutable release certificate and do not replace P3 performance qualification. See [request deeper diagnostics](0015-ci-stages.md#deeper-diagnostics-and-qualification).
+`ci:full` is not an area label. A person adds it to request separate full functional diagnostics for a same-repository PR. The trusted label handler dispatches the trusted base-branch Test and Build workflow with `profile=production` and the exact PR merge SHA as `source_sha`. That run reports `production_ci_passed`; it does not replace or delay the ordinary required `ci_passed` fast gate. Fork PRs receive an explicit manual diagnostic instruction instead of automatic dispatch. These functional diagnostics are not an immutable release certificate and do not replace P3 performance qualification. See [request deeper diagnostics](0015-ci-stages.md#extra-diagnostics).
 
 ## SDK and extension separation
 
