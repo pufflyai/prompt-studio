@@ -1,6 +1,6 @@
 // Draw one ticket card in the graph: gate marker, shorthand, status, and title.
 import { Box, Flex, Icon, Text } from "@chakra-ui/react";
-import { DropIndicator, ResourceContextMenu, Tooltip } from "@pstdio/ui";
+import { ResourceContextMenu, Tooltip } from "@pstdio/ui";
 import {
   collectDisplayBadges,
   getAttributeValue,
@@ -11,28 +11,21 @@ import { ShieldCheck } from "lucide-react";
 import type { TicketWorkspaceBadgeItem } from "../../data/mappers";
 import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES } from "../../data/ticket-board";
 import type { PlanRow } from "../contracts";
-import { card } from "./graph-geometry";
-import { graphLayers } from "./graph-layers";
 import type { Relation } from "./plan-view";
 import { ReviewStatusIcon } from "./status-icon";
 import { TicketCardError, type TicketCardInteraction, useTicketCardActions } from "./ticket-card-interaction";
 
 interface GraphCardProps {
   row: PlanRow;
-  x: number;
-  y: number;
   relation?: Relation;
-  dropBefore: boolean;
   interaction?: TicketCardInteraction;
   onSelect: (id: string) => void;
   onOpenRequests?: (row: PlanRow) => void;
   onDragStart: (id: string) => void;
-  onDragOver: () => void;
-  onDrop: () => void;
 }
 
 export function GraphCard(props: GraphCardProps) {
-  const { row, x, y, relation, dropBefore, interaction, ...actions } = props;
+  const { row, relation, interaction, ...actions } = props;
   const source = interaction?.rows.get(row.id);
   const menu = useTicketCardActions(interaction, source);
   const fields = interaction?.attributes ?? [];
@@ -84,26 +77,11 @@ export function GraphCard(props: GraphCardProps) {
             activate();
           }
         }}
-        position="absolute"
-        left={`${x}px`}
-        top={`${y}px`}
-        w={`${card.width}px`}
-        zIndex={relation ? graphLayers.hierarchyNode : graphLayers.node}
+        position="relative"
+        w="full"
         opacity={opacity}
         title={`${row.shorthand} ${row.title}`}
-        onDragOver={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          actions.onDragOver();
-        }}
-        onDrop={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          actions.onDrop();
-        }}
       >
-        {/* The shared placement indicator marks the insertion point in the gap above the card. */}
-        {dropBefore ? <DropIndicator top="-12px" /> : null}
         <KanbanRendererCard
           eyebrow={
             !interaction || interaction.displayProperties.includes("id")

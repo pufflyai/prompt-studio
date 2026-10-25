@@ -1,121 +1,138 @@
-// Show the plan as a dependency graph: the milestone timeline runs down the left, execution order runs down,
-// parallel work sits side by side, each milestone is a band, and collapsible tracks split every band into columns.
-import { Box } from "@chakra-ui/react";
-import type { RefObject } from "react";
-import { layoutGraph } from "../model/graph-layout";
-import { dropRegion } from "./drop-region";
-import { GraphContent } from "./graph-content";
-import { geometry, newTrackWidth, trackHeaderHeight } from "./graph-geometry";
-import { TrackHeader } from "./graph-tracks";
+import { Text } from "@chakra-ui/react";
+import { Tooltip } from "@pstdio/ui";
+import { DependencyTimeline, type TimelineDropTarget } from "@pstdio/ui/dependency-timeline";
+import type { PlanDeadline } from "../contracts";
+import { isComplete } from "../model/filter";
+import type { DropTarget } from "./drag";
+import { countdown, formatDay } from "./flags";
+import { GraphCard } from "./graph-card";
+import { InlineDate, InlineText } from "./inline-edit";
 import type { PlanViewProps } from "./plan-view";
+import { SectionHeader } from "./section-header";
 import { useTimelinePresentation } from "./timeline-presentation";
-import { useCanvasPan } from "./use-canvas-pan";
-import { useCanvasZoom } from "./use-canvas-zoom";
-import { useCardHeights } from "./use-card-heights";
-import { useRevealCard } from "./use-reveal-card";
-import { useSize } from "./use-size";
-import { ZoomControls } from "./zoom-controls";
 
-// Place the visible tickets, leaving out collapsed milestones and collapsed tracks.
-function useGraphBox(
-  sections: PlanViewProps["sections"],
-  tracks: PlanViewProps["tracks"],
-  collapsed: ReadonlySet<string>,
-  ref: RefObject<HTMLDivElement | null>,
-) {
-  const layout = layoutGraph(
-    sections.map(({ section, rows, collapsed: closed }) => ({
-      deadlineId: section.deadline?.id ?? null,
-      collapsed: closed,
-      rows,
-    })),
-    {
-      tracks: tracks.list.length,
-      trackOf: tracks.indexOf,
-      collapsedTracks: new Set(tracks.list.flatMap((track, index) => (collapsed.has(track.id) ? [index] : []))),
-    },
-  );
-  const heights = useCardHeights(ref, layout.nodes.map(({ id }) => id).join(","));
-  const box = geometry(layout, heights);
-  const trackAt = (x: number) => {
-    const index = box.tracks.findIndex((entry) => x >= entry.x && x <= entry.x + entry.width);
-    const id = tracks.list[Math.max(0, index)]?.id;
-    return id === "unassigned" ? null : id;
-  };
-  const rows = sections
-    .flatMap((entry) => (entry.collapsed ? [] : entry.rows))
-    .filter(({ id }) => box.positions.has(id));
-  return { box, trackAt, rows };
+const dateTone = (deadline: PlanDeadline, complete: boolean) => {
+  if (complete) return "fg.muted";
+  if (deadline.daysLeft === 0) return "orange.fg";
+  return deadline.daysLeft < 0 ? "red.fg" : "fg.muted";
+};
+
+interface MilestoneDateProps {
+  deadline: PlanDeadline;
+  complete: boolean;
+  onRedate: PlanViewProps["onRedate"];
 }
 
+const MilestoneDate = (props: MilestoneDateProps) => {
+  const { deadline, complete, onRedate } = props;
+  return (
+    <Tooltip content={`${deadline.date} · ${countdown(deadline.daysLeft, complete)}`}>
+      <InlineDate
+        value={deadline.date}
+        display={formatDay(deadline.date).split(", ").pop() ?? deadline.date}
+        label={`${deadline.name ?? deadline.date} date`}
+        color={dateTone(deadline, complete)}
+        onSave={(date) => onRedate(deadline.id, date)}
+      />
+    </Tooltip>
+  );
+};
+
+const timelineTarget = (target: DropTarget) =>
+  ({
+    sectionId: target.deadlineId,
+    beforeId: target.beforeId,
+    trackId: target.trackId === null ? "unassigned" : target.trackId,
+  }) satisfies TimelineDropTarget;
+
 export function PlanGraph(props: PlanViewProps) {
-  const { sections, tracks, selectedId, ...actions } = props;
-  const { ref, width, height } = useSize();
-  const { zoom, change } = useCanvasZoom(ref);
-  const { panning, handlers } = useCanvasPan(ref, zoom, change);
+  const { sections, tracks, selectedId, relations, today, dragId, dropTarget, ...actions } = props;
   const presentation = useTimelinePresentation();
   const collapsed = new Set(presentation.value.collapsedTracks);
-  const toggle = (id: string) => presentation.toggle("collapsedTracks", id);
-  const { box, trackAt, rows } = useGraphBox(sections, tracks, collapsed, ref);
-  const sourceTrackId = sections.flatMap(({ section }) => section.rows).find(({ id }) => id === props.dragId)?.trackId;
-  const region = dropRegion(
-    box,
-    tracks.list.map(({ id }) => id),
-    props.dropTarget,
-    sourceTrackId,
-  );
-  useRevealCard({ ref, selectedId, box, zoom });
-  const canvasWidth = Math.max(box.width + newTrackWidth, width / zoom);
-  // Tracks run to the bottom of the panel even when milestones are collapsed.
-  const canvasHeight = Math.max(box.height, height / zoom - trackHeaderHeight);
-
   return (
-    <Box h="full" minH="0" minW="0" position="relative">
-      <Box
-        ref={ref}
-        data-timeline-viewport
-        h="full"
-        minH="0"
-        minW="0"
-        overflow="hidden"
-        position="relative"
-        isolation="isolate"
-        cursor={panning ? "grabbing" : "grab"}
-        userSelect={panning ? "none" : undefined}
-        touchAction="none"
-        role="region"
-        aria-label="Project Timeline canvas"
-        tabIndex={0}
-        {...handlers}
-      >
-        <Box style={{ zoom }} w={`${canvasWidth}px`}>
-          <TrackHeader
-            tracks={tracks.list}
-            boxes={box.tracks}
-            width={canvasWidth}
-            contentLeft={box.contentLeft}
-            collapsed={collapsed}
-            onToggle={toggle}
-            onRename={actions.onRenameTrack}
-            onNewTrack={actions.onNewTrack}
-          />
-          <GraphContent
-            props={props}
-            region={region}
-            graph={{ box, trackAt, rows }}
-            collapsed={collapsed}
-            viewport={{
-              ref,
-              width: width / zoom,
-              height: height / zoom,
-              canvasWidth,
-              canvasHeight,
-              zoom,
-            }}
-          />
-        </Box>
-      </Box>
-      <ZoomControls zoom={zoom} onChange={change} />
-    </Box>
+    <DependencyTimeline
+      aria-label="Project Timeline canvas"
+      today={today}
+      selectedId={selectedId}
+      draggedId={dragId}
+      dropTarget={dropTarget ? timelineTarget(dropTarget) : undefined}
+      tracks={tracks.list.map((track) => ({
+        ...track,
+        collapsed: collapsed.has(track.id),
+        name:
+          track.id === "unassigned" ? undefined : (
+            <InlineText
+              value={track.label}
+              label={`${track.label} track name`}
+              color="fg.muted"
+              onSave={(name) => actions.onRenameTrack(track.id, name)}
+            />
+          ),
+      }))}
+      sections={sections.map((entry) => {
+        const deadline = entry.section.deadline;
+        const complete = isComplete(entry.section);
+        return {
+          id: deadline?.id ?? null,
+          date: deadline?.date,
+          dateTone: deadline ? dateTone(deadline, complete) : undefined,
+          complete,
+          collapsed: entry.collapsed,
+          dateLabel: deadline ? (
+            <MilestoneDate deadline={deadline} complete={complete} onRedate={actions.onRedate} />
+          ) : undefined,
+          header: (
+            <SectionHeader
+              entry={entry}
+              onToggle={actions.onToggle}
+              onDelete={actions.onDelete}
+              onRenameDeadline={actions.onRenameDeadline}
+              onReview={actions.onReview}
+            />
+          ),
+          emptyContent: !deadline ? (
+            <Text textAlign="center" pt="md" textStyle="label/S/regular" color="fg.subtle">
+              Every ticket has a deadline
+            </Text>
+          ) : undefined,
+          items: entry.rows.map((row) => ({
+            id: row.id,
+            trackId: row.trackId ?? "unassigned",
+            dependencies: row.dependsOn,
+            related: relations.has(row.id),
+            content: (
+              <GraphCard
+                row={row}
+                interaction={props.cardInteraction}
+                relation={relations.get(row.id)}
+                onSelect={actions.onSelect}
+                onOpenRequests={actions.onOpenRequests}
+                onDragStart={actions.onDragStart}
+              />
+            ),
+          })),
+        };
+      })}
+      onToggleTrack={(id) => presentation.toggle("collapsedTracks", id)}
+      onAddTrack={actions.onNewTrack}
+      onCreateSection={actions.onCreateDeadline}
+      onDrop={actions.onDrop}
+      onDropTarget={(target) => {
+        const next = {
+          deadlineId: target.sectionId,
+          beforeId: target.beforeId,
+          trackId: target.trackId === "unassigned" ? null : target.trackId,
+        };
+        if (
+          next.deadlineId !== dropTarget?.deadlineId ||
+          next.beforeId !== dropTarget?.beforeId ||
+          next.trackId !== dropTarget?.trackId
+        )
+          actions.onDragTarget(next);
+      }}
+      onContext={({ sectionId, trackId, ...point }) =>
+        actions.onContext({ ...point, deadlineId: sectionId, trackId: trackId === "unassigned" ? undefined : trackId })
+      }
+    />
   );
 }

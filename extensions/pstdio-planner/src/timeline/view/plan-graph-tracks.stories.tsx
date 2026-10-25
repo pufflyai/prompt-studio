@@ -151,9 +151,12 @@ export const UnassignedOnly: Story = {
 };
 
 export const TrackpadNavigation: Story = {
+  // Keep enough overflow for wheel movement to finish before reaching the bottom.
+  args: { height: 360 },
   play: async ({ canvasElement }) => {
     const viewport = canvasElement.querySelector<HTMLElement>("[data-timeline-viewport]")!;
-    const scale = () => Number.parseFloat(getComputedStyle(viewport.firstElementChild!).zoom);
+    const scale = () =>
+      Number.parseFloat(getComputedStyle(viewport.querySelector<HTMLElement>("[data-timeline-scale]")!).zoom);
     const { left, top } = viewport.getBoundingClientRect();
     const point = { bubbles: true, cancelable: true, clientX: left + 200, clientY: top + 200 };
     viewport.dispatchEvent(new WheelEvent("wheel", { ...point, deltaX: 120, deltaY: 80 }));
@@ -176,7 +179,7 @@ export const TrackpadNavigation: Story = {
 
 export const SelectedTrackpadNavigation: Story = {
   ...TrackpadNavigation,
-  args: { selectedId: "a-1" },
+  args: { height: 360, selectedId: "a-1" },
 };
 
 export const MovingPinchAnchor: Story = {
@@ -200,7 +203,9 @@ export const MovingPinchAnchor: Story = {
       );
     }
     await waitFor(() => {
-      expect(Number.parseFloat(getComputedStyle(viewport.firstElementChild!).zoom)).toBe(1);
+      expect(
+        Number.parseFloat(getComputedStyle(viewport.querySelector<HTMLElement>("[data-timeline-scale]")!).zoom),
+      ).toBe(1);
       expect(viewport.scrollLeft).toBeGreaterThan(200);
     });
   },

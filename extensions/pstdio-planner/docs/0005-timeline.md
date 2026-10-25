@@ -4,6 +4,8 @@ Open **Tickets** or **Project Timeline** under **Project Planning** in the proje
 
 Both boards use the shared Kanban card. Right-click a card for the same ticket actions, including Run attempt, Refine ticket, Archive, and Delete. Edit property bubbles directly on either board; both views show the saved changes. Click a card to open its ticket, or its pending review requests when it needs human input. Timeline cards keep their full titles. Tickets waiting for unfinished prerequisites appear slightly dimmed. The timeline shows **Blocked** only when prerequisites are complete and the ticket has a blocked status or another recorded blocker.
 
+Planner renders the timeline with the public `DependencyTimeline` component from `@pstdio/ui/dependency-timeline`. Its milestone and track layout, dependency arrows, card measurement, and windowed rendering use the same `Canvas` navigation and zoom controls as other canvas tools. Planner owns ticket data, editors, saved presentation, and actions.
+
 Move around the timeline like a map. Scroll with two fingers on a trackpad, use the mouse wheel, or drag empty canvas to pan. Pinch on a trackpad or touch screen to zoom around your fingers. A touch pinch can move and zoom at the same time. Ctrl+wheel also zooms around the pointer. The zoom buttons remain available, and focusing the canvas lets the arrow keys pan. Ticket cards keep their normal click and drag actions.
 
 The canvas renders nearby cards as you move, keeping the selected, focused, and dragged card available. Connection status and page-wide failure notices belong to the host chrome. The timeline keeps loaded content during a failed refresh and retries automatically. Forms keep validation messages beside the fields that need attention.

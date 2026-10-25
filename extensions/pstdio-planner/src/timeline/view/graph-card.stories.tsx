@@ -33,20 +33,15 @@ const meta: Meta<typeof GraphCard> = {
   render: (args) => <EditableCardPreview {...args} />,
   decorators: [
     (Story) => (
-      <Box position="relative" minH="300px">
+      <Box position="relative" minH="300px" w="60">
         <Story />
       </Box>
     ),
   ],
   args: {
     row,
-    x: 0,
-    y: 0,
-    dropBefore: false,
     onSelect: () => {},
     onDragStart: () => {},
-    onDragOver: () => {},
-    onDrop: () => {},
   },
 };
 export default meta;

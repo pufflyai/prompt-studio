@@ -8,6 +8,7 @@ import type { ComponentProps } from "react";
 import { useState } from "react";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES } from "../../data/ticket-board";
+import { plannerExtensionId } from "../planner";
 import { GraphCard } from "./graph-card";
 import type { PlanClient } from "./use-plan";
 
@@ -33,6 +34,7 @@ export function EditableCardPreview(props: EditableCardPreviewProps) {
   const { displayProperties = DEFAULT_TIMELINE_DISPLAY_PROPERTIES, ...cardProps } = props;
   const [values, setValues] = useState<Record<string, unknown>>({ status: props.row.status?.id, type: "feature" });
   const [host] = useState<GuestHost>(() => ({
+    extensionId: plannerExtensionId,
     call: (async (method, request) => {
       if (method === "resources.actions") return [{ key: "run", label: "Run attempt", icon: "Play" }];
       if (method === "commands.execute") {

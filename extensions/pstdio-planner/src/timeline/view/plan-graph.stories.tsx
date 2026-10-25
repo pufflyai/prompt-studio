@@ -45,7 +45,10 @@ const densePlan = buildPlan({
     statusId: null,
     dependsOn: index ? [String(index - 1)] : [],
   })),
-  plan: { deadlines: [], order: [] },
+  plan: {
+    deadlines: [],
+    order: Array.from({ length: 1000 }, (_, index) => ({ ticketId: String(index), deadlineId: null })),
+  },
 });
 
 // Drops only reset the preview here; the story has no plan to move tickets in.
