@@ -44,9 +44,7 @@ export const plannedCiJobs = (scope: Scope) => {
     if (scope.production)
       add(
         "packaged_toolchain",
-        ["cli-linux-x64", "cli-darwin-x64", "cli-linux-arm64", "cli-darwin-arm64", "cli-win-x64", "cli-win-arm64"].map(
-          (platform) => `packaged_toolchain / verify (${platform})`,
-        ),
+        scope.toolchainMatrix.map((row) => `packaged_toolchain / verify (${row.platform_pkg})`),
         "P2",
       );
   }

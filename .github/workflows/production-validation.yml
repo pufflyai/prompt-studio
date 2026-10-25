@@ -55,6 +55,8 @@ jobs:
   candidate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      desktop_matrix: ${{ steps.platforms.outputs.desktop_matrix }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -62,6 +64,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
+      - name: Select the release channel's desktop platforms
+        id: platforms
+        env:
+          CHANNEL: ${{ inputs.channel }}
+        run: bun scripts/ci/production-platforms.ts
       - name: Download immutable candidate build identity
         uses: actions/download-artifact@v4
         with:
@@ -99,6 +106,7 @@ jobs:
       artifact_run_id: ${{ inputs.artifact_run_id }}
       artifact_attempt: ${{ inputs.artifact_attempt }}
   signed_functional:
+    needs: candidate
     uses: ./.github/workflows/production-desktop.yml
     with:
       ref: ${{ inputs.ref }}
@@ -107,7 +115,9 @@ jobs:
       source_sha: ${{ inputs.source_sha }}
       artifact_attempt: ${{ inputs.artifact_attempt }}
       kind: functional
+      platforms: ${{ needs.candidate.outputs.desktop_matrix }}
   performance:
+    needs: candidate
     uses: ./.github/workflows/production-performance.yml
     with:
       ref: ${{ inputs.ref }}
@@ -115,6 +125,7 @@ jobs:
       artifact_run_id: ${{ inputs.artifact_run_id }}
       artifact_attempt: ${{ inputs.artifact_attempt }}
       channel: ${{ inputs.channel }}
+      desktop_platforms: ${{ needs.candidate.outputs.desktop_matrix }}
   services:
     needs: candidate
     uses: ./.github/workflows/production-services.yml
@@ -150,6 +161,7 @@ jobs:
         id: certify
         env:
           PRODUCTION_RESULTS: ${{ toJSON(needs) }}
+          CHANNEL: ${{ inputs.channel }}
         run: |
           bun scripts/ci/production-candidate.ts production-candidate.json
           echo "certificate_name=production-certificate-attempt-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"

@@ -144,7 +144,7 @@ jobs:
       source_sha: ${{ inputs.channel == 'patch' && inputs.source_sha || (steps.channel.outputs.channel == 'nightly' && github.sha || steps.stable.outputs.commit) }}
       # Nightly tags are pruned, so nightly builds install core extensions from the main commit.
       extension_ref: ${{ steps.channel.outputs.channel == 'nightly' && github.sha || needs.prepare_patch.outputs.tag || steps.stable.outputs.tag }}
-      targets: ${{ steps.channel.outputs.channel == 'nightly' && '["darwin-arm64","darwin-x64","linux-x64"]' || '["darwin-arm64","darwin-x64","linux-x64","win32-x64"]' }}
+      targets: ${{ steps.channel.outputs.channel == 'nightly' && '["darwin-arm64","linux-x64"]' || '["darwin-arm64","darwin-x64","linux-x64","win32-x64"]' }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { appendFileSync, readFileSync } from "node:fs";
 import type { ProductionCandidate } from "./production-candidate";
+import { publishedDesktopTargets } from "./production-platforms";
 
 interface Artifact {
   id: number;
@@ -9,8 +10,7 @@ interface Artifact {
   expired: boolean;
 }
 export const selectProductionArtifacts = (artifacts: Artifact[], attempt: number, channel: string) => {
-  const targets = ["linux-x64", "darwin-arm64", "darwin-x64"];
-  if (channel === "stable") targets.push("win32-x64");
+  const targets = publishedDesktopTargets(channel);
   const required = [
     `release-build-attempt-${attempt}`,
     ...targets.flatMap((target) => [`desktop-${target}`, `validation-app-${target}`]),

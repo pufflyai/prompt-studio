@@ -80,6 +80,7 @@ jobs:
       sdk_api_report: ${{ steps.scope.outputs.sdkApiReport }}
       gate_plan: ${{ steps.scope.outputs.gatePlan }}
       client_matrix: ${{ steps.scope.outputs.clientMatrix }}
+      toolchain_matrix: ${{ steps.scope.outputs.toolchainMatrix }}
       component_matrix: ${{ steps.scope.outputs.componentMatrix }}
       bun_contract_matrix: ${{ steps.scope.outputs.bunContractMatrix }}
       app_matrix: ${{ steps.scope.outputs.appMatrix }}
@@ -104,6 +105,7 @@ jobs:
           PULL_REQUEST_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
           GH_TOKEN: ${{ github.token }}
           CI_PROFILE: ${{ inputs.profile || '' }}
+          RELEASE_CHANNEL: ${{ inputs.release_channel || 'stable' }}
         run: bun scripts/ci/pull-request-ci-scope.ts
     env:
       CI_PRIORITY: P0
@@ -154,20 +156,16 @@ jobs:
           pattern: ci-build-host-*-attempt-${{ steps.provenance.outputs.attempt }}
           run-id: ${{ steps.provenance.outputs.run_id }}
           github-token: ${{ github.token }}
-          path: .cache/ci-build
-          merge-multiple: true
+          path: .cache/certified-host-builds
+      - name: Import complete certified host archives
+        if: needs.scope.outputs.stage == 'main'
+        run: bun scripts/ci/merge-build-cache.ts .cache/certified-host-builds .cache/ci-build
       - name: Publish certified host build cache on the default branch
         if: needs.scope.outputs.stage == 'main'
         uses: actions/cache/save@v4
         with:
           path: .cache/ci-build
           key: nx-${{ runner.os }}-${{ runner.arch }}-host-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha }}-provenance
-      - name: Publish certified Intel Mac host build cache on the default branch
-        if: needs.scope.outputs.stage == 'main'
-        uses: actions/cache/save@v4
-        with:
-          path: .cache/ci-build
-          key: nx-macOS-X64-host-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha }}-provenance
       - name: Publish certified Apple Silicon host build cache on the default branch
         if: needs.scope.outputs.stage == 'main'
         uses: actions/cache/save@v4
@@ -641,8 +639,9 @@ jobs:
           pattern: ci-build-playwright-*-attempt-${{ needs.static_checks.outputs.queue_attempt }}
           run-id: ${{ needs.static_checks.outputs.queue_run }}
           github-token: ${{ github.token }}
-          path: .cache/ci-build
-          merge-multiple: true
+          path: .cache/certified-browser-builds
+      - name: Import complete certified browser archives
+        run: bun scripts/ci/merge-build-cache.ts .cache/certified-browser-builds .cache/ci-build
       - name: Publish certified browser build cache on the default branch
         uses: actions/cache/save@v4
         with:
@@ -652,7 +651,6 @@ jobs:
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
       - name: Test basic dashboard flows
         run: bun run --cwd packages/e2e test:smoke
-        if: ${{ !cancelled() }}
       - name: Preserve browser smoke reports and failure traces
         if: always()
         uses: actions/upload-artifact@v4
@@ -1248,6 +1246,7 @@ jobs:
       artifact_run_id: ${{ inputs.artifact_run_id || '' }}
       artifact_attempt: ${{ inputs.artifact_attempt || '1' }}
       profile: full
+      platforms: ${{ needs.scope.outputs.toolchain_matrix }}
       priority: P2
       gate_plan: ${{ needs.scope.outputs.gate_plan }}
   ci_passed:

@@ -42,6 +42,19 @@ test("the queue includes every critical contract and production adds separate br
   expect(production.packagedMatrix.some((row) => row.priority === "P2")).toBe(true);
 });
 
+test("Intel Mac validation belongs to full releases while nightly keeps Windows diagnostics", () => {
+  const input = { ...scopeFixture(), event: "workflow_dispatch", profile: "production" };
+  const queue = resolveCiScope({ ...input, profile: "merge_queue" });
+  const nightly = resolveCiScope({ ...input, releaseChannel: "nightly" });
+  const stable = resolveCiScope({ ...input, releaseChannel: "stable" });
+  expect(queue.clientMatrix.map((row) => row.target)).toEqual(["linux-x64", "darwin-arm64"]);
+  expect(nightly.clientMatrix.map((row) => row.target)).toEqual(["linux-x64", "darwin-arm64", "win32-x64"]);
+  expect(stable.clientMatrix.map((row) => row.target)).toContain("darwin-x64");
+  expect(nightly.toolchainMatrix.map((row) => row.platform_pkg)).not.toContain("cli-darwin-x64");
+  expect(stable.toolchainMatrix.map((row) => row.platform_pkg)).toContain("cli-darwin-x64");
+  expect(JSON.stringify(plannedCiJobs(nightly))).not.toContain("cli-darwin-x64");
+});
+
 test("shared inputs select all essential owners and prose starts no runtime suites", () => {
   const shared = resolveCiScope({ ...scopeFixture(), changedFiles: ["bun.lock"] });
   expect(shared.affectedOwners).toHaveLength(scopeFixture().packages.length);

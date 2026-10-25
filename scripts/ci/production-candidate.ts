@@ -1,4 +1,5 @@
 import { appendFileSync, readFileSync } from "node:fs";
+import { productionDesktopPlatforms } from "./production-platforms";
 
 export interface ProductionCandidate {
   sourceSha: string;
@@ -71,11 +72,9 @@ export const certifyProduction = (
   return errors;
 };
 
-if (import.meta.main) {
-  const candidate: ProductionCandidate = JSON.parse(readFileSync(process.argv[2]!, "utf8"));
-  const results: Record<string, { result: string }> = JSON.parse(process.env.PRODUCTION_RESULTS ?? "{}");
-  const targets = ["linux-x64", "darwin-arm64", "darwin-x64", "win32-x64"];
-  const required = [
+export const requiredProductionChecks = (channel: string) => {
+  const targets = productionDesktopPlatforms(channel).map((row) => row.target);
+  return [
     "functional",
     "services",
     ...targets.flatMap((target) => [`signed-functional-${target}`, `performance-desktop-${target}`]),
@@ -87,6 +86,12 @@ if (import.meta.main) {
     "performance-navigation-ubuntu-24.04",
     "performance-planner-ubuntu-24.04",
   ];
+};
+
+if (import.meta.main) {
+  const candidate: ProductionCandidate = JSON.parse(readFileSync(process.argv[2]!, "utf8"));
+  const results: Record<string, { result: string }> = JSON.parse(process.env.PRODUCTION_RESULTS ?? "{}");
+  const required = requiredProductionChecks(process.env.CHANNEL ?? "stable");
   const evidence: ProductionEvidence[] = [];
   for await (const path of new Bun.Glob("production-evidence/**/*.json").scan("."))
     evidence.push(JSON.parse(readFileSync(path, "utf8")));
