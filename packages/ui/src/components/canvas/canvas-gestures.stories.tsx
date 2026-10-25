@@ -1,4 +1,4 @@
-import { Box, Stack } from "@chakra-ui/react";
+import { Box, Button, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, within } from "storybook/test";
 import { Canvas } from "./canvas";
@@ -8,7 +8,7 @@ const meta: Meta<typeof Canvas> = {
   title: "Components/Layout/Canvas Gestures",
   component: Canvas,
   tags: ["!manifest"],
-  args: { zoom: 1, onPan: fn(), onZoom: fn() },
+  args: { zoom: 1, onPan: fn(), onZoom: fn(), onFit: fn() },
 };
 export default meta;
 type Story = StoryObj<typeof Canvas>;
@@ -52,7 +52,11 @@ export const DiagonalPreviewScroll: Story = {
 };
 
 export const PanAfterPinch: Story = {
-  render: (args) => <Canvas {...args} h="400px" aria-label="Touch canvas" />,
+  render: (args) => (
+    <Canvas {...args} h="400px" aria-label="Touch canvas">
+      <Button onClick={args.onFit}>Touch action</Button>
+    </Canvas>
+  ),
   play: async ({ canvasElement, args }) => {
     const viewport = within(canvasElement).getByRole("region", { name: "Touch canvas" });
     const target = viewport.querySelector<HTMLElement>("[data-canvas-background]")!;
@@ -67,6 +71,10 @@ export const PanAfterPinch: Story = {
     dispatch("touchmove", [touch(1, 130, 120)]);
     await expect(args.onPan).toHaveBeenCalledWith({ x: 30, y: 20 });
     dispatch("touchend", []);
+    const button = within(canvasElement).getByRole("button", { name: "Touch action" });
+    button.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch", button: 0 }));
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
+    await expect(args.onFit).toHaveBeenCalledOnce();
   },
 };
 

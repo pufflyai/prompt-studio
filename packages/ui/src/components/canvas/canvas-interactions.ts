@@ -104,10 +104,10 @@ export const createCanvasInteractions = (viewport: HTMLElement, navigation: () =
   const restoreOverscroll = preventCanvasOverscroll(document);
   return {
     pointerDown: (event: PointerInput) => {
-      // Touch events own the full gesture, including switching between pan and pinch.
-      if (event.pointerType === "touch") return;
       if (pointer || !inside(event.target) || (event.button !== 0 && event.button !== 1)) return;
       suppressClick = 0;
+      // Touch events own the full gesture, including switching between pan and pinch.
+      if (event.pointerType === "touch") return;
       const explicit = event.button === 1 || (space && !isCanvasControl(document.activeElement));
       if (!explicit && isCanvasControl(event.target)) return;
       event.preventDefault();
