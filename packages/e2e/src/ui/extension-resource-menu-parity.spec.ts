@@ -92,10 +92,14 @@ test("Artifact actions keep rename defaults, target inactive tabs, and refresh t
     await page.goto(a.url);
     await expect(page.getByRole("tab", { name: "Artifact A", exact: true })).toBeVisible();
     await page.goto(b.url);
+    // Published URLs open their viewer after the page has loaded.
+    const secondTab = page.getByRole("tab", { name: "Artifact B", exact: true });
+    await expect(secondTab).toHaveAttribute("aria-selected", "true");
     const firstTab = page.getByRole("tab", { name: "Artifact A", exact: true });
     await firstTab.click();
+    await expect(firstTab).toHaveAttribute("aria-selected", "true");
     const route = page.url();
-    await page.getByRole("tab", { name: "Artifact B", exact: true }).click({ button: "right" });
+    await secondTab.click({ button: "right" });
     const expected = await menuValues(page, "Artifact");
     expect(expected).toHaveLength(2);
     await page.getByRole("menuitem", { name: "Rename artifact…", exact: true }).click();
