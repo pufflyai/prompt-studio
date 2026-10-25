@@ -60,6 +60,13 @@ jobs:
         run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke"; preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
       - name: Compare bare signals through the host terminal
         run: bun packages/e2e/src/packaged/native-terminal-diagnostic.ts
+      - name: Diagnose native signal subscription lifetime
+        shell: bash
+        working-directory: packages/e2e
+        run: |
+          for mode in early-import rearm reset-ignore; do
+            SIGNAL_REARM_MODE="$mode" bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/packaged/extension-smoke.p2.test.ts --test-name-pattern 'interruption stops' --timeout 30000 --silent > "../../signal-$mode.log" 2>&1 || true
+          done
       - name: Exercise native interruption, inherited output and archive cleanup
         shell: bash
         working-directory: packages/e2e
@@ -94,5 +101,7 @@ jobs:
             packages/e2e/test-results/native-fixtures.log
             test-results/ci
             native-profile.jsonl*
+            signal-*.log
+            packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
           include-hidden-files: true
           if-no-files-found: warn

@@ -200,7 +200,7 @@ test("interruption stops the browser and host while retaining requested evidence
       const browser = await chromium.launchPersistentContext(join(retained, "browser-profile"), PROVISIONED_CHROMIUM);
       await browser.close();
     } finally {
-      if (process.env.NATIVE_PROFILE_LOG) writeFileSync(`${process.env.NATIVE_PROFILE_LOG}.terminal`, output);
+      if (process.env.NATIVE_PROFILE_LOG) writeFileSync(`${process.env.NATIVE_PROFILE_LOG}.terminal-${process.env.SIGNAL_REARM_MODE ?? "normal"}`, output);
       terminal.onopen = null;
       terminal.onmessage = null;
       terminal.onerror = null;

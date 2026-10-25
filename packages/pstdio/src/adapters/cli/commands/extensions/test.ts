@@ -18,6 +18,7 @@ export const builder = (yargs: Argv) =>
     });
 
 export const handler = async (argv: { source: string; projectPath?: string; json?: boolean; keepHome?: boolean }) => {
+  const early = process.env.SIGNAL_REARM_MODE === "early-import" ? await import("@/features/extensions/smoke-runner") : undefined;
   const controller = new AbortController();
   let interrupted: NodeJS.Signals | undefined;
   const interrupt = (signal: NodeJS.Signals) => {
@@ -30,7 +31,7 @@ export const handler = async (argv: { source: string; projectPath?: string; json
   process.once("SIGINT", sigint);
   process.once("SIGTERM", sigterm);
   try {
-    const { runExtensionSmoke } = await import("@/features/extensions/smoke-runner");
+    const { runExtensionSmoke } = early ?? await import("@/features/extensions/smoke-runner");
     const result = await runExtensionSmoke({ ...argv, signal: controller.signal });
     console.log(argv.json ? JSON.stringify(result) : formatSmokeResult(result));
     process.exitCode = result.exitCode;

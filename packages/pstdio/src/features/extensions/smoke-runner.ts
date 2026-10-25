@@ -18,7 +18,7 @@ export const runExtensionSmoke = async (input: {
   signal: AbortSignal;
 }) => {
   const ffi = process.platform === "win32" ? await import("bun:ffi") : undefined;
-  const kernel = ffi?.dlopen("kernel32.dll", {GetStdHandle:{args:["u32"],returns:"u64"},GetConsoleMode:{args:["u64","ptr"],returns:"bool"}});
+  const kernel = ffi?.dlopen("kernel32.dll", {GetStdHandle:{args:["u32"],returns:"u64"},GetConsoleMode:{args:["u64","ptr"],returns:"bool"},SetConsoleCtrlHandler:{args:["ptr","bool"],returns:"bool"}});
   const mode = new Uint32Array(1);
   const result: SmokeResult = {
     host: { version: CLI_VERSION },
@@ -103,6 +103,10 @@ export const runExtensionSmoke = async (input: {
         "Dashboard assets are missing. Reinstall the packaged CLI, or build the dashboard before running from source.",
       );
     next("dashboard");
+    if (process.env.SIGNAL_REARM_MODE === "rearm") {
+      for (const listener of process.listeners("SIGINT")) {process.off("SIGINT",listener);process.once("SIGINT",listener);}
+    }
+    if (process.env.SIGNAL_REARM_MODE === "reset-ignore") kernel?.symbols.SetConsoleCtrlHandler(null,false);
     await exerciseSmokeDashboard({
       context: browser,
       origin: host.origin,
