@@ -83,6 +83,26 @@ const projectItems = defineView({ id: "project-items", title: "Items", body: { k
 const projectNavigation = defineNavigationTree({ id: "project-items", owner: workbenchModes.project, view: projectItems.ref, resourceScope: "project" });
 if (projectNavigation.resourceScope !== "project") throw new Error("Navigation lost its resource scope");
 ` +
+      (imports.includes("@pstdio/workbench")
+        ? `
+import { createWorkbench } from "@pstdio/workbench";
+const headerWorkbench = createWorkbench();
+headerWorkbench.modes.registerMode({ id: "legacy", activate() {}, regionSettings: { main: { alwaysShowTabs: false } } });
+headerWorkbench.views.registerView({ id: "content", title: "Content", body: { kind: "react", render: () => null } });
+for (const presentation of [undefined, "page", "tabs"] as const) {
+  const id = presentation ?? "legacy";
+  const page = { kind: "page", extensionId: "consumer", id } as const;
+  headerWorkbench.pages.registerPage({ id, ref: page, title: id, path: id, modeId: "legacy",
+    main: { kind: "view", presentation, view: { kind: "view", id: "content" }, cardinality: "one" }, slots: [] });
+  headerWorkbench.pageLocations.setProject("consumer");
+  headerWorkbench.pageLocations.navigate({ kind: "page", page });
+  if (headerWorkbench.shell.getPanelPolicy("main").showHeader !== (presentation === "tabs")) {
+    throw new Error("Page headers lost the legacy or explicit presentation policy");
+  }
+}
+headerWorkbench.dispose();
+`
+        : "") +
       (react && imports.includes("@pstdio/ui")
         ? `
 import { createElement } from "react";

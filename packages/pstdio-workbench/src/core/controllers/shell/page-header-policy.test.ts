@@ -44,3 +44,22 @@ test("a tabbed page keeps its header when adding more tabs is disabled", () => {
   w.pageLocations.navigate({ kind: "page", page });
   expect(w.shell.getPanelPolicy("main")).toMatchObject({ acceptsTabs: false, showHeader: true });
 });
+
+test("legacy pages keep the deprecated mode header choice until presentation is declared", () => {
+  const w = createWorkbench();
+  w.modes.registerMode({ id: "legacy", activate() {}, regionSettings: { main: { alwaysShowTabs: false } } });
+  w.views.registerView({ id: "content", title: "Content", body: { kind: "react", render: () => null } });
+  const page = { kind: "page", extensionId: "test", id: "legacy" } as const;
+  w.pages.registerPage({
+    id: page.id,
+    ref: page,
+    title: "Legacy",
+    path: "legacy",
+    modeId: "legacy",
+    main: { kind: "view", view: { kind: "view", id: "content" }, cardinality: "one" },
+    slots: [],
+  });
+  w.pageLocations.setProject("project-1");
+  w.pageLocations.navigate({ kind: "page", page });
+  expect(w.shell.getPanelPolicy("main").showHeader).toBe(false);
+});

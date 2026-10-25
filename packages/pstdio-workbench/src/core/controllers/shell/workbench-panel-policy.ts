@@ -27,11 +27,14 @@ export const workbenchPanelPolicy = (
     legacyFloatable: core.sidePanel.canFloat(),
   });
   const acceptsTabs = policy.acceptsTabs && !(region === "main" && page?.modeId === modeId && isSingleViewPage(page));
+  const hasPagePresentation = page?.main.kind !== "view" || page.main.presentation !== undefined;
   return {
     ...policy,
     acceptsTabs,
     showHeader:
-      region === "main" && page?.modeId === modeId ? policy.provided && !isSingleViewPage(page) : policy.showHeader,
+      region === "main" && page?.modeId === modeId && hasPagePresentation
+        ? policy.provided && !isSingleViewPage(page)
+        : policy.showHeader,
   };
 };
 
