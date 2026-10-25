@@ -59,6 +59,32 @@ afterEach(async () => {
   await close?.();
 });
 
+test("keeps unchanged source metadata stable when runtime views contain callbacks", async () => {
+  const project = await projectService.create({ name: "Native views" });
+  let refreshes = 0;
+  const nativeViews = createExtensionService({
+    sourceExists: () => true,
+    extensionInstancesService,
+    installedExtensionSourcesService,
+    extensionUserDataService,
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
+    projectService,
+    onInstalledSourcesChanged: () => {
+      refreshes++;
+    },
+  });
+  const source = () =>
+    createServiceInput(project.id, {
+      sourceHash: "same-source",
+      manifest: { views: [{ id: "tickets", body: { kind: "collection", query: () => [] } }] },
+    });
+  const first = await nativeViews.syncInstalledSourceForProject(source());
+  refreshes = 0;
+  const second = await nativeViews.syncInstalledSourceForProject(source());
+  expect(second?.installedSource.updated_at).toBe(first?.installedSource.updated_at);
+  expect(refreshes).toBe(0);
+});
+
 describe("extensionService installed source sync", () => {
   test("attaches a committed source while another project's webviews are refreshing", async () => {
     const firstProject = await projectService.create({ name: "First" });
