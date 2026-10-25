@@ -2,12 +2,12 @@ import type { RefObject } from "react";
 import type { DependencyTimelineProps } from "./dependency-timeline.types";
 import { DropHighlight } from "./timeline-drop-highlight";
 import { TimelineEdges } from "./timeline-edges";
-import { type geometry, gutterWidth, visibleContentLeft } from "./timeline-geometry";
+import { type geometry, gutterWidth, trackAt, visibleContentLeft } from "./timeline-geometry";
 import { MilestoneGutter } from "./timeline-gutter";
 import { TimelineItems } from "./timeline-items";
 import { TimelineSurface } from "./timeline-parts";
 import { TimelineSections } from "./timeline-sections";
-import { TrackColumns, trackAt } from "./timeline-tracks";
+import { TrackColumns } from "./timeline-tracks";
 import { graphWindow, visibleGraphRows } from "./timeline-window";
 import { useTimelineWindow } from "./use-timeline-window";
 

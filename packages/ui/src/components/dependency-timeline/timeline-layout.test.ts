@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { geometry } from "./timeline-geometry";
 import { layoutTimeline } from "./timeline-layout";
 
 const item = (id: string, trackId: string, dependencies: string[] = []) => ({
@@ -43,4 +44,15 @@ test("collapsed timeline sections and tracks release their lanes and rows", () =
   expect(layout.trackLanes).toEqual([0, 1]);
   expect(layout.bands[0].rowCount).toBe(0);
   expect(layout.nodes[0].row).toBe(0);
+});
+
+test("a timeline only lays out items in its supplied tracks", () => {
+  const sections = [{ id: "release", header: null, items: [item("known", "work"), item("orphan", "missing")] }];
+  const layout = layoutTimeline(sections, [{ id: "work", label: "Work" }]);
+  expect(layout.nodes.map(({ id }) => id)).toEqual(["known"]);
+  expect([...geometry(layout).positions.keys()]).toEqual(["known"]);
+
+  const empty = layoutTimeline(sections, []);
+  expect(empty.nodes).toEqual([]);
+  expect(geometry(empty).positions.size).toBe(0);
 });

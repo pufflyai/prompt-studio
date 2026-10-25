@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { DependencyTimelineProps, TimelineSection } from "./dependency-timeline.types";
-import { type BandBox, type geometry, gutterWidth, headerHeight, lineX, padding } from "./timeline-geometry";
+import { type BandBox, type geometry, gutterWidth, headerHeight, lineX, padding, trackAt } from "./timeline-geometry";
 import {
   TimelineDate,
   TimelineMarker,
@@ -8,7 +8,6 @@ import {
   TimelineSectionHeader,
   TimelineSectionLabel,
 } from "./timeline-parts";
-import { trackAt } from "./timeline-tracks";
 
 interface SectionsProps extends Pick<DependencyTimelineProps, "sections" | "tracks" | "onDropTarget" | "onDrop"> {
   box: ReturnType<typeof geometry>;

@@ -2,7 +2,7 @@ import { Button, IconButton } from "@chakra-ui/react";
 import { ChevronsLeftRight, ChevronsRightLeft, Plus } from "lucide-react";
 import { Tooltip } from "../primitives/tooltip";
 import type { DependencyTimelineProps } from "./dependency-timeline.types";
-import { gutterWidth, type TrackBox, trackGap } from "./timeline-geometry";
+import { type TrackBox, trackGap } from "./timeline-geometry";
 import {
   TimelineColumn,
   TimelineColumnLabel,
@@ -109,10 +109,4 @@ export const TrackColumns = (props: TrackColumnsProps) => {
       ))}
     </>
   );
-};
-
-export const trackAt = (boxes: TrackBox[], tracks: DependencyTimelineProps["tracks"], x: number) => {
-  if (x < gutterWidth) return undefined;
-  const index = boxes.findIndex((box) => x >= box.x && x <= box.x + box.width);
-  return tracks[Math.max(0, index)]?.id;
 };

@@ -56,15 +56,7 @@ function placeTicket(grid: Grid, ticket: TimelineItem, track: number, earliest: 
 }
 
 export function layoutTimeline(sections: TimelineSection[], tracks: TimelineTrack[]) {
-  const options = {
-    tracks: tracks.length,
-    trackOf: (item: TimelineItem) =>
-      Math.max(
-        0,
-        tracks.findIndex(({ id }) => id === item.trackId),
-      ),
-    collapsedTracks: new Set(tracks.flatMap((track, index) => (track.collapsed ? [index] : []))),
-  };
+  const trackIndices = new Map(tracks.map((track, index) => [track.id, index]));
   const grid: Grid = { placed: new Map(), taken: new Map() };
   const nodes: GraphNode[] = [];
   const bands: GraphBand[] = [];
@@ -72,7 +64,10 @@ export function layoutTimeline(sections: TimelineSection[], tracks: TimelineTrac
   for (const section of sections) {
     // Each deadline starts on a fresh row. Within a track, later tickets never rise above earlier ones.
     const current = new Map<number, number>();
-    const shown = section.items.filter((ticket) => !options.collapsedTracks?.has(options.trackOf(ticket)));
+    const shown = section.items.filter((ticket) => {
+      const track = trackIndices.get(ticket.trackId);
+      return track !== undefined && !tracks[track].collapsed;
+    });
     for (const ticket of section.collapsed
       ? []
       : dependencyOrder(
@@ -80,7 +75,7 @@ export function layoutTimeline(sections: TimelineSection[], tracks: TimelineTrac
           ({ id }) => id,
           ({ dependencies }) => dependencies.map(({ id }) => id),
         )) {
-      const track = options.trackOf(ticket);
+      const track = trackIndices.get(ticket.trackId)!;
       const node = placeTicket(grid, ticket, track, current.get(track) ?? nextRow);
       nodes.push(node);
       current.set(track, node.row);
@@ -92,10 +87,8 @@ export function layoutTimeline(sections: TimelineSection[], tracks: TimelineTrac
   }
 
   // Each track is as wide as the lanes it uses, an empty track keeps one lane, and a collapsed track has none.
-  const trackLanes = Array.from({ length: options.tracks }, (_, track) =>
-    options.collapsedTracks?.has(track)
-      ? 0
-      : Math.max(1, ...nodes.filter((node) => node.track === track).map(({ lane }) => lane + 1)),
+  const trackLanes = tracks.map(({ collapsed }, track) =>
+    collapsed ? 0 : Math.max(1, ...nodes.filter((node) => node.track === track).map(({ lane }) => lane + 1)),
   );
   return { nodes, bands, trackLanes };
 }

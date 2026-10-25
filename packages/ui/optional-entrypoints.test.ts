@@ -45,23 +45,3 @@ test("the dedicated timeline entry uses the same canvas navigation", async () =>
   expect(inputs.some((path) => path.endsWith("dependency-timeline/dependency-timeline.tsx"))).toBe(true);
   expect(inputs.some((path) => path.endsWith("canvas/canvas-interactions.ts"))).toBe(true);
 });
-
-test("the published root entry does not load optional component code or styles", async () => {
-  const result = await Bun.build({
-    entrypoints: [resolve(import.meta.dirname, "dist/index.js")],
-    target: "browser",
-    packages: "external",
-    metafile: true,
-  });
-  expect(result.success).toBe(true);
-  const sources = (
-    await Promise.all(
-      Object.keys(result.metafile!.inputs).map(async (input) => {
-        const map = Bun.file(resolve(import.meta.dirname, `${input}.map`));
-        return (await map.exists()) ? ((await map.json()).sources as string[]) : [];
-      }),
-    )
-  ).flat();
-  expect(sources.length).toBeGreaterThan(0);
-  expect(sources.filter((path) => /\/(canvas|dependency-timeline)(\/|\.ts)/.test(path))).toEqual([]);
-});

@@ -53,6 +53,28 @@ export const CollapsibleTracksAndMilestones: Story = {
 };
 
 export const Empty: Story = { render: () => <DependencyTimelineExample empty /> };
+export const NoTracks: Story = {
+  render: () => (
+    <Box h="400px">
+      <DependencyTimeline
+        today="2026-10-10"
+        tracks={[]}
+        sections={[
+          {
+            id: "release",
+            header: "Release",
+            items: [{ id: "orphan", trackId: "missing", dependencies: [], content: "Unassigned item" }],
+          },
+        ]}
+      />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Release")).toBeVisible();
+    await expect(canvas.queryByText("Unassigned item")).toBeNull();
+  },
+};
 export const SelectedDependencies: Story = { args: { selectedId: "ship" } };
 export const LargePlan: Story = {
   render: () => <DependencyTimelineExample large />,

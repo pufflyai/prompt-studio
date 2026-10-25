@@ -1,4 +1,5 @@
 import { dependencyTimelineMetrics as metrics } from "../../theme/primitives/dependency-timeline";
+import type { TimelineTrack } from "./dependency-timeline.types";
 // Turn graph rows, tracks, and lanes into pixel positions for cards, milestone bands, tracks, edges, and the timeline gutter.
 import type { GraphBand, GraphNode } from "./timeline-layout";
 
@@ -47,6 +48,20 @@ export interface TrackBox {
   x: number;
   width: number;
 }
+
+export const trackAt = (boxes: TrackBox[], tracks: TimelineTrack[], x: number) => {
+  if (x < gutterWidth) return undefined;
+  let nearest = -1;
+  let distance = Number.POSITIVE_INFINITY;
+  for (const [index, box] of boxes.entries()) {
+    const nextDistance = Math.max(box.x - x, x - box.x - box.width, 0);
+    if (nextDistance < distance) {
+      nearest = index;
+      distance = nextDistance;
+    }
+  }
+  return tracks[nearest]?.id;
+};
 
 // A track with no lanes is collapsed.
 function trackBoxes(trackLanes: number[]) {

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { geometry } from "./timeline-geometry";
+import { geometry, trackAt } from "./timeline-geometry";
 
 test("keeps full-height cards and later milestones from overlapping", () => {
   const layout = {
@@ -33,4 +33,22 @@ test("keeps full-height cards and later milestones from overlapping", () => {
   expect(dependent.y).toBeGreaterThan(long.y + long.height);
   expect(box.bands[1]!.top).toBeGreaterThan(dependent.y + dependent.height);
   expect(box.bands[1]!.top + box.bands[1]!.height).toBeGreaterThan(later.y + later.height);
+});
+
+test("drops between tracks and past the final track choose the nearest track", () => {
+  const boxes = [
+    { x: 88, width: 240 },
+    { x: 384, width: 240 },
+    { x: 680, width: 240 },
+  ];
+  const tracks = [
+    { id: "first", label: "First" },
+    { id: "second", label: "Second" },
+    { id: "third", label: "Third" },
+  ];
+  expect(trackAt(boxes, tracks, 376)).toBe("second");
+  expect(trackAt(boxes, tracks, 990)).toBe("third");
+  expect(trackAt(boxes, tracks, 80)).toBe("first");
+  expect(trackAt(boxes, tracks, 60)).toBeUndefined();
+  expect(trackAt([], [], 376)).toBeUndefined();
 });

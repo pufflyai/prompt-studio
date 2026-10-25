@@ -169,6 +169,7 @@ export default defineConfig({ build: { lib: { entry: ${JSON.stringify(dependenci
     );
     run(directory, ["node_modules/vite/bin/vite.js", "build"]);
     if (dependencies["@pstdio/ui"]) {
+      process.stdout.write(run(directory, [join(repoRoot, "scripts/verify/ui-bundle-boundaries.ts")]));
       const monaco = verifyMonacoPackageAssets(directory);
       console.log(`Resolved @pstdio/ui Monaco files with ${monaco.workers} workers and ${monaco.fonts} fonts.`);
     }
