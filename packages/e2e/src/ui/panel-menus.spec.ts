@@ -274,9 +274,9 @@ test("renames a moved session and restores its destination after reload", async 
   await openTabCustomMenu(side.getByRole("tab", { name: "New session", exact: true }));
   await switchSession(page, "Session to rename");
   await openTabCustomMenu(side.getByRole("tab", { name: "Session to rename", exact: true }));
-  await page.getByRole("menuitem", { name: "Move to Main", exact: true }).click();
-  const main = page.locator('[data-workbench-panel-header="main"]');
-  const moved = main.getByRole("tab", { name: "Session to rename", exact: true });
+  await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
+  const bottom = page.locator('[data-workbench-panel-header="secondary"]');
+  const moved = bottom.getByRole("tab", { name: "Session to rename", exact: true });
   await expect(moved).toBeVisible();
   const instance = await moved.locator("..").getAttribute("data-workbench-tab");
   expect(instance).toBeTruthy();
@@ -285,11 +285,11 @@ test("renames a moved session and restores its destination after reload", async 
   const dialog = page.getByRole("dialog", { name: "Rename session", exact: true });
   await dialog.getByRole("textbox").fill("Renamed session");
   await dialog.getByRole("button", { name: "Run", exact: true }).click();
-  await expect(main.getByRole("tab", { name: "Renamed session", exact: true })).toBeVisible();
+  await expect(bottom.getByRole("tab", { name: "Renamed session", exact: true })).toBeVisible();
   await page.reload();
-  await expect(main.getByRole("tab", { name: "Renamed session", exact: true })).toBeVisible();
+  await expect(bottom.getByRole("tab", { name: "Renamed session", exact: true })).toBeVisible();
   expect(
-    await main
+    await bottom
       .getByRole("tab", { name: "Renamed session", exact: true })
       .locator("..")
       .getAttribute("data-workbench-tab"),

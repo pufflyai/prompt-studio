@@ -99,7 +99,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     const pageLocation = firstValues[pageLocationKey];
     expect(JSON.parse(pageLocation ?? "null")).toMatchObject({
       version: 1,
-      location: { page: { id: "sessions", kind: "page" } },
+      location: { page: { id: "session-composer", kind: "page" } },
     });
     // The opposite of the default proves the restored theme is the saved choice, not the system mode.
     const chosenTheme = await test.step("Choose the theme opposite to the one shown", async () => {

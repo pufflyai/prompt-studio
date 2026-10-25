@@ -15,6 +15,7 @@ import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { pageLocationTarget } from "../page-location/page-location-target";
+import { departingPagePreviews } from "../page-runtime/page-preview-lifetime";
 import { getWorkbenchPanelLayout } from "../page-runtime/workbench-layout-context";
 import { requirePanelOpen } from "../shell/panel-open-policy";
 import {
@@ -56,13 +57,18 @@ export const restorePageLocation = (
     .find((page) => page.ref.id === location.page.id && page.ref.extensionId === location.page.extensionId);
   if (!page) return location;
   const key = core.pages.resourceReferenceKey(location.resource);
-  const layout = getWorkbenchPanelLayout(core, page.modeId, {
-    ...core.pages.store.getState(),
+  const previous = core.pages.store.getState();
+  const next = {
+    ...previous,
     projectId,
     activePageId: page.id,
     activeModeId: page.modeId,
     location,
-  });
+  };
+  const layout = getWorkbenchPanelLayout(core, page.modeId, next);
+  const departing = new Set(
+    departingPagePreviews(next, previous, core.layout.getLayout()).map((widget) => widget.widgetId),
+  );
   const mode = core.modes.getMode(page.modeId);
   const conflict = (["side", "secondary"] as const).some(
     (region) =>
@@ -70,6 +76,7 @@ export const restorePageLocation = (
       layout.regions[region].widgets.some(
         (widget) =>
           widget.resource &&
+          !departing.has(widget.widgetId) &&
           widget.placementIdentity &&
           resourceViewerBinding(core, widget.placementIdentity)?.kind === "binding" &&
           core.pages.resourceReferenceKey(widget.resource) === key,

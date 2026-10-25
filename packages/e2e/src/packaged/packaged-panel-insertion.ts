@@ -165,6 +165,8 @@ const verifyNearbyTabTargets = async (page: Page) => {
   await page.reload();
   const bottom = page.locator('[data-workbench-panel="secondary"]:visible');
   await expect(bottom.getByRole("tab", { selected: true })).toBeVisible();
+  await expect(main.getByRole("tab")).toHaveCount(0);
+  await expect(main.locator('iframe[title="Artifacts"]')).toBeVisible();
   await expect.poll(async () => (await bottom.boundingBox())!.y < (await main.boundingBox())!.y).toBe(true);
 };
 
