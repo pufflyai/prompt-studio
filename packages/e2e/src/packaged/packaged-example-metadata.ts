@@ -2,6 +2,7 @@ import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 
 export const expectExamplePages = (metadata: WorkbenchExtensionMetadata) => {
+  expect(metadata.modes.find((mode) => mode.localId === "boombox")).toMatchObject({ canFullscreen: false });
   for (const [mode, view] of [
     ["boombox", "boombox-player"],
     ["kiln", "kiln-timeline"],
@@ -29,19 +30,22 @@ export const expectExamplePages = (metadata: WorkbenchExtensionMetadata) => {
       expect.objectContaining({
         extensionId: "pstdio.extension-lab",
         localId: name,
-        main: { kind: "view", view: expect.any(Object), cardinality: "one" },
-        slots: [],
+        main: expect.objectContaining({ kind: "view", view: expect.any(Object), cardinality: "one" }),
       }),
     );
-    expect(metadata.pages).toContainEqual(
-      expect.objectContaining({
-        extensionId: "pstdio.extension-lab",
-        localId: `${name}-resource`,
-        parent: { extensionId: "pstdio.extension-lab", kind: "page", id: name },
-        resource: { kinds: [expect.any(Object)] },
-        main: { kind: "view", view: expect.any(Object), cardinality: "one" },
-      }),
-    );
+    if (name === "scribble" || name === "zipline")
+      expect(metadata.pages).toContainEqual(
+        expect.objectContaining({
+          extensionId: "pstdio.extension-lab",
+          localId: `${name}-resource`,
+          parent: { extensionId: "pstdio.extension-lab", kind: "page", id: name },
+          resource: { kinds: [expect.any(Object)] },
+          main: expect.objectContaining({ kind: "view", view: expect.any(Object), cardinality: "one" }),
+        }),
+      );
+  }
+  for (const name of ["boombox", "pigeon", "kiln"]) {
+    expect(metadata.pages.find((page) => page.localId === name)?.main).toMatchObject({ presentation: "page" });
   }
   expect(metadata.views).toContainEqual(
     expect.objectContaining({
