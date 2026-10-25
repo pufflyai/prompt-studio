@@ -1,9 +1,11 @@
 import { join, resolve } from "node:path";
 import { createRegistryClient, packExtension } from "pstdio-extensions/distribution";
+import { releasedApiBaselines } from "../verify/extension-api-baselines";
 import { publishedExtensionDirs, verifyPublishedExtension } from "../verify/verify-published-extensions";
 
 export const publishExtensions = async (root: string, registry: string, token: string) => {
   const client = createRegistryClient(registry);
+  const releases = await releasedApiBaselines(root);
   for (const dir of await publishedExtensionDirs(root)) {
     const manifest = await Bun.file(join(root, dir, "package.json")).json();
     const id = `${manifest.publisher}.${manifest.name}`;
@@ -12,7 +14,7 @@ export const publishExtensions = async (root: string, registry: string, token: s
       console.log(`${id}@${manifest.version} is already published.`);
       continue;
     }
-    await verifyPublishedExtension(root, dir);
+    await verifyPublishedExtension(root, dir, releases);
     const packed = await packExtension(join(root, dir));
     const response = await fetch(`${registry.replace(/\/$/, "")}/api/-/publish`, {
       method: "POST",

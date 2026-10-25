@@ -1,26 +1,24 @@
 name: Release Packages
 
-# One pipeline publishes stable releases and nightlies. It builds and verifies every
-# artifact from one commit first, and publishes npm packages and desktop apps together
-# only when everything passed. A failed release resumes with "Re-run failed jobs" or
-# with the next push to main. See ADR 0072.
+# Host releases build and verify every artifact before publishing. The manual packages
+# channel publishes only SDK/UI previews. See ADRs 0072 and 0107.
 on:
   push:
     branches:
       - main
-  # Nightly builds live here, not in their own workflow, because npm trusted
-  # publishing allows one publisher per package and names this workflow file.
+  # Nightlies and SDK/UI previews reuse this workflow's existing npm publisher trust.
   schedule:
     - cron: "0 3 * * *"
   workflow_dispatch:
     inputs:
       channel:
-        description: Release a version on main, build a nightly, or patch the current stable release
+        description: Release stable, nightly, a stable patch, or SDK/UI previews only (packages)
         type: choice
         options:
           - stable
           - nightly
           - patch
+          - packages
         default: stable
       base_tag:
         description: "Patch only: current stable tag, such as pstdio@0.43.1"
@@ -40,13 +38,50 @@ on:
 # replaces a run of the same channel that is still waiting. A queued nightly never replaces
 # a queued stable run.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ (github.event_name == 'schedule' || inputs.channel == 'nightly') && 'nightly' || 'stable' }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.channel == 'packages' && 'packages' || (github.event_name == 'schedule' || inputs.channel == 'nightly') && 'nightly' || 'stable' }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  package_previews:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.channel == 'packages'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: node scripts/ci/install-native-dependencies.ts
+      - name: Give SDK/UI previews a source-based version
+        run: bun run --cwd scripts release:packages:version
+      - name: Build SDK and UI with their dependencies
+        run: bunx lerna run build --scope @pstdio/sdk --scope @pstdio/ui --include-dependencies
+      - name: Check preview release contracts
+        run: >-
+          bun test scripts/release/package-preview-version.test.ts
+          scripts/release/package-preview-publish.test.ts
+          scripts/verify/extension-api-registry.test.ts scripts/verify/extension-api-baselines.test.ts
+      - name: Check packed public API exports
+        run: bun scripts/verify/published-type-exports.ts sdk ui
+      - name: Install, typecheck, and bundle packed SDK/UI consumers
+        run: bun scripts/verify/public-package-consumer.ts sdk ui
+      - name: Pack both previews before publication
+        run: bun run --cwd scripts release:packages:publish --dry-run
+      - name: Publish only SDK and UI with the preview tag
+        env:
+          NPM_CONFIG_PROVENANCE: true
+        run: bun run --cwd scripts release:packages:publish
+
   # The workflow stays on main for signing trust. Only the build checkout changes.
   prepare_patch:
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.channel == 'patch'
@@ -88,6 +123,7 @@ jobs:
     needs: prepare_patch
     if: >-
       ${{ !cancelled() && github.ref == 'refs/heads/main' &&
+      inputs.channel != 'packages' &&
       (needs.prepare_patch.result == 'success' || needs.prepare_patch.result == 'skipped') }}
     runs-on: ubuntu-latest
     # These are the limits of the plan and nightly jobs this job replaces. The nightly path
@@ -436,7 +472,7 @@ jobs:
     needs: [prepare_patch, publish]
     if: >-
       ${{ !cancelled() && github.ref == 'refs/heads/main' &&
-      github.event_name != 'schedule' && inputs.channel != 'nightly' &&
+      github.event_name != 'schedule' && inputs.channel != 'nightly' && inputs.channel != 'packages' &&
       needs.prepare_patch.result != 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15

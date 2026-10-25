@@ -1,7 +1,8 @@
 # Independent core extension releases
 
 Core extensions have their own versions and changelogs. The host, SDK, UI,
-workbench and desktop keep their shared release policy.
+workbench and desktop keep their shared stable release policy. SDK and UI can
+also publish [packages-only previews](0014-sdk-ui-previews.md).
 
 PSX is not deployed yet. Until it is, stable hosts install core extensions from
 their own `pstdio@<version>` release tag, so users receive extension changes with
@@ -16,16 +17,21 @@ Do not edit package versions by hand. The next host release notes include each
 extension whose version changed since the previous host release.
 
 The compatibility check discovers releasable extension manifests outside the
-host fixed group. It also typechecks against the first released SDK supported
-by each term in engines.pstdio. Fetch stable host tags before running it:
+host fixed group. It also typechecks against the first stable SDK supported
+by each term in engines.pstdio. If that API has no stable SDK, it uses a
+supporting published preview, preferring one within the extension's SDK dependency
+range and otherwise using the first supporting preview.
+It reads API versions from SDK registry metadata and uses host tags only for
+older SDKs without that metadata. Fetch stable host tags before running it:
 
 ~~~bash
 bun run --cwd scripts verify:published-extensions
 ~~~
 
 If code uses an API absent from that baseline, raise the manifest's minimum to the
-first API that provides it. A declaration with no released compatible host cannot
-publish yet. A range for which no host ever shipped adds no baseline.
+first API that provides it. A declaration with no published supporting SDK cannot
+publish yet. A range for which no SDK shipped adds no baseline. Publishing an SDK
+preview does not add that API to existing hosts.
 
 ## Publish to PSX
 
