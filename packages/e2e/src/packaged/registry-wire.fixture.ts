@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { basename } from "node:path";
+import { gunzipSync } from "node:zlib";
 
 // The portable smoke checks the host's HTTP contract. The service-container job runs
 // the same scenario against the production PSX image with PostgreSQL and S3.
@@ -36,10 +37,13 @@ export const startRegistryWireFixture = async () => {
       const version = /^pstdio\.pstdio-notes-(\d+\.\d+\.\d+)\.tgz$/.exec(basename(path))?.[1];
       if (!version) throw new Error("Unexpected Notes fixture package name");
       const bytes = await readFile(path);
+      // PSX indexes the engine range from the uploaded manifest, so the fixture reads it the same way.
+      const manifest = (await new Bun.Archive(gunzipSync(bytes)).files()).get("package.json");
+      const { engines } = JSON.parse((await manifest?.text()) ?? "{}") as { engines: { pstdio: string } };
       versions.push({
         id: "pstdio.pstdio-notes",
         version,
-        enginesPstdio: "^0.2.0",
+        enginesPstdio: engines.pstdio,
         sha256: createHash("sha256").update(bytes).digest("hex"),
         withdrawn: false,
       });
