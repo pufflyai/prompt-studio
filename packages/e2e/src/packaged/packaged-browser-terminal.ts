@@ -55,7 +55,7 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   }, destination.href);
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Sessions");
   await expect(
-    page.locator('[data-workbench-panel="main"]').getByRole("button", { name: "New session", exact: true }),
+    page.locator('[data-workbench-panel="main"]').getByTestId("content-editable").filter({ visible: true }),
   ).toBeVisible();
   await expect(terminalInput).toHaveCount(0);
   await page.goBack();

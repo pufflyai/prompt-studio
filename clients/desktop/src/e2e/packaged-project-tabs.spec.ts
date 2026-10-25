@@ -63,9 +63,7 @@ test(
       await expect.poll(async () => (await readRuntimeActivity(app!.runtime)).terminals).toHaveLength(1);
       const terminal = (await readRuntimeActivity(app.runtime)).terminals[0];
       await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
-      await expect(
-        app.page.getByLabel("Main", { exact: true }).getByRole("button", { name: "New session", exact: true }),
-      ).toBeVisible();
+      await expect(app.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
       await app.page.getByRole("button", { name: "Navigate back", exact: true }).click();
       await expect(app.page.getByTestId("start-page")).toBeVisible();
       await app.page.getByRole("option", { name: "Lab", exact: true }).click();
