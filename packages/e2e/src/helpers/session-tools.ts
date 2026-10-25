@@ -26,24 +26,25 @@ export const verifySessionTools = async (page: Page) => {
   await expect(page).toHaveURL(new RegExp(`/session\\?.*${session.id}`));
   await expect(main.getByRole("tab")).toHaveCount(1);
   await expect(main.getByRole("tab", { selected: true })).toContainText("Start from a New session tab");
+  const tabIds = () =>
+    main
+      .locator("[data-workbench-tab]")
+      .evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute("data-workbench-tab")));
+  const beforeTerminal = await tabIds();
   await main.getByRole("button", { name: "Add panel", exact: true }).click();
   await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
-  const openedTerminal = main.getByRole("tab").filter({ hasText: "Terminal" });
-  await expect(openedTerminal).toBeVisible();
-  const terminalId = await openedTerminal.locator("..").getAttribute("data-workbench-tab");
+  await expect(main.locator("[data-workbench-tab]")).toHaveCount(beforeTerminal.length + 1);
+  const terminalId = (await tabIds()).find((id) => !beforeTerminal.includes(id));
+  expect(terminalId).toBeTruthy();
   const terminal = main.locator(`[data-workbench-tab="${terminalId}"]`).getByRole("tab");
-  const ids = await main
-    .locator("[data-workbench-tab]")
-    .evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute("data-workbench-tab")));
+  await expect(terminal).toBeVisible();
+  await expect(main.getByRole("textbox", { name: "Terminal input", exact: true })).toBeVisible();
+  const ids = await tabIds();
   await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("option", { name: "Home", exact: true }).click();
   await page.getByRole("option", { name: "Sessions", exact: true }).click();
   await expect(main.getByRole("tab")).toHaveCount(2);
-  expect(
-    await main
-      .locator("[data-workbench-tab]")
-      .evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute("data-workbench-tab"))),
-  ).toEqual(ids);
+  expect(await tabIds()).toEqual(ids);
   await page.reload();
   await expect(main.getByRole("tab")).toHaveCount(2);
   await terminal.click({ button: "right" });
