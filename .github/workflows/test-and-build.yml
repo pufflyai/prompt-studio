@@ -5,6 +5,18 @@ permissions:
   contents: read
   actions: read
 jobs:
+  signals:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - run: bun scripts/ci/native-signal-diagnostic.ts
   native:
     name: native fixtures (${{ matrix.platform_pkg }})
     runs-on: ${{ matrix.os }}
