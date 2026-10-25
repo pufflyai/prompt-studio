@@ -29,21 +29,23 @@ export const webview = (id: string, title: string, capabilities: WebviewCapabili
       capabilities: ["commands.execute", "navigation.open", "page.params.update", "editing.session", ...capabilities],
     },
   });
-interface ExampleDefinition {
+interface ExampleEnvironment {
   name: keyof typeof exampleResources;
   label: string;
   icon: string;
-  primary: ViewRef;
   regions?: ModeContribution["regions"];
   chrome?: ModeContribution["chrome"];
   floatingPanels?: ModeContribution["floatingPanels"];
   canFullscreen?: ModeContribution["canFullscreen"];
   regionSettings?: ModeContribution["regionSettings"];
+}
+interface ExampleDefinition extends ExampleEnvironment {
+  primary: ViewRef;
   slots?: PageSlot[];
   initialResource?: boolean;
   params?: PageContribution["params"];
 }
-const defineExampleEnvironment = (input: ExampleDefinition) => {
+export const defineExampleEnvironment = (input: ExampleEnvironment) => {
   const { name, label, icon } = input;
   const theme = defineTheme({
     id: name,

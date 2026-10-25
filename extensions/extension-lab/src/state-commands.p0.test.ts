@@ -1,20 +1,8 @@
 import { expect, test } from "bun:test";
+import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { commands } from "./state-commands";
 
-const context = () => {
-  const values = new Map<string, unknown>();
-  return {
-    storage: {
-      collection: (name: string) => ({
-        list: async () => [...values].filter(([key]) => key.startsWith(`${name}:`)).map(([, value]) => value),
-        put: async (key: string, value: unknown) => {
-          values.set(`${name}:${key}`, value);
-        },
-      }),
-    },
-    events: { emit: async () => ({ delivered: 0 }) },
-  };
-};
+const context = () => makeCommandContext({ storage: createMemoryStorage(), params: {} });
 test("sample documents work immediately and keep edits across reads", async () => {
   const ctx = context();
   const resources = await commands["resources.query"].run(ctx as never, { name: "scribble" });

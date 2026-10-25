@@ -48,7 +48,7 @@ const editDocument = async (page: Page, content: string) => {
   const saved = waitForExampleSave(page, "scribble", "contentById", content);
   await view(page, "Document").locator('[contenteditable="true"]').first().fill(content);
   await saved;
-  await expect(view(page, "Document").getByText("Saved locally", { exact: true })).toBeVisible();
+  await expect(view(page, "Document").locator('[contenteditable="true"]').first()).toContainText(content);
 };
 
 test.beforeEach(async ({ page, request }) => {
@@ -70,28 +70,30 @@ test.beforeEach(async ({ page, request }) => {
 test("Scribble saves edits and creates documents", async ({ page }) => {
   await openExample(page, "scribble", "scribble.document/north-star");
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await expect(sidenav.locator('iframe[title="Pages"]')).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: "North star", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Bottom Panel/ })).toHaveCount(0);
   await expect(page.locator('[data-workbench-region="status"] iframe[title="Sync status"]')).toBeVisible();
-  const pages = view(page, "Pages");
+  const pages = sidenav;
   const editor = () => view(page, "Document").locator('[contenteditable="true"]').first();
   await expect(editor()).toContainText("Why now");
   await editDocument(page, "A saved Scribble note");
-  await pages.getByRole("button", { name: "Field notes", exact: true }).click();
+  await pages.getByRole("option", { name: "Field notes", exact: true }).click();
   await expect(editor()).toContainText("Patterns");
-  await pages.getByRole("button", { name: "North star", exact: true }).click();
+  await pages.getByRole("option", { name: "North star", exact: true }).click();
   await expect(editor()).toContainText("A saved Scribble note");
   await page.reload();
   await expect(editor()).toContainText("A saved Scribble note");
-  await pages.getByRole("button", { name: "New page", exact: true }).click();
-  await expect(pages.getByRole("button", { name: "Untitled page", exact: true })).toBeVisible();
+  await pages.getByRole("option", { name: "New page", exact: true }).click();
+  await expect(pages.getByRole("option", { name: "Untitled page", exact: true })).toHaveCount(0);
   await expect(view(page, "Document").getByText("Untitled page", { exact: true }).last()).toBeVisible();
   await expect(editor()).toBeEmpty();
-  await editDocument(page, "A new document");
-  await pages.getByRole("button", { name: "Field notes", exact: true }).click();
+  await editor().fill("A new document");
+  await view(page, "Document").getByRole("button", { name: "Save page", exact: true }).click();
+  await expect(pages.getByRole("option", { name: "Untitled page", exact: true })).toBeVisible();
+  await pages.getByRole("option", { name: "Field notes", exact: true }).click();
   await expect(editor()).toContainText("Patterns");
-  await pages.getByRole("button", { name: "Untitled page", exact: true }).click();
+  await pages.getByRole("option", { name: "Untitled page", exact: true }).click();
   await expect(editor()).toContainText("A new document");
   await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
@@ -105,6 +107,7 @@ test("Boombox retains its player across selections and disposes it when its exte
   request,
 }) => {
   await openExample(page, "boombox");
+  await expect(page.getByRole("button", { name: "Enter Main fullscreen", exact: true })).toHaveCount(0);
   await expect(page.locator('[data-workbench-region="sidenav"]')).toBeHidden();
   await expect(view(page, "Player").getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   const playerFrame = await page.locator('iframe[title="Player"]').elementHandle();

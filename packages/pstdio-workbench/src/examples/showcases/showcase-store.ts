@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { ResourceRef, WorkbenchCore } from "../../core";
+import type { WorkbenchCore } from "../../core";
 
 export interface ShowcaseStore<State> {
   getState(): State;
@@ -26,16 +26,6 @@ export const createShowcaseStore = <State extends object>(initialState: State): 
 
 export const useShowcaseStore = <State extends object>(store: ShowcaseStore<State>) =>
   useSyncExternalStore(store.subscribe, store.getState, store.getState);
-
-export const usePrimaryResource = (workbench: WorkbenchCore) =>
-  useSyncExternalStore<ResourceRef | undefined>(
-    (listener) => {
-      const disposable = workbench.onDidChangePrimaryResource(listener);
-      return () => disposable.dispose();
-    },
-    () => workbench.getPrimaryResource(),
-    () => workbench.getPrimaryResource(),
-  );
 
 export const initials = (name: string) =>
   name

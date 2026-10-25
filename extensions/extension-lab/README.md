@@ -31,6 +31,8 @@ The samples are ready right away. Your changes are saved in the extension's stor
 
 Boombox, Pigeon and Kiln each have one tabless page. Their selected track, message or object lives in the page's declared `selection` parameter. Views subscribe with `client.page.subscribe` and change selection with `client.page.updateParams`. Selecting an item updates the existing views without opening a resource route, adding history entries or changing panel tabs. Scribble and Zipline demonstrate resource navigation instead. No view reads the host's database or internal registries.
 
+Scribble uses a native searchable navigation tree. Search matches page titles and saved content. Drag pages or use Alt+Up/Down to reorder them; the extension persists that order. Native groups support renaming, icons, and drag-and-drop membership. Existing pages open retained tabs. **New page** opens an unpinned draft editor without creating a note. **Save page** creates the note; later content edits save automatically. Use **Pin tab** to retain a tab. Draft text stays in the editing preview until Save and is discarded when its view is released or reloaded. Page titles and icons update the tree, tab, and breadcrumb. Project switching uses the shared Workbench header.
+
 Read an example's data from a terminal:
 
 ```sh

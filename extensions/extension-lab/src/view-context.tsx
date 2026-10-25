@@ -4,7 +4,6 @@ import {
   type NavigationTarget,
   type PageLocation,
   type PageParams,
-  type PropsStore,
   type ResourceRef,
   type WebviewPageClient,
 } from "@pstdio/sdk/extensions";
@@ -18,8 +17,6 @@ export interface ExampleProps {
 }
 export interface ExampleHost {
   navigate(target: NavigationTarget): Promise<unknown>;
-  getResource(): ResourceRef | undefined;
-  subscribeResource(listener: () => void): () => void;
   bridge: GuestHost;
   page: WebviewPageClient;
 }
@@ -33,15 +30,11 @@ export const useExampleView = () => {
   if (!context) throw new Error("Example view context is missing");
   return context;
 };
-export const createExampleHost = (bridge: GuestHost, props: PropsStore<ExampleProps>): ExampleHost => ({
+export const createExampleHost = (bridge: GuestHost): ExampleHost => ({
   bridge,
   page: createWebviewClient(bridge).page,
   navigate: (target) => bridge.call("navigation.open", { target }),
-  getResource: () => props.get().pageLocation?.resource,
-  subscribeResource: (listener) => props.subscribe(listener),
 });
-export const usePageResource = (host: ExampleHost) =>
-  useSyncExternalStore(host.subscribeResource, host.getResource, host.getResource);
 
 export const pageSelection = (host: ExampleHost) => {
   const value = host.page.params().selection;
