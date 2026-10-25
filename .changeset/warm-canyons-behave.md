@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Close extension test hosts gracefully on Windows before cleaning up.
+Close extension test hosts through runtime control before cleaning up.

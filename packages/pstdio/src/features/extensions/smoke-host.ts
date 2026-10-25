@@ -38,6 +38,10 @@ export const startSmokeHost = async (input: {
     {
       cwd: input.project,
       env: { ...input.env, ...(!compiled ? { PSTDIO_DISABLE_EMBED_MANIFEST: "1" } : {}) },
+      // The smoke command owns interruption and awaits authenticated host cleanup.
+      // A terminal Ctrl+C must not also terminate the host's process group.
+      detached: true,
+      windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     },
   );

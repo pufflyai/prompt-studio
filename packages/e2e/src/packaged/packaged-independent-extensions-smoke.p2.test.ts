@@ -23,7 +23,8 @@ test("a packaged CLI gives unchanged extension contents identical archives acros
     const repeated = (await runPackagedAsync(args, root, { PSTDIO_HOME: home })).trim();
     expect(await Bun.file(repeated).bytes()).toEqual(first);
   } finally {
-    await rm(root, { recursive: true, force: true });
+    // ADR 0039: Windows can retain an OS handle after the awaited process close.
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
@@ -94,6 +95,6 @@ test("a packaged host packs, installs and upgrades an independently published ex
   } finally {
     if (host) await stopProcess(host.child);
     if (!registryClosed) await registry.close();
-    await rm(root, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
