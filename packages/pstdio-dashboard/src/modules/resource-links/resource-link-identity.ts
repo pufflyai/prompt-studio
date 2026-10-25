@@ -8,7 +8,7 @@ export const linkableResource = (resource: ResourceRef, projectId: string) => {
     ref.extensionId === "pstdio"
       ? ["workspace", "session", "project"].includes(ref.type)
       : getCachedDashboardExtensionMetadata(projectId)?.resourceKinds.some(
-          (kind) => kind.extensionId === ref.extensionId && kind.id === ref.type,
+          (kind) => kind.extensionId === ref.extensionId && kind.localId === ref.type,
         );
   return known && ref.projectId === projectId ? ref : undefined;
 };

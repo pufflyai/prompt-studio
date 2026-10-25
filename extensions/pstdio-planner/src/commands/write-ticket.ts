@@ -13,7 +13,7 @@ import { allocateTicketIdentity } from "../data/ticket-identity";
 import { withTicketOrder } from "../data/ticket-order";
 
 // `pst tickets write`: create a draft ticket in extension storage and lay down its
-// local `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/ticket.md` via the host file primitive. The
+// local `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md` via the host file primitive. The
 // draft is later reconciled with edits by `pst tickets save`.
 export const writeTicketCommand = defineCommand({
   id: "write-ticket",

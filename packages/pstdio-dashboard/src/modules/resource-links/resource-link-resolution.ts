@@ -82,7 +82,9 @@ export const resolveLinkedResources = async (
         });
       continue;
     }
-    const kind = metadata?.resourceKinds.find((kind) => kind.extensionId === ref.extensionId && kind.id === ref.type);
+    const kind = metadata?.resourceKinds.find(
+      (kind) => kind.extensionId === ref.extensionId && kind.localId === ref.type,
+    );
     if (!kind?.resolveManyCommand) continue;
     const batch = batches.get(kind.resolveManyCommand) ?? { command: kind.resolveManyCommand, resources: [] };
     batch.resources.push(ref);

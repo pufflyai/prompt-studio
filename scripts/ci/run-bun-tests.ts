@@ -1,6 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import { bunTestSelection, verifyQuarantineReport } from "./test-quarantine";
+import { bunTestSelection, narrowStablePattern, verifyQuarantineReport } from "./test-quarantine";
 import cases from "./test-quarantine.json";
 
 const root = resolve(import.meta.dir, "../..");
@@ -16,8 +16,14 @@ if (quarantine && !selection.files.length) {
     console.log("Evidence and removal criteria: scripts/ci/test-quarantine.json");
   }
   const args = process.argv.slice(2);
-  if (selection.pattern && args.some((arg) => arg === "-t" || arg.startsWith("--test-name-pattern"))) {
-    throw new Error("Use E2E_TEST_LANE=quarantine to select registered flaky cases; do not override the lane pattern.");
+  const filterAt = args.findIndex((arg) => arg === "-t" || arg.startsWith("--test-name-pattern"));
+  let pattern = selection.pattern;
+  if (filterAt !== -1 && pattern) {
+    if (quarantine) throw new Error("The quarantine lane selects registered cases itself; remove the name filter.");
+    const equals = args[filterAt].indexOf("=");
+    const filter = equals === -1 ? args[filterAt + 1] : args[filterAt].slice(equals + 1);
+    args.splice(filterAt, equals === -1 ? 2 : 1);
+    pattern = narrowStablePattern(pattern, filter);
   }
   const report = resolve(root, "test-results/quarantine", packageDir, "results.xml");
   if (quarantine) mkdirSync(resolve(report, ".."), { recursive: true });
@@ -27,7 +33,7 @@ if (quarantine && !selection.files.length) {
       "test",
       ...args,
       ...(quarantine ? selection.files : []),
-      ...(selection.pattern ? ["--test-name-pattern", selection.pattern] : []),
+      ...(pattern ? ["--test-name-pattern", pattern] : []),
       ...(quarantine ? ["--reporter=junit", "--reporter-outfile", report] : []),
     ],
     { stdin: "inherit", stdout: "inherit", stderr: "inherit" },

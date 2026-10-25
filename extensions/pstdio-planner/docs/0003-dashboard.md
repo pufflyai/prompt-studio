@@ -65,7 +65,7 @@ The editor shows the document you selected in the sidebar: the description, a ti
 
 Selecting a saved document puts it in the page URL. Open the menu after the ticket name in the header and choose **Copy link** to copy that URL. Reload, Back, and Forward restore that document. File links keep working after a rename. A deleted document shows an unavailable error.
 
-Chat links to `.pstdio/extension-storage/pstdio-planner/tickets/<ticket>/ticket.md` open the exact workspace draft. They do not open or save the Planner document.
+Chat links to `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<ticket>/ticket.md` open the exact workspace draft. They do not open or save the Planner document.
 
 ### Properties
 

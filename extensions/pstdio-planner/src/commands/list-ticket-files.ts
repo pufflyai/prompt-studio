@@ -6,7 +6,7 @@ import { readTicketImageCheckout } from "../data/ticket-image-checkout";
 import { ticketImagePaths } from "../data/ticket-image-paths";
 
 // `pst tickets files`: compare a ticket's stored files against the local
-// `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/files/` directory so the user can see what is and
+// `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/files/` directory so the user can see what is and
 // isn't synced.
 export const listTicketFilesCommand = defineCommand({
   id: "list-ticket-files",

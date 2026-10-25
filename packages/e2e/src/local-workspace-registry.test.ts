@@ -64,8 +64,10 @@ describe("local workspace package registry", () => {
     expect(localTarball.status).toBe(200);
     expect((await localTarball.arrayBuffer()).byteLength).toBeGreaterThan(0);
 
-    const install = Bun.spawn(["bun", "install", "--ignore-scripts", "--cache-dir", join(root, "cache")], {
+    // BUN_INSTALL_CACHE_DIR overrides --cache-dir, and a shared CI cache can already hold this fixture.
+    const install = Bun.spawn(["bun", "install", "--ignore-scripts"], {
       cwd: consumer,
+      env: { ...process.env, BUN_INSTALL_CACHE_DIR: join(root, "cache") },
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -112,8 +114,10 @@ describe("local workspace package registry", () => {
     });
     cleanups.push(registry.close);
 
-    const install = Bun.spawn(["bun", "install", "--ignore-scripts", "--cache-dir", join(root, "cache")], {
+    // BUN_INSTALL_CACHE_DIR overrides --cache-dir, and a shared CI cache can already hold this fixture.
+    const install = Bun.spawn(["bun", "install", "--ignore-scripts"], {
       cwd: consumer,
+      env: { ...process.env, BUN_INSTALL_CACHE_DIR: join(root, "cache") },
       stdout: "pipe",
       stderr: "pipe",
     });

@@ -57,6 +57,8 @@ export const marketplaceExtensionSchema = z.object({
     ref: z.string(),
   }),
   publisher: z.string().optional(),
+  /** Stable package source. origin describes the repository source used by development builds. */
+  registry: z.object({ url: z.string(), extensionId: z.string() }).optional(),
 });
 
 export const listProjectExtensionsResponseSchema = z.object({

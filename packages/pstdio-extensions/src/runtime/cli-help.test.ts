@@ -43,10 +43,10 @@ const labFixture = () =>
   });
 
 describe("buildCliHelpTree", () => {
-  test("groups CLI contributions by package name", () => {
+  test("groups CLI contributions by full extension ID", () => {
     const runtime = normalizeExtensionSources([wrap(labFixture())]);
     const [labRoot] = buildCliHelpTree(runtime);
-    expect(labRoot?.segment).toBe("lab");
+    expect(labRoot?.segment).toBe("pstdio.lab");
     expect(labRoot?.children.map((c) => c.segment)).toEqual(["counter", "say-hello"]);
     expect(labRoot?.children.find((c) => c.segment === "counter")?.children[0]?.command?.commandId).toBe(
       "pstdio.lab.command.counter.bump",

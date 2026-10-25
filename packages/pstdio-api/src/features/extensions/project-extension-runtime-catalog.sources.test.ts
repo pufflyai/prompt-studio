@@ -298,3 +298,19 @@ describe("project extension runtime catalog with real sources", () => {
     expect(imports).toBe(1);
   });
 });
+
+test("a storage folder conflict does not stop the project's extensions from loading", async () => {
+  const path = join(createTempDir(), "hello");
+  writeRuntimeExtension(path, "greet");
+  const repo = createTempDir();
+  mkdirSync(join(repo, ".pstdio/extension-storage/hello"), { recursive: true });
+  mkdirSync(join(repo, ".pstdio/extension-storage/pstdio.hello"), { recursive: true });
+  const catalog = createCatalog({
+    sources: () => [sourceRow({ id: "hello", extensionId: "pstdio.hello", path })],
+    repos: [{ id: "repo", path: repo }],
+  });
+
+  const snapshot = await catalog.get("p1");
+
+  expect(snapshot.runtime.commands.map((command) => command.id)).toEqual(["pstdio.hello.command.greet"]);
+});

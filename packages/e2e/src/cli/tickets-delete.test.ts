@@ -7,7 +7,7 @@ import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
 const findTicketDir = (repo: string, shorthand: string) => {
-  const ticketsBase = join(repo, ".pstdio", "extension-storage", "pstdio-planner", "tickets");
+  const ticketsBase = join(repo, ".pstdio", "extension-storage", "pstdio.pstdio-planner", "tickets");
   const exactDir = join(ticketsBase, shorthand);
   return existsSync(exactDir) ? exactDir : null;
 };

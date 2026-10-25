@@ -215,7 +215,7 @@ describe("pstdio planner workspace contributions", () => {
     const worktreePath = mkdtempSync(join(tmpdir(), "planner-worktree-"));
     const repoTicketPath = join(repoPath, ticketMarkdownPath(ticket.shorthand));
     const localContent = "# Local ticket edits\n";
-    mkdirSync(join(repoPath, ".pstdio", "extension-storage", "pstdio-planner", "tickets", ticket.shorthand), {
+    mkdirSync(join(repoPath, ".pstdio", "extension-storage", "pstdio.pstdio-planner", "tickets", ticket.shorthand), {
       recursive: true,
     });
     writeFileSync(repoTicketPath, localContent);

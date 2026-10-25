@@ -8,7 +8,7 @@ import { apiClient } from "@/features/api-client";
 import { resolveProjectId } from "@/features/projects/resolve-project-id";
 
 export const command = "update [name]";
-export const describe = "Update managed extensions to the release matching this host";
+export const describe = "Install the newest compatible release of managed extensions";
 
 export const builder = (yargs: Argv) =>
   yargs
@@ -72,7 +72,7 @@ export const createHandler =
       deps.log(
         argv.name
           ? `No host-managed update is available for "${argv.name}".`
-          : "All host-managed extensions already match this Prompt Studio release.",
+          : "All managed extensions are up to date.",
       );
       return;
     }

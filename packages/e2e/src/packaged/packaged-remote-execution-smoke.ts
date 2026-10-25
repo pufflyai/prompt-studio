@@ -1,18 +1,13 @@
 import { expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { verifyPocketCoderLifecycle } from "./packaged-pocketcoder-lifecycle";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
-
-const bunTypes = dirname(Bun.resolveSync("@types/bun/package.json", import.meta.dir));
-const bunRuntimeTypes = dirname(Bun.resolveSync("bun-types/package.json", bunTypes));
-const nodeTypes = dirname(Bun.resolveSync("@types/node/package.json", bunRuntimeTypes));
-const undiciTypes = dirname(Bun.resolveSync("undici-types/package.json", nodeTypes));
 
 const repoRoot = join(import.meta.dirname, "../../../..");
 
@@ -30,21 +25,10 @@ export const registerRemoteExecutionSmokeTests = () => {
       const registry = await startLocalWorkspaceRegistry({
         configPath: npmConfigPath,
         outputRoot: tempRoot,
-        packagePaths: [
-          bunTypes,
-          bunRuntimeTypes,
-          nodeTypes,
-          undiciTypes,
-          join(repoRoot, "packages/sdk"),
-          ...["mustache", "zod"].map((name) =>
-            dirname(Bun.resolveSync(`${name}/package.json`, join(repoRoot, "packages/sdk"))),
-          ),
-          dirname(Bun.resolveSync("typescript/package.json", join(repoRoot, "extensions/remote-workspaces"))),
-        ],
+        packagePaths: [join(repoRoot, "packages/sdk")],
       });
       closeRegistry = registry.close;
-      // Install real dependencies from the checkout without public registry latency.
-      appendFileSync(npmConfigPath, `registry=${registry.origin}/\n`);
+      // Third-party tarballs keep their public registry bytes and lockfile integrity.
       checkpoint("registry");
       const started = await startPackagedServe(tempRoot, {
         NPM_CONFIG_USERCONFIG: npmConfigPath,

@@ -50,7 +50,9 @@ test("report paths and creation events identify files in the default folder, ind
     }),
   );
   expect(result.path).toBe(join(projectRoot, reportMarkdownPath("review")));
-  expect(result.filesPath).toBe(join(projectRoot, ".pstdio/extension-storage/pstdio-reports/reports/review/files"));
+  expect(result.filesPath).toBe(
+    join(projectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/files"),
+  );
   expect(await readFile(result.path, "utf8")).toBe(await projectFiles.readText(reportMarkdownPath("review")));
   expect(events[0]).toMatchObject({ path: result.path, workspaceId: "selected" });
 });
@@ -71,8 +73,8 @@ test("deleting a report preserves another workspace's draft and evidence in the 
     ...makeCommandArgs({ storage, params: { workspace: "WS-2", kind: "review", template: "review" }, overrides }),
   );
   expect(second.name).toBe("review_01");
-  const secondPath = ".pstdio/extension-storage/pstdio-reports/reports/review/report_01.md";
-  const secondEvidence = ".pstdio/extension-storage/pstdio-reports/reports/review/files_01/log.txt";
+  const secondPath = ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/report_01.md";
+  const secondEvidence = ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/files_01/log.txt";
   await projectFiles.writeText(secondEvidence, "Keep this evidence");
   const secondContent = await projectFiles.readText(secondPath);
   await deleteReportCommand.run(

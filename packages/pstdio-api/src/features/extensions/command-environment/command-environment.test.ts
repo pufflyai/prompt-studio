@@ -156,12 +156,11 @@ describe("createCommandEnvironment host primitives", () => {
     expect("writeText" in env.packageFiles).toBe(false);
     await env.extensionFiles?.writeText("cache/index.json", "{}");
     expect(
-      readFileSync(
-        join(repoPath, ".pstdio/extension-storage/extension-lab/.publishers/pstdio/cache/index.json"),
-        "utf8",
-      ),
+      readFileSync(join(repoPath, ".pstdio/extension-storage/pstdio.extension-lab/cache/index.json"), "utf8"),
     ).toBe("{}");
-    expect(readFileSync(join(repoPath, ".pstdio/.gitignore"), "utf8")).toContain("/extension-storage/extension-lab/");
+    expect(readFileSync(join(repoPath, ".pstdio/.gitignore"), "utf8")).toContain(
+      "/extension-storage/pstdio.extension-lab/",
+    );
     await expect(env.extensionFiles?.readText("../secret.md")).rejects.toThrow("escapes");
   });
 
@@ -481,13 +480,13 @@ describe("createCommandEnvironment", () => {
       {
         artifactMounts: [
           {
-            id: "extension-lab.reports",
+            id: "pstdio.extension-lab.reports",
             localId: "reports",
             extensionId: "pstdio.extension-lab",
             name: "extension-lab",
             sourcePath: "/tmp/extension-lab/extension.ts",
             relativePath: "reports",
-            fullPath: ".pstdio/extension-storage/extension-lab/reports",
+            fullPath: ".pstdio/extension-storage/pstdio.extension-lab/reports",
             label: "Reports",
             watch: false,
             changedEventId: "artifact.changed:pstdio.extension-lab.artifact.reports",
@@ -504,7 +503,10 @@ describe("createCommandEnvironment", () => {
     await reports.writeText("latest.md", "hello");
 
     expect(
-      readFileSync(join(repoPath, ".pstdio", "extension-storage", "extension-lab", "reports", "latest.md"), "utf8"),
+      readFileSync(
+        join(repoPath, ".pstdio", "extension-storage", "pstdio.extension-lab", "reports", "latest.md"),
+        "utf8",
+      ),
     ).toBe("hello");
     expect(() => env.artifacts.mount("missing")).toThrow("Artifact mount not found: missing");
   });

@@ -9,7 +9,7 @@ const roots: string[] = [];
 const createMount = (ledger: ReturnType<typeof createArtifactMountWriteLedger>) => {
   const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-mount-ledger-"));
   roots.push(repoRoot);
-  const location = { repoRoot, name: "dashboards", mountPath: "boards" };
+  const location = { repoRoot, extensionId: "pstdio.dashboards", mountPath: "boards" };
   return {
     mount: createArtifactMount({ ...location, onWrite: ledger.record }),
     root: resolveArtifactMountRoot(location),
