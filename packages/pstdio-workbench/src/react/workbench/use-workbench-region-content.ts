@@ -23,6 +23,10 @@ export const useWorkbenchRegionContent = (
   const chrome = useModeChrome(workbench, region);
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
+  const hasPageContent = useWorkbenchStore(workbench.pages.store, (state) => {
+    const page = state.pages[state.activePageId ?? ""];
+    return region === "main" && Boolean(page?.main.empty);
+  });
   const modePanel = getWorkbenchModePanelForRegion(region);
   const panelAvailable =
     !modePanel || isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, modePanel);
@@ -30,6 +34,7 @@ export const useWorkbenchRegionContent = (
   return useWorkbenchStore(workbench.layout.store, (state) => {
     if (chrome !== undefined) return chrome !== false;
     if (!panelAvailable) return false;
+    if (hasPageContent) return true;
     if (state.placeholders[region]) return true;
     if (!options.locationScoped) return state.layout.regions[region].widgets.length > 0;
 
