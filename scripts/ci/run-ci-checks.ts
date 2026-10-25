@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { readFailedP1Job } from "./p1-fail-fast";
+import { createP1Observer } from "./p1-fail-fast";
 import type { TestPriority } from "./test-policy";
 
 interface Check {
@@ -110,11 +110,12 @@ export const runCiChecks = async (checks: Check[], options: Options) => {
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
   let polling = false;
+  const readPeerFailure = createP1Observer(process.env);
   const observePeers = async () => {
     if (polling || stopped || options.priority !== "P1" || !options.observePeers) return;
     polling = true;
     try {
-      const failed = await readFailedP1Job(process.env);
+      const failed = await readPeerFailure();
       if (failed) {
         console.error(`P1 stopped after ${failed.name}: ${failed.conclusion}`);
         stop();
@@ -130,7 +131,7 @@ export const runCiChecks = async (checks: Check[], options: Options) => {
     options.priority === "P1"
       ? setInterval(() => {
           void observePeers();
-        }, 15000)
+        }, 30000)
       : undefined;
   try {
     await Promise.all(Array.from({ length: Math.min(checks.length, options.concurrency ?? 1) }, worker));

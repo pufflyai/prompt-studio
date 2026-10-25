@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { currentCiProvenance } from "./ci-provenance";
+import { createCiResultsClient } from "./ci-results-client";
 import { evaluateCiGate, isGateJob, matchesJob, type ObservedJob, type PlannedJob } from "./test-policy";
 
 interface Job extends ObservedJob {
@@ -19,14 +20,7 @@ export const monitorCiGates = async (
   const attempt = Number(env.GITHUB_RUN_ATTEMPT);
   if (!repository || !runId || !attempt || !env.GH_TOKEN) throw new Error("Missing CI run identity");
   const base = `${env.GITHUB_API_URL ?? "https://api.github.com"}/repos/${repository}/actions/runs/${runId}`;
-  const request = async (url: string) => {
-    const response = await fetch(url, {
-      headers: { authorization: `Bearer ${env.GH_TOKEN}`, accept: "application/vnd.github+json" },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!response.ok) throw new Error(`CI results API: HTTP ${response.status}`);
-    return response.json();
-  };
+  const request = createCiResultsClient(env.GH_TOKEN);
   let previous = "";
   for (;;) {
     const run = (await request(base)) as { run_attempt: number; head_sha: string };
