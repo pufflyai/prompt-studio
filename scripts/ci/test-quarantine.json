@@ -79,6 +79,16 @@
     "removeWhen": "Identify and fix the slow phase and pass ten independent Apple Silicon runs within 30 seconds, preserving cold startup and all lifecycle assertions."
   },
   {
+    "runner": "bun",
+    "file": "extensions/pstdio-planner/src/commands/dependency-stacks.test.ts",
+    "name": "the owner can reconcile conflicting dependencies and submit without a human request",
+    "platforms": ["win32"],
+    "owner": "PS-907 / Planner dependency stacks",
+    "reason": "On Windows this case exhausted its 15 second allowance in one PR run; on the same branch it took 3.0 to 6.6 seconds. The case before it in the same file took 13.9 seconds instead of 2.3, so the whole Windows runner was slow. The case runs many git commands to build and reconcile a conflicting stack.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40170450203/job/121100301043"],
+    "removeWhen": "Find the slow git phase of the conflicting-stack fixture on Windows and fix it, then pass ten independent Windows runs within the existing 15 second allowance."
+  },
+  {
     "runner": "packaged-bun",
     "file": "packages/e2e/src/packaged/codex-transport.test.ts",
     "name": "the packaged Codex harness preserves protocol loss and independent provider failure",

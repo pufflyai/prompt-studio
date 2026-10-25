@@ -11,7 +11,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts --silent",
     "test:coverage": "bun test --coverage",
     "typecheck": "tsc --noEmit"
   },
