@@ -10,16 +10,25 @@ export const registerSessionPicker = (ctx: WorkbenchModuleContext) => {
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.switchSession, label: "Switch session", category: "Dashboard", icon: "Search" },
     {
-      execute: (args) => {
-        const { placementIdentity, page } = (args ?? {}) as { placementIdentity?: PlacementIdentity; page?: PageRef };
+      execute: (args, context) => {
+        const {
+          placementIdentity = context?.placement,
+          page,
+          from = context?.resource,
+        } = (args ?? {}) as { placementIdentity?: PlacementIdentity; page?: PageRef; from?: ResourceRef };
         const projectId = getDashboardSelectedProjectId(ctx);
         const activate = (resource: ResourceRef) => {
-          if (page || placementIdentity?.kind === "page")
-            return ctx.navigation.openTarget({ kind: "page", page: page ?? workbenchPages.session, resource });
-          return ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
-            resource,
-            replacePanel: placementIdentity,
-          });
+          if (!placementIdentity) return ctx.navigation.openPage({ page: page ?? workbenchPages.session, resource });
+          return ctx.navigation.openTarget(
+            {
+              kind: "viewer",
+              operation: "switch",
+              from,
+              resource,
+              ...(placementIdentity.kind === "page" ? { page: page ?? workbenchPages.session } : {}),
+            },
+            { viewer: placementIdentity, projectId },
+          );
         };
         ctx.commandPalette.open({
           resourceSearch: {

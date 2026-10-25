@@ -43,7 +43,6 @@ test("Session menus share resource actions and switch through the full history",
   await expect(page.getByRole("group", { name: "Sessions", exact: true }).getByRole("menuitem")).toHaveText([
     "New session",
     "Switch session",
-    "View all sessions",
   ]);
   await expect(page.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
   await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();

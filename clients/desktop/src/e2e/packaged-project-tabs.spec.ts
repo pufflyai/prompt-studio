@@ -74,7 +74,7 @@ test(
 
       await openPackagedProject(app.page, second);
       await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
-      await expect(app.page).toHaveURL(/\/sessions$/);
+      await expect(app.page).toHaveURL(/\/sessions\/compose$/);
       const secondPageUrl = app.page.url();
       await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveCount(2);
       await app.page.getByRole("tab", { name: first.name, exact: true }).click();

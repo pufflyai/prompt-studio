@@ -60,7 +60,7 @@ describe("createSessionBubbleModule workspace resolution", () => {
     workbench.registerModule(createSessionBubbleModule());
     try {
       openWorkspacesPage(workbench);
-      await workbench.commands.executeCommand(dashboardCommandIds.createSession);
+      await workbench.commands.executeCommand(dashboardCommandIds.createSession, { sidePanel: true });
       const placement = workbench.layout
         .getLayout()
         .regions.side.widgets.find((widget) => widget.resource?.type === "session-draft");
@@ -113,7 +113,7 @@ describe("createSessionBubbleModule workspace resolution", () => {
         .listResources("")
         .find((entry) => entry.resource.id === "workspace-active")?.resource;
       openWorkspacesPage(workbench, activeWorkspace!);
-      await workbench.commands.executeCommand(dashboardCommandIds.createSession);
+      await workbench.commands.executeCommand(dashboardCommandIds.createSession, { sidePanel: true });
       const placement = workbench.layout
         .getLayout()
         .regions.side.widgets.find((widget) => widget.resource?.type === "session-draft");

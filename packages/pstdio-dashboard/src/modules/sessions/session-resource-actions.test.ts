@@ -57,7 +57,7 @@ test("synced removal preserves a different page and archive clears the affected 
     status: "completed",
     archived: true,
   });
-  expect(workbench.pages.store.getState().location?.page.id).toBe("sessions");
+  expect(workbench.pages.store.getState().location?.page.id).toBe("session-composer");
   expect(workbench.pages.store.getState().location?.resource).toBeUndefined();
   workbench.dispose();
 });

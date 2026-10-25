@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { createDashboardSessionDraftPersistence } from "./session-draft-persistence";
-import { createDashboardSessionSelectionPersistence } from "./session-selection-persistence";
 
 const createStorage = (): WorkbenchStorageLike => {
   const values = new Map<string, string>();
@@ -27,26 +26,6 @@ const createProjectSelection = () => {
 };
 
 describe("dashboard session persistence", () => {
-  test("isolates the selected session by project and clears only the active project", () => {
-    const storage = createStorage();
-    const projectSelection = createProjectSelection();
-    const persistence = createDashboardSessionSelectionPersistence({
-      namespace: "dashboard-test",
-      storage,
-      projectSelection,
-    });
-
-    persistence.setSelectedSessionId("session-a");
-    projectSelection.select("project-b");
-    expect(persistence.getSelectedSessionId()).toBeUndefined();
-
-    persistence.setSelectedSessionId("session-b");
-    persistence.setSelectedSessionId(undefined);
-    projectSelection.select("project-a");
-
-    expect(persistence.getSelectedSessionId()).toBe("session-a");
-  });
-
   test("isolates drafts by project and removes an explicitly cleared draft", () => {
     const storage = createStorage();
     const projectSelection = createProjectSelection();

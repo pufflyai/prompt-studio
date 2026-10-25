@@ -65,7 +65,7 @@ for (const destination of ["start", "extension", "navigate-away"] as const) {
       await registered;
       if (destination === "extension") await expect(page.locator('iframe[title="Lab"]')).toBeVisible();
       if (destination === "start") await expect(page.getByTestId("start-page")).toBeVisible();
-      if (destination === "navigate-away") await expect(page).toHaveURL(`${projectUrl}/sessions`);
+      if (destination === "navigate-away") await expect(page).toHaveURL(`${projectUrl}/sessions/compose`);
       // A page with its own navigation replaces the project rows. Return to Start
       // after proving restoration so the extension's root entry is visible again.
       if (destination !== "start") await page.goto(projectUrl);

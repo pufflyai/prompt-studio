@@ -2,19 +2,16 @@ import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { HarnessParamValues } from "@pstdio/ui/param-editor";
-import { batchWorkbenchChanges } from "@pstdio/workbench";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { createDashboardSessionResource } from "@/shared/app/resources";
-import { sessionPanelRef } from "../bubble/session-panel-placements";
 import { toSessionNotice } from "../data/session-notice";
-import { rememberDashboardSessionResource } from "../state/session-selection";
 import {
   createPendingFollowUpState,
   failPendingFollowUp,
   type PendingFollowUpState,
   updatePendingFollowUp,
 } from "./session-chat-state";
-import { type SessionViewContext, sessionViewPlacement, sessionViewShowsDraft } from "./session-view-context";
+import type { SessionViewContext } from "./session-view-context";
 
 // Post-send work runs on the request promise. Callbacks passed to TanStack's `mutate()` are
 // skipped once the chat panel unmounts, which would leave the message without an owner.
@@ -48,52 +45,20 @@ const createSessionTitle = (prompt: string) => prompt.slice(0, 100) || "Session"
 
 export const openCreatedSessionFromDraft = (args: {
   input: SessionViewContext;
-  draftKey: string;
   sessionId: string;
   prompt: string;
   projectId: string;
 }) => {
-  if (!sessionViewShowsDraft(args.input, args.draftKey)) return undefined;
   const title = createSessionTitle(args.prompt);
   const resource = createDashboardSessionResource(args.sessionId, title, args.projectId);
-
-  rememberDashboardSessionResource(args.input.workbench, resource);
   const identity = args.input.instance.placementIdentity;
-  if (identity?.kind === "mode") {
-    args.input.workbench.modePlacements.updatePlacement(identity, { resource, title });
-    args.input.workbench.layout.activatePanel(args.input.instance.instanceId);
-    return identity;
-  }
-  if (identity?.kind === "page") {
-    const placement = sessionViewPlacement(args.input)!;
-    const workbench = args.input.workbench;
-    const routed =
-      placement.region === "main" &&
-      workbench.layout.getActivePanel("main")?.instanceId === placement.instance.instanceId;
-    if (!routed) {
-      return batchWorkbenchChanges(() => {
-        const session = workbench.modePlacements.openPlacement({
-          panel: sessionPanelRef(workbench.modes.getActiveModeId() ?? "project"),
-          resource,
-          region: placement.region,
-          open: "pin",
-        });
-        workbench.closePlacement(identity);
-        return session;
-      });
-    }
-    return batchWorkbenchChanges(() => {
-      const result = workbench.pageLocations.navigate({
-        kind: "page",
-        page: workbenchPages.session,
-        resource,
-      });
-      if (!result.ok) throw new Error(result.diagnostic.message);
-      if (sessionViewPlacement(args.input)) workbench.closePlacement(identity);
-      return identity;
-    });
-  }
-  throw new Error("A session draft must be opened through an owned placement.");
+  if (!identity) throw new Error("A session draft must have an owned viewer");
+  const result = args.input.changeViewer?.({
+    operation: "replace",
+    resource,
+    ...(identity.kind === "page" ? { page: workbenchPages.session } : {}),
+  });
+  return result && result !== "stale" ? identity : undefined;
 };
 
 // Ids only need to be unique among the messages a conversation shows at once.

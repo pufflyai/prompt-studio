@@ -8,7 +8,6 @@ import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "../workspaces/module";
-import { createSessionBubbleModule } from "./bubble/module";
 import { createSessionsModule } from "./module";
 
 afterEach(() => {
@@ -20,7 +19,6 @@ afterEach(() => {
 const createWorkspaceSessionWorkbench = () => {
   const workbench = createWorkbench();
   workbench.registerModule(createSidenavModule());
-  workbench.registerModule(createSessionBubbleModule());
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });

@@ -130,16 +130,13 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   await openTabCustomMenu(sessionTabs.first());
   const menu = page.getByRole("menu", { name: "New session context menu" });
   const newSession = menu.getByRole("menuitem", { name: "New session" });
-  const viewAllSessions = menu.getByRole("menuitem", { name: "View all sessions" });
   await expect(newSession).toBeVisible();
-  await expect(viewAllSessions).toBeVisible();
   await expect(menu.getByRole("menuitem").first()).toContainText("New session");
   await expect(menu.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "Reset layout", exact: true })).toBeVisible();
   await expect(menu.getByRole("group", { name: "Sessions", exact: true })).toBeVisible();
   await expect(menu.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
   await expect(newSession.locator("svg")).toHaveClass(/lucide-message-square-plus/);
-  await expect(viewAllSessions.locator("svg")).toHaveClass(/lucide-arrow-up-right/);
 
   await switchSession(page, "First context session");
   await expect(sideHeader.getByRole("tab", { name: /First context session/ })).toBeVisible();

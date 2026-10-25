@@ -148,7 +148,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByRole("option", { name: /^Notes/ }).first()).toBeVisible({ timeout: 30_000 });
   for (const [key, label, destination] of [
-    ["S", "Sessions", /\/sessions$/],
+    ["S", "Sessions", /\/sessions\/compose$/],
     ["W", "Workspaces", /\/workspaces$/],
     ["O", "Notes", /\/notes$/],
     ["P", "Tickets", /\/tickets$/],

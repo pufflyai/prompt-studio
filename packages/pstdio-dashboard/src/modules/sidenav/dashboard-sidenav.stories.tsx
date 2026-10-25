@@ -17,7 +17,6 @@ import { createHelpModule } from "../help/module";
 import { createNotificationsModule } from "../notifications/module";
 import { DesktopProjectTabsController } from "../projects/desktop-project-tabs-controller";
 import { createProjectsModule } from "../projects/module";
-import { createSessionBubbleModule } from "../sessions/bubble/module";
 import { createSessionsModule } from "../sessions/module";
 import { createSettingsModule } from "../settings/module";
 import { createStartModule } from "../start/module";
@@ -204,7 +203,6 @@ const bootstrapWorkbench = (desktop = false) => {
     createHeadersModule(desktop ? new DesktopProjectTabsController([], async () => {}) : undefined),
     createHelpModule(),
     createNotificationsModule(),
-    createSessionBubbleModule(),
     createSessionsModule(),
     createSettingsModule(),
     createStartModule(),
