@@ -269,7 +269,8 @@ test("renames a moved session and restores its destination after reload", async 
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", id);
   }, project.id);
-  await page.goto(`/projects/${project.id}/`);
+  // Home's Main is tabless, so the move needs a page whose Main accepts tabs.
+  await page.goto(`/projects/${project.id}/sessions`);
   await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const side = page.locator('[data-workbench-panel-header="side"]');

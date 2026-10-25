@@ -142,7 +142,7 @@ export const verifyPackagedSessionMenus = async (
     (socket) => new URL(socket.url()).pathname === "/v1/terminal",
   );
   await bottomHeader.getByRole("button", { name: "Add panel", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
   const terminalSocket = await terminalConnection;
   const terminalWidgetId = await bottomHeader
     .locator('[data-workbench-tab]:has([role="tab"][aria-selected="true"])')

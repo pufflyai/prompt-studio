@@ -27,7 +27,7 @@ export const verifySessionTools = async (page: Page) => {
   await expect(main.getByRole("tab")).toHaveCount(1);
   await expect(main.getByRole("tab", { selected: true })).toContainText("Start from a New session tab");
   await main.getByRole("button", { name: "Add panel", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
   const openedTerminal = main.getByRole("tab").filter({ hasText: "Terminal" });
   await expect(openedTerminal).toBeVisible();
   const terminalId = await openedTerminal.locator("..").getAttribute("data-workbench-tab");
@@ -61,7 +61,7 @@ export const verifySessionTools = async (page: Page) => {
   await main.getByRole("button", { name: "Add panel", exact: true }).click();
   const menu = page.getByRole("menu", { name: "Add panel", exact: true });
   await expect(menu.getByRole("menuitem")).toHaveCount(2);
-  await expect(menu.getByRole("menuitem", { name: "Terminal", exact: true })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Open terminal", exact: true })).toBeVisible();
   await menu.getByRole("menuitem", { name: "New session", exact: true }).click();
   await expect(main.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await expect(editor).toBeVisible();

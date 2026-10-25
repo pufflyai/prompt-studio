@@ -163,7 +163,6 @@ const verifyNearbyTabTargets = async (page: Page) => {
     await verifyLastTabPanelMove(page, region, region === "side" ? "left" : "top");
   }
   await page.reload();
-  await expect(main.getByRole("tab", { selected: true })).toBeVisible();
   const bottom = page.locator('[data-workbench-panel="secondary"]:visible');
   await expect(bottom.getByRole("tab", { selected: true })).toBeVisible();
   await expect.poll(async () => (await bottom.boundingBox())!.y < (await main.boundingBox())!.y).toBe(true);

@@ -46,8 +46,9 @@ test("the project crumb leaves a Sidenav level for the last root-level page", as
   await expect(row("Sessions")).toBeVisible();
 
   // The saved board survives a reload that opens a level page straight from the URL.
+  // Returning to Sessions restores its selected session tab, and the route follows Main.
   await row("Sessions").click();
-  await expect(page).toHaveURL(/\/sessions$/);
+  await expect(page).toHaveURL(/\/session\?/);
   await page.reload();
   await expect(row("Exit session")).toBeVisible();
   await projectCrumb.click();

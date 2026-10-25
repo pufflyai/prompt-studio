@@ -136,7 +136,7 @@ test("keeps the tab viewport unscrolled during drag and supports pointer and key
     await header.getByRole("button", { name: "Add panel", exact: true }).click();
     const terminalChoice = page
       .getByRole("menu", { name: "Add panel" })
-      .getByRole("menuitem", { name: "Terminal", exact: true });
+      .getByRole("menuitem", { name: "Open terminal", exact: true });
     if (await terminalChoice.isVisible()) await terminalChoice.click();
     await expect(header.getByRole("tab")).toHaveCount(index + 1);
   }
