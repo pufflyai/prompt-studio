@@ -32,7 +32,8 @@ const shutdownFixture = (root: string, inheritedOutput = false) =>
           await Bun.write(process.argv[2], "closed");
           rmSync(process.argv[1]);
           if (${inheritedOutput}) {
-            const descendant = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {stdio: "inherit"});
+            const descendant = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {stdio: "inherit", detached: true});
+            descendant.unref();
             await Bun.write(process.argv[3], String(descendant.pid));
           }
           process.exit(0);
@@ -78,6 +79,7 @@ test("runner cancellation releases a shutdown wait when a descendant keeps outpu
     });
     await exited;
     expect(child.exitCode).toBe(0);
+    expect(() => process.kill(Number(readFileSync(join(root, "descendant.pid"), "utf8")), 0)).not.toThrow();
     await stopPendingTestProcesses();
     await Bun.sleep(0);
     expect(failure).toMatchObject({ name: "AbortError" });

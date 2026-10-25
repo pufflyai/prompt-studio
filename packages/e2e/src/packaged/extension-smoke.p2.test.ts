@@ -189,8 +189,7 @@ test("interruption stops the browser and host while retaining requested evidence
     terminal.send(JSON.stringify({ type: "write", data: Buffer.from("\u0003").toString("base64") }));
     let message = await next();
     while (message.type !== "exit") message = await next();
-    expect(message.code ?? message.signal).not.toBeNull();
-    expect(message.code ?? message.signal).not.toBe(0);
+    expect(message.code).toBe(130);
     expect(() => process.kill(descriptor.pid, 0)).toThrow();
     expect(existsSync(join(retained, "browser-profile"))).toBe(true);
     expect(existsSync(join(retained, "home/runtime.json"))).toBe(false);

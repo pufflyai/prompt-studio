@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
@@ -13,11 +14,13 @@ import { expectPackagedStatusBarOrder } from "./packaged-status-bar-order";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<string, string>) => {
+  logTestPhase("connection status: launch browser");
   const browser = await chromium.launch(PROVISIONED_CHROMIUM);
   try {
     const page = await browser.newPage({ extraHTTPHeaders: headers });
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await page.goto(baseUrl);
+    logTestPhase("connection status: open developer settings");
     await page.getByRole("option", { name: "Settings", exact: true }).click();
     await page.getByRole("option", { name: "Developer tools", exact: true }).click();
     const toggle = page.getByRole("checkbox", { name: "Show connection status" });
@@ -31,6 +34,7 @@ const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<s
     await expect(connected).toHaveCSS("border-top-width", "0px");
     await expect(connected).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
     await expect(connected.locator("svg")).toHaveCSS("width", "6px");
+    logTestPhase("connection status: reload persisted settings");
     await page.reload();
     await expect(toggle).toBeChecked();
     await expect(connected).toBeVisible();
@@ -45,6 +49,7 @@ const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<s
     await page.evaluate(() => window.stop());
     const warning = page.getByRole("status", { name: /backend connection lost/i, includeHidden: true });
     await expect(warning).toBeVisible();
+    logTestPhase("connection status: disconnected warning shown");
     await expect(warning).not.toHaveText("");
     await toggle.focus();
     await toggle.press("Space");
@@ -58,6 +63,7 @@ const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<s
       page.getByRole("tooltip", { name: (await warning.getAttribute("aria-label")) ?? "", exact: true }),
     ).toBeVisible();
     await page.context().setOffline(false);
+    logTestPhase("connection status: reconnect and reload");
     await page.reload();
     await expect(connected).toBeVisible();
     await connected.hover();
@@ -71,6 +77,7 @@ const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<s
     await expect(connected).not.toBeVisible();
     await page.reload();
     await expect(toggle).not.toBeChecked();
+    logTestPhase("connection status: settings checked");
   } finally {
     await browser.close();
   }
@@ -85,18 +92,21 @@ test(
     let child: ChildProcess | null = null;
 
     try {
+      logTestPhase("connection status: start runtime");
       const started = await startPackagedServe(tempRoot, {
         PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture"),
       });
       child = started.child;
       const folder = join(tempRoot, "connection-project");
       mkdirSync(folder);
+      logTestPhase("connection status: create project");
       const project = await fetch(`${started.baseUrl}/v1/projects`, {
         method: "POST",
         headers: { ...runtimeAuthorization(started.descriptor), "Content-Type": "application/json" },
         body: JSON.stringify(folderProjectInput({ name: "Connection status" }, folder)),
       });
       expectBun(project.ok).toBe(true);
+      logTestPhase("connection status: project created");
       await expectPackagedConnectionStatus(started.baseUrl, runtimeAuthorization(started.descriptor));
     } finally {
       if (child) await stopProcess(child);

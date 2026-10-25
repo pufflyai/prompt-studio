@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -18,10 +18,10 @@ test("a packaged CLI gives unchanged extension contents identical archives acros
     await writeRegistryNotes(source, "0.45.1");
     const args = ["extensions", "pack", source, "--out-dir", root];
     const path = (await runPackagedAsync(args, root, { PSTDIO_HOME: home })).trim();
-    const first = await Bun.file(path).bytes();
+    const first = await readFile(path);
     await Bun.sleep(1100);
     const repeated = (await runPackagedAsync(args, root, { PSTDIO_HOME: home })).trim();
-    expect(await Bun.file(repeated).bytes()).toEqual(first);
+    expect(await readFile(repeated)).toEqual(first);
   } finally {
     // ADR 0039: Windows can retain an OS handle after the awaited process close.
     await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
@@ -82,8 +82,8 @@ test("a packaged host packs, installs and upgrades an independently published ex
       "0.45.1",
     );
     const manifestPath = join(source, "package.json");
-    const manifest = JSON.parse(await Bun.file(manifestPath).text());
-    await Bun.write(manifestPath, JSON.stringify({ ...manifest, publisher: "con" }));
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    await writeFile(manifestPath, JSON.stringify({ ...manifest, publisher: "con" }));
     const portablePackage = (
       await runPackagedAsync(["extensions", "pack", source, "--out-dir", root], root, env)
     ).trim();
