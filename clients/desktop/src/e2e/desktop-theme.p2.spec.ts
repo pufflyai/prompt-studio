@@ -50,7 +50,7 @@ const startPersistentRuntime = async (home: string) => {
       return;
     }
     response.setHeader("content-type", "text/html");
-    response.end("<!doctype html><html><body><main>Theme dashboard</main></body></html>");
+    response.end("<!doctype html><html><body><main id='root'>Theme dashboard</main></body></html>");
   });
   await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
   cleanup.push(async () => {
