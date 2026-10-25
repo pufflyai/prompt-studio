@@ -10,7 +10,7 @@ the persistence contract.
 Run from the repository root:
 
 ```sh
-bun packages/pstdio-db/src/services/extension-storage/document-storage.bench.ts
+bun packages/pstdio-db/src/services/extension-storage/document-storage.p3.bench.ts
 ```
 
 The benchmark uses real PGlite storage. It saves one ticket repeatedly, then measures

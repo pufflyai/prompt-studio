@@ -54,7 +54,7 @@ const createBlobStore = () => {
 };
 
 // A wire-level peer for the compiled host. Real PostgreSQL/object-store behavior is checked in
-// services/relay/src/transport/document-client.integration.ts.
+// services/relay/src/transport/document-client.p1.integration.ts.
 export const createPackagedSyncPeer = (
   tls: { key: Bun.BunFile; cert: Bun.BunFile } | undefined,
   hostname = "127.0.0.1",

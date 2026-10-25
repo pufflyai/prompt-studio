@@ -56,23 +56,23 @@ States: fixed and verified, open, blocked, accepted limit. "Fixed" means fixed i
 
 | ID | Finding | State | Owner | Closure evidence or next step |
 | --- | --- | --- | --- | --- |
-| R01 | Installer rewrote same-name skills despite the PRD | Fixed and verified | CLI maintainers | `install-skills.test.ts`, `setup.test.ts`, `src/cli/agents.test.ts` |
-| R02 | Workspace sync overwrote unowned and edited skill files | Fixed and verified | Runtime maintainers | `workspace-files-mount.test.ts`, `workspace-files.test.ts` |
+| R01 | Installer rewrote same-name skills despite the PRD | Fixed and verified | CLI maintainers | `install-skills.p0.test.ts`, `setup.p0.test.ts`, `src/cli/agents.p2.test.ts` |
+| R02 | Workspace sync overwrote unowned and edited skill files | Fixed and verified | Runtime maintainers | `workspace-files-mount.p0.test.ts`, `workspace-files.p0.test.ts` |
 | R03 | Kept skill files are reported only in the host log at `warn` level | Open | Product owner | Decide whether a visible notice is needed |
 | R04 | `syncDir` doc comment in `pstdio-api-contracts` predates the ownership rule | Open | SDK maintainers | Update in a separate SDK PR (the separation check forbids it here) |
-| R05 | Packaged auto-start and close hit 60 s under a non-reaping PID 1 | Fixed and verified | Runtime maintainers | `process-liveness.test.ts`; Linux no-init runs at about 1.8 s; [lesson 0017](../../lessons-learned/0017-unreaped-processes-look-alive.md) |
+| R05 | Packaged auto-start and close hit 60 s under a non-reaping PID 1 | Fixed and verified | Runtime maintainers | `process-liveness.p1.test.ts`; Linux no-init runs at about 1.8 s; [lesson 0017](../../lessons-learned/0017-unreaped-processes-look-alive.md) |
 | R06 | Zombies still collect under a non-reaping PID 1 | Accepted limit | Runtime maintainers | Run containers with an init process, as CI does |
-| R07 | "Harness has been disposed" after installs | Fixed and verified | Runtime maintainers | `agent-listing-during-install.test.ts` |
+| R07 | "Harness has been disposed" after installs | Fixed and verified | Runtime maintainers | `agent-listing-during-install.p1.test.ts` |
 | R08 | A listing can still fail once if the listed harness's own source changes mid-request | Open | Runtime maintainers | Decide whether retired handles should finish in-flight reads |
-| R09 | Piped `--json` output stopped at 64 KiB | Fixed and verified (temporary) | CLI maintainers | `piped-output.test.ts`; remove per ADR 0081 when Bun drains `console` writes |
-| R10 | Bare command groups failed without the API | Fixed and verified | CLI maintainers | `src/cli/feedback.test.ts` |
-| R11 | `pst extensions add .` was read as a catalog name | Fixed and verified | CLI maintainers | `extensions-add-paths.test.ts`, `add.test.ts` |
-| R12 | Checks did not say what was checked or whose versions were compared | Fixed and verified | CLI maintainers | `check.test.ts`, `package-manifest-api-versions.test.ts`, runtime `check.test.ts` |
+| R09 | Piped `--json` output stopped at 64 KiB | Fixed and verified (temporary) | CLI maintainers | `piped-output.p2.test.ts`; remove per ADR 0081 when Bun drains `console` writes |
+| R10 | Bare command groups failed without the API | Fixed and verified | CLI maintainers | `src/cli/feedback.p2.test.ts` |
+| R11 | `pst extensions add .` was read as a catalog name | Fixed and verified | CLI maintainers | `extensions-add-paths.p1.test.ts`, `add.p0.test.ts` |
+| R12 | Checks did not say what was checked or whose versions were compared | Fixed and verified | CLI maintainers | `check.p0.test.ts`, `package-manifest-api-versions.p0.test.ts`, runtime `check.p0.test.ts` |
 | R13 | The host's own app and extension API versions are not reported | Open | SDK and runtime maintainers | Add `host` versions to the diagnostics contract in an SDK PR |
 | R14 | Source and installed checks use different inner JSON shapes | Accepted limit | CLI maintainers | Both shapes are documented; unify when the source check can call the host checker |
 | R15 | Packaged tests launched a browser the installer does not provision | Fixed and verified | Developer tooling | Clean `PLAYWRIGHT_BROWSERS_PATH` runs; CI installs `--no-shell` only |
 | R16 | Isolated stack needed image edits behind a managed proxy and CA | Fixed and verified | Developer tooling | `NODE_EXTRA_CA_CERTS` build context, tested with a test CA |
-| R17 | Missing login files became empty folders on the host | Fixed and verified | Developer tooling | `isolated-host-files.test.ts` |
+| R17 | Missing login files became empty folders on the host | Fixed and verified | Developer tooling | `isolated-host-files.p0.test.ts` |
 | R18 | `--down` left unnamed `node_modules` volumes behind | Fixed and verified | Developer tooling | Start, recreate, and down leave zero volumes |
 | R19 | Cold first `dev:isolated` start outlasts the 90 s readiness wait | Blocked on approval | Developer tooling | Measured 171 s and 176 s; needs an approved readiness rule |
 | R20 | API requests stall while default extensions install | Open | Runtime maintainers | Requests should answer or fail clearly during installs |
@@ -93,7 +93,7 @@ States: fixed and verified, open, blocked, accepted limit. "Fixed" means fixed i
 | R35 | Docker address pools exhausted by many stacks | Accepted limit | Each stack owner | Documented in the setup guide |
 | R36 | Release, docs deploy, and post-release verification | Open | Release owner | Happens after merge through the normal release workflow |
 | R37 | Resource links have no dashboard entry point; the "Related resources" command has no menu or palette placement | Open | Workbench and dashboard maintainers | Place the command and pass the search, link, open, and unlink journey in Playwright |
-| R38 | Linking to an undeclared resource kind reported "ambiguous" | Fixed and verified | Platform API | `resource-link-policy.test.ts`; live stack message |
+| R38 | Linking to an undeclared resource kind reported "ambiguous" | Fixed and verified | Platform API | `resource-link-policy.p1.test.ts`; live stack message |
 | R39 | Codex runs with `approvalPolicy: "never"`, so approvals cannot be tested | Open | harness-codex owner | Decide and document the approval policy |
 | R40 | Real OpenCode and Claude Code sessions not run (expired OpenCode key; no Claude credential in the container) | Blocked | Machine owner | Renew credentials, then rerun one short session each. Codex passed a first turn and a follow-up |
 | R41 | Windows and Linux desktop installs and update channels not validated natively | Blocked | Release maintainers | Run on each platform. macOS 0.43.1 app signature, notarization, and CLI checksum were verified |
@@ -274,14 +274,14 @@ bun -e 'for (const p of process.argv.slice(1)) { JSON.parse(await Bun.file(p).te
 Targeted examples and broader gates when their affected scope requires them:
 
 ```sh
-bun run --cwd packages/pstdio-dashboard test src/modules/resource-links/resource-link-resolution.test.ts
-bun run --cwd packages/pstdio-sync-contracts test:conformance
+bun run --cwd packages/pstdio-dashboard test src/modules/resource-links/resource-link-resolution.p0.test.ts
+bun run --cwd packages/pstdio-sync-contracts test:integration
 bun run --cwd clients/landing-page build
 # For packaged runtime/assets changes, after the documented package build:
 PSTDIO_VERIFY_PLATFORM_PKG=cli-linux-x64 bun run --cwd scripts verify:packages
 ```
 
-Use [packaged auto-start tests](../../../packages/e2e/src/packaged/packaged.test.ts), [runtime lifecycle tests](../../../packages/e2e/src/packaged/runtime-lifecycle.test.ts), [core extension smoke checks](../../../packages/e2e/src/packaged/packaged-core-extensions-smoke.ts), and [packaged serve checks](../../../packages/e2e/src/packaged/packaged-serve-smoke.test.ts) to select the focused regression runs. Browser runs use `bun run dev:playwright` and its printed URL; stop with `bun run dev:playwright:down`. Never start the app directly or inspect its live database.
+Use [packaged auto-start tests](../../../packages/e2e/src/packaged/packaged.p1.test.ts), [runtime lifecycle tests](../../../packages/e2e/src/packaged/runtime-lifecycle.p1.test.ts), [core extension smoke checks](../../../packages/e2e/src/packaged/packaged-core-extensions-smoke.p1.test.ts), and [packaged serve checks](../../../packages/e2e/src/packaged/packaged-serve-smoke.p2.test.ts) to select the focused regression runs. Browser runs use `bun run dev:playwright` and its printed URL; stop with `bun run dev:playwright:down`. Never start the app directly or inspect its live database.
 
 ## Implementation handoff checklist
 

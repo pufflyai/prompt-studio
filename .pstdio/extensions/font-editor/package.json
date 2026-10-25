@@ -11,8 +11,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "test": "bun ../../../scripts/ci/run-bun-tests.ts",
+    "typecheck": "bun check"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
@@ -25,7 +25,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/pako": "^2.0.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

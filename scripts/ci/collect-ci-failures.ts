@@ -16,7 +16,10 @@ interface WorkflowJob {
   conclusion: string | null;
   started_at: string | null;
   completed_at: string | null;
-  steps: Array<{ name: string; conclusion: string | null }>;
+  created_at?: string;
+  runner_name?: string;
+  labels?: string[];
+  steps: Array<{ name: string; conclusion: string | null; started_at?: string; completed_at?: string }>;
 }
 
 const githubText = async (endpoint: string) => {
@@ -82,6 +85,15 @@ export const collectCiFailures = async (repository: string, since: Date, until: 
             conclusion: job.conclusion,
             started: job.started_at,
             completed: job.completed_at,
+            runCreated: request.run.created_at,
+            created: job.created_at ?? null,
+            runner: job.runner_name ?? null,
+            labels: job.labels,
+            steps: job.steps.map((step) => ({
+              name: step.name,
+              started: step.started_at ?? null,
+              completed: step.completed_at ?? null,
+            })),
             failedSteps: job.steps.filter((step) => step.conclusion === "failure").map((step) => step.name),
           });
       }

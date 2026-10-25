@@ -71,4 +71,4 @@ jobs:
         working-directory: extensions/${{ matrix.harness.extension }}
         env:
           INSTALLED_CLI_TESTS: "1"
-        run: bun test src/installed-cli.test.ts
+        run: bun test src/installed-cli.p0.test.ts

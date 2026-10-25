@@ -1,0 +1,162 @@
+name: Production validation
+# Release Packages calls this once per daily nightly candidate and for each stable
+# candidate. Manual diagnostics use the same workloads and exact artifact contract.
+on:
+  workflow_call:
+    outputs:
+      certificate_name:
+        description: Immutable decision artifact produced by this complete validation
+        value: ${{ jobs.certify.outputs.certificate_name }}
+    inputs:
+      ref:
+        description: Exact generated version commit, or reviewed stable commit
+        required: true
+        type: string
+      source_sha:
+        description: Original source commit before generated version changes
+        required: true
+        type: string
+      artifact_run_id:
+        required: true
+        type: string
+      artifact_attempt:
+        required: true
+        type: string
+      channel:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Exact candidate version commit
+        required: true
+        type: string
+      source_sha:
+        description: Original source commit
+        required: true
+        type: string
+      artifact_run_id:
+        description: Release run that built this candidate
+        required: true
+        type: string
+      artifact_attempt:
+        required: true
+        default: "1"
+        type: string
+      channel:
+        type: choice
+        options: [stable, nightly]
+        default: stable
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Download immutable candidate build identity
+        uses: actions/download-artifact@v4
+        with:
+          name: release-build-attempt-${{ inputs.artifact_attempt }}
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+      - name: Record immutable candidate artifact identities
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
+          ARTIFACT_ATTEMPT: ${{ inputs.artifact_attempt }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          VERSION_SHA: ${{ inputs.ref }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$ARTIFACT_RUN_ID/artifacts?per_page=100" > production-artifacts.json
+          bun scripts/ci/production-payload.ts check
+          bun scripts/ci/production-artifacts.ts production-artifacts.json
+      - name: Preserve candidate identity
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-candidate-attempt-${{ github.run_attempt }}
+          path: |
+            production-candidate.json
+            production-artifacts.json
+          if-no-files-found: error
+  functional:
+    uses: ./.github/workflows/test-and-build.yml
+    with:
+      profile: production
+      release_channel: ${{ inputs.channel }}
+      source_sha: ${{ inputs.ref }}
+      original_source_sha: ${{ inputs.source_sha }}
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      artifact_attempt: ${{ inputs.artifact_attempt }}
+  signed_functional:
+    uses: ./.github/workflows/production-desktop.yml
+    with:
+      ref: ${{ inputs.ref }}
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      channel: ${{ inputs.channel }}
+      source_sha: ${{ inputs.source_sha }}
+      artifact_attempt: ${{ inputs.artifact_attempt }}
+      kind: functional
+  performance:
+    uses: ./.github/workflows/production-performance.yml
+    with:
+      ref: ${{ inputs.ref }}
+      source_sha: ${{ inputs.source_sha }}
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      artifact_attempt: ${{ inputs.artifact_attempt }}
+      channel: ${{ inputs.channel }}
+  services:
+    needs: candidate
+    uses: ./.github/workflows/production-services.yml
+    with:
+      ref: ${{ inputs.ref }}
+      source_sha: ${{ inputs.source_sha }}
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      artifact_attempt: ${{ inputs.artifact_attempt }}
+      channel: ${{ inputs.channel }}
+  certify:
+    if: always()
+    needs: [candidate, functional, signed_functional, performance, services]
+    outputs:
+      certificate_name: ${{ steps.certify.outputs.certificate_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: production-candidate-attempt-${{ github.run_attempt }}
+      - name: Download actual consumer attestations
+        uses: actions/download-artifact@v4
+        with:
+          pattern: production-evidence-*-attempt-${{ github.run_attempt }}
+          path: production-evidence
+      - name: Require complete matching candidate certification
+        id: certify
+        env:
+          PRODUCTION_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          bun scripts/ci/production-candidate.ts production-candidate.json
+          echo "certificate_name=production-certificate-attempt-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+      - name: Preserve the decision, including every blocker
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-certificate-attempt-${{ github.run_attempt }}
+          path: production-certificate.json
+          if-no-files-found: error

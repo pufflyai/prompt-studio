@@ -8,7 +8,7 @@ Because nx buffers task output until completion, the hanging task produced no ou
 
 ## Why
 
-API tests that enable real repo extensions (for example `core-extension-catalog.test.ts` enabling `extensions/pstdio-planner`) start the extension source watcher, which called `fs.watch(source_path, { recursive: true })`.
+API tests that enable real repo extensions (for example `core-extension-catalog.p1.test.ts` enabling `extensions/pstdio-planner`) start the extension source watcher, which called `fs.watch(source_path, { recursive: true })`.
 
 - On macOS, recursive `fs.watch` maps to FSEvents: registration is O(1) and never walks the tree, so the watcher is effectively free locally.
 - On Linux there is no native recursive watch, so the runtime crawls the tree and registers every directory. `extensions/pstdio-planner/node_modules` contains symlinks straight into the monorepo's root `.bun` store (`lucide-react -> ../../../node_modules/.bun/lucide-react@...`), and the crawl follows them — into hundreds of thousands of files.

@@ -103,7 +103,9 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "remote-workspaces",
     "workbench-fixture",
     "storage-scale-fixture",
+    "pstdio-scripts",
   ],
+  "storybook-tests": ["@pstdio/ui", "@pstdio/workbench", "pstdio-dashboard"],
   "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],
   "@pstdio/desktop": [
     "@pstdio/ui",
@@ -112,6 +114,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-logging",
     "pstdio-paths",
     "workbench-fixture",
+    "pstdio-scripts",
   ],
   "@pstdio/landing-page": ["@pstdio/ui"],
   "motion-lab": ["@pstdio/sdk", "@pstdio/ui"],

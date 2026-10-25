@@ -10,10 +10,9 @@
     "build": "bun build src/server.ts src/index.ts --target bun --outdir dist",
     "start": "bun ./dist/server.js",
     "db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
-    "test": "bun test src --pass-with-no-tests",
-    "test:isolated": "SYNC_TEST_ENTRY=../../services/psx/src/registry.integration.ts bun ../../packages/pstdio-sync-contracts/scripts/isolated.ts"
+    "test:integration": "bun ../../packages/pstdio-sync-contracts/scripts/isolated.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1152.0",
@@ -22,7 +21,7 @@
     "pstdio-extensions": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/pg": "^8.18.0",
     "drizzle-kit": "^0.31.9",
     "typescript": "6.0.2"
