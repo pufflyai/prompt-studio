@@ -1,24 +1,13 @@
-import { and, eq, lte, sql } from "drizzle-orm";
+import { eq, lte, sql } from "drizzle-orm";
 import type { createRelayAssets } from "../assets/assets";
 import type { RelayLimits } from "../limits";
-import { lockAccount, removeRows } from "./accounts";
-import { blobOwner } from "./blobs";
+import { removeRows } from "./accounts";
+import { cleanupBlobGraph } from "./blob-graph-cleanup";
 import type { connectRelay } from "./database";
-import { syncBlobs, syncObjectDeletions, syncStates, syncUpdates } from "./document-schema";
+import { syncObjectDeletions, syncStates, syncUpdates } from "./document-schema";
 import type { PayloadObjects } from "./payloads";
 
 const batchSize = 500;
-
-// A blob is unused when no stored update or latest state lists it and its last use is older than the
-// grace period (R21). Unfinished uploads expire after the grace period too.
-const unusedBlob = (cutoff: Date) => sql`(
-  (b."status" = 'open' AND b."createdAt" <= ${cutoff})
-  OR (b."status" = 'completed' AND coalesce(b."lastUsedAt", b."completedAt") <= ${cutoff}
-    AND NOT EXISTS (SELECT 1 FROM relay_sync_updates u
-      WHERE u."projectKey" = b."projectKey" AND u."blobIds" @> ARRAY[b."blobId"])
-    AND NOT EXISTS (SELECT 1 FROM relay_sync_states s
-      WHERE s."projectKey" = b."projectKey" AND s."blobIds" @> ARRAY[b."blobId"]))
-)`;
 
 export interface SyncCleanupOptions {
   connection: ReturnType<typeof connectRelay>;
@@ -43,38 +32,7 @@ export const cleanupSync = async (
     signal,
   );
 
-  const accounts = await connection.run(
-    (db) =>
-      db.execute<{ accountId: string }>(sql`
-        SELECT DISTINCT p."accountId" FROM relay_sync_blobs b
-        JOIN relay_sync_projects p ON p."projectKey" = b."projectKey" WHERE ${unusedBlob(cutoff)}`),
-    signal,
-  );
-  // Writes that add blob references hold the same account lock, so no update can start using a blob
-  // between this check and its removal.
-  for (const { accountId } of accounts.rows)
-    await connection.run(
-      (db) =>
-        db.transaction(async (transaction) => {
-          await lockAccount(transaction, accountId);
-          await transaction.execute(sql`
-            UPDATE relay_sync_blobs b SET "status" = 'deleting' FROM relay_sync_projects p
-            WHERE p."projectKey" = b."projectKey" AND p."accountId" = ${accountId} AND ${unusedBlob(cutoff)}`);
-        }),
-      signal,
-    );
-  const deleting = await connection.run(
-    (db) => db.select().from(syncBlobs).where(eq(syncBlobs.status, "deleting")),
-    signal,
-  );
-  for (const blob of deleting) {
-    await assets.remove(blobOwner(blob), blob.blobId);
-    await connection.run(
-      (db) =>
-        db.delete(syncBlobs).where(and(eq(syncBlobs.projectKey, blob.projectKey), eq(syncBlobs.blobId, blob.blobId))),
-      signal,
-    );
-  }
+  await cleanupBlobGraph(connection, assets, cutoff, signal);
 
   while (true) {
     const keys = await connection.run((db) => db.select().from(syncObjectDeletions).limit(batchSize), signal);

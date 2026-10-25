@@ -10,6 +10,7 @@ const examples = [scribble, boombox, zipline, pigeon, kiln];
 export default defineExtension({
   defaultLocale: "en",
   commands: Object.values(commands),
+  statusBarItems: [...scribble.statusBarItems, ...zipline.statusBarItems, ...kiln.statusBarItems],
   modes: examples.flatMap((example) => example.modes),
   placements: [...boombox.placements, ...kiln.placements],
   themes: examples.flatMap((example) => example.themes),

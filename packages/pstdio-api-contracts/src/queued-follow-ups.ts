@@ -26,6 +26,14 @@ export const combineQueuedFollowUpsInputSchema = z.object({
   targetRevision: z.string().min(1),
 });
 
+export const moveQueuedFollowUpInputSchema = z.object({
+  direction: z.enum(["up", "down"]),
+  expectedRevision: z.string().optional(),
+  steps: z.number().int().positive().default(1),
+  expectedOrder: z.array(z.object({ queuePosition: z.number().int().positive(), revision: z.string() })).optional(),
+});
+export type MoveQueuedFollowUpInput = z.input<typeof moveQueuedFollowUpInputSchema>;
+
 export const queuedFollowUpUpdateResponseSchema = z.object({ ok: z.literal(true), request: queuedFollowUpSchema });
 export const pendingQueuedFollowUpsResponseSchema = z.object({
   requests: z.array(queuedFollowUpSchema),

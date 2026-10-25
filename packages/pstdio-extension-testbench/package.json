@@ -4,12 +4,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "bun check && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun test --conditions production --silent"
+    "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --silent"
   },
   "dependencies": {
     "@chakra-ui/react": "3.32.0",
@@ -25,7 +25,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/react": "19.2.3",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "^5.2.0",

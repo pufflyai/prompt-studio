@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useContext, useEffect, useRef, useState } from "react";
 import {
   getFocusableRows,
   getRowFocusId,
@@ -7,6 +7,7 @@ import {
   resolveTreeListKeyboardNavigation,
   type VirtualRow,
 } from "./tree-list-model";
+import { TreeListSelectionContext } from "./tree-list-selection-context";
 
 const findRowElement = (root: HTMLElement | null, focusId: string) => {
   if (!root) return null;
@@ -28,6 +29,18 @@ const isTextEditingTarget = (target: EventTarget | null) => {
 const getRowIndex = (rows: VirtualRow[], focusId: string) =>
   rows.findIndex((row) => isFocusableRow(row) && getRowFocusId(row) === focusId);
 
+const isRangeNavigation = (event: KeyboardEvent<HTMLElement>) =>
+  event.shiftKey &&
+  !event.altKey &&
+  !event.ctrlKey &&
+  !event.metaKey &&
+  (event.key === "ArrowUp" || event.key === "ArrowDown");
+
+const adjacentNode = (rows: VirtualRow[], current: string | undefined, key: string) => {
+  const ids = rows.flatMap((row) => (row.kind === "node" && !row.node.disabled ? [row.node.id] : []));
+  return ids[ids.indexOf(current ?? "") + (key === "ArrowUp" ? -1 : 1)];
+};
+
 export const useTreeListKeyboardNavigation = (input: {
   rows: VirtualRow[];
   activeNodeId?: string | string[] | null;
@@ -37,17 +50,34 @@ export const useTreeListKeyboardNavigation = (input: {
   scrollToRow?: (index: number) => void;
 }) => {
   const { rows, activeNodeId, expandedNodeIds, onToggleNode, onToggleSection, scrollToRow } = input;
+  const selection = useContext(TreeListSelectionContext);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const focusedElement = useRef<HTMLElement | null>(null);
   const [focusedRowId, setFocusedRowId] = useState<string>();
   const [pendingFocusRowId, setPendingFocusRowId] = useState<string>();
   const focusRowId = resolveTreeListFocusRowId(focusedRowId, activeNodeId, rows);
-  const focusableRowIds = getFocusableRows(rows).map(getRowFocusId).join("\0");
+  const focusableRows = JSON.stringify(
+    getFocusableRows(rows).map((row) => ({
+      id: getRowFocusId(row),
+      section: row.sectionId,
+      level: row.kind === "node" ? row.level : 0,
+      parent: row.kind === "node" ? row.parentNodeId : undefined,
+    })),
+  );
 
   useEffect(() => {
     if (!focusedRowId) return;
-    if (focusableRowIds.split("\0").includes(focusedRowId)) return;
-    setFocusedRowId(undefined);
-  }, [focusedRowId, focusableRowIds]);
+    if (!(JSON.parse(focusableRows) as { id: string }[]).some((row) => row.id === focusedRowId)) {
+      setFocusedRowId(undefined);
+      return;
+    }
+    const previous = focusedElement.current;
+    if (!previous || previous.isConnected) return;
+    focusedElement.current = null;
+    // Reparenting remounts a row. Restore its focus only when removal left focus on the document body.
+    if (previous.ownerDocument.hasFocus() && previous.ownerDocument.activeElement === previous.ownerDocument.body)
+      findRowElement(rootRef.current, focusedRowId)?.focus();
+  }, [focusedRowId, focusableRows]);
 
   useEffect(() => {
     if (!pendingFocusRowId) return;
@@ -78,8 +108,17 @@ export const useTreeListKeyboardNavigation = (input: {
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.defaultPrevented || isTextEditingTarget(event.target)) return;
+    if (selection && isRangeNavigation(event)) {
+      const current = findFocusedRowId(rootRef.current, event.target) ?? focusRowId;
+      const target = adjacentNode(rows, current, event.key);
+      if (target) {
+        selection.select(target, event, current);
+        focusRow(target);
+      }
+      return;
+    }
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    if (isTextEditingTarget(event.target)) return;
 
     const navigation = resolveTreeListKeyboardNavigation({
       rows,
@@ -107,6 +146,9 @@ export const useTreeListKeyboardNavigation = (input: {
     focusRowId,
     rootRef,
     handleKeyDown,
-    onRowFocus: (rowId: string) => setFocusedRowId(rowId),
+    onRowFocus: (rowId: string) => {
+      focusedElement.current = rootRef.current?.ownerDocument.activeElement as HTMLElement | null;
+      setFocusedRowId(rowId);
+    },
   };
 };

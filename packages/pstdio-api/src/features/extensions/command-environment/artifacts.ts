@@ -11,6 +11,7 @@ export const createArtifactsApi = (
     extensionId: string;
     name: string;
     onWrite: (path: string) => void;
+    assertWritable?: () => Promise<void>;
     projectId: string;
     signal?: AbortSignal;
   },
@@ -30,6 +31,7 @@ export const createArtifactsApi = (
         ? await createReadBoundary(input.signal)(() => resolveProjectPath(access))
         : await resolveProjectPath(access);
     return createSharedArtifactMount(deps, {
+      assertWritable: input.assertWritable,
       projectId: input.projectId,
       extensionId: input.extensionId,
       repoRoot: root,

@@ -3,6 +3,7 @@ import { useSyncExternalStore } from "react";
 import { applyStateChanges, type StateChange, stateChanges } from "./state-changes";
 import type { commands } from "./state-commands";
 import type { ExampleName } from "./state-defaults";
+import { examplesChanged } from "./state-events";
 import type { ExampleProps } from "./view-context";
 
 export { usePageResource } from "./view-context";
@@ -25,31 +26,39 @@ export const createExampleStore = <State extends object>(name: ExampleName, init
       publish(next);
       if (changes.length) return write?.(changes);
     },
-    setTransient(update: Partial<State>) {
-      publish({ ...state, ...update });
-    },
     subscribe(listener: () => void) {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
       };
     },
-    connect(host: GuestHost, props: PropsStore<ExampleProps>, onError: (error: unknown) => void, onReady?: () => void) {
+    connect(
+      host: GuestHost,
+      _props: PropsStore<ExampleProps>,
+      onError: (error: unknown) => void,
+      onReady?: () => void,
+    ) {
       const client = createWebviewClient<typeof commands>(host);
       let active = true;
-      let lastTick = props.get().lastCommand?.tick ?? 0;
+      let generation = 0;
       let queue = Promise.resolve();
       const accept = (result: unknown) => {
         if (!active) return;
-        const wrapped = result as { value?: unknown };
-        const snapshot = (wrapped?.value ?? result) as { name: string; state: State };
+        const snapshot = result as { name: string; state: State };
         if (snapshot?.name !== name) return;
         publish(applyStateChanges(snapshot.state, pending.flat()));
       };
       publish(structuredClone(initial));
-      const ready = client.commands["state.read"]({ name })
-        .then((result) => {
-          accept(result);
+      const refresh = async () => {
+        const request = ++generation;
+        const result = await client.commands["state.read"]({ name });
+        if (request === generation) accept(result);
+      };
+      const unsubscribe = client.events.subscribe(examplesChanged, () => {
+        void refresh().catch(onError);
+      });
+      const ready = refresh()
+        .then(() => {
           if (active) onReady?.();
         })
         .catch(onError);
@@ -59,20 +68,14 @@ export const createExampleStore = <State extends object>(name: ExampleName, init
         queue = queue
           .then(() => ready)
           .then(async () => {
-            const result = await client.commands["state.update"]({ name, changes });
+            await client.commands["state.update"]({ name, changes });
             pending.shift();
-            accept(result);
+            // The command's captured result can predate another view's completed write.
+            await refresh();
           })
           .catch(onError);
         return queue;
       };
-      const unsubscribe = props.subscribe((next) => {
-        const event = next.lastCommand;
-        if (!event || event.tick <= lastTick) return;
-        lastTick = event.tick;
-        if (event.commandId.endsWith(".state.update") && event.extensionId === host.extensionId && event.outcome.ok)
-          accept(event.outcome.value);
-      });
       return () => {
         active = false;
         write = undefined;

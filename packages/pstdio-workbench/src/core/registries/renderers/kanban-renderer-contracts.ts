@@ -161,7 +161,9 @@ export interface BoardColumnAction<TIcon = unknown> {
 export interface BoardColumnConfig<TIcon = unknown> {
   /** Color palette token used for the column header and group badges. */
   color?: string;
+  /** @deprecated Remove this option. Cards can always be dragged between columns. */
   canDragIn?: boolean;
+  /** @deprecated Remove this option. Cards can always be dragged between columns. */
   canDragOut?: boolean;
   canCreate?: boolean;
   actions?: BoardColumnAction<TIcon>[];

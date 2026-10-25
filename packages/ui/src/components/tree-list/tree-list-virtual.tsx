@@ -1,12 +1,13 @@
 import { Box } from "@chakra-ui/react";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import type { ReactNode, RefObject } from "react";
+import { type ReactNode, type RefObject, useContext } from "react";
 import { useVirtualizer } from "@/utils/use-virtualizer";
 import type { TreeListProps } from "./tree-list";
 import type { TreeListDropIndicator } from "./tree-list-drop-indicator";
 import type { VirtualRow } from "./tree-list-model";
 import { toSectionDragId } from "./tree-list-reorder";
 import { TreeListRow } from "./tree-list-row";
+import { TreeListSelectionContext } from "./tree-list-selection-context";
 import { DropLine, SectionGap, SortableHost } from "./tree-list-sortable-host";
 import { useTreeListKeyboardNavigation } from "./use-tree-list-keyboard-navigation";
 
@@ -52,6 +53,7 @@ const VirtualRowContent = (props: {
 };
 
 export const VirtualTreeList = (props: VirtualTreeListProps) => {
+  const selection = useContext(TreeListSelectionContext);
   const {
     rows,
     expandedNodeIds = [],
@@ -91,6 +93,7 @@ export const VirtualTreeList = (props: VirtualTreeListProps) => {
       ref={keyboard.rootRef}
       data-tree-list-virtual=""
       role="listbox"
+      aria-multiselectable={Boolean(selection) || undefined}
       w="full"
       minW="0"
       maxW="full"

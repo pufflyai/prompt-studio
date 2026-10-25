@@ -2,44 +2,40 @@
 import type { ExtensionContextBase, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { readTickets } from "../../commands/read-tickets";
 import { readTicketStatuses } from "../../data/status-operations";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import { plannerSchemaChanged } from "../../events";
 import { planChanged, type StoredPlan } from "../contracts";
 import { resolvePlan } from "../model/resolve-plan";
-import type { PlannerTicket } from "../planner";
 
 const planKey = "timeline.plan";
 export const readStoredPlan = (storage: ExtensionStorageApi) => storage.get<StoredPlan>(planKey);
 
-export async function loadPlan(ctx: Pick<ExtensionContextBase, "storage">) {
-  const [tickets, statuses, stored] = await Promise.all([
-    readTickets(ctx.storage),
+export async function loadPlan(ctx: Pick<ExtensionContextBase, "storage" | "settings" | "resources">) {
+  const [tickets, statuses, stored, selections] = await Promise.all([
+    readTickets(ctx),
     readTicketStatuses(ctx.storage),
     readStoredPlan(ctx.storage),
+    readWorkflowStatuses(ctx),
   ]);
-  return { tickets, statuses: statuses.statuses, plan: resolvePlan(stored, tickets, statuses.statuses) };
+  const workflow = usableWorkflowStatuses(selections);
+  return {
+    tickets,
+    workflow,
+    statuses: statuses.statuses,
+    plan: resolvePlan(stored, tickets, statuses.statuses, workflow),
+  };
 }
 
 export const writeStoredPlan = (storage: ExtensionStorageApi, plan: StoredPlan) => storage.set(planKey, plan);
 
 export async function savePlan(
-  ctx: Pick<ExtensionContextBase, "storage" | "events">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events" | "resources">,
   plan: StoredPlan,
   reason: string,
 ) {
   await writeStoredPlan(ctx.storage, plan);
   await ctx.events.emit(planChanged, { reason });
   if (reason === "deadline") await ctx.events.emit(plannerSchemaChanged, {});
-}
-
-// The view passes ids; people on the CLI pass shorthands such as PS-32.
-export function findTicket(tickets: PlannerTicket[], key: string) {
-  const wanted = key.trim().toLowerCase();
-  const ticket = tickets.find(({ id, shorthand }) => id === key || shorthand.toLowerCase() === wanted);
-  if (!ticket) {
-    throw new Error(`Unknown ticket "${key}".`);
-  }
-
-  return ticket;
 }
 
 // A deadline is named by its id, or on the CLI by its date.

@@ -11,14 +11,17 @@ The `PR area labels` workflow marks changes that need focused review. Labels des
 | `security` | Runtime authentication, secrets, webview access, and desktop isolation |
 | `sync` | Event delivery, ordering, reconnects, and consistency |
 | `release` | CI permissions, packaging, publishing, and label policy |
+| `dashboard-ui` | Core UI and dashboard chrome: compare with the Pencil design and [DESIGN.md](../../../design/DESIGN.md) |
 
-`.github/labeler.yml` is the executable mapping source. Whole-package rules include tests and documentation. Several labels can match one file. The security paths identify known boundaries and do not detect every security change.
+`.github/labeler.yml` is the executable mapping source. Whole-package rules include tests and documentation. `dashboard-ui` is the exception: it covers the sources of the dashboard, the workbench and `@pstdio/ui`, the dashboard's `index.html` and `public/` assets, the icon font and the design system file, but not test files or test fixtures, support, utilities and helpers. Stories, story fixtures and locale strings count. Extension views are not core UI: the `extensions` label tracks them. Several labels can match one file. The security paths identify known boundaries and do not detect every security change.
 
 Reviewers own two separate labels: `breaking-change` for incompatible behavior or contracts, and `needs-migration` for required data transitions. Explain the affected consumers or migration in the PR description. These labels are never managed by the workflow.
 
 The PR author owns `waiting-for-release`. Add it to an extension PR that uses SDK or UI changes that are merged but not yet published to npm. Name the SDK or UI PR it waits for in the description. The `published_extensions` CI job fails on such a PR until the next release, so do not merge it. After the release, raise the extension's `@pstdio/sdk` or `@pstdio/ui` range to the published version, rerun CI, and remove the label once `published_extensions` passes. The workflow never manages this label.
 
-`ci:full` is not an area label. A person adds it to run the full Test and Build stage on a PR; see [CI stages](0002-testing.md#ci-stages).
+`removed-from-queue` is not an area label. The **Merge queue removals** workflow manages it; see [Merge queue stage](0015-ci-stages.md#stage-guarantees).
+
+`ci:full` is not an area label. A person adds it to request separate full functional diagnostics for a same-repository PR. The trusted label handler dispatches the trusted base-branch Test and Build workflow with `profile=production` and the exact PR merge SHA as `source_sha`. That run reports `production_ci_passed`; it does not replace or delay the ordinary required `ci_passed` fast gate. Fork PRs receive an explicit manual diagnostic instruction instead of automatic dispatch. These functional diagnostics are not an immutable release certificate and do not replace P3 performance qualification. See [request deeper diagnostics](0015-ci-stages.md#deeper-diagnostics-and-qualification).
 
 ## SDK and extension separation
 
@@ -26,7 +29,7 @@ The PR author owns `waiting-for-release`. Add it to an extension PR that uses SD
 
 The workflow publishes pending before classification, then success, failure, or error on the evaluated PR head commit. It evaluates immediately after label synchronization; bot label events are not needed. Manually deleting an area label triggers reclassification and cannot clear the rule. A changed head or base during classification produces an error on the old evaluated head, never success on a newer commit. Runs are serialized by PR with cancellation disabled.
 
-The pinned labeler has GitHub API limits: the files endpoint returns at most 3,000 files and a PR holds at most 100 labels. The policy reports an error for a diff over 3,000 files, fewer than seven free label slots before classification, or a full label list afterward. It never treats a partial classification as success. Remove unnecessary labels or split the diff, then rerun.
+The pinned labeler has GitHub API limits: the files endpoint returns at most 3,000 files and a PR holds at most 100 labels. The policy reports an error for a diff over 3,000 files, fewer than eight free label slots before classification, or a full label list afterward. It never treats a partial classification as success. Remove unnecessary labels or split the diff, then rerun.
 
 ## Trusted execution
 
@@ -50,7 +53,7 @@ Opening, reopening, pushing commits, editing the base, and editing labels also r
 
 ## Current enforcement
 
-PS-78 implements PRD PS-76. Since 2026-10-12, the active `main` ruleset requires `ci_passed` and merges through a merge queue (see [Tests](0002-testing.md#merge-queue-stage)). It does not require `sdk-extension-separation`, so that status is advisory. Repository settings can change independently of this checkout; inspect the active ruleset before changing enforcement.
+PS-78 implements PRD PS-76. The CI architecture retains the existing `ci_passed` required context and ALLGREEN merge queue (see [CI stages](0015-ci-stages.md)). It does not require replacing that context or weakening protection when the job layout changes. `sdk-extension-separation` remains advisory under the documented policy. Repository settings can change independently of this checkout; inspect the active ruleset and check identity before changing enforcement.
 
 The area-label workflow evaluates pull request heads and manual dispatches.
 
@@ -66,7 +69,7 @@ A failing workflow alone does not enforce separation. Current whole-package mapp
 ## Local validation
 
 ```bash
-bun test scripts/ci/pr-risk-labels.test.ts
+bun test scripts/ci/pr-risk-labels.p0.test.ts
 ```
 
 The tests cover classification outcomes, reversions, failed classification, changed head/base snapshots, manual label removal during a run, and API errors. GitHub rollout checks above prove the actual hosted permissions and merge gate.

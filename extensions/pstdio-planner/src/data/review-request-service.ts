@@ -1,4 +1,4 @@
-// Settle review requests and notify readers to derive the current Needs attention flag.
+// Settle review requests and notify readers to refresh pending input and request counts.
 import { type CommandContext, workbenchPanels } from "@pstdio/sdk/extensions";
 import { plannerTicketsChanged } from "../events";
 import { actorFromSource } from "./attempt-actors";
@@ -13,11 +13,11 @@ import {
 import type { ReviewOutcome, ReviewRequestView } from "./review-request-types";
 import { validateResponse } from "./review-request-validation";
 
-type StorageContext = Pick<CommandContext, "storage">;
+type StorageContext = Pick<CommandContext, "storage" | "resources">;
 
 // A write that raced with ticket deletion removes its own records so no orphan request remains.
 export const keepOwnedRequest = async (ctx: StorageContext, request: Pick<ReviewRequestView, "id" | "ticketId">) => {
-  if (await ticketsCollection(ctx.storage).get(request.ticketId)) return;
+  if (await ticketsCollection(ctx).get(request.ticketId)) return;
   await deleteTicketReviewRequests(ctx.storage, request.ticketId);
   // Cleanup may have run before this write, so remove this request's records by ID as well.
   await reviewRequestsCollection(ctx.storage).delete(request.id);
@@ -39,7 +39,7 @@ const ownedRequest = async (ctx: CommandContext, requestId: string, verb: string
   const request = await readReviewRequest(ctx.storage, requestId);
   if (!request) throw new Error(`Unknown review request "${requestId}".`);
   // A request stays answerable after its ticket is done, because a merge can finish the ticket first.
-  if (!(await ticketsCollection(ctx.storage).get(request.ticketId))) throw new Error("The ticket was removed.");
+  if (!(await ticketsCollection(ctx).get(request.ticketId))) throw new Error("The ticket was removed.");
   return request;
 };
 

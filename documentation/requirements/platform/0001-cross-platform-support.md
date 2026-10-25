@@ -74,16 +74,16 @@ Windows (`clients/desktop/src/runtime/runtime-environment.ts`).
 to the desktop runtime, CLI, and harness selector. No separate `where` command or
 Git Bash dependency is needed.
 
-The packaged desktop test `clients/desktop/src/e2e/packaged-harness-detection.spec.ts`
+The packaged desktop test `clients/desktop/src/e2e/packaged-harness-detection.p2.spec.ts`
 checks discovery from a directory containing spaces. It uses native executables on
-Windows and login-shell setup on POSIX. `packages/e2e/src/packaged/harness-npm-detection.test.ts`
+Windows and login-shell setup on POSIX. `packages/e2e/src/packaged/harness-npm-detection.p2.test.ts`
 checks npm command shims on `PATH`.
 
 ### 4. Path Separator Handling
 
 **Current behavior:** Claude transcript lookup uses native path joining and
 replaces non-alphanumeric project-path characters with hyphens, matching the
-agent's directory encoding. Regression cases in `harness.test.ts` cover Windows
+agent's directory encoding. Regression cases in `harness.p0.test.ts` cover Windows
 drive paths, spaces, and network shares.
 
 **Required behavior:** use `path.join()` and `path.sep` consistently. Where paths are sanitized for use as identifiers (e.g. project directory → filename), replace both `/` and `\`.
@@ -102,7 +102,7 @@ signals for normal shutdown.
 **Required behavior:** preserve the runtime ownership and active-work checks on
 every platform. Test forced process exits separately from normal shutdown.
 
-The stalled-runtime test (`clients/desktop/src/e2e/packaged-startup-recovery.spec.ts`)
+The stalled-runtime test (`clients/desktop/src/e2e/packaged-startup-recovery.p1.spec.ts`)
 uses POSIX suspension signals or Microsoft's signed
 [PsSuspend](https://learn.microsoft.com/sysinternals/downloads/pssuspend) tool on
 Windows. Windows test runners must put `pssuspend64.exe` on `PATH`. The
@@ -139,12 +139,11 @@ the packaged suite. The production app does not use it.
 | Stage | Trigger | Platform checks |
 | --- | --- | --- |
 | Pull request | `pull_request` without the `ci:full` label | Linux only. `static_checks` and `lint_and_test` run for the packages changed since the target branch. Database, relay, published-extension, license, Docker, and harness CLI jobs run only when the changed files need them. A change outside every package, other than Markdown, `design/`, or `LICENSE`, turns on all of these jobs. No native desktop or CLI build runs. |
-| Merge queue | `merge_group` | `static_checks`, relay checks, Docker image builds, and unsigned desktop builds on Linux x64, Apple Silicon macOS, Intel macOS, and Windows x64. The Linux row also compiles the CLI for every platform. No unit, e2e, or desktop tests run in this stage. |
+| Merge queue | `merge_group` | The full stage, the same jobs as a push to `main`. Desktop builds are unsigned. |
 | Full | Push to `main`, manual run, or a pull request with `ci:full` | Every job. This adds Windows unit, database, and npm-shim tests, a compiled Windows CLI, the Linux e2e, Storybook, and packaged suites, unsigned desktop source and packaged tests on Linux, Apple Silicon, and Windows, and `verify-packaged-toolchain.yml` on Linux, Intel macOS, and Windows. |
 
 `ci_passed` is the required check. A pull request may skip jobs it does not need.
-The merge queue requires `static_checks`, `build_clients`, and `build_docker`. The
-full stage fails if any job is skipped. Signed builds, notarization, the Intel
+The merge queue and the full stage fail if any job is skipped. Signed builds, notarization, the Intel
 desktop tests, and the Windows update check run only in `release-packages.yml`.
 
 ## Rules & Constraints

@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
 import type { RouteDeps } from "../deps";
 import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps, ExtensionWebviewRouteDeps } from "./deps";
+import { createDeviceAutomationRoutes } from "./device-automation-routes";
 import {
   createExtensionNotificationHandler,
   createExtensionNotificationRoute,
@@ -99,6 +100,8 @@ import {
   createProjectExtensionLifecycle,
   type ProjectExtensionLifecycleRouteDeps,
 } from "./project-extension-lifecycle";
+import { publicationRoutes } from "./publication/routes";
+import { PublicationChangedError, PublicationUpdateRequiredError } from "./publication/types";
 
 type ExtensionRoutes = OpenAPIHono<AppBindings>;
 
@@ -173,7 +176,14 @@ export const createExtensionRoutes = (
     Pick<RouteDeps, "installedExtensionSourcesService" | "webviewPreferencesDBService">,
 ) => {
   const routes = new OpenAPIHono<AppBindings>();
+  routes.onError((error, c) => {
+    if (error instanceof PublicationUpdateRequiredError || error instanceof PublicationChangedError)
+      return c.json({ error: error.message }, 409);
+    throw error;
+  });
 
+  routes.route("/", publicationRoutes(deps));
+  routes.route("/", createDeviceAutomationRoutes(deps));
   registerInstalledExtensionRoutes(routes, deps);
   registerExtensionWorkbenchRoutes(routes, deps);
   registerExtensionFileRoutes(routes, deps);

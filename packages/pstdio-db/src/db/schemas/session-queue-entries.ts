@@ -12,7 +12,7 @@ export const session_queue_entries = pgTable(
       .references(() => sessions.id, { onDelete: "cascade" }),
     model: text("model"),
     steering_delivery_json: jsonb("steering_delivery_json").$type<{ id: string; runStartedAt: string }>(),
-    revision: text("revision").notNull().default(""),
+    revision: text("revision").notNull(),
     prompt: text("prompt").notNull(),
     request_kind: text("request_kind").notNull().default("start"),
     question_response_json: jsonb("question_response_json"),

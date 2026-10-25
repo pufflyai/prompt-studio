@@ -1,6 +1,6 @@
 {
   "name": "pstdio",
-  "version": "0.44.0",
+  "version": "0.45.0",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -36,11 +36,11 @@
     "local:add": "bun ./scripts/manage-local-pstdio.ts add",
     "local:add-dev": "bun ./scripts/manage-local-pstdio.ts add --dev-server",
     "local:remove": "bun ./scripts/manage-local-pstdio.ts remove",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "bun run typecheck && biome lint .",
     "format": "biome format --write .",
-    "test": "bun test --conditions=production --silent",
-    "test:coverage": "bun test --conditions=production --coverage"
+    "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions=production --silent",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions=production --coverage"
   },
   "dependencies": {
     "@tanstack/react-db": "^0.1.74",
@@ -48,16 +48,16 @@
     "yargs": "^18.0.0"
   },
   "optionalDependencies": {
-    "@pstdio/cli-darwin-arm64": "0.44.0",
-    "@pstdio/cli-darwin-x64": "0.44.0",
-    "@pstdio/cli-linux-x64": "0.44.0",
-    "@pstdio/cli-linux-arm64": "0.44.0",
-    "@pstdio/cli-win-x64": "0.44.0",
-    "@pstdio/cli-win-arm64": "0.44.0"
+    "@pstdio/cli-darwin-arm64": "0.45.0",
+    "@pstdio/cli-darwin-x64": "0.45.0",
+    "@pstdio/cli-linux-x64": "0.45.0",
+    "@pstdio/cli-linux-arm64": "0.45.0",
+    "@pstdio/cli-win-x64": "0.45.0",
+    "@pstdio/cli-win-arm64": "0.45.0"
   },
   "devDependencies": {
     "@pstdio/sdk": "workspace:*",
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/node": "^24.3.0",
     "@types/react": "^19.2.14",
     "@types/yargs": "^17.0.35",

@@ -4,7 +4,8 @@ Choose storage by who owns the data. The [extension API index](extension-api.md#
 
 | Data | API |
 | --- | --- |
-| Structured project data, such as a list of bookmarks | `ctx.storage` (collections on every host, `ctx.storage.records` from API 0.2.0) |
+| Small structured project data, such as a list of bookmarks | `ctx.storage` (collections on every host, `ctx.storage.records` from API 0.2.0) |
+| Large content that belongs to records, such as file bodies and images | `ctx.storage.files` blobs, or `ctx.storage.scope({ type: "resource", resource }).files` for one resource |
 | Files the extension owns in the project | `ctx.extensionFiles` or a declared artifact mount |
 | Files shipped inside the extension package | `ctx.packageFiles` (read-only) |
 | Project source files | `ctx.projectFiles` |
@@ -12,6 +13,29 @@ Choose storage by who owns the data. The [extension API index](extension-api.md#
 | Host-wide values a harness keeps between calls | `ctx.state` in harness handlers |
 
 `ctx.projectFiles`, `ctx.workspaceFiles`, and `ctx.extensionFiles` are optional. They are missing when the context has no ready workspace with file access. Check before use and return a clear error.
+
+## Keep records small
+
+A record is for small structured data. Large content goes in a file, and the record keeps only the file's ID or path.
+
+From extension API 0.3 (Prompt Studio 0.46), the host refuses a save over a limit:
+
+| Limit | Size | What counts |
+| --- | --- | --- |
+| One record | 256 KiB | The UTF-8 bytes of the record's JSON: its value and its shared text, list, or map. Asset metadata does not count. |
+| One commit | 4 MiB | The sum of those sizes for every record in one `records.commit` group, one collection write, or one `set`. |
+
+The whole save fails, and nothing in it is written. The error has `code: "storage_limit_exceeded"` and names the record, its size, and the limit. SDK 0.46 exports the numbers as `storageLimits` and the check as `isStorageLimitError` from `@pstdio/sdk/extensions`. Check the installed SDK before you import them.
+
+Move these out of records:
+
+| Content | Store it in |
+| --- | --- |
+| File bodies, images, PDFs, and other attachments of an item | `ctx.storage.files.put({ name, data, mimeType })`, or the files of the item's resource scope. Keep the returned `id` in the record. |
+| Long logs, transcripts, generated HTML, and exports | `ctx.extensionFiles`, or an artifact mount with `writeText` or `writeBytes` |
+| Base64 data | Decode it and store the bytes as a file |
+
+Do not split one large value across many records to fit under the limits. A set of related records may still be committed together while the group stays under 4 MiB. Import or migrate many records in several smaller commits.
 
 ## Keep harness state
 
@@ -27,7 +51,7 @@ Project data belongs in `ctx.storage` instead.
 
 ## Store extension-owned project files
 
-Keep configuration, caches, drafts, prototypes, evidence, and backups under `.pstdio/extension-storage/<package-name>/`. Never create another data folder directly under `.pstdio/`, and never write runtime data into extension source folders.
+Keep configuration, caches, drafts, prototypes, evidence, and backups under `.pstdio/extension-storage/<publisher>.<name>/`. Never create another data folder directly under `.pstdio/`, and never write runtime data into extension source folders.
 
 Declare an artifact mount when a view needs to read the files or react to changes:
 

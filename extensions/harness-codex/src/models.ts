@@ -8,6 +8,7 @@ const effortMetadata: Record<string, { label: string; icon: string }> = {
   high: { label: "High", icon: "level-high" },
   xhigh: { label: "XHigh", icon: "level-xhigh" },
   max: { label: "Max", icon: "flame" },
+  ultra: { label: "Ultra", icon: "flame" },
 };
 
 const reasoningEffortParam = (efforts: string[], defaultValue?: string): HarnessParamDescriptor => ({

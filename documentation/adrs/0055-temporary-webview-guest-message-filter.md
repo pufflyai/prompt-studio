@@ -10,7 +10,7 @@ An extension webview talks to the dashboard through a bridge. Only the host page
 
 The bridge uses [rimless](https://github.com/au-re/rimless) 0.8.2, the newest release. Its guest end accepts a `RIMLESS/HANDSHAKE_REPLY` from any window and keeps listening after the first handshake. It also accepts RPC requests from any window that knows the connection ID, and a forged handshake chooses that ID. The guest end cannot be configured to check `event.source`.
 
-Any frame that can reach the webview window can therefore connect to it. This includes sibling webviews, a nested HTML artifact preview, and a sandboxed frame. It can then call `init` with its own module URL. The guest imports that module and mounts it with a host handle bound to the victim webview's declared capabilities, such as `commands.execute`. The PS-497 audit (finding 2) described this path, and the e2e spec `extension-webview-bridge.spec.ts` reproduced it in Chromium.
+Any frame that can reach the webview window can therefore connect to it. This includes sibling webviews, a nested HTML artifact preview, and a sandboxed frame. It can then call `init` with its own module URL. The guest imports that module and mounts it with a host handle bound to the victim webview's declared capabilities, such as `commands.execute`. The PS-497 audit (finding 2) described this path, and the e2e spec `extension-webview-bridge.p1.spec.ts` reproduced it in Chromium.
 
 ## Decision
 
@@ -25,4 +25,4 @@ The check uses window identity, not origin. The guest frame has an opaque origin
 
 ## Removal
 
-Remove the listener when a rimless release checks `event.source` against the guest's target window for the handshake and every RPC message, and removes its handshake listener after it connects. Upgrade rimless, delete `acceptBridgeMessagesOnlyFromHost`, rebuild the runtime bundle, and keep `extension-webview-bridge.spec.ts` passing.
+Remove the listener when a rimless release checks `event.source` against the guest's target window for the handshake and every RPC message, and removes its handshake listener after it connects. Upgrade rimless, delete `acceptBridgeMessagesOnlyFromHost`, rebuild the runtime bundle, and keep `extension-webview-bridge.p1.spec.ts` passing.

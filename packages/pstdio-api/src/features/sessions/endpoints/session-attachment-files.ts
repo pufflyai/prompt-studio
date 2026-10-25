@@ -4,24 +4,15 @@ import {
   sessionAttachmentSchema as legacySessionAttachmentSchema,
   sessionAttachmentDetailsSchema,
 } from "pstdio-api-contracts";
-import {
-  supportedSessionAttachmentExtensions,
-  supportedSessionAttachmentMimeTypes,
-} from "pstdio-api-contracts/session-attachment-types";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
+import { SessionAttachmentUploadError, uploadSessionAttachment } from "../session-attachment-upload";
 import {
   getProjectSessionAttachment,
   isMissingFileError,
   isSessionAttachmentSubmitted,
-  SESSION_ATTACHMENT_FILE_KIND,
   sessionAttachmentContentUrl,
-  toSessionAttachment,
 } from "../session-attachments";
-
-const MAX_SESSION_ATTACHMENT_UPLOAD_BYTES = 25 * 1024 * 1024;
-const UNSUPPORTED_SESSION_ATTACHMENT_MESSAGE =
-  "Session attachment type is not supported. Supported uploads: PDF, CSV, XLSX, TXT, Markdown, PNG, SVG, and code files.";
 
 const errorSchema = z.object({ error: z.string() });
 
@@ -132,26 +123,6 @@ const readUploadName = (headers: Headers) => {
   }
 };
 
-const supportedSessionAttachmentExtensionSet: ReadonlySet<string> = new Set(supportedSessionAttachmentExtensions);
-const supportedSessionAttachmentMimeTypeSet: ReadonlySet<string> = new Set<string>(supportedSessionAttachmentMimeTypes);
-
-const normalizeContentType = (contentType: string | null) => contentType?.split(";")[0]?.trim().toLowerCase() ?? "";
-
-const uploadFileExtension = (fileName: string) => {
-  const baseName = fileName.split(/[\\/]/).pop() ?? fileName;
-  const dotIndex = baseName.lastIndexOf(".");
-  if (dotIndex <= 0 || dotIndex === baseName.length - 1) return "";
-  return baseName.slice(dotIndex + 1).toLowerCase();
-};
-
-const isSupportedSessionAttachmentUpload = (input: { contentType: string | null; fileName: string }) => {
-  const extension = uploadFileExtension(input.fileName);
-  if (extension) return supportedSessionAttachmentExtensionSet.has(extension);
-
-  const contentType = normalizeContentType(input.contentType);
-  return contentType ? supportedSessionAttachmentMimeTypeSet.has(contentType) : false;
-};
-
 export const uploadSessionAttachmentHandler = (
   deps: SessionsRouteDeps,
 ): AppRouteHandler<typeof uploadSessionAttachmentRoute> => {
@@ -160,26 +131,17 @@ export const uploadSessionAttachmentHandler = (
     const project = await deps.projectService.get(projectId);
     if (!project) return c.json({ error: `Project not found: ${projectId}` }, 404);
 
-    const data = Buffer.from(await c.req.arrayBuffer());
-    if (data.byteLength > MAX_SESSION_ATTACHMENT_UPLOAD_BYTES) {
-      return c.json({ error: "Session attachment upload exceeds the maximum size." }, 413);
+    try {
+      const attachment = await uploadSessionAttachment(deps, projectId, {
+        name: readUploadName(c.req.raw.headers),
+        data: await c.req.arrayBuffer(),
+        mimeType: c.req.raw.headers.get("content-type"),
+      });
+      return c.json(attachment, 201);
+    } catch (error) {
+      if (error instanceof SessionAttachmentUploadError) return c.json({ error: error.message }, error.status);
+      throw error;
     }
-
-    const fileName = readUploadName(c.req.raw.headers);
-    const contentType = c.req.raw.headers.get("content-type");
-    if (!isSupportedSessionAttachmentUpload({ contentType, fileName })) {
-      return c.json({ error: UNSUPPORTED_SESSION_ATTACHMENT_MESSAGE }, 415);
-    }
-
-    const file = await deps.fileService.upload({
-      project_id: projectId,
-      file_name: fileName,
-      file_kind: SESSION_ATTACHMENT_FILE_KIND,
-      data,
-      mime_type: contentType,
-    });
-
-    return c.json(toSessionAttachment(projectId, file), 201);
   };
 };
 

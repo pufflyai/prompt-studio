@@ -1,15 +1,7 @@
 import { createSelectSchema } from "drizzle-zod";
 import { resourceAnchorSchema } from "pstdio-api-contracts";
 import { z } from "zod";
-import {
-  activity_events,
-  notifications,
-  sessions,
-  workspaces,
-  ydocAwareness,
-  ydocResumeState,
-  ydocUpdates,
-} from "./schemas.pg";
+import { activity_events, notifications, sessions, workspaces } from "./schemas.pg";
 
 export const sessionSelectSchema = createSelectSchema(sessions, {
   status: z.enum(["in_progress", "awaiting_input", "queued", "completed", "failed", "cancelled", "disconnected"]),
@@ -34,7 +26,3 @@ export const sessionApiSchema = sessionSelectSchema.extend({
   workspace_id: z.string().nullable(),
   root_path: z.string().nullable(),
 });
-
-export const ydocUpdatesSelectSchema = createSelectSchema(ydocUpdates);
-export const ydocAwarenessSelectSchema = createSelectSchema(ydocAwareness);
-export const ydocResumeStateSelectSchema = createSelectSchema(ydocResumeState);

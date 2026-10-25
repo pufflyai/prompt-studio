@@ -4,13 +4,14 @@ import type { AttemptRecord } from "../../data/attempt-types";
 import { withIndependentBlockers } from "../../data/dependency-blockers";
 import { hasPendingInput } from "../../data/review-request-storage";
 import type { TicketReviewRequests } from "../../data/review-request-types";
+import { ticketTagIds } from "../../data/ticket-tags";
+import { emptyWorkflowStatuses, type WorkflowStatusSelections } from "../../data/workflow-statuses";
 import type { Deadline, PlanFlag, PlanLink, PlanTag, StoredPlan } from "../contracts";
 import { dependencyIds, type PlannerStatus, type PlannerTicket, ticketTarget } from "../planner";
 import { daysBetween } from "./days";
 import { projectPace } from "./milestone-eta";
 import { summarizeSection } from "./section-summary";
 import { ticketState } from "./state";
-import { workflowName } from "./workflow";
 
 // Deadlines inside this many days are shown as due soon.
 const dueSoonDays = 7;
@@ -18,6 +19,7 @@ const dueSoonDays = 7;
 export interface PlanInput {
   attempts?: Pick<AttemptRecord, "ticketId" | "createdAt">[];
   now?: number;
+  workflow?: WorkflowStatusSelections;
   requests?: Map<string, TicketReviewRequests>;
   gates?: Set<string>;
   // The Track property that readTrack resolved. Without it, rows have no track.
@@ -31,6 +33,7 @@ export interface PlanInput {
 }
 
 interface PlanIndex {
+  workflow: WorkflowStatusSelections;
   tickets: Map<string, PlannerTicket>;
   statuses: Map<string, PlannerStatus>;
   steps: Map<string, number>;
@@ -41,8 +44,8 @@ interface PlanIndex {
   gates: Set<string>;
 }
 
-const statusName = (ticket: PlannerTicket, index: PlanIndex) => index.statuses.get(ticket.statusId ?? "")?.name;
-const isDone = (ticket: PlannerTicket, index: PlanIndex) => workflowName(statusName(ticket, index)) === "done";
+const isDone = (ticket: PlannerTicket, index: PlanIndex) =>
+  index.workflow.completedStatusIds.includes(ticket.statusId ?? "");
 
 const link = (ticket: PlannerTicket, index: PlanIndex) => ({
   id: ticket.id,
@@ -71,6 +74,7 @@ function indexInput(input: PlanInput, groups: ReturnType<typeof executionOrder>)
   }
 
   return {
+    workflow: input.workflow ?? emptyWorkflowStatuses(),
     tickets: new Map(input.tickets.map((ticket) => [ticket.id, ticket])),
     statuses: new Map(input.statuses.map((status) => [status.id, status])),
     steps: new Map(groups.flatMap(({ ticketIds }) => ticketIds).map((id, position) => [id, position + 1])),
@@ -117,7 +121,10 @@ function flagsFor(ticket: PlannerTicket, deadline: Deadline | undefined, late: P
 
   if (needsHuman(ticket, index)) {
     flags.push("human-needed");
-  } else if (!waiting && (workflowName(statusName(ticket, index)) === "blocked" || ticket.blockedReason?.trim())) {
+  } else if (
+    !waiting &&
+    (index.workflow.blockedStatusIds.includes(ticket.statusId ?? "") || ticket.blockedReason?.trim())
+  ) {
     flags.push("blocked");
   }
 
@@ -160,9 +167,9 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
         inputReceived: !humanNeeded && requests.some((request) => request.state === "answered"),
         unmet: flags.includes("waiting"),
       },
-      statusName(ticket, index),
+      index.workflow,
     ),
-    trackId: ticket.tagIds?.find((id) => index.trackOptionIds.has(id)) ?? null,
+    trackId: ticketTagIds(ticket).find((id) => index.trackOptionIds.has(id)) ?? null,
     requests,
     requestErrors: errors,
     instructions: ticket.content ?? "",
@@ -178,7 +185,7 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
       .map((ticket) => link(ticket, index)),
     laterDependencies: late.map((ticket) => link(ticket, index)),
     ...(blockedReason ? { blockedReason } : {}),
-    tagIds: ticket.tagIds ?? [],
+    tagIds: ticketTagIds(ticket),
     flags,
     target: ticketTarget(ticket),
   };

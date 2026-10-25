@@ -1,6 +1,6 @@
 {
   "name": "@pstdio/workbench",
-  "version": "0.44.0",
+  "version": "0.45.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/pufflyai/prompt-studio"
@@ -40,15 +40,15 @@
     }
   },
   "scripts": {
-    "bench:open-resources": "bun src/core/controllers/page-runtime/open-resource-inventory.bench.ts",
+    "bench:open-resources": "bun src/core/controllers/page-runtime/open-resource-inventory.p3.bench.ts",
     "build": "cross-env NODE_ENV=production vite build && rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist && bun ../../scripts/release/stage-package.ts .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun test --conditions production --silent",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --silent",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build",
-    "test:coverage": "bun test --conditions production --coverage",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --coverage",
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
@@ -73,7 +73,7 @@
     "@storybook/addon-docs": "10.6.0",
     "@storybook/react": "^10.6.0",
     "@storybook/react-vite": "^10.6.0",
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/react": "19.2.3",
     "@types/react-dom": "19.2.3",
     "@types/three": "^0.185.4",

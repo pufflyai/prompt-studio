@@ -1,10 +1,12 @@
 import { type CommandContext, defineCommand, defineSchedule } from "@pstdio/sdk/extensions";
 import { recordSubmittedMerge } from "../data/attempt-merges";
+import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import { attemptEventsCollection, listAttempts } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
-import { statusesCollection, ticketsCollection } from "../data/collections";
+import { ticketsCollection } from "../data/collections";
 import { githubReviewLinks, readGithubMerge } from "../data/github-merges";
 import { markTicketsDone } from "../data/mark-tickets-done";
+import { readMergeDestination } from "../data/workflow-statuses";
 
 const mergeDetails = (value: { headRefOid?: string; mergeCommit?: { oid: string } | null }) => ({
   headSha: value.headRefOid ?? null,
@@ -40,15 +42,15 @@ export const checkMergedPullRequestsCommand = defineCommand({
   mutating: true,
   async run(ctx) {
     if ((await ctx.settings.get("tickets.markDoneOnMerge")) === false) return;
-    const done = (await statusesCollection(ctx.storage).list()).find(
-      (status) => status.name.trim().toLowerCase() === "done",
-    );
-    if (!done) return;
-    const [allTickets, attempts, events] = await Promise.all([
-      ticketsCollection(ctx.storage).list(),
+    // Merge evidence also proves dependency integration, so it is recorded without a merge destination.
+    const destination = await readMergeDestination(ctx);
+    const [allTickets, current, events, retired] = await Promise.all([
+      ticketsCollection(ctx).list(),
       listAttempts(ctx.storage),
       attemptEventsCollection(ctx.storage).list(),
+      readRetiredWorkspaceIds(ctx.storage),
     ]);
+    const attempts = current.filter(({ workspaceId }) => !retired.has(workspaceId));
     const recordedHeads = new Set(
       events.filter((event) => event.type === "attempt_merged").map((event) => event.metadata.headSha),
     );
@@ -61,9 +63,9 @@ export const checkMergedPullRequestsCommand = defineCommand({
         .map((attempt) => attempt.ticketId),
     );
     const tickets = allTickets.filter(
-      (ticket) => !ticket.archived && (ticket.statusId !== done.id || unrecorded.has(ticket.id)),
+      (ticket) => !ticket.archived && (ticket.statusId !== destination.status?.id || unrecorded.has(ticket.id)),
     );
-    if (!tickets.length) return;
+    if (!tickets.length) return destination.status ? undefined : { reason: destination.reason };
     const root = await ctx.workspaces.getDefault();
     const cwd = root?.root_path ?? undefined;
     const mergedIds = new Set<string>();
@@ -121,7 +123,7 @@ export const checkMergedPullRequestsCommand = defineCommand({
         }
       }),
     );
-    await markTicketsDone(ctx, [...mergedIds]);
+    return markTicketsDone(ctx, [...mergedIds]);
   },
 });
 

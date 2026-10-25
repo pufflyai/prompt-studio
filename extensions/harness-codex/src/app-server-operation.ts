@@ -1,4 +1,4 @@
-import type { HarnessExit } from "@pstdio/sdk/extensions";
+import type { HarnessExit, HarnessSteeringInput } from "@pstdio/sdk/extensions";
 import { createAppServerItems } from "./app-server-items";
 import type { RpcMessage } from "./app-server-rpc";
 import { snapshotCodexImage } from "./image-items";
@@ -122,7 +122,10 @@ export const createAppServerOperation = (
     const params = message.params ?? {};
     const item = params.item as ThreadItem | undefined;
     const itemEvent = message.method === "item/started" || message.method === "item/completed";
-    if (itemEvent && item?.type === "userMessage") projection.receive(item, String(params.turnId));
+    if (itemEvent && item?.type === "userMessage") {
+      projection.receive(item, String(params.turnId));
+      return;
+    }
     if (message.method === "item/completed" && item?.type === "contextCompaction")
       projection.receive(item, String(params.turnId));
     items.receive(message);
@@ -204,6 +207,11 @@ export const createAppServerOperation = (
       };
     },
     recordGoalUpdate: (prompt: string) => projection.publish(userMessageFor(prompt)),
+    prepareSteering: (delivery: HarnessSteeringInput) => {
+      const message = { ...userMessageFor(delivery.prompt, delivery.attachments), id: delivery.deliveryId };
+      const release = projection.prepareUser(message);
+      return { accept: () => projection.publish(message), release };
+    },
     stop: async (request: (method: string, params: Record<string, unknown>) => Promise<unknown>, threadId: string) => {
       if (finished) return;
       stopping = true;

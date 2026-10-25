@@ -4,18 +4,23 @@ import {
   resolveAttemptDependencies,
   resolveAttemptReadiness,
 } from "../data/attempt-readiness";
+import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import { attemptEventsCollection, attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
-import { statusesCollection, ticketsCollection } from "../data/collections";
+import { ticketsCollection } from "../data/collections";
 import { type DependencyDeliveryReads, readDependencyDeliveries } from "../data/dependency-deliveries";
 import { findTicket } from "../data/resolve";
 import { readTicketReviewRequests } from "../data/review-request-storage";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { isLiveSession } from "./auto-build-sessions";
 
-type ReadinessContext = Pick<CommandContext, "process" | "workspaces" | "sessions" | "settings" | "storage" | "logger">;
+type ReadinessContext = Pick<
+  CommandContext,
+  "process" | "workspaces" | "sessions" | "settings" | "storage" | "logger" | "resources"
+>;
 
 interface ReadinessParams {
   base?: string;
-  dependencyReview?: "approved" | "submitted";
+  requireMergedDependencies?: boolean;
 }
 
 export async function readImplementationCapacity(ctx: Pick<ReadinessContext, "storage" | "sessions" | "settings">) {
@@ -42,16 +47,16 @@ const loadDependencyInput = async (
   deliveryReads?: DependencyDeliveryReads,
 ) => {
   const [storedTickets, attempts, selections, statuses, home, providers, requests, events] = await Promise.all([
-    ticketsCollection(ctx.storage).list(),
+    ticketsCollection(ctx).list(),
     listAttempts(ctx.storage),
     attemptSelectionsCollection(ctx.storage).list(),
-    statusesCollection(ctx.storage).list(),
+    readWorkflowStatuses(ctx),
     ctx.workspaces.getDefault(),
     ctx.workspaces.listProviders(),
     readTicketReviewRequests(ctx.storage),
     attemptEventsCollection(ctx.storage).list(),
   ]);
-  const storedTarget = await findTicket(ctx.storage, ticketRef);
+  const storedTarget = await findTicket(ctx, ticketRef);
   const target: AttemptReadinessTicket = storedTarget ?? {
     id: ticketRef,
     shorthand: ticketRef,
@@ -76,10 +81,7 @@ const loadDependencyInput = async (
     "--end-of-options",
     `${commandParams.base ?? "HEAD"}^{commit}`,
   ]);
-  const doneStatusIds = new Set(
-    statuses.filter((status) => status.name.trim().toLowerCase() === "done").map((status) => status.id),
-  );
-
+  const doneStatusIds = new Set(usableWorkflowStatuses(statuses).completedStatusIds);
   const owners = await Promise.all(
     attempts.map(async (attempt) => ({
       workspaceId: attempt.workspaceId,
@@ -100,12 +102,13 @@ const loadDependencyInput = async (
       return heads;
     }, new Map<string, string[]>()),
     activeImplementationWorkspaceIds,
+    retiredWorkspaceIds: await readRetiredWorkspaceIds(ctx.storage),
+    requireMergedDependencies: commandParams.requireMergedDependencies,
     requests,
     target: target.id,
     tickets,
     attempts,
     selections,
-    dependencyReview: commandParams.dependencyReview,
     doneStatusIds,
     mainHeadSha,
     isAncestor: async (baseSha: string, headSha: string) => {

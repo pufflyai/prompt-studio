@@ -17,7 +17,8 @@ export const builder = (yargs: Argv) =>
     .option("updated-from", { type: "string", describe: "Filter by updated from" })
     .option("anchor-type", { type: "string", describe: "Filter by anchor type" })
     .option("anchor-id", { type: "string", describe: "Filter by anchor id" })
-    .option("archived", { type: "boolean", describe: "Include archived sessions" });
+    .option("archived", { type: "boolean", describe: "Include archived sessions" })
+    .option("json", { type: "boolean", default: false, describe: "Print complete session records as JSON" });
 
 export type ListArgs = {
   "project-id"?: string;
@@ -30,6 +31,7 @@ export type ListArgs = {
   "anchor-type"?: string;
   "anchor-id"?: string;
   archived?: boolean;
+  json?: boolean;
 };
 
 type Deps = {
@@ -72,6 +74,11 @@ export const createHandler =
       anchorId: argv["anchor-id"],
       archived: argv.archived,
     });
+
+    if (argv.json) {
+      deps.log(JSON.stringify(sessions, null, 2));
+      return;
+    }
 
     if (sessions.length === 0) {
       deps.log("No sessions found.");

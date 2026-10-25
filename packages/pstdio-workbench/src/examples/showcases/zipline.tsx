@@ -120,8 +120,6 @@ const updateBoardAttribute = (rowId: string, attributeId: string, value: unknown
 };
 const getBoardColumnConfig = (groupKey: string) => ({
   color: isIssueStatus(groupKey) ? statusColors[groupKey] : "gray",
-  canDragIn: true,
-  canDragOut: true,
 });
 const IssueInspector = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
@@ -244,6 +242,7 @@ export const createZiplineWorkbench = () => {
   workbench.views.registerView({
     id: "zipline.board",
     title: "My issues",
+    icon: "ListTodo",
     body: {
       kind: "kanban",
       resourceKind: "zipline.issue",

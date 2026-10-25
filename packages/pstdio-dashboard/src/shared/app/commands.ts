@@ -1,4 +1,5 @@
 export const dashboardCommandIds = {
+  chooseProjectFolder: "dashboard.chooseProjectFolder",
   clearSelectedProject: "dashboard.clearSelectedProject",
   copyPerformanceSnapshot: "dashboard.copyPerformanceSnapshot",
   createProject: "dashboard.createProject",

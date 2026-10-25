@@ -38,6 +38,12 @@ export const requestHumanCommand = defineCommand({
     title: params.text({ required: true }),
     instructions: params.longText({ required: true }),
     request: params.json<ReviewRequestBody, { required: true }>({ required: true }),
+    affectedAction: params.select({
+      options: [
+        { label: "Implementation", value: "implementation" },
+        { label: "Merge", value: "merge" },
+      ],
+    }),
     reason: params.select({ options: humanRequestReasons.map((reason) => ({ label: reason, value: reason })) }),
     workspaceId: params.text(),
     revision: params.number(),
@@ -89,7 +95,7 @@ export const listReviewRequestsCommand = defineCommand({
   cli: { description: "List a ticket's review requests and their history." },
   params: { ticket: params.text({ required: true }), openOnly: params.boolean() },
   async run(ctx, { ticket, openOnly }) {
-    const found = await findTicket(ctx.storage, ticket);
+    const found = await findTicket(ctx, ticket);
     if (!found) throw new Error(`Unknown ticket "${ticket}"`);
     const { requests, errors } = await listTicketReviewRequests(ctx.storage, found.id);
     return { requests: openOnly ? requests.filter((request) => request.state === "open") : requests, errors };

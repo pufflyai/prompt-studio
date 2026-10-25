@@ -6,7 +6,6 @@ import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { PanelHeader } from "../region/panel-header";
-import { useWorkbenchRegionTabsVisible } from "../region/region-tabs";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -47,7 +46,6 @@ const WorkbenchSidePanelHeader = (props: WorkbenchSidePanelHeaderProps) => {
 export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
   const { workbench, contentSlotRef, header } = props;
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
-  const hasTabs = useWorkbenchRegionTabsVisible(workbench, "side");
   const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   const attached = mode === "attached" && !fullscreen;
@@ -64,15 +62,7 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         layerStyle="panel"
         header={
           attached ? (
-            <PanelHeader
-              workbench={workbench}
-              region="side"
-              hasTabs={hasTabs}
-              hasContent={Boolean(header || canFloat)}
-              variant="main"
-              flexShrink={0}
-              gap="sm"
-            >
+            <PanelHeader workbench={workbench} region="side" variant="main" flexShrink={0} gap="sm">
               <WorkbenchSidePanelHeader header={header} />
               <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
               {canFloat ? (
@@ -155,7 +145,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         popOutLabel="Reattach Side Panel"
         header={
           visible ? (
-            <PanelHeader workbench={workbench} region="side" hasTabs variant="main" gap="sm">
+            <PanelHeader workbench={workbench} region="side" variant="main" gap="sm">
               <WorkbenchSidePanelHeader header={header} />
               {!fullscreen.active ? (
                 <Tooltip content="Reattach Side Panel">

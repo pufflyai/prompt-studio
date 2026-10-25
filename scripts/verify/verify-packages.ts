@@ -2,80 +2,83 @@ import { spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { loadEmbedConfig } from "../build/embed-manifest";
+import { collectVerifications } from "./collect-verifications";
 import { getHostPlatformPackage, resolveCompiledBinaryPath, runCompiledBunSmoke } from "./compiled-bun-smoke";
-import { preparePackagedSmokeBrowser, resolvePackagedRuntimeTestArgs } from "./packaged-runtime-smoke";
+import { packagedBuildCommand, packagedVerificationProfile } from "./packaged-build";
+import { preparePackagedSmokeBrowser } from "./packaged-runtime-smoke";
 import { verifyPublicPackages } from "./public-package-consumer";
 import { verifyPublishedTypeExports } from "./published-type-exports";
-
-const logTestPhase = (phase: string) => process.stdout.write(`[${new Date().toISOString()}] ${phase}\n`);
 
 const config = loadEmbedConfig();
 const platformPackage = getHostPlatformPackage(config.platformBinaries);
 const verifyPlatformPackage = process.env.PSTDIO_VERIFY_PLATFORM_PKG;
 const platformBinaries = verifyPlatformPackage ? [platformPackage] : config.platformBinaries;
-
-process.stdout.write(
-  verifyPlatformPackage
-    ? `Building selected compiled target: ${platformPackage.pkg}...\n`
-    : "Building all compiled targets...\n",
+const buildCommand = packagedBuildCommand(process.argv.includes("--prebuilt"));
+const profileIndex = process.argv.indexOf("--profile");
+const profileName = profileIndex < 0 ? "full" : process.argv[profileIndex + 1]!;
+const profile = packagedVerificationProfile(profileName, process.platform);
+console.log(`Packaged verification profile: ${profileName} on ${process.platform}-${process.arch}`);
+console.log(
+  `Public package contracts ${profile.publicContracts ? "selected" : "not selected"}: ${profile.publicContractsReason}.`,
 );
-
-logTestPhase("build compiled packages");
-const build = spawnSync("bun", ["run", "--cwd", "scripts", "build:all"], {
-  stdio: "inherit",
-  env: verifyPlatformPackage ? { ...process.env, PSTDIO_BUILD_PLATFORM_PKG: platformPackage.pkg } : process.env,
-});
-
-if (build.status !== 0) {
-  process.stderr.write("\nVerification failed: all-target compiled build failed.\n");
-  process.exit(build.status ?? 1);
+console.log(
+  `Compiled file integrity and embedded Bun smoke selected; full packaged runtime cases ${profile.runtime ? "selected" : "not selected"}.`,
+);
+let buildFailed = false;
+if (buildCommand) {
+  console.log(`[${new Date().toISOString()}] build compiled packages`);
+  const build = spawnSync(buildCommand[0]!, buildCommand.slice(1), {
+    stdio: "inherit",
+    env: verifyPlatformPackage ? { ...process.env, PSTDIO_BUILD_PLATFORM_PKG: platformPackage.pkg } : process.env,
+  });
+  buildFailed = build.status !== 0;
+  if (buildFailed) console.error("::error::Compiled package build failed");
+  if (buildFailed && process.env.CI_PRIORITY === "P1") process.exit(1);
 }
 
-logTestPhase("verify published types");
-await verifyPublishedTypeExports(process.cwd());
-logTestPhase("verify package consumers");
-verifyPublicPackages(process.cwd());
-
-let failed = false;
-
-for (const { pkg, bin } of platformBinaries) {
-  const binPath = join("./packages/pstdio/dist/platforms", pkg, "bin", bin);
-
-  if (!existsSync(binPath)) {
-    process.stderr.write(`MISSING: ${binPath}\n`);
-    failed = true;
-    continue;
-  }
-
-  const stat = statSync(binPath);
-  process.stdout.write(`OK: ${binPath} (${(stat.size / 1_000_000).toFixed(1)} MB)\n`);
+const errors = profile.publicContracts
+  ? await collectVerifications([
+      { id: "verify published types", run: () => verifyPublishedTypeExports(process.cwd()) },
+      { id: "verify package consumers", run: () => verifyPublicPackages(process.cwd()) },
+    ])
+  : [];
+// These checks all need the compiled candidate. A build failure still leaves the
+// independent public-type and package-consumer diagnostics above available.
+if (!buildFailed && (process.env.CI_PRIORITY !== "P1" || errors.length === 0)) {
+  const hostBinaryPath = resolveCompiledBinaryPath(platformPackage);
+  errors.push(
+    ...(await collectVerifications([
+      {
+        id: "verify compiled files",
+        run: () => {
+          const missing: string[] = [];
+          for (const { pkg, bin } of platformBinaries) {
+            const path = join("./packages/pstdio/dist/platforms", pkg, "bin", bin);
+            if (!existsSync(path)) missing.push(path);
+            else console.log(`OK: ${path} (${(statSync(path).size / 1_000_000).toFixed(1)} MB)`);
+          }
+          if (missing.length) throw new Error(`Missing binaries: ${missing.join(", ")}`);
+        },
+      },
+      ...(profile.runtime
+        ? [
+            {
+              id: "run packaged e2e",
+              run: () => {
+                preparePackagedSmokeBrowser(hostBinaryPath);
+                const result = spawnSync("bun", ["run", "test:packaged:cli"], {
+                  cwd: "./packages/e2e",
+                  stdio: "inherit",
+                  env: { ...process.env, E2E_PACKAGED_BINARY_PATH: hostBinaryPath },
+                });
+                if (result.status !== 0) throw new Error(`Packaged e2e failed (${result.status})`);
+              },
+            },
+          ]
+        : []),
+      { id: "run compiled CLI smoke", run: () => runCompiledBunSmoke(platformBinaries) },
+    ])),
+  );
 }
-
-if (failed) {
-  process.stderr.write("\nVerification failed: some binaries are missing.\n");
-  process.exit(1);
-}
-
-const hostBinaryPath = resolveCompiledBinaryPath(platformPackage);
-process.stdout.write("\nPreparing Chromium for packaged e2e checks...\n");
-logTestPhase("prepare packaged Chromium");
-preparePackagedSmokeBrowser(platformPackage, hostBinaryPath);
-
-process.stdout.write("\nRunning packaged e2e checks...\n");
-logTestPhase("run packaged e2e");
-const packagedE2e = spawnSync("bun", resolvePackagedRuntimeTestArgs(platformPackage), {
-  cwd: "./packages/e2e",
-  stdio: "inherit",
-  env: { ...process.env, E2E_PACKAGED_BINARY_PATH: hostBinaryPath },
-});
-
-if (packagedE2e.status !== 0) {
-  process.stderr.write("\nVerification failed: packaged e2e checks failed.\n");
-  process.exit(packagedE2e.status ?? 1);
-}
-
-process.stdout.write("\nRunning compiled Bun CLI smoke check...\n");
-logTestPhase("run compiled CLI smoke");
-runCompiledBunSmoke(platformBinaries);
-
-process.stdout.write("\nAll platform binaries and packaged e2e checks passed.\n");
+if (buildFailed || errors.length) process.exitCode = 1;
+else console.log("All selected packaged verification checks passed.");

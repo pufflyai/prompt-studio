@@ -2,7 +2,6 @@ import { createWorkbench, type WorkbenchModuleContext } from "@pstdio/workbench"
 import { createWorkbenchTerminalModule } from "@pstdio/workbench/react";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { createSessionBubbleModule } from "../sessions/bubble/module";
 import { createSessionsModule } from "../sessions/module";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "./module";
@@ -13,7 +12,6 @@ export const setupWorkspaceOpening = (ready = true) => {
   for (const module of [
     createSidenavModule(),
     createWorkspacesModule(),
-    createSessionBubbleModule(),
     createSessionsModule(),
     createWorkbenchTerminalModule(),
   ])

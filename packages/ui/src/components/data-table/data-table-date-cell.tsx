@@ -43,7 +43,7 @@ export const DataTableDateCell = (props: DataTableDateCellProps) => {
   const fullDate = new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
   return (
-    <Tooltip content={fullDate} openDelay={300}>
+    <Tooltip content={fullDate}>
       <Text as="span" tabIndex={0} textStyle="paragraph/S/regular" color="fg.muted" whiteSpace="nowrap">
         <HighlightedText text={relativeLabel ?? ""} query={search} />
       </Text>

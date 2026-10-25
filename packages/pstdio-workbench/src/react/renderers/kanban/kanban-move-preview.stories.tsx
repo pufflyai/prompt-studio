@@ -35,7 +35,7 @@ const DeferredMove = (props: { viewMode?: "board" | "list" }) => {
       ],
       defaultSettings: { viewMode, columnGrouping: "status", rowGrouping: "none", displayProperties: ["status"] },
       executeQuery: () => rows,
-      getBoardColumnConfig: () => ({ canDragIn: true, canDragOut: true, canCreate: false }),
+      getBoardColumnConfig: () => ({ canCreate: false }),
       onAttributeChange: (rowId, attributeId, value) =>
         new Promise<void>((resolve, reject) => {
           const finish = (success: boolean) => {

@@ -6,13 +6,28 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.1.0 || ^0.2.0"
+    "pstdio": "^0.1.0 || ^0.2.0 || ^0.3.0"
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "typecheck": "bun check -p ../../tsconfig.test-fixtures.json"
+  },
+  "nx": {
+    "implicitDependencies": [
+      "@pstdio/sdk",
+      "@pstdio/ui"
+    ],
+    "targets": {
+      "typecheck": {
+        "inputs": [
+          "default",
+          "^production",
+          "{workspaceRoot}/tsconfig.test-fixtures.json"
+        ]
+      }
+    }
   },
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
@@ -24,7 +39,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "6.0.2"

@@ -1,4 +1,4 @@
-import type { NavigationTargetPage } from "@pstdio/sdk/extensions";
+import type { NavigationTargetPage, PageLocation } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import type {
   ResolvedPageLocation,
@@ -8,7 +8,11 @@ import type {
 
 interface PageLocationPreparation<Value> {
   resolve(target: NavigationTargetPage): ResolvedPageLocation;
-  commit(state: WorkbenchPageRegistryStoreState<Value>, beforePublish?: () => void): WorkbenchPageNavigationResult;
+  commit(
+    state: WorkbenchPageRegistryStoreState<Value>,
+    beforePublish?: () => void,
+    consumeRemembered?: readonly PageLocation[],
+  ): WorkbenchPageNavigationResult;
 }
 const preparations = new WeakMap<WorkbenchPageLocationController, PageLocationPreparation<unknown>>();
 export const setPageLocationPreparation = <Value>(

@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.2 AS source
+FROM oven/bun:1.4.4 AS source
 
 WORKDIR /app
 
@@ -23,10 +23,11 @@ RUN bun run --cwd packages/sdk build:js
 FROM source AS deps
 
 RUN bun install --frozen-lockfile --ignore-scripts --production --filter pstdio-api
+RUN bun run --cwd packages/pstdio-db postinstall
 COPY --from=sdk /app/packages/sdk/dist /app/packages/sdk/dist
 
 
-FROM oven/bun:1.4.2-slim AS runner
+FROM oven/bun:1.4.4-slim AS runner
 
 WORKDIR /app
 

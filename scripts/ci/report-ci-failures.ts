@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { summarizeFailures } from "./ci-failures";
+import { type CiRunTiming, summarizeCiTiming } from "./ci-timing";
 import { collectCiFailures } from "./collect-ci-failures";
 
 const { values } = parseArgs({
@@ -18,8 +19,11 @@ if (!Number.isFinite(since.getTime()) || !Number.isFinite(until.getTime()) || si
 const output = resolve(values.output);
 const jobs = await collectCiFailures(values.repository, since, until, output);
 const summary = summarizeFailures(jobs);
-const { total, failed } = summary.mainFirstAttempts;
-const rate = total ? `${((failed / total) * 100).toFixed(1)}%` : "not measured";
+const timing = summarizeCiTiming(jobs, (await Bun.file(resolve(output, "runs.json")).json()) as CiRunTiming[]);
+const mainFirstAttempts = timing.runs.filter((run) => run.stage === "main");
+const successful = mainFirstAttempts.filter((run) => run.firstAttemptSucceeded).length;
+const total = mainFirstAttempts.length;
+const rate = total ? `${((successful / total) * 100).toFixed(1)}%` : "not measured";
 const cell = (value: string) => value.replace(/\|/g, "\\|").replace(/[\r\n]/g, " ");
 const unavailable = jobs.filter((job) => job.logError);
 const markdown = [
@@ -27,7 +31,9 @@ const markdown = [
   "",
   `Repository: ${values.repository}. Created from ${since.toISOString()} through ${until.toISOString()}.`,
   "",
-  `Main first-attempt failure rate: **${rate}** (${failed}/${total} completed push runs).`,
+  `Main first-attempt successful completion: **${rate}** (${successful}/${total} observed push runs).`,
+  "",
+  "Cancelled, skipped, incomplete and missing first attempts are not successful. Timing data is in timing.json; unknown PR scope and failure causes remain unclassified.",
   "",
   "A later passing job on the same commit is evidence to investigate, not proof that the failed check is safe to retry.",
   "",
@@ -55,5 +61,6 @@ const markdown = [
   "",
 ].join("\n");
 await Bun.write(resolve(output, "summary.json"), JSON.stringify(summary, null, 2));
+await Bun.write(resolve(output, "timing.json"), JSON.stringify(timing, null, 2));
 await Bun.write(resolve(output, "summary.md"), markdown);
 process.stdout.write(markdown);

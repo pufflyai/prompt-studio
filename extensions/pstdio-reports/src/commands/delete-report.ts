@@ -26,7 +26,9 @@ export const deleteReportCommand = defineCommand({
     const collection = reportsCollection(ctx.storage);
     const blobs = collection.attachments(report.id);
     await collection.delete(report.id);
-    await Promise.allSettled(report.files.map((file) => blobs.delete(file.blobId)));
+    await Promise.allSettled(
+      [report.bodyBlobId, ...report.files.map((file) => file.blobId)].map((blobId) => blobs.delete(blobId)),
+    );
     const directoryName = report.directoryName ?? report.name;
     const siblings = (await collection.list()).filter(
       (candidate) => (candidate.directoryName ?? candidate.name) === directoryName,

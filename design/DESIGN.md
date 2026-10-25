@@ -56,8 +56,7 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 ## 8. Hover
 
 1. Feedback is immediate.
-2. Button hover exits wait 150 ms; menu items and button groups do not.
-3. Explanatory tooltips wait 300 ms.
+2. Explanatory tooltips wait 300 ms.
 
 ## 9. Chat composer
 
@@ -68,3 +67,7 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 
 1. Always use the shared `ScrollArea` component for scrollable containers. This includes popovers, dialogs, panels, and lists; do not create scrollable surfaces with raw overflow styles.
 3. Main and side chat views fill their panels with the same composer inset. The workspace header touches the input without an extra gap.
+
+## 11. Interface text
+
+1. Cut taglines, helper text and secondary labels. If a screen needs them to make sense, fix the layout.

@@ -20,6 +20,8 @@ This repository supplies no live Google OAuth client or account service. The com
 
 Closing a pending login stops its in-flight exchange and the write that follows it.
 
+Signing in, registering a device, presence, listing devices, renaming and removing devices stay available without early access. Cloud sync requires the account's `relay` feature. Without it, the manager lists no cloud projects, hands out no encryption keys and issues no relay access. The operator grants or revokes it by verified Google email after the first sign-in; see [Cloud early access](0007-account-manager.md#cloud-early-access). Plans, billing and the Coming soon UI are separate work.
+
 ## Cloud projects on the host
 
 [`createNativeAccount`](../../../packages/pstdio-api/src/services/account/native-account.ts) keeps the account's cloud project list in memory. It loads the list from `GET /v1/workbenches` at startup, after login, after `pst projects cloud` or `pst projects local`, and when a local project is created or bound. It then hands the relay runtime one connection per cloud project that exists on this device. The relay runtime restarts only the projects whose connection changed.
@@ -46,7 +48,11 @@ The device credential never leaves the native host. Host API responses and exten
 
 The manager routes are listed in [account authority development](0007-account-manager.md#better-auth-and-http).
 
+The host account response also includes `features: { relay: boolean } | null`. A false `relay` means the account has no early access. `null` means signed out or not yet loaded, rather than a denial. The host reads grants with its cloud project list and updates them on the same refresh cycle. A revoked account stays signed in and stops syncing when discovery refreshes; the manager immediately denies new keys and renewal. Already-issued relay tokens keep their finite expiry.
+
 The public SDK `/client` account methods are additive API changes. API `0.2.1` records that step under [API versioning](../../references/extensions/0014-api-versioning.md#public-sdk-subpaths). Existing `^0.2.0` extension ranges still accept this version; no manifest range changes are needed.
+
+The host-provided account feature field is additive in API `0.2.2`, on `main` after release `0.45.0`.
 
 The browser bridge uses Better Auth's [single-use token plugin](https://better-auth.com/docs/plugins/one-time-token) and [bearer session plugin](https://better-auth.com/docs/plugins/bearer). It adds no auth provider or hosted execution service.
 
@@ -55,10 +61,10 @@ The browser bridge uses Better Auth's [single-use token plugin](https://better-a
 Run the focused Docker checks:
 
 ```sh
-bun run --cwd services/account-manager test:isolated src/native-devices.test.ts src/native-login.test.ts src/manager-http.test.ts src/google-library.test.ts
+bun run --cwd services/account-manager test:integration src/native-devices.p1.integration.ts src/native-login.p1.integration.ts src/manager-http.p1.integration.ts src/google-library.p1.integration.ts
 ```
 
-`native-devices.test.ts` starts an owned HTTPS manager and runs [`native-devices.integration.ts`](../../../packages/pstdio-api/src/services/account/native-devices.integration.ts) against it. Two host fixtures log in as devices of one Google user. Each sees both devices; one renames and removes the other; the removed device stops renewing and stops syncing. A restarted device keeps its login. A cloud project turns on and off, logout clears the login, a second Google user gets a separate account, and local data written before login stays unchanged.
+`native-devices.p1.integration.ts` starts an owned HTTPS manager and runs [`native-devices.integration.fixture.ts`](../../../packages/pstdio-api/src/services/account/native-devices.integration.fixture.ts) against it. Two host fixtures log in as devices of one Google user. Each sees both devices; one renames and removes the other; the removed device stops renewing and stops syncing. A restarted device keeps its login. A cloud project turns on and off, logout clears the login, a second Google user gets a separate account, and local data written before login stays unchanged.
 
 The relay runtime test checks that adding a cloud project keeps earlier sockets, that a changed credential discards stale in-flight starts, and that removed projects stop syncing. The packaged smoke checks full-host account wiring and that projects stay local without a login.
 

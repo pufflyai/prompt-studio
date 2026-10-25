@@ -36,6 +36,8 @@ export const toPanelInstance = (placement: WorkbenchWidgetPlacement): WorkbenchP
   source: placement.source,
   resource: placement.resource,
   section: placement.section,
+  position: placement.position,
+  pageContext: placement.pageContext,
   resourceKey: placement.resourceKey,
   ownerResourceKey: placement.ownerResourceKey,
   title: placement.title,

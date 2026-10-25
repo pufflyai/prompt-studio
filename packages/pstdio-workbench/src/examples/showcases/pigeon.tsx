@@ -2,7 +2,7 @@ import { createWorkbench } from "../../core";
 import { PigeonComposer } from "./pigeon-composer";
 import { PigeonInbox } from "./pigeon-inbox";
 import { Folders, PigeonNav } from "./pigeon-navigation";
-import { pigeonHomePage, pigeonResourcePage } from "./pigeon-pages";
+import { pigeonHomePage } from "./pigeon-pages";
 import { PigeonReadingPane } from "./pigeon-reading-pane";
 import { pigeonTheme } from "./themes";
 
@@ -51,34 +51,11 @@ export const createPigeonWorkbench = () => {
     ref: pigeonHomePage,
     title: "Inbox",
     path: "pigeon/inbox",
+    params: { selection: { type: "string" } },
     modeId: "pigeon",
     main: {
       kind: "view",
-      view: {
-        kind: "view",
-        id: "pigeon.inbox",
-      },
-      cardinality: "one",
-    },
-    slots: [],
-  });
-  workbench.pages.registerPage({
-    id: "pigeon.resource",
-    ref: pigeonResourcePage,
-    title: "Inbox",
-    path: "pigeon/inbox/resource",
-    modeId: "pigeon",
-    parentId: "pigeon.home",
-    resource: {
-      kinds: [
-        {
-          kind: "resource-kind",
-          id: "pigeon.thread",
-        },
-      ],
-    },
-    main: {
-      kind: "view",
+      presentation: "page",
       view: {
         kind: "view",
         id: "pigeon.inbox",
@@ -89,23 +66,7 @@ export const createPigeonWorkbench = () => {
       {
         id: "reader",
         region: "side",
-        openOn: "page-resource",
-        item: {
-          kind: "binding",
-          binding: {
-            kinds: [
-              {
-                kind: "resource-kind",
-                id: "pigeon.thread",
-              },
-            ],
-            view: {
-              kind: "view",
-              id: "pigeon.reader",
-            },
-            cardinality: "one",
-          },
-        },
+        item: { kind: "view", view: { kind: "view", id: "pigeon.reader" }, presence: "open" },
       },
     ],
   });

@@ -55,7 +55,7 @@ const LocalModeTag = (props: { tag: LocalTag }) => {
   const { tag } = props;
   return (
     <Menu.Root>
-      <Tooltip content={tag.description} openDelay={300} closeDelay={150}>
+      <Tooltip content={tag.description} closeDelay={150}>
         <Tag.Root variant="ticket" size="composer">
           <Menu.Trigger asChild>
             <Tag.Label asChild>
@@ -116,7 +116,7 @@ const NativeModeTag = (props: {
         if (!details.open) setEditing(null);
       }}
     >
-      <Tooltip content={`${mode.label}: ${mode.description} · ${status}`} openDelay={300} closeDelay={150}>
+      <Tooltip content={`${mode.label}: ${mode.description} · ${status}`} closeDelay={150}>
         <Tag.Root variant="ticket" size="composer">
           {mode.indicator ? (
             <Tag.StartElement>

@@ -1,18 +1,19 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import type { Workspace } from "pstdio-api-contracts";
 import { draftHarnessCommandInputSchema, harnessCommandStateSchema } from "pstdio-api-contracts";
-import { HarnessDisposedError } from "pstdio-api-runtime-host";
 import type { AppRouteHandler } from "../../../types";
-import { readCurrentHarness } from "../../harnesses/read-current-harness";
+import { ProjectFolderMissingError } from "../../projects/project-folder-missing";
 import type { SessionsRouteDeps } from "../deps";
-import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
-import { toHarnessWorkspaceContext } from "../session-workspace-context";
-import { resolveCreateSessionModel } from "./resolve-create-session";
-import { resolveCreateWorkspace } from "./resolve-create-workspace";
+import { getDraftHarnessCommands } from "../draft-harness-commands";
+import { HarnessParamError } from "../harness-params";
+import { HarnessOperationError } from "../session-harness-commands";
 
 const errorResponse = {
   description: "Project, harness, workspace, or parameters are unavailable.",
   content: { "application/json": { schema: z.object({ error: z.string() }) } },
+};
+const conflictResponse = {
+  description: "The workspace is not ready, or the project's folder is not on this device.",
+  content: { "application/json": { schema: z.object({ error: z.string(), code: z.string().optional() }) } },
 };
 export const draftHarnessCommandsRoute = createRoute({
   method: "post",
@@ -27,56 +28,18 @@ export const draftHarnessCommandsRoute = createRoute({
     },
     400: errorResponse,
     404: errorResponse,
-    409: errorResponse,
+    409: conflictResponse,
   },
 });
-
-const workspaceReady = (workspace: Workspace) =>
-  !workspace.initializing && !workspace.setup_error && workspace.provider_state === "ready";
 
 export const draftHarnessCommandsHandler =
   (deps: SessionsRouteDeps): AppRouteHandler<typeof draftHarnessCommandsRoute> =>
   async (c) => {
-    const input = c.req.valid("json");
-    const project = await deps.projectService.get(input.project_id);
-    if (!project) return c.json({ error: "Project not found." }, 404);
-    if (!(await deps.harnessRegistry.get(input.agent, { projectId: input.project_id })))
-      return c.json({ error: "The selected harness is not enabled for this project." }, 404);
-    const resolved = await resolveCreateWorkspace(deps, input.project_id, input.workspace_id);
-    if (resolved.error) return c.json({ error: resolved.error }, resolved.status);
-    const record = resolved.workspace!;
-    if (!workspaceReady(record)) return c.json({ error: "The workspace is not ready." }, 409);
-    const workspace = toHarnessWorkspaceContext(record)!;
-    const cwd = workspace.executionTarget.kind === "local" ? workspace.executionTarget.rootPath : undefined;
     try {
-      const model = await resolveCreateSessionModel(input.model, project, input.agent, deps.harnessRegistry, {
-        requestAgentWasOmitted: false,
-      });
-      const params = await resolveHarnessRunParams(deps, {
-        projectId: input.project_id,
-        agentId: input.agent,
-        model,
-        overrides: input.params,
-      });
-      // Model discovery may finish after an extension refresh retires its provider.
-      const response = await readCurrentHarness(
-        deps.harnessRegistry,
-        input.agent,
-        { projectId: input.project_id },
-        async (harness) => {
-          if (workspace.executionTarget.kind === "remote" && harness.cwdRequirement === "required")
-            return c.json({ error: "This harness requires a local workspace." }, 400);
-          const state = await harness.getCommandState(
-            { workspace, cwd, model, params },
-            { projectId: input.project_id },
-          );
-          return c.json({ ...state, harnessId: harness.id }, 200);
-        },
-      );
-      return response ?? c.json({ error: "The selected harness is not enabled for this project." }, 404);
+      return c.json(await getDraftHarnessCommands(deps, c.req.valid("json")), 200);
     } catch (error) {
-      if (error instanceof HarnessDisposedError)
-        return c.json({ error: "The harness changed during discovery. Try again." }, 409);
+      if (error instanceof HarnessOperationError) return c.json({ error: error.message }, error.status);
+      if (error instanceof ProjectFolderMissingError) return c.json({ error: error.message, code: error.code }, 409);
       if (error instanceof HarnessParamError) return c.json({ error: error.message }, 400);
       throw error;
     }

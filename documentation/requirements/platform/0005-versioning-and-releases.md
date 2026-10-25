@@ -88,6 +88,59 @@ these together:
 After the docs deploy, open the changed pages on the public site and confirm that
 the labels match the release.
 
+## Patch releases
+
+Only the current stable release can be patched. A patch contains selected fixes
+from a branch based on that exact release tag; it does not publish main. All
+members of the fixed version group move to the next patch version together.
+Older release lines are unsupported.
+
+1. Fix the bug on main first. Create a `bugfix/` branch from the tag reported by
+   `gh release view --json tagName --jq .tagName`, cherry-pick the required fixes,
+   review the diff against that tag, and run the affected tests and checks.
+   Keep the branch's package versions unchanged. No contributor changeset is
+   required on this branch.
+2. Push the branch and record its full commit SHA. Keep normal version PRs
+   unmerged during patch preparation and verification, until they are refreshed.
+3. Dispatch **Release Packages** on **main**, with `channel: patch`, `base_tag`
+   set to the current stable tag, `source_sha` set to that fix commit, and a
+   one-line `summary`. Leave `publish_patch: false` to verify first.
+4. The workflow generates a patch changeset, replacing pending changesets only
+   in the candidate checkout. Changesets versions the fixed group; the existing
+   stamp, platform sync and lockfile steps run before the version commit is
+   tagged. The tag reserves that version and is never moved by patch runs.
+5. Every existing release verification runs against the generated commit,
+   including signing and the Windows update from `base_tag`. Verification alone
+   publishes no npm packages, service images, or GitHub release. It does create
+   the candidate tag and refresh the main version PR.
+6. When publication is requested, dispatch with the same inputs and
+   `publish_patch: true`. The workflow reuses the immutable candidate, verifies
+   it again, then publishes with npm `latest` and the normal desktop channel.
+   It checks the current stable tag again before publishing. A newer stable
+   release makes an unfinished older patch ineligible.
+7. Check the release assets and main version PR. Remove only changesets for fixes
+   that the patch already shipped through a reviewed main PR, preserving unrelated
+   changesets. Do not replace main's source or dependency choices with the patch
+   checkout. Main versioning starts at least at the shipped or reserved patch
+   version before applying its own pending changesets, so it skips that number.
+
+The dispatch stays on main even though the build checkout uses the fix commit.
+The existing Azure signing subject and npm trusted workflow therefore remain in
+use. No release-branch signing identity or GitHub environment is added.
+Patch and normal stable runs share the existing concurrency group.
+
+A candidate already reserved by another source is rejected. Once any packages
+are published, only the original candidate can complete that version. Retry
+failed jobs or dispatch the same inputs. If the candidate must change before
+publication, first verify that no package or GitHub release shipped, then obtain
+approval to abandon the unused tag. Main pushes never take over a patch tag or
+publish a verification-only candidate.
+
+The repository-local [patch release skill](../../../.pstdio/extensions/pstdio-dev/skills/patch-release/SKILL.md)
+contains the operator commands. Loading the skill does not authorize publication.
+A native verification dispatch on main is required after deploying this workflow;
+local tests cannot prove the external signing service accepts a run.
+
 ## Nightly builds
 
 Maintainers use what `main` builds every day, packaged the way users get it. The nightly runs the compiled CLI, the bundled runtime, the updater and migrations on existing data, which a source checkout skips. Because it runs the same verify and publish jobs as a stable release, a red nightly predicts a red release.

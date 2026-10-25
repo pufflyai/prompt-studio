@@ -1,7 +1,7 @@
 import type { PageOpenIntent, ResourceRef } from "@pstdio/sdk/extensions";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
-import { isPageSlotClosable, primarySlot, type ResolvedPageSlot } from "./page-main";
+import { isSingleViewPage, PAGE_MAIN_SLOT_ID, pageSlots, primarySlot, type ResolvedPageSlot } from "./page-main";
 import type {
   WorkbenchPageContribution,
   WorkbenchPageOpenInput,
@@ -12,14 +12,14 @@ import type {
 export { primarySlot, requirePageSlot } from "./page-main";
 
 export const emptyPageState = (page: WorkbenchPageContribution): WorkbenchPageRuntimeState => ({
-  openStaticSlotIds: page.slots
-    .filter((slot) => slot.item.kind === "view" && slot.item.presence === "open")
+  openStaticSlotIds: pageSlots(page)
+    .filter((slot) => slot.item.kind === "view" && slot.item.presence !== "closed")
     .map((slot) => slot.id),
   resourceInstances: {},
 });
 
 export const staticSlotOpen = (slot: ResolvedPageSlot, state: WorkbenchPageRuntimeState) =>
-  slot.item.kind === "view" && (slot.item.presence === "fixed" || state.openStaticSlotIds.includes(slot.id));
+  slot.item.kind === "view" && state.openStaticSlotIds.includes(slot.id);
 
 const nextResourceInstances = (
   slot: ResolvedPageSlot,
@@ -53,7 +53,9 @@ export const openResourceSlot = (input: {
   const instance: WorkbenchPageSlotInstance = {
     instanceKey,
     resource: target.resource,
+    pageContext: target.pageContext,
     ...(target.section ? { section: target.section } : {}),
+    ...(target.position ? { position: target.position } : {}),
     ...(binding.cardinality === "many" ? { open: target.open ?? "preview" } : {}),
   };
   return {
@@ -74,18 +76,29 @@ export const selectPrimaryTarget = (input: {
 }) => {
   const { page, target } = input;
   if (page.resource) {
-    if (!target.resource) throw new Error(`Page "${page.id}" requires a resource`);
+    if (!target.resource) {
+      if (isSingleViewPage(page) && page.main.empty)
+        return {
+          ...input.state,
+          resourceInstances: { ...input.state.resourceInstances, [PAGE_MAIN_SLOT_ID]: [] },
+          activePrimaryInstanceKey: undefined,
+        };
+      throw new Error(`Page "${page.id}" requires a resource`);
+    }
     if (!resourceMatchesConstraint(page.resource, target.resource))
       throw new Error(`Page "${page.id}" does not accept resource kind "${target.resource.type}"`);
   } else if (target.resource) throw new Error(`Page "${page.id}" does not accept a resource`);
   const slot = primarySlot(page);
   if (!slot) {
-    if (target.open) throw new Error(`Panel collection page "${page.id}" does not accept an open intent`);
+    if (target.open && !(page.resource && page.main.kind === "panels" && typeof page.main.landing === "object"))
+      throw new Error(`Panel collection page "${page.id}" does not accept an open intent`);
+    if (page.main.kind === "panels" && typeof page.main.landing === "string")
+      return setStaticSlotOpen(input.state, page.main.landing, true);
     return input.state;
   }
   if (target.resource) return openResourceSlot({ ...input, slot });
   if (target.open) throw new Error(`Page "${page.id}" accepts open intent only with a resource`);
-  return { ...input.state, activePrimaryInstanceKey: "default" };
+  return { ...setStaticSlotOpen(input.state, slot.id, true), activePrimaryInstanceKey: "default" };
 };
 
 export const pageResourceBindingSlots = (page: WorkbenchPageContribution, resource: ResourceRef | undefined) =>
@@ -131,9 +144,11 @@ export const removeResourceInstance = (state: WorkbenchPageRuntimeState, slotId:
   },
 });
 
-export type ClosePageSlotResult =
-  | { kind: "stay"; state: WorkbenchPageRuntimeState; activateInstanceKey?: string }
-  | { kind: "parent"; state: WorkbenchPageRuntimeState; parentId: string };
+export interface ClosePageSlotResult {
+  kind: "stay";
+  state: WorkbenchPageRuntimeState;
+  activateInstanceKey?: string;
+}
 
 export const closePageSlot = (input: {
   page: WorkbenchPageContribution;
@@ -141,8 +156,7 @@ export const closePageSlot = (input: {
   state: WorkbenchPageRuntimeState;
   instanceKey: string;
 }): ClosePageSlotResult => {
-  const { page, slot, instanceKey } = input;
-  if (!isPageSlotClosable(slot)) throw new Error(`Page slot "${slot.id}" is fixed and cannot close`);
+  const { slot, instanceKey } = input;
   const state =
     slot.item.kind === "view"
       ? setStaticSlotOpen(input.state, slot.id, false)
@@ -154,6 +168,5 @@ export const closePageSlot = (input: {
     const activateInstanceKey = previous && previous !== instanceKey ? previous : remaining.at(-1)?.instanceKey;
     return { kind: "stay", state: { ...state, activePrimaryInstanceKey: activateInstanceKey }, activateInstanceKey };
   }
-  if (!page.parentId) throw new Error(`Resource page has no parent: ${page.id}`);
-  return { kind: "parent", state, parentId: page.parentId };
+  return { kind: "stay", state: { ...state, activePrimaryInstanceKey: undefined } };
 };

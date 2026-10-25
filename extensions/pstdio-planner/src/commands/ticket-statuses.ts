@@ -21,8 +21,6 @@ export const readTicketStatusesCommand = defineCommand({
 
 const statusActionParams = {
   canCreate: params.boolean({ label: "Allow creating tickets", required: false }),
-  canDragIn: params.boolean({ label: "Allow dragging tickets in", required: false }),
-  canDragOut: params.boolean({ label: "Allow dragging tickets out", required: false }),
   columnActions: params.json<string[]>(),
 };
 
@@ -40,12 +38,11 @@ export const createTicketStatusCommand = defineCommand({
   async run(ctx, commandParams) {
     const status = await createTicketStatus({
       storage: ctx.storage,
+      resources: ctx.resources,
       name: commandParams.label,
       color: commandParams.color,
       icon: commandParams.icon,
       canCreate: commandParams.canCreate,
-      canDragIn: commandParams.canDragIn,
-      canDragOut: commandParams.canDragOut,
       columnActions: commandParams.columnActions,
     });
     await ctx.events.emit(plannerTicketsChanged, {});
@@ -73,14 +70,13 @@ export const updateTicketStatusCommand = defineCommand({
   async run(ctx, commandParams) {
     const status = await updateTicketStatus({
       storage: ctx.storage,
+      resources: ctx.resources,
       statusId: commandParams.statusId,
       name: commandParams.label,
       color: commandParams.color,
       icon: commandParams.icon,
       sortOrder: commandParams.sortOrder,
       canCreate: commandParams.canCreate,
-      canDragIn: commandParams.canDragIn,
-      canDragOut: commandParams.canDragOut,
       columnActions: commandParams.columnActions,
     });
     await ctx.events.emit(plannerTicketsChanged, {});
@@ -100,7 +96,7 @@ export const deleteTicketStatusCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const statusId = commandParams.statusId ?? (await resolveStatusId(ctx.storage, commandParams.status ?? ""));
-    const result = await deleteTicketStatus({ storage: ctx.storage, statusId });
+    const result = await deleteTicketStatus({ storage: ctx.storage, resources: ctx.resources, statusId });
     await ctx.events.emit(plannerTicketsChanged, {});
     await ctx.events.emit(plannerSchemaChanged, {});
     return result;
@@ -117,7 +113,7 @@ export const setDefaultTicketStatusCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const statusId = await resolveStatusId(ctx.storage, commandParams.status);
-    const result = await setDefaultStatus({ storage: ctx.storage, statusId });
+    const result = await setDefaultStatus({ storage: ctx.storage, resources: ctx.resources, statusId });
     await ctx.events.emit(plannerTicketsChanged, {});
     await ctx.events.emit(plannerSchemaChanged, {});
     return result;
@@ -136,7 +132,11 @@ export const reorderTicketStatusesCommand = defineCommand({
     statusIds: params.json<string[]>(),
   },
   async run(ctx, commandParams) {
-    const result = await reorderTicketStatuses({ storage: ctx.storage, statusIds: commandParams.statusIds ?? [] });
+    const result = await reorderTicketStatuses({
+      storage: ctx.storage,
+      resources: ctx.resources,
+      statusIds: commandParams.statusIds ?? [],
+    });
     await ctx.events.emit(plannerTicketsChanged, {});
     await ctx.events.emit(plannerSchemaChanged, {});
     return result;

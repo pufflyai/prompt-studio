@@ -16,6 +16,12 @@ const expectWindowWidth = async (canvasElement: HTMLElement) => {
   const hostWidth = main.parentElement!.getBoundingClientRect().width;
   await expect(main.getBoundingClientRect().width).toBe(hostWidth);
   await expect(main.querySelector("[data-window-title-bar]")!.getBoundingClientRect().width).toBe(hostWidth);
+  const status = within(canvasElement).queryByRole("status");
+  if (status) {
+    const bounds = status.getBoundingClientRect();
+    const mainBounds = main.getBoundingClientRect();
+    await expect(Math.abs(bounds.x + bounds.width / 2 - mainBounds.x - hostWidth / 2)).toBeLessThan(1);
+  }
 };
 
 const meta = {
@@ -42,6 +48,10 @@ export const StartingDiscovery: Story = {
 
 export const StartingRuntime: Story = {
   args: { state: { kind: "starting", phase: "spawning" } },
+};
+
+export const BackingUpPreviousData: Story = {
+  args: { state: { kind: "starting", phase: "retiring" } },
 };
 
 export const WaitingForWorkbench: Story = {
@@ -91,4 +101,39 @@ export const Recovery: Story = {
 
 export const Closing: Story = {
   args: { state: { kind: "closing" } },
+};
+
+export const LongRecoveryDetails: Story = {
+  args: {
+    state: {
+      kind: "recovery",
+      error: {
+        code: "unexpected_exit",
+        message: Array.from(
+          { length: 80 },
+          (_, index) =>
+            `Startup log ${index}: ENOENT: /project/.pstdio/extensions/example/src/workbench/src/views/notebook.tsx`,
+        ).join("\n"),
+        actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await expectWindowWidth(canvasElement);
+    const canvas = within(canvasElement);
+    const main = canvas.getByRole("main");
+    const window = canvasElement.ownerDocument.defaultView!;
+    await expect(main.getBoundingClientRect().height).toBeLessThanOrEqual(window.innerHeight);
+    const viewport = main.querySelector<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]')!;
+    await expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight);
+    viewport.scrollTop = viewport.scrollHeight;
+    await expect(viewport.scrollTop).toBeGreaterThan(0);
+    for (const name of ["Retry", "Open logs", "Copy diagnostics", "Quit"]) {
+      const button = canvas.getByRole("button", { name });
+      await expect(button).toBeVisible();
+      const bounds = button.getBoundingClientRect();
+      await expect(bounds.top).toBeGreaterThanOrEqual(0);
+      await expect(bounds.bottom).toBeLessThanOrEqual(window.innerHeight);
+    }
+  },
 };

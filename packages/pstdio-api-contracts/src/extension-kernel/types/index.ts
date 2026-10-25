@@ -1,6 +1,7 @@
 export type * from "./account";
 export type * from "./assets";
 export type * from "./automation";
+export type * from "./collection-page";
 export type * from "./collection-view";
 export type * from "./commands";
 export * from "./composition";
@@ -24,6 +25,7 @@ export type * from "./renderer-base";
 export type * from "./resource-binding";
 export type * from "./resources";
 export type * from "./saved-views";
+export type * from "./session-controls";
 export type * from "./slots";
 export type * from "./status-bar";
 export type * from "./storage";

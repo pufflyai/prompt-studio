@@ -7,6 +7,17 @@ export const accounts = pgTable("manager_accounts", {
   ownerSubject: text().notNull(),
   state: text({ enum: ["active", "disabled"] }).notNull(),
 });
+export const accountFeatures = pgTable(
+  "manager_account_features",
+  {
+    accountId: text()
+      .notNull()
+      .references(() => accounts.id),
+    feature: text({ enum: ["relay"] }).notNull(),
+    grantedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.accountId, table.feature] })],
+);
 export const restoreRequests = pgTable("manager_restore_requests", {
   id: text().primaryKey(),
   fingerprint: text().notNull(),

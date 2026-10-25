@@ -14,6 +14,7 @@ import { attemptReadinessCommand } from "./attempt-readiness";
 import { autoBuildCommand } from "./auto-build";
 import { autoBuildCandidatesCommand } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
+import { pauseAutoBuildCommand, resumeAutoBuildCommand } from "./auto-build-lifecycle";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { autoBuildScopeCommand } from "./auto-build-scope";
 import { automationPolicyCommand } from "./automation-policy";
@@ -31,7 +32,6 @@ import { linkReviewCommand } from "./link-review";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { listTicketTemplatesCommand } from "./list-ticket-templates";
 import { listTicketsCommand } from "./list-tickets";
-import { migrateTicketIdentitiesCommand } from "./migrate-ticket-identities";
 import { newTicketCommand } from "./new-ticket";
 import { nextTicketsCommand } from "./next-tickets";
 import { openTicketsCommand } from "./open-tickets";
@@ -39,9 +39,10 @@ import { pullTicketCommand } from "./pull-ticket";
 import { queryTicketsCommand } from "./query-tickets";
 import { readTicketAttachmentCommand } from "./read-ticket-attachment";
 import { readTicketsCommand } from "./read-tickets";
-import { listAttemptsCommand, reconcileAttemptCommand } from "./reconcile-attempt";
+import { listAttemptsCommand, listVariantsCommand, reconcileAttemptCommand } from "./reconcile-attempt";
 import { refinementPolicyCommand } from "./refinement-policy";
 import { reorderTicketCommand } from "./reorder-ticket";
+import { repairAttemptCommand } from "./repair-attempt";
 import { resolveTicketPathCommand } from "./resolve-ticket-path";
 import { resolveTicketResourcesCommand } from "./resolve-ticket-resources";
 import {
@@ -58,6 +59,7 @@ import { saveTicketCommand } from "./save-ticket";
 import { saveTicketContentCommand } from "./save-ticket-content";
 import { setTicketAttributeCommand } from "./set-ticket-attribute";
 import { submitReviewCommand } from "./submit-review";
+import { submitRevisionCommand } from "./submit-revision";
 import {
   deleteTemplateCommand,
   listTemplatesCommand,
@@ -109,16 +111,24 @@ import {
 import { unarchiveTicketCommand } from "./unarchive-ticket";
 import { updateStackCommand } from "./update-stack";
 import { updateTicketCommand } from "./update-ticket";
+import { readWorkflowStatusesCommand, saveWorkflowStatusesCommand } from "./workflow-statuses";
 import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
   ticketRelatedOpeningsCommand,
   resolveTicketPathCommand,
+  submitRevisionCommand,
+  listVariantsCommand,
+  repairAttemptCommand,
+  readWorkflowStatusesCommand,
+  saveWorkflowStatusesCommand,
   autoBuildCommand,
   autoBuildCandidatesCommand,
   autoBuildDispatchCommand,
   autoBuildScopeCommand,
+  pauseAutoBuildCommand,
+  resumeAutoBuildCommand,
   configureAutoBuildCommand,
   readAutoBuildCommand,
   checkAutoBuildCommand,
@@ -128,7 +138,6 @@ export const plannerCommands = [
   openTicketsCommand,
   linkTicketCommand,
   unlinkTicketCommand,
-  migrateTicketIdentitiesCommand,
   listTemplatesCommand,
   readTemplateCommand,
   saveTemplateCommand,

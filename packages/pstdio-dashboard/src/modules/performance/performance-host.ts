@@ -1,6 +1,7 @@
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import {
   PERFORMANCE_LIMITS,
+  type PerformanceRecordingExport,
   type PerformanceSnapshot,
   type RendererStateReport,
   type SlowFrame,
@@ -15,6 +16,8 @@ export interface PerformanceHost {
   isEnabled: () => Promise<boolean>;
   setEnabled: (enabled: boolean) => Promise<void>;
   snapshot: () => Promise<PerformanceSnapshot | null>;
+  recordings?: () => Promise<PerformanceRecordingExport | null>;
+  retainCapture?: () => Promise<() => Promise<void>>;
   reportFrames: (report: SlowFrameReport) => void;
   reportState: (report: RendererStateReport) => void;
 }
@@ -23,6 +26,9 @@ interface DesktopPerformanceBridge {
   getPerformanceMonitoring: () => Promise<boolean>;
   setPerformanceMonitoring: (enabled: boolean) => Promise<void>;
   getPerformanceSnapshot: () => Promise<PerformanceSnapshot | null>;
+  getPerformanceRecordings?: () => Promise<PerformanceRecordingExport | null>;
+  retainPerformanceCapture?: (id: string) => Promise<void>;
+  releasePerformanceCapture?: (id: string) => Promise<void>;
   reportSlowFrames: (report: SlowFrameReport) => Promise<void>;
   reportRendererState: (report: RendererStateReport) => Promise<void>;
 }
@@ -39,9 +45,17 @@ const hasPerformanceBridge = (bridge: unknown): bridge is DesktopPerformanceBrid
 
 const desktopHost = (bridge: DesktopPerformanceBridge): PerformanceHost => ({
   kind: "desktop",
+  retainCapture: async () => {
+    const id = crypto.randomUUID();
+    await bridge.retainPerformanceCapture?.(id);
+    return async () => {
+      await bridge.releasePerformanceCapture?.(id);
+    };
+  },
   isEnabled: () => bridge.getPerformanceMonitoring(),
   setEnabled: (enabled) => bridge.setPerformanceMonitoring(enabled),
   snapshot: () => bridge.getPerformanceSnapshot(),
+  recordings: async () => bridge.getPerformanceRecordings?.() ?? null,
   reportFrames: (report) => {
     // A report sent while monitoring turns off is dropped by main; nothing to recover.
     void bridge.reportSlowFrames(report).catch(() => {});

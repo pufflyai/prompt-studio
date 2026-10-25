@@ -1,31 +1,29 @@
-import {
-  defineCommand,
-  type ExtensionContextBase,
-  type ExtensionStorageApi,
-  type ResourceRef,
-} from "@pstdio/sdk/extensions";
+import { defineCommand, type ExtensionContextBase, type ResourceRef } from "@pstdio/sdk/extensions";
+import { migratePlannerStorage } from "../../data/migrate-storage";
 import { findTicket } from "../../data/resolve";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
 import { normalizeTicketDependencies } from "../../data/ticket-dependencies";
+import type { TicketContext } from "../../data/ticket-identity";
 import { readStoredPlan } from "../../timeline/commands/plan-store";
 import { buildTicketPropertiesControls, type TicketRef } from "./params";
 
 // Resolve a dependency/parent reference to the real ticket id (so its chip opens the
 // right tab) plus its shorthand for display; a deleted ticket falls back to the raw value.
-const resolveTicketRef = async (storage: ExtensionStorageApi, value: string): Promise<TicketRef> => {
-  const ticket = await findTicket(storage, value);
+const resolveTicketRef = async (ctx: TicketContext, value: string): Promise<TicketRef> => {
+  const ticket = await findTicket(ctx, value);
   return { id: ticket?.id ?? value, label: ticket?.shorthand ?? value };
 };
 
 export const queryTicketProperties = async (
-  ctx: Pick<ExtensionContextBase, "storage">,
+  ctx: Pick<ExtensionContextBase, "storage" | "files" | "resources">,
   resource: ResourceRef | undefined,
 ) => {
   const ticketId = resource?.type === "ticket" ? resource.id : undefined;
   if (!ticketId) return {};
 
-  const ticket = await findTicket(ctx.storage, ticketId);
+  await migratePlannerStorage(ctx);
+  const ticket = await findTicket(ctx, ticketId);
   if (!ticket) return {};
 
   const [{ statuses }, { tags }, plan] = await Promise.all([
@@ -35,9 +33,9 @@ export const queryTicketProperties = async (
   ]);
 
   const dependencies = await Promise.all(
-    normalizeTicketDependencies(ticket.dependsOn).map((value) => resolveTicketRef(ctx.storage, value)),
+    normalizeTicketDependencies(ticket.dependsOn).map((value) => resolveTicketRef(ctx, value)),
   );
-  const parent = ticket.parentId ? await resolveTicketRef(ctx.storage, ticket.parentId) : null;
+  const parent = ticket.parentId ? await resolveTicketRef(ctx, ticket.parentId) : null;
 
   return buildTicketPropertiesControls({
     ticket,

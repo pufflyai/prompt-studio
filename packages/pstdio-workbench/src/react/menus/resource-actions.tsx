@@ -20,11 +20,15 @@ const toResourceContextAction = (item: TreeListActionMenuItem): ResourceContextA
 export const createWorkbenchResourceActions = (
   workbench: WorkbenchCoreContributionContext,
   subject: ResourceRef,
-  options: Pick<CreateMenuItemsInput, "onRequestParams" | "onCommandError"> = {},
+  options: Pick<CreateMenuItemsInput, "onRequestParams" | "onCommandError" | "context"> = {},
 ) => {
   const menu = resolveResourceActionMenu(workbench, subject, options.onRequestParams);
   if (!menu) return [];
-  return createMenuItems({ ...menu, onCommandError: options.onCommandError }).map((item) => ({
+  return createMenuItems({
+    ...menu,
+    context: { ...options.context, resource: menu.context.resource },
+    onCommandError: options.onCommandError,
+  }).map((item) => ({
     ...toResourceContextAction(item),
     group: item.group ?? menu.group,
   }));

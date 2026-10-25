@@ -16,6 +16,7 @@ export type ExtensionsRouteDeps = Pick<
   | "extensionService"
   | "extensionRuntimeCatalog"
   | "extensionResourceSequencesService"
+  | "projectInfoService"
   | "extensionConnectionService"
   | "extensionSettingsDBService"
   | "extensionSettingsService"
@@ -48,3 +49,5 @@ export interface ExtensionWebviewMetadataDeps {
   ensureExtensionWebviews: RouteDeps["ensureExtensionWebviews"];
   extensionWebviewAccess: ExtensionWebviewUrlIssuer;
 }
+
+export type ScheduleAdmissionDeps = ExtensionsRouteDeps & Pick<RouteDeps, "environmentService">;

@@ -104,8 +104,71 @@ const syncHistory = defineCommand({
 });
 // The compiled host must expose this public event reference as well as the methods.
 const numberEvent = defineCommand({ id: "number-event", title: "Number event", run: () => resourceEvents.renumbered });
+const seedQueryRecords = defineCommand({
+  id: "seed-query-records",
+  title: "Seed selected records",
+  mutating: true,
+  run: (ctx) =>
+    ctx.storage.records.commit({
+      operationId: "seed-query-records",
+      edits: [3, 1, 2].map((rank) => ({
+        recordId: ctx.storage.records.id(`indexed-${rank}`),
+        replace: { state: "ready", rank, body: rank === 1 ? "full \ud800 value" : "full\u0000value" },
+      })),
+    }),
+});
+const queryRecords = defineCommand({
+  id: "query-records",
+  title: "Read selected records",
+  async run(ctx) {
+    const records = ctx.storage.records;
+    const request = {
+      index: "ready",
+      where: {
+        all: [
+          { field: "state", op: "equalsIgnoreCase" as const, value: "READY" },
+          { not: { field: "rank", op: "lt" as const, value: 1 } },
+        ],
+      },
+      limit: 2,
+    };
+    const page = await records.query(request);
+    return {
+      page,
+      next: await records.query({ ...request, cursor: page.cursor! }),
+      rows: await records.readMany(page.records.map((row) => row.recordId)),
+      count: await records.aggregate({ index: "ready", where: request.where }),
+      scalarText: await records.query({
+        index: "ready",
+        fields: ["rank"],
+        where: { field: "rank", op: "textContains", value: "2" },
+      }),
+    };
+  },
+});
 export default defineExtension({
+  storageIndexes: [
+    {
+      name: "ready",
+      fields: { state: { path: ["state"], type: "string" }, rank: { path: ["rank"], type: "number" } },
+      equality: ["state"],
+      orderBy: [{ field: "rank", direction: "asc" }],
+    },
+  ],
   resourceKinds: [defineResourceKind({ id: "note", prefix: "NR" })],
-  commands: [read, stage, commit, outcome, checkReadCache, allocate, identity, find, numberEvent, syncHistory],
+  commands: [
+    read,
+    stage,
+    commit,
+    outcome,
+    checkReadCache,
+    allocate,
+    identity,
+    find,
+    numberEvent,
+    syncHistory,
+    seedQueryRecords,
+    queryRecords,
+  ],
   hooks: [recordSyncEvent],
 });

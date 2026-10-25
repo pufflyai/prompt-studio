@@ -12,9 +12,10 @@ export const example = defineExample({
   label: "Pigeon",
   icon: "Mail",
   primary: views[0].ref,
+  regions: ["main", "side"],
   chrome: { nav: views[3].ref, sidenav: views[2].ref, activity: false },
   regionSettings: {
-    sidenav: { size: { defaultPx: 220, minPx: 200, maxPx: 280 }, collapsible: false },
+    sidenav: { size: { defaultPx: 220, minPx: 200, maxPx: 280 }, canClose: false },
     side: { size: { defaultPx: 480, minPx: 360, maxPx: 600 } },
   },
   slots: [

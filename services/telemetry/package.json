@@ -7,12 +7,12 @@
   },
   "scripts": {
     "build": "bun build src/telemetry.ts --target bun --outdir dist",
-    "test": "bun test src",
-    "typecheck": "tsc --noEmit",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "typecheck": "bun check",
     "lint": "bun run typecheck && biome check ."
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "typescript": "6.0.2"
   }
 }

@@ -1,6 +1,15 @@
 export const kilnFrameCount = 120;
 export const kilnFrameRate = 24;
 
+export const sampleKilnPlayback = (
+  state: { frame: number; playing: boolean; playbackStartedAt: number },
+  now: number,
+) => {
+  if (!state.playing) return state.frame;
+  const elapsed = Math.floor(((now - state.playbackStartedAt) * kilnFrameRate) / 1000);
+  return ((state.frame - 1 + elapsed) % kilnFrameCount) + 1;
+};
+
 interface KilnKeyframe {
   frame: number;
   value: number;

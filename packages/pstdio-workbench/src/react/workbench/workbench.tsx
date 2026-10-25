@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import { ResizableSplitLayout, type ResourceContextAction, type ThemePreferenceStorage, Toaster } from "@pstdio/ui";
+import { ResizableSplitLayout, type ThemePreferenceStorage, Toaster } from "@pstdio/ui";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
@@ -27,6 +27,7 @@ import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
 import { FullscreenKeyboard } from "./fullscreen-controls";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
+import { useSidenavContextActions } from "./use-sidenav-context-actions";
 import { useWorkbenchLayoutFlags } from "./use-workbench-layout-flags";
 import { useWorkbenchArrangement, WorkbenchArrangementFrame } from "./workbench-arrangement";
 import { WorkbenchBody } from "./workbench-body";
@@ -36,7 +37,7 @@ import { WorkbenchSidePanelBoundary } from "./workbench-side-panel-boundary";
 import { WorkbenchSidePanelRegionHeader, WorkbenchSidePanelRegionPortal } from "./workbench-side-panel-layout";
 
 interface WorkbenchProps {
-  /** The host renders WorkbenchPanelToggles outside the navigation header. */
+  /** The host renders WorkbenchPanelToggles and WorkbenchFullscreenToggle outside the navigation header. */
   panelControlsPlacement?: "nav" | "host";
   workbench: WorkbenchCore;
   /** Host chrome above all workbench regions, inside the current theme. */
@@ -75,10 +76,10 @@ const createSidePanelHost = () => {
 const WorkbenchContent = (props: WorkbenchProps) => {
   const { workbench, renderParamField, sidePanelBubbleIcon, onOpenSidePanel, titleBar, panelControlsPlacement } = props;
   const arrangement = useWorkbenchArrangement(workbench);
-  const [sidenavContextActions, setSidenavContextActions] = useState<ResourceContextAction[]>([]);
+  const { contextActions: sidenavContextActions, onSidenavContextActionsChange } = useSidenavContextActions(workbench);
   installWorkbenchTreeRenderer(workbench, {
     renderParamField,
-    onSidenavContextActionsChange: setSidenavContextActions,
+    onSidenavContextActionsChange,
   });
   installWorkbenchKanbanRenderer(workbench, { renderParamField });
   installWorkbenchDataTableRenderer(workbench, { renderParamField });

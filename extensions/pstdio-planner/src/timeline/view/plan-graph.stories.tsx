@@ -6,6 +6,7 @@ import { buildTracks } from "../model/tracks";
 import type { DropTarget } from "./drag";
 import { PlanGraph } from "./plan-graph";
 import { useDragAndDrop, useViewSections } from "./plan-state";
+import { TimelinePresentationProvider } from "./timeline-presentation";
 import type { PlanClient } from "./use-plan";
 
 const plan = buildPlan({
@@ -96,6 +97,13 @@ function TimelineGraphStory(props: {
 const meta: Meta<typeof TimelineGraphStory> = {
   title: "Extensions/Planner/Timeline graph",
   component: TimelineGraphStory,
+  decorators: [
+    (Story) => (
+      <TimelinePresentationProvider projectId="graph-story">
+        <Story />
+      </TimelinePresentationProvider>
+    ),
+  ],
 };
 export default meta;
 type Story = StoryObj<typeof TimelineGraphStory>;
