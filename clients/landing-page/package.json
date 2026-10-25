@@ -6,13 +6,13 @@
     "dev": "astro dev",
     "build": "astro build --force",
     "preview": "astro preview",
-    "test": "bun test src",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts src",
     "astro": "astro",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build"
   },
   "engines": {
-    "bun": ">=1.4.2"
+    "bun": ">=1.4.4"
   },
   "dependencies": {
     "@astrojs/markdown-satteri": "^0.4.2",
@@ -34,7 +34,7 @@
     "@storybook/addon-docs": "^10.6.0",
     "@storybook/react": "^10.6.0",
     "@storybook/react-vite": "^10.6.0",
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/matter-js": "^0.20.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

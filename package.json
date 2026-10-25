@@ -17,13 +17,13 @@
     "verify:lockfile": "bun run --cwd scripts verify:lockfile",
     "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" lerna run build",
     "analyze-bundle": "lerna run analyze-bundle --stream",
-    "test": "lerna run test --ignore e2e && bun run build -- --scope e2e --include-dependencies && bun run --cwd packages/e2e test",
+    "test": "lerna run test --ignore e2e --ignore storybook-tests && bun run build -- --scope e2e --include-dependencies && bun run test:e2e && bun run test:storybook",
     "test:coverage": "lerna run test:coverage --stream -- --coverage-reporter=lcov",
     "test:e2e": "bun run --cwd packages/e2e test",
     "extension:bench:workbench": "bun run --cwd packages/pstdio-extension-testbench dev",
     "perf:frontend": "bun run --cwd packages/e2e perf:frontend",
     "perf:frontend:trace": "bun run --cwd packages/e2e perf:frontend:trace",
-    "lint": "lerna run lint",
+    "lint": "lerna run lint --concurrency 2",
     "format": "biome check --write .",
     "format:check": "biome check .",
     "clean": "find . -type d \\( -name node_modules -o -name dist -o -name dist-monaco -o -name .cache -o -name storybook-static -o -name __test-tmp__ -o -name .nx -o -name .publish -o -name .temp -o -name coverage -o -name .nyc_output -o -name test-results -o -name playwright-report -o -name .astro -o -name .playwright-mcp \\) -prune -exec rm -rf '{}' + && rm -rf packages/e2e/screenshots clients/desktop/out clients/desktop/.sidecar packages/pstdio-db/vendor",
@@ -50,10 +50,15 @@
     "verify:translations": "bun run --cwd scripts verify:translations",
     "changeset": "changeset",
     "release": "bun run build && changeset publish",
-    "dev:relay": "bun scripts/dev/relay-local.ts"
+    "dev:relay": "bun scripts/dev/relay-local.ts",
+    "test:storybook": "bun run --cwd packages/storybook-tests test",
+    "test:p0": "bun scripts/ci/run-priority-tests.ts p0",
+    "test:p1": "bun scripts/ci/run-priority-tests.ts p1",
+    "test:p2": "bun scripts/ci/run-priority-tests.ts p2",
+    "test:p3": "bun scripts/ci/run-priority-tests.ts p3"
   },
   "engines": {
-    "bun": ">=1.4.2"
+    "bun": ">=1.4.4"
   },
   "workspaces": [
     "clients/*",
@@ -75,14 +80,14 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.10",
     "@changesets/cli": "2.30.0",
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/node": "25.5.2",
     "cross-env": "10.1.0",
     "knip": "6.3.0",
     "lerna": "9.0.7",
     "node-gyp": "12.2.0"
   },
-  "packageManager": "bun@1.4.2",
+  "packageManager": "bun@1.4.4",
   "overrides": {
     "@electron/node-gyp": "10.2.0-electron.2",
     "katex": "^0.19.0"

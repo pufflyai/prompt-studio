@@ -1,7 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
   "ignoreExportsUsedInFile": true,
-  "ignoreBinaries": ["gh", "wait", "version"],
+  // `check` is a built-in Bun command, not a dependency binary.
+  "ignoreBinaries": ["check", "gh", "wait", "version"],
   "ignoreIssues": {
     "packages/pstdio/src/adapters/cli/commands/{close,inbox,login,logout,logs,performance,update-channel}.ts": [
       "exports"
@@ -28,7 +29,15 @@
       "ignore": ["dist/**"]
     },
     "services/account-manager": {
-      "entry": ["src/index.ts", "src/server.ts", "src/**/*.test.ts", "scripts/*.ts", "drizzle.config.ts"],
+      "entry": [
+        "src/index.ts",
+        "src/server.ts",
+        "src/**/*.test.ts",
+        "src/**/*.integration.ts",
+        "src/**/*.fixture.ts",
+        "scripts/*.ts",
+        "drizzle.config.ts"
+      ],
       "project": ["src/**/*.ts", "scripts/**/*.ts", "drizzle.config.ts"],
       "ignore": ["dist/**"]
     },
@@ -69,18 +78,27 @@
         // Tests spawn fixtures by path, so nothing imports them.
         "src/**/*.fixture.ts",
         "src/**/*.bench.ts",
+        "src/**/*.diagnostic.ts",
         "src/**/*.typecheck.ts",
         "*.test.ts",
+        "*.test.tsx",
         "scripts/**/*.ts",
         "bin/**/*.cjs"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}", "scripts/**/*.ts", "bin/**/*.cjs"],
       "ignore": ["dist/**", "storybook-static/**"]
     },
+    "packages/storybook-tests": {
+      "entry": ["playwright.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts", "src/scripts/*.ts"],
+      "project": ["playwright.config.ts", "src/**/*.ts"],
+      "ignore": ["playwright-report/**", "test-results/**"],
+      "ignoreDependencies": ["@pstdio/ui", "@pstdio/workbench", "pstdio-dashboard"]
+    },
     "packages/e2e": {
       "entry": [
         "playwright*.config.ts",
         "src/cli/run-pstdio.ts",
+        "src/scripts/bun-process-cleanup.ts",
         "src/**/*.spec.ts",
         "src/**/*.perf.ts",
         "src/**/*.bench.ts",
@@ -128,7 +146,7 @@
         "package.json",
         "src/index.ts",
         "src/server.ts",
-        "src/features/workspaces/worktree-cleanup.bench.ts",
+        "src/features/workspaces/worktree-cleanup.p3.bench.ts",
         "src/**/*.test.ts",
         // The isolated conformance runner launches these by path.
         "src/**/*.integration.ts",
@@ -152,10 +170,10 @@
         "src/index.ts",
         // The database asset build bundles this isolated child entrypoint by path.
         "src/db/pglite-export-worker.ts",
-        "src/services/sessions/session-query.bench.ts",
-        "src/services/extension-storage/document-storage.bench.ts",
-        "src/services/extension-storage/document-scale.bench.ts",
-        "src/services/extension-storage/record-read-scale.bench.ts",
+        "src/services/sessions/session-query.p3.bench.ts",
+        "src/services/extension-storage/document-storage.p3.bench.ts",
+        "src/services/extension-storage/document-scale.diagnostic.ts",
+        "src/services/extension-storage/record-read-scale.diagnostic.ts",
         "src/**/*.test.ts",
         // The isolated conformance runner and durability tests launch these by path.
         "src/**/*.integration.ts",
@@ -170,7 +188,9 @@
         ".storybook/**/*.{ts,tsx}",
         "src/main.tsx",
         "src/**/*.stories.tsx",
-        "src/**/*.test.ts"
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "*.test.ts"
       ],
       "project": ["*.ts", ".storybook/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
       "ignore": ["dist/**", "storybook-static/**"]
@@ -181,6 +201,7 @@
         "src/main.tsx",
         "src/lib/testbench-api-server.ts",
         "src/**/*.test.ts",
+        "src/**/*.test.tsx",
         // Tests load fixture extensions by path.
         "src/lib/fixtures/**/extension.ts"
       ],
@@ -251,6 +272,7 @@
         "src/components/{canvas,dependency-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.stories.tsx",
+        "*.test.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx"
       ],
@@ -333,6 +355,8 @@
       "entry": [
         "package.json",
         "astro.config.*",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
         "src/pages/**/*.{astro,md,mdx,ts,tsx}",
         "src/layouts/**/*.astro",
         // Loaded by a <script src> tag in base-layout.astro.

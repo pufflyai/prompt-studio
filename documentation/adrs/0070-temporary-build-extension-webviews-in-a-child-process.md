@@ -31,4 +31,4 @@ PS-624 also changed the build manager. Those changes are not part of this workar
 
 ## Removal
 
-Remove this workaround when `Bun.build` reads replaced package files in a long-running process, or when Bun offers a way to clear its resolution cache. Then call `Bun.build` in process again. Before removing it, run the "builds the dependency files present at build time after an extension folder is replaced" test in `extension-webview-builder.test.ts` against the in-process builder, and repeat the Planner upgrade check from PS-626.
+Remove this workaround when `Bun.build` reads replaced package files in a long-running process, or when Bun offers a way to clear its resolution cache. Then call `Bun.build` in process again. Before removing it, run the "builds the dependency files present at build time after an extension folder is replaced" test in `extension-webview-builder.p0.test.ts` against the in-process builder, and repeat the Planner upgrade check from PS-626.

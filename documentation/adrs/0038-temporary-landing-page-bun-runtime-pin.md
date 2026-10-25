@@ -8,7 +8,7 @@ Accepted as a temporary workaround.
 
 ## Intended design
 
-The landing page should build in production the same way it builds in CI and in its Dockerfile: Astro running on Node, with the repository's Bun version (1.4.2) installing dependencies.
+The landing page should build in production the same way it builds in CI and in its Dockerfile: Astro running on Node, with the repository's Bun version (1.4.4) installing dependencies.
 
 ## External limitation
 
@@ -18,7 +18,7 @@ A clean fix needs either Node in the build image or a Bun runtime that prerender
 
 ## Temporary workaround
 
-As a temporary workaround, the App Platform spec pins `BUN_VERSION` to 1.3.14 for the `ps-landing` static site. The workaround lives only in that spec; the repository, CI, and the Dockerfile stay on Bun 1.4.2. The trade-off is that production installs and builds with an older Bun than the rest of the project. Bun 1.3.14 reads the current lockfile and installs it with `--frozen-lockfile`, so dependency versions still match.
+As a temporary workaround, the App Platform spec pins `BUN_VERSION` to 1.3.14 for the `ps-landing` static site. The workaround lives only in that spec; the repository, CI, and the Dockerfile stay on Bun 1.4.4. The trade-off is that production installs and builds with an older Bun than the rest of the project. Bun 1.3.14 reads the current lockfile and installs it with `--frozen-lockfile`, so dependency versions still match.
 
 The same spec change also fixed the underlying outage, and that part is permanent. The build command now runs `rm -rf node_modules && bun install --frozen-lockfile --ignore-scripts --filter @pstdio/landing-page` before building. The buildpack had been restoring a cached root `node_modules` and skipping the install, and that cache lacks workspace binaries such as `chakra`. Every production deploy failed from September 17 to September 25, 2026 for this reason.
 

@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -6,7 +7,21 @@ const root = resolve(import.meta.dir, "../../..");
 const directory = await mkdtemp(join(tmpdir(), "manager-authority-"));
 const file = join(directory, "compose.json");
 const project = `manager-authority-${crypto.randomUUID()}`;
-const entries = process.argv.slice(2);
+const requested = process.argv.slice(2);
+const priorities = (process.env.TEST_PRIORITIES ?? "P0,P1,P2").split(",");
+const entries = (requested.length ? requested : ["src", "scripts"])
+  .flatMap((path) => {
+    if (statSync(path).isFile()) return [path];
+    return Array.from(new Bun.Glob("**/*.{test,integration}.ts").scanSync({ cwd: path })).map((file) =>
+      join(path, file),
+    );
+  })
+  .filter((file) => {
+    const priority = file.match(/\.p([0-3])\.(?:test|integration)\.ts$/)?.[1];
+    return priority && priorities.includes(`P${priority}`);
+  })
+  .sort();
+if (!entries.length) throw new Error("No account authority contracts selected");
 const compose = async (...args: string[]) => {
   const child = Bun.spawn(["docker", "compose", "-f", file, "-p", project, ...args], {
     stdout: "inherit",
@@ -33,13 +48,18 @@ const config = {
       },
     },
     tester: {
-      image: "oven/bun:1.4.2",
+      image: "oven/bun:1.4.4",
       working_dir: "/repo/services/account-manager",
       volumes: [`${root}:/repo:ro`],
       environment: {
         MANAGER_TEST_ADMIN_URL: "postgres://fixture_admin:fixture-admin-only@database:5432/authority_admin",
       },
-      command: ["bun", "test", ...(entries.length ? entries : ["src", "scripts"])],
+      command: [
+        "bun",
+        "test",
+        ...entries.map((file) => `./${file}`),
+        ...(process.env.CI_PRIORITY === "P1" ? ["--bail=1"] : []),
+      ],
       depends_on: { database: { condition: "service_healthy" } },
     },
     smoke: {

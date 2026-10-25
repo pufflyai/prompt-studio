@@ -72,6 +72,16 @@ const checkConsumer = (
   );
   const install = freshInstallArgs(repoRoot, directory);
   run(directory, react ? install : [...install, "--omit", "peer"]);
+  run(directory, [
+    "--eval",
+    `
+import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
+const path = new URL("../../package.json", import.meta.resolve("@pstdio/sdk/extensions"));
+const manifest = await Bun.file(path).json();
+if (manifest.pstdio?.extensionApiVersion !== EXTENSION_API_VERSION)
+  throw new Error("Packed SDK API metadata differs from its runtime API version");
+`,
+  ]);
   writeFileSync(
     join(directory, "consumer.ts"),
     imports
@@ -161,6 +171,7 @@ void [invalidAttribute, invalidColumn];
     }),
   );
   run(directory, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
+  run(directory, ["check", "-p", "tsconfig.json"]);
   if (react) {
     writeFileSync(
       join(directory, "vite.config.ts"),
@@ -185,10 +196,10 @@ export default defineConfig({ build: { lib: { entry: ${JSON.stringify(dependenci
   );
 };
 
-export const verifyPublicPackages = (repoRoot: string, sdkOnly = false) => {
+export const verifyPublicPackages = (repoRoot: string, packageNames = ["sdk", "ui", "pstdio-workbench"]) => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-public-packages-"));
   try {
-    const packages = (sdkOnly ? ["sdk"] : ["sdk", "ui", "pstdio-workbench"]).map((name) => {
+    const packages = packageNames.map((name) => {
       const path = resolve(repoRoot, "packages", name, ".publish");
       const archive = join(root, `${name}.tgz`);
       run(path, ["pm", "pack", "--filename", archive]);
@@ -202,4 +213,7 @@ export const verifyPublicPackages = (repoRoot: string, sdkOnly = false) => {
   }
 };
 
-if (import.meta.main) verifyPublicPackages(resolve(import.meta.dirname, "../.."), process.argv.includes("--sdk-only"));
+if (import.meta.main) {
+  const names = process.argv.includes("--sdk-only") ? ["sdk"] : process.argv.slice(2);
+  verifyPublicPackages(resolve(import.meta.dirname, "../.."), names.length ? names : undefined);
+}

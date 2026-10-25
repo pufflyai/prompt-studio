@@ -32,4 +32,4 @@ The fatal handlers were reached in practice by errors that should never be fatal
 
 PGlite 0.4.6 can spin synchronously when an admitted query resumes after the engine closes. This blocks JavaScript timers, so increasing test timeouts cannot help. The failure matches [upstream issue 1084](https://github.com/electric-sql/pglite/issues/1084). In our reproduction, session completion launched a detached workspace lookup; the app then closed its database before that lookup finished. The fix belongs to the callback owner, rather than a test delay or a longer shutdown allowance.
 
-Tests: `packages/pstdio-api/src/app-database-close.test.ts` reopens the same database after a failed startup and after a failed close. The PGlite lock refuses the reopen while the first open is still active. `serve-app.test.ts` checks that the fatal handler exits only after close finishes.
+Tests: `packages/pstdio-api/src/app-database-close.p1.test.ts` reopens the same database after a failed startup and after a failed close. The PGlite lock refuses the reopen while the first open is still active. `serve-app.p0.test.ts` checks that the fatal handler exits only after close finishes.

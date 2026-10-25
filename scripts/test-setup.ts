@@ -1,6 +1,6 @@
 /// <reference types="node" />
-import { afterEach, beforeEach } from "bun:test";
-import { mkdtempSync } from "node:fs";
+import { afterAll, afterEach, beforeEach } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -21,8 +21,11 @@ process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
 
 // Point PSTDIO_HOME at a fresh temp dir so the per-project extension auto-enable
 // pass cannot pick up real extensions from the developer machine.
-process.env.PSTDIO_HOME = mkdtempSync(join(tmpdir(), "pstdio-test-home-"));
+const testHome = mkdtempSync(join(tmpdir(), "pstdio-test-home-"));
+process.env.PSTDIO_HOME = testHome;
 process.env.PSTDIO_LOG_PATH = join(process.env.PSTDIO_HOME, "logs.jsonl");
+// Preload hooks run at the whole test process boundary.
+afterAll(() => rmSync(testHome, { recursive: true, force: true }));
 
 // 2. Snapshot/restore process.env around every test so mutations made by one
 //    test cannot leak into the next. The snapshot is taken inside beforeEach,

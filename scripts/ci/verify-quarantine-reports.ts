@@ -1,50 +1,85 @@
-import { appendFileSync, existsSync } from "node:fs";
-import { dirname, relative, resolve } from "node:path";
-import { bunTestSelection, verifyPlaywrightQuarantineReport, verifyQuarantineReport } from "./test-quarantine";
-import registry from "./test-quarantine.json";
+import { appendFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { bunRunIdentity } from "./bun-test-evidence";
+import {
+  verifyBunQuarantineCases,
+  verifyPlaywrightQuarantineReport,
+  verifyQuarantineAttempt,
+} from "./quarantine-reports";
+import { quarantineGroups } from "./run-quarantined-tests";
+import {
+  browserQuarantineReportPath,
+  matchesPlatform,
+  quarantineDirectory,
+  quarantineRegistry,
+} from "./test-quarantine";
+import { readWorkspacePackages } from "./workspace-packages";
 
 const root = resolve(import.meta.dir, "../..");
-const runner = process.argv[2];
-const cases = registry.filter(
-  (entry) =>
-    entry.runner === runner &&
-    entry.platforms.includes(process.platform) &&
-    (!entry.arch || entry.arch === process.arch),
-);
+const runner = process.argv[2]!;
+const scopeAt = process.argv.indexOf("--scope");
+const scope = scopeAt < 0 ? undefined : process.argv[scopeAt + 1];
+if (scopeAt >= 0 && !scope) throw new Error("Missing quarantine scope");
 const record = (name: string, result: { executed: number; failures: number }) => {
   const line = `${name}: ${result.executed} quarantined cases executed once; ${result.failures} failed.\n`;
   console.log(line.trim());
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, line);
 };
-
 if (runner === "bun" || runner === "packaged-bun") {
-  const packages = new Set(
-    cases.map((entry) => {
-      let directory = dirname(resolve(root, entry.file));
-      while (!existsSync(resolve(directory, "package.json"))) directory = dirname(directory);
-      return relative(root, directory).replaceAll("\\", "/");
-    }),
-  );
-  for (const packageDir of packages) {
-    const selection = bunTestSelection(registry, packageDir, process.platform, true, runner);
-    const xml = await Bun.file(resolve(root, "test-results/quarantine", packageDir, "results.xml")).text();
-    record(packageDir, verifyQuarantineReport(xml, selection.count));
-  }
-} else if (runner === "playwright" || runner === "playwright-ui" || runner === "packaged-desktop") {
-  const files: Record<string, string> = {
-    playwright: "packages/e2e/test-results/packaged-browser-quarantine/results.json",
-    "playwright-ui": "packages/e2e/test-results/ui-quarantine/results.json",
-    "packaged-desktop": "clients/desktop/test-results/packaged-quarantine-readiness.json",
-  };
-  const file = files[runner];
-  const report = await Bun.file(resolve(root, file)).json();
-  record(
+  const identity = bunRunIdentity(root);
+  for (const { owner, entries } of quarantineGroups(
+    quarantineRegistry,
+    readWorkspacePackages(root),
     runner,
-    verifyPlaywrightQuarantineReport(
-      report,
-      cases.map((entry) => entry.name),
-    ),
+    process.platform,
+    process.arch,
+    scope,
+  )) {
+    const directory = quarantineDirectory(root, runner, owner.dir);
+    const attempt = await Bun.file(resolve(directory, "attempt.json")).json();
+    const paths = Array.from(new Bun.Glob("**/cases.json").scanSync({ cwd: directory }));
+    const reports = await Promise.all(paths.map((path) => Bun.file(resolve(directory, path)).json()));
+    if (
+      !reports.length ||
+      reports.some(
+        (report) =>
+          !report.complete ||
+          report.reportError ||
+          report.signal ||
+          report.sourceSha !== identity.sourceSha ||
+          report.policyDigest !== identity.policyDigest ||
+          report.platform !== identity.platform ||
+          report.arch !== identity.arch,
+      )
+    )
+      throw new Error(`Incomplete or stale quarantine evidence: ${owner.name}`);
+    for (const report of reports) verifyQuarantineAttempt(attempt, identity, report.quarantineAttempt);
+    record(
+      owner.name,
+      verifyBunQuarantineCases(
+        reports.flatMap((report) => report.cases),
+        entries,
+      ),
+    );
+  }
+} else if (["playwright", "playwright-ui", "packaged-desktop"].includes(runner)) {
+  const expected = quarantineRegistry.filter(
+    (entry) => entry.runner === runner && matchesPlatform(entry, process.platform, process.arch),
   );
-} else {
-  throw new Error("Choose bun, packaged-bun, playwright, playwright-ui or packaged-desktop quarantine reports.");
-}
+  if (!expected.length) {
+    record(runner, { executed: 0, failures: 0 });
+    process.exit(0);
+  }
+  const { owner } = quarantineGroups(
+    quarantineRegistry,
+    readWorkspacePackages(root),
+    runner,
+    process.platform,
+    process.arch,
+    scope,
+  )[0]!;
+  const attempt = await Bun.file(resolve(quarantineDirectory(root, runner, owner.dir), "attempt.json")).json();
+  const report = await Bun.file(browserQuarantineReportPath(runner)).json();
+  verifyQuarantineAttempt(attempt, bunRunIdentity(root), report.config.metadata?.quarantineAttempt);
+  record(runner, verifyPlaywrightQuarantineReport(report, expected, root));
+} else throw new Error("Choose bun, packaged-bun, playwright, playwright-ui or packaged-desktop");

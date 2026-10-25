@@ -34,7 +34,7 @@ The Claude resume wrapper now treats a follow-up as a one-shot input payload and
 
 The original host timeout was superseded by PS-389. Claude Code and Codex now use provider-owned completion. A lack of chat events cannot distinguish a hung process from quiet reasoning or a long tool call, so the host activity watchdog must not terminate these CLI sessions.
 
-The [Claude Code harness](../../extensions/harness-claude-code/src/spawn.ts) closes stdin after sending the prompt, drains stderr to prevent output backpressure, and returns `timeoutStrategy: "provider"`. Its [regression test](../../extensions/harness-claude-code/src/spawn.test.ts) checks that follow-up input ends.
+The [Claude Code harness](../../extensions/harness-claude-code/src/spawn.ts) closes stdin after sending the prompt, drains stderr to prevent output backpressure, and returns `timeoutStrategy: "provider"`. Its [regression test](../../extensions/harness-claude-code/src/spawn.p0.test.ts) checks that follow-up input ends.
 
 ## Key takeaway
 
