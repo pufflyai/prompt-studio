@@ -10,6 +10,24 @@ import { startRegistryService } from "./registry-service.fixture";
 import { startRegistryWireFixture } from "./registry-wire.fixture";
 
 export const registerIndependentExtensionSmokeTests = () => {
+  test("a packaged CLI gives unchanged extension contents identical archives across time", async () => {
+    const root = await mkdtemp(join(tmpdir(), "packaged-extension-reproducibility-"));
+    try {
+      const source = join(root, "notes");
+      const home = join(root, "home");
+      await mkdir(home);
+      await writeRegistryNotes(source, "0.45.1");
+      const args = ["extensions", "pack", source, "--out-dir", root];
+      const path = (await runPackagedAsync(args, root, { PSTDIO_HOME: home })).trim();
+      const first = await Bun.file(path).bytes();
+      await Bun.sleep(1100);
+      const repeated = (await runPackagedAsync(args, root, { PSTDIO_HOME: home })).trim();
+      expect(await Bun.file(repeated).bytes()).toEqual(first);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   test("a packaged host packs, installs and upgrades an independently published extension without changing host version", async () => {
     const root = await mkdtemp(join(tmpdir(), "packaged-independent-extensions-"));
     const registry =

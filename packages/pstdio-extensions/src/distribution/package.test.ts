@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { packExtension, readExtensionPackage, unpackExtension } from "./package";
@@ -61,6 +61,16 @@ test("refuses modified packages and mismatched identities before writing files",
       sha256: "0".repeat(64),
     }),
   ).rejects.toThrow("SHA-256");
+});
+
+test("unchanged extension contents keep their package hash across clock and filesystem timestamp changes", async () => {
+  const root = await fixture();
+  const first = await packExtension(root);
+  await Bun.sleep(1100);
+  await utimes(join(root, "extension.ts"), new Date(0), new Date(0));
+  const second = await packExtension(root);
+  expect(second.sha256).toBe(first.sha256);
+  expect(second.bytes).toEqual(first.bytes);
 });
 
 test("refuses unsafe archive paths", async () => {

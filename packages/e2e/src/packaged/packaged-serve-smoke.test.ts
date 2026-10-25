@@ -66,7 +66,7 @@ import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smo
 // Shutdown also drains session lifecycle work after an immediately completed harness run.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
-// A separately published PSX package upgrades and runs on the same packaged host version.
+// Repeat packing keeps identical bytes; a PSX package upgrades and runs on the same packaged host version.
 import { registerIndependentExtensionSmokeTests } from "./packaged-independent-extensions-smoke";
 import { registerLinkIconsSmokeTests } from "./packaged-link-icons-smoke";
 // Harness discovery/models live in harness-npm-detection.test.ts; Codex exit outcomes in codex-transport.test.ts.
