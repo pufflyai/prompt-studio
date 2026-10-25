@@ -4,7 +4,7 @@ Proposed: 2026-10-24
 
 ## Decision
 
-This is a temporary workaround, not the intended design. The Linux job of `verify-packaged-toolchain.yml` and the `psx_delivery` job of `service-containers.yml` run on `ubuntu-24.04` instead of `ubuntu-latest`. Both install Playwright's Chromium. All other jobs keep `ubuntu-latest`.
+This is a temporary workaround, not the intended design. The Linux job of `verify-packaged-toolchain.yml`, the `psx_delivery` job of `service-containers.yml` and the `publish` job of `release-packages.yml` run on `ubuntu-24.04` instead of `ubuntu-latest`. All three install Playwright's Chromium. All other jobs keep `ubuntu-latest`.
 
 ## How it should work
 
@@ -16,7 +16,7 @@ GitHub moves the `ubuntu-latest` label to Ubuntu 26.04 from 2026-10-19 ([runner-
 
 ## Workaround and trade-offs
 
-One matrix entry and the `psx_delivery` job name `ubuntu-24.04`. The packaged CLI, browser and extension delivery checks keep their workload, limits and assertions. The trade-off: these checks do not run on the newest image until the pin is removed. `psx_delivery` also runs when the release workflow builds containers, so without the pin a 26.04 runner would block the release.
+One matrix entry, the `psx_delivery` job and the release `publish` job name `ubuntu-24.04`. The packaged CLI, browser and extension delivery checks keep their workload, limits and assertions. The trade-off: these jobs do not run on the newest image until the pin is removed. `psx_delivery` also runs when the release workflow builds containers, so without the pin a 26.04 runner would block the release. Without the pin on `publish`, nightly run [40139112300](https://github.com/pufflyai/prompt-studio/actions/runs/40139112300) could not publish.
 
 ## Limitations
 
@@ -24,4 +24,4 @@ Only these two jobs are pinned. Another job that installs Playwright browsers on
 
 ## Removal
 
-When a Playwright release supports Chromium on Ubuntu 26.04, upgrade `@playwright/test`, set both jobs back to `ubuntu-latest`, confirm the packaged Linux check passes on a 26.04 runner, and delete this ADR.
+When a Playwright release supports Chromium on Ubuntu 26.04, upgrade `@playwright/test`, set all three jobs back to `ubuntu-latest`, confirm the packaged Linux check passes on a 26.04 runner, and delete this ADR.
