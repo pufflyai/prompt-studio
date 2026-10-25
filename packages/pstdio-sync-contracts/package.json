@@ -6,6 +6,7 @@
     ".": "./src/index.ts",
     "./conformance": "./src/conformance/index.ts"
   },
+  "sideEffects": false,
   "scripts": {
     "test": "bun test src",
     "test:conformance": "bun scripts/isolated.ts",

@@ -14,27 +14,38 @@ export const resolveCommandRef = (ext: NormalizedExtension, ref: CommandRef) => 
 
 export const resolveEventRef = (ext: NormalizedExtension, ref: EventRef) => resolveEventReferenceId(ref, ext.id);
 
-// A resource kind's id is the plain name its extension declares, unlike a panel or mode
-// id. That same string is the resource type in every payload crossing the extension
-// boundary, in persisted resource URIs, and in persisted session anchors, so the host
-// must not rewrite it. A reference may name a kind bare or namespaced as
-// `<extension>.<kind>`; the namespaced form records who owns the kind and resolves to
-// the same declared id. Anything else — a host kind, or an extension that is not
-// installed — stays exactly as written.
-export const resourceKindReferences = (kinds: readonly { id: string; name: string; extensionId?: string }[]) =>
-  new Map(
-    kinds.flatMap((kind) => [
-      [kind.id, kind.id],
-      [`${kind.name}.${kind.id}`, kind.id],
-      ...(kind.extensionId ? [[`${kind.extensionId}.${kind.id}`, kind.id] as const] : []),
-      ...(kind.extensionId
-        ? [[contributionRefId({ extensionId: kind.extensionId, kind: "resource-kind", id: kind.id }), kind.id] as const]
-        : []),
-    ]),
-  );
+export const resourceKindReferences = (
+  kinds: readonly { id: string; localId?: string; name: string; extensionId?: string }[],
+) => {
+  const references = new Map<string, string>();
+  const aliases = new Map<string, Set<string>>();
+  for (const kind of kinds) {
+    const localId = kind.localId ?? kind.id;
+    references.set(kind.id, kind.id);
+    if (kind.extensionId) {
+      references.set(`${kind.extensionId}.${localId}`, kind.id);
+      references.set(contributionRefId({ extensionId: kind.extensionId, kind: "resource-kind", id: localId }), kind.id);
+    }
+    for (const alias of [localId, `${kind.name}.${localId}`]) {
+      const owners = aliases.get(alias) ?? new Set<string>();
+      owners.add(kind.id);
+      aliases.set(alias, owners);
+    }
+  }
+  for (const [alias, owners] of aliases) {
+    if (owners.size === 1) references.set(alias, [...owners][0]!);
+    else references.delete(alias);
+  }
+  return references;
+};
 
-export const resolveResourceKindReference = (reference: string, references: ReadonlyMap<string, string>) =>
-  references.get(reference) ?? reference;
+export const resolveResourceKindReference = (reference: string, references: ReadonlyMap<string, string>) => {
+  const resolved = references.get(reference);
+  if (resolved && resolved !== reference && !reference.includes(".resource-kind.")) {
+    console.warn(`Deprecated resource kind "${reference}"; use "${resolved}".`);
+  }
+  return resolved ?? reference;
+};
 
 const refs = <Kind extends ContributionKind>(
   value: ContributionRef<Kind> | readonly ContributionRef<Kind>[] | undefined,
@@ -48,17 +59,14 @@ const oneOrMany = (values: readonly string[]) => {
   return values.length === 1 ? values[0] : [...values];
 };
 
-export const serializeWhenExpression = (
-  when: WhenExpression | undefined,
-  extensionId: string,
-  resourceKinds: ReadonlyMap<string, string> = new Map(),
-) => {
+export const serializeWhenExpression = (when: WhenExpression | undefined, extensionId: string) => {
   if (!when) return undefined;
   const mode = oneOrMany(refs(when.mode).map((ref) => contributionRefId(ref, extensionId)));
   const viewId = oneOrMany(refs(when.view).map((ref) => contributionRefId(ref, extensionId)));
-  const resourceType = when.resourceType?.map((ref) =>
-    resolveResourceKindReference(contributionRefId(ref, extensionId), resourceKinds),
-  );
+  const resourceType = when.resourceType?.map((ref) => {
+    const owner = ref.extensionId ?? extensionId;
+    return owner === "pstdio" ? ref.id : `${owner}.${ref.id}`;
+  });
   return {
     ...(mode ? { mode } : {}),
     ...(viewId ? { viewId } : {}),

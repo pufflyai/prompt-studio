@@ -5,9 +5,9 @@ import {
   ticketResourceIdentity,
   ticketResourceReference,
 } from "./ticket-resource-hierarchy";
-import type { StoredTicket } from "./types";
+import type { Ticket } from "./types";
 
-const storedTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
+const storedTicket = (overrides: Partial<Ticket>): Ticket => ({
   id: "ticket-1",
   shorthand: "PS-1",
   title: "Ticket",

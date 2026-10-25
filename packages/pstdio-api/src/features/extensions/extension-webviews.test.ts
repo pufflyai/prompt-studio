@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { classifyWebviewEntry, collectExtensionWebviews } from "./extension-webviews";
+import { classifyWebviewEntry, collectExtensionWebviews, safeWebviewId } from "./extension-webviews";
+
+test("allocates portable webview cache paths for Windows device publishers", () => {
+  expect(safeWebviewId("con.notes.view.editor")).toBe("_con.notes.view.editor");
+  expect(safeWebviewId("alice.notes.view.editor")).toBe("alice.notes.view.editor");
+});
 
 const asset = (path: string) => ({
   kind: "package-asset" as const,

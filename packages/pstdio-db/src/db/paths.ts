@@ -10,7 +10,8 @@ export const canonicalDbPath = (dbPath: string) => {
   if (dbPath === ":memory:") return dbPath;
   const requested = resolve(dbPath);
   // Preserve existing symlink targets. A dangling symlink must not become a new home.
-  if (fs.lstatSync(requested, { throwIfNoEntry: false })) return fs.realpathSync(requested);
+  // The native call also expands Windows short names, so every route to a home gets one path.
+  if (fs.lstatSync(requested, { throwIfNoEntry: false })) return fs.realpathSync.native(requested);
   fs.mkdirSync(dirname(requested), { recursive: true });
-  return join(fs.realpathSync(dirname(requested)), basename(requested));
+  return join(fs.realpathSync.native(dirname(requested)), basename(requested));
 };

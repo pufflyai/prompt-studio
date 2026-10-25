@@ -12,5 +12,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const PreparingData: Story = {};
+export const BackingUpPreviousData: Story = { args: { phase: "retiring" } };
+export const BackupTakingLonger: Story = { args: { phase: "retiring", takingLonger: true } };
 export const LoadingTools: Story = { args: { phase: "extensions" } };
 export const TakingLonger: Story = { args: { phase: "database", takingLonger: true } };

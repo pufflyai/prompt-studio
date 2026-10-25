@@ -34,8 +34,8 @@ test("opens note and artifact paths from chat in their own pages", async ({ page
         workspace_id: workspaces[0].id,
         title: "Resource path review",
         prompt: [
-          `Read .pstdio/extension-storage/pstdio-notes/documents/${note.id}/content.md`,
-          `and .pstdio/extension-storage/pstdio-artifacts/sites/${artifact.revisionId}.html`,
+          `Read .pstdio/extension-storage/pstdio.pstdio-notes/documents/${note.id}/content.md`,
+          `and .pstdio/extension-storage/pstdio.pstdio-artifacts/sites/${artifact.revisionId}.html`,
         ].join(" "),
         agent,
       },

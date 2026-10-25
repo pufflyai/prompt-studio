@@ -53,7 +53,7 @@ describe("createWorkbenchExtensionMetadata", () => {
     const runtime = normalizeExtensionSources([source(defineExtension({ commands: [rename], resourceKinds: [note] }))]);
     const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
     expect(metadata.menuContributions[0]).toMatchObject({
-      disabledWhen: { resourceType: ["note"], metadata: { writable: false } },
+      disabledWhen: { resourceType: ["pstdio.lab.note"], metadata: { writable: false } },
       disabledReason: "Notes are read-only.",
     });
   });

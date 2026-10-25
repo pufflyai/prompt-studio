@@ -4,7 +4,7 @@ Use these TypeScript and TSX files as the source for authoring snippets. They ar
 
 - [Resource reviewer](examples/resource-reviewer/extension.ts) combines a searchable catalog, native tree, custom preview, attached native inspector, and event-driven refresh. Start here for a review or editing tool.
 - [Commands and resource actions](examples/commands.ts) shows typed parameters and resource menu ownership.
-- [Scribble documents](examples/scribble.ts) shows an editable native file view, storage, routed resources, pinned tabs, and a navigation tree.
+- [Scribble documents](examples/scribble.ts) shows an editable native file view, note bodies stored as files in an artifact mount, routed resources, pinned tabs, and a navigation tree.
 - [Zipline inspector](examples/zipline.ts) shows a native board and a Side resource binding.
 - [Pigeon reader](examples/pigeon.ts) shows a table, explicit row activation, and a resource-bound reader.
 

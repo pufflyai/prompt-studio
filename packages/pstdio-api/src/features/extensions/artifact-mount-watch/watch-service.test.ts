@@ -132,7 +132,7 @@ const createHarness = async (listProjectIds = async () => ["project-1"]) => {
   services.push(service);
 
   const boards = (root = workspace.root_path) =>
-    join(root ?? "", ".pstdio", "extension-storage", "dashboards", "boards");
+    join(root ?? "", ".pstdio", "extension-storage", "pstdio.dashboards", "boards");
   const changeEvents = () =>
     eventBus
       .getSince(0)

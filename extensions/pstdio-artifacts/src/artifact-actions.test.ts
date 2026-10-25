@@ -62,7 +62,7 @@ test("snapshot paths open the artifact that owns the revision", async () => {
   const [claim] = artifactKind.paths ?? [];
   const resolve = (path: string) => resolvePath.run(ctx, { path: `${claim.prefix}${path}`, workspaceId: "workspace" });
 
-  expect(claim.prefix).toBe(".pstdio/extension-storage/pstdio-artifacts/sites/");
+  expect(claim.prefix).toBe(".pstdio/extension-storage/pstdio.pstdio-artifacts/sites/");
   expect(resolvePath.id).toBe(claim.resolve.id);
   expect(await resolve(`${artifact.revisionId}.html`)).toMatchObject({
     resource: { type: "artifact", id: artifact.artifactId, label: "Updated report", projectId: ctx.projectId },

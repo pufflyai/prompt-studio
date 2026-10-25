@@ -57,7 +57,7 @@ describe("createDb", () => {
 
       const client = await createDb();
 
-      expect(client.path).toBe(fs.realpathSync(dbPath));
+      expect(client.path).toBe(fs.realpathSync.native(dbPath));
       expect(fs.existsSync(dbPath)).toBe(true);
 
       await client.close();

@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import type {
   createExtensionInstancesDBService,
+  createExtensionStorageDBService,
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
@@ -9,7 +10,9 @@ import type {
   hashExtensionSource,
   LoadedExtensionSnapshot,
 } from "../features/extensions/extension-runtime";
+import { publishedExtensionsId } from "../features/extensions/publication/types";
 import type { EventBus } from "../features/sync/event-bus";
+import { activatePublishedExtensions } from "./activate-published-extension";
 import {
   type PruneProjectExtensionInstancesInput,
   pruneProjectExtensionInstances as pruneProjectExtensionInstancesImpl,
@@ -78,6 +81,8 @@ type ExtensionServiceDeps = {
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
+  /** Deleting an extension's data waits for a running capture or restore of its project. */
+  recovery: Pick<ReturnType<typeof createExtensionStorageDBService>["recovery"], "exclusive">;
   eventBus?: EventBus;
   hashExtension?: typeof hashExtensionSource;
   onInstalledSourcesChanged?: (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void> | void;
@@ -113,6 +118,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   const registerInstalledSource = async (input: RegisterInstalledSourceInput) => {
+    if (input.extensionId === publishedExtensionsId) throw new Error("Reserved platform extension identity");
     const existing = await findInstalledSourceForRegistration(deps.installedExtensionSourcesService, input);
     const values = registrationValues(input, existing);
 
@@ -311,6 +317,18 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   return {
+    activatePublishedExtensions: (inputs: Parameters<typeof activatePublishedExtensions>[1]) =>
+      activatePublishedExtensions(
+        {
+          sources: deps.installedExtensionSourcesService,
+          instances: deps.extensionInstancesService,
+          emitRemoved: (row) => deps.eventBus?.emit("installed_extension_sources", "delete", row),
+          emitInstance: emitExtensionInstance,
+          refresh: notifyInstalledSourcesChanged,
+          emit: emitInstalledSource,
+        },
+        inputs,
+      ),
     enableInstalledSourceForProject,
     getInstalledSource,
     getInstalledSourceById: deps.installedExtensionSourcesService.get,

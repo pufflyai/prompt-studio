@@ -4,6 +4,7 @@ import { normalizeMountRelativePath } from "pstdio-extensions";
 import { createSharedArtifactMount } from "../../services/shared-files/artifact-mount";
 import { resolveWorkspaceFilesPath } from "./command-environment/workspace-files";
 import type { ExtensionsRouteDeps } from "./deps";
+import { createPublicationStorageAccess } from "./publication/storage-access";
 
 // The image allowlist deliberately excludes SVG: it can carry script.
 export const ARTIFACT_IMAGE_MEDIA_TYPES: Record<string, string> = {
@@ -34,7 +35,12 @@ export const artifactImageMediaType = (path: string) => ARTIFACT_IMAGE_MEDIA_TYP
 
 type ArtifactMountDeps = Pick<
   ExtensionsRouteDeps,
-  "extensionRuntimeCatalog" | "workspaceService" | "extensionStorageService" | "assetTransferService"
+  | "extensionRuntimeCatalog"
+  | "workspaceService"
+  | "extensionStorageService"
+  | "assetTransferService"
+  | "extensionService"
+  | "accountService"
 >;
 
 type ResolveArtifactMountInput = { projectId: string; mountId: string } & (
@@ -70,6 +76,12 @@ export const resolveExtensionArtifactMount = async (deps: ArtifactMountDeps, inp
   return {
     installedExtensionId: enabled.installedSource.id,
     mount: createSharedArtifactMount(deps, {
+      assertWritable: createPublicationStorageAccess(deps, {
+        projectId: input.projectId,
+        extensionId: runtimeMount.extensionId,
+        extensionInstanceId: enabled.instance.id,
+        source: enabled.installedSource,
+      }).write,
       projectId: input.projectId,
       extensionId: runtimeMount.extensionId,
       repoRoot: rootPath,

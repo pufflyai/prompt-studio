@@ -64,7 +64,7 @@ export const expectPackagedArtifacts = async (input: {
   expect(metadata.resourceKinds).toContainEqual(
     expect.objectContaining({
       extensionId: "pstdio.pstdio-artifacts",
-      id: "artifact",
+      id: "pstdio.pstdio-artifacts.artifact",
     }),
   );
   expect(metadata.commandPaletteResources).toContainEqual(

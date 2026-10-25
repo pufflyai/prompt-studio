@@ -67,7 +67,7 @@ for (const target of ["workspace", "session"] as const) {
     if (target === "workspace") {
       for (const ticket of env.tickets) {
         expect(await ticketWorkspacesCommand.run(...env.args({ id: ticket.id }))).toHaveLength(1);
-        expect(createTicketWorkspaceLookup([env.workspace]).get(ticket.shorthand)).toHaveLength(1);
+        expect(createTicketWorkspaceLookup([env.workspace]).get(ticket.id)).toHaveLength(1);
       }
       await linkTicketCommand.run(...env.args({ id: one.id, workspace: "WS-1" }));
     }

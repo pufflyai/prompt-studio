@@ -8,6 +8,7 @@ import {
 import { createRuntimeCollections } from "@/lib/sync/collections";
 import {
   buildDashboardExtensionMenuRegistrations,
+  buildDashboardWorkbenchWhenExpression,
   getCachedDashboardExtensionMetadata,
   setCachedDashboardExtensionMetadata,
 } from "./workbench-extension-contributions";
@@ -27,6 +28,22 @@ test("the same workbench keeps its extension metadata in its runtime connection"
 
 const labViewWhenExpression = 'workbench.view.id == "pstdio.extension-lab.view.labPage"';
 const ticketResourceContextMenuPath = resourceContextMenuPath("ticket");
+
+test("resource conditions match both the local kind and its publisher", () => {
+  const when = buildDashboardWorkbenchWhenExpression({ resourceType: ["alice.notes.note"] });
+  expect(
+    matchesContextExpression(
+      { "workbench.resource.type": "note", "workbench.resource.extensionId": "alice.notes" },
+      when,
+    ),
+  ).toBe(true);
+  expect(
+    matchesContextExpression(
+      { "workbench.resource.type": "note", "workbench.resource.extensionId": "bob.notes" },
+      when,
+    ),
+  ).toBe(false);
+});
 
 describe("dashboard workbench extension menu contributions", () => {
   test("maps extension view actions into the header with view context", () => {
@@ -308,4 +325,30 @@ test("same-kind menu slots stay scoped to their resource owner", () => {
       matchesContextExpression({ "workbench.resource.type": "other", "workbench.resource.extensionId": owner }, when),
     ).toBe(false);
   }
+});
+
+test("an owner-qualified resource condition registers in the local kind's context menu", () => {
+  const { registrations } = buildDashboardExtensionMenuRegistrations({
+    ...metadata,
+    resourceKinds: [
+      {
+        id: "alice.notes.note",
+        localId: "note",
+        extensionId: "alice.notes",
+        menuSlots: [{ id: "actions", placement: "context-menu", access: "public" }],
+      },
+    ],
+    commands: [{ id: "alice.notes.command.pin", extensionId: "alice.notes", title: "Pin" }],
+    menuContributions: [
+      {
+        id: "alice.notes.menu.pin",
+        extensionId: "alice.notes",
+        commandId: "alice.notes.command.pin",
+        slotId: "alice.notes.resource-kind.note.actions",
+        label: "Pin",
+        when: { resourceType: ["alice.notes.note"] },
+      },
+    ],
+  });
+  expect(registrations[0]?.menuItems.map((item) => item.menuPath)).toEqual([resourceContextMenuPath("note")]);
 });

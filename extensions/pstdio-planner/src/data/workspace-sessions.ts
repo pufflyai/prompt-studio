@@ -1,5 +1,4 @@
 import type { ExtensionSessionsApi, ExtensionWorkspace } from "@pstdio/sdk/extensions";
-import { ticketShorthandsFromWorkspace } from "./workspace-ticket-link";
 
 type WorkspaceSession = Awaited<ReturnType<ExtensionSessionsApi["query"]>>["items"][number];
 
@@ -29,7 +28,7 @@ const latestWorkspaceSession = async (sessions: Pick<ExtensionSessionsApi, "quer
 const linkedWorkspaceIds = (workspaces: ExtensionWorkspace[]) =>
   new Set(
     workspaces
-      .filter((workspace) => ticketShorthandsFromWorkspace(workspace).length > 0)
+      .filter((workspace) => (workspace.anchors_json ?? []).some(({ type }) => type === "ticket"))
       .map((workspace) => workspace.id),
   );
 

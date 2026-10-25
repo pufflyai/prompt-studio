@@ -51,8 +51,8 @@ describe("extension files ignore ownership", () => {
     expect(await files("alice", false).readText("settings.json")).toBe("Alice settings");
     expect(await files("bob", true).readText("settings.json")).toBe("Bob settings");
     const ignore = readFileSync(join(repo, ".pstdio/.gitignore"), "utf8");
-    expect(ignore).toContain("/extension-storage/tools/.publishers/alice/");
-    expect(ignore).not.toContain("/extension-storage/tools/.publishers/bob/");
+    expect(ignore).toContain("/extension-storage/alice.tools/");
+    expect(ignore).not.toContain("/extension-storage/bob.tools/");
   });
 
   test("keeps concurrent first-write entries for two extensions", async () => {
@@ -73,8 +73,8 @@ describe("extension files ignore ownership", () => {
     await Promise.all([first.writeText("one.txt", "1"), second.writeText("two.txt", "2")]);
 
     const ignore = readFileSync(join(repo, ".pstdio/.gitignore"), "utf8");
-    expect(ignore).toContain("/extension-storage/first/.publishers/pstdio/");
-    expect(ignore).toContain("/extension-storage/second/.publishers/pstdio/");
+    expect(ignore).toContain("/extension-storage/pstdio.first/");
+    expect(ignore).toContain("/extension-storage/pstdio.second/");
   });
 
   test("does not restore an entry removed after the first write", async () => {
@@ -87,14 +87,11 @@ describe("extension files ignore ownership", () => {
     });
     await files.writeText("one.txt", "1");
     const ignorePath = join(repo, ".pstdio/.gitignore");
-    writeFileSync(
-      ignorePath,
-      readFileSync(ignorePath, "utf8").replace("/extension-storage/first/.publishers/pstdio/\n", ""),
-    );
+    writeFileSync(ignorePath, readFileSync(ignorePath, "utf8").replace("/extension-storage/pstdio.first/\n", ""));
 
     await files.writeText("two.txt", "2");
 
-    expect(readFileSync(ignorePath, "utf8").split("\n")).not.toContain("/extension-storage/first/.publishers/pstdio/");
+    expect(readFileSync(ignorePath, "utf8").split("\n")).not.toContain("/extension-storage/pstdio.first/");
   });
 
   test("tracked files remove only the ignore entry owned by the host", async () => {

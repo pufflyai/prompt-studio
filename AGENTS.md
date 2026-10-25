@@ -37,9 +37,9 @@ Do not:
 
 ## Extension storage
 
-- All extension-owned project files live under `.pstdio/extension-storage/<package-name>/`. This includes configuration, caches, drafts, prototypes, screenshots, ticket checkouts, report checkouts, and migration backups.
-- Use `ctx.extensionFiles` or declared artifact mounts for extension files, and `ctx.storage` for structured project data. Both file APIs live inside the extension's package-name directory. Allocated files use the reserved `.publishers/<publisher>/` child so different publishers stay separate.
-- Keep artifact drafts and prototypes under `.pstdio/extension-storage/pstdio-artifacts/`. Put report evidence under the `filesPath` returned by `pst reports write`.
+- All extension-owned project files live under `.pstdio/extension-storage/<publisher>.<name>/`. This includes configuration, caches, drafts, prototypes, screenshots, ticket checkouts, report checkouts, and migration backups.
+- Use `ctx.extensionFiles` or declared artifact mounts for extension files, and `ctx.storage` for structured project data. Both file APIs live inside the extension's full-ID directory, so different publishers stay separate. Prompt Studio 0.46 does not read the older `<name>/` or `.publishers/<publisher>/` folders.
+- Keep artifact drafts and prototypes under `.pstdio/extension-storage/pstdio.pstdio-artifacts/`. Put report evidence under the `filesPath` returned by `pst reports write`.
 - Do not create extension data folders directly under `.pstdio/` or store runtime data in extension source folders. `.pstdio/extensions/` holds extension source.
 - Files an extension deliberately edits as project source, such as the UI icon fonts, stay at their configured project paths. The extension's own settings and working files still belong in extension storage.
 
@@ -144,7 +144,7 @@ Run tests often, but run only the tests for the code you changed:
 - One package: `bun run --cwd packages/<name> test`
 - One e2e spec: `bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts`
 
-Choose the smallest test scope that covers the changed behavior. Include affected callers or integration tests when the change crosses a package boundary. Do not run the full monorepo tests, full e2e suites, or `bun run validate` unless the user explicitly asks for full validation.
+Choose the smallest test scope that covers the changed behavior. Include affected callers or integration tests when the change crosses a package boundary. Run all tests only when the feature is ready, before the PR is marked ready. See [Finishing a pull request](#finishing-a-pull-request). Do not run `bun run validate` unless the user explicitly asks for full validation.
 
 ### 3. Refactor: clean up
 
@@ -188,7 +188,7 @@ Do not add:
 
 - Changesets for changes that only affect tests or code structure.
 
-All released workspace packages share one Changesets fixed version group. Add new core extensions to that group in `.changeset/config.json`. The highest requested bump sets the next version for the whole group. The named packages still decide where summaries appear in release notes. Extension SDK and UI dependency ranges remain owned by extension PRs.
+The host, SDK, UI, workbench and desktop share one Changesets fixed version group. Core extensions have independent versions and changelogs and must stay outside that group. Extension-only changesets must not bump the host or other extensions. Extension SDK and UI dependency ranges remain owned by extension PRs. See [independent extension releases](documentation/guides/development/0013-independent-extension-releases.md).
 
 ### 7. Migrations
 
@@ -258,6 +258,18 @@ Do not write:
 ## Manual Playwright validation
 
 Run `bun run dev:playwright`. Open the dashboard URL printed by the command with Playwright or another browser tool. When finished, stop it with `bun run dev:playwright:down`.
+
+## Finishing a pull request
+
+Build each feature with the [test-driven workflow](#required-workflow-test-driven-development). While you develop, run only the tests relevant to your change. When the feature is ready:
+
+1. **Open the PR.** Push the branch and open a draft PR, as described in [Git](#git).
+2. **Run all tests.** Run `bun run test`. It runs every package's tests, builds what the E2E suites need, then runs the E2E script, CLI, UI and Vite terminal suites. Run it again after merging `main` into the branch, because a merge can combine changes that each passed alone. Fix every failure your PR causes and push the fix.
+   - If a test fails for a reason unrelated to your PR, check that it also fails on `main`. Then look for an open PR that already fixes it. If there is none, open a separate PR that fixes it. Link that PR in your PR's description. Do not fix unrelated failures in your PR.
+3. **Mark the PR ready.** Run `gh pr ready` only when CI is green on the latest commit and all tests pass, apart from unrelated failures that have a linked fix PR. See [CI completion](#ci-completion).
+4. **Answer review comments.** Read every review comment on the PR, including inline comments on the code. `gh pr view <number> --comments` shows the conversation, and `gh api repos/pufflyai/prompt-studio/pulls/<number>/comments` shows the inline comments. Fix the valid ones and reply to each comment. After a fix, rerun the affected tests and wait for CI on the new commit.
+
+Documentation-only PRs skip step 2.
 
 ## CI completion
 

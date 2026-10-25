@@ -15,6 +15,7 @@ import type { RecordProjection } from "./projection";
 export interface AssetStore {
   verifyComplete(assets: Asset[]): Promise<void>;
   read(asset: Asset): Promise<ReadableStream<Uint8Array>>;
+  /** Stores an asset from `source`, resuming at `offset`. Bytes that can never match reject with `UnreadableSyncData`. */
   receive(
     asset: Asset,
     source: (offset: number, signal: AbortSignal) => Promise<ReadableStream<Uint8Array>>,

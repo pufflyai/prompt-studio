@@ -1,6 +1,13 @@
-import { describe, expect, mock, test } from "bun:test";
-import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createTestApp } from "../../test-utils/create-test-app";
+import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
+import { loadExtensionSource } from "./extension-runtime";
 import { createProjectExtensionLifecycle } from "./project-extension-lifecycle";
+import { openPublishedCatalog, publishExtension } from "./publication/catalog";
+import { createTestExtensionSource } from "./test-utils/create-test-extension-source";
 
 const installedSource = {
   id: "source-1",
@@ -29,19 +36,14 @@ const extensionInstance = (enabled: boolean) => ({
 });
 
 const createDeps = (input: { skills?: unknown[] } = {}) => {
-  const store = createMemoryDocumentStore();
   const setProjectExtensionEnabled = mock(async (_instanceId: string, enabled: boolean) => extensionInstance(enabled));
   const provisionProjectWorkspaces = mock(async () => {});
   return {
     deps: {
-      extensionStorageService: {
-        documents: { open: () => store },
-        open: async ({ owner }: { owner: { workbenchId: string; extensionId: string } }) =>
-          createDocumentStorage({ owner, store }),
-      },
       eventBus: { emit: mock(() => {}) },
       extensionAutomationPreferencesService: { set: mock(async (row: unknown) => row) },
       extensionConnectionService: { removeExtension: mock(async () => {}) },
+      extensionStorageService: createTestDocumentStorage(),
       extensionRuntimeCatalog: {
         get: mock(async () => ({ runtime: { schedules: [] as Array<Record<string, unknown>> } })),
         getSourcesRuntime: mock(async () => ({ hooks: [], skills: input.skills ?? [] })),
@@ -49,6 +51,7 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
       extensionService: {
         enableInstalledSourceForProject: async () => ({ instance: extensionInstance(true), installedSource }),
         getProjectExtensionInstance: mock(async () => ({ instance: extensionInstance(true), installedSource })),
+        listProjectExtensionInstances: mock(async () => []),
         setProjectExtensionEnabled,
         uninstallProjectExtension: mock(async () => ({
           instance: extensionInstance(true),
@@ -99,11 +102,16 @@ describe("project extension lifecycle", () => {
 
   test("finishes required workspace provisioning before enablement returns", async () => {
     let finishProvisioning: (() => void) | undefined;
+    let startedProvisioning: (() => void) | undefined;
+    const provisioningStarted = new Promise<void>((resolve) => {
+      startedProvisioning = resolve;
+    });
     const { deps, provisionProjectWorkspaces } = createDeps({ skills: [{}] });
     provisionProjectWorkspaces.mockImplementation(
       () =>
         new Promise<void>((resolve) => {
           finishProvisioning = resolve;
+          startedProvisioning?.();
         }),
     );
     const lifecycle = createProjectExtensionLifecycle(deps as never);
@@ -113,9 +121,7 @@ describe("project extension lifecycle", () => {
       settled = true;
       return result;
     });
-    for (let index = 0; index < 5 && provisionProjectWorkspaces.mock.calls.length === 0; index += 1) {
-      await Promise.resolve();
-    }
+    await provisioningStarted;
     expect(provisionProjectWorkspaces).toHaveBeenCalledTimes(1);
     expect(settled).toBe(false);
 
@@ -224,5 +230,140 @@ describe("project extension lifecycle", () => {
     await expect(
       lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true }),
     ).resolves.toBe("removed");
+  });
+});
+
+describe("published extension lifecycle", () => {
+  let app: Awaited<ReturnType<typeof createTestApp>>;
+  let root: string;
+  beforeAll(async () => {
+    root = await mkdtemp(join(tmpdir(), "published-lifecycle-"));
+    app = await createTestApp();
+  });
+  afterAll(async () => {
+    await app.close();
+    await rm(root, { recursive: true, force: true });
+  });
+
+  const install = async (projectId: string, installName: string, name: string, extensionTs?: string) => {
+    const sourcePath = createTestExtensionSource({ root, installName, name, displayName: name });
+    if (extensionTs) await writeFile(join(sourcePath, "extension.ts"), extensionTs);
+    const loaded = await loadExtensionSource(sourcePath);
+    const { instance } = await app.deps.extensionService.enableInstalledSourceForProject({
+      projectId,
+      sourcePath,
+      extensionId: loaded.metadata.id,
+      installName,
+      name,
+      displayName: name,
+      manifest: loaded.manifest,
+    });
+    return instance.id;
+  };
+  const publish = async (projectId: string, instanceId: string, extensionId: string) =>
+    publishExtension(app.deps, {
+      projectId,
+      instanceId,
+      expectedRevision: (await (await openPublishedCatalog(app.deps, projectId)).read(extensionId)).revision,
+    });
+  const selection = async (projectId: string, extensionId: string) =>
+    (await openPublishedCatalog(app.deps, projectId)).records.read(extensionId);
+
+  test("an enable this device refuses is not shared", async () => {
+    const project = await app.deps.projectService.create({ name: "Refused enable" });
+    const lifecycle = createProjectExtensionLifecycle(app.deps);
+    const prefixed =
+      'export default { resourceKinds: [{ id: "item", ref: { kind: "resource-kind", id: "item" }, prefix: "XX" }] };';
+    const published = await install(project.id, "prefix-published", "prefix-published", prefixed);
+    await lifecycle.setEnabled(project.id, published, false);
+    await publish(project.id, published, "test.prefix-published");
+    await install(project.id, "prefix-local", "prefix-local", prefixed);
+
+    await expect(lifecycle.setEnabled(project.id, published, true)).rejects.toThrow("prefix");
+    expect((await selection(project.id, "test.prefix-published")).value).toMatchObject({ enabled: false });
+  });
+
+  test("uninstalling a leftover copy keeps the published extension on every device", async () => {
+    const project = await app.deps.projectService.create({ name: "Leftover copy" });
+    const lifecycle = createProjectExtensionLifecycle(app.deps);
+    const leftover = await install(project.id, "copy-old", "copy");
+    const active = await install(project.id, "copy-new", "copy");
+    await publish(project.id, active, "test.copy");
+
+    await lifecycle.uninstall({ projectId: project.id, instanceId: leftover, deleteUserData: true });
+    expect((await selection(project.id, "test.copy")).deleted).toBe(false);
+    await lifecycle.uninstall({ projectId: project.id, instanceId: active, deleteUserData: true });
+    expect((await selection(project.id, "test.copy")).deleted).toBe(true);
+  });
+
+  test("disabling a leftover copy keeps the published extension enabled on every device", async () => {
+    const project = await app.deps.projectService.create({ name: "Leftover disable" });
+    const lifecycle = createProjectExtensionLifecycle(app.deps);
+    const leftover = await install(project.id, "spare-old", "spare");
+    const active = await install(project.id, "spare-new", "spare");
+    await publish(project.id, active, "test.spare");
+
+    await lifecycle.setEnabled(project.id, leftover, false);
+    expect((await selection(project.id, "test.spare")).value).toMatchObject({ enabled: true });
+    await lifecycle.setEnabled(project.id, active, false);
+    expect((await selection(project.id, "test.spare")).value).toMatchObject({ enabled: false });
+  });
+
+  const failingUninstall = (beforeFailure: () => Promise<void> = async () => {}) =>
+    createProjectExtensionLifecycle({
+      ...app.deps,
+      extensionService: {
+        ...app.deps.extensionService,
+        uninstallProjectExtension: async () => {
+          await beforeFailure();
+          throw new Error("source folder is busy");
+        },
+      },
+    });
+
+  test("a failed uninstall keeps the published extension on every device", async () => {
+    const project = await app.deps.projectService.create({ name: "Failed uninstall" });
+    const instanceId = await install(project.id, "busy", "busy");
+    await publish(project.id, instanceId, "test.busy");
+    const published = await selection(project.id, "test.busy");
+
+    await expect(
+      failingUninstall().uninstall({ projectId: project.id, instanceId, deleteUserData: true }),
+    ).rejects.toThrow("source folder is busy");
+    expect(await selection(project.id, "test.busy")).toMatchObject({ deleted: false, value: published.value });
+  });
+
+  test("a failed uninstall reports its own error when restoring the shared selection fails", async () => {
+    const project = await app.deps.projectService.create({ name: "Failed uninstall and restore" });
+    const instanceId = await install(project.id, "gone", "gone");
+    await publish(project.id, instanceId, "test.gone");
+    // The project disappears while the uninstall runs, so the shared selection cannot be written back.
+    const lifecycle = failingUninstall(async () => {
+      await app.deps.projectService.delete(project.id);
+    });
+
+    await expect(lifecycle.uninstall({ projectId: project.id, instanceId, deleteUserData: true })).rejects.toThrow(
+      "source folder is busy",
+    );
+  });
+
+  test("a failed uninstall keeps a newer shared choice", async () => {
+    const project = await app.deps.projectService.create({ name: "Failed uninstall newer choice" });
+    const instanceId = await install(project.id, "raced", "raced");
+    await publish(project.id, instanceId, "test.raced");
+    const published = await selection(project.id, "test.raced");
+    const newer = { ...(published.value as { revision: string }), enabled: false };
+    // Another device restores the extension with its own choice while this uninstall runs.
+    const lifecycle = failingUninstall(async () => {
+      await (await openPublishedCatalog(app.deps, project.id)).records.commit({
+        operationId: crypto.randomUUID(),
+        edits: [{ recordId: "test.raced", replace: newer, deleted: false }],
+      });
+    });
+
+    await expect(lifecycle.uninstall({ projectId: project.id, instanceId, deleteUserData: true })).rejects.toThrow(
+      "source folder is busy",
+    );
+    expect(await selection(project.id, "test.raced")).toMatchObject({ deleted: false, value: newer });
   });
 });

@@ -14,3 +14,12 @@ test("command success returns complete output after the child closes", async () 
   const result = await runTestCommand("bun", ["-e", "console.log(JSON.stringify({ready: true}))"], {});
   expect(JSON.parse(result.stdout)).toEqual({ ready: true });
 });
+
+test("command failure includes its structured stdout report", async () => {
+  const failure = await runTestCommand(
+    "bun",
+    ["-e", "console.log(JSON.stringify({checks: [{message: 'Dashboard readiness failed'}]})); process.exit(1)"],
+    {},
+  ).catch((error: unknown) => error);
+  expect(failure).toMatchObject({ message: expect.stringMatching(/code 1[\s\S]*Dashboard readiness failed/) });
+});

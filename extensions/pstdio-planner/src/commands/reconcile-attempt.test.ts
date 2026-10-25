@@ -2,9 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ATTEMPTS_COLLECTION, putAttempt, readAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
-import { putTicket } from "../data/collections";
+
 import { listTicketReviewRequests } from "../data/review-request-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { putTicket } from "../data/ticket-context.fixture";
 import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
 import { reconcileAttemptCommand } from "./reconcile-attempt";
 import { runReviewCommand } from "./run-review";
@@ -35,7 +36,7 @@ const setup = async (attempt: AttemptRecord, statuses: Record<string, string>) =
     title: "Ticket",
     content: "# Ticket",
     statusId: "in-progress",
-    tagIds: [],
+    tags: {},
     archived: false,
     sortOrder: 0,
     createdAt: "2026-08-18T09:00:00.000Z",

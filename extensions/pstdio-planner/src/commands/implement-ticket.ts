@@ -13,7 +13,7 @@ export const implementTicketCommand = defineCommand({
     agent: params.harness({ label: "Model" }),
   },
   async run(ctx, commandParams) {
-    const ticket = await findTicket(ctx.storage, commandParams.id);
+    const ticket = await findTicket(ctx, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
     return ctx.sessions.create({

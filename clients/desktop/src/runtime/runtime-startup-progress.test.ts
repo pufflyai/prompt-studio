@@ -6,6 +6,7 @@ const log = (phase: string) => JSON.stringify({ event: "runtime.startup.phase", 
 test("shows the work following the latest completed startup step", () => {
   expect(readRuntimeStartupPhase(log("database_locked"))).toBe("database");
   expect(readRuntimeStartupPhase(log("database_engine_loaded"))).toBe("database");
+  expect(readRuntimeStartupPhase(log("database_retiring"))).toBe("retiring");
   expect(readRuntimeStartupPhase(log("database_image_restored"))).toBe("database");
   expect(readRuntimeStartupPhase(log("database_opened"))).toBe("migrations");
   expect(readRuntimeStartupPhase(log("database_migrated"))).toBe("extensions");

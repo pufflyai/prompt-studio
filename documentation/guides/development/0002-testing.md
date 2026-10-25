@@ -37,7 +37,7 @@ The script runs `bun test --conditions production --tsconfig-override tsconfig.a
 
 Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks described in `AGENTS.md`. Documentation-reference-only edits do not.
 
-Do not run full repository or full end-to-end suites unless the user explicitly requests full validation. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs package tests through Lerna followed by the E2E script, CLI, UI, and Vite terminal suites. Packaged and desktop tests run separately in CI.
+While you implement a change, run only the tests for the changed code and its callers. When the implementation is done and the draft PR is open, run all tests with `bun run test` before you mark the PR ready. Run them again after merging `main` into the branch. [Finishing a pull request](../../../AGENTS.md#finishing-a-pull-request) lists every step. Run `bun run validate` only when the user explicitly requests full validation. It checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs package tests through Lerna, builds the E2E package's dependencies, including the dashboard, and then runs the E2E script, CLI, UI, and Vite terminal suites. Packaged and desktop tests run separately in CI.
 
 Install browser dependencies before running browser tests:
 
@@ -71,10 +71,11 @@ Test and Build runs one stage per event. The `scope` job runs `scripts/ci/pull-r
 | Stage | Event | Runs | `ci_passed` requires |
 | --- | --- | --- | --- |
 | Pull request | Opening, reopening, a new push, or a new label on a pull request | Whole-repo static checks; parallel affected-package lint and unit tests; selected database shards, browser regressions, Windows contracts, compatibility and container checks | Every selected job succeeded; no job failed or was cancelled |
-| Merge queue | `merge_group` | At least the checks selected for every PR in the group, plus unsigned builds of every client | Every selected job and client build succeeded |
-| Full | A push to `main`, a manual run, or `ci:full` on a PR or any PR in a merge group | Full Windows, browser E2E, desktop and packaged suites, plus the package and compatibility checks | Every required full-stage job succeeded |
+| Full | A merge group, a push to `main`, a manual run, or `ci:full` on a PR | Full Windows, browser E2E, desktop and packaged suites, plus the package and compatibility checks | Every required full-stage job succeeded |
 
-A newer event on the same pull request cancels the older run. Every merge queue and `main` commit keeps its own run, so a red commit can always be traced.
+A newer event on the same pull request cancels the older run. Pull requests, including `ci:full`, and pushes to `main` finish every selected check so one run reports all errors. Merge queue matrices use fail-fast cancellation. A queue-only monitor also polls job results every ten seconds and cancels that same run after a job completes with failure, cancellation, or another terminal error. This stops unrelated suites while preserving the failed job and its logs. It does not cancel other queue candidates.
+
+The monitor uses Node without installing Bun or workspace dependencies. Only its queue-only job has Actions write permission. It checks the API event and run attempt before cancelling; an old monitor exits if a rerun has started. If monitoring is unavailable, it logs a warning and ordinary validation continues. The existing `ci_passed` gate still requires every selected check to succeed. The monitor is an optimization, not an additional success condition, and uses one Ubuntu runner while queue validation runs.
 
 ### Pull request stage
 
@@ -86,7 +87,7 @@ The selector compares the PR merge commit with its target parent. Workspace depe
 - `lint` builds the affected packages and their dependencies, then runs type checking and lint. `unit_tests` builds and runs unit and synchronization conformance tests in parallel with `lint`; unit tests no longer wait for type checking. API and database suites remain in their own shards. E2E-only changes select browser jobs. Package jobs require at least one affected package other than `e2e`.
 - `browser_smoke` runs the six basic dashboard flows when code affects the dashboard or its E2E runtime dependencies. Repository tooling and shared build inputs also select it. Documentation-only changes do not.
 - `browser_regressions` selects real-app specs for session navigation, state and shared streaming, retained ticket editor state, extension lifecycle, and opaque webview interactions. Short specs run in pairs on parallel runners to share build setup. Each spec starts a separate runtime, home and database, and a failure does not prevent the other spec from running. Session inputs select session specs; editor and Planner/Notes inputs select editor specs; extension inputs select lifecycle and webview specs. Shared UI, SDK, workbench, storage, browser helpers and otherwise unclassified browser dependencies select every maintained regression family. These specs use `playwright.pr.config.ts` without Storybook. Run one locally with `bun run --cwd packages/e2e test:pr -- src/ui/session-menu-parity.spec.ts`.
-- `native_contracts` selects short Windows filesystem, process and desktop contracts from changes to those inputs. SDK and API contract changes select filesystem and process checks. Selected groups share one runner's setup and retain their existing test limits. Full Windows database tests and desktop packaging remain in the full stage.
+- `native_contracts` selects short Windows filesystem, process and desktop contracts from changes to those inputs. SDK and API contract changes select filesystem and process checks. Every selected native job also tests release alignment with native Windows paths, including `.pstdio` paths, and reuse of installed default extensions after concurrent startup setup. These checks share the existing SDK build and runner setup. Selected groups retain their existing test limits. Full Windows database tests and desktop packaging remain in the full stage.
 - `database_tests` runs the `pstdio-api` tests in four shards and the `pstdio-db` tests in three, when a change affects either package. Together these suites took 6 to 8 minutes in one job, so each shard runs on its own runner. The `pstdio-db` shards use `bun test --shard`; the API test runner accepts the same `--shard=<index>/<count>` argument.
 - `published_extensions` runs for extension, SDK, UI, and API contract changes. `harness_cli_support` runs the minimum supported agent CLIs for harness changes. Documentation files (Markdown, `design/`, and `LICENSE`) do not select either job. `license_check` runs when a `package.json` or `bun.lock` changes.
 - `build_docker` builds both images when a `package.json`, `bun.lock`, or `Dockerfile` changes. This catches container install failures before the merge queue.
@@ -95,25 +96,25 @@ The selector compares the PR merge commit with its target parent. Workspace depe
 
 The setup action reuses Bun downloads and portable Nx task archives. Each job starts a loopback HTTP cache backed by the restored Actions cache directory. Nx imports archives through its supported cache API; its machine-bound local database is not shared. Host and Playwright-container caches remain separate, as do operating systems, architectures and toolchain inputs. Nx hashes root compiler settings, the lockfile, build helpers and relevant build environment variables. Chakra's installed theme types regenerate even on a cached UI build. A cache miss runs the normal dependency builds.
 
-The scope emits an explicit required-job list. `ci_passed` fails if any selected job skips or has no result, or if any job fails or is cancelled. Intentionally unselected jobs may skip.
+The scope emits an explicit required-job list. `ci_passed` fails if any selected job skips or has no result, or if any job fails or is cancelled. Intentionally unselected jobs may skip. Quarantine jobs allow failures only in their registered test steps; setup, build, and report-validation steps remain blocking.
 
 Add `ci:full` when the full Windows, browser, packaged or desktop suites are needed. Adding the label starts a full run, and each later push runs the full stage too. Removing the label starts no run; the next push runs scoped checks. The full stage already includes the targeted browser and Windows contracts, so their separate scoped jobs skip there.
 
 ### Merge queue stage
 
-The merge queue applies the same selection policy as PR checks to its combined result. It compares against `merge_group.base_sha`, rather than the last parent alone. It also reads the matching GitHub merge-queue entries and each member's original changed-file list and labels. This preserves a companion PR's `ci:full` and checks for changes that cancel each other in the final tree. Incomplete queue metadata fails scope selection instead of reducing coverage.
+The merge queue runs the full stage, the same jobs as a push to `main`. Before 2026-10-24 it ran only the checks its pull requests selected. The Windows, browser E2E, desktop and packaged suites then ran only after merge, and from 2026-10-12 to 2026-10-23 only 51 of 200 `main` runs passed. Running the full stage in the queue keeps those failures off `main`. A queue run takes about 20 minutes instead of about 7, and uses about as many runner minutes as the `main` run that follows it.
 
-- Static, package, database, browser, Windows, compatibility and container jobs use the same selection as PR checks.
-- `build_clients` builds without signing, because signing secrets are trusted only on `main` and release tags. The Linux row builds the monorepo, compiles the CLI for every platform with `bun run --cwd scripts build:all`, scaffolds the platform packages, and makes the Linux desktop app. The macOS arm64 (`macos-15`), macOS x64 (`macos-15-intel`), and Windows rows make their desktop apps. Desktop sidecars must be compiled on their own platform, so each desktop app needs a native runner.
-- Any group member with `ci:full` selects the complete full stage for the group.
+`build_clients` builds without signing, because signing secrets are trusted only on `main` and release tags. The Linux row builds the monorepo, compiles the CLI for every platform with `bun run --cwd scripts build:all`, scaffolds the platform packages, and makes the Linux desktop app. The macOS arm64 (`macos-15`), macOS x64 (`macos-15-intel`), and Windows rows make their desktop apps. Desktop sidecars must be compiled on their own platform, so each desktop app needs a native runner.
 
-The `main` ruleset turned the queue on on 2026-10-12, after the queue's jobs passed every `main` run since the stages were split. It squashes, builds up to five groups at once, merges up to five pull requests per group, and merges a group only when every pull request in it passed (`ALLGREEN`). `ci_passed` is the only required check, on pull requests and in the queue.
+The `main` ruleset turned the queue on on 2026-10-12, after the queue's jobs passed every `main` run since the stages were split. Each queued pull request gets a temporary merge candidate containing `main` and the changes ahead of it in the queue. Each candidate runs the full stage. The queue can build up to five candidates at once and squash up to five passing pull requests in one merge batch. Every pull request must pass (`ALLGREEN`); batching happens after the required candidate checks pass. `ci_passed` is the only required check, on pull requests and in the queue.
 
 When a pull request leaves the queue, a build or check failed on the merged result. Rebase, fix, and queue it again. If the failure is not caused by the pull request, the check is not deterministic; fix the check first.
 
+The **Merge queue removals** workflow (`.github/workflows/merge-queue-removals.yml`) labels every open pull request that GitHub removed from the queue with `removed-from-queue`. It posts one comment with the reason and, for failed checks, the failed merge group run and its failed jobs. The label goes away when the pull request is queued again, merged, or closed. Queue events and manual workflow dispatches update one pull request at a time, sharing its concurrency group. A manual dispatch requires the pull request number; there is no sweep. Find these pull requests with `gh pr list --label removed-from-queue`. The workflow reads each pull request's merge queue timeline through `scripts/ci/merge-queue-removals.ts`; like the area labels workflow, it loads that script from the trusted base commit and never checks out pull request code.
+
 ### Full stage
 
-Pushes to `main` run the full stage, including coverage outside the scoped regression families. Fix a failure in a follow-up pull request, or link it to the flaky-test ticket that owns it before re-running.
+Merge groups and pushes to `main` run the full stage, including coverage outside the scoped regression families. A failure in the queue removes the pull request from the queue. Fix a failure on `main` in a follow-up pull request, or link it to the flaky-test ticket that owns it before re-running.
 
 Before using **Re-run failed jobs** on a release or nightly, record the failure on a ticket or link it to the ticket that owns it. Keep the job link, failed step or test, and first-attempt evidence. A passing rerun does not close the bug.
 
@@ -124,11 +125,11 @@ Run it locally with GitHub CLI authentication: `bun scripts/ci/report-ci-failure
 The full stage adds:
 
 - `lint`, `unit_tests` and `database_tests` for every package, `relay_smoke`, and the published extension, harness CLI, and license checks.
-- `windows_test_and_build` has six parallel rows: whole-repo lint and formatting, native and packaged Windows contracts, and four unit-test shards. Each unit row runs one quarter of every package's Bun test files, excluding E2E, API and database suites. It also runs one quarter of the Git worktree files in a separate command that keeps their existing 30-second limit. Every row builds through the shared cache. Reproduce a unit row with `bunx lerna run test --ignore e2e --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api --stream --concurrency=1 -- --shard=1/4 --timeout=15000`, followed by `bun run --cwd packages/pstdio-wt test --shard=1/4`.
+- `windows_test_and_build` has five parallel rows: whole-repo lint and four unit-test shards. Static checks own formatting. These shards and the Windows API shards own native source contracts; the Windows packaged toolchain owns compiled harness detection and the observer. The former native row repeated those same cases and compiled the same binary again. Each unit row runs one quarter of every package's Bun test files, excluding E2E, API and database suites. It also runs one quarter of the Git worktree files in a separate command that keeps their existing 30-second limit. Every row builds through the shared cache. Reproduce a unit row with `bunx lerna run test --ignore e2e --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api --stream --concurrency=1 -- --shard=1/4 --timeout=15000`, followed by `bun run --cwd packages/pstdio-wt test --shard=1/4`.
 - `windows_database_tests` runs the Windows API suite in eight shards and the database suite in four, each on a separate runner because PGlite setup dominates their serial test time. Each shard builds only its package and dependencies. All Windows rows finish even when another fails, and `ci_passed` requires both matrices to succeed. Run a database/API shard locally with `bun run --cwd packages/pstdio-api test --shard=1/8 --timeout=15000` or `bun run --cwd packages/pstdio-db test --shard=1/4 --timeout=15000`.
 - `e2e` (three browser shards), `e2e_cli`, and `packaged_and_vite_e2e`.
 - The desktop source Electron specs, packaged renderer benchmarks, and packaged desktop smoke tests in the Linux, macOS arm64, and Windows rows of `build_clients`, run against the unsigned app from the same row. Linux runs them under `xvfb-run`. The Intel macOS row only builds. The release workflow also runs the launch benchmarks and Intel tests against signed release artifacts.
-- `packaged_toolchain`, which calls `verify-packaged-toolchain.yml` for the commit to check the compiled CLI on Linux, Intel macOS, and Windows. Linux runs the full packaged suite. Intel macOS runs only the essential CLI, runtime, and extension page tests in `scripts/verify/packaged-runtime-smoke.ts`, as the desktop release runs only `@essential` tests there: slow Intel runners turned timing races in the large UI suite into release failures that other platforms did not have. Windows runs its own short list.
+- `packaged_toolchain`, which calls `verify-packaged-toolchain.yml` for the commit to check the compiled CLI on Linux, Intel macOS, and Windows. Its Linux runner is pinned to Ubuntu 24.04, which the pinned Playwright 1.60 browser installer supports. Linux runs the packaged CLI suite against the distributed binary; `packaged_and_vite_e2e` owns the full three-browser suite, avoiding a second browser run in toolchain verification. Intel macOS runs only the essential CLI, runtime, and extension page tests in `scripts/verify/packaged-runtime-smoke.ts`, as the desktop release runs only `@essential` tests there: slow Intel runners turned timing races in the large UI suite into release failures that other platforms did not have. Windows runs its own short list.
 
 `build_clients` sets `PSTDIO_EXTENSION_RELEASE_REF` to the run's commit, so the packaged apps install that commit's core extensions instead of those of the last release tag.
 
@@ -183,7 +184,13 @@ The UI and Vite launchers also remove inherited runtime settings. Each run alloc
 
 The packaged Planner runtime spec (`packages/e2e/src/packaged/packaged-planner-runtime.spec.ts`) installs the current Planner into a running host and seeds populated projects. It covers saved views, filter controls, Track conflicts, missing caches, and webview reload recovery. The install downloads the Planner's locked dependencies into the test home.
 
-Nx test inputs include the shared preload, root Bun configuration, lockfile, and Bun version. Changing these invalidates cached test results.
+Packaged relay checks cover shared-document replication, project sync states, encrypted uploads, and device-local record persistence. Record replication is paused until per-resource sync exists, as specified by [ADR 0100](../../adrs/0100-one-document-per-resource.md). These checks still run automatically.
+
+Full CI runs packaged CLI and packaged browser checks in separate matrix jobs with the existing 18-minute limit each. The CLI job also runs the Vite terminal checks. Both jobs compile their own current CLI, and neither suite depends on the other finishing first.
+
+The browser job runs `test:packaged:benchmark` before the functional suite. `packaged-paged-collections.bench.ts` keeps the existing one-second collection-readiness budget for 100 rows, ten owners and the board view. Its separate Playwright configuration disables tracing while preserving the 120-second execution allowance and the full workload. Each benchmark attaches source revision, compiled binary checksum, runner, measurement boundaries, and every sample before checking the budget. The functional suite still runs after a benchmark failure, and either failure blocks CI. `test:packaged` also includes the benchmark for local full packaged validation.
+
+Nx test, conformance, and coverage targets do not cache passing results. Every CI attempt executes the tests. Dependency and build caches remain enabled, including build dependencies of test targets. Do not use a global cache-bypass flag: it also repeats dependency builds.
 
 Global preferences survive project deletion. Browser specs that read or change notifications use the test fixture in `src/ui/helpers/notification-settings.ts` and opt in with `test.use({ notificationsEnabled: true })` when needed. The fixture restores the previous preference during teardown.
 
@@ -209,7 +216,21 @@ Linux UI, CLI, and packaged/Vite jobs use the official `mcr.microsoft.com/playwr
 
 The browser container installs the root manifest's Bun version with `scripts/ci/setup-container-bun.ts`. This temporary bootstrap uses Bun's official registry archive because the normal setup action requires `unzip`, which the image lacks. ADR 0026 describes when to remove it.
 
-The UI suite has no migration quarantine list. Obsolete dashboard specs were removed. Current tests cover project selection, ticket workflows, session follow-ups, workspace files and terminals, extension lifecycle, and workbench navigation. Add coverage for restored features against the current UI. Live Claude, Codex, and OpenCode follow-up tests skip unless `E2E_AGENTS` selects the provider. Packaged browser checks cover Chromium, Firefox, and WebKit; the main UI suite covers Chromium.
+Obsolete dashboard specs were removed. Current tests cover project selection, ticket workflows, session follow-ups, workspace files and terminals, extension lifecycle, and workbench navigation. Add coverage for restored features against the current UI. Live Claude, Codex, and OpenCode follow-up tests skip unless `E2E_AGENTS` selects the provider. Packaged browser checks cover Chromium, Firefox, and WebKit; the main UI suite covers Chromium. The packaged webview suite gives commands/settings, workspace panels/session tabs, and documents/collections independent cold fixtures and test results. It keeps every assertion and the existing 120-second per-test allowance.
+
+### Flaky-test quarantine and reliability runs
+
+`scripts/ci/test-quarantine.json` records confirmed flakes, their affected platforms, owners, first-failure evidence, and removal criteria. The package runners for `scripts`, `pstdio-db`, and `pstdio-api`, and the packaged Bun and Playwright runners, exclude only registered cases on the listed platform. CI executes them separately in quarantine steps, without retries or changed limits. Only the registered test steps allow failures; setup and build failures remain blocking. A separate report check requires every registered case to execute exactly once and records its failure count in the job summary. Missing reports, skipped cases and retries fail that check. Bun JUnit reports, packaged browser JSON reports, and traces are uploaded with attempt-specific names. A passing stable gate does not mean that quarantine passed. [ADR 0101](../../adrs/0101-temporary-flaky-test-quarantine.md) records the temporary trade-off.
+
+Database coverage uses the same stable selection. Quarantined cases do not contribute to its line-coverage report; their separate lane owns their execution evidence.
+
+The Apple Silicon desktop row runs its registered packaged cases in a separate step against the same built app. The normal desktop suite retains the project-tab lifecycle case on Linux, Windows and Intel macOS. `E2E_TEST_LANE=quarantine bun run --cwd clients/desktop test:packaged` selects the registered cases on an affected native machine. The separate report check remains required and uploads beside the stable desktop results.
+
+Run registered cases locally with `E2E_TEST_LANE=quarantine bun run --cwd packages/pstdio-db test`, `E2E_TEST_LANE=quarantine bun run --cwd scripts test`, or `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:browser`. Use the normal package scripts for the stable lane. Direct `bun test <file>` remains available for diagnosis and does not apply quarantine selection.
+
+Windows compiled CLI quarantine runs after native package verification against that same binary. For diagnosis, set `E2E_PACKAGED_BINARY_PATH` to the compiled executable and run `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:cli`. The API quarantine step runs its registered file in an isolated source-conditions process, with the same 30-second test allowance as normal API shards.
+
+For ten full CI validations, create ten refs under `test/ci-reliability/<batch>/` at the same final commit. Each push starts the normal full workflow, including native builds, all browser engines, package consumers, and quarantine. The ref is part of the concurrency key, so independent runs cannot cancel each other. Nx test targets disable result caching; dependency builds still use their caches. Count first attempts and record all failures. If a fix changes the commit, start a new ten-run qualification on that commit. A test passing on a later attempt does not erase its earlier failure.
 
 To investigate a failure, keep retries disabled and repeat the affected spec:
 
@@ -218,6 +239,14 @@ bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.spec.ts --repeat-e
 ```
 
 To run one CI shard locally, use `bun run --cwd packages/e2e test:ui -- --shard=2/3`. Keep the same shard total when comparing runs.
+
+The Marketplace install/delete/disable/enable lifecycle is manual-only. Run it explicitly with:
+
+```bash
+E2E_MANUAL_MARKETPLACE_LIFECYCLE=1 bun run --cwd packages/e2e test:ui -- src/ui/marketplace-extension-lifecycle.spec.ts --grep "deletes, installs, disables, and enables a Marketplace extension"
+```
+
+Normal UI runs skip that lifecycle check. The separate extension automation toggle test still runs automatically.
 
 In CI, UI shards serve prebuilt `ui`, `pstdio-dashboard`, and `pstdio-workbench` Storybooks from the `storybook-static` artifact. The full stage builds that artifact once before starting the shards. Local `test:ui` keeps Storybook dev servers. To check static output locally, run `bun packages/e2e/src/scripts/build-storybooks.ts`, then use `CI=true` when starting the UI tests. Both paths load a real story before tests begin and keep the existing 60-second startup allowance.
 

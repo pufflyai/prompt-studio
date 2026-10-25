@@ -15,6 +15,7 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
 import { useWorkbenchMainPanels } from "./use-workbench-main-panels";
+import { useWorkbenchRegionContent } from "./use-workbench-region-content";
 import { WorkbenchSecondaryPanel } from "./workbench-secondary-panel";
 
 interface WorkbenchBodyProps {
@@ -82,6 +83,8 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
   const panels = useWorkbenchMainPanels(workbench);
+  const hasMain = useWorkbenchRegionContent(workbench, "main", { locationScoped: true });
+  const mainPolicy = usePanelPolicy(workbench, "main");
   const { hasMainHeader, secondaryPanel } = panels;
   const persistedSecondarySize = useWorkbenchStore(
     workbench.layout.store,
@@ -125,7 +128,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       minW="0"
       w="full"
       bg={workbenchBackgrounds.main}
-      layerStyle="panel"
+      layerStyle={hasMain || hasMainHeader || mainPolicy.showHeader ? "panel" : undefined}
       position="relative"
     >
       <Box display={fullscreen ? "none" : "contents"}>

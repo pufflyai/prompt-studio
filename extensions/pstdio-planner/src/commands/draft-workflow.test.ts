@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
+import { changeTicketFiles } from "../data/collections";
 import { ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
 import { parseTicketFrontmatter, stripFrontmatter } from "../data/frontmatter";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
+import { readTicketFileContent, storeTicketFileContent } from "../data/ticket-file-content";
 import { defaultProjectRoot, makeCommandArgs } from "./command-context.fixture";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { pullTicketCommand } from "./pull-ticket";
@@ -102,9 +104,9 @@ describe("draft workflow", () => {
     expect(saved.draft).toBe(false);
     expect(saved.title).toBe("Edited title");
     expect(saved.content).toContain("Body text.");
-    expect(saved.tagIds).toEqual(["default-priority-high"]);
+    expect(saved.tags).toEqual({ "default-priority": "default-priority-high" });
     expect(saved.files?.[0]?.name).toBe("notes.md");
-    expect(saved.files?.[0]?.content).toBe("extra notes");
+    expect(await readTicketFileContent(storage, saved.id, saved.files![0])).toBe("extra notes");
   });
 
   test("save resolves depends_on shorthands to ticket ids", async () => {
@@ -179,10 +181,18 @@ describe("draft workflow", () => {
       ...makeCommandArgs({ storage, params: { title: "Seeded" }, overrides: { projectFiles } }),
     );
     const [stored] = await ticketsCollection(storage).list();
-    await ticketsCollection(storage).put(stored.id, {
-      ...stored,
-      files: [{ id: "f1", name: "spec.md", content: "spec body", createdAt: "x", updatedAt: "x" }],
-    });
+    await changeTicketFiles(ticketContext(storage), stored.id, async (ticket) => ({
+      ...ticket,
+      files: [
+        {
+          id: "f1",
+          name: "spec.md",
+          blobId: await storeTicketFileContent(storage, stored.id, "spec.md", "spec body"),
+          createdAt: "x",
+          updatedAt: "x",
+        },
+      ],
+    }));
 
     // Clear the working tree so pull has to recreate everything.
     projectFiles.files.clear();
@@ -218,10 +228,10 @@ describe("draft workflow", () => {
       ...makeCommandArgs({ storage, params: { title: "Seeded" }, overrides: { projectFiles } }),
     );
     const [stored] = await ticketsCollection(storage).list();
-    await ticketsCollection(storage).put(stored.id, {
-      ...stored,
-      files: [{ id: "f1", name: "only-storage.md", content: "x", createdAt: "x", updatedAt: "x" }],
-    });
+    await changeTicketFiles(ticketContext(storage), stored.id, async (ticket) => ({
+      ...ticket,
+      files: [{ id: "f1", name: "only-storage.md", blobId: "unused", createdAt: "x", updatedAt: "x" }],
+    }));
     await projectFiles.writeText(`${ticketFilesDir(shorthand)}/only-local.md`, "y");
 
     const rows = await listTicketFilesCommand.run(

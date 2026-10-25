@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, linkSync, mkdirSync, writeFileSync } from "node:fs";
 import { delimiter, join, resolve } from "node:path";
 import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
@@ -34,7 +34,9 @@ for (const shell of environments) {
     const compiled = join(home, `fake-harness${executableSuffix}`);
     execFileSync("bun", ["build", "--compile", "--outfile", compiled, source]);
     for (const executable of Object.keys(versions)) {
-      copyFileSync(compiled, join(toolsPath, `${executable}${executableSuffix}`));
+      // Each probe still launches a real executable. Share its bytes instead of copying
+      // the bundled runtime three times immediately before Windows starts the probes.
+      linkSync(compiled, join(toolsPath, `${executable}${executableSuffix}`));
     }
     writeFileSync(join(home, ".bash_profile"), 'source "$HOME/.bashrc"\n');
     writeFileSync(join(home, ".bashrc"), 'export PATH="$HOME/agent tools:$PATH"\n');

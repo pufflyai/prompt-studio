@@ -34,7 +34,7 @@ export const readPlanCommand = defineCommand({
     await migratePlannerStorage(ctx);
     const [{ tickets, requests }, { statuses }, { tags }, stored, gates, attempts, workspaces, selections] =
       await Promise.all([
-        readTicketSnapshot(ctx.storage),
+        readTicketSnapshot(ctx),
         readTicketStatuses(ctx.storage),
         readTicketTags(ctx.storage),
         readStoredPlan(ctx.storage),

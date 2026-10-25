@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { folderWorkspaceCapabilities } from "pstdio-db";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { blobFilesFixture } from "../../../services/shared-files/blob-files.fixture";
+import { createTestDocumentStorage } from "../../../test-utils/create-test-document-storage";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createFilesApi } from "./files";
 import { createCommandEnvironment } from "./index";
@@ -53,6 +54,7 @@ const makeEnabledSources = () => [
 const projectContext = { id: "project-1", name: "Project One", shorthand: "PO" };
 
 const makeStorageService = () => ({
+  ...createTestDocumentStorage(),
   getKv: async () => null,
   setKv: async () => {},
   deleteKv: async () => {},
@@ -154,12 +156,11 @@ describe("createCommandEnvironment host primitives", () => {
     expect("writeText" in env.packageFiles).toBe(false);
     await env.extensionFiles?.writeText("cache/index.json", "{}");
     expect(
-      readFileSync(
-        join(repoPath, ".pstdio/extension-storage/extension-lab/.publishers/pstdio/cache/index.json"),
-        "utf8",
-      ),
+      readFileSync(join(repoPath, ".pstdio/extension-storage/pstdio.extension-lab/cache/index.json"), "utf8"),
     ).toBe("{}");
-    expect(readFileSync(join(repoPath, ".pstdio/.gitignore"), "utf8")).toContain("/extension-storage/extension-lab/");
+    expect(readFileSync(join(repoPath, ".pstdio/.gitignore"), "utf8")).toContain(
+      "/extension-storage/pstdio.extension-lab/",
+    );
     await expect(env.extensionFiles?.readText("../secret.md")).rejects.toThrow("escapes");
   });
 
@@ -479,13 +480,13 @@ describe("createCommandEnvironment", () => {
       {
         artifactMounts: [
           {
-            id: "extension-lab.reports",
+            id: "pstdio.extension-lab.reports",
             localId: "reports",
             extensionId: "pstdio.extension-lab",
             name: "extension-lab",
             sourcePath: "/tmp/extension-lab/extension.ts",
             relativePath: "reports",
-            fullPath: ".pstdio/extension-storage/extension-lab/reports",
+            fullPath: ".pstdio/extension-storage/pstdio.extension-lab/reports",
             label: "Reports",
             watch: false,
             changedEventId: "artifact.changed:pstdio.extension-lab.artifact.reports",
@@ -502,7 +503,10 @@ describe("createCommandEnvironment", () => {
     await reports.writeText("latest.md", "hello");
 
     expect(
-      readFileSync(join(repoPath, ".pstdio", "extension-storage", "extension-lab", "reports", "latest.md"), "utf8"),
+      readFileSync(
+        join(repoPath, ".pstdio", "extension-storage", "pstdio.extension-lab", "reports", "latest.md"),
+        "utf8",
+      ),
     ).toBe("hello");
     expect(() => env.artifacts.mount("missing")).toThrow("Artifact mount not found: missing");
   });

@@ -6,6 +6,7 @@ import { reportsCollection } from "../data/collections";
 import { reportFilesDir, reportMarkdownPath } from "../data/draft-storage";
 import { parseReportFrontmatter, stripFrontmatter } from "../data/frontmatter";
 import { saveReportTemplate } from "../data/template-store";
+import type { StoredReport } from "../data/types";
 import { defaultProjectRoot, makeCommandArgs } from "./command-context.fixture";
 import { deleteReportCommand } from "./delete-report";
 import { readReportCommand } from "./read-report";
@@ -49,6 +50,62 @@ const failBlobDeletes = (storage: ExtensionStorageApi): ExtensionStorageApi => (
     };
   },
 });
+
+/** Records every uploaded report file, and fails record writes or body uploads on request. */
+const failingWrites = (storage: ExtensionStorageApi, fail: "record" | "body") => {
+  const uploaded: { itemId: string; id: string }[] = [];
+  const wrapped: ExtensionStorageApi = {
+    ...storage,
+    collection<TItem>(name: string) {
+      const collection = storage.collection<TItem>(name);
+      return {
+        ...collection,
+        async put(id: string, value: TItem) {
+          if (fail === "record") throw new Error("record write failed");
+          return collection.put(id, value);
+        },
+        attachments(itemId) {
+          const blobs = collection.attachments(itemId);
+          return {
+            ...blobs,
+            async put(input) {
+              if (fail === "body" && input.name === "report.md") throw new Error("body upload failed");
+              const blob = await blobs.put(input);
+              uploaded.push({ itemId, id: blob.id });
+              return blob;
+            },
+          };
+        },
+      };
+    },
+  };
+  const remaining = async () => {
+    const found = await Promise.all(
+      uploaded.map(({ itemId, id }) => reportsCollection(storage).attachments(itemId).get(id)),
+    );
+    return found.filter(Boolean);
+  };
+  return { storage: wrapped, uploaded, remaining };
+};
+
+/** The first report read returns the record as it was before a later save replaced it. */
+const readStaleReportOnce = (storage: ExtensionStorageApi, stale: StoredReport): ExtensionStorageApi => {
+  let served = false;
+  return {
+    ...storage,
+    collection<TItem>(name: string) {
+      const collection = storage.collection<TItem>(name);
+      return {
+        ...collection,
+        async get(id) {
+          if (served) return collection.get(id);
+          served = true;
+          return stale as TItem;
+        },
+      };
+    },
+  };
+};
 
 describe("report workflow", () => {
   test("write creates a workspace draft report with frontmatter", async () => {
@@ -218,11 +275,13 @@ describe("report workflow", () => {
 
     expect(result).toMatchObject({
       name: "review_01",
-      path: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio-reports/reports/review/report_01.md"),
-      filesPath: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio-reports/reports/review/files_01"),
+      path: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/report_01.md"),
+      filesPath: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/files_01"),
     });
     expect(new TextDecoder().decode(projectFiles.files.get(reportMarkdownPath("review"))!)).toBe("local edits");
-    expect(projectFiles.files.has(".pstdio/extension-storage/pstdio-reports/reports/review/report_01.md")).toBe(true);
+    expect(projectFiles.files.has(".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/report_01.md")).toBe(
+      true,
+    );
     expect(await reportsCollection(storage).list()).toHaveLength(2);
     expect(events).toHaveLength(1);
 
@@ -236,8 +295,8 @@ describe("report workflow", () => {
 
     expect(third).toMatchObject({
       name: "review_02",
-      path: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio-reports/reports/review/report_02.md"),
-      filesPath: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio-reports/reports/review/files_02"),
+      path: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/report_02.md"),
+      filesPath: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/files_02"),
     });
   });
 
@@ -255,8 +314,8 @@ describe("report workflow", () => {
 
     expect(result).toMatchObject({
       name: "review_01",
-      path: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio-reports/reports/review/report_01.md"),
-      filesPath: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio-reports/reports/review/files_01"),
+      path: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/report_01.md"),
+      filesPath: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/files_01"),
     });
     expect(new TextDecoder().decode(projectFiles.files.get(reportMarkdownPath("review"))!)).toBe("untracked review");
   });
@@ -354,7 +413,9 @@ describe("saved report workflow", () => {
       source: "manual",
       draft: false,
     });
-    expect(saved.body).toContain("Body text.");
+    expect((await readReportCommand.run(...makeCommandArgs({ storage, params: { id: saved.id } }))).body).toContain(
+      "Body text.",
+    );
     expect(saved.createdAt).not.toBe("1999-01-01T00:00:00.000Z");
     expect(saved.files[0]).toMatchObject({ name: "screenshot.png", size: 4, hash: expect.any(String) });
     expect(saved.files[0]?.hash).not.toBe("");
@@ -389,6 +450,94 @@ describe("saved report identity and failures", () => {
     const report = await readReportCommand.run(...makeCommandArgs({ storage, params: { id: written.reportId } }));
 
     expect(report).toMatchObject({ id: written.reportId, workspaceShorthand: "PS-116_A1", draft: false });
+  });
+
+  test("a long report body is stored as a file and the report record stays small", async () => {
+    const { storage, projectFiles } = setup();
+    const written = await writeReportCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { projectFiles },
+      }),
+    );
+    // Over the 256 KiB record limit of extension API 0.3, like a report with pasted test logs.
+    const log = "test output line\n".repeat(20_000);
+    projectFiles.files.set(reportMarkdownPath("review"), new TextEncoder().encode(`# Review\n\n${log}`));
+    await saveReportCommand.run(
+      ...makeCommandArgs({ storage, params: { workspace: "PS-116_A1", name: "review" }, overrides: { projectFiles } }),
+    );
+
+    const [stored] = await reportsCollection(storage).list();
+    expect(JSON.stringify(stored).length).toBeLessThan(10_000);
+    const report = await readReportCommand.run(...makeCommandArgs({ storage, params: { id: written.reportId } }));
+    expect(report.body).toBe(`# Review\n\n${log}`);
+  });
+
+  test("a draft whose report record cannot be written removes its body file", async () => {
+    const { storage, projectFiles } = setup();
+    const failing = failingWrites(storage, "record");
+
+    await expect(
+      writeReportCommand.run(
+        ...makeCommandArgs({
+          storage: failing.storage,
+          params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+          overrides: { projectFiles },
+        }),
+      ),
+    ).rejects.toThrow("record write failed");
+
+    expect(failing.uploaded).toHaveLength(1);
+    expect(await failing.remaining()).toEqual([]);
+  });
+
+  test("a save whose body upload fails removes the evidence it uploaded", async () => {
+    const { storage, projectFiles } = setup();
+    await writeReportCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { projectFiles },
+      }),
+    );
+    projectFiles.files.set(`${reportFilesDir("review")}/evidence.txt`, new TextEncoder().encode("details"));
+    const failing = failingWrites(storage, "body");
+
+    await expect(
+      saveReportCommand.run(
+        ...makeCommandArgs({
+          storage: failing.storage,
+          params: { workspace: "PS-116_A1", name: "review" },
+          overrides: { projectFiles },
+        }),
+      ),
+    ).rejects.toThrow("body upload failed");
+
+    expect(failing.uploaded).toHaveLength(1);
+    expect(await failing.remaining()).toEqual([]);
+  });
+
+  test("reading a report while a save replaces its body returns the saved body", async () => {
+    const { storage, projectFiles } = setup();
+    const written = await writeReportCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
+        overrides: { projectFiles },
+      }),
+    );
+    const stale = (await reportsCollection(storage).get(written.reportId))!;
+    projectFiles.files.set(reportMarkdownPath("review"), new TextEncoder().encode("# Review\n\nUpdated."));
+    await saveReportCommand.run(
+      ...makeCommandArgs({ storage, params: { workspace: "PS-116_A1", name: "review" }, overrides: { projectFiles } }),
+    );
+
+    const report = await readReportCommand.run(
+      ...makeCommandArgs({ storage: readStaleReportOnce(storage, stale), params: { id: written.reportId } }),
+    );
+
+    expect(report.body).toBe("# Review\n\nUpdated.");
   });
 
   test("save succeeds when old attachment cleanup fails after storage update", async () => {
@@ -445,7 +594,7 @@ describe("saved report identity and failures", () => {
     expect(await reportsCollection(storage).list()).toEqual([]);
     expect(
       [...projectFiles.files.keys()].filter((path) =>
-        path.startsWith(".pstdio/extension-storage/pstdio-reports/reports/review/"),
+        path.startsWith(".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/"),
       ),
     ).toEqual([]);
     expect(events[0]?.event).toBe("pstdio-reports.report.deleted");
@@ -478,7 +627,7 @@ describe("saved report identity and failures", () => {
     expect(await reportsCollection(storage).list()).toEqual([]);
     expect(
       [...projectFiles.files.keys()].filter((path) =>
-        path.startsWith(".pstdio/extension-storage/pstdio-reports/reports/review/"),
+        path.startsWith(".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/"),
       ),
     ).toEqual([]);
   });

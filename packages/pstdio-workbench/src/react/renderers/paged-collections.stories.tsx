@@ -11,7 +11,7 @@ const sortDirection = (input: DataTableRendererQueryContext) => (input.sorts[0]?
 
 const pageOffset = (page: CollectionPageRequest) => (page.cursor === undefined ? page.offset : Number(page.cursor));
 
-const createFixture = (initiallyHeld: boolean) => {
+const createFixture = (initiallyHeld: boolean, withOtherTable: boolean) => {
   const workbench = createWorkbench();
   let held = initiallyHeld;
   let pending = Promise.withResolvers<void>();
@@ -87,6 +87,23 @@ const createFixture = (initiallyHeld: boolean) => {
         region: "main",
         item: { kind: "view", presence: "fixed", view: { kind: "view", id: "paged-table" } },
       });
+      if (withOtherTable) {
+        ctx.views.registerView({
+          id: "other-table",
+          title: "Other table",
+          body: {
+            kind: "dataTable",
+            columns: [{ id: "title", label: "Title" }],
+            defaultSettings: { showStats: false },
+            executeQuery: () => ({ rows: [{ id: "other", values: { title: "Another collection" } }] }),
+          },
+        });
+        ctx.shellPlacements.registerPlacement({
+          id: "other-table",
+          region: "main",
+          item: { kind: "view", presence: "fixed", view: { kind: "view", id: "other-table" } },
+        });
+      }
     },
   });
   return {
@@ -111,8 +128,8 @@ const createFixture = (initiallyHeld: boolean) => {
   };
 };
 
-const PagedCollections = (props: { initiallyHeld?: boolean }) => {
-  const [fixture] = useState(() => createFixture(Boolean(props.initiallyHeld)));
+const PagedCollections = (props: { initiallyHeld?: boolean; withOtherTable?: boolean }) => {
+  const [fixture] = useState(() => createFixture(Boolean(props.initiallyHeld), Boolean(props.withOtherTable)));
   return (
     <WorkbenchThemeProvider>
       <Stack h="100dvh" gap="sm">
@@ -139,6 +156,23 @@ const meta = {
 } satisfies Meta<typeof PagedCollections>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+export const HiddenPageState: Story = {
+  args: { withOtherTable: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Row 000");
+    await userEvent.click(canvas.getByRole("button", { name: "Go to next page" }));
+    const row = (await canvas.findByText("Row 100")).closest("tr")!;
+    await userEvent.click(within(row).getByRole("checkbox", { name: "Select row" }));
+    await userEvent.click(canvas.getByRole("tab", { name: /^Other table$/ }));
+    await expect(await canvas.findByText("Another collection")).toBeVisible();
+    await userEvent.click(canvas.getByRole("tab", { name: /^Paged rows$/ }));
+    const restored = await canvas.findByText("Row 100");
+    await expect(restored).toBeVisible();
+    await expect(within(restored.closest("tr")!).getByRole("checkbox", { name: "Select row" })).toBeChecked();
+    await expect(canvas.getByRole("spinbutton")).toHaveValue("2");
+  },
+};
 export const Loading: Story = {
   args: { initiallyHeld: true },
   play: async ({ canvasElement }) => {

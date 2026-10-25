@@ -12,7 +12,10 @@ type RootManifest = {
 
 type WorkspaceManifest = {
   name?: string;
+  publisher?: string;
+  engines?: { pstdio?: string };
 };
+const isExtensionManifest = (manifest: WorkspaceManifest) => Boolean(manifest.publisher && manifest.engines?.pstdio);
 
 export type ChangesetValidationIssue = {
   filePath: string;
@@ -114,7 +117,7 @@ export const collectChangesetConfigIssues = async (cwd = process.cwd()) => {
         message: `expected exactly one fixed version group, found ${config.fixed.length}`,
       });
     }
-    const workspaces = new Map<string, boolean>();
+    const workspaces = new Map<string, { repoLocal: boolean; extension: boolean }>();
 
     for (const workspace of rootManifest.workspaces ?? []) {
       const manifests = new Bun.Glob(`${workspace.replace(/\/$/, "")}/package.json`);
@@ -123,15 +126,19 @@ export const collectChangesetConfigIssues = async (cwd = process.cwd()) => {
         const pathFromRoot = relative(cwd, manifestFullPath);
 
         const manifest = (await Bun.file(manifestFullPath).json()) as WorkspaceManifest;
-        if (manifest.name) workspaces.set(manifest.name, pathFromRoot.split(sep)[0] === ".pstdio");
+        if (manifest.name)
+          workspaces.set(manifest.name, {
+            repoLocal: pathFromRoot.split(sep)[0] === ".pstdio",
+            extension: isExtensionManifest(manifest),
+          });
       }
     }
 
-    for (const [name, repoLocal] of [...workspaces].sort(([a], [b]) => a.localeCompare(b))) {
+    for (const [name, { repoLocal, extension }] of [...workspaces].sort(([a], [b]) => a.localeCompare(b))) {
       if (config.ignore.includes(name)) continue;
       if (repoLocal)
         issues.push({ filePath: changesetConfigPath, message: `repo-local workspace "${name}" must be ignored` });
-      if (!releasedNames.has(name))
+      if (!extension && !releasedNames.has(name))
         issues.push({
           filePath: changesetConfigPath,
           message: `released workspace "${name}" must be in the fixed version group`,

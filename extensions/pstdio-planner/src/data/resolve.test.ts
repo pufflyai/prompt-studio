@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "./collections";
 import { findTicket, resolveStatusId, resolveTagId, resolveTagOptionIds, resolveTicketId } from "./resolve";
 import { reviewRequestsCollection } from "./review-request-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import { observeStorageReads } from "./storage-reads.fixture";
+import { ticketContext, ticketsCollection } from "./ticket-context.fixture";
 
 describe("resolveStatusId", () => {
   test("resolves by id and by case-insensitive name", async () => {
@@ -63,8 +63,8 @@ describe("resolveTicketId", () => {
       updatedAt: "",
     });
 
-    expect(await resolveTicketId(storage, "T-1")).toBe("t1");
-    expect(await resolveTicketId(storage, "t1")).toBe("t1");
+    expect(await resolveTicketId(ticketContext(storage), "T-1")).toBe("t1");
+    expect(await resolveTicketId(ticketContext(storage), "t1")).toBe("t1");
   });
 });
 
@@ -77,7 +77,7 @@ describe("findTicket", () => {
       title: "Selected ticket",
       content: "",
       statusId: null,
-      tagIds: [],
+      tags: {},
       archived: false,
       sortOrder: 0,
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -95,9 +95,9 @@ describe("findTicket", () => {
     });
     const observed = observeStorageReads(storage);
 
-    const ticket = await findTicket(observed.storage, "ticket-1");
+    const ticket = await findTicket({ ...ticketContext(storage), storage: observed.storage }, "ticket-1");
 
-    expect(ticket?.tagIds).toEqual([]);
+    expect(ticket?.tags).toEqual({});
     expect(observed.reads.filter((key) => key.startsWith("tickets/"))).toEqual(["tickets/ticket-1"]);
   });
 
@@ -110,13 +110,13 @@ describe("findTicket", () => {
       title: "Padded shorthand",
       content: "",
       statusId: null,
-      tagIds: [],
+      tags: {},
       archived: false,
       sortOrder: 0,
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
     } as never);
 
-    expect(await resolveTicketId(storage, "PS-1")).toBe("ticket-1");
+    expect(await resolveTicketId(ticketContext(storage), "PS-1")).toBe("ticket-1");
   });
 });

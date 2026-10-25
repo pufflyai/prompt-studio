@@ -1,7 +1,7 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import type { AttemptRecord } from "../data/attempt-types";
 import { readSessionHistory } from "../data/session-history";
-import type { StoredTicket } from "../data/types";
+import type { Ticket } from "../data/types";
 import type { PlanRow } from "../timeline/contracts";
 import { isLiveSession } from "./auto-build-sessions";
 import type { NextTicket, WaitingTicket } from "./next-ticket-types";
@@ -10,7 +10,7 @@ export async function nextWorkSnapshot(
   ctx: CommandContext,
   input: {
     revision: string;
-    tickets: StoredTicket[];
+    tickets: Ticket[];
     attempts: AttemptRecord[];
     rows: PlanRow[];
     next: NextTicket[];

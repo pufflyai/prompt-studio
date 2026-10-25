@@ -9,6 +9,7 @@ import type { SessionAttachment } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
 import { useApiFileParts } from "@/lib/api-file-url";
 import { useAgents } from "@/shared/agents/use-agents";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
@@ -96,7 +97,10 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const links = useSessionLinks(input.workbench, projectId, view.workspaceId);
 
   const { messages, loading, streaming, reconnect, refreshQueue, error, queueError, queue } = history;
-  const createSession = useCreateProjectSession();
+  // A session that works on files asks for the project's folder on a device that does not have it yet.
+  const chooseProjectFolder = () =>
+    void input.workbench.commands.executeCommand(dashboardCommandIds.chooseProjectFolder);
+  const createSession = useCreateProjectSession({ onFolderMissing: chooseProjectFolder });
   const followUp = useFollowUpSession();
   const stopSession = useStopSession();
 
@@ -142,7 +146,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     view.status,
     view.lastRequestStarted,
     commandDraft,
-    (operation) => createDraftCommandSession(commandDraft, operation),
+    (operation) => createDraftCommandSession(commandDraft, operation, chooseProjectFolder),
     openCreatedSession,
     input,
   );

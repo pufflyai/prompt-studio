@@ -81,7 +81,7 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
   };
   const resolve = async (resource: ResourceRef) => {
     const kind = input.metadata.resourceKinds.find(
-      (kind) => kind.id === resource.type && kind.extensionId === resource.extensionId,
+      (kind) => kind.localId === resource.type && kind.extensionId === resource.extensionId,
     );
     if (!kind) return;
     const command = kind.resolveCommand ?? kind.resolveManyCommand;

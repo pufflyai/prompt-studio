@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import type { CommandSource } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt, readAttempt } from "../data/attempt-storage";
-import { putTicket, ticketsCollection } from "../data/collections";
 import { hasPendingImplementationInput } from "../data/implementation-input";
 import {
   hasPendingInput,
@@ -10,6 +9,7 @@ import {
   REVIEW_OUTCOMES_COLLECTION,
   reviewRequestsCollection,
 } from "../data/review-request-storage";
+import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
 import { reviewRequestCleanupHook } from "../hooks/review-request-cleanup";
 import { makeCommandContext } from "./command-context.fixture";
 import {
@@ -29,7 +29,7 @@ const ticket = (id: string, statusId = "in-review") => ({
   title: "Human handoff",
   content: "# Human handoff",
   statusId,
-  tagIds: [],
+  tags: {},
   attachments: [],
   parentId: null,
   dependsOn: [],
@@ -327,7 +327,7 @@ describe("review request ownership", () => {
   test("a request opened before the ticket was done can still be settled", async () => {
     const { storage, context, inputPending } = await setup();
     const request = await requestHumanCommand.run(context(), task as never);
-    await putTicket(storage, { ...ticket("ps-1"), statusId: "done", tagIds: [] });
+    await putTicket(storage, { ...ticket("ps-1"), statusId: "done", tags: {} });
 
     await expect(requestHumanCommand.run(context(), task as never)).rejects.toThrow("The ticket is complete.");
     await reviewCommand.run(context(), { requestId: request.id, response: { confirmed: true } });
@@ -456,7 +456,7 @@ describe("attempt handoffs", () => {
   test("human requests preserve the chosen ticket status when a variant records evidence", async () => {
     const { storage, context } = await setupAttempt();
     await requestHumanCommand.run(context("automation"), handoff as never);
-    await putTicket(storage, { ...ticket("ps-1"), tagIds: [] });
+    await putTicket(storage, { ...ticket("ps-1"), tags: {} });
     const attempt = (await readAttempt(storage, "workspace-1"))!;
     await putAttempt(storage, { ...attempt, updatedAt: new Date().toISOString() });
 

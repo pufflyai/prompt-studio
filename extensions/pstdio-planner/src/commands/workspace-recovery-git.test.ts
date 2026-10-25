@@ -9,6 +9,7 @@ import { fixture } from "./auto-build.fixture";
 import { nextTicketsCommand } from "./next-tickets";
 import { runAttemptCommand } from "./run-attempt";
 import { sessionQuery } from "./session-query.fixture";
+import { sessionRecord } from "./session-record.fixture";
 
 const run = async (command: string[]) => {
   const child = Bun.spawn(command, { stdout: "pipe", stderr: "pipe" });
@@ -68,7 +69,7 @@ test.each([
         execution_kind: "local",
         provider_capabilities_json: { diff: true },
       }) as never;
-    f.ctx.sessions.get = async (id) => ({ ...old.session, id, status: "completed" });
+    f.ctx.sessions.get = async (id) => sessionRecord({ ...old.session, id, status: "completed" });
     f.ctx.sessions.query = sessionQuery(async () => [{ ...old.session, status: "completed" }]);
     f.ctx.process.run = ({ command }) => run(command);
 

@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { ticketsCollection } from "../data/ticket-context.fixture";
 import { plannerTicketsChanged } from "../events";
-import { makeCommandArgs } from "./command-context.fixture";
+import { makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { getTicketCommand } from "./get-ticket";
 import { updateTicketCommand } from "./update-ticket";
@@ -40,7 +40,7 @@ describe("get/update ticket commands", () => {
     const found = await getTicketCommand.run(...makeCommandArgs({ storage, params: { id: created.id } }));
     const missing = await getTicketCommand.run(...makeCommandArgs({ storage, params: { id: "nope" } }));
 
-    expect(found?.id).toBe(created.id);
+    expect(Array.isArray(found) ? undefined : found?.id).toBe(created.id);
     expect(missing).toBeNull();
   });
 
@@ -135,12 +135,41 @@ describe("updateTicket server-side resolution", () => {
 
     expect(notifications).toEqual([
       expect.objectContaining({
-        dedupeKey: "pstdio-planner:ticket:T-1:blocked",
+        dedupeKey: `pstdio-planner:ticket:${ticket.id}:blocked`,
         kind: "blocked",
         priority: "high",
       }),
     ]);
-    expect(resolutions).toEqual([{ dedupeKey: "pstdio-planner:ticket:T-1:blocked", status: "done" }]);
+    expect(resolutions).toEqual([{ dedupeKey: `pstdio-planner:ticket:${ticket.id}:blocked`, status: "done" }]);
+  });
+
+  test("a blocked notification closes after the ticket is renumbered", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    const open = new Set<string>();
+    const ctx = makeCommandContext({
+      storage,
+      params: {},
+      overrides: {
+        notify: {
+          action: async (input: { dedupeKey: string }) => {
+            open.add(input.dedupeKey);
+            return {};
+          },
+          resolve: async (input: { dedupeKey: string }) => {
+            open.delete(input.dedupeKey);
+            return [];
+          },
+        } as never,
+      },
+    });
+    const ticket = await createTicketCommand.run(ctx, { title: "Blocked" });
+
+    await updateTicketCommand.run(ctx, { id: ticket.id, blockedReason: "need credentials" });
+    ctx.resources.identity = async ({ id }) => ({ id, kind: "ticket", shorthand: "T-9", aliases: [ticket.shorthand] });
+    await updateTicketCommand.run(ctx, { id: ticket.id, status: "In Progress", blockedReason: "" });
+
+    expect([...open]).toEqual([]);
   });
 
   test("returns the saved ticket when blocked notification creation fails", async () => {

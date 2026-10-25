@@ -2,7 +2,7 @@ import type { ExtensionSetupWarning } from "pstdio-api-contracts";
 import { apiLogger } from "../../lib/logger";
 import { traceSetupPhase } from "../../lib/setup-phase";
 import {
-  installDefaultExtensions,
+  installMissingDefaultExtensions,
   registerInstalledExtensionSources,
   syncInstalledExtensionsForProject,
 } from "../extensions/default-extensions";
@@ -50,7 +50,7 @@ export const setupProjectExtensions = async (
 
   if (installDefaults) {
     try {
-      const installed = await installDefaultExtensions({
+      const installed = await installMissingDefaultExtensions({
         forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
         onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
         releaseRef: deps.extensionUpgradeService?.releaseRef,

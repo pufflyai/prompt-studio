@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -53,6 +54,45 @@ const packageEntries = (notes: string) =>
     });
 
 describe("shared release notes", () => {
+  test("includes changed independent extensions and leaves unchanged extensions out", async () => {
+    const root = workspace({
+      pstdio: "## 0.35.0\n\n- Host.\n",
+      planner: "## 0.8.2\n\n- Planner fix.\n",
+      notes: "## 0.9.1\n\n- Older Notes.\n",
+    });
+    writeFileSync(join(root, ".changeset/config.json"), JSON.stringify({ fixed: [["pstdio"]], ignore: [] }));
+    const git = (...args: string[]) => execFileSync("git", args, { cwd: root, stdio: "pipe" });
+    for (const [name, version] of [
+      ["planner", "0.8.1"],
+      ["notes", "0.9.1"],
+    ]) {
+      writeFileSync(
+        join(root, "packages", name!, "package.json"),
+        JSON.stringify({
+          name,
+          version,
+          publisher: "pstdio",
+          engines: { pstdio: "^0.2.0" },
+          dependencies: { "@pstdio/sdk": "^0.44.0" },
+        }),
+      );
+    }
+    git("init");
+    git("config", "user.email", "test@example.com");
+    git("config", "user.name", "Test");
+    git("add", ".");
+    git("commit", "-m", "Previous host");
+    git("tag", "pstdio@0.34.0");
+    const file = join(root, "packages/planner/package.json");
+    const planner = JSON.parse(Bun.file(file).size ? await Bun.file(file).text() : "{}");
+    writeFileSync(file, JSON.stringify({ ...planner, version: "0.8.2" }));
+    git("add", ".");
+    git("commit", "-m", "Release Planner fix");
+    expect(packageEntries(await createReleaseNotes(root, "0.35.0"))).toEqual([
+      { name: "pstdio", entries: ["Host."] },
+      { name: "planner", entries: ["Planner fix."] },
+    ]);
+  });
   test("combines each changed package's section for the release version", async () => {
     const root = workspace({
       pstdio: "## 0.35.0\n\n_2026-09-26_\n\n### Minor Changes\n\n- Add tools.\n\n## 0.34.0\n\n- Old entry.\n",

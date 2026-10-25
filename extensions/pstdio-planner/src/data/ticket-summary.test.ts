@@ -1,21 +1,21 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "./collections";
 import { createTicketParentLookup, createTicketWorkspaceLookup, ticketToRow } from "./mappers";
 import { observeStorageReads } from "./storage-reads.fixture";
+import { ticketContext, ticketsCollection } from "./ticket-context.fixture";
 import { readTicketParentLookup } from "./ticket-resource-hierarchy";
 import { ticketSummary } from "./ticket-summary";
-import type { StoredTag, StoredTicket } from "./types";
+import type { StoredTag, Ticket } from "./types";
 
-const ticket = (id: string, parentId?: string): StoredTicket => ({
+const ticket = (id: string, parentId?: string): Ticket => ({
   id,
   shorthand: `T-${id}`,
   title: id,
   content: "Full ticket body",
-  files: [{ id: "file", name: "notes.md", content: "File body", createdAt: "before", updatedAt: "after" }],
+  files: [{ id: "file", name: "notes.md", blobId: "file-body", createdAt: "before", updatedAt: "after" }],
   userPrompt: "Implementation instructions",
   statusId: "ready",
-  tagIds: ["feature", "urgent"],
+  tags: { labels: ["feature", "urgent"] },
   archived: false,
   sortOrder: 1,
   createdAt: "2026-01-01T00:00:00.000Z",
@@ -27,7 +27,7 @@ test("summary rows preserve full-ticket values, hierarchy, tags, archives and wo
   const tickets = [
     ticket("root"),
     { ...ticket("child", "root"), archived: true },
-    { ...ticket("orphan", "missing"), title: "", statusId: null, tagIds: undefined },
+    { ...ticket("orphan", "missing"), title: "", statusId: null, tags: undefined },
     ticket("cycle-a", "cycle-b"),
     ticket("cycle-b", "cycle-a"),
   ];
@@ -67,7 +67,10 @@ test("selected hierarchy retains summaries without retaining bodies or rereading
   await ticketsCollection(storage).put("unrelated", ticket("unrelated"));
   const observed = observeStorageReads(storage);
 
-  const lookup = await readTicketParentLookup(observed.storage, new Map([[child.id, child]]));
+  const lookup = await readTicketParentLookup(
+    { ...ticketContext(storage), storage: observed.storage },
+    new Map([[child.id, child]]),
+  );
 
   expect(observed.reads).toEqual(["tickets/parent"]);
   expect([...lookup.keys()]).toEqual(["child", "parent"]);
@@ -76,6 +79,6 @@ test("selected hierarchy retains summaries without retaining bodies or rereading
     expect(summary).not.toHaveProperty("files");
     expect(summary).not.toHaveProperty("userPrompt");
   }
-  expect(child.files?.[0].content).toBe("File body");
+  expect(child.files?.[0].blobId).toBe("file-body");
   expect(await ticketsCollection(storage).get(parent.id)).toEqual(parent);
 });

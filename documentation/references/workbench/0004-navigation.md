@@ -34,9 +34,15 @@ The routed page owns its breadcrumb and page actions. A collection page uses Mai
 
 ## Mounted views
 
+### Project selection
+
+Before a project is selected, the required Projects dialog appears on an empty background. Project selection hides navigation, activity, status widgets, floating panels, project tabs, and panel controls. Native window controls remain available. The dialog footer opens global Settings; closing Settings returns to the picker. System errors still use the status bar when they need attention.
+
+Creating the first project opens its Start page and tools without reloading. Project selection commits the project scope and dialog changes together, so automatic selection cannot interrupt that transition.
+
 ### Main fullscreen
 
-The fullscreen control expands Main over the workbench. In the browser it sits at the end of the navigation header. Desktop places it beside the panel controls in the top bar. It stays reachable when panel headers or mode navigation chrome are hidden. Fullscreen hides the title bar, activity bar, Sidenav, Bottom, Main's tab header, and status bar as presentation. It does not replace or save the global layout, change the page URL, or create page panels.
+The fullscreen control expands Main over the workbench. It appears when Main has content. In the browser it sits at the end of the navigation header. Desktop places it beside the panel controls in the top bar. It stays reachable when panel headers or mode navigation chrome are hidden. Fullscreen hides the title bar, activity bar, Sidenav, Bottom, Main's tab header, and status bar as presentation. It does not replace or save the global layout, change the page URL, or create page panels.
 
 An open attached or floating Side becomes a temporary floating overlay when the mode allows floating. A closed Side stays closed. While Side is minimized, its bubble remains available in fullscreen and reopens the temporary overlay. The bubble hides beneath the open overlay. A mode without Side, or with a nonfloating Side, hides it. The fullscreen header keeps only the exit control. The bubble and overlay close action change only the temporary presentation. They follow the mode's open and close permissions. Dismissing Side returns focus to the bubble; exiting returns focus to the fullscreen entry control. Escape first lets nested menus and dialogs handle the key, then dismisses Side, then exits fullscreen.
 
@@ -90,7 +96,7 @@ A routed resource page can declare `document: { metadataKey: "workspaceFilePath"
 
 `position: { line, column?, endLine?, endColumn? }` is a one-based source location. It requires a selected document and cannot be combined with a Markdown heading `section`. URLs use the same named coordinate parameters. Monaco reveals and selects the requested range after loading, and on another explicit navigation within the same file. It retains the editor draft. Images and rich Markdown show a notice when source positions are unavailable. Markdown heading navigation still uses `section`.
 
-Chat UI accepts an optional `linkHandler` with `resolveHref`, `open`, and optional `describe` methods. It passes the original destination and its origin (Markdown, inline code, reference, or tool) to the host. The session host resolves relative paths from the originating workspace root, checks rooted paths against that root, and uses registered page URLs for saved resources. A file path under `.pstdio/extension-storage/pstdio-planner/tickets` opens those workspace bytes. It does not imply a saved Planner document. Absolute dashboard URLs must have the dashboard's origin; another project is selected before its page is restored. Raw custom schemes cannot execute commands. Uploaded attachments retain their own open behavior.
+Chat UI accepts an optional `linkHandler` with `resolveHref`, `open`, and optional `describe` methods. It passes the original destination and its origin (Markdown, inline code, reference, or tool) to the host. The session host resolves relative paths from the originating workspace root, checks rooted paths against that root, and uses registered page URLs for saved resources. A file path under `.pstdio/extension-storage/pstdio.pstdio-planner/tickets` opens those workspace bytes. It does not imply a saved Planner document. Absolute dashboard URLs must have the dashboard's origin; another project is selected before its page is restored. Raw custom schemes cannot execute commands. Uploaded attachments retain their own open behavior.
 
 The legacy public `onOpenFile` callback remains available and is deprecated in favor of `linkHandler`. Existing callers without a handler retain their behavior.
 

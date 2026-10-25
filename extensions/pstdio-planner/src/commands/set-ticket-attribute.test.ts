@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { ticketsCollection } from "../data/collections";
 import { createTagOption, createTicketTag, readTicketTags } from "../data/tag-operations";
+import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { setTicketAttributeCommand } from "./set-ticket-attribute";
@@ -59,7 +59,7 @@ describe("setTicketAttributeCommand", () => {
     );
 
     expect(updated?.tagIds).toEqual([high.id]);
-    expect((await ticketsCollection(storage).get(created.id))?.tagIds).toEqual([high.id]);
+    expect((await ticketsCollection(storage).get(created.id))?.tags).toEqual({ "default-priority": high.id });
   });
 
   test("updates a multi-select tag without replacing unrelated tag values", async () => {
@@ -67,9 +67,9 @@ describe("setTicketAttributeCommand", () => {
     const { tags } = await readTicketTags(storage);
     const priority = tags.find((tag) => tag.id === "default-priority")!;
     const high = priority.options.find((option) => option.id === "default-priority-high")!;
-    const surface = await createTicketTag({ storage, name: "Surface", type: "multi_select" });
-    const api = await createTagOption({ storage, tagId: surface.id, name: "api" });
-    const dashboard = await createTagOption({ storage, tagId: surface.id, name: "dashboard" });
+    const surface = await createTicketTag({ ...ticketContext(storage), name: "Surface", type: "multi_select" });
+    const api = await createTagOption({ ...ticketContext(storage), tagId: surface.id, name: "api" });
+    const dashboard = await createTagOption({ ...ticketContext(storage), tagId: surface.id, name: "dashboard" });
     const created = await createTicketCommand.run(
       ...makeCommandArgs({ storage, params: { title: "X", tagIds: [high.id, api.id] } }),
     );
@@ -82,6 +82,9 @@ describe("setTicketAttributeCommand", () => {
     );
 
     expect(updated?.tagIds).toEqual([high.id, api.id, dashboard.id]);
-    expect((await ticketsCollection(storage).get(created.id))?.tagIds).toEqual([high.id, api.id, dashboard.id]);
+    expect((await ticketsCollection(storage).get(created.id))?.tags).toEqual({
+      "default-priority": high.id,
+      [surface.id]: [api.id, dashboard.id],
+    });
   });
 });

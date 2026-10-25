@@ -1,4 +1,4 @@
-import { boolean, index, integer, jsonb, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { extensionLoadStatusEnum, extensionReloadStatusEnum, extensionSourceKindEnum } from "./enums";
 import { files } from "./files";
 import { projects } from "./projects";
@@ -77,27 +77,6 @@ export const extension_reload_events = pgTable(
   (table) => [index("extension_reload_events_installed_idx").on(table.installed_extension_id, table.created_at)],
 );
 
-export const extension_kv = pgTable(
-  "extension_kv",
-  {
-    project_id: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
-    extension_instance_id: text("extension_instance_id")
-      .notNull()
-      .references(() => extension_instances.id, { onDelete: "restrict" }),
-    scope_type: text("scope_type").notNull(),
-    scope_id: text("scope_id").notNull(),
-    key: text("key").notNull(),
-    value_json: jsonb("value_json").$type<unknown>().notNull(),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.extension_instance_id, table.scope_type, table.scope_id, table.key] }),
-    index("extension_kv_instance_scope_idx").on(table.extension_instance_id, table.scope_type, table.scope_id),
-    index("extension_kv_project_idx").on(table.project_id),
-  ],
-);
-
 export const extension_settings = pgTable(
   "extension_settings",
   {
@@ -113,37 +92,6 @@ export const extension_settings = pgTable(
     primaryKey({ columns: [table.owner_type, table.owner_id, table.extension_id, table.key] }),
     index("extension_settings_owner_idx").on(table.owner_type, table.owner_id),
     index("extension_settings_extension_idx").on(table.extension_id),
-  ],
-);
-
-export const extension_collection_items = pgTable(
-  "extension_collection_items",
-  {
-    project_id: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
-    extension_instance_id: text("extension_instance_id")
-      .notNull()
-      .references(() => extension_instances.id, { onDelete: "restrict" }),
-    scope_type: text("scope_type").notNull(),
-    scope_id: text("scope_id").notNull(),
-    collection: text("collection").notNull(),
-    item_id: text("item_id").notNull(),
-    sort_order: integer("sort_order"),
-    value_json: jsonb("value_json").$type<unknown>().notNull(),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-  },
-  (table) => [
-    primaryKey({
-      columns: [table.extension_instance_id, table.scope_type, table.scope_id, table.collection, table.item_id],
-    }),
-    index("extension_collection_instance_idx").on(table.extension_instance_id, table.collection),
-    index("extension_collection_scope_idx").on(
-      table.extension_instance_id,
-      table.scope_type,
-      table.scope_id,
-      table.collection,
-    ),
-    index("extension_collection_project_idx").on(table.project_id),
   ],
 );
 

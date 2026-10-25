@@ -91,7 +91,14 @@ export const registerDocumentSyncSmokeTests = () =>
         await command("commit", {
           group: {
             operationId: "offline-note",
-            edits: [{ recordId: note.recordId, replace: `packaged-secret${"x".repeat(1_048_576)}`, asset }],
+            // Records stay under the 256 KiB record limit; together they are over 1 MB.
+            edits: [
+              { recordId: note.recordId, replace: `packaged-secret${"x".repeat(250_000)}`, asset },
+              ...[1, 2, 3, 4].map((page) => ({
+                recordId: `page-${page}`,
+                replace: `packaged-secret${"x".repeat(250_000)}`,
+              })),
+            ],
           },
         });
         const syncState = async () => (await client.account.projectSyncStatus(project.id)).state;
@@ -104,17 +111,29 @@ export const registerDocumentSyncSmokeTests = () =>
         const quarantine = join(root, "state", "sync-quarantine");
         await waitFor(async () => (await readdir(quarantine).catch(() => [])).some((file) => file.endsWith(".json")));
         await waitFor(async () => (await syncState()) === "needs-attention");
+        // Healthy record uploads continue after an unreadable update.
+        const before = new Map([...peer.documents].map(([id, document]) => [id, document.updates.length]));
         await command("commit", {
           group: {
             operationId: "healthy-after-corrupt",
             edits: [{ recordId: note.recordId, replace: "healthy after corrupt update" }],
           },
         });
-        await waitFor(() => [...peer.documents.values()].some((document) => document.updates.length >= 3));
+        await waitFor(() =>
+          [...peer.documents].some(([id, document]) => document.updates.length > (before.get(id) ?? 0)),
+        );
         const files = await readdir(quarantine);
         const saved = await Bun.file(join(quarantine, files[0]!)).text();
         expect(saved).toContain("invalidciphertext000000");
         expect(saved).not.toContain("packaged-secret");
+        // Record text, including the 1 MB save, never reaches the relay readable: not in updates,
+        // latest states or the blobs that hold latest-state chunks and files.
+        const payloads = [...peer.documents.values()].flatMap((document) => [
+          ...(document.payload ? [Buffer.from(document.payload, "base64")] : []),
+          ...document.updates.map((update) => Buffer.from(String(update.payload), "base64")),
+        ]);
+        for (const bytes of [...payloads, ...peer.blobContents()])
+          expect(Buffer.from(bytes).toString("latin1")).not.toContain("packaged-secret");
       } finally {
         await stopProcess(host.child);
         await peer.stop();

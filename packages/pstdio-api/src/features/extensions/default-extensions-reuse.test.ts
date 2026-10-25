@@ -2,7 +2,7 @@ import { expect, mock, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { installDefaultExtensions } from "./default-extensions";
+import { installDefaultExtensions, installMissingDefaultExtensions } from "./default-extensions";
 import { installed, writeExtension } from "./default-extensions-test-fixtures";
 
 test("keeps replacing development defaults from their local sources", async () => {
@@ -22,7 +22,7 @@ test("keeps replacing development defaults from their local sources", async () =
   }
 });
 
-test("uses installed named defaults offline after an earlier setup finishes", async () => {
+test.each(["named", "local"])("uses installed %s defaults after an earlier setup finishes", async (kind) => {
   const root = mkdtempSync(join(tmpdir(), "default-extensions-reuse-"));
   const home = join(root, "home");
   const source = join(root, "source");
@@ -35,21 +35,23 @@ test("uses installed named defaults offline after an earlier setup finishes", as
     cleanup: () => {},
   }));
   const input = {
-    config: { defaultExtensions: ["default-tool"] },
+    config: {
+      defaultExtensions: [kind === "named" ? "default-tool" : { source, installName: "default-tool", force: true }],
+    },
     env: { PSTDIO_HOME: home },
     prepareSharedCheckout,
     installExtensionSource: async () => {
       started.resolve();
       await released.promise;
       writeExtension(target, "default-tool", "user");
-      mkdirSync(join(target, "node_modules"));
+      mkdirSync(join(target, "node_modules"), { recursive: true });
       return { ...installed, installName: "default-tool", targetPath: target };
     },
   };
   try {
     const startup = installDefaultExtensions(input);
     await started.promise;
-    const project = installDefaultExtensions({
+    const project = installMissingDefaultExtensions({
       ...input,
       prepareSharedCheckout: async () => {
         throw new Error("Project setup must not fetch installed defaults again");
@@ -58,7 +60,7 @@ test("uses installed named defaults offline after an earlier setup finishes", as
     released.resolve();
     expect((await startup).map((extension) => extension.installName)).toEqual(["default-tool"]);
     expect(await project).toEqual([]);
-    expect(prepareSharedCheckout).toHaveBeenCalledTimes(1);
+    expect(prepareSharedCheckout).toHaveBeenCalledTimes(kind === "named" ? 1 : 0);
   } finally {
     released.resolve();
     rmSync(root, { recursive: true, force: true });

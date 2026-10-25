@@ -2,10 +2,10 @@ import { extname } from "node:path";
 import { imageExtensionForMimeType, imageMimeType } from "../utils/is-image-attachment";
 import { validateTicketFileName } from "./ticket-file-name";
 import type { TicketImageCheckout } from "./ticket-image-checkout";
-import type { StoredTicket } from "./types";
+import type { Ticket } from "./types";
 
 // Preserve known checkout paths and allocate distinct names for new attachments.
-export const ticketImagePaths = (ticket: StoredTicket, checkout: TicketImageCheckout) => {
+export const ticketImagePaths = (ticket: Ticket, checkout: TicketImageCheckout) => {
   const images = (ticket.attachments ?? []).flatMap((attachment) => {
     const name = validateTicketFileName(attachment.name);
     if (imageMimeType(name)) return [{ attachment, name }];

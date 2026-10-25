@@ -6,7 +6,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.2.1"
+    "pstdio": "^0.2.1 || ^0.3.0"
   },
   "pstdio": {
     "scope": "user"
@@ -14,7 +14,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test --silent",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts --silent",
     "test:coverage": "bun test --coverage",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",

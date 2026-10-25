@@ -18,6 +18,7 @@ export type ExtensionFileServiceDeps = {
   installedExtensionSourcesDBService: Pick<ReturnType<typeof createInstalledExtensionSourcesDBService>, "get">;
   extensionStorageService: ReturnType<typeof createExtensionStorageDBService>;
   assetTransferService: ReturnType<typeof createAssetTransferService>;
+  beforeWrite?: (input: { project_id: string; extension_instance_id: string }) => Promise<void>;
   fileService: Pick<ReturnType<typeof createFileService>, "remove" | "upload">;
 };
 interface ExtensionFileScope {
@@ -116,6 +117,7 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
     const resolved = await resolve(input);
     if (!resolved) return null;
     const { owner, instanceId } = resolved;
+    await deps.beforeWrite?.({ project_id: input.project_id, extension_instance_id: instanceId });
     const file = await deps.fileService.upload({ ...input, file_kind: "extension" }, async (file) => {
       await deps.extensionFilesDBService.attach({ ...input, extension_instance_id: instanceId, file_id: file.id });
     });
@@ -157,6 +159,9 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
   const remove = async (input: OwnedFileRef) => {
     const file = await getOwnedFile(input);
     if (!file) return false;
+    const resolved = await resolve(input);
+    if (!resolved) return false;
+    await deps.beforeWrite?.({ project_id: input.project_id, extension_instance_id: resolved.instanceId });
     const storage = await open({ workbenchId: input.project_id, extensionId: file.extension_id });
     const record = await storage.records.read(recordId(file.id));
     await storage.records.commit({

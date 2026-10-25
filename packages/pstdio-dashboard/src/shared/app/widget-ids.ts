@@ -21,6 +21,7 @@ export const dashboardWidgetIds = {
   shortcutHelp: "dashboard-workbench.shortcut-help",
   projectPicker: "dashboard-workbench.project-picker",
   createProject: "dashboard-workbench.create-project",
+  projectFolder: "dashboard-workbench.project-folder",
   sessionBubble: "dashboard-workbench.session-bubble",
   performance: "dashboard-workbench.performance",
 } as const;

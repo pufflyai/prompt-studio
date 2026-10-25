@@ -17,7 +17,7 @@ Use the repository-local `font-editor` extension through `pst`. Run commands fro
 - Every mutation generates all outputs in memory, verifies their semantic maps, and only then commits them.
 - Run `verify` after the final edit and report the returned glyph count and formats.
 
-The extension stores its configuration at `.pstdio/extension-storage/font-editor/config.json`. Keep temporary SVG inputs and other working files under that same directory. Font outputs remain at the configured project paths.
+The extension stores its configuration at `.pstdio/extension-storage/pstdio.font-editor/config.json`. Keep temporary SVG inputs and other working files under that same directory. Font outputs remain at the configured project paths.
 
 ## Inspect
 

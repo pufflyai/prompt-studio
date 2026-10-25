@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { putAttempt } from "../data/attempt-storage";
-import { putTicket, statusesCollection } from "../data/collections";
+import { statusesCollection } from "../data/collections";
+import { putTicket } from "../data/ticket-context.fixture";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { stackSubmissionFixture } from "./stack-submission.fixture";
 

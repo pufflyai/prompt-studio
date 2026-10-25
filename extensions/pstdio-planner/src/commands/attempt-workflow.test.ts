@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt, readAttempt, reviewCommentsCollection, reviewThreadsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
-import { putTicket, ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { putTicket, ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import {
   addReviewCommentCommand,
   dismissReviewCommand,
@@ -30,7 +30,7 @@ const setup = async () => {
     title: "Attempt workflow",
     content: "# Attempt workflow",
     statusId: "in-progress",
-    tagIds: [],
+    tags: {},
     attachments: [],
     parentId: null,
     dependsOn: [],
@@ -264,9 +264,9 @@ describe("attempt workflow commands", () => {
     );
 
     expect((await readAttempt(fixture.storage, "workspace-1"))?.revisions[0]?.reviews[0]?.verdict).toBe("passed");
-    const ticket = await findTicket(fixture.storage, "ticket-1");
+    const ticket = await findTicket(ticketContext(fixture.storage), "ticket-1");
     expect(ticket?.statusId).toBe("in-progress");
-    expect(ticket?.tagIds).toEqual([]);
+    expect(ticket?.tags).toEqual({});
     expect(fixture.addedAnchors).toEqual([]);
     expect(fixture.followups).toEqual([]);
     await expect(runReviewCommand.run(...fixture.context({ workspaceId: "workspace-1" }))).rejects.toThrow(
@@ -319,5 +319,5 @@ test("later corrections preserve passed review evidence and the chosen ticket st
   );
   expect(result.revisions).toHaveLength(2);
   expect(result.revisions[0]?.reviews[0]).toMatchObject({ reviewedHeadSha: "old-head", verdict: "passed" });
-  expect((await findTicket(fixture.storage, "ticket-1"))?.statusId).toBe("in-progress");
+  expect((await findTicket(ticketContext(fixture.storage), "ticket-1"))?.statusId).toBe("in-progress");
 });

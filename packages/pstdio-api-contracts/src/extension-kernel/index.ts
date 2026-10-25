@@ -8,6 +8,8 @@
  * consume it directly.
  */
 
+// The storage layer owns the limits; extensions read them through the SDK.
+export { isStorageLimitError, type StorageLimitError, storageLimits } from "pstdio-sync-contracts";
 export { parseExtensionApiDeclaration, supportsExtensionApiVersion } from "./api-versions";
 export { normalizeBooleanViewRule } from "./boolean-view-filter";
 export {
