@@ -24,4 +24,4 @@ Only these two jobs are pinned. Another job that installs Playwright browsers on
 
 ## Removal
 
-When a Playwright release supports Chromium on Ubuntu 26.04, upgrade `@playwright/test`, set both jobs back to `ubuntu-latest`, confirm the packaged Linux check passes on a 26.04 runner, and delete this ADR.
+When a Playwright release supports Chromium on Ubuntu 26.04, upgrade `@playwright/test`, set all three jobs back to `ubuntu-latest`, confirm the packaged Linux check passes on a 26.04 runner, and delete this ADR.
