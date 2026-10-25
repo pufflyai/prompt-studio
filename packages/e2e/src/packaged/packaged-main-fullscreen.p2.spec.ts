@@ -2,9 +2,9 @@ import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type Browser, chromium, expect, test } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
 import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 test("packaged Main fullscreen exits with Escape and resets on reload", async () => {
