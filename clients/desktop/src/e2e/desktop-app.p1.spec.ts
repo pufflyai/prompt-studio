@@ -117,7 +117,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     dashboardRequested.resolve();
     void dashboardResponse.promise.then(() =>
       response.end(
-        '<main>Existing Prompt Studio dashboard<textarea aria-label="Draft"></textarea></main></body></html>',
+        '<main id="root">Existing Prompt Studio dashboard<textarea aria-label="Draft"></textarea></main></body></html>',
       ),
     );
   });
