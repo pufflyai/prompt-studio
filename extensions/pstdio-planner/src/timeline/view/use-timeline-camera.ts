@@ -1,4 +1,4 @@
-import { type CanvasCamera, type CanvasPoint, type CanvasZoomChange, zoomCanvas } from "@pstdio/ui";
+import { type CanvasCamera, type CanvasPoint, type CanvasZoomChange, zoomCanvas } from "@pstdio/ui/canvas";
 import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 
 // Planner keeps native scrolling for sticky headers and the card window. Canvas owns the input gestures.

@@ -1,7 +1,7 @@
 // Show the plan as a dependency graph: the milestone timeline runs down the left, execution order runs down,
 // parallel work sits side by side, each milestone is a band, and collapsible tracks split every band into columns.
 import { Box } from "@chakra-ui/react";
-import { Canvas } from "@pstdio/ui";
+import { Canvas } from "@pstdio/ui/canvas";
 import type { RefObject } from "react";
 import { layoutGraph } from "../model/graph-layout";
 import { dropRegion } from "./drop-region";
