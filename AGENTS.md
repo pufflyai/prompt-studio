@@ -233,7 +233,7 @@ A pull request may contain only one migration entry. If the tools create more th
 ### Testing rules
 
 - Name test files and test or suite titles after the feature or behavior they cover. Do not prefix them with ticket IDs.
-- Declare one priority in every maintained test filename, such as `session.p0.test.ts` or `startup.p1.spec.ts`. See [test priorities](documentation/guides/development/0013-ci-stages.md#contracts-and-naming).
+- Declare one priority in every maintained test filename, such as `session.p0.test.ts` or `startup.p1.spec.ts`. See [test priorities](documentation/guides/development/0015-ci-stages.md#test-priorities).
 - Run one group with `bun test:p0`, `bun test:p1`, `bun test:p2`, or `bun test:p3`. Use `--scope <workspace>` and `--runner <kind>` for targeted work. Discovery owns membership; do not add test filename lists to workflows.
 - Put each test **next to the file it tests**.
 - Avoid mocks. Test real behavior when possible.

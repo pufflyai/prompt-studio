@@ -95,7 +95,7 @@ These commands run exactly the named priority on the current host and build requ
 
 P0 owns fast local rules and static checks. P1 owns essential integrated product contracts. P2 owns full feature, browser, platform and distribution breadth. P3 owns maintained performance and endurance acceptance workloads. A slow essential behavior stays P1. Merge duplicate assertions under one owner; do not move an assertion to nightly only because it takes time.
 
-See [CI stages and qualification](0015-ci-stages.md) for the complete contract allocation and stage rules.
+See [CI stages](0015-ci-stages.md) for when each priority runs.
 
 ## Unused code
 
@@ -124,22 +124,9 @@ A package's report also lists source files from the packages its tests import. T
 
 ## CI stages
 
-[CI stages and qualification](0015-ci-stages.md) owns selection, failure collection, evidence, cache promotion, exact-candidate certification and rollback.
-
-| Stage | Required work |
-| --- | --- |
-| Pull request | Affected P0 rules, types, lint and public contracts selected through workspace dependencies |
-| Merge queue | Complete P0/P1 and essential Linux/macOS delivered startup |
-| Main | Matching queue provenance and startup smoke |
-| Nightly/release | Critical contracts, separate P2 breadth and P3 measurements |
-
-The PR and queue targets remain below three and eight minutes of active execution, including setup, builds, tests, reports and cleanup. GitHub queue and runner wait time is reported separately and does not count against these targets. Complete production qualification retains its forty-minute active execution target. Hosted first-attempt results must establish those targets.
-
-P0 package rows share their builds between lint and unit checks. API/database rows split priorities and retain API per-file process isolation. App and component suites run independently. Each component row builds and tests only its owner. Production adds functional permutations, Windows and all native CLI hosts; stable publication requires complete matching evidence for its exact artifacts.
+[CI stages](0015-ci-stages.md) describes what runs on pull requests, in the merge queue, on `main`, in the nightly and in a stable release, and what to do when a PR leaves the queue. It also covers failure handling, evidence, build caches and release certification.
 
 Windows unit jobs divide the complete P0/P1/P2 file set into four shards before grouping files by owner. Each owner runs only its assigned files. Package scripts must not add a broad `src` selector, because Bun combines that selector with the assigned paths and repeats other shards' tests. The existing 15-second test allowance remains unchanged; Git worktree tests keep their existing 30-second allowance.
-
-P1 alone fails fast. Other priorities complete selected independent work. Keep the existing `ci_passed` identity and ALLGREEN queue rule. `ci:full` requests separate trusted production functional diagnostics without replacing the required PR result.
 
 The Merge queue removals workflow retains first-failure links and the `removed-from-queue` label. Repair the cause before requeuing. Weekly CI failure reports retain first-attempt scheduling, setup, build, test, reporting and cleanup evidence; a later passing rerun does not resolve the underlying failure.
 
