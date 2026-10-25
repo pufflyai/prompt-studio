@@ -28,6 +28,15 @@ test("stores harness state under the active pstdio home and isolates extensions"
   expect(await first.get("serverUrl")).toBeUndefined();
 });
 
+test("stores accepted Windows device publishers in portable state files", async () => {
+  const home = mkdtempSync(join(tmpdir(), "pstdio-harness-device-"));
+  roots.push(home);
+  const state = createHarnessStateApi("con.notes", { env: { PSTDIO_HOME: home } });
+  await state.set("value", "kept");
+  expect(JSON.parse(readFileSync(join(home, "state/_con.notes.json"), "utf8"))).toEqual({ value: "kept" });
+  expect(await state.get<string>("value")).toBe("kept");
+});
+
 test("does not replace malformed harness state", async () => {
   const home = mkdtempSync(join(tmpdir(), "pstdio-harness-state-"));
   roots.push(home);

@@ -161,7 +161,7 @@ export const registerSettings = (ext: NormalizedExtension, source: LoadedExtensi
     }
     if (!validateSetting(ext, source, key, setting, runtime)) continue;
     runtime.settings.push({
-      id: `${ext.name}.${key}`,
+      id: `${ext.id}.${key}`,
       key,
       extensionId: ext.id,
       name: ext.name,

@@ -54,7 +54,7 @@ export const expectPlannerIdentities = async (input: {
   expect(sharedWorkspaces).toEqual([expect.objectContaining({ is_default: true, anchors_json: [] })]);
   expect(
     await execute("resolve-ticket-path", {
-      path: `.pstdio/extension-storage/pstdio-planner/tickets/${identities[0]!.shorthand}/ticket.md`,
+      path: `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/${identities[0]!.shorthand}/ticket.md`,
       workspaceId: sharedWorkspaces[0]!.id,
     }),
   ).toMatchObject({ resource: { id: identities[0]!.id, shorthand: identities[0]!.shorthand } });

@@ -37,9 +37,9 @@ Do not:
 
 ## Extension storage
 
-- All extension-owned project files live under `.pstdio/extension-storage/<package-name>/`. This includes configuration, caches, drafts, prototypes, screenshots, ticket checkouts, report checkouts, and migration backups.
-- Use `ctx.extensionFiles` or declared artifact mounts for extension files, and `ctx.storage` for structured project data. Both file APIs live inside the extension's package-name directory. Allocated files use the reserved `.publishers/<publisher>/` child so different publishers stay separate.
-- Keep artifact drafts and prototypes under `.pstdio/extension-storage/pstdio-artifacts/`. Put report evidence under the `filesPath` returned by `pst reports write`.
+- All extension-owned project files live under `.pstdio/extension-storage/<publisher>.<name>/`. This includes configuration, caches, drafts, prototypes, screenshots, ticket checkouts, report checkouts, and migration backups.
+- Use `ctx.extensionFiles` or declared artifact mounts for extension files, and `ctx.storage` for structured project data. Both file APIs live inside the extension's full-ID directory, so different publishers stay separate. Prompt Studio 0.46 does not read the older `<name>/` or `.publishers/<publisher>/` folders.
+- Keep artifact drafts and prototypes under `.pstdio/extension-storage/pstdio.pstdio-artifacts/`. Put report evidence under the `filesPath` returned by `pst reports write`.
 - Do not create extension data folders directly under `.pstdio/` or store runtime data in extension source folders. `.pstdio/extensions/` holds extension source.
 - Files an extension deliberately edits as project source, such as the UI icon fonts, stay at their configured project paths. The extension's own settings and working files still belong in extension storage.
 
@@ -188,7 +188,7 @@ Do not add:
 
 - Changesets for changes that only affect tests or code structure.
 
-All released workspace packages share one Changesets fixed version group. Add new core extensions to that group in `.changeset/config.json`. The highest requested bump sets the next version for the whole group. The named packages still decide where summaries appear in release notes. Extension SDK and UI dependency ranges remain owned by extension PRs.
+The host, SDK, UI, workbench and desktop share one Changesets fixed version group. Core extensions have independent versions and changelogs and must stay outside that group. Extension-only changesets must not bump the host or other extensions. Extension SDK and UI dependency ranges remain owned by extension PRs. See [independent extension releases](documentation/guides/development/0013-independent-extension-releases.md).
 
 ### 7. Migrations
 

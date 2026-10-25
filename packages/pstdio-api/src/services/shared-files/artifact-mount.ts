@@ -175,5 +175,5 @@ export const createSharedArtifactMount = (
         await withoutStorageObservation(reconcile);
       }),
   };
-  return { ...api, refresh: () => run(async () => {}) };
+  return { ...api, root, refresh: () => run(async () => {}) };
 };

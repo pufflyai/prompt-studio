@@ -50,6 +50,20 @@ describe("isLocalExtensionSource", () => {
 });
 
 describe("installExtensionSource scope", () => {
+  test("keeps a full install identity while allocating a portable device-name folder", async () => {
+    const source = join(root, "source");
+    makeExtension(source, { id: "con.notes", namespace: "notes" });
+    const result = await installExtensionSource({
+      source,
+      installName: "con.notes",
+      skipInstall: true,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+    });
+    expect(result.installName).toBe("con.notes");
+    expect(result.targetPath).toBe(join(pstdioHome, "extensions", "_con.notes"));
+    expect(result.metadata.id).toBe("con.notes");
+  });
   test("copies a repo-scoped extension into the project folder extension root", async () => {
     const source = join(root, "repo-extension");
     const repoPath = join(root, "repo");

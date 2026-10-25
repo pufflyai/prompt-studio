@@ -6,6 +6,17 @@ import { resolveCommandRef, serializeWhenExpression } from "./references";
 const ext = { id: "pstdio.pstdio-planner", name: "pstdio-planner" } as NormalizedExtension;
 
 describe("contribution ref resolution", () => {
+  test("keeps resource condition ownership when publishers use the same local kind", () => {
+    expect(serializeWhenExpression({ resourceType: [{ kind: "resource-kind", id: "note" }] }, "alice.notes")).toEqual({
+      resourceType: ["alice.notes.note"],
+    });
+    expect(
+      serializeWhenExpression(
+        { resourceType: [{ kind: "resource-kind", id: "note", extensionId: "bob.notes" }] },
+        "alice.notes",
+      ),
+    ).toEqual({ resourceType: ["bob.notes.note"] });
+  });
   test("prefixes extension-owned command refs with owner and kind", () => {
     expect(resolveCommandRef(ext, { kind: "command", id: "ticket-status.read" })).toBe(
       "pstdio.pstdio-planner.command.ticket-status.read",

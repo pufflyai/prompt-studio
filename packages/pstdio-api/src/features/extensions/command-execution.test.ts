@@ -183,7 +183,7 @@ describe("extension command execution routes", () => {
     expect(body.commands).toContainEqual(
       expect.objectContaining({
         id: "pstdio.lab.command.counter.bump",
-        cliPath: "lab counter bump",
+        cliPath: "pstdio.lab counter bump",
         extensionId: "pstdio.lab",
         cliAliases: ["counter bump"],
         params: { amount: { type: "number", defaultValue: 1 } },

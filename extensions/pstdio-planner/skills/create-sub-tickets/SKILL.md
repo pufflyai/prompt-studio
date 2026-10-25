@@ -15,7 +15,7 @@ Sub-tickets are planner tickets linked to a parent. Create them like any ticket 
    - Independently testable.
    - Limited to one system. Split work that crosses systems or has a large scope.
 3. Create each sub-ticket with `pst tickets write --title "<title>" --parent <parent-shorthand>`.
-4. Fill `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/ticket.md`, using the absolute `path` the command returns. Follow the `create-ticket` standard. Name the files or modules involved, the validation commands, assumptions, and `depends_on`.
+4. Fill `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md`, using the absolute `path` the command returns. Follow the `create-ticket` standard. Name the files or modules involved, the validation commands, assumptions, and `depends_on`.
 5. Apply a template when it helps. List templates with `pst tickets templates`, then run `pst tickets apply-template --id <shorthand> --template <template>`. Priority and type belong in tags from `pst tags list`, not in body sections.
 6. Check unfinished tickets with `pst tickets list`. If a child needs another ticket to finish first, add that ticket to the child's `depends_on`. Do not set a Blocked status or a blocked reason only because the child is waiting; Planner derives readiness from `depends_on`. See [Dependencies](https://prompt.studio/docs/extensions/planner/cli/#dependencies).
 7. Save each child with `pst tickets save --id <shorthand>`.
