@@ -41,6 +41,7 @@ export default defineConfig({
   ],
   timeout: 120_000,
   workers: 1,
+  maxFailures: process.env.CI_PRIORITY === "P1" ? 1 : 0,
   retries: 0,
   forbidOnly: !!process.env.CI,
   use: { trace: "retain-on-failure" },

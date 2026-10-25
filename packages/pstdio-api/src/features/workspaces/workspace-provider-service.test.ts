@@ -79,6 +79,54 @@ const makeCreateDeps = (provider: Record<string, unknown>) => {
   };
 };
 
+test("deletes an accepted remote create when cancelled before its response and no cancel method exists", async () => {
+  const controller = new AbortController();
+  const started = Promise.withResolvers<void>();
+  const response = Promise.withResolvers<WorkspaceProviderResult>();
+  const providerRef = { version: 1 as const, data: { remoteId: "accepted-remote" } };
+  const deleteResource = mock(async () => {});
+  const { deps } = makeCreateDeps({
+    create: async () => {
+      started.resolve();
+      return response.promise;
+    },
+    delete: deleteResource,
+  });
+
+  const creating = createProviderBackedWorkspace(deps, {
+    projectId: "project-1",
+    providerId: "pocketcoder.remote",
+    standalone: true,
+    signal: controller.signal,
+  });
+  await started.promise;
+  controller.abort();
+  response.resolve({
+    providerRef,
+    state: "ready",
+    executionKind: "remote",
+    capabilities: remoteWorkspaceCapabilities,
+  });
+
+  const workspace = await creating;
+  expect(deleteResource).toHaveBeenCalledTimes(1);
+  expect(deleteResource).toHaveBeenCalledWith(
+    {},
+    {
+      operationId: expect.any(String),
+      projectId: "project-1",
+      workspaceId: workspace.id,
+      providerRef,
+    },
+  );
+  expect(workspace).toMatchObject({
+    provider_state: "cancelled",
+    provider_operation_id: null,
+    provider_operation_kind: null,
+    provider_error_json: null,
+  });
+});
+
 describe("createProviderBackedWorkspace", () => {
   test("stores a remote provider result without a worktree path", async () => {
     const providerResult: WorkspaceProviderResult = {

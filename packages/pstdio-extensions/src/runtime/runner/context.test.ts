@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionTerminalApi } from "@pstdio/sdk/extensions";
 import { createCommandRunner } from "./runner";
-import { buildRuntime, makeStorage, stubEnvironment } from "./test-helpers.test";
+import { buildRuntime, makeStorage, stubEnvironment } from "./runner.test-fixture";
 
 describe("context factory", () => {
   test("forwards env.terminal into ctx.terminal", async () => {

@@ -123,60 +123,6 @@ test.describe("Workspace diff", () => {
     expect(diff.totals.file_count).toBe(0);
   });
 
-  test("current mode — shows only uncommitted changes", async ({ request }) => {
-    const repoRoot = createGitRepo();
-    repoDirs.push(repoRoot);
-    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
-
-    const ticket = await createTicketViaApi(request, projectId, "# Current mode dirty test");
-    const attempt = await createAttemptViaApi(request, projectId, ticket.id);
-
-    const wtPath = attempt.workspace.root_path;
-
-    // Commit a change
-    writeFileSync(join(wtPath, "committed.ts"), "export const x = 1;\n");
-    execSync("git add .", { cwd: wtPath, stdio: "pipe" });
-    execSync('git commit -m "add committed"', { cwd: wtPath, stdio: "pipe" });
-
-    // Add uncommitted file
-    writeFileSync(join(wtPath, "wip.txt"), "work in progress\n");
-
-    const res = await request.get(`${apiBase}/v1/workspaces/${attempt.workspace.id}/diff`);
-    expect(res.ok()).toBe(true);
-    const diff = (await res.json()) as DiffResponse;
-
-    expect(diff.files.length).toBe(1);
-    expect(diff.files[0].filePath).toBe("wip.txt");
-  });
-
-  test("fork_point mode — returns all changes since branch diverged", async ({ request }) => {
-    const repoRoot = createGitRepo();
-    repoDirs.push(repoRoot);
-    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
-
-    const ticket = await createTicketViaApi(request, projectId, "# Fork point test");
-    const attempt = await createAttemptViaApi(request, projectId, ticket.id);
-
-    const wtPath = attempt.workspace.root_path;
-    writeFileSync(join(wtPath, "feature.ts"), 'export const greet = () => "hello";\n');
-    execSync("git add feature.ts", { cwd: wtPath, stdio: "pipe" });
-    execSync('git commit -m "add feature"', { cwd: wtPath, stdio: "pipe" });
-
-    const res = await request.get(`${apiBase}/v1/workspaces/${attempt.workspace.id}/diff?mode=fork_point`);
-    expect(res.ok()).toBe(true);
-    const diff = (await res.json()) as DiffResponse;
-
-    const featureFile = diff.files.find((f) => f.filePath === "feature.ts");
-    expect(featureFile).toBeDefined();
-    expect(featureFile!.change).toBe("added");
-    expect(featureFile!.additions).toBe(1);
-  });
-
-  test("returns 404 for non-existent workspace", async ({ request }) => {
-    const res = await request.get(`${apiBase}/v1/workspaces/non-existent-id/diff`);
-    expect(res.status()).toBe(404);
-  });
-
   test("fork_point mode keeps diff after squash merge when workspace remains", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);

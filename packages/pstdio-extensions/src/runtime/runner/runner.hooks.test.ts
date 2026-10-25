@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { workspaceEvents } from "@pstdio/sdk/extensions";
 import type { BuildEnvironmentInput } from "./runner";
 import { createCommandRunner } from "./runner";
-import { buildRuntime, makeRunner, makeStorage, stubEnvironment } from "./test-helpers.test";
+import { buildRuntime, makeRunner, makeStorage, stubEnvironment } from "./runner.test-fixture";
 
 describe("createCommandRunner: hooks and nesting", () => {
   test("dispatches host events to extension hooks with workspace file helpers", async () => {

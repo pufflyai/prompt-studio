@@ -4,25 +4,11 @@ import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
-import { startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const extensionId = "pstdio.pstdio-artifacts";
 
 // Let iframe color-scheme follow its embedding element instead of browser media emulation.
 test.use({ colorScheme: null });
-
-test("loads a thumbnail while command completion refreshes host props", async ({ page }) => {
-  const storyId = "extensions-artifacts-library--host-updates";
-  const { baseUrl, storybook } = await startStorybook(storyId, "pstdio-dashboard");
-  try {
-    await page.goto(storyUrl(baseUrl, storyId));
-    const card = page.getByRole("button", { name: "Release overview", exact: true });
-    await card.scrollIntoViewIfNeeded();
-    await expect(card.frameLocator("iframe").frameLocator("iframe").locator("h1")).toHaveText("Saved preview");
-  } finally {
-    await stopStorybook(storybook);
-  }
-});
 
 for (const title of ["Project brief", "System diagram"]) {
   test(`starts and opens a creation session from ${title}`, async ({ page, request }) => {
@@ -228,21 +214,5 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`).catch(() => {});
     rmSync(repo, { recursive: true, force: true });
-  }
-});
-
-test("uses translated version controls", async ({ page }) => {
-  const storyId = "extensions-artifacts-library--french";
-  const { baseUrl, storybook } = await startStorybook(storyId, "pstdio-dashboard");
-  try {
-    await page.goto(storyUrl(baseUrl, storyId));
-    await expect(page.getByRole("button", { name: "Release overview", exact: true })).toBeVisible();
-    await page.goto(storyUrl(baseUrl, "extensions-artifacts-reader--french"));
-    const versions = page.getByRole("button", { name: "Versions", exact: true });
-    await versions.click();
-    await expect(page.getByRole("menuitemradio", { name: "Version 1 · Dernière version" })).toBeVisible();
-    await page.keyboard.press("Escape");
-  } finally {
-    await stopStorybook(storybook);
   }
 });

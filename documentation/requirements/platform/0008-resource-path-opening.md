@@ -124,7 +124,7 @@ Checked on 2026-10-19 against main commit `2527821f`. The newest stable release 
 | Host path claims and resolution | Delivered in source | #1155, merged 2026-10-17. Longest whole-segment matching, owner and project qualification, and fallback live in `packages/pstdio-dashboard/src/modules/sessions/chat/resource-path-resolution.ts` and `session-link-handler.ts`. Metadata normalization lives in `packages/pstdio-extensions/src/runtime/normalize/`. |
 | SDK and metadata schema | Delivered in source | `paths` on `ResourceKindDefinition` and the metadata schema, as listed under Schema above. Published in `@pstdio/sdk@0.44.0`. |
 | Message UI | Delivered in source | Resource bubbles and prose path detection in `packages/ui/src/components/chat-ui/links/` and `packages/ui/src/components/rich-text/shared/`. |
-| Packaged contract | Delivered in source | `packages/e2e/src/packaged/packaged-resource-links-smoke.ts` loads an independent fixture declaration and calls its resolver through the command API. |
+| Packaged contract | Delivered in source | `packages/e2e/src/packaged/packaged-resource-links-smoke.test.ts` loads an independent fixture declaration and calls its resolver through the command API. |
 | Planner declarations and resolver | In review | #1156 adds them and passes `published_extensions` against 0.44.0. It finds a ticket by shorthand without reading every ticket. |
 | Notes and Artifacts declarations and resolvers | In review | #1240 claims note `content.md` files and artifact snapshot files. |
 | Guards and legacy cleanup | Not in scope here | Planner guards and the removal of old anchor methods belong to [general resource linking](0006-resource-linking.md#delivery-record). |

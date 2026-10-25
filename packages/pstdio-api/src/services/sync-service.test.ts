@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { describe, expect, onTestFinished, test } from "bun:test";
 import type { DbClient } from "pstdio-db";
 import {
   createBoardViewsDBService,
@@ -8,101 +8,17 @@ import {
   createNotificationsDBService,
   createProjectsDBService,
 } from "pstdio-db";
-import { createSyncService, SYNCED_TABLES } from "./sync-service";
+import { createSyncService } from "./sync-service";
 
-let close: () => Promise<void>;
 let db: DbClient;
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
-  close = result.close;
+  onTestFinished(result.close);
   db = result.db;
 };
 
-afterAll(async () => {
-  await close?.();
-});
-
 describe("createSyncService", () => {
-  describe("getFullState", () => {
-    test("returns all synced tables as keys", async () => {
-      await setup();
-      const syncService = createSyncService({ db });
-      const state = await syncService.getFullState();
-
-      for (const table of SYNCED_TABLES) {
-        expect(state).toHaveProperty(table);
-        expect(Array.isArray(state[table])).toBe(true);
-      }
-    });
-
-    test("returns empty arrays for fresh database", async () => {
-      await setup();
-      const syncService = createSyncService({ db });
-      const state = await syncService.getFullState();
-
-      for (const table of SYNCED_TABLES) {
-        expect(state[table]).toHaveLength(0);
-      }
-    });
-
-    test("returns inserted data", async () => {
-      await setup();
-      const syncService = createSyncService({ db });
-
-      const projectsService = createProjectsDBService(db);
-
-      await projectsService.create({ name: "test-project" });
-
-      const state = await syncService.getFullState();
-
-      expect(state.projects).toHaveLength(1);
-      expect((state.projects[0] as Record<string, unknown>).name).toBe("test-project");
-    });
-
-    test("includes installed extension sources and project instances", async () => {
-      await setup();
-      const syncService = createSyncService({ db });
-      const projectsService = createProjectsDBService(db);
-      const sourcesService = createInstalledExtensionSourcesDBService(db);
-      const instancesService = createExtensionInstancesDBService(db);
-
-      const project = await projectsService.create({ name: "extension-sync-test" });
-      const source = await sourcesService.register({
-        install_name: "lab",
-        extension_id: "pstdio.lab",
-        display_name: "Lab",
-        source_kind: "local_path",
-        source_path: "/extensions/lab",
-        status: "loaded",
-      });
-      const instance = await instancesService.create({
-        installed_extension_id: source.id,
-        scope_id: project.id,
-        scope_type: "project",
-      });
-
-      const state = await syncService.getFullState();
-
-      expect(state.installed_extension_sources).toContainEqual(expect.objectContaining({ id: source.id }));
-      expect(state.extension_instances).toContainEqual(expect.objectContaining({ id: instance.id }));
-    });
-
-    test("excludes soft-deleted rows", async () => {
-      await setup();
-      const syncService = createSyncService({ db });
-
-      const projectsService = createProjectsDBService(db);
-      const project = await projectsService.create({ name: "soft-delete-test" });
-
-      await projectsService.remove(project.id);
-      const state = await syncService.getFullState();
-      const syncedProjects = state.projects as { id: string }[];
-
-      expect(syncedProjects.find((item) => item.id === project.id)).toBeUndefined();
-    });
-  });
-
   describe("cascadeDeletes", () => {
     test("lists project dependents before the project", async () => {
       await setup();

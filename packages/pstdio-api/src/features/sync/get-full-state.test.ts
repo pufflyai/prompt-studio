@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { describe, expect, onTestFinished, test } from "bun:test";
 import type { DbClient } from "pstdio-db";
 import {
   createDb,
@@ -8,18 +8,13 @@ import {
 } from "pstdio-db";
 import { getFullState, SYNCED_TABLES } from "./get-full-state";
 
-let close: () => Promise<void>;
 let db: DbClient;
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
-  close = result.close;
+  onTestFinished(result.close);
   db = result.db;
 };
-
-afterAll(async () => {
-  await close?.();
-});
 
 describe("getFullState", () => {
   test("returns all synced tables as keys", async () => {

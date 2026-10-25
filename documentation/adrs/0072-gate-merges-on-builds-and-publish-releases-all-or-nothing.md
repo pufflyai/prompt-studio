@@ -2,7 +2,7 @@
 
 Proposed: 2026-10-12
 
-Status: Accepted. The PR and merge-queue stage decisions are superseded by [ADR 0087](0087-run-relevant-pr-checks-before-merging.md). The host release decisions still apply. [ADR 0107](0107-independent-sdk-ui-previews.md) adds a packages-only SDK/UI preview channel.
+Status: Partially superseded. [ADR 0087](0087-run-relevant-pr-checks-before-merging.md) first replaced the PR/queue stages. [ADR 0106](0106-prioritize-merge-checks-and-certify-release-candidates.md) now owns stage guarantees and release-validation placement. The original single-commit publication, tag ownership, and all-or-nothing publication rules remain accepted. [ADR 0107](0107-independent-sdk-ui-previews.md) adds a packages-only SDK/UI preview channel. The decision and consequences below preserve the original design as history.
 
 ## Context
 

@@ -41,7 +41,8 @@
     "relay-demo",
     "pstdio-service-telemetry",
     "pstdio-psx",
-    "storage-scale-fixture"
+    "storage-scale-fixture",
+    "storybook-tests"
   ],
   "snapshot": {
     "useCalculatedVersion": true,

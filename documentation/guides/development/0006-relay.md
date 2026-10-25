@@ -20,7 +20,7 @@ The full 10,000-update storage check is a manual benchmark: `bun run --cwd servi
 
 ## Build and check
 
-Use Bun 1.4.2 and Docker with the Compose plugin. From the repository root:
+Use Bun 1.4.4 and Docker with the Compose plugin. From the repository root:
 
 ```sh
 bun install --frozen-lockfile

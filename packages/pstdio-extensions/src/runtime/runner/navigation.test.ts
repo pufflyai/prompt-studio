@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { defineCommand, type NavigationTarget } from "@pstdio/sdk/extensions";
-import { makeRunner } from "./test-helpers.test";
+import { makeRunner } from "./runner.test-fixture";
 
 const target = (id: string): NavigationTarget => ({ kind: "page", page: { kind: "page", id } });
 const qualified = (id: string): NavigationTarget => ({
@@ -161,7 +161,7 @@ test("event hooks do not inherit navigation from the UI that emitted the event",
 
 test("private interaction callbacks use handler navigation with scoped resources", async () => {
   const { createCommandRunner } = await import("./runner");
-  const { buildRuntime, makeStorage, stubEnvironment } = await import("./test-helpers.test");
+  const { buildRuntime, makeStorage, stubEnvironment } = await import("./runner.test-fixture");
   const { defineView } = await import("@pstdio/sdk/extensions");
   const view = defineView({
     id: "notes",
@@ -193,7 +193,7 @@ test("private interaction callbacks use handler navigation with scoped resources
 
 test("nested navigation keeps the child extension's identity", async () => {
   const { createCommandRunner } = await import("./runner");
-  const { buildRuntime, makeStorage, stubEnvironment } = await import("./test-helpers.test");
+  const { buildRuntime, makeStorage, stubEnvironment } = await import("./runner.test-fixture");
   const child = defineCommand({
     id: "child",
     title: "Child",

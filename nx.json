@@ -17,6 +17,18 @@
     ]
   },
   "targetDefaults": {
+    "build-storybook": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": [
+        "default",
+        "^default",
+        { "env": "NODE_ENV" },
+        { "env": "PSTDIO_API_URL" },
+        { "env": "PSTDIO_TERMINAL_WEBSOCKET_URL" }
+      ],
+      "outputs": ["{projectRoot}/storybook-static"]
+    },
     "build": {
       "cache": true,
       "dependsOn": ["^build"],

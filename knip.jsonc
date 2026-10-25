@@ -1,7 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
   "ignoreExportsUsedInFile": true,
-  "ignoreBinaries": ["gh", "wait", "version"],
+  // `check` is a built-in Bun command, not a dependency binary.
+  "ignoreBinaries": ["check", "gh", "wait", "version"],
   "ignoreIssues": {
     "packages/pstdio/src/adapters/cli/commands/{close,inbox,login,logout,logs,performance,update-channel}.ts": [
       "exports"
@@ -71,11 +72,18 @@
         "src/**/*.bench.ts",
         "src/**/*.typecheck.ts",
         "*.test.ts",
+        "*.test.tsx",
         "scripts/**/*.ts",
         "bin/**/*.cjs"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}", "scripts/**/*.ts", "bin/**/*.cjs"],
       "ignore": ["dist/**", "storybook-static/**"]
+    },
+    "packages/storybook-tests": {
+      "entry": ["playwright.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts", "src/scripts/*.ts"],
+      "project": ["playwright.config.ts", "src/**/*.ts"],
+      "ignore": ["playwright-report/**", "test-results/**"],
+      "ignoreDependencies": ["@pstdio/ui", "@pstdio/workbench", "pstdio-dashboard"]
     },
     "packages/e2e": {
       "entry": [
@@ -170,7 +178,9 @@
         ".storybook/**/*.{ts,tsx}",
         "src/main.tsx",
         "src/**/*.stories.tsx",
-        "src/**/*.test.ts"
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "*.test.ts"
       ],
       "project": ["*.ts", ".storybook/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
       "ignore": ["dist/**", "storybook-static/**"]
@@ -181,6 +191,7 @@
         "src/main.tsx",
         "src/lib/testbench-api-server.ts",
         "src/**/*.test.ts",
+        "src/**/*.test.tsx",
         // Tests load fixture extensions by path.
         "src/lib/fixtures/**/extension.ts"
       ],
@@ -251,6 +262,7 @@
         "src/components/{canvas,dependency-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.stories.tsx",
+        "*.test.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx"
       ],
@@ -333,6 +345,8 @@
       "entry": [
         "package.json",
         "astro.config.*",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
         "src/pages/**/*.{astro,md,mdx,ts,tsx}",
         "src/layouts/**/*.astro",
         // Loaded by a <script src> tag in base-layout.astro.

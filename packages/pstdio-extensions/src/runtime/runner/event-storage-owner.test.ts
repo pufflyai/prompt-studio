@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { eventRef } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { createCommandRunner } from "./runner";
-import { buildRuntime, stubEnvironment } from "./test-helpers.test";
+import { buildRuntime, stubEnvironment } from "./runner.test-fixture";
 
 test("extension events keep the emitting workbench storage owner and preserve their payload", async () => {
   const changed = eventRef<{ projectId?: string; workspaceId?: string; value: string }>({

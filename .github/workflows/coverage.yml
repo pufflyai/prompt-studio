@@ -1,11 +1,9 @@
 name: Coverage
 
-# Measures unit-test line coverage for the README badge. Pull requests that change the
-# coverage tooling run the measurement without publishing it.
+# Full source measurement runs daily. Pull requests only check the reporting logic.
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: "31 4 * * *"
   pull_request:
     paths:
       - .github/workflows/coverage.yml
@@ -19,13 +17,26 @@ permissions:
   contents: read
 
 concurrency:
-  # Main runs queue instead of cancelling, so every main commit keeps its result and the
-  # badge is always written by the newest one.
+  # Preserve a daily measurement's result. The report records the measured revision.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  report_tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun test scripts/badges/coverage-badge.test.ts scripts/badges/coverage-report.test.ts
+
   measure:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -55,12 +66,16 @@ jobs:
         run: bun run test:coverage
 
       - name: Summarize coverage
+        if: ${{ !cancelled() }}
+        env:
+          COVERAGE_SCOPE: daily-unit-source/linux-x64
         run: bun run --cwd scripts coverage:badge -- "$RUNNER_TEMP/badges/coverage.json"
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: coverage-badge
-          path: ${{ runner.temp }}/badges/coverage.json
+          path: ${{ runner.temp }}/badges/*.json
 
   # Only this job can write to the repository, and it runs no project code.
   publish:
@@ -83,7 +98,7 @@ jobs:
         # The badges branch holds only the latest badge data, so each run replaces it.
         run: |
           git init --quiet --initial-branch badges
-          git add coverage.json
+          git add coverage.json coverage-report.json
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit --quiet --message "chore: update coverage badge for ${GITHUB_SHA}"
           git push --force --quiet "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges

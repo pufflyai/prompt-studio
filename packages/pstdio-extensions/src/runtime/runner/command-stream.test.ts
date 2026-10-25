@@ -69,7 +69,7 @@ test("concurrent writes drain in order without exceeding the active socket write
 });
 
 test("the invocation closes its writer before returning the final outcome", async () => {
-  const { makeRunner } = await import("./test-helpers.test");
+  const { makeRunner } = await import("./runner.test-fixture");
   let writer!: { write(chunk: string): Promise<void> };
   const chunks: unknown[] = [];
   const runner = makeRunner({

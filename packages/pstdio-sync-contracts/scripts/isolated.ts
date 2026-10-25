@@ -29,7 +29,7 @@ const config = {
       volumes: ["objects:/data"],
     },
     tester: {
-      image: "oven/bun:1.4.2",
+      image: "oven/bun:1.4.4",
       working_dir: "/repo/packages/pstdio-sync-contracts",
       volumes: [`${root}:/repo:ro`],
       environment: {
