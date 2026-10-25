@@ -156,3 +156,15 @@ test("a nonclosing panel opens even when the host starts with Side closed", () =
   w.modes.setActiveMode("player");
   expect(w.shell.getPanelPolicy("side")).toMatchObject({ canClose: false, open: true });
 });
+
+test("deprecated alwaysShowTabs false hides the header until showHeader is declared", () => {
+  const w = createWorkbench();
+  w.modes.registerMode({
+    id: "legacy",
+    activate: () => undefined,
+    regionSettings: { main: { alwaysShowTabs: false }, side: { alwaysShowTabs: false, showHeader: true } },
+  });
+  w.modes.setActiveMode("legacy");
+  expect(w.shell.getPanelPolicy("main").showHeader).toBe(false);
+  expect(w.shell.getPanelPolicy("side").showHeader).toBe(true);
+});
