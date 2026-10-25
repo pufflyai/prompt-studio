@@ -24,7 +24,6 @@ export {
   ActivityRoot,
   ActivityTimeline,
 } from "@/components/activity";
-export * from "@/components/canvas";
 // Curated design-system groups (see components/<group>/index.ts).
 export * from "@/components/command-palette";
 export * from "@/components/layout";

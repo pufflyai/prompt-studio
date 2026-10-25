@@ -47,7 +47,6 @@ export const spacing = {
 };
 
 export const sizes = {
-  "canvas-dot-radius": { value: "1px" },
   "alert-max-height": { value: "min(24rem, 50dvh)" },
   "kanban-create-editor-min": { value: "min(9rem, 40dvh)" },
   "kanban-create-editor-max": { value: "min(20rem, 40dvh)" },

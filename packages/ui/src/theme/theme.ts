@@ -7,7 +7,6 @@ import { borderWidths, radii, sizes, spacing } from "./primitives/sizes";
 import { alertSlotRecipe } from "./recipes/alert";
 import { badgeRecipe } from "./recipes/badge";
 import { buttonRecipe } from "./recipes/button";
-import { canvasFrameRecipe, canvasRecipe, canvasZoomControlsRecipe } from "./recipes/canvas";
 import { chatQuestionBubbleRecipe } from "./recipes/chat-question-bubble";
 import { checkboxSlotRecipe } from "./recipes/checkbox";
 import { colorPickerSlotRecipe } from "./recipes/color-picker";
@@ -79,9 +78,6 @@ const config = defineConfig({
       chatQuestionBubble: chatQuestionBubbleRecipe,
       badge: badgeRecipe,
       button: buttonRecipe,
-      canvas: canvasRecipe,
-      canvasFrame: canvasFrameRecipe,
-      canvasZoomControls: canvasZoomControlsRecipe,
       divider: dividerRecipe,
       input: inputRecipe,
       kbd: kbdRecipe,

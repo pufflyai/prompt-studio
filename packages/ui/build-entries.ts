@@ -3,6 +3,8 @@ import path from "node:path";
 
 export const entries = {
   index: path.resolve(import.meta.dirname, "src/index.ts"),
+  canvas: path.resolve(import.meta.dirname, "src/components/canvas/index.ts"),
+  "dependency-timeline": path.resolve(import.meta.dirname, "src/components/dependency-timeline/index.ts"),
   "rich-text": path.resolve(import.meta.dirname, "src/components/rich-text/index.ts"),
   theme: path.resolve(import.meta.dirname, "src/theme/index.ts"),
   "chat-ui": path.resolve(import.meta.dirname, "src/components/chat-ui/index.ts"),

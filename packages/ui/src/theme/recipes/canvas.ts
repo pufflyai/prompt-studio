@@ -1,7 +1,9 @@
 import { defineRecipe } from "@chakra-ui/react";
+import { canvasTokens } from "../tokens/canvas";
 
 export const canvasFrameRecipe = defineRecipe({
   base: {
+    ...canvasTokens,
     position: "relative",
     height: "full",
     minHeight: "0",
@@ -10,7 +12,7 @@ export const canvasFrameRecipe = defineRecipe({
     bg: "bg",
     color: "fg",
     backgroundImage:
-      "radial-gradient(circle, {colors.canvas.dot} {sizes.canvas-dot-radius}, transparent {sizes.canvas-dot-radius})",
+      "radial-gradient(circle, var(--canvas-dot-color) var(--canvas-dot-radius), transparent var(--canvas-dot-radius))",
     backgroundSize: "{spacing.lg} {spacing.lg}",
   },
 });
