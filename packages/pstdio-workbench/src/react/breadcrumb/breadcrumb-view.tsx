@@ -2,15 +2,14 @@ import { HStack, Text } from "@chakra-ui/react";
 import { Breadcrumb, type ResourceContextAction, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
-import { resolvePageBreadcrumbPlacement } from "../../core/registries/pages/page-active-placement";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
 import { createWorkbenchResourceMenu } from "../menus/resource-menu";
 import { WorkbenchIcon } from "../shared/icon";
 import { placementMenuActions } from "../shared/placement-menu-actions";
-import { usePlacementTab } from "../shared/use-placement-tab";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { breadcrumbSnapshot } from "./breadcrumb-snapshot";
+import { useBreadcrumbPlacement } from "./use-breadcrumb-placement";
 
 interface WorkbenchBreadcrumbViewProps {
   workbench: WorkbenchCore;
@@ -22,7 +21,7 @@ const getSessionStatus = (item: WorkbenchBreadcrumbItem) =>
 const WorkbenchBreadcrumbIcon = (props: { item: WorkbenchBreadcrumbItem }) => {
   const { item } = props;
   const status = getSessionStatus(item);
-  if (item.indicator === "session-status" || item.resource?.type === "session") {
+  if (item.indicator === "session-status") {
     return <SessionIndicator status={status} boxSize="14px" />;
   }
   if (!item.icon) return null;
@@ -61,14 +60,7 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   const { workbench } = props;
   const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const items = useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items) ?? [];
-  const page = useWorkbenchStore(workbench.pages.store, (state) =>
-    state.activePageId ? state.pages[state.activePageId] : undefined,
-  );
-  const routedResource = useWorkbenchStore(workbench.pages.store, (state) => state.location?.resource);
-  const placement = useWorkbenchStore(workbench.layout.store, (state) =>
-    resolvePageBreadcrumbPlacement(state.layout, page, routedResource),
-  );
-  const snapshot = usePlacementTab(placement, workbench);
+  const { placement, content, snapshot, resourcePresentation } = useBreadcrumbPlacement(workbench);
   useWorkbenchResourceActionResolver(workbench);
   if (items.length === 0) return null;
   const resource = placement?.resource;
@@ -76,8 +68,25 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
     if (!item.resource) return [item];
     const projected = resolveResourcePreview(item.resource, changes);
     if (!projected) return [];
-    return [{ ...item, resource: projected, title: projected !== item.resource ? projected.label : item.title }];
+    const current = breadcrumbSnapshot(
+      item,
+      items.at(-1),
+      resource,
+      resourcePresentation,
+      workbench.pages.resourceReferenceKey,
+    );
+    return [
+      {
+        ...item,
+        resource: projected,
+        title: projected !== item.resource ? projected.label : (current.label ?? item.title),
+        icon: (projected !== item.resource ? projected.icon : undefined) ?? current.icon ?? item.icon,
+      },
+    ];
   });
+  if (content && !resource && crumbs.length && snapshot.label && snapshot.label !== crumbs.at(-1)?.title) {
+    crumbs.push({ title: snapshot.label, icon: snapshot.icon ?? crumbs.at(-1)?.icon });
+  }
   if (
     resource &&
     resolveResourcePreview(resource, changes) &&
@@ -88,22 +97,30 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
     )
   ) {
     crumbs.push({
-      title: snapshot.label ?? resource.label ?? resource.id,
-      icon: snapshot.icon ?? workbench.resources.getKind(resource.type, resource.extensionId)?.icon,
+      title: resourcePresentation.label ?? resource.label ?? resource.id,
+      icon: resourcePresentation.icon ?? workbench.resources.getKind(resource.type, resource.extensionId)?.icon,
       resource,
     });
   }
   return (
     <Breadcrumb
       items={buildWorkbenchBreadcrumbItems(crumbs, (item) => [
-        ...(item.resource
+        ...(item.resource || item === crumbs.at(-1)
           ? createWorkbenchResourceMenu(
               workbench,
               item.resource,
-              breadcrumbSnapshot(item, crumbs.at(-1), resource, snapshot, workbench.pages.resourceReferenceKey),
+              !resource && item === crumbs.at(-1)
+                ? snapshot
+                : breadcrumbSnapshot(item, crumbs.at(-1), resource, snapshot, workbench.pages.resourceReferenceKey),
+              item === crumbs.at(-1) ? placement : undefined,
             )
           : []),
-        ...placementMenuActions(workbench, { menu: item.menu }, item.resource),
+        ...placementMenuActions(
+          workbench,
+          { menu: item.menu },
+          item.resource,
+          item === crumbs.at(-1) ? placement : undefined,
+        ),
       ])}
       separator="/"
       separatorGap="xs"

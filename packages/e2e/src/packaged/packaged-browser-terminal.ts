@@ -8,7 +8,7 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();
   await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
-  const choice = page.getByRole("menuitem", { name: "Terminal", exact: true });
+  const choice = page.getByRole("menuitem", { name: "Open terminal", exact: true });
   if (await choice.isVisible()) await choice.click();
   const socket = await connection;
   expect(new URL(socket.url()).origin).toBe(origin.replace(/^http/, "ws"));
@@ -23,10 +23,7 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   await terminalInput.pressSequentially("export PSTDIO_PACKAGED_STATE=retained");
   await terminalInput.press("Enter");
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
-  await mainHeader.focus();
-  await mainHeader.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
-  await expect(mainHeader).toBeHidden();
+  await expect(mainHeader).toBeVisible();
   const terminalTab = page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab");
   const start = (await terminalTab.boundingBox())!;
   const end = (await iframe.boundingBox())!;

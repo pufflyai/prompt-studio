@@ -4,10 +4,19 @@ import type { WorkbenchCore } from "./workbench-core-types";
 export const createWorkbenchHost = (
   layout: WorkbenchCore["layout"],
   cache: ReturnType<typeof createWorkbenchLayoutCache>,
+  getContent: () => import("./registries/layout/layout-types").WorkbenchWidgetPlacement | undefined,
 ) =>
   ({
-    getOpenPlacements: () => cache.listPlacements(layout.getLayout()),
-    getOpenPlacementIds: () => cache.placementIds(layout.getLayout()),
+    getOpenPlacements() {
+      const content = getContent();
+      return [...cache.listPlacements(layout.getLayout()), ...(content ? [content] : [])];
+    },
+    getOpenPlacementIds() {
+      const ids = new Set(cache.placementIds(layout.getLayout()));
+      const content = getContent();
+      if (content) ids.add(content.widgetId);
+      return ids;
+    },
     getSnapshot: () => ({ layout: layout.getLayout() }),
     restoreSnapshot: (snapshot) => layout.restoreLayout(snapshot.layout),
     setPersistenceScope: (scope, scopeInput = {}) =>

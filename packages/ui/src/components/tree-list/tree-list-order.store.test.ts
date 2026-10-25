@@ -4,6 +4,18 @@ import { createTreeListOrderStore, getTreeListOrderStore } from "./tree-list-ord
 
 const STORAGE_KEY = "test-tree-order";
 
+test("group icon changes survive reload without changing membership or name", () => {
+  const storage = memoryStorage();
+  const store = createTreeListOrderStore({ storageKey: STORAGE_KEY, storage });
+  store.getState().addGroup({ id: "research", label: "Research" }, ["workspace"]);
+  store.getState().setNodeOrder("research", ["page-a"]);
+  store.getState().setGroupIcon("research", "book-open");
+  const restored = createTreeListOrderStore({ storageKey: STORAGE_KEY, storage }).getState();
+  expect(restored.groups).toEqual([{ id: "research", label: "Research", icon: "book-open" }]);
+  expect(restored.nodeOrderBySection.research).toEqual(["page-a"]);
+  expect(restored.sectionOrder).toEqual(["workspace", "research"]);
+});
+
 const memoryStorage = () => {
   const values = new Map<string, string>();
   return {

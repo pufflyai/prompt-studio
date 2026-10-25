@@ -2,7 +2,7 @@ import { Box, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import type { WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { pigeonThreads } from "./pigeon-data";
-import { pigeonResourcePage, pigeonThreadResource } from "./pigeon-pages";
+import { selectPigeonThread } from "./pigeon-pages";
 import { pigeonStore } from "./pigeon-state";
 import { initials, useShowcaseStore } from "./showcase-store";
 
@@ -42,13 +42,7 @@ export const PigeonInbox = (props: { input: WorkbenchPanelRenderInput }) => {
             bg={thread.unread ? "bg.subtle" : undefined}
             _hover={{ bg: "bg.hover" }}
             cursor="pointer"
-            onClick={() =>
-              props.input.workbench.pageLocations.navigate({
-                kind: "page",
-                page: pigeonResourcePage,
-                resource: pigeonThreadResource(thread),
-              })
-            }
+            onClick={() => selectPigeonThread(props.input.workbench, thread.id)}
           >
             <IconButton
               aria-label={thread.starred ? `Unstar ${thread.subject}` : `Star ${thread.subject}`}
@@ -64,11 +58,7 @@ export const PigeonInbox = (props: { input: WorkbenchPanelRenderInput }) => {
               variant="ghost"
               onClick={(event) => {
                 event.stopPropagation();
-                props.input.workbench.pageLocations.navigate({
-                  kind: "page",
-                  page: pigeonResourcePage,
-                  resource: pigeonThreadResource(thread),
-                });
+                selectPigeonThread(props.input.workbench, thread.id);
               }}
             >
               <WorkbenchIcon name="MailOpen" />

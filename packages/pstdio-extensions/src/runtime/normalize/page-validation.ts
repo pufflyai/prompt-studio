@@ -8,6 +8,8 @@ import {
 import type { RuntimePageRecord, RuntimePageSlot } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { Accumulator } from "./accumulator";
+import { validatePageGroup } from "./page-group-validation";
+import { validatePagePanels } from "./page-panel-validation";
 
 export interface PageDiagnosticInput {
   code: string;
@@ -118,6 +120,7 @@ const validatePageMainDefaults = (runtime: Accumulator, record: RuntimePageRecor
   if (
     main.kind === "panels" &&
     main.landing &&
+    typeof main.landing === "string" &&
     !page.slots.some((slot) => slot.id === main.landing && slot.region === "main" && slot.item.kind === "view")
   ) {
     addPageDiagnostic(runtime, {
@@ -132,7 +135,8 @@ const validatePageMainDefaults = (runtime: Accumulator, record: RuntimePageRecor
 const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) => {
   const page = record.contribution;
   const main = page.main;
-  const view = main.kind === "view" ? main.view : pagePlaceholderView(main.empty);
+  const empty = main.kind === "group" ? undefined : main.empty;
+  const view = main.kind === "view" ? main.view : pagePlaceholderView(empty);
   if (view)
     ownRefMissing(runtime, record, view, `pages.${record.localId}.main.${main.kind === "view" ? "view" : "empty"}`);
   validatePageMainDefaults(runtime, record);
@@ -294,7 +298,11 @@ const validateParentCycles = (runtime: Accumulator) => {
 };
 
 export const validatePageDefinitions = (runtime: Accumulator) => {
-  for (const record of runtime.pages) validatePageStructure(runtime, record);
+  for (const record of runtime.pages) {
+    validatePageStructure(runtime, record);
+    validatePagePanels(runtime, record);
+    validatePageGroup(runtime, record);
+  }
   validatePaths(runtime);
   validateParentCycles(runtime);
 };

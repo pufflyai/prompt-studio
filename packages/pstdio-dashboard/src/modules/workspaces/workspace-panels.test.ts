@@ -4,6 +4,7 @@ import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "./module";
 
@@ -14,10 +15,13 @@ test("keeps Files and Changes closable and bound to the current workspace", () =
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
 
   for (const workspaceId of ["workspace-1", "workspace-2", "workspace-1"]) {
-    const workspace = createDashboardResource("workspace", workspaceId, "Workspace", "GitBranch", "project-1", {
-      workspaceSupportsDiff: true,
-      workspaceSupportsFiles: true,
-    });
+    const workspace = canonicalDashboardResource(
+      createDashboardResource("workspace", workspaceId, "Workspace", "GitBranch", "project-1", {
+        workspaceSupportsDiff: true,
+        workspaceSupportsFiles: true,
+      }),
+      "project-1",
+    );
     openWorkspacesPage(workbench, workspace);
     const panels = workbench.layout.listPanelInstances("main");
     expect(panels).toEqual([

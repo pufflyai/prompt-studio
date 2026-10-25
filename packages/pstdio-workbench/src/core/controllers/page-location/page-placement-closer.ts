@@ -24,12 +24,14 @@ export const createPagePlacementCloser = (input: PagePlacementCloserInput) => {
   ) => {
     const page = input.getPageRef(resolution.target.pageId);
     if (!page) throw new Error(`Unknown page: ${resolution.target.pageId}`);
+    const context = resolution.target.pageContext ?? location;
     const resolved = input.normalizeStored({
       page,
       ...(resolution.target.resource ? { resource: resolution.target.resource } : {}),
       ...(resolution.target.section ? { section: resolution.target.section } : {}),
-      ...(location.params ? { params: location.params } : {}),
-      ...(location.parent ? { parent: location.parent } : {}),
+      ...(resolution.target.position ? { position: resolution.target.position } : {}),
+      ...(context.params ? { params: context.params } : {}),
+      ...(context.parent ? { parent: context.parent } : {}),
     });
     return input.commit(
       projectId,

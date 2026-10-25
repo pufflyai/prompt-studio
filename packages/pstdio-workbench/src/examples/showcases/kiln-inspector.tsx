@@ -1,9 +1,9 @@
 import { Badge, Box, Button, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react";
 import type { WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
-import { type KilnObject, type KilnVector, kilnObjects, kilnPage, kilnResource } from "./kiln-data";
+import { type KilnObject, type KilnVector, kilnObjects } from "./kiln-data";
 import { kilnStore, toggleKilnVisibility, updateKilnVector } from "./kiln-state";
-import { usePrimaryResource, useShowcaseStore } from "./showcase-store";
+import { usePageSelection, useShowcaseStore } from "./showcase-store";
 
 const axisColors = { X: "red.fg", Y: "green.fg", Z: "blue.fg" } as const;
 
@@ -68,13 +68,7 @@ const SceneOutliner = (props: { input: WorkbenchPanelRenderInput; selectedId: st
                 variant={selectedId === object.id ? "subtle" : "ghost"}
                 justifyContent="flex-start"
                 aria-current={selectedId === object.id ? "true" : undefined}
-                onClick={() =>
-                  input.workbench.pageLocations.navigate({
-                    kind: "page",
-                    page: kilnPage,
-                    resource: kilnResource(object),
-                  })
-                }
+                onClick={() => input.workbench.pageLocations.updateParams({ selection: object.id })}
               >
                 <WorkbenchIcon name={object.icon} />
                 <Text truncate>{object.name}</Text>
@@ -99,7 +93,7 @@ const SceneOutliner = (props: { input: WorkbenchPanelRenderInput; selectedId: st
 export const KilnInspector = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const state = useShowcaseStore(kilnStore);
-  const selectedId = usePrimaryResource(input.workbench)?.id ?? kilnObjects[0].id;
+  const selectedId = usePageSelection(input.workbench) ?? kilnObjects[0].id;
   const object = kilnObjects.find((item) => item.id === selectedId) ?? kilnObjects[0];
   const objectState = state.objectStates[object.id];
 

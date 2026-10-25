@@ -19,12 +19,14 @@ test("public mode metadata enforces the same floating and region policy as core 
           label: "Kiln",
           regions: ["main", "side", "secondary"],
           floatingPanels: "hidden",
+          canFullscreen: false,
           regionSettings: { side: { collapsible: false }, secondary: { collapsible: false, alwaysShowTabs: true } },
         },
       ],
     },
   });
   workbench.modes.setActiveMode("example.lab.mode.kiln");
+  expect(() => workbench.fullscreen.enter()).toThrow("Fullscreen is not available in this mode");
   expect(workbench.sidePanel.canFloat()).toBe(false);
   expect(workbench.shell.getSidePanelPresentation()).toBe("attached");
   workbench.shell.setSidePanelPresentation("floating");

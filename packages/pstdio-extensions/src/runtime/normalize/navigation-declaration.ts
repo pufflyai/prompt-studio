@@ -38,6 +38,7 @@ const pageTarget: z.ZodType<Extract<NavigationTarget, { kind: "page" }>> = z.laz
       params: z.record(z.string(), pageParamValueSchema).optional(),
       position: z.custom<FileSourcePosition>(isFileSourcePosition).optional(),
       parent: pageTarget.optional(),
+      intent: z.enum(["open", "restore"]).optional(),
     })
     .strict()
     .refine((value) => !(value.position && value.section), "Choose a source position or a heading section"),
@@ -62,6 +63,35 @@ export const navigationDeclarationSchema: z.ZodType<NavigationTarget> = z
     const schema = {
       page: pageTarget,
       panel: panelTarget,
+      viewer: z
+        .object({
+          kind: z.literal("viewer"),
+          operation: z.enum(["switch", "replace"]),
+          from: extensionResourceRefSchema.optional(),
+          resource: extensionResourceRefSchema,
+          page: localRefSchema("page").optional(),
+          section: z
+            .object({
+              anchors: z.array(
+                z
+                  .object({
+                    id: z.string(),
+                    heading: z.string(),
+                    occurrence: z.number().int().nonnegative().optional(),
+                  })
+                  .strict(),
+              ),
+            })
+            .strict()
+            .optional(),
+          position: z.custom<FileSourcePosition>(isFileSourcePosition).optional(),
+        })
+        .strict()
+        .refine(
+          (value) => value.from !== undefined || value.page !== undefined,
+          "A resource-free landing requires its destination page",
+        )
+        .refine((value) => !(value.position && value.section), "Choose a source position or a heading section"),
       command: z
         .object({
           kind: z.literal("command"),

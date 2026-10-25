@@ -7,6 +7,7 @@ import {
   type WorkbenchCore,
   type WorkbenchRegion,
 } from "../../core";
+import { resolvePageContent } from "../../core/registries/pages/page-content";
 import { useModeChrome } from "../region/mode-chrome";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -25,7 +26,7 @@ export const useWorkbenchRegionContent = (
   const modeId = useWorkbenchActiveModeId(workbench);
   const hasPageContent = useWorkbenchStore(workbench.pages.store, (state) => {
     const page = state.pages[state.activePageId ?? ""];
-    return region === "main" && Boolean(page?.main.empty);
+    return region === "main" && Boolean(resolvePageContent(state) || page?.main.empty);
   });
   const modePanel = getWorkbenchModePanelForRegion(region);
   const panelAvailable =

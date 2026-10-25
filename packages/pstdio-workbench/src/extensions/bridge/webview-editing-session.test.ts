@@ -13,6 +13,7 @@ const deferred = () => {
 };
 const createEditor = (failFirst = false) => {
   const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project-1");
   const writes: unknown[] = [];
   const writing = deferred();
   const release = deferred();

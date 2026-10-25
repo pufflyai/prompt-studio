@@ -51,6 +51,7 @@ export function toWorkbenchNavigationTarget(
   if (target.kind === "command") return toCommandTarget(target, input);
   if (target.kind === "href") return target;
   if (target.kind === "page") return target;
+  if (target.kind === "viewer") return target;
   if (target.kind === "panel") return { ...target, ...(input.region ? { region: input.region } : {}) };
   return {
     kind: "compound",

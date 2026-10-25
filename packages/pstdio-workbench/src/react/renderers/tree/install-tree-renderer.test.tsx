@@ -28,6 +28,30 @@ const activateHostPage = (workbench: ReturnType<typeof createWorkbench>) => {
   });
 };
 describe("installWorkbenchTreeRenderer", () => {
+  test("mode chrome trees receive their Sidenav action owner without a layout widget", () => {
+    const workbench = createWorkbench();
+    const onSidenavContextActionsChange = () => undefined;
+    installWorkbenchTreeRenderer(workbench, { onSidenavContextActionsChange });
+    workbench.views.registerView({
+      id: "chrome.navigation",
+      title: "Navigation",
+      body: { kind: "tree", getBody: () => [], getChildren: () => [] },
+    });
+    const rendered = getWorkbenchRenderers(workbench)
+      .getRenderer("chrome.navigation")
+      ?.render({
+        workbench,
+        panel: { id: "chrome.navigation", title: "Navigation", region: "sidenav", rendererId: "chrome.navigation" },
+        instance: {
+          instanceId: "chrome.navigation",
+          panelId: "chrome.navigation",
+          viewId: "chrome.navigation",
+          closable: false,
+        },
+        refresh() {},
+      }) as { props?: { onSidenavContextActionsChange?: unknown } };
+    expect(rendered.props?.onSidenavContextActionsChange).toBe(onSidenavContextActionsChange);
+  });
   test("passes the host param field renderer to tree action dialogs", () => {
     const workbench = createWorkbench();
     const renderParamField: CommandParamFieldRenderer = () => undefined;

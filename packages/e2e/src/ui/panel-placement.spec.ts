@@ -307,20 +307,6 @@ test("an invalid drop leaves its preview unpinned in the source", async ({ page 
   await expect(page.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
 });
 
-test("showing the header on a single-page Start exposes its tab and its own Main drag surface", async ({ page }) => {
-  await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-panel-header-visibility--single-page-header"));
-  await waitForStoryPlayback(page);
-  const main = page.locator('[data-workbench-panel="main"]');
-  await expect(main.getByRole("tab")).toHaveCount(0);
-  const edge = page.getByLabel("Main header edge", { exact: true });
-  await edge.focus();
-  await edge.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Show header", exact: true }).click();
-  await expect(main.getByRole("tab", { name: "Start", exact: true })).toBeVisible();
-  await expect(main.locator('[data-workbench-panel-drag="main"]')).toBeVisible();
-  await expect(page.locator('[data-workbench-region="nav"] [data-workbench-panel-drag]')).toHaveCount(0);
-});
-
 for (const region of ["side", "secondary", "main", "sidenav", "activity"]) {
   test(`${region}: returning near the drag start keeps placement and resets the grab cursor`, async ({ page }) => {
     await page.goto(storyUrl(baseUrl, "pstdio-workbench-reference-core-api-whole-panel-placement--interactive"));

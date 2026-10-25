@@ -26,6 +26,7 @@ export interface WorkbenchCompositionController {
   panelsFor(region: WorkbenchPanelRegion): WorkbenchCompositionRegionPanels;
 }
 interface CreateWorkbenchCompositionControllerInput {
+  acceptsTabs?(region: WorkbenchPanelRegion): boolean;
   getActiveMode(): WorkbenchModeContribution | undefined;
   getLayout(): WorkbenchLayout;
   getResource(): ResourceRef | undefined;
@@ -96,7 +97,11 @@ export const createWorkbenchCompositionController = (
     const resource = input.getResource();
     const location = getActiveLocationPlacement(layout);
     const mode = input.getActiveMode();
-    if (!isWorkbenchModePanelAvailable(mode, region) || mode?.regionSettings?.[region]?.acceptsTabs === false)
+    if (
+      !isWorkbenchModePanelAvailable(mode, region) ||
+      mode?.regionSettings?.[region]?.acceptsTabs === false ||
+      input.acceptsTabs?.(region) === false
+    )
       return { open, addable: [], closable: [] };
     const placements = Object.values(layout.regions).flatMap((panel) => panel.widgets);
     const widgets = input.listWidgets();

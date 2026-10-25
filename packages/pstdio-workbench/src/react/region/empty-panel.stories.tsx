@@ -4,12 +4,11 @@ import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench, type WorkbenchPanelRegion } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
-const createEmptyWorkbench = (hiddenHeader = false, pageEntries = false) => {
+const createEmptyWorkbench = (pageEntries = false) => {
   const workbench = createWorkbench({ initialSidePanelMode: "attached" });
   workbench.modes.registerMode({
     id: "tools",
     activate() {},
-    regionSettings: { main: { showHeader: !hiddenHeader } },
   });
   for (const [id, title] of [
     ["terminal", "Terminal"],
@@ -75,13 +74,13 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const AvailableTabs: Story = { args: { workbench: createEmptyWorkbench() } };
-export const HiddenHeader: Story = { args: { workbench: createEmptyWorkbench(true) } };
-export const PageEntries: Story = { args: { workbench: createEmptyWorkbench(false, true) } };
+export const NarrowPanel: Story = { args: { workbench: createEmptyWorkbench() } };
+export const PageEntries: Story = { args: { workbench: createEmptyWorkbench(true) } };
 
 export const TopAlignedCards: Story = {
   args: {
     workbench: (() => {
-      const workbench = createEmptyWorkbench(false, true);
+      const workbench = createEmptyWorkbench(true);
       workbench.shell.setRegionOpen("side", false);
       workbench.shell.setRegionOpen("secondary", false);
       return workbench;
@@ -142,5 +141,28 @@ export const SelectingMode: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).queryByRole("group", { name: "Available tabs" })).toBeNull();
+  },
+};
+
+export const TabsDisabled: Story = {
+  tags: ["panel-placeholder-policy"],
+  args: {
+    workbench: (() => {
+      const workbench = createEmptyWorkbench();
+      workbench.modes.registerMode({
+        id: "selection",
+        panels: [],
+        regionSettings: { main: { acceptsTabs: false, showHeader: false } },
+        activate() {},
+      });
+      workbench.pageLocations.clearProject();
+      workbench.modes.setActiveMode("selection");
+      return workbench;
+    })(),
+  },
+  play: async ({ canvasElement }) => {
+    const main = within(canvasElement.querySelector('[data-workbench-panel="main"]') as HTMLElement);
+    await expect(main.queryByRole("group", { name: "Available tabs" })).toBeNull();
+    await expect(main.queryByText("No tabs available")).toBeNull();
   },
 };

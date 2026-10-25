@@ -214,6 +214,7 @@ describe("createDashboardWorkbench restoration", () => {
     openWorkspacesPage(first);
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
+    await first.dispose();
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
     expect(second.layout.getLayout().regions.main.widgets[0]?.viewId).toBe(dashboardWidgetIds.workspaces);
@@ -225,9 +226,10 @@ describe("createDashboardWorkbench restoration", () => {
     const first = createDashboardWorkbench({ storage });
     await selectProject(first);
     await flushMicrotasks();
-    await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
     openSessionsPage(first, sessionResource);
+    await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
     expect(first.layout.listPanelInstances("side")).toEqual([]);
+    await first.dispose();
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
     expect(resourceKey(second.getPrimaryResource())).toBe(resourceKey(sessionResource));

@@ -7,9 +7,24 @@ const meta = {
   title: "pstdio-workbench/Reference/Core API/Main fullscreen",
   component: WorkbenchStory,
   parameters: { layout: "fullscreen" },
+  tags: ["main-fullscreen"],
 } satisfies Meta<typeof WorkbenchStory>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+const modePolicy = createFullscreenWorkbench();
+modePolicy.w.modes.registerMode({ id: "restricted", canFullscreen: false, activate() {} });
+export const ModePolicy: Story = {
+  args: { workbench: modePolicy.w },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("button", { name: "Enter Main fullscreen" })).toBeVisible();
+    modePolicy.w.modes.setActiveMode("restricted");
+    await waitFor(() => expect(canvas.queryByRole("button", { name: "Enter Main fullscreen" })).toBeNull());
+    modePolicy.w.modes.setActiveMode("first");
+    await expect(await canvas.findByRole("button", { name: "Enter Main fullscreen" })).toBeVisible();
+  },
+};
 
 const fullscreenStory = (side: "attached" | "floating" | "closed", floatable = true, hiddenNav = false): Story => {
   const { w, lifecycle } = createFullscreenWorkbench(side, floatable, { hiddenNav });

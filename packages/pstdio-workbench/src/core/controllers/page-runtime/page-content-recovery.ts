@@ -12,7 +12,7 @@ export const getPageContentRecovery = (
   if (!page) return undefined;
   const main = page.main;
   const slot = pageSlots(page).find((slot) =>
-    main.kind === "view" ? slot.role === "primary" : slot.id === main.landing,
+    main.kind === "view" ? slot.role === "primary" : main.kind === "panels" && slot.id === main.landing,
   );
   if (!slot) return undefined;
   return createOwnedAddablePanels(core, {

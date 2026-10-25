@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { PlacementItem } from "@pstdio/sdk/extensions";
+import { shellPlacementContributionId } from "../../registries/placements/shell-placement-registry";
 import { createWorkbench } from "../../workbench-core";
 import { createOwnedAddablePanels } from "./owned-addable-panels";
 
@@ -34,7 +35,9 @@ test("command-backed singleton Add can create a tab again after it closes", asyn
   await w.commands.executeCommand("open-tool");
   const original = w.layout.getActivePanel("side")!;
   w.closePlacement(original.placementIdentity!);
-  const add = w.composition.panelsFor("secondary").addable.find((panel) => panel.contribution.title === "Tool")!;
+  const add = w.composition
+    .panelsFor("secondary")
+    .addable.find((panel) => panel.panelId === shellPlacementContributionId("tool"))!;
   await add.open!();
   expect(w.layout.getActivePanel("secondary")?.instanceId).toBe(original.instanceId);
   expect(w.layout.listPanelInstances("side")).toEqual([]);

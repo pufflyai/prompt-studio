@@ -53,7 +53,9 @@ export const pageStateFromLayout = (
               ? SINGLE_RESOURCE_INSTANCE_KEY
               : identity.instanceKey,
           resource: placement.resource,
-          ...(placement.section ? { section: placement.section } : {}),
+          section: placement.section,
+          position: placement.position,
+          pageContext: placement.pageContext,
           ...(binding.cardinality === "many"
             ? { open: placement.tabRetention === "preview" ? ("preview" as const) : ("pin" as const) }
             : {}),

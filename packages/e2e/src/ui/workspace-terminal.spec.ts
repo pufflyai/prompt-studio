@@ -119,7 +119,7 @@ test("restores the first terminal when the hidden launcher was persisted active"
     const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
     if (await showSecondary.isVisible()) await showSecondary.click();
     await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
-    await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
     await expect(page.getByRole("textbox", { name: "Terminal input" })).toBeVisible();
 
     await page.getByRole("button", { name: "Hide Bottom Panel" }).click();
@@ -164,7 +164,7 @@ test("keeps a workspace terminal in its worktree and alive when the workspace is
     await openWorkspace(page, workspace.workspace_shorthand);
     await showSecondaryPanel(page);
     await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
-    await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
     await page.locator(".xterm:visible").click();
     await expectTerminalPwd(page, workspace.root_path);
 
@@ -230,7 +230,7 @@ test("closing a terminal tab leaves no shell process behind", async ({ page, req
     const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
     if (await showSecondary.isVisible()) await showSecondary.click();
     await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
-    await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
     await expect(page.getByRole("textbox", { name: "Terminal input" })).toBeVisible();
 
     const shellPid = await readShellPid(page);

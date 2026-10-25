@@ -5,7 +5,7 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../registries/layout/layout-types";
 import { placementIdentityKey, reconcileOwnedPlacements } from "../../registries/layout/placement-reconciliation";
-import { pageSlots } from "../../registries/pages/page-main";
+import { isSingleViewPage, pageSlots } from "../../registries/pages/page-main";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { pageResourceContextKey } from "../../registries/pages/page-resource-context";
 import { ownsStaticPageInstance } from "../../registries/pages/page-state-key";
@@ -83,7 +83,8 @@ const restoreMainTabs = (input: PageTabsInput, current: State["placements"], sha
   const changingPage = pageContextChanged(state, previous);
   const activated = new Set(state.reconciliation.activate.map((entry) => placementIdentityKey(entry.identity)));
   let placements = [...current];
-  const main = changingPage ? pageLayout?.regions.main.widgets : layout.regions.main.widgets;
+  let main = changingPage ? pageLayout?.regions.main.widgets : layout.regions.main.widgets;
+  if (isSingleViewPage(state.pages[state.activePageId ?? ""])) main = [];
   for (const [order, widget] of (main ?? []).entries()) {
     const identity = widget.placementIdentity;
     if (!identity || !input.getWidget(widget.contributionId) || pagePlacementClosed(widget, state, previous)) continue;
@@ -118,13 +119,19 @@ const refreshPageTab = (input: PageTabsInput, widget: WorkbenchWidgetPlacement) 
   return {
     ...widget,
     resource: instance.resource,
+    section: instance.section,
+    position: instance.position,
+    pageContext: instance.pageContext,
     title: instance.resource.label ?? input.getWidget(widget.contributionId)?.title ?? widget.title,
   };
 };
 
 const sharedPageTabValue = (input: PageTabsInput, widget: WorkbenchWidgetPlacement) => {
   const key = placementIdentityKey(widget.placementIdentity!);
-  const explicit = input.state.reconciliation.activate.find((entry) => placementIdentityKey(entry.identity) === key);
+  const explicit = [
+    ...input.state.reconciliation.activate,
+    ...input.state.reconciliation.update.map((entry) => entry.desired),
+  ].find((entry) => placementIdentityKey(entry.identity) === key);
   return explicit ? { ...explicit.value, widgetId: widget.widgetId } : refreshPageTab(input, widget);
 };
 

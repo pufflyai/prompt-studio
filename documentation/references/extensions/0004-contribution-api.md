@@ -128,6 +128,7 @@ Dashboard UI contributions have one ownership model:
 
 - a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`
 - a page owns a route, mode, optional resource constraint, Main presentation, and extra slots
+- a non-rendering parent uses `main: { kind: "group", default: child.ref }`; the default child opens without a resource in the same mode, while the group remains a breadcrumb label and navigation-tree owner
 - a placement owns a shared mode panel with a static-view or resource-binding item
 - a navigation item uses a typed action instead of encoded route or command fields
 - a navigation tree adds a tree view to a mode or page in the shared Sidenav

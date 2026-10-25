@@ -46,6 +46,43 @@ const metadata = {
   ],
 } satisfies WorkbenchExtensionMetadata;
 describe("extension page registration", () => {
+  test("opens an extension group's child once and keeps its parent label", () => {
+    const workbench = createWorkbench();
+    const group = { extensionId, kind: "page", id: "messages" } as const;
+    const child = { extensionId, kind: "page", id: "review" } as const;
+    const registration = registerWorkbenchExtensionContributions({
+      executeCommand: () => undefined,
+      metadata: {
+        ...metadata,
+        pages: [
+          {
+            ...metadata.pages[0],
+            id: `${extensionId}.page.messages`,
+            localId: "messages",
+            title: "Messages",
+            path: "messages",
+            main: { kind: "group", default: child },
+            slots: [],
+          },
+          { ...metadata.pages[0], parent: group, main: { ...metadata.pages[0].main, presentation: "page" } },
+        ],
+      },
+      projectId: "project-1",
+      workbench,
+    });
+    workbench.pageLocations.setProject("project-1");
+    const commits: string[] = [];
+    const unsubscribe = workbench.pages.store.subscribe((state) => commits.push(state.activePageId!));
+    const result = workbench.pageLocations.navigate({ kind: "page", page: group });
+    expect(result).toMatchObject({ ok: true, location: { page: child, parent: { page: group } } });
+    expect(commits).toEqual([pageId]);
+    expect(workbench.pages.getContent()?.viewId).toBe(viewId);
+    expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(0);
+    expect(workbench.breadcrumbs.getItems()?.[0]).toMatchObject({ title: "Messages" });
+    expect(workbench.breadcrumbs.getItems()?.[0]?.onClick).toBeUndefined();
+    unsubscribe();
+    registration.dispose();
+  });
   test("keeps an extension page open as its Main panels close independently", () => {
     const workbench = createWorkbench();
     const registration = registerWorkbenchExtensionContributions({

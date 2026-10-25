@@ -1,10 +1,13 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import { isPageContent } from "../../registries/pages/page-main";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { editSharedPagePlacement, isDetachedPagePlacement } from "./shared-page-placement";
 
 export const createPlacementCloseController = (resolveCore: () => WorkbenchCore) => (identity: PlacementIdentity) => {
   const core = resolveCore();
+  if (identity.kind === "page" && isPageContent(core.pages.getPage(identity.pageId), identity))
+    throw new Error("Page content closes through navigation");
   const key = placementIdentityKey(identity);
   const placement = Object.values(core.layout.getLayout().regions)
     .flatMap((region) => region.widgets)

@@ -9,6 +9,7 @@ import { useWorkbenchRegionContent } from "./use-workbench-region-content";
 export const FullscreenControls = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const active = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
+  const allowed = useWorkbenchStore(workbench.modes.store, () => workbench.fullscreen.canEnter());
   const hasMain = useWorkbenchRegionContent(workbench, "main", { locationScoped: true });
   const exitRef = useRef<HTMLButtonElement>(null);
   const previous = useRef(active);
@@ -16,8 +17,7 @@ export const FullscreenControls = (props: { workbench: WorkbenchCore }) => {
     if (previous.current && !active) exitRef.current?.focus({ preventScroll: true });
     previous.current = active;
   }, [active]);
-  if (!active && !hasMain) return null;
-
+  if (!active && (!allowed || !hasMain)) return null;
   const label = active ? "Exit Main fullscreen" : "Enter Main fullscreen";
   return (
     <Tooltip content={label}>

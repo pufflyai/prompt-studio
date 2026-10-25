@@ -27,14 +27,18 @@ export interface WorkbenchPageCloseResolution {
 export interface WorkbenchPageRegistryInternals<Value> {
   resources: WorkbenchPageResourceCodec;
   prepare: ReturnType<typeof createPagePreparation<Value>>;
-  publish(state: WorkbenchPageRegistryStoreState<Value>, action: string): void;
+  publish(state: WorkbenchPageRegistryStoreState<Value>, action: string, operation?: "navigate" | "select"): void;
   onDidCommit(listener: () => void): Disposable;
   getPublishingState(): WorkbenchPageRegistryStoreState<Value>;
   connectRuntime(
     apply: (
       state: WorkbenchPageRegistryStoreState<Value>,
+      operation: "navigate" | "select",
     ) => WorkbenchPageRegistryStoreState<Value>["layoutActivation"],
-    normalize?: (state: WorkbenchPageRegistryStoreState<Value>) => WorkbenchPageRegistryStoreState<Value>,
+    normalize?: (
+      state: WorkbenchPageRegistryStoreState<Value>,
+      operation: "navigate" | "select",
+    ) => WorkbenchPageRegistryStoreState<Value>,
   ): Disposable;
   activateLocation(input: WorkbenchPageLocationCommitInput): void;
   refreshModePlacements(destination?: PlacementDestination): void;

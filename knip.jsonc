@@ -81,6 +81,8 @@
       "entry": [
         "playwright*.config.ts",
         "src/cli/run-pstdio.ts",
+        // Playwright launches the prepared test runtime through a command string.
+        "src/scripts/serve-ui.ts",
         "src/**/*.spec.ts",
         "src/**/*.perf.ts",
         "src/**/*.bench.ts",

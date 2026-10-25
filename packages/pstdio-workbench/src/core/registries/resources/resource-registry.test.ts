@@ -286,3 +286,16 @@ test("resource context replaces the open page owner for scoped menus", async () 
     scopeWorkbenchResourceContextValues(page, { type: "workspace", id: "three" })[workbenchResourceOwnerContextKey],
   ).toBeUndefined();
 });
+
+test("resource removal epochs work on origins without randomUUID", () => {
+  const descriptor = Object.getOwnPropertyDescriptor(crypto, "randomUUID");
+  Object.defineProperty(crypto, "randomUUID", { value: undefined, configurable: true });
+  try {
+    const first = createResourceRegistry();
+    const second = createResourceRegistry();
+    expect(first.getRemovalEpoch()).not.toBe(second.getRemovalEpoch());
+  } finally {
+    if (descriptor) Object.defineProperty(crypto, "randomUUID", descriptor);
+    else delete (crypto as Partial<Crypto>).randomUUID;
+  }
+});

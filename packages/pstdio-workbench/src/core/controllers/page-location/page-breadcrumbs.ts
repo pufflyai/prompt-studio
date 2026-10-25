@@ -1,6 +1,7 @@
 import { isLocalizedString, type NavigationTargetPage, type PageLocation, type PageRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchLayout } from "../../registries/layout/layout-types";
 import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
+import { isSingleViewPage } from "../../registries/pages/page-main";
 import type {
   WorkbenchPageContribution,
   WorkbenchPageRegistry,
@@ -12,26 +13,26 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 import type { WorkbenchBreadcrumbController, WorkbenchBreadcrumbItem } from "../breadcrumbs/breadcrumb-registry";
 import { leavesProjectNavigation, type NavigationLevelModes } from "./navigation-level";
 import type { WorkbenchPageLocationController } from "./page-location-controller";
+import { pageLocationTarget } from "./page-location-target";
 
 const pageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:${ref.id}`;
 const locationsFromRoot = (location: PageLocation): PageLocation[] =>
   location.parent ? [...locationsFromRoot(location.parent), location] : [location];
-const targetFromLocation = (location: PageLocation): NavigationTargetPage => ({
-  kind: "page",
-  page: location.page,
-  ...(location.resource ? { resource: location.resource } : {}),
-  ...(location.section ? { section: location.section } : {}),
-  ...(location.params ? { params: location.params } : {}),
-  ...(location.parent ? { parent: targetFromLocation(location.parent) } : {}),
-});
 const pageTitle = (page: WorkbenchPageContribution) => {
   if (page.title === undefined) return page.ref.id;
   if (!isLocalizedString(page.title)) return page.title;
   return page.title.default ?? page.title.$l10n;
 };
+const hasOwnMainView = (page: WorkbenchPageContribution | undefined, location: PageLocation) =>
+  page?.main.kind === "view" && (!page.resource || Boolean(location.resource));
 const placeholderBreadcrumb = (page: WorkbenchPageContribution | undefined, isEmptyCurrentPage: boolean) => {
   const empty = page?.main.empty;
   return isEmptyCurrentPage && empty && "view" in empty ? empty.breadcrumb : undefined;
+};
+const pageLandingSlot = (page: WorkbenchPageContribution | undefined, location: PageLocation) => {
+  if (page?.main.kind !== "panels" || location.resource) return undefined;
+  const landing = page.main.landing;
+  return page.slots.find((slot) => slot.id === landing);
 };
 const resourceSubpage = (location: PageLocation, resources: WorkbenchPageResourceCodec) => {
   const parent = location.parent;
@@ -67,9 +68,10 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
   const locations = locationsFromRoot(input.location);
   return locations.map((location, index) => {
     const page = pagesByRef.get(pageRefKey(location.page));
+    const hasPageContent = isSingleViewPage(page) && hasOwnMainView(page, location);
     const presentation = placeholderBreadcrumb(
       page,
-      index === locations.length - 1 && input.layout.regions.main.widgets.length === 0,
+      index === locations.length - 1 && !hasPageContent && input.layout.regions.main.widgets.length === 0,
     );
     const base = breadcrumbPresentation(location, page, input.resources);
     const item: WorkbenchBreadcrumbItem = {
@@ -80,13 +82,13 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
       ...(!presentation && location.resource ? { resource: input.resources.normalize(location.resource) } : {}),
     };
     // Collection pages return to their landing panel; resource crumbs keep their resource link.
-    const landingPanel =
-      page?.main.kind === "panels" && !location.resource
-        ? page.slots.find((slot) => page.main.kind === "panels" && slot.id === page.main.landing)
-        : undefined;
-    if (index < locations.length - 1 || (landingPanel && input.openPanel)) {
+    const landingPanel = pageLandingSlot(page, location);
+    const independentLanding =
+      page?.main.kind === "panels" && page.main.landing && typeof page.main.landing !== "string";
+    const parentNavigation = index < locations.length - 1 && (location.resource || hasOwnMainView(page, location));
+    if (parentNavigation || (landingPanel && input.openPanel) || independentLanding) {
       item.onClick = () => {
-        input.navigate(targetFromLocation(location));
+        input.navigate(pageLocationTarget(location));
         if (page && landingPanel) input.openPanel?.(page.id, landingPanel.id);
       };
     }

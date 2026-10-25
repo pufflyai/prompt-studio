@@ -31,6 +31,8 @@ export interface PageMainView extends PlacementPresentation {
   readonly kind: "view";
   readonly view: ViewRef;
   readonly cardinality: PageSlotCardinality;
+  /** Render page content without tab controls, or normal tabs. Defaults to tabs. */
+  readonly presentation?: "page" | "tabs";
   /** Custom content for an empty Main. */
   readonly empty?: PagePlaceholder;
 }
@@ -38,11 +40,18 @@ export interface PageMainView extends PlacementPresentation {
 export interface PageMainPanels {
   readonly kind: "panels";
   readonly empty?: PagePlaceholder;
-  /** Static Main slot opened when navigating to this collection or selecting its breadcrumb. */
-  readonly landing?: string;
+  /** Static Main slot, independent static view, or many-resource Main viewer selected on navigation. */
+  readonly landing?: string | PlacementRef;
 }
 
-export type PageMain = PageMainView | PageMainPanels;
+/** A navigation parent without its own Main content. Opening it resolves to its default child. */
+export interface PageMainGroup {
+  readonly kind: "group";
+  /** A child in the same mode that can open without a resource. */
+  readonly default: PageRef;
+}
+
+export type PageMain = PageMainView | PageMainPanels | PageMainGroup;
 
 /** A page-owned panel. Main presentation and routed context belong to the page. */
 export interface PageSlot extends PlacementPresentation {
@@ -87,9 +96,11 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   readonly resource?: ResourceConstraint;
   readonly document?: PageDocumentDeclaration;
   readonly params?: Readonly<Record<string, PageParamDefinition>>;
-  /** Header defaults only. User choices win; omitted values inherit the mode. */
+  /** @deprecated Main headers follow main.presentation. Auxiliary header defaults remain supported for existing pages. */
   readonly regionSettings?: Partial<Record<ExtensionPanelRegion, { readonly showHeader?: boolean }>>;
   readonly main: PageMain;
+  /** Independent panel version of this page, using a normal static view or resource binding. */
+  readonly panelView?: PlacementRef;
   readonly slots: readonly PageSlot[];
   readonly panels: Readonly<Record<string, PageSlotRef>>;
 }
@@ -101,11 +112,16 @@ export type PlacementOwner =
 
 export type PlacementIdentity = PlacementOwner & { readonly instanceKey: string };
 
-export interface PageLocation {
-  readonly page: PageRef;
-  readonly resource?: ResourceRef;
+/** Viewer-owned navigation context and position, separate from resource identity. */
+export interface ViewLocation {
+  readonly pageContext?: Pick<PageLocation, "page" | "parent" | "params">;
   readonly section?: FileRendererSectionTarget;
   readonly position?: FileSourcePosition;
+}
+
+export interface PageLocation extends Pick<ViewLocation, "section" | "position"> {
+  readonly page: PageRef;
+  readonly resource?: ResourceRef;
   /** Overrides that differ from declared defaults. */
   readonly params?: PageParams;
   readonly parent?: PageLocation;

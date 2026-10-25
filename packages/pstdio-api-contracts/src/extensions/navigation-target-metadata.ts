@@ -30,6 +30,7 @@ export interface MetadataPageTarget {
   position?: FileSourcePosition;
   params?: PageParams;
   parent?: MetadataPageTarget;
+  intent?: "open" | "restore";
 }
 
 const pageTargetSchema: z.ZodType<MetadataPageTarget> = z
@@ -44,6 +45,7 @@ const pageTargetSchema: z.ZodType<MetadataPageTarget> = z
         position: sourcePositionSchema.optional(),
         params: z.record(z.string(), pageParamValueSchema).optional(),
         parent: pageTargetSchema.optional(),
+        intent: z.enum(["open", "restore"]).optional(),
       })
       .refine((value) => !(value.position && value.section), "Choose a source position or a heading section"),
   )
@@ -61,6 +63,22 @@ const navigationOperationSchema = z.union([
 
 export const navigationTargetSchema = z.union([
   navigationOperationSchema,
+  z
+    .object({
+      kind: z.literal("viewer"),
+      operation: z.enum(["switch", "replace"]),
+      from: extensionResourceRefSchema.optional(),
+      resource: extensionResourceRefSchema,
+      page: pageRefSchema.optional(),
+      section: sectionSchema.optional(),
+      position: sourcePositionSchema.optional(),
+    })
+    .strict()
+    .refine(
+      (value) => value.from !== undefined || value.page !== undefined,
+      "A resource-free landing requires its destination page",
+    )
+    .refine((value) => !(value.position && value.section), "Choose a source position or a heading section"),
   z.object({ kind: z.literal("command"), target: commandTargetSchema }),
   z.object({ kind: z.literal("href"), href: z.string().refine(isNavigationHref, "Expected an HTTP or HTTPS URL") }),
   z.object({ kind: z.literal("compound"), targets: z.array(navigationOperationSchema).min(1) }),

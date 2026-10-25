@@ -58,7 +58,8 @@ test("page header defaults and empty views survive normalization and metadata se
     JSON.parse(JSON.stringify(createWorkbenchExtensionMetadata({ runtime }))),
   );
   expect(metadata.pages[0].regionSettings).toEqual(page.regionSettings);
-  expect(metadata.pages[0].main.empty).toMatchObject({
+  const main = metadata.pages[0].main;
+  expect(main.kind === "view" && main.empty).toMatchObject({
     view: { extensionId: "example.lab", kind: "view", id: "editor" },
     breadcrumb: {
       label: "New session",
@@ -67,6 +68,56 @@ test("page header defaults and empty views survive normalization and metadata se
       ],
     },
   });
+});
+
+test("extension page groups preserve their default child through metadata serialization", () => {
+  const group = definePage({
+    id: "messages",
+    title: "Messages",
+    path: "messages",
+    mode: workbenchModes.project,
+    main: { kind: "group", default: { kind: "page", id: "compose" } },
+    slots: [],
+  });
+  const child = definePage({
+    id: "compose",
+    title: "New message",
+    path: "compose",
+    mode: workbenchModes.project,
+    parent: group.ref,
+    main: { kind: "panels" },
+    slots: [],
+  });
+  const source: LoadedExtensionSource = {
+    packagePath: "/fake/lab",
+    sourcePath: "/fake/lab/extension.ts",
+    sourceKind: "local_path",
+    manifest: {
+      id: "example.lab",
+      name: "lab",
+      publisher: "example",
+      version: "1.0.0",
+      main: "./extension.ts",
+      enginesPstdio: "^0.3.0",
+    },
+    definition: defineExtension({ pages: [group, child] }),
+  };
+  const runtime = normalizeExtensionSources([source]);
+  expect(runtime.diagnostics).toEqual([]);
+  const metadata = workbenchExtensionMetadataSchema.parse(
+    JSON.parse(JSON.stringify(createWorkbenchExtensionMetadata({ runtime }))),
+  );
+  expect(metadata.pages[0].main).toEqual({
+    kind: "group",
+    default: { extensionId: "example.lab", kind: "page", id: "compose" },
+  });
+  const missing = normalizeExtensionSources([{ ...source, definition: defineExtension({ pages: [group] }) }]);
+  expect(missing.diagnostics).toContainEqual(
+    expect.objectContaining({
+      code: "extension_page_group_invalid",
+      metadata: expect.objectContaining({ fieldPath: "pages.messages.main.default" }),
+    }),
+  );
 });
 
 test("a collection can use the host placeholder without declaring an empty view", () => {

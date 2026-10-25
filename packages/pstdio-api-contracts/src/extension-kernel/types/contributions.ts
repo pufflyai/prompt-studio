@@ -74,7 +74,7 @@ export interface ActivityItemContribution<TParams extends Struct = Struct>
 }
 
 export interface ModeRegionSettings {
-  /** Hide the panel header when the mode supplies its own controls. */
+  /** Legacy auxiliary-panel header visibility. Main follows the page's main.presentation. */
   readonly showHeader?: boolean;
   /** Permit explicit opening/revealing independently of closing. Defaults to true. */
   readonly canOpen?: boolean;
@@ -93,7 +93,7 @@ export interface ModeRegionSettings {
    * @deprecated For panel visibility use canOpen/canClose. Retained for menu collapse.
    */
   readonly collapsible?: boolean;
-  /** @deprecated Use showHeader. Every visible header shows its tabs. */
+  /** @deprecated Main follows main.presentation. Auxiliary panels may use showHeader. Every visible header shows tabs. */
   readonly alwaysShowTabs?: boolean;
 }
 
@@ -103,6 +103,8 @@ export interface ModeContribution extends ContributionDefinition<"mode"> {
   regions: readonly ExtensionPanelRegion[];
   /** Default theme for this mode. An explicit user choice for the mode takes precedence. */
   defaultTheme?: ThemeRef;
+  /** Allow Main fullscreen while this mode is active. Defaults to true. */
+  canFullscreen?: boolean;
   /** Whether side panels may float while this mode is active. Defaults to visible.
    * @deprecated Use regionSettings.side.floatable.
    */
