@@ -30,6 +30,7 @@ In `pst extensions check --json`, `versions.extensionApi` is always the API vers
 | `ctx.extensionFiles` root | API 0.1: `.pstdio/ext/<publisher>.<name>/`. API 0.2 (0.44, 0.45): `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. From 0.46: `.pstdio/extension-storage/<publisher>.<name>/`. | Use relative paths only; the methods are the same. |
 | `statuses` contributions (`defineStatuses`) | Deprecated from API 0.1.3. Removed on `main`, so the release after 0.43.x no longer has it. | Do not add new ones. Return enum attributes from the query instead. |
 | Setting `options` loaded from a command | API 0.1.2 and newer. | Use fixed `enum` choices. |
+| `CollectionBadgeItem.action` | Planned for API 0.3.0 (Prompt Studio 0.46). | Use the page-only `target`, deprecated when `action` becomes available. |
 
 [API versioning](https://prompt.studio/docs/references/extensions/api-versioning/) explains ranges and breaking changes. [Scoped checks and versions](https://prompt.studio/docs/references/extensions/manifest-and-installation/#scoped-checks-and-versions) explains what each check compares.
 
@@ -47,6 +48,7 @@ In `pst extensions check --json`, `versions.extensionApi` is always the API vers
 | Structured data | [Save related records](https://prompt.studio/docs/guides/sdk/storage/), [Grouped storage](https://prompt.studio/docs/references/sdk/storage/), [Data migrations](https://prompt.studio/docs/references/extensions/data-migrations/) | [Storage and workspaces](host-storage-and-workspaces.md) |
 | Extension-owned files | [Extension file storage](https://prompt.studio/docs/guides/extensions/extension-storage/), [Artifact mounts and storage](https://prompt.studio/docs/references/extensions/webview-and-storage-api/#artifact-mounts-and-storage) | [Storage and workspaces](host-storage-and-workspaces.md) |
 | Tables, boards, trees, controls, and files | [Dashboard UI contributions](https://prompt.studio/docs/references/extensions/contribution-api/#dashboard-ui-contributions), [Views: filter, sort, and display](https://prompt.studio/docs/references/extensions/contribution-api/#views-filter-sort-and-display) | This page |
+| Collection badges that open pages or panels | [Collection badge navigation](https://prompt.studio/docs/references/extensions/contribution-api/#sidenav-levels) | [Navigation and removal](#navigation-and-removal) |
 | Refresh after a change | [Renderer edit and refresh](https://prompt.studio/docs/references/extensions/renderer-edit-refresh-lifecycle/) | This page |
 | Pages, panels, and navigation | [Workbench composition](https://prompt.studio/docs/references/extensions/contextual-workbench-composition/), [Navigation and layout state](https://prompt.studio/docs/references/extensions/navigation-and-layout-state/), [Sidenav levels](https://prompt.studio/docs/references/extensions/contribution-api/#sidenav-levels), [Workbench cookbook](https://prompt.studio/docs/guides/extensions/workbench-cookbook/) | [Pages and panels](pages.md) |
 | Modes and chrome | [Modes and layout](https://prompt.studio/docs/references/extensions/modes-and-layout/) | [Pages and panels](pages.md) |
@@ -109,6 +111,7 @@ Declare `rowId: params.text({ required: true })` or `rowIds: params.json<string[
 - Commands and callbacks request navigation with `ctx.navigation.open(target)`. A returned target is only data and does nothing.
 - After deleting a resource, call `await ctx.resources.removed({ type, id })` so open views close their bindings.
 - The host never guesses a page from a resource kind. Give every target an explicit page or panel.
+- From API 0.3.0 (planned for Prompt Studio 0.46), `CollectionBadgeItem.action` accepts any navigation target, including a page-owned panel beside the collection. It runs without activating the card and takes precedence over the deprecated page-only `target`. Older hosts support only `target`. Publish the SDK and host before adopting `action`.
 
 ### Each project has its own data
 
