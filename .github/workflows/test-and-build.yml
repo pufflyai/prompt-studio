@@ -638,6 +638,18 @@ jobs:
       - name: Test UI e2e
         run: bun run --cwd packages/e2e test:ui -- --shard=${{ matrix.shard }}/3
 
+      # One shard runs the registered UI cases, so each executes exactly once per run.
+      - name: Run quarantined UI cases without retries
+        if: matrix.shard == 1 && !cancelled()
+        continue-on-error: true
+        env:
+          E2E_TEST_LANE: quarantine
+        run: bun run --cwd packages/e2e test:ui -- --pass-with-no-tests
+
+      - name: Require first-attempt UI quarantine execution
+        if: matrix.shard == 1 && !cancelled()
+        run: bun scripts/ci/verify-quarantine-reports.ts playwright-ui
+
       - name: Preserve UI test reports and failure traces
         if: always()
         uses: actions/upload-artifact@v4
