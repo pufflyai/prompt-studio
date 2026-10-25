@@ -263,13 +263,12 @@ Run `bun run dev:playwright`. Open the dashboard URL printed by the command with
 
 Build each feature with the [test-driven workflow](#required-workflow-test-driven-development). While you develop, run only the tests relevant to your change. When the feature is ready:
 
-1. **Build.** Run `bun run build`.
-2. **Open the PR.** Push the branch and open a draft PR, as described in [Git](#git).
-3. **Run all tests.** Run `bun run test`. It runs every package's tests, then the E2E script, CLI, UI and Vite terminal suites. Run it again after merging `main` into the branch, because a merge can combine changes that each passed alone. Fix every failure and push the fix.
-4. **Mark the PR ready.** Run `gh pr ready` only when all tests pass and CI is green on the latest commit. See [CI completion](#ci-completion).
-5. **Answer review comments.** Read every review comment on the PR, including inline comments on the code. `gh pr view <number> --comments` shows the conversation, and `gh api repos/pufflyai/prompt-studio/pulls/<number>/comments` shows the inline comments. Fix the valid ones and reply to each comment. After a fix, rerun the affected tests and wait for CI on the new commit.
+1. **Open the PR.** Push the branch and open a draft PR, as described in [Git](#git).
+2. **Run all tests.** Run `bun run test`. It runs every package's tests, builds what the E2E suites need, then runs the E2E script, CLI, UI and Vite terminal suites. Run it again after merging `main` into the branch, because a merge can combine changes that each passed alone. Fix every failure and push the fix.
+3. **Mark the PR ready.** Run `gh pr ready` only when all tests pass and CI is green on the latest commit. See [CI completion](#ci-completion).
+4. **Answer review comments.** Read every review comment on the PR, including inline comments on the code. `gh pr view <number> --comments` shows the conversation, and `gh api repos/pufflyai/prompt-studio/pulls/<number>/comments` shows the inline comments. Fix the valid ones and reply to each comment. After a fix, rerun the affected tests and wait for CI on the new commit.
 
-Documentation-only PRs skip steps 1 and 3.
+Documentation-only PRs skip step 2.
 
 ## CI completion
 
