@@ -39,6 +39,6 @@ export const handler = async (argv: { source: string; projectPath?: string; json
   } finally {
     process.off("SIGINT", sigint);
     process.off("SIGTERM", sigterm);
-    if (interrupted) process.kill(process.pid, interrupted);
+    if (interrupted) process.exitCode = interrupted === "SIGINT" ? 130 : 143;
   }
 };

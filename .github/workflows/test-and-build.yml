@@ -10,6 +10,7 @@ permissions:
   actions: read
 jobs:
   signals:
+    if: inputs.signals_only == true
     runs-on: windows-latest
     timeout-minutes: 5
     steps:
@@ -70,7 +71,8 @@ jobs:
             src/packaged/packaged-independent-extensions-smoke.p2.test.ts \
             src/packaged/packaged-serve-helpers.p2.test.ts \
             src/packaged/packaged-planner-smoke.p2.test.ts \
-            --test-name-pattern 'interruption stops|a packaged CLI gives|a packaged host packs|fixture shutdown|runner cancellation|dependency stacks|recovers missing|adopts a feature' \
+            src/packaged/packaged-board-panning-smoke.p2.test.ts \
+            --test-name-pattern 'interruption stops|a packaged CLI gives|a packaged host packs|fixture shutdown|runner cancellation|dependency stacks|recovers missing|adopts a feature|board pans' \
             --timeout 30000 --silent 2>&1 | tee test-results/native-fixtures.log
       - name: Identify handles retained by failed archive cleanup
         if: failure()
@@ -91,6 +93,6 @@ jobs:
           path: |
             packages/e2e/test-results/native-fixtures.log
             test-results/ci
-            native-profile.jsonl
+            native-profile.jsonl*
           include-hidden-files: true
           if-no-files-found: warn

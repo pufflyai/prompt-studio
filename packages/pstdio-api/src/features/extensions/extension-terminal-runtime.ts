@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { appendFileSync, existsSync } from "node:fs";
 import { basename } from "node:path";
 import type {
   ExtensionLoggerApi,
@@ -198,6 +198,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
         id,
         write: (data) => {
           console.error(`TERMINAL WRITE ${data.byteLength} ${data[0] === 3} CLOSED ${closed}`);
+          if (process.env.NATIVE_PROFILE_LOG) appendFileSync(process.env.NATIVE_PROFILE_LOG, `${JSON.stringify({kind:"terminal-write",size:data.byteLength,interrupt:data[0]===3,closed})}\n`);
           if (closed) return;
           shellState.onInput(data);
           terminal.write(data);
