@@ -120,6 +120,8 @@ Set `COVERAGE_EXECUTION_REPORT` to a JSON array of execution evidence when attac
 
 The shared test preload owns its temporary home until the global `afterAll` hook, after every test file. Individual tests must close app handles, subscriptions and child processes in `finally` blocks or register `onTestFinished` cleanup as soon as a fixture opens. Caller-provided storage belongs to the caller. Copy requested failure evidence into its retained artifact location before disposing fixtures. Tests that change `process.env` run serially; the preload restores the environment after each test. The API per-file process driver remains required by [ADR 0018](../../adrs/0018-temporary-api-test-process-isolation.md).
 
+Packaged Playwright specs and benchmarks import `test` from `src/scripts/playwright-test.ts`. Its automatic fixture cancels pending command, readiness, and shutdown waits after a timeout. Biome rejects direct imports of Playwright's base `test` in these files, so new browser tests keep the same cleanup.
+
 A package's report also lists source files from the packages its tests import. The script merges line hits per file, so each source file counts once. It leaves out tests, stories, fixtures, mocks, test helpers, dependencies, build output, and files outside the repository. Bun reports only files that a test loads, so files that no test imports are missing from the total. Bun's lcov output has no function names, so function coverage cannot be merged and the badge shows lines only.
 
 ## CI stages
