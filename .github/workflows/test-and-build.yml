@@ -1,6 +1,10 @@
 name: CI native diagnostics
 on:
   workflow_dispatch:
+    inputs:
+      signals_only:
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -18,6 +22,7 @@ jobs:
           node-version: "24"
       - run: bun scripts/ci/native-signal-diagnostic.ts
   native:
+    if: inputs.signals_only != true
     name: native fixtures (${{ matrix.platform_pkg }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
