@@ -17,6 +17,9 @@ on:
       channel:
         required: true
         type: string
+      desktop_platforms:
+        required: true
+        type: string
 permissions:
   contents: read
   actions: read
@@ -30,6 +33,7 @@ jobs:
       source_sha: ${{ inputs.source_sha }}
       artifact_attempt: ${{ inputs.artifact_attempt }}
       kind: performance
+      platforms: ${{ inputs.desktop_platforms }}
   workloads:
     name: P3 ${{ matrix.family }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

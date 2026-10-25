@@ -21,6 +21,10 @@ on:
         description: functional or performance; performance always uses a fresh runner
         required: true
         type: string
+      platforms:
+        description: JSON desktop rows selected for this release channel
+        required: true
+        type: string
 permissions:
   contents: read
   actions: read
@@ -39,11 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { target: linux-x64, os: ubuntu-24.04, platform: linux, arch: x64 }
-          - { target: darwin-arm64, os: macos-15, platform: darwin, arch: arm64 }
-          - { target: darwin-x64, os: macos-15-intel, platform: darwin, arch: x64 }
-          - { target: win32-x64, os: windows-2025, platform: win32, arch: x64 }
+        include: ${{ fromJSON(inputs.platforms) }}
     steps:
       - uses: actions/checkout@v5
         with:

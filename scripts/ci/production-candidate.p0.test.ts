@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { certifyProduction, type ProductionCandidate } from "./production-candidate";
+import { certifyProduction, type ProductionCandidate, requiredProductionChecks } from "./production-candidate";
 
 const candidate: ProductionCandidate = {
   artifactRunId: "789",
@@ -68,4 +68,15 @@ test("source-only nightly Windows diagnostics cannot certify signed stable Windo
       [{ ...report("windows"), candidate: stable, artifactMode: "source-diagnostic" }],
     ),
   ).toContain("windows: a source diagnostic cannot certify a stable publication artifact");
+});
+
+test("full releases require Intel functional and performance proof while nightly retains Windows", () => {
+  const stable = requiredProductionChecks("stable");
+  const nightly = requiredProductionChecks("nightly");
+  expect(stable).toContain("signed-functional-darwin-x64");
+  expect(stable).toContain("performance-desktop-darwin-x64");
+  expect(nightly).not.toContain("signed-functional-darwin-x64");
+  expect(nightly).not.toContain("performance-desktop-darwin-x64");
+  expect(nightly).toContain("signed-functional-win32-x64");
+  expect(nightly).toContain("performance-desktop-win32-x64");
 });

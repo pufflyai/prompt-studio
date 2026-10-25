@@ -141,7 +141,7 @@ The Merge queue removals workflow retains first-failure links and the `removed-f
 
 Signed macOS builds submit the app with native `notarytool` from Forge's `postPackage` hook. Submission and ticket retrieval are separate operations. After Apple accepts the upload, `stapler staple` gets up to three attempts for Apple network failures: exit code 68 with `NSURLErrorDomain` in the output. The pauses are one and two seconds. Release verification uses the same rule for `stapler validate`.
 
-Every attempt logs its status and output. Other errors fail at once. This retries an external service call; test retries remain disabled. Validate a change to this path with a nightly release run that builds, notarizes, staples, and verifies both macOS targets.
+Every attempt logs its status and output. Other errors fail at once. This retries an external service call; test retries remain disabled. Validate a change to this path with a full stable release candidate that builds, notarizes, staples, and verifies both macOS targets. Nightly runs cover Apple Silicon only.
 
 ## Published extension dependencies
 

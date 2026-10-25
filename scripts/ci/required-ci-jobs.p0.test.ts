@@ -31,11 +31,7 @@ test("queue native owners provide delivered integrity while production requires 
   const input = scopeFixture();
   const queue = plannedCiJobs(resolveCiScope({ ...input, event: "merge_group" }));
   const delivered = queue.find((job) => job.id === "build_clients")!;
-  expect(delivered.names).toEqual([
-    "build_clients (linux-x64)",
-    "build_clients (darwin-arm64)",
-    "build_clients (darwin-x64)",
-  ]);
+  expect(delivered.names).toEqual(["build_clients (linux-x64)", "build_clients (darwin-arm64)"]);
   const completed = queue
     .filter((job) => job.id !== "packaged_toolchain")
     .flatMap((job) => job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })));

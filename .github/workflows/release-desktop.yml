@@ -21,7 +21,7 @@ on:
         required: false
         type: string
       targets:
-        description: JSON list of native targets to build. Nightlies skip Windows.
+        description: JSON list of native targets to build. Nightlies skip Windows and Intel macOS.
         required: false
         type: string
         default: '["darwin-arm64","darwin-x64","linux-x64","win32-x64"]'

@@ -3,6 +3,7 @@ import { appendFileSync } from "node:fs";
 import { basename } from "node:path";
 import { affectedPackages } from "./ci-packages";
 import { partitionPackageChecks } from "./package-check-matrix";
+import { productionDesktopPlatforms, productionToolchainPlatforms } from "./production-platforms";
 import { plannedCiJobs, requiredCiJobs } from "./required-ci-jobs";
 import { discoverTestFiles, priorityFromFile } from "./test-discovery";
 import { createTestMatrices } from "./test-matrices";
@@ -16,6 +17,7 @@ interface CiScopeInput {
   packages: ReturnType<typeof readWorkspacePackages>;
   tests: string[];
   profile?: string;
+  releaseChannel?: string;
 }
 const documentation = (file: string) =>
   /\.(md|mdx|txt)$/.test(file) || file.startsWith("design/") || file === "LICENSE";
@@ -28,7 +30,7 @@ const stageFor = (event: string, production: boolean, profile?: string) => {
 };
 
 export const resolveCiScope = (input: CiScopeInput) => {
-  const { event, labels, changedFiles, packages, tests, profile } = input;
+  const { event, labels, changedFiles, packages, tests, profile, releaseChannel = "stable" } = input;
   for (const file of tests) priorityFromFile(file);
   const production = profile === "production" || (event === "workflow_dispatch" && profile !== "merge_queue");
   const stage = stageFor(event, production, profile);
@@ -44,12 +46,9 @@ export const resolveCiScope = (input: CiScopeInput) => {
   if (production) priorities = ["P0", "P1", "P2"];
   const matrices = createTestMatrices(tests, packages, affectedOwners, priorities);
   const browserSmoke = stage === "main";
-  const clientMatrix = [
-    { target: "linux-x64", os: "ubuntu-latest", platform: "linux", arch: "x64", tests: true },
-    { target: "darwin-arm64", os: "macos-15", platform: "darwin", arch: "arm64", tests: true },
-    { target: "darwin-x64", os: "macos-15-intel", platform: "darwin", arch: "x64", tests: true },
-    ...(production ? [{ target: "win32-x64", os: "windows-2025", platform: "win32", arch: "x64", tests: true }] : []),
-  ];
+  const clientMatrix = productionDesktopPlatforms(production ? releaseChannel : "nightly")
+    .filter((row) => production || row.platform !== "win32")
+    .map((row) => ({ ...row, os: row.platform === "linux" ? "ubuntu-latest" : row.os, tests: true }));
   return {
     stage,
     production,
@@ -58,6 +57,7 @@ export const resolveCiScope = (input: CiScopeInput) => {
     appMatrix: stage === "pull_request" ? [] : matrices.appMatrix,
     packagedMatrix: stage === "pull_request" ? [] : matrices.packagedMatrix,
     clientMatrix,
+    toolchainMatrix: productionToolchainPlatforms(releaseChannel),
     componentChecks: matrices.componentMatrix.length > 0,
     databaseTests: matrices.databaseMatrix.length > 0,
     packageChecks: affectedOwners.length > 0,
@@ -99,6 +99,7 @@ if (import.meta.main) {
     packages: readWorkspacePackages(process.cwd()),
     tests: discoverTestFiles(process.cwd()),
     profile,
+    releaseChannel: process.env.RELEASE_CHANNEL || undefined,
   });
   const outputs = Object.entries({ ...scope, requiredJobs: requiredCiJobs(scope), gatePlan: plannedCiJobs(scope) }).map(
     ([key, value]) => `${key}=${Array.isArray(value) ? JSON.stringify(value) : value}`,

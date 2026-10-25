@@ -47,7 +47,7 @@ Local commands are current-host diagnostics. They do not certify other platforms
 | Stage | Selected work | Success means |
 | --- | --- | --- |
 | Pull request | Affected P0 rules, types, lint and public contracts, selected through workspace dependencies | Every selected fast check passed for that merge commit |
-| Merge queue | All P0/P1 plus essential Linux/macOS delivered startup and defaults | The actual candidate passed the merge-safety plan |
+| Merge queue | All P0/P1 plus essential Linux and Apple Silicon delivered startup and defaults | The actual candidate passed the merge-safety plan |
 | Main | Matching successful queue tree/build provenance and startup smoke | The tested queue content matches main and still starts |
 | Production functional | P0/P1 and separate P2 breadth, including Windows | Every selected functional platform and row passed |
 | Production certification | Complete functional, signed-app and P3 evidence for one immutable candidate | Matching evidence permits stable publication |
@@ -76,9 +76,11 @@ Manual quarantine remains explicit in `scripts/ci/test-quarantine.json`. Each en
 
 Reuse dependency downloads and Nx build archives, never passing test results. Build inputs include production source/dependencies, lockfile, build helpers, toolchain, OS/architecture and relevant environment. Test-only edits do not invalidate production builds. Storybook builds still include their stories. Check committed generated outputs after builds, including cache hits.
 
-Main verifies the exact successful queue tree and inputs before promoting Linux and both macOS build-cache namespaces. Container Storybook and app archives stay in the separate Linux Playwright namespace. Main smoke must not replace that complete certified cache with a partial archive. A missing cache runs the required build. A passing PR does not certify a different merged tree.
+Main verifies the exact successful queue tree and inputs before promoting Linux and Apple Silicon build-cache namespaces. Container Storybook and app archives stay in the separate Linux Playwright namespace. Download each producer into its own directory, then import complete task archives serially. The same Nx hash can have different tar metadata between runners; concurrent extraction into the same file can corrupt it. Main smoke must not replace that complete certified cache with a partial archive. A missing cache runs the required build. Smoke runs only after its build succeeds. A passing PR does not certify a different merged tree.
 
-Queue integrity assigns portable public consumer checks once to Linux. Each native desktop row verifies the CLI it just compiled for its sidecar, including embedded Bun, before starting the app. This shares installation and compilation instead of starting separate queue toolchain builds. Production repeats full public-consumer and runtime coverage on all six native CLI hosts. Signed desktop certification checks the candidate's Linux x64, macOS x64/arm64 and Windows x64 publication inputs.
+If a cache importer has already published corrupt archives, remove those exact cache entries before validating its fix. Preserve the failing build logs and identify the producer run. Changing the importer does not repair an immutable cache that later jobs can still restore. A cache failure never justifies changing a test or its priority.
+
+Queue integrity assigns portable public consumer checks once to Linux. Each native desktop row verifies the CLI it just compiled for its sidecar, including embedded Bun, before starting the app. This shares installation and compilation instead of starting separate queue toolchain builds. Intel macOS validation and desktop publication run only for full stable releases. Stable production repeats full public-consumer and runtime coverage on all six native CLI hosts and certifies Linux x64, macOS x64/arm64 and Windows x64 desktop publication inputs. Nightly validates the other five CLI hosts, publishes Linux x64 and Apple Silicon desktop apps, and keeps its daily Windows source diagnostics. All quarantine entries remain registered, including Intel-only cases exercised during full releases.
 
 Production binds evidence to the original source SHA, version SHA, actual toolchain/policy, producer run/attempt and immutable artifact IDs/digests. Stable publication requires a complete release-eligible certificate and rechecks those identities before downloading the certified artifacts. Missing, expired, changed or partial evidence blocks publication.
 

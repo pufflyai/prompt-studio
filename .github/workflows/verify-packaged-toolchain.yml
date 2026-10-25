@@ -17,10 +17,9 @@ on:
         type: string
         default: P2
       platforms:
-        description: JSON runner rows; production defaults to every supported native host
-        required: false
+        description: JSON runner rows selected by the release channel
+        required: true
         type: string
-        default: '[{"os":"ubuntu-24.04","platform_pkg":"cli-linux-x64"},{"os":"ubuntu-24.04-arm","platform_pkg":"cli-linux-arm64"},{"os":"macos-15","platform_pkg":"cli-darwin-arm64"},{"os":"macos-15-intel","platform_pkg":"cli-darwin-x64"},{"os":"windows-latest","platform_pkg":"cli-win-x64"},{"os":"windows-11-arm","platform_pkg":"cli-win-arm64"}]'
       artifact_run_id:
         description: Release run holding the immutable compiled candidate
         required: false
