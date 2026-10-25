@@ -5,9 +5,12 @@ import { join } from "node:path";
 import { viewDataEvents } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import extension from "./extension";
+import { fixture } from "./src/commands/auto-build.fixture";
 import { ticketMarkdownPath } from "./src/data/draft-storage";
+import { observeStorageReads } from "./src/data/storage-reads.fixture";
 import { putTicket, ticketContext } from "./src/data/ticket-context.fixture";
 import type { Ticket } from "./src/data/types";
+import { plannerTicketsChanged } from "./src/events";
 
 const command = (id: string) => extension.commands?.find((contribution) => contribution.id === id);
 const hook = (id: string) => extension.hooks?.find((contribution) => contribution.id === id);
@@ -368,4 +371,21 @@ describe("pstdio planner notification hooks", () => {
       }),
     ]);
   });
+});
+
+test("ticket change hooks read only the changed ticket, so saves stay fast in large projects", async () => {
+  const { ctx, ticket, storage } = await fixture();
+  const changed = await ticket("Changed ticket");
+  for (let index = 0; index < 20; index++) await ticket(`Other ticket ${index}`);
+  const observed = observeStorageReads(storage);
+  const hooks = extension.hooks?.filter((contribution) => contribution.event.id === plannerTicketsChanged.id) ?? [];
+
+  expect(hooks.length).toBeGreaterThan(0);
+  for (const contribution of hooks)
+    await contribution.run(
+      { ...ctx, storage: observed.storage, eventId: contribution.event.id, deliveryId: `check-${contribution.id}` },
+      { projectId: ctx.projectId, ticketId: changed.id },
+    );
+
+  expect(observed.reads).not.toContain("tickets/*");
 });
