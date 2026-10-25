@@ -58,6 +58,7 @@ export const extensionsCheckResponseSchema = checkWorkbenchMetadataSchema.extend
 });
 
 export const listExtensionCommandsResponseSchema = z.object({
+  extensionIds: z.array(z.string()).optional(),
   commands: workbenchExtensionMetadataSchema.shape.commands,
   translations: z.array(extensionTranslationRecordSchema).optional(),
   diagnostics: workbenchExtensionMetadataSchema.shape.diagnostics,

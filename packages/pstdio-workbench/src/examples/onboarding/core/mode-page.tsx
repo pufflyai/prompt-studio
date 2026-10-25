@@ -126,7 +126,6 @@ const registerModeSidenav = (workbench: WorkbenchCore, modeId: GuidePage["modeId
       },
     },
     region: "sidenav",
-    movableTo: ["sidenav"],
   });
 };
 const registerPage = (workbench: WorkbenchCore, page: GuidePage) => {

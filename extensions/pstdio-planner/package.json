@@ -6,19 +6,19 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.2.1"
+    "pstdio": "^0.2.2 || ^0.3.0"
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
-    "test:coverage": "bun test --coverage",
-    "typecheck": "tsc --noEmit"
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage",
+    "typecheck": "bun check"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "^0.45.0",
+    "@pstdio/sdk": "0.46.0-nightly.20261024001730",
     "@pstdio/ui": "0.45.0",
     "@tanstack/react-query": "^5.90.21",
     "lucide-react": "^0.557.0",
@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@storybook/react": "^10.6.0",
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "storybook": "^10.6.0",

@@ -4,6 +4,7 @@
 export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-service-telemetry": [],
   "pstdio-account-manager": ["pstdio-sync-contracts", "pstdio-service-telemetry"],
+  "pstdio-psx": ["pstdio-extensions"],
   "pstdio-relay": ["pstdio-account-manager", "pstdio-sync", "pstdio-sync-contracts", "pstdio-service-telemetry"],
   "pstdio-api-contracts": ["pstdio-sync-contracts"],
   "pstdio-sync-contracts": [],
@@ -15,7 +16,6 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-db": [
     "pstdio-api-contracts",
     "pstdio-paths",
-    "pstdio-storage",
     "pstdio-sync",
     "pstdio-sync-contracts",
     "pstdio-relay",
@@ -47,7 +47,6 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "extension-lab",
     "pstdio-base-themes",
     "pstdio-planner",
-    "pstdio-notes",
     "pstdio-skills",
     "workbench-fixture",
   ],
@@ -87,6 +86,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio",
     "pstdio-api-contracts",
     "pstdio-extensions",
+    "pstdio-sync",
     "pstdio-wt",
     "extension-lab",
     "harness-claude-code",
@@ -103,7 +103,9 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "remote-workspaces",
     "workbench-fixture",
     "storage-scale-fixture",
+    "pstdio-scripts",
   ],
+  "storybook-tests": ["@pstdio/ui", "@pstdio/workbench", "pstdio-dashboard"],
   "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],
   "@pstdio/desktop": [
     "@pstdio/ui",
@@ -112,6 +114,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-logging",
     "pstdio-paths",
     "workbench-fixture",
+    "pstdio-scripts",
   ],
   "@pstdio/landing-page": ["@pstdio/ui"],
   "motion-lab": ["@pstdio/sdk", "@pstdio/ui"],
@@ -140,5 +143,5 @@ export const DEFAULT_PRIVATE_EXPORT_LIMIT = 2;
 export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
   "pstdio-api": 2,
   "pstdio-api-contracts": 7,
-  "pstdio-extensions": 11,
+  "pstdio-extensions": 12,
 };

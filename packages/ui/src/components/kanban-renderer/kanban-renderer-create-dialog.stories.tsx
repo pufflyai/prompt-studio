@@ -115,7 +115,7 @@ export const Empty: Story = {
   render: () => <Harness config={config} />,
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
-    await expect(body.getByRole("button", { name: "Create ticket", exact: true })).toBeDisabled();
+    await expect(await body.findByRole("button", { name: "Create ticket", exact: true })).toBeDisabled();
     await expect(body.getByRole("button", { name: "Create without opening", exact: true })).toBeDisabled();
   },
 };
@@ -126,6 +126,47 @@ export const PrefilledFromColumn: Story = {
   render: () => (
     <Harness config={{ ...config, fields: [{ ...config.fields[0], defaultValue: "Ticket body" }, config.fields[1]] }} />
   ),
+};
+
+export const LongDescription: Story = {
+  args: {} as never,
+  render: () => (
+    <Harness
+      config={{
+        ...config,
+        fields: [
+          {
+            ...config.fields[0],
+            defaultValue: Array.from(
+              { length: 40 },
+              (_, index) => `Requirement ${index + 1}: Keep the ticket details accessible while editing.`,
+            ).join("\n\n"),
+          },
+          config.fields[1],
+        ],
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const editor = await body.findByRole("textbox");
+    const attachments = body.getByRole("button", { name: "Attach files", exact: true });
+    const submit = body.getByRole("button", { name: "Create ticket", exact: true });
+    const viewportHeight = canvasElement.ownerDocument.documentElement.clientHeight;
+    const viewport = editor.closest<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]');
+    await expect(viewport).not.toBeNull();
+    await expect(viewport!.scrollHeight).toBeGreaterThan(viewport!.clientHeight);
+    await expect(attachments.getBoundingClientRect().top).toBeGreaterThan(0);
+    await expect(attachments.getBoundingClientRect().bottom).toBeLessThan(viewportHeight);
+    await expect(submit.getBoundingClientRect().bottom).toBeLessThan(viewportHeight);
+    const lastParagraph = editor.lastElementChild;
+    await expect(lastParagraph).not.toBeNull();
+    lastParagraph?.scrollIntoView({ block: "nearest" });
+    await expect(viewport!.scrollTop).toBeGreaterThan(0);
+    await expect(lastParagraph!.getBoundingClientRect().bottom).toBeLessThan(attachments.getBoundingClientRect().top);
+    await expect(attachments.getBoundingClientRect().top).toBeGreaterThan(0);
+    await expect(attachments.getBoundingClientRect().bottom).toBeLessThan(viewportHeight);
+  },
 };
 
 /** Submitting: every control is disabled while the create command runs. */
@@ -139,8 +180,9 @@ export const Submitting: Story = {
   ),
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(body.getByRole("button", { name: "Create ticket", exact: true }));
-    await expect(body.getByRole("button", { name: "Create ticket", exact: true })).toBeDisabled();
+    const submit = await body.findByRole("button", { name: "Create ticket", exact: true });
+    await userEvent.click(submit);
+    await expect(submit).toBeDisabled();
     await expect(body.getByRole("button", { name: "Create without opening", exact: true })).toBeDisabled();
   },
 };

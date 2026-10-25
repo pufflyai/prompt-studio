@@ -17,16 +17,6 @@ uppercase shorthand prefix. The core resource allocator remains the owner of
 number allocation; extensions keep the returned ID instead of generating another.
 See [Resource identities](../sdk/0002-resources.md#resource-identities).
 
-## Planner migration
-
-Existing projects must run `pst pstdio-planner migrate-ticket-identities` from their repository before creating tickets with the updated Planner. Stop ticket writers and automation first, and run one migration command at a time. This maintenance operation renumbers saved tickets in stable order, beginning at 1 in a project with no previous host allocations. UUIDs remain unchanged.
-
-The command backs up all local ticket files under `.pstdio/extension-storage/pstdio-planner/ticket-identity-migration`, including unsaved edits and orphan files. It replaces `.pstdio/extension-storage/pstdio-planner/tickets` with files rebuilt from saved tickets, and refreshes session anchor labels and shorthands. Restore any wanted unsaved edits from the backup into the corresponding new ticket. Do not save old files by their old shorthand.
-
-A persisted migration journal and per-ticket allocation map allow an interrupted command to resume without allocating a second shorthand for tickets already mapped. A completed rerun does nothing. Keep writers stopped until it completes. Other clients must discard or back up their old local ticket files and pull fresh copies before saving.
-
-The result lists linked workspaces for manual review. It does not rename live Git branches or worktrees. Old external links and commit messages retain their old numbers.
-
 ## Shared SDK helpers
 
 Import in-memory storage, repository files, resource allocators, and command contexts from `@pstdio/sdk/testing`. Command fixtures pass a prefix map for declared kinds. Import frontmatter quoting and replacement, name resolution, and safe draft layouts from `@pstdio/sdk/data`. Domain schemas and commands stay in the extension.

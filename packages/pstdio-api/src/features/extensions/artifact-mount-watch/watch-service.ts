@@ -52,7 +52,11 @@ export const createArtifactMountWatchService = (input: {
       }
       for (const mount of mounts) {
         if (!mount.watch) continue;
-        const root = resolveArtifactMountRoot({ repoRoot, name: mount.name, mountPath: mount.relativePath });
+        const root = resolveArtifactMountRoot({
+          repoRoot,
+          extensionId: mount.extensionId,
+          mountPath: mount.relativePath,
+        });
         targets.set(JSON.stringify([projectId, mount.id, root]), { projectId, mount, root });
       }
     }

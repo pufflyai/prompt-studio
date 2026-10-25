@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { selectMenuAction } from "../helpers/menu-actions";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { type RuntimeDescriptor, runtimeAuthorization, signInBrowser } from "./packaged-serve-helpers";
 
@@ -45,7 +46,7 @@ export const verifyPackagedPreviewSelection = async (page: Page, projectId: stri
       }
       if (await reattach.isVisible()) await reattach.click();
       await addPanel.click();
-      await isolated.getByRole("menuitem", { name: "Session", exact: true }).click();
+      await selectMenuAction(isolated, "New session");
       const newSession = header.getByRole("tab", { name: "New session", exact: true });
       await expect(newSession).toHaveAttribute("aria-selected", "true");
       await newSession.click({ button: "right" });
@@ -56,7 +57,7 @@ export const verifyPackagedPreviewSelection = async (page: Page, projectId: stri
       const tab = header.getByRole("tab", { name: new RegExp(title) });
       await expect(tab).toHaveAttribute("aria-selected", "true");
       await tab.click({ button: "right" });
-      await isolated.getByRole("menuitem", { name: "Unpin tab", exact: true }).click();
+      await selectMenuAction(isolated, "Unpin tab");
       await expect(tab).toHaveCSS("font-style", "italic");
       logTestPhase(`Preview selection opened ${title}`);
       return tab;
@@ -64,7 +65,7 @@ export const verifyPackagedPreviewSelection = async (page: Page, projectId: stri
     const kept = await open("Selection kept");
     await kept.focus();
     await isolated.keyboard.press("Shift+F10");
-    await isolated.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+    await selectMenuAction(isolated, "Pin tab");
     await expect(kept).toHaveCSS("font-style", "normal");
     logTestPhase("Preview selection kept pinned");
     const old = await open("Selection old");

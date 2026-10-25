@@ -12,7 +12,7 @@ export const readTicketAttachmentCommand = defineCommand({
     attachmentId: params.text({ required: true }),
   },
   async run(ctx, commandParams) {
-    const ticket = await ticketsCollection(ctx.storage).get(commandParams.ticketId);
+    const ticket = await ticketsCollection(ctx).get(commandParams.ticketId);
     const attachment = ticket?.attachments?.find((entry) => entry.id === commandParams.attachmentId);
     if (!attachment) return null;
 

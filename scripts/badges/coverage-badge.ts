@@ -1,5 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { coverageReport, type ExecutionEvidence } from "./coverage-report";
+import { isProductionSource, mergeCoverageHits } from "./coverage-source";
 
 export interface CoverageReport {
   packageDir: string;
@@ -10,9 +13,6 @@ export interface CoverageSummary {
   coveredLines: number;
   totalLines: number;
 }
-
-const excludedSource =
-  /(^|\/)(node_modules|dist|mocks?|__tests__|__test-tmp__)\/|\.(test|spec|stories)\.|fixture|test-utils|test-support|test-setup|mock-data/;
 
 const badgeColors: Array<[minimum: number, color: string]> = [
   [90, "brightgreen"],
@@ -26,26 +26,8 @@ const badgeColors: Array<[minimum: number, color: string]> = [
 // Each package report also lists the source of every package its tests import, so merge
 // line hits per file before counting. Bun writes source paths relative to the package.
 export const summarizeCoverage = (root: string, reports: CoverageReport[]) => {
-  const files = new Map<string, Map<number, number>>();
-  for (const report of reports) {
-    let lines: Map<number, number> | undefined;
-    for (const entry of report.content.split("\n")) {
-      if (entry.startsWith("SF:")) {
-        const path = resolve(report.packageDir, entry.slice(3));
-        const repoPath = relative(root, path).split(sep).join("/");
-        lines = undefined;
-        if (!repoPath.startsWith("..") && !excludedSource.test(repoPath)) {
-          lines = files.get(path) ?? new Map();
-          files.set(path, lines);
-        }
-      } else if (lines && entry.startsWith("DA:")) {
-        const [line, hits] = entry.slice(3).split(",").map(Number);
-        lines.set(line, (lines.get(line) ?? 0) + hits);
-      }
-    }
-  }
-
-  const hits = [...files.values()].flatMap((lines) => [...lines.values()]);
+  const files = mergeCoverageHits(root, reports);
+  const hits = [...files].filter(([path]) => isProductionSource(path)).flatMap(([, lines]) => [...lines.values()]);
   return { coveredLines: hits.filter((count) => count > 0).length, totalLines: hits.length };
 };
 
@@ -56,24 +38,56 @@ export const coverageBadge = (summary: CoverageSummary) => {
   return { schemaVersion: 1, label: "coverage", message: `${percent}%`, color };
 };
 
+interface CoverageArtifactsInput {
+  root: string;
+  output: string;
+  reports: CoverageReport[];
+  scope: string;
+  execution?: ExecutionEvidence[];
+  workflowRunId?: number;
+}
+export const writeCoverageArtifacts = (input: CoverageArtifactsInput) => {
+  const { root, output, reports, scope, execution } = input;
+  const summary = summarizeCoverage(root, reports);
+  const badge = coverageBadge(summary);
+  const tracked = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" });
+  const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
+  if (tracked.status !== 0 || revision.status !== 0) throw new Error("Cannot identify coverage source revision.");
+  const report = coverageReport({
+    root,
+    revision: revision.stdout.trim(),
+    scope,
+    measuredAt: new Date().toISOString(),
+    trackedFiles: tracked.stdout.split("\0").filter(Boolean),
+    reports,
+    execution,
+    workflowRunId: input.workflowRunId,
+  });
+  mkdirSync(dirname(resolve(output)), { recursive: true });
+  writeFileSync(output, `${JSON.stringify(badge, null, 2)}\n`);
+  writeFileSync(join(dirname(resolve(output)), "coverage-report.json"), `${JSON.stringify(report, null, 2)}\n`);
+  console.log(
+    `Line coverage: ${badge.message} (${summary.coveredLines}/${summary.totalLines}) from ${reports.length} reports.`,
+  );
+};
+
 if (import.meta.main) {
   const output = process.argv[2];
   if (!output) throw new Error("Usage: summarize-coverage.ts <badge-json-path>");
-
   const root = process.cwd();
-  const reports = ["packages", "extensions"].flatMap((group) =>
+  const reports = ["packages", "extensions", "services", "clients", ".pstdio/extensions"].flatMap((group) =>
     Array.from(new Bun.Glob(`${group}/*/coverage/**/lcov.info`).scanSync({ cwd: root })).map((file) => ({
       packageDir: join(root, file.split("/coverage/")[0]),
       content: readFileSync(join(root, file), "utf8"),
     })),
   );
-  if (reports.length === 0) throw new Error("No lcov reports found. Run `bun run test:coverage` first.");
-
-  const summary = summarizeCoverage(root, reports);
-  const badge = coverageBadge(summary);
-  mkdirSync(dirname(resolve(output)), { recursive: true });
-  writeFileSync(output, `${JSON.stringify(badge, null, 2)}\n`);
-  console.log(
-    `Line coverage: ${badge.message} (${summary.coveredLines}/${summary.totalLines}) from ${reports.length} reports.`,
-  );
+  if (!reports.length) throw new Error("No lcov reports found. Run `bun run test:coverage` first.");
+  const executionPath = process.env.COVERAGE_EXECUTION_REPORT;
+  writeCoverageArtifacts({
+    root,
+    output,
+    reports,
+    scope: process.env.COVERAGE_SCOPE ?? "unit-source",
+    execution: executionPath ? (JSON.parse(readFileSync(executionPath, "utf8")) as ExecutionEvidence[]) : undefined,
+  });
 }

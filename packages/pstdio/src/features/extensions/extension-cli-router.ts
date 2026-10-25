@@ -8,23 +8,21 @@ import type {
 import type { ExtensionClient } from "@pstdio/sdk/client";
 import { apiClient } from "../api-client";
 import { resolveProjectId as defaultResolveProjectId } from "../projects/resolve-project-id";
+import { warnDeprecatedExtensionCommand } from "./deprecated-extension-command";
 import { describeParamValue, formatParamName, parseExtensionCommandArgs } from "./extension-cli-args";
 import { printExtensionCommandStream } from "./extension-cli-stream";
+import {
+  buildExtensionCommandTable,
+  commandCliPaths,
+  type ExtensionCommandCollision,
+  type ExtensionCommandTable,
+} from "./extension-command-table";
 
 export { parseExtensionCommandArgs } from "./extension-cli-args";
+export type { ExtensionCommandCollision, ExtensionCommandTable } from "./extension-command-table";
+export { buildExtensionCommandTable } from "./extension-command-table";
 
 type TranslationRecord = NonNullable<ListExtensionCommandsResponse["translations"]>[number];
-
-export type ExtensionCommandCollision = {
-  path: string;
-  commands: ExtensionCommandRecord[];
-};
-
-export type ExtensionCommandTable = {
-  byPath: Map<string, ExtensionCommandRecord>;
-  byNamespace: Map<string, ExtensionCommandRecord[]>;
-  collisions: ExtensionCommandCollision[];
-};
 
 type DispatchDeps = {
   streamCommand: ExtensionClient["streamCommand"];
@@ -95,11 +93,6 @@ const localizeCommands = (
       ),
   }));
 
-const commandCliPaths = (command: ExtensionCommandRecord) => {
-  const paths = [command.cliPath, ...(command.cliAliases ?? [])].filter((path): path is string => Boolean(path));
-  return Array.from(new Set(paths));
-};
-
 const firstOptionIndex = (args: string[]) => {
   const index = args.findIndex((arg) => arg.startsWith("-"));
   return index === -1 ? args.length : index;
@@ -133,7 +126,7 @@ const extractGlobalOptions = (rawArgs: string[]) => {
 
 const formatCollision = (collision: ExtensionCommandCollision) => {
   const providers = collision.commands
-    .map((command) => `${command.extensionId} (${command.id})`)
+    .map((command) => `pst ${command.cliPath ?? command.id}`)
     .sort((a, b) => a.localeCompare(b))
     .join(", ");
   return `CLI path "${collision.path}" is provided by multiple extension commands: ${providers}`;
@@ -156,42 +149,6 @@ const defaultDeps = (): DispatchDeps => ({
   error: (message) => console.error(message),
   resolveProjectId: defaultResolveProjectId,
 });
-
-export const buildExtensionCommandTable = (commands: ExtensionCommandRecord[]) => {
-  const byNamespace = new Map<string, ExtensionCommandRecord[]>();
-  const byPath = new Map<string, ExtensionCommandRecord>();
-  const collisionsByPath = new Map<string, ExtensionCommandRecord[]>();
-
-  for (const command of commands) {
-    const paths = commandCliPaths(command);
-    const scopes = paths.length > 0 ? paths.map((path) => path.split(" ")[0] ?? "") : [command.id.split(".")[0] ?? ""];
-
-    for (const commandScope of new Set(scopes)) {
-      const existingNamespace = byNamespace.get(commandScope) ?? [];
-      if (!existingNamespace.includes(command)) existingNamespace.push(command);
-      byNamespace.set(commandScope, existingNamespace);
-    }
-
-    for (const path of paths) {
-      const existing = byPath.get(path);
-      if (existing) {
-        collisionsByPath.set(path, [...(collisionsByPath.get(path) ?? [existing]), command]);
-        byPath.delete(path);
-        continue;
-      }
-      if (!collisionsByPath.has(path)) byPath.set(path, command);
-    }
-  }
-
-  return {
-    byPath,
-    byNamespace,
-    collisions: Array.from(collisionsByPath.entries()).map(([path, pathCommands]) => ({
-      path,
-      commands: pathCommands,
-    })),
-  };
-};
 
 // Mirrors the yargs command-group layout (scriptName-prefixed paths, aligned
 // descriptions, an Options section) so an extension namespace reads the same as a
@@ -280,7 +237,7 @@ export const dispatchExtensionCliCommand = async (input: {
   const { projectId, workspaceId } = deps.resolveProjectId(deps.cwd(), global.projectId);
   const metadata = await deps.listCommands(projectId);
   const commands = localizeCommands(metadata.commands, metadata.translations ?? [], processLocale());
-  const table = buildExtensionCommandTable(commands);
+  const table = buildExtensionCommandTable(commands, metadata.extensionIds);
   const commandPathParts = global.args.slice(0, firstOptionIndex(global.args));
   const commandPath = commandPathParts.join(" ");
 
@@ -304,6 +261,7 @@ export const dispatchExtensionCliCommand = async (input: {
   }
 
   input.onCommandResolved?.(command);
+  warnDeprecatedExtensionCommand(command, commandPath, deps.error ?? deps.log, !global.json);
 
   const commandArgs = global.args.slice(pathParts(commandPath).length);
   const parsed = parseExtensionCommandArgs(command, commandArgs);

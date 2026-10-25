@@ -12,6 +12,7 @@ import { updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { createDashboardWorkspaces } from "@/shared/workspaces/dashboard-workspaces";
+import { isProjectFolderMissing } from "@/shared/workspaces/workspace-state";
 import { registerWorkspaceDataTableView } from "./collections/workspace-data-table-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-widget";
@@ -35,6 +36,7 @@ const openCreateWorkspace = (ctx: WorkbenchModuleContext, options: CreateWorkspa
     ctx.modes.setActiveMode("project-selection");
     return;
   }
+  if (isProjectFolderMissing(projectId)) return ctx.commands.executeCommand(dashboardCommandIds.chooseProjectFolder);
   return ctx.overlays.openOverlay(dashboardWidgetIds.createWorkspace, {
     title: "Create workspace",
     resource: {
@@ -153,6 +155,7 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
     },
     main: {
       kind: "panels",
+      landing: "changes",
       empty: {
         kind: "view",
         id: dashboardWidgetIds.workspaceSummary,

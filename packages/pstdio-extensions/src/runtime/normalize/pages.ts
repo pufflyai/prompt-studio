@@ -1,10 +1,11 @@
-import type { PageContribution, PageMain, PageSlot } from "@pstdio/sdk/extensions";
+import type { PageContribution, PageMain, PagePlaceholder, PageSlot } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension, RuntimePageMain, RuntimePageSlot } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import type { Accumulator, RegistryIndex } from "./accumulator";
 import { pageDeclarationSchema } from "./composition-declarations";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { validateDeclaration } from "./declaration-diagnostic";
+import { normalizeNavigationAction } from "./navigation-action";
 import { normalizePlacementTab } from "./placement-tab";
 import { normalizeContributionRef } from "./references";
 import { normalizePlacementItem } from "./resource-binding";
@@ -16,12 +17,41 @@ interface NormalizePageInput {
   index: RegistryIndex;
   pageId: string;
 }
+const normalizeEmpty = (input: NormalizePageInput, empty: PagePlaceholder | undefined) => {
+  if (!empty) return undefined;
+  if (!("view" in empty)) return normalizeContributionRef(input.ext, empty);
+  return {
+    view: normalizeContributionRef(input.ext, empty.view),
+    breadcrumb: empty.breadcrumb
+      ? {
+          ...empty.breadcrumb,
+          menu: empty.breadcrumb.menu?.map((group) => ({
+            ...group,
+            rows: group.rows.map((row) => ({
+              ...row,
+              action: row.action ? normalizeNavigationAction(input.ext, row.action) : undefined,
+            })),
+          })),
+        }
+      : undefined,
+  };
+};
 const normalizeMain = (input: NormalizePageInput, main: PageMain): RuntimePageMain => {
-  if (main.kind === "panels") return { ...main, empty: normalizeContributionRef(input.ext, main.empty) };
+  if (main.kind === "group") return { ...main, default: normalizeContributionRef(input.ext, main.default) };
+  if (main.kind === "panels")
+    return {
+      ...main,
+      empty: normalizeEmpty(input, main.empty),
+      landing:
+        main.landing && typeof main.landing !== "string"
+          ? normalizeContributionRef(input.ext, main.landing)
+          : main.landing,
+    };
   const { tab, ...presentation } = main;
   return {
     ...presentation,
     view: normalizeContributionRef(input.ext, main.view),
+    ...(main.empty ? { empty: normalizeEmpty(input, main.empty) } : {}),
     tab: normalizePlacementTab({ ...input, id: `${input.pageId}.$main`, tab }),
   };
 };
@@ -59,12 +89,26 @@ export const registerPages = (
       contribution: {
         ...contribution,
         ref,
+        ...(contribution.panelView ? { panelView: normalizeContributionRef(ext, contribution.panelView) } : {}),
         mode: normalizeContributionRef(ext, contribution.mode),
         ...(contribution.parent ? { parent: normalizeContributionRef(ext, contribution.parent) } : {}),
         ...(contribution.resource
           ? { resource: { kinds: contribution.resource.kinds.map((kind) => normalizeContributionRef(ext, kind)) } }
           : {}),
-        main: normalizeMain(input, contribution.main),
+        main: normalizeMain(
+          input,
+          contribution.main.kind === "panels"
+            ? {
+                ...contribution.main,
+                // Keep published collection landing behavior during the fixed-presence deprecation window.
+                landing:
+                  contribution.main.landing ??
+                  contribution.slots.find(
+                    (slot) => slot.region === "main" && slot.item.kind === "view" && slot.item.presence === "fixed",
+                  )?.id,
+              }
+            : contribution.main,
+        ),
         slots,
         panels: Object.fromEntries(
           slots.map((slot) => [slot.id, { kind: "page-slot" as const, page: ref, id: slot.id }]),

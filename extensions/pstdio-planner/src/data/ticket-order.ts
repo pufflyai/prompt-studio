@@ -1,6 +1,6 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { sortedBySortOrder } from "../utils/sort";
-import type { StoredTicket } from "./types";
+import type { Ticket } from "./types";
 import { withWriteGuard } from "./write-guard";
 
 const busy = Symbol("busy");
@@ -13,7 +13,7 @@ const ORDER_RETRY_MS = 25;
  * create holds the order for a moment. A live writer retains ownership after the wait.
  */
 export const withTicketOrder = async <T>(
-  ctx: Pick<ExtensionContextBase, "storage" | "projectId" | "extensionId">,
+  ctx: Pick<ExtensionContextBase, "storage" | "projectId" | "extensionId" | "resources">,
   write: () => Promise<T>,
 ) => {
   const deadline = Date.now() + ORDER_WAIT_MS;
@@ -26,7 +26,7 @@ export const withTicketOrder = async <T>(
 };
 
 /** Places a row in the global order, including rows hidden by the current view. */
-export const ticketOrderChanges = (tickets: StoredTicket[], rowId: string, beforeRowId?: string) => {
+export const ticketOrderChanges = (tickets: Ticket[], rowId: string, beforeRowId?: string) => {
   const ordered = sortedBySortOrder(tickets.filter((ticket) => !ticket.archived));
   const moving = ordered.find((ticket) => ticket.id === rowId);
   if (!moving || rowId === beforeRowId) return [];

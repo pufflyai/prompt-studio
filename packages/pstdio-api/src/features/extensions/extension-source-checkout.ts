@@ -1,6 +1,8 @@
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { createRegistryClient } from "pstdio-extensions/distribution";
 import { findExtensionCatalogEntry, type GitExtensionOrigin, packagedExtensionCatalog } from "./extension-catalog";
 import { type CommandOptions, type CommandResult, runCommand } from "./install-extension-dependencies";
 
@@ -74,6 +76,11 @@ export const prepareNamedSource = async (
 ) => {
   const entry = await findExtensionCatalogEntry(name);
   if (!entry) throw new Error(`No catalog entry for extension: ${name}`);
+  if (!explicitRef && hostReleaseRef?.startsWith("psx:") && entry.extensionId) {
+    const registry = createRegistryClient(hostReleaseRef.slice(4));
+    const release = await registry.latest(entry.extensionId, EXTENSION_API_VERSION, signal);
+    return registry.prepare(release, join(tempDir, "extension-source"), signal);
+  }
   const ref = originRef(entry.origin, explicitRef, hostReleaseRef);
   const checkoutPath = join(tempDir, "extension-source");
   const commit = await cloneRepoSparse(checkoutPath, [entry.origin.path], runCommand, entry.origin.url, ref, signal);
@@ -107,6 +114,20 @@ export const createSharedNamedSourceCheckout = async (
   const cleanup = () => rmSync(tempDir, { recursive: true, force: true });
 
   if (names.length === 0) return { prepareNamedSource, cleanup };
+  if (!options.ref && options.hostReleaseRef?.startsWith("psx:")) {
+    const prepared = new Map<string, ReturnType<typeof prepareNamedSource>>();
+    return {
+      cleanup,
+      prepareNamedSource: (name: string, _tempDir: string, ref?: string, signal?: AbortSignal) => {
+        let source = prepared.get(name);
+        if (!source) {
+          source = prepareNamedSource(name, join(tempDir, name), ref, signal, options.hostReleaseRef);
+          prepared.set(name, source);
+        }
+        return source;
+      },
+    };
+  }
 
   const entries = await Promise.all(
     names.map(async (name) => {

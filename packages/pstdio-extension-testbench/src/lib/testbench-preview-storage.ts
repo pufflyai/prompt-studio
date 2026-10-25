@@ -8,6 +8,10 @@ export const createPreviewStorage = (): BenchStorageSeed => {
   const now = new Date(0).toISOString();
 
   return {
+    resourceIdentities: [
+      { id: "PS-15", kind: "ticket", shorthand: "PS-15", aliases: [] },
+      { id: "PS-16", kind: "ticket", shorthand: "PS-16", aliases: [] },
+    ],
     blobs: {
       "preview-image": { name: "diagram.png", mimeType: "image/png", base64: previewImageBase64 },
     },
@@ -31,7 +35,6 @@ export const createPreviewStorage = (): BenchStorageSeed => {
       tickets: {
         "PS-15": {
           id: "PS-15",
-          shorthand: "PS-15",
           title: "Parent ticket preview",
           content: "# Parent ticket preview\n\nLinked from PS-16 to exercise the properties panel links.",
           statusId: null,
@@ -42,7 +45,6 @@ export const createPreviewStorage = (): BenchStorageSeed => {
         },
         "PS-16": {
           id: "PS-16",
-          shorthand: "PS-16",
           title: "Tree renderer preview",
           content: "# Tree renderer preview\n\nUse this ticket resource to inspect extension tree contributions.",
           statusId: null,

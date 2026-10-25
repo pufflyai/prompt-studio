@@ -160,6 +160,7 @@
     }
   },
   "list": {
+    "settings": "設定",
     "createProject": "プロジェクトを作成",
     "noProjectsYet": "まだプロジェクトがありません",
     "noProjectsDescription": "最初のプロジェクトを作成して始めましょう。"

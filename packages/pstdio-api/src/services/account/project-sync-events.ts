@@ -37,9 +37,11 @@ export const createProjectSyncEvents = (input: {
       running ??= run();
       return running;
     },
-    close() {
+    /** Resolves after a status read that is still running, so the caller can close storage after it. */
+    async close() {
       closed = true;
       dirty.clear();
+      await running;
     },
   };
 };

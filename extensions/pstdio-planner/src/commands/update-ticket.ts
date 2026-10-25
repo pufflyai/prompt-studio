@@ -1,15 +1,17 @@
-import { defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
+import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { statusesCollection, updateTicket } from "../data/collections";
 import {
   findTicket,
   resolveDependencyIds,
+  resolveLinkedTicketId,
   resolveStatusId,
   resolveTagOptionIds,
-  resolveTicketId,
 } from "../data/resolve";
-import { assertSingleSelectTagIds } from "../data/tag-cardinality";
-import { validateTicketDependencies } from "../data/ticket-dependencies";
-import type { StoredTicket } from "../data/types";
+import { ticketTagsForIds } from "../data/tag-cardinality";
+import { normalizeTicketDependencies, validateTicketDependencies } from "../data/ticket-dependencies";
+import type { TicketContext } from "../data/ticket-identity";
+import { withTicketTagIds } from "../data/ticket-tags";
+import type { Ticket } from "../data/types";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { plannerTicketsChanged } from "../events";
 import { notifyBlocked, resolveBlockedNotification } from "../planner-notifications";
@@ -42,7 +44,7 @@ export const updateTicketCommand = defineCommand({
     blockedReason: params.text(),
   },
   async run(ctx, commandParams) {
-    const existing = await findTicket(ctx.storage, commandParams.id);
+    const existing = await findTicket(ctx, commandParams.id);
     if (!existing) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
     const statusId =
@@ -53,10 +55,15 @@ export const updateTicketCommand = defineCommand({
       commandParams.tags !== undefined
         ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
         : commandParams.tagIds;
-    if (tagIds !== undefined) await assertSingleSelectTagIds(ctx.storage, tagIds, existing.tagIds);
-    const parentId = await resolveParentUpdate(ctx.storage, commandParams.parent, commandParams.unlinkParent);
-    const dependsOn = await resolveDependencyUpdate(ctx.storage, commandParams.dependsOn, commandParams.clearDependsOn);
-    if (dependsOn !== undefined) await validateTicketDependencies(ctx.storage, existing, dependsOn);
+    const tags = tagIds === undefined ? undefined : await ticketTagsForIds(ctx.storage, tagIds, existing.tags);
+    const parentId = await resolveParentUpdate(ctx, existing, commandParams.parent, commandParams.unlinkParent);
+    const dependsOn = await resolveDependencyUpdate(
+      ctx,
+      existing,
+      commandParams.dependsOn,
+      commandParams.clearDependsOn,
+    );
+    if (dependsOn !== undefined) await validateTicketDependencies(ctx, existing, dependsOn);
 
     const draft = {
       ...existing,
@@ -64,22 +71,22 @@ export const updateTicketCommand = defineCommand({
         ? { content: commandParams.content, title: deriveTitle(commandParams.content) }
         : {}),
       ...(statusId !== undefined ? { statusId: statusId || null } : {}),
-      ...(tagIds !== undefined ? { tagIds } : {}),
+      ...(tags !== undefined ? { tags } : {}),
       ...(parentId !== undefined ? { parentId } : {}),
       ...(dependsOn !== undefined ? { dependsOn } : {}),
       ...(commandParams.blockedReason !== undefined ? { blockedReason: commandParams.blockedReason || null } : {}),
       updatedAt: new Date().toISOString(),
     };
-    const next = await updateTicket(ctx.storage, draft);
+    const next = await updateTicket(ctx, draft);
     await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
     await syncBlockedNotificationSafely(ctx, existing, next);
-    return next;
+    return withTicketTagIds(next);
   },
 });
 
 const isBlockedTicket = async (
   ctx: Pick<Parameters<typeof updateTicketCommand.run>[0], "storage" | "settings">,
-  ticket: StoredTicket,
+  ticket: Ticket,
 ) => {
   if (ticket.blockedReason) return true;
   const status = ticket.statusId ? await statusesCollection(ctx.storage).get(ticket.statusId) : null;
@@ -92,8 +99,8 @@ const isBlockedTicket = async (
 
 const syncBlockedNotification = async (
   ctx: Parameters<typeof updateTicketCommand.run>[0],
-  previous: StoredTicket,
-  next: StoredTicket,
+  previous: Ticket,
+  next: Ticket,
 ) => {
   const [wasBlocked, isBlocked] = await Promise.all([isBlockedTicket(ctx, previous), isBlockedTicket(ctx, next)]);
   if (isBlocked) {
@@ -109,8 +116,8 @@ const syncBlockedNotification = async (
 // (autosave, CLI). Swallow toast failures too, even if delivery is unavailable.
 const syncBlockedNotificationSafely = async (
   ctx: Parameters<typeof updateTicketCommand.run>[0],
-  previous: StoredTicket,
-  next: StoredTicket,
+  previous: Ticket,
+  next: Ticket,
 ) => {
   try {
     await syncBlockedNotification(ctx, previous, next);
@@ -129,12 +136,13 @@ const syncBlockedNotificationSafely = async (
 
 // undefined → leave the parent untouched; null → unlink; string → resolve the shorthand.
 const resolveParentUpdate = async (
-  storage: ExtensionStorageApi,
+  ctx: TicketContext,
+  existing: Ticket,
   parent: string | undefined,
   unlink: boolean | undefined,
 ) => {
   if (unlink) return null;
-  if (parent !== undefined) return resolveTicketId(storage, parent);
+  if (parent !== undefined) return resolveLinkedTicketId(ctx, parent, existing.parentId ? [existing.parentId] : []);
   return undefined;
 };
 
@@ -142,11 +150,13 @@ const resolveParentUpdate = async (
 // from "supplied empty": undefined leaves dependencies untouched, and clearing
 // takes its own flag rather than an empty list a routine update could produce.
 const resolveDependencyUpdate = async (
-  storage: ExtensionStorageApi,
+  ctx: TicketContext,
+  existing: Ticket,
   dependsOn: string[] | undefined,
   clear: boolean | undefined,
 ) => {
   if (clear) return [];
-  if (dependsOn !== undefined) return resolveDependencyIds(storage, dependsOn);
+  if (dependsOn !== undefined)
+    return resolveDependencyIds(ctx, dependsOn, normalizeTicketDependencies(existing.dependsOn));
   return undefined;
 };

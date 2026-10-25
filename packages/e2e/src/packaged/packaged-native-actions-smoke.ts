@@ -105,16 +105,10 @@ export const expectPackagedNativeActions = async (input: {
   });
   expect(await otherStore.json()).toMatchObject({ outcome: { ok: true, value: "Stored draft for other" } });
   expect(
-    readFileSync(
-      join(input.projectFolder, ".pstdio/extension-storage/native-actions/.publishers/test/draft.txt"),
-      "utf8",
-    ),
+    readFileSync(join(input.projectFolder, ".pstdio/extension-storage/test.native-actions/draft.txt"), "utf8"),
   ).toBe("Stored draft for test");
   expect(
-    readFileSync(
-      join(input.projectFolder, ".pstdio/extension-storage/native-actions/.publishers/other/draft.txt"),
-      "utf8",
-    ),
+    readFileSync(join(input.projectFolder, ".pstdio/extension-storage/other.native-actions/draft.txt"), "utf8"),
   ).toBe("Stored draft for other");
   const agentView = body.views.find(
     (entry: { extensionId: string; localId: string }) =>

@@ -58,7 +58,7 @@ export const watchOpenExtensionResource = (
       (kind.resolveCommand ?? kind.resolveManyCommand)
         ? [
             [
-              JSON.stringify([kind.extensionId, kind.id]),
+              JSON.stringify([kind.extensionId, kind.localId]),
               {
                 commandId: (kind.resolveCommand ?? kind.resolveManyCommand)!,
                 extensionId: kind.extensionId,

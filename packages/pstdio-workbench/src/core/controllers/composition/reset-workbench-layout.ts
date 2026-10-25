@@ -35,13 +35,16 @@ export const resetWorkbenchLayout = (core: WorkbenchCore) => {
       projectId: current.projectId,
       location: current.location,
       resource: current.location.resource,
+      section: current.location.section,
       action: "resetWorkbenchLayout",
+    },
+    {
+      ...current,
       pageStates: {
         ...current.pageStates,
         [pageStateKey(page, current.location, internals.resources)]: emptyPageState(page),
       },
     },
-    current,
     { mode: mode.resolve(current.activeModeId, modeState), shell: shell.resolve(undefined, shellState) },
   );
   const layout = core.layout.getLayout();

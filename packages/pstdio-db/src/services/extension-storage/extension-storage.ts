@@ -8,21 +8,28 @@ import {
 } from "pstdio-sync";
 import type { Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { readRetiredData } from "../../db/retired-data";
 import { createStorageMigrations } from "./data-migrations";
 import { createDocumentStorageDBService } from "./document-storage";
 import type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
 import { installRecordIndexes } from "./record-index-installation";
+import { createRecoveryPoints } from "./recovery-points";
 import { getExtensionStorageOwner } from "./storage-owner";
 
 export type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
 
-export const createExtensionStorageDBService = (db: DbClient, observer?: StorageObserver) => {
+export const createExtensionStorageDBService = (
+  db: DbClient,
+  observer?: StorageObserver,
+  options: { freeBytes?: () => Promise<number> } = {},
+) => {
   const documents = createDocumentStorageDBService(db, observer);
   const scopeFor = async (scope: KvScope) => {
     const owner = await getExtensionStorageOwner(db, scope.extension_instance_id);
     if (!owner) return null;
-    return createLegacyRecordStorage({ owner, store: documents }).scope(scope.scope_type, scope.scope_id);
+    return createLegacyRecordStorage({ records: documents.open({ owner }).records }).scope(
+      scope.scope_type,
+      scope.scope_id,
+    );
   };
   const requireScope = async (scope: KvScope) => {
     const storage = await scopeFor(scope);
@@ -41,12 +48,11 @@ export const createExtensionStorageDBService = (db: DbClient, observer?: Storage
   return {
     installIndexes: (owners: Parameters<typeof installRecordIndexes>[1], validate: () => void = () => {}) =>
       installRecordIndexes(db, owners, validate),
+    recovery: createRecoveryPoints(db, documents, options),
     watch: documents.watch,
     documents: documents.documents,
     openTextDocument: documents.openTextDocument,
     migrate: createStorageMigrations(db, documents),
-    readLegacy: (source: string, scope: { projectId: string; extensionInstanceId: string }) =>
-      readRetiredData(db, source, scope),
     recordId: (scopeType: string, scopeId: string, key: string) => storageRecordId([scopeType, scopeId, "kv"], key),
     open: async (input: { owner: StorageOwner; assets?: AssetStore }) => {
       const storage = documents.open(input);

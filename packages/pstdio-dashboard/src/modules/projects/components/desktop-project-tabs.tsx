@@ -36,6 +36,8 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
     if (id === selected) workbench.pageLocations.navigateToRootLevel();
     else void controller.select(workbench, id);
   };
+  if (typeof selected !== "string") return <WindowTitleBar platform={platform} />;
+
   return (
     <WindowTitleBar
       platform={platform}

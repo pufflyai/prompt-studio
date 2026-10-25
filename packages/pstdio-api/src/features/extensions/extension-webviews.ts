@@ -1,6 +1,7 @@
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
+import { isWindowsDeviceName } from "pstdio-extensions";
 import type { LoadedExtension } from "./extension-runtime";
 
 type WebviewContributionRecord = {
@@ -48,7 +49,10 @@ export const collectExtensionWebviews = (loaded: Pick<LoadedExtension, "definiti
 export const resolvePackageAssetFile = (asset: PackageAssetDescriptor) =>
   fileURLToPath(new URL(asset.path, asset.baseUrl));
 
-export const safeWebviewId = (webviewId: string) => webviewId.replace(/[^a-zA-Z0-9._-]/g, "_");
+export const safeWebviewId = (webviewId: string) => {
+  const name = webviewId.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return isWindowsDeviceName(name) ? `_${name}` : name;
+};
 
 export const resolveManagedWebviewPaths = (input: {
   installedExtensionId: string;

@@ -18,7 +18,9 @@ process.env.E2E_HOME = resolvedHomePath;
 
 export default defineConfig({
   testDir: "./src/vite-terminal",
-  testMatch: "**/*.spec.ts",
+  testMatch:
+    process.env.TEST_PRIORITIES?.split(",").map((priority) => `**/*.${priority.toLowerCase()}.spec.ts`) ??
+    "**/*.spec.ts",
   expect: { timeout: 5_000 },
   fullyParallel: false,
   workers: 1,

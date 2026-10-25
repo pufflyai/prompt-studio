@@ -1,4 +1,11 @@
-import type { DockedWorkbenchRegion, PageOpenIntent, PlacementIdentity, PlacementRef } from "@pstdio/sdk/extensions";
+import type {
+  DockedWorkbenchRegion,
+  PageOpenIntent,
+  PageSlotRef,
+  PlacementIdentity,
+  PlacementRef,
+  ViewLocation,
+} from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { notifyWorkbenchChange } from "../../shared/store/workbench-batch";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
@@ -18,7 +25,6 @@ import {
   placementItemViewId,
   staticPlacementClosable,
   updateResourcePlacementInstance,
-  validateOwnedPlacementItem,
   type WorkbenchOwnedPlacementItem,
 } from "../placements/owned-placement-lifecycle";
 import type { OwnedPlacementLocationContext } from "../placements/owned-placement-preparation";
@@ -37,13 +43,18 @@ import {
 } from "../views/view-placement";
 import type { WorkbenchViewRegistry } from "../views/view-registry";
 
+import { copyPlacement, placementRefKey, validatePlacement } from "./mode-placement-declarations";
+
 export interface WorkbenchModePlacementContribution extends WorkbenchPlacementPresentation {
+  readonly replaces?: readonly PageSlotRef[];
   readonly id: string;
   readonly ref: PlacementRef;
   readonly modeId: string;
   readonly item: WorkbenchOwnedPlacementItem;
   readonly region: DockedWorkbenchRegion;
   readonly order?: number;
+  readonly addableIn?: readonly DockedWorkbenchRegion[];
+  /** @deprecated Use addableIn. Tab movement is independent of Add choices. */
   readonly movableTo?: readonly DockedWorkbenchRegion[];
 }
 
@@ -54,6 +65,7 @@ interface OpenModePlacementTarget {
   resource?: ResourceRef;
   open?: PageOpenIntent;
   relatedSource?: string;
+  location?: ViewLocation;
 }
 
 export interface WorkbenchModePlacementRegistry {
@@ -63,7 +75,7 @@ export interface WorkbenchModePlacementRegistry {
   openPlacement(input: OpenModePlacementTarget): PlacementIdentity;
   updatePlacement(
     identity: PlacementIdentity,
-    input: { resource?: ResourceRef; title?: string; open?: PageOpenIntent },
+    input: { resource?: ResourceRef; title?: string; open?: PageOpenIntent; location?: ViewLocation },
   ): void;
   closePlacement(identity: PlacementIdentity): void;
   resolvePlacements(
@@ -86,40 +98,9 @@ const tabState = (open: PageOpenIntent | undefined) => {
   return {};
 };
 
-const placementRefKey = (ref: PlacementRef) => JSON.stringify([ref.extensionId, ref.id]);
-
-const validatePlacement = (input: {
-  placement: WorkbenchModePlacementContribution;
-  placements: Map<string, WorkbenchModePlacementContribution>;
-  refs: Map<string, WorkbenchModePlacementContribution>;
-  views: WorkbenchViewRegistry;
-}) => {
-  const { placement, placements, refs, views } = input;
-  if (placements.has(placement.id)) throw new Error(`Mode placement already registered: ${placement.id}`);
-  if (placement.ref.kind !== "placement" || !placement.ref.extensionId || !placement.ref.id) {
-    throw new Error(`Mode placement "${placement.id}" must declare a normalized placement ref`);
-  }
-  const refKey = placementRefKey(placement.ref);
-  if (refs.has(refKey)) throw new Error(`Mode placement ref already registered: ${refKey}`);
-  if (placement.movableTo && !placement.movableTo.includes(placement.region)) {
-    throw new Error(`Mode placement "${placement.id}" must include its initial region in movableTo`);
-  }
-  validateOwnedPlacementItem("Mode placement", placement.id, placement.item);
-  if (!views.getView(placementItemViewId(placement.item))) {
-    throw new Error(`Workbench mode placement view is not registered: ${placementItemViewId(placement.item)}`);
-  }
-  return refKey;
-};
-
-const copyPlacement = (placement: WorkbenchModePlacementContribution) => ({
-  ...placement,
-  ref: { ...placement.ref },
-  item: { ...placement.item },
-  ...(placement.movableTo ? { movableTo: [...placement.movableTo] } : {}),
-});
-
 export const createWorkbenchModePlacementRegistry = (input: {
   views: WorkbenchViewRegistry;
+  resourceReferenceKey?(resource: ResourceRef): string;
   getProjectId?(): string | undefined;
   loadLayout?(context: OwnedPlacementLocationContext): WorkbenchLayout | undefined;
   viewMenus?: WorkbenchViewMenuRegistry;
@@ -156,6 +137,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
     open?: PageOpenIntent,
     title?: string,
     relatedSource?: string,
+    location?: ViewLocation,
   ): ResolvedOwnedPlacement<WorkbenchWidgetPlacement> => {
     const view = input.views.getView(placementItemViewId(placement.item));
     if (!view)
@@ -182,6 +164,9 @@ export const createWorkbenchModePlacementRegistry = (input: {
           },
         ),
         ...(relatedSource ? { relatedSource } : {}),
+        section: location?.section,
+        position: location?.position,
+        pageContext: location?.pageContext,
       },
     };
   };
@@ -222,13 +207,12 @@ export const createWorkbenchModePlacementRegistry = (input: {
     open(target, current = state) {
       const placement = placements.get(target.placementId);
       if (!placement) throw new Error(`Unknown mode placement: ${target.placementId}`);
-      if (target.region && placement.movableTo && !placement.movableTo.some((region) => region === target.region))
-        throw new Error(`Mode panel cannot open in ${target.region}: ${placement.id}`);
       return prepareOwnedPlacement({
         label,
         target,
         item: placement.item,
         current,
+        keyOfResource: input.resourceReferenceKey,
         identityFor: (instanceKey) => identityFor(placement, instanceKey),
       });
     },
@@ -250,6 +234,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
             instance.open,
             instance.title,
             instance.relatedSource,
+            instance,
           ),
         );
       });
@@ -332,6 +317,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
         item: placement.item,
         state,
         instanceKey: identity.instanceKey,
+        keyOfResource: input.resourceReferenceKey,
         ...update,
       });
       emitChange();

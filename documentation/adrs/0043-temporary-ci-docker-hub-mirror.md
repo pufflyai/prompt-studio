@@ -12,7 +12,7 @@ The CI `build_docker` job builds the API and landing page images from their Dock
 
 ## External limitation
 
-The Dockerfiles use `node:24-bookworm-slim`, `nginx:1.27-alpine`, `oven/bun:1.4.2` and `oven/bun:1.4.2-slim` from Docker Hub. CI pulls them anonymously. Docker Hub rate-limits anonymous pulls per IP, and GitHub-hosted runners share IPs. Pulls sometimes fail before any of our code runs, for example on #764 ([run 36308658281](https://github.com/pufflyai/prompt-studio/actions/runs/36308658281)):
+The Dockerfiles use `node:24-bookworm-slim`, `nginx:1.27-alpine`, `oven/bun:1.4.4` and `oven/bun:1.4.4-slim` from Docker Hub. CI pulls them anonymously. Docker Hub rate-limits anonymous pulls per IP, and GitHub-hosted runners share IPs. Pulls sometimes fail before any of our code runs, for example on #764 ([run 36308658281](https://github.com/pufflyai/prompt-studio/actions/runs/36308658281)):
 
 ```
 failed to fetch oauth token: Post "https://auth.docker.io/token": ... connection reset by peer

@@ -1,4 +1,4 @@
-import { Icon, Menu, Portal } from "@chakra-ui/react";
+import { Icon, Menu, Portal, type PortalProps } from "@chakra-ui/react";
 import { ChevronDown } from "lucide-react";
 import { type ElementType, type ReactNode, useEffect, useRef, useState } from "react";
 import { Header } from "@/components/layout/header";
@@ -68,6 +68,8 @@ interface SearchableMenuProps<T extends SearchableMenuItem> {
   onFocusOutside?: MenuRootProps["onFocusOutside"];
   contentTestId?: string;
   portalled?: boolean;
+  /** Keep a portalled menu inside its owning modal content. */
+  portalContainer?: PortalProps["container"];
   parentList?: SearchableMenuParentList<T>;
   multiple?: boolean;
 }
@@ -134,6 +136,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
     onFocusOutside,
     contentTestId,
     portalled = true,
+    portalContainer,
     parentList,
     multiple = false,
   } = props;
@@ -284,7 +287,9 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
       onSelect={hasParentList ? handleMenuItemSelect : undefined}
     >
       <Menu.Trigger asChild>{trigger}</Menu.Trigger>
-      <Portal disabled={!portalled}>{menuPositioner}</Portal>
+      <Portal disabled={!portalled} container={portalContainer}>
+        {menuPositioner}
+      </Portal>
     </Menu.Root>
   );
 };

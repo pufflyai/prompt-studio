@@ -6,7 +6,10 @@ import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-s
 import { loadLatestWorkspaceSessions } from "../data/workspace-sessions";
 
 export const queryTickets = async (
-  ctx: Pick<ExtensionContextBase, "files" | "projectId" | "sessions" | "storage" | "workspaces" | "settings">,
+  ctx: Pick<
+    ExtensionContextBase,
+    "files" | "projectId" | "sessions" | "storage" | "workspaces" | "settings" | "resources"
+  >,
   input: { filter?: ViewFilterGroup },
 ) => {
   await migratePlannerStorage(ctx);
@@ -14,6 +17,7 @@ export const queryTickets = async (
 
   return runTicketsQuery({
     storage: ctx.storage,
+    resources: ctx.resources,
     projectId: ctx.projectId,
     workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
     filter: input.filter,

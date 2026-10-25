@@ -61,6 +61,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     extensionInstancesService: input.extensionInstancesDBService,
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionUserDataService: createExtensionUserDataDBService(input.db),
+    recovery: input.extensionStorageDBService.recovery,
     eventBus: input.eventBus,
     onInstalledSourcesChanged: refreshInstalledSources,
     projectService: input.projectService,

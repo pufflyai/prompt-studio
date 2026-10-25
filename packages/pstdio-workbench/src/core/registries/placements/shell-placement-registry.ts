@@ -1,4 +1,4 @@
-import type { PageOpenIntent, PlacementIdentity } from "@pstdio/sdk/extensions";
+import type { PageOpenIntent, PlacementIdentity, ViewLocation } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { notifyWorkbenchChange } from "../../shared/store/workbench-batch";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
@@ -13,18 +13,17 @@ import type {
 import type { PlacementDestination, ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import type { ResourceRef } from "../resources/resource-registry";
 import type { WorkbenchViewMenuRegistry } from "../view-menus/view-menu-registry";
-import { registerWorkbenchViewPlacement, type WorkbenchPlacementPresentation } from "../views/view-placement";
+import { registerWorkbenchViewPlacement } from "../views/view-placement";
 import type { WorkbenchViewRegistry } from "../views/view-registry";
 import {
   clearOwnedPlacementState,
   closeOwnedPlacementInstance,
   createOwnedPlacementState,
   isStaticPlacementOpen,
+  placementItemForRegion,
   placementItemViewId,
   staticPlacementClosable,
   updateResourcePlacementInstance,
-  validateOwnedPlacementItem,
-  type WorkbenchOwnedPlacementItem,
 } from "./owned-placement-lifecycle";
 import {
   type OwnedPlacementLocationContext,
@@ -33,12 +32,9 @@ import {
   setOwnedPlacementPreparation,
 } from "./owned-placement-preparation";
 import { restoreOwnedPlacementState } from "./owned-placement-restoration";
-export interface WorkbenchShellPlacementContribution extends WorkbenchPlacementPresentation {
-  readonly id: string;
-  readonly item: WorkbenchOwnedPlacementItem;
-  readonly region: WorkbenchRegion;
-  readonly order?: number;
-}
+import { validateShellPlacement, type WorkbenchShellPlacementContribution } from "./shell-placement-declarations";
+
+export type { WorkbenchShellPlacementContribution } from "./shell-placement-declarations";
 export interface OpenWorkbenchShellPlacementInput {
   placementId: string;
   /** Explicit destination for this open. Omit to keep an existing tab's placement. */
@@ -47,6 +43,7 @@ export interface OpenWorkbenchShellPlacementInput {
   open?: PageOpenIntent;
   title?: string;
   relatedSource?: string;
+  location?: ViewLocation;
   /** Leave the current tab and global focus selected when opening in the background. */
   activate?: boolean;
 }
@@ -61,6 +58,7 @@ export interface WorkbenchShellPlacementRegistry {
       resource?: ResourceRef;
       title?: string;
       open?: PageOpenIntent;
+      location?: ViewLocation;
     },
   ): void;
   closePlacement(identity: PlacementIdentity): void;
@@ -91,6 +89,7 @@ const tabState = (open: PageOpenIntent | undefined) => {
 };
 interface CreateWorkbenchShellPlacementRegistryInput {
   views: WorkbenchViewRegistry;
+  resourceReferenceKey?(resource: ResourceRef): string;
   viewMenus?: WorkbenchViewMenuRegistry;
   validateOpen?(
     identity: PlacementIdentity,
@@ -150,6 +149,7 @@ export const createWorkbenchShellPlacementRegistry = (
     open?: PageOpenIntent,
     title?: string,
     relatedSource?: string,
+    location?: ViewLocation,
   ): ResolvedOwnedPlacement<WorkbenchWidgetPlacement> => {
     const panel = input.getPanel(shellPlacementContributionId(placement.id));
     if (!panel) throw new Error(`Workbench shell placement is not registered: ${placement.id}`);
@@ -168,6 +168,9 @@ export const createWorkbenchShellPlacementRegistry = (
           ...tabState(open),
         }),
         ...(relatedSource ? { relatedSource } : {}),
+        section: location?.section,
+        position: location?.position,
+        pageContext: location?.pageContext,
       },
     };
   };
@@ -222,6 +225,7 @@ export const createWorkbenchShellPlacementRegistry = (
         target,
         item: placement.item,
         current,
+        keyOfResource: input.resourceReferenceKey,
         identityFor: (instanceKey) => identityFor(placement.id, instanceKey),
       });
     },
@@ -242,6 +246,7 @@ export const createWorkbenchShellPlacementRegistry = (
             instance.open,
             instance.title,
             instance.relatedSource,
+            instance,
           ),
         );
       });
@@ -249,12 +254,8 @@ export const createWorkbenchShellPlacementRegistry = (
   };
   const registry: WorkbenchShellPlacementRegistry = {
     registerPlacement(placement) {
-      if (placements.has(placement.id)) throw new Error(`Shell placement already registered: ${placement.id}`);
-      if (!input.views.getView(placementItemViewId(placement.item))) {
-        throw new Error(`Workbench shell placement view is not registered: ${placementItemViewId(placement.item)}`);
-      }
-      validateOwnedPlacementItem(label, placement.id, placement.item);
-      const registered = { ...placement, item: { ...placement.item } };
+      validateShellPlacement(placement, placements, input.views);
+      const registered = { ...placement, item: placementItemForRegion(placement.item, placement.region) };
       const panel = registerWorkbenchViewPlacement(
         input.registerPanel,
         input.views,
@@ -318,6 +319,7 @@ export const createWorkbenchShellPlacementRegistry = (
         item: placement.item,
         state,
         instanceKey: identity.instanceKey,
+        keyOfResource: input.resourceReferenceKey,
         ...update,
       });
       emitChange();

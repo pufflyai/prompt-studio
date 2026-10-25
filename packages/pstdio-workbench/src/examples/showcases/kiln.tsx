@@ -1,12 +1,12 @@
 import { createWorkbench } from "../../core";
 import { KilnNav, KilnStatus } from "./kiln-chrome";
-import { kilnObjects, kilnPage, kilnResource } from "./kiln-data";
+import { kilnPage } from "./kiln-data";
 import { KilnInspector } from "./kiln-inspector";
 import { KilnTimeline } from "./kiln-timeline";
 import { KilnViewport } from "./kiln-viewport";
 import { kilnTheme } from "./themes";
 
-const homePage = { ...kilnPage, id: "kiln" };
+const homePage = kilnPage;
 export const createKilnWorkbench = () => {
   const workbench = createWorkbench({
     startPage: homePage,
@@ -70,34 +70,11 @@ export const createKilnWorkbench = () => {
     ref: homePage,
     title: "Clay Study",
     path: "kiln/clay-study",
+    params: { selection: { type: "string" } },
     modeId: "kiln",
     main: {
       kind: "view",
-      view: {
-        kind: "view",
-        id: "kiln.viewport",
-      },
-      cardinality: "one",
-    },
-    slots: [],
-  });
-  workbench.pages.registerPage({
-    id: "kiln.resource",
-    ref: kilnPage,
-    title: "Clay Study",
-    path: "kiln/clay-study/resource",
-    modeId: "kiln",
-    parentId: "kiln.home",
-    resource: {
-      kinds: [
-        {
-          kind: "resource-kind",
-          id: "kiln.object",
-        },
-      ],
-    },
-    main: {
-      kind: "view",
+      presentation: "page",
       view: {
         kind: "view",
         id: "kiln.viewport",
@@ -108,27 +85,11 @@ export const createKilnWorkbench = () => {
       {
         id: "inspector",
         region: "side",
-        openOn: "page-resource",
-        item: {
-          kind: "binding",
-          binding: {
-            kinds: [
-              {
-                kind: "resource-kind",
-                id: "kiln.object",
-              },
-            ],
-            view: {
-              kind: "view",
-              id: "kiln.inspector",
-            },
-            cardinality: "one",
-          },
-        },
+        item: { kind: "view", view: { kind: "view", id: "kiln.inspector" }, presence: "open" },
       },
     ],
   });
   workbench.pageLocations.switchProject("storybook-kiln");
-  workbench.pageLocations.navigate({ kind: "page", page: kilnPage, resource: kilnResource(kilnObjects[0]) });
+  workbench.pageLocations.navigate({ kind: "page", page: homePage });
   return workbench;
 };

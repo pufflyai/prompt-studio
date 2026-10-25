@@ -1,0 +1,100 @@
+import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
+import { createPlannerTicket } from "../helpers/planner-api";
+import { uiOrigin as apiBase } from "../ui-server";
+
+const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
+  const response = await request.get(`${apiBase}/v1/projects`);
+  expect(response.ok()).toBe(true);
+  for (const project of (await response.json()) as Array<{ id: string }>) {
+    expect((await request.delete(`${apiBase}/v1/projects/${project.id}`)).ok()).toBe(true);
+  }
+};
+
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "PS-168 Side Panel" }, folderPath),
+  });
+  expect(response.ok()).toBe(true);
+  return (await response.json()) as { id: string };
+};
+
+const prepareDashboard = async (page: import("@playwright/test").Page, projectId: string) => {
+  await page.addInitScript((selectedProjectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
+  }, projectId);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(`/projects/${projectId}/tickets`);
+};
+
+// Panels are inset from the window and separated from each other by the panel gap.
+const PANEL_GAP_PX = 4;
+
+const expectNear = (actual: number, expected: number) => {
+  expect(Math.abs(actual - expected)).toBeLessThanOrEqual(1);
+};
+
+const expectDashboardAttachedBounds = async (page: import("@playwright/test").Page) => {
+  const main = page.locator('[data-workbench-panel="main"]');
+  const side = page.getByTestId("workbench-side-panel-attached");
+  await expect
+    .poll(() => side.evaluate((element) => element.closest("[data-dragging]")!.getAnimations().length))
+    .toBe(0);
+  const [mainBox, sideBox] = await Promise.all([main.boundingBox(), side.boundingBox()]);
+  expect(mainBox).not.toBeNull();
+  expect(sideBox).not.toBeNull();
+
+  expectNear(sideBox!.y, PANEL_GAP_PX);
+  expectNear(sideBox!.height, 720 - 2 * PANEL_GAP_PX);
+  expectNear(sideBox!.width, 420);
+  expectNear(mainBox!.x + mainBox!.width + PANEL_GAP_PX, sideBox!.x);
+  expectNear(sideBox!.x + sideBox!.width, 1280 - PANEL_GAP_PX);
+};
+
+test("closes and keyboard-restores the same full-height Side Panel", async ({ page, request }) => {
+  await deleteAllProjects(request);
+  const project = await createProject(request);
+  const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "Inspect Side Panel geometry" });
+  await prepareDashboard(page, project.id);
+  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+  await page.getByText(ticket.content, { exact: true }).click();
+
+  const controls = page.getByRole("group", { name: "Panel controls" });
+  await controls.getByRole("button", { name: "Show Side Panel" }).click();
+  await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
+  await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
+  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
+  await expectDashboardAttachedBounds(page);
+
+  const mainNode = await page.locator('[data-workbench-region="main"]').elementHandle();
+  const secondaryNode = await page.locator('[data-workbench-region="secondary"]').elementHandle();
+  const sideRegionNode = await page.getByRole("region", { name: "Side Panel", exact: true }).elementHandle();
+  expect(mainNode).not.toBeNull();
+  expect(secondaryNode).not.toBeNull();
+  expect(sideRegionNode).not.toBeNull();
+
+  await controls.getByRole("button", { name: "Hide Side Panel" }).click();
+  await expect(page.getByTestId("workbench-side-panel-attached")).not.toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
+  await expect(page.getByTestId("workbench-side-panel-floating")).toBeHidden();
+
+  const closedMainBox = await page.locator('[data-workbench-panel="main"]').boundingBox();
+  expect(closedMainBox).not.toBeNull();
+  expectNear(closedMainBox!.x + closedMainBox!.width, 1280 - PANEL_GAP_PX);
+  expect(await mainNode!.evaluate((element) => element.isConnected)).toBe(true);
+  expect(await secondaryNode!.evaluate((element) => element.isConnected)).toBe(true);
+  expect(await sideRegionNode!.evaluate((element) => element.isConnected)).toBe(true);
+
+  const showSide = controls.getByRole("button", { name: "Show Side Panel" });
+  await showSide.focus();
+  await expect(showSide).toBeFocused();
+  await showSide.press("Enter");
+
+  await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
+  await expectDashboardAttachedBounds(page);
+  expect(await mainNode!.evaluate((element) => element.isConnected)).toBe(true);
+  expect(await secondaryNode!.evaluate((element) => element.isConnected)).toBe(true);
+  expect(await sideRegionNode!.evaluate((element) => element.isConnected)).toBe(true);
+});

@@ -44,3 +44,14 @@ export const initials = (name: string) =>
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+export const showcaseSelection = (workbench: WorkbenchCore) => {
+  const selection = workbench.pages.store.getState().location?.params?.selection;
+  return typeof selection === "string" ? selection : undefined;
+};
+export const usePageSelection = (workbench: WorkbenchCore) =>
+  useSyncExternalStore(
+    workbench.pages.store.subscribe,
+    () => showcaseSelection(workbench),
+    () => showcaseSelection(workbench),
+  );

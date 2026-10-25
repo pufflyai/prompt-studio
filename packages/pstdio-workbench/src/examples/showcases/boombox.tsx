@@ -1,15 +1,13 @@
 import { Box, Grid, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
-import type { PageRef, ResourceRef } from "@pstdio/sdk/extensions";
+import type { PageRef } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore, type WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { type BoomboxTrack, boomboxTracks } from "./boombox-data";
 import { BoomboxNav, BoomboxRail } from "./boombox-navigation";
-import { createShowcaseStore, usePrimaryResource, useShowcaseStore } from "./showcase-store";
+import { createShowcaseStore, usePageSelection, useShowcaseStore } from "./showcase-store";
 import { boomboxTheme } from "./themes";
 
-const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "boombox-resource" };
-const homePage: PageRef = { ...page, id: "boombox" };
-const resource = (track: BoomboxTrack): ResourceRef => ({ type: "boombox.track", id: track.id, label: track.title });
+const homePage: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "boombox" };
 const store = createShowcaseStore({ playing: true, likedIds: ["paper-moon"], queueIds: ["afterimage", "still-life"] });
 const Artwork = (props: { size?: string; track: BoomboxTrack }) => (
   <Box
@@ -28,10 +26,10 @@ const Artwork = (props: { size?: string; track: BoomboxTrack }) => (
 const Playlist = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const state = useShowcaseStore(store);
-  const activeId = input.instance.resource?.id ?? boomboxTracks[0].id;
+  const activeId = usePageSelection(input.workbench) ?? boomboxTracks[0].id;
   const play = (track: BoomboxTrack) => {
     store.setState({ playing: true });
-    input.workbench.pageLocations.navigate({ kind: "page", page, resource: resource(track) });
+    input.workbench.pageLocations.updateParams({ selection: track.id });
   };
   return (
     <Stack h="full" overflow="hidden" bg="bg" gap="0">
@@ -141,7 +139,7 @@ const Playlist = (props: { input: WorkbenchPanelRenderInput }) => {
 };
 const Queue = (props: { workbench: WorkbenchCore }) => {
   const state = useShowcaseStore(store);
-  const activeId = usePrimaryResource(props.workbench)?.id;
+  const activeId = usePageSelection(props.workbench);
   const queued = boomboxTracks.filter((track) => state.queueIds.includes(track.id));
   return (
     <Stack h="full" p="md" gap="lg">
@@ -193,8 +191,8 @@ const Queue = (props: { workbench: WorkbenchCore }) => {
 };
 const Player = (props: { workbench: WorkbenchCore }) => {
   const state = useShowcaseStore(store);
-  const activeResource = usePrimaryResource(props.workbench);
-  const track = boomboxTracks.find((item) => item.id === activeResource?.id) ?? boomboxTracks[0];
+  const activeId = usePageSelection(props.workbench);
+  const track = boomboxTracks.find((item) => item.id === activeId) ?? boomboxTracks[0];
   const liked = state.likedIds.includes(track.id);
   return (
     <HStack h="full" px="md" justify="space-between">
@@ -307,34 +305,11 @@ export const createBoomboxWorkbench = () => {
     ref: homePage,
     title: "Lazy Sunday",
     path: "boombox",
+    params: { selection: { type: "string" } },
     modeId: "boombox",
     main: {
       kind: "view",
-      view: {
-        kind: "view",
-        id: "boombox.playlist",
-      },
-      cardinality: "one",
-    },
-    slots: [],
-  });
-  workbench.pages.registerPage({
-    id: "boombox.resource",
-    ref: page,
-    title: "Lazy Sunday",
-    path: "boombox/resource",
-    modeId: "boombox",
-    parentId: "boombox.home",
-    resource: {
-      kinds: [
-        {
-          kind: "resource-kind",
-          id: "boombox.track",
-        },
-      ],
-    },
-    main: {
-      kind: "view",
+      presentation: "page",
       view: {
         kind: "view",
         id: "boombox.playlist",
@@ -344,6 +319,6 @@ export const createBoomboxWorkbench = () => {
     slots: [],
   });
   workbench.pageLocations.switchProject("storybook-boombox");
-  workbench.pageLocations.navigate({ kind: "page", page, resource: resource(boomboxTracks[0]) });
+  workbench.pageLocations.navigate({ kind: "page", page: homePage });
   return workbench;
 };

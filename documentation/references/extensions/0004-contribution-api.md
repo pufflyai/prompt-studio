@@ -28,7 +28,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `modes`                                           | Typed Workbench mode contributions.                                                                |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                                                |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                                          |
-| `artifactMounts`                                  | Safe repo-local file access under `.pstdio/extension-storage/<package-name>/`. `watch: true` adds change events.   |
+| `artifactMounts`                                  | Safe repo-local file access under `.pstdio/extension-storage/<publisher>.<name>/`. `watch: true` adds change events. |
 | `workspaceTypes`, `harnesses`                     | Provider integrations owned by the extension runtime.                                             |
 | `connections`                                     | Host-managed HTTP access to a declared remote control plane.                                       |
 
@@ -128,6 +128,7 @@ Dashboard UI contributions have one ownership model:
 
 - a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`
 - a page owns a route, mode, optional resource constraint, Main presentation, and extra slots
+- a non-rendering parent uses `main: { kind: "group", default: child.ref }`; the default child opens without a resource in the same mode, while the group remains a breadcrumb label and navigation-tree owner
 - a placement owns a shared mode panel with a static-view or resource-binding item
 - a navigation item uses a typed action instead of encoded route or command fields
 - a navigation tree adds a tree view to a mode or page in the shared Sidenav
@@ -187,7 +188,7 @@ Set `tooltip` to show text while the pointer rests on a row or the row has keybo
 
 Set `badge: { label: "3", color: "orange" }` for a trailing count beside a tree row. It uses the notification count badge style. Omit it when there is no count to show.
 
-Kanban attributes with `display: { kind: "badge-list", itemsAttributeId: "items" }` read their badges from the named row attribute. Each item has an `id`, `label`, and optional `icon`, `color`, `tooltip`, and page `target`. A target makes that badge a direct link without activating the card. Page and resource references are scoped to the contributing extension and project.
+Kanban attributes with `display: { kind: "badge-list", itemsAttributeId: "items" }` read their badges from the named row attribute. Each item has an `id`, `label`, and optional `icon`, `color`, `tooltip`, and `action`. The action accepts any navigation target, including a page-owned panel that opens beside the collection without changing its route. Page, panel, and resource references are scoped to the contributing extension and project. Actions run without activating the card. The older page-only `target` remains supported and is deprecated in favor of `action`; when both are present, `action` wins. This addition shares the planned extension API 0.3.0 release in Prompt Studio 0.46. Publish the SDK and host before extensions adopt it.
 
 Tree rows use `resource` as their action subject and `target` as their normal-click destination. Right-clicking
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
@@ -522,7 +523,7 @@ export default defineExtension({
 
 The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels.
 
-Inside a level, the shared Sidenav adds a fixed left-arrow button labeled with the current mode name, such as Project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
+Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
 
 Users can hide and reorder a level's labeled sections, but its rows keep the order their owner gives them.
 

@@ -32,8 +32,10 @@ export const alignReleaseBaseline = async (root: string, tag: string) => {
       dot: true,
     })) {
       const manifest = JSON.parse(readFileSync(join(root, path), "utf8")) as { name: string; version: string };
-      if (!fixed.has(manifest.name) || !releasedPaths.has(path)) continue;
-      const released = JSON.parse(git("show", `${tag}:${path}`)) as { name: string; version: string };
+      // Glob returns native separators; Git tree paths always use forward slashes.
+      const gitPath = path.replaceAll("\\", "/");
+      if (!fixed.has(manifest.name) || !releasedPaths.has(gitPath)) continue;
+      const released = JSON.parse(git("show", `${tag}:${gitPath}`)) as { name: string; version: string };
       if (released.name !== manifest.name || Bun.semver.order(manifest.version, released.version) >= 0) continue;
       // Only the version floor comes from the shipped release. Source, dependency
       // choices and pending changesets remain owned by main.

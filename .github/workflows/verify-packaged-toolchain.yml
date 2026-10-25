@@ -1,6 +1,4 @@
 name: Verify packaged toolchain
-
-# Runs on native runners after every merge to main and before every release.
 on:
   workflow_call:
     inputs:
@@ -8,63 +6,114 @@ on:
         description: Git revision to verify
         required: true
         type: string
-
+      profile:
+        description: full production runtime or minimum integrity
+        required: false
+        type: string
+        default: full
+      priority:
+        description: P1 alone fails fast; production P2 collects all platforms
+        required: false
+        type: string
+        default: P2
+      platforms:
+        description: JSON runner rows selected by the release channel
+        required: true
+        type: string
+      artifact_run_id:
+        description: Release run holding the immutable compiled candidate
+        required: false
+        type: string
+        default: ""
+      artifact_attempt:
+        required: false
+        type: string
+        default: "1"
+      gate_plan:
+        type: string
+        default: "[]"
+        description: Selected priority job plan for cooperative P1 cancellation
 permissions:
   contents: read
-
+  actions: read
 jobs:
   verify:
+    name: verify (${{ matrix.platform_pkg }})
+    env:
+      CI_PRIORITY: ${{ inputs.priority }}
+      VERIFY_PROFILE: ${{ inputs.profile }}
+      CI_GATE_PLAN: ${{ inputs.gate_plan }}
+      GH_TOKEN: ${{ github.token }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
-      fail-fast: false
+      fail-fast: ${{ inputs.priority == 'P1' }}
       matrix:
-        include:
-          - os: ubuntu-latest
-            platform_pkg: cli-linux-x64
-          - os: macos-15-intel
-            platform_pkg: cli-darwin-x64
-          - os: windows-latest
-            platform_pkg: cli-win-x64
+        include: ${{ fromJSON(inputs.platforms) }}
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
-          # Packaged checks read older release tags, such as the Planner upgrade check.
           fetch-depth: 0
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: "24"
-
-      - name: Install dependencies
-        run: node scripts/ci/install-native-dependencies.ts
-
+      - name: Install native dependencies and restore host build cache
+        uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Download immutable compiled candidate
+        if: inputs.artifact_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: release-build-attempt-${{ inputs.artifact_attempt }}
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+      - name: Restore immutable compiled candidate
+        if: inputs.artifact_run_id != ''
+        shell: bash
+        run: |
+          bun scripts/ci/production-payload.ts check
+          tar -xzf release-build.tar.gz
       - name: Install Chromium for packaged extension smoke tests
-        if: runner.os != 'Windows'
+        if: inputs.profile == 'full' && runner.os != 'Windows'
         run: bunx playwright@1.60.0 install chromium --with-deps
-
       - name: Verify packaged Bun toolchain
+        id: toolchain
         shell: bash
         env:
           PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
-        run: |
-          set -o pipefail
-          mkdir -p packages/e2e/test-results/packaged-toolchain
-          bun run --cwd scripts verify:packages 2>&1 | tee packages/e2e/test-results/packaged-toolchain/verification.log
+          CI_CHECK_COMMAND: >
+            set -o pipefail
 
-      - name: Preserve failed packaged toolchain evidence
-        if: failure()
+            mkdir -p packages/e2e/test-results/packaged-toolchain
+
+            bun run --cwd scripts verify:packages --profile "$VERIFY_PROFILE" ${{ inputs.artifact_run_id != '' && '--prebuilt' || '' }} 2>&1
+            | tee packages/e2e/test-results/packaged-toolchain/verification.log
+        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
+          "$CI_CHECK_COMMAND"
+      - name: Run quarantined Windows compiled CLI cases
+        if: inputs.profile == 'full' && runner.os == 'Windows' && !cancelled() && steps.toolchain.outcome == 'success'
+        continue-on-error: true
+        env:
+          E2E_TEST_LANE: quarantine
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
+        run: bun scripts/ci/run-quarantined-tests.ts packaged-bun --scope e2e --prebuilt
+      - name: Require every compiled CLI quarantine case to have executed
+        if: inputs.profile == 'full' && runner.os == 'Windows' && !cancelled() && steps.toolchain.outcome == 'success'
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun
+      - name: Preserve packaged toolchain evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: packaged-toolchain-${{ matrix.platform_pkg }}-attempt-${{ github.run_attempt }}
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report
+            test-results/quarantine
           if-no-files-found: warn

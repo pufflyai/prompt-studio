@@ -1,0 +1,32 @@
+name: Full PR diagnostics
+on:
+  pull_request_target:
+    types:
+      - labeled
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: full-diagnostics-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+jobs:
+  request:
+    if: github.event.label.name == 'ci:full'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Request diagnostics without adding work to the required PR check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha || github.event.pull_request.head.sha }}
+          PR_LABEL: ${{ github.event.label.name }}
+          DIAGNOSTIC_REF: ${{ github.event.pull_request.base.ref }}
+        run: node scripts/ci/request-production-diagnostics.ts

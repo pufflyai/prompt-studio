@@ -10,7 +10,12 @@ import type {
 } from "./page-location-types";
 
 export const createPageHistoryEntry =
-  (input: { pages(): WorkbenchPageContribution[]; resources: WorkbenchPageResourceCodec }) =>
+  (input: {
+    pages(): WorkbenchPageContribution[];
+    resources: WorkbenchPageResourceCodec;
+    removalVersion?(): number;
+    removalEpoch?(): string;
+  }) =>
   (projectId: string, location: PageLocation, index: number) => ({
     url: serializeWorkbenchPageUrl({ projectId, location, pages: input.pages(), resources: input.resources }),
     state: {
@@ -19,6 +24,8 @@ export const createPageHistoryEntry =
       projectId,
       routeKey: workbenchPageLocationRouteKey(location, input.resources, input.pages()),
       location,
+      removalVersion: input.removalVersion?.() ?? 0,
+      removalEpoch: input.removalEpoch?.(),
     } satisfies WorkbenchPageHistoryState,
   });
 

@@ -4,11 +4,7 @@ import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { PanelHeader } from "../region/panel-header";
 import { WorkbenchRegion } from "../region/region";
-import {
-  useWorkbenchPanelHeaderVisible,
-  useWorkbenchRegionTabsVisible,
-  WorkbenchRegionTabs,
-} from "../region/region-tabs";
+import { WorkbenchRegionTabs } from "../region/region-tabs";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
@@ -22,8 +18,6 @@ interface WorkbenchSecondaryPanelProps {
 export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => {
   const { workbench, hasSecondaryHeader } = props;
   const policy = usePanelPolicy(workbench, "secondary");
-  const hasTabs = useWorkbenchRegionTabsVisible(workbench, "secondary");
-  const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
 
   return (
     <WorkbenchFocusRegion
@@ -47,8 +41,6 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
       <PanelHeader
         workbench={workbench}
         region="secondary"
-        hasTabs={hasTabs}
-        hasContent={hasSecondaryHeader || hasPanelHeader}
         data-workbench-panel-header="secondary"
         variant="main"
         bg={workbenchBackgrounds.panel}

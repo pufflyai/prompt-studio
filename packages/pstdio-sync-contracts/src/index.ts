@@ -10,6 +10,7 @@ export type * from "./record-query";
 export * from "./replay";
 export * from "./retention";
 export * from "./state";
+export * from "./storage-limits";
 export * from "./transport";
 export { relayInitializeSchema } from "./transport";
 export * from "./wire";

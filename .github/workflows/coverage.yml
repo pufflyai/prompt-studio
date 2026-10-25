@@ -1,89 +1,76 @@
 name: Coverage
 
-# Measures unit-test line coverage for the README badge. Pull requests that change the
-# coverage tooling run the measurement without publishing it.
+# Measure in full nightly validation. This workflow publishes that run's result.
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    paths:
-      - .github/workflows/coverage.yml
-      - scripts/badges/**
-      - packages/pstdio-api/src/test-utils/run-api-tests.ts
-      - packages/pstdio-db/package.json
-      - packages/sdk/package.json
+  workflow_run:
+    workflows: [Release Packages]
+    types: [completed]
   workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful full nightly Release Packages run to publish
+        required: true
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  # Main runs queue instead of cancelling, so every main commit keeps its result and the
-  # badge is always written by the newest one.
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  measure:
+  select:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'))
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
+    outputs:
+      run_id: ${{ steps.source.outputs.run_id }}
+      artifact_id: ${{ steps.source.outputs.artifact_id }}
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
-
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build monorepo
-        run: bun run build
-
-      - name: Run tests with coverage
-        # Database and SDK coverage targets run alone so other package tests do not
-        # compete with cold database fixtures and full-size streaming asset checks.
-        run: bun run test:coverage
-
-      - name: Summarize coverage
-        run: bun run --cwd scripts coverage:badge -- "$RUNNER_TEMP/badges/coverage.json"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: coverage-badge
-          path: ${{ runner.temp }}/badges/coverage.json
+      - name: Select the successful full nightly measurement
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+        run: bun scripts/badges/select-nightly-source-coverage.ts
 
   # Only this job can write to the repository, and it runs no project code.
   publish:
-    needs: measure
-    if: github.ref == 'refs/heads/main'
+    needs: select
+    if: needs.select.outputs.artifact_id != ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: coverage-badge
+          artifact-ids: ${{ needs.select.outputs.artifact_id }}
+          run-id: ${{ needs.select.outputs.run_id }}
+          github-token: ${{ github.token }}
           path: badges
+          merge-multiple: true
 
       - name: Replace the badges branch
         working-directory: badges
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_RUN_ID: ${{ needs.select.outputs.run_id }}
         # The badges branch holds only the latest badge data, so each run replaces it.
         run: |
           git init --quiet --initial-branch badges
-          git add coverage.json
+          git add coverage.json coverage-report.json
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit --quiet --message "chore: update coverage badge for ${GITHUB_SHA}"
+            commit --quiet --message "chore: update coverage badge from full nightly $SOURCE_RUN_ID"
           git push --force --quiet "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges

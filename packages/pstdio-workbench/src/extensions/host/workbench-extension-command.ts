@@ -1,4 +1,5 @@
 import type { CommandExecuteRequest, CommandExecutionResult, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import type {
   ResourceRef,
   WorkbenchCommandExecutionContext,
@@ -22,6 +23,9 @@ export interface WorkbenchExtensionCommandContext {
   workbench: WorkbenchModuleContext;
 }
 export interface ExecuteWorkbenchExtensionCommandInput {
+  removalVersion?: number;
+  isViewerCurrent?(): boolean;
+  placement?: PlacementIdentity;
   region?: WorkbenchPanelRegion;
   workspaceId?: string;
   signal?: AbortSignal;
@@ -42,12 +46,18 @@ export const createExtensionSlot = (input: {
 });
 export const executeWorkbenchExtensionCommandResponse = async (
   context: Pick<WorkbenchExtensionCommandContext, "executeCommand" | "projectId"> & {
-    workbench: Pick<WorkbenchModuleContext, "navigation" | "notifications">;
+    workbench: Pick<WorkbenchModuleContext, "navigation" | "notifications" | "resources" | "viewers">;
   },
   commandId: string,
   input: ExecuteWorkbenchExtensionCommandInput = {},
 ) => {
   const resource = input.resource;
+  const captured = context.workbench.viewers.captureContext(input.placement);
+  const invocation = {
+    ...captured,
+    removalVersion: input.removalVersion ?? captured.removalVersion,
+    isViewerCurrent: input.isViewerCurrent ?? captured.isViewerCurrent,
+  };
   const reportNavigationError = context.workbench.notifications.captureActionError("Open command result");
   const response = await context.executeCommand(
     commandId,
@@ -63,10 +73,14 @@ export const executeWorkbenchExtensionCommandResponse = async (
     input.signal,
   );
   const outcome = (response as Partial<CommandExecutionResult> | undefined)?.outcome;
-  if (outcome?.status === "success") {
+  if (outcome?.status === "success" && !input.signal?.aborted) {
     for (const target of outcome.navigationRequests ?? []) {
+      if (input.signal?.aborted) break;
       try {
-        await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { region: input.region }));
+        await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { region: input.region }), {
+          ...invocation,
+          projectId: context.projectId,
+        });
       } catch (error) {
         reportNavigationError(error);
       }

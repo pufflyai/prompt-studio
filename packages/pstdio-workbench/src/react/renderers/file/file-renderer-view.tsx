@@ -1,5 +1,5 @@
 import { Box, Button, Center, Flex, Text } from "@chakra-ui/react";
-import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RegisteredFileRendererContribution, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
@@ -8,7 +8,6 @@ import {
   resolveFileSectionTargetId,
   shouldClearFileSectionSelection,
 } from "../../../core/registries/renderers/file-section-navigation";
-import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { usePageParams } from "../use-page-params";
 import { FileRendererContentView } from "./file-renderer-content";
 import {
@@ -65,18 +64,6 @@ const getEditorSectionNavigation = (
     targetId: resolveFileSectionTargetId(navigation, selectedNodeId),
   };
 };
-const useFilePosition = (workbench: WorkbenchCore, resource?: ResourceRef) =>
-  useWorkbenchStore(workbench.pages.store, (state) => {
-    const location = state.location;
-    if (!location?.position || resourceKey(location.resource) !== resourceKey(resource)) return undefined;
-    const page = Object.values(state.pages).find(
-      (page) => page.ref.id === location.page.id && page.ref.extensionId === location.page.extensionId,
-    );
-    const key = page?.document?.metadataKey;
-    if (!key || location.resource?.metadata?.[key] !== resource?.metadata?.[key]) return undefined;
-    return location.position;
-  });
-
 const FileRendererHeader = (props: { file: LoadedFile }) => {
   const { file } = props;
   return file.filePath ? (
@@ -93,9 +80,14 @@ const fileRendererOwnerKey = (
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
   const resource = props.placement?.resource;
-  const position = useFilePosition(workbench, resource);
+  const position = props.placement?.position;
   const sectionNavigation = getFileSectionNavigation(resource);
-  const editorSectionNavigation = getEditorSectionNavigation(workbench, sectionNavigation);
+  const requestedSection = props.placement?.section;
+  const targetAnchor = requestedSection?.anchors.at(-1);
+  const editorSectionNavigation =
+    requestedSection && targetAnchor
+      ? { anchors: [...requestedSection.anchors], targetId: targetAnchor.id }
+      : getEditorSectionNavigation(workbench, sectionNavigation);
   const pageParams = usePageParams(workbench, props.placement);
   const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resource, pageParams });
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);

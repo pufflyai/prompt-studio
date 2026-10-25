@@ -8,6 +8,10 @@ output "relay_url" {
   value = "https://${var.host}${var.relay_path}"
 }
 
+output "psx_url" {
+  value = contains(var.services, "psx") ? "https://${var.host}${var.psx_path}" : null
+}
+
 output "app_id" {
   value = digitalocean_app.cloud.id
 }

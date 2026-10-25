@@ -23,7 +23,7 @@ export const expectPackagedArtifacts = async (input: {
     expect.objectContaining({
       extensionId: "pstdio.pstdio-artifacts",
       localId: "artifacts",
-      main: { kind: "panels", empty: expect.any(Object) },
+      main: { kind: "panels", empty: expect.any(Object), landing: "library" },
       slots: expect.arrayContaining([
         expect.objectContaining({
           id: "library",
@@ -64,7 +64,7 @@ export const expectPackagedArtifacts = async (input: {
   expect(metadata.resourceKinds).toContainEqual(
     expect.objectContaining({
       extensionId: "pstdio.pstdio-artifacts",
-      id: "artifact",
+      id: "pstdio.pstdio-artifacts.artifact",
     }),
   );
   expect(metadata.commandPaletteResources).toContainEqual(

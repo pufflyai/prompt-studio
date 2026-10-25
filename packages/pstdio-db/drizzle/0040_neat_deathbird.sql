@@ -1,1 +1,0 @@
-ALTER TABLE "settings" ADD COLUMN "machine_tokens_enabled" boolean DEFAULT false NOT NULL;

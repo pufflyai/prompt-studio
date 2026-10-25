@@ -6,16 +6,13 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.1.0 || ^0.2.0"
+    "pstdio": "^0.1.0 || ^0.2.0 || ^0.3.0"
   },
   "pstdio": {
     "scope": "repo"
   },
   "private": true,
   "type": "module",
-  "scripts": {
-    "test": "bun test"
-  },
   "dependencies": {
     "@pstdio/sdk": "^0.25.0"
   }

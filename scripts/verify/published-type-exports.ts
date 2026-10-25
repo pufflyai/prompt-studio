@@ -47,8 +47,8 @@ export const compareEntryExports = (tsconfigPath: string, entries: { source: str
   });
 };
 
-export const verifyPublishedTypeExports = async (repoRoot: string) => {
-  for (const name of PACKAGES) {
+export const verifyPublishedTypeExports = async (repoRoot: string, packageNames = PACKAGES) => {
+  for (const name of packageNames) {
     const packageRoot = resolve(repoRoot, "packages", name);
     const configPath = join(packageRoot, "rolldown.types.config.ts");
     const { default: config } = await import(configPath);
@@ -66,3 +66,8 @@ export const verifyPublishedTypeExports = async (repoRoot: string) => {
     console.log(`Checked published type exports of ${entries.length} packages/${name} entries.`);
   }
 };
+
+if (import.meta.main) {
+  const names = process.argv.slice(2);
+  await verifyPublishedTypeExports(resolve(import.meta.dir, "../.."), names.length ? names : undefined);
+}

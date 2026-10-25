@@ -1,6 +1,7 @@
 import { createStorageId, createStorageMigration } from "pstdio-api-contracts";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
+import { createPublicationStorageAccess, guardPublicationStorage } from "../publication/storage-access";
 import { createExtensionAssetsApi } from "./assets";
 import { createExtensionBlobsApi } from "./blobs";
 import { createExtensionRecordsApi } from "./records";
@@ -9,6 +10,7 @@ type StorageApiInput = {
   extensionId: string;
   extensionInstanceId: string;
   projectId: string;
+  source?: { version: string | null; source_ref: string | null; source_path: string };
   signal?: AbortSignal;
   scopeType?: string;
   scopeId?: string;
@@ -51,13 +53,7 @@ export const createStorageApi = (
       }),
     ids: { create: createStorageId },
     positions: deps.storagePositions,
-    readLegacy: (source) =>
-      read(() =>
-        deps.extensionStorageService.readLegacy(source, {
-          projectId: input.projectId,
-          extensionInstanceId: input.extensionInstanceId,
-        }),
-      ),
+    readLegacy: async () => undefined,
     records: createExtensionRecordsApi(deps, { ...input, scopeType: scope.scope_type, scopeId: scope.scope_id }),
     assets: createExtensionAssetsApi(deps, input),
     files: createExtensionBlobsApi(deps, {
@@ -145,5 +141,5 @@ export const createStorageApi = (
     },
   };
 
-  return api;
+  return guardPublicationStorage(api, createPublicationStorageAccess(deps, input));
 };

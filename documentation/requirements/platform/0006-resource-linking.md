@@ -53,4 +53,4 @@ Checked on 2026-10-18 against main commit `45580feb`. The newest stable release 
 
 Acceptance 1, 4, and 6 need stage 3. Link changes reach dashboards as `resource_anchor_events` stream events, not as a synced table.
 
-Evidence: unit tests, passed locally on 2026-10-18: `packages/pstdio-db/src/services/resource-links.test.ts` (owners, pagination, atomic creation, cleanup of both directions on deletion) and `packages/pstdio-db/src/db/resource-anchor-migration.test.ts`. The packaged smoke `packages/e2e/src/packaged/packaged-resource-links-smoke.ts` uses two independent fixture extensions and runs in the full CI stage; it was not rerun here. No Planner-to-Artifacts journey has been run.
+Evidence: unit tests, passed locally on 2026-10-18: `packages/pstdio-db/src/services/resource-links.p1.test.ts` (owners, pagination, atomic creation, cleanup of both directions on deletion) and `packages/pstdio-db/src/db/resource-anchor-migration.test.ts`. The packaged smoke `packages/e2e/src/packaged/packaged-resource-links-smoke.p2.test.ts` uses two independent fixture extensions and runs in the full CI stage; it was not rerun here. No Planner-to-Artifacts journey has been run.

@@ -10,7 +10,11 @@
   <a href="https://github.com/pufflyai/prompt-studio/actions/workflows/test-and-build.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/pufflyai/prompt-studio/test-and-build.yml?branch=main&event=push&style=flat-square" /></a>
   <a href="https://github.com/pufflyai/prompt-studio/actions/workflows/coverage.yml"><img alt="Coverage" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpufflyai%2Fprompt-studio%2Fbadges%2Fcoverage.json&style=flat-square" /></a>
   <a href="https://github.com/pufflyai/prompt-studio/blob/main/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" /></a>
-  <a href="https://discord.gg/3RxwUEk8fW"><img alt="Discord" src="https://img.shields.io/badge/Discord-Join-5865F2?style=flat-square&logo=discord&logoColor=white" /></a>
+  <img alt="Status: alpha" src="https://img.shields.io/badge/status-alpha-d69e2e?style=flat-square" />
+</p>
+
+<p align="center">
+  <a href="https://discord.gg/3RxwUEk8fW"><img alt="Join the Prompt Studio community on Discord" src="https://img.shields.io/badge/Join%20us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" height="40" /></a>
 </p>
 
 <p align="center">

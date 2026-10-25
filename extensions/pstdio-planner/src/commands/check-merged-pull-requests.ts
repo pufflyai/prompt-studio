@@ -45,7 +45,7 @@ export const checkMergedPullRequestsCommand = defineCommand({
     // Merge evidence also proves dependency integration, so it is recorded without a merge destination.
     const destination = await readMergeDestination(ctx);
     const [allTickets, current, events, retired] = await Promise.all([
-      ticketsCollection(ctx.storage).list(),
+      ticketsCollection(ctx).list(),
       listAttempts(ctx.storage),
       attemptEventsCollection(ctx.storage).list(),
       readRetiredWorkspaceIds(ctx.storage),

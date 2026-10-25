@@ -20,6 +20,7 @@ type TreeListOrderSlot = "header" | "content" | "footer";
 export interface TreeListGroup {
   id: string;
   label: string;
+  icon?: string;
   moveScope?: string;
 }
 
@@ -29,6 +30,7 @@ interface TreeListOrderState extends TreeListOrderSnapshot {
   setSectionSlot: (sectionId: string, slot: TreeListOrderSlot) => void;
   addGroup: (group: TreeListGroup, sectionIds: string[]) => void;
   renameGroup: (groupId: string, label: string) => void;
+  setGroupIcon: (groupId: string, icon: string | undefined) => void;
   removeGroup: (groupId: string) => void;
   resetSectionOrder: () => void;
   resetNodeOrder: (sectionId: string) => void;
@@ -99,6 +101,10 @@ export const createTreeListOrderStore = (options: CreateTreeListOrderStoreOption
             groups: state.groups.map((group) => (group.id === groupId ? { ...group, label: nextLabel } : group)),
           }));
         },
+        setGroupIcon: (groupId, icon) =>
+          set((state) => ({
+            groups: state.groups.map((group) => (group.id === groupId ? { ...group, icon } : group)),
+          })),
         removeGroup: (groupId) =>
           set((state) => {
             const { [groupId]: _nodes, ...nodeOrderBySection } = state.nodeOrderBySection;

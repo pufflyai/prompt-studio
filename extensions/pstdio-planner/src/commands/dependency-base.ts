@@ -4,7 +4,7 @@ import { readAttempt } from "../data/attempt-storage";
 
 type Ready = Extract<AttemptReadinessResult, { decision: "ready" }>;
 
-export const dependencyHeads = async (ctx: Pick<CommandContext, "storage">, workspaceIds: string[]) =>
+export const dependencyHeads = async (ctx: Pick<CommandContext, "storage" | "resources">, workspaceIds: string[]) =>
   Promise.all(
     workspaceIds.map(async (id) => {
       const attempt = await readAttempt(ctx.storage, id);

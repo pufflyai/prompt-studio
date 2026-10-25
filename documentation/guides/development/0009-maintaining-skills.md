@@ -36,7 +36,7 @@ The host reads the folder from the installed extension and offers it as a projec
 
 Never edit an installed copy to change a shipped skill, including copies in this repository's own agent folders. Edit the source folder above.
 
-Core extensions are bundled with the CLI. Two tests list the shipped files of `create-pstdio-extension`: [the core catalog test](../../../packages/pstdio-api/src/features/extensions/core-extension-catalog.test.ts) and [the packaged smoke check](../../../packages/e2e/src/packaged/packaged-core-extensions-smoke.ts). When you add, rename, or remove a file in that skill, update both.
+Core extensions are bundled with the CLI. Two tests list the shipped files of `create-pstdio-extension`: [the core catalog test](../../../packages/pstdio-api/src/features/extensions/core-extension-catalog.p1.test.ts) and [the packaged smoke check](../../../packages/e2e/src/packaged/packaged-core-extensions-smoke.p1.test.ts). When you add, rename, or remove a file in that skill, update both.
 
 The TypeScript examples in `create-pstdio-extension/references/examples/` compile as part of the `pstdio-skills` typecheck. They use the `@pstdio/sdk` and `@pstdio/ui` releases in that extension's lockfile, not the workspace source.
 

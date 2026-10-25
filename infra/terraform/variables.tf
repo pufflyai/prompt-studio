@@ -39,6 +39,11 @@ variable "manager_path" {
   default = "/accounts"
 }
 
+variable "psx_path" {
+  type    = string
+  default = "/psx"
+}
+
 # A DigitalOcean DNS zone that contains the host. App Platform then creates its record. Leave
 # it null to manage DNS elsewhere.
 variable "dns_zone" {
@@ -55,19 +60,22 @@ variable "image_registry" {
 }
 
 variable "image_repositories" {
-  type = object({ relay = string, manager = string })
+  type = object({ relay = string, manager = string, psx = optional(string, "prompt-studio/psx") })
   default = {
     relay   = "prompt-studio/relay"
     manager = "prompt-studio/account-manager"
+    psx     = "prompt-studio/psx"
   }
 }
 
 # Released digests. App Platform never builds source or updates an image on its own.
 variable "image_digests" {
-  type = object({ relay = string, manager = string })
+  type = object({ relay = string, manager = string, psx = optional(string) })
   validation {
-    condition     = alltrue([for digest in values(var.image_digests) : can(regex("^sha256:[0-9a-f]{64}$", digest))])
-    error_message = "Pin the relay and manager images to released SHA-256 digests."
+    condition = alltrue([
+      for service in var.services : can(regex("^sha256:[0-9a-f]{64}$", var.image_digests[service]))
+    ])
+    error_message = "Pin every selected service image to a released SHA-256 digest."
   }
 }
 
@@ -97,13 +105,29 @@ variable "manager_secrets" {
   sensitive = true
 }
 
+# Required only when services includes psx.
+variable "psx_secrets" {
+  type = object({
+    S3_ACCESS_KEY_ID     = string
+    S3_SECRET_ACCESS_KEY = string
+    PSX_PUBLISH_TOKEN    = string
+  })
+  sensitive = true
+  default   = null
+  validation {
+    condition     = !contains(var.services, "psx") || var.psx_secrets != null
+    error_message = "Set psx_secrets to run psx."
+  }
+}
+
 # The first deployment runs only the manager: the relay must trust the manager's signing
-# keys, which exist only once the manager runs. Every later deployment runs both.
+# keys, which exist only once the manager runs. Every later deployment runs both. Add psx
+# to run the extension registry in the same app.
 variable "services" {
   type    = set(string)
   default = ["relay", "manager"]
   validation {
-    condition     = contains(var.services, "manager") && length(setsubtract(var.services, ["relay", "manager"])) == 0
-    error_message = "Run the manager, alone or with the relay."
+    condition     = contains(var.services, "manager") && length(setsubtract(var.services, ["relay", "manager", "psx"])) == 0
+    error_message = "Run the manager, alone or with the relay and psx."
   }
 }

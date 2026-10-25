@@ -22,9 +22,9 @@ export const deleteTicketCommand = defineCommand({
   ],
   async run(ctx, commandParams) {
     const ref = ticketRefFromCommandContext(ctx, commandParams);
-    const ticket = await findTicket(ctx.storage, ref);
+    const ticket = await findTicket(ctx, ref);
     const id = ticket?.id ?? ref;
-    await ticketsCollection(ctx.storage).delete(id);
+    await ticketsCollection(ctx).delete(id);
     if (ticket) await deleteUnusedLinkedWorkspaces(ctx, [ticket]);
     await ctx.resources.removed({ type: "ticket", id });
     await ctx.events.emit(plannerTicketsChanged, { ticketId: id });
