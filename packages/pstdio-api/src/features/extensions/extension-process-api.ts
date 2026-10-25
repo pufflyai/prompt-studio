@@ -1,4 +1,5 @@
 import { createServer } from "node:net";
+import { appendFileSync } from "node:fs";
 import type { ProcessRunInput } from "pstdio-api-contracts/extension-kernel";
 import {
   type CommandRunnerEnvironment,
@@ -175,6 +176,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       child.exited,
     ]).then(([stdout, stderr, exitCode]) => {
       console.error(`[Native process ${Math.round(performance.now() - diagnosticStarted)}ms] ${JSON.stringify(input.command)}`);
+      if (process.env.NATIVE_PROFILE_LOG) appendFileSync(process.env.NATIVE_PROFILE_LOG, `${JSON.stringify({kind:"process", ms:Math.round(performance.now()-diagnosticStarted), command:input.command})}\n`);
       return gate.stopped ? gate.failed : { exitCode, stdout, stderr };
     });
     collect.catch(() => {});

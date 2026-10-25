@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
+import { appendFileSync, existsSync } from "node:fs";
 import { win32 } from "node:path";
 
 export class GitError extends Error {
@@ -44,6 +44,7 @@ export const gitBytes = (cwd: string, args: string[]) =>
       { cwd, encoding: "buffer", maxBuffer: Number.POSITIVE_INFINITY, windowsHide: true },
       (error, stdout, stderr) => {
         console.error(`[Native Git ${Math.round(performance.now() - diagnosticStarted)}ms] ${JSON.stringify(args)}`);
+        if (process.env.NATIVE_PROFILE_LOG) appendFileSync(process.env.NATIVE_PROFILE_LOG, `${JSON.stringify({kind:"git", ms:Math.round(performance.now()-diagnosticStarted), args})}\n`);
         if (error) {
           reject(
             typeof error.code === "number" ? new GitError(args.join(" "), error.code, stderr.toString().trim()) : error,

@@ -36,6 +36,7 @@ jobs:
             platform_pkg: cli-win-arm64
     env:
       CI_PRIORITY: P2
+      NATIVE_PROFILE_LOG: ${{ github.workspace }}/native-profile.jsonl
       PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
       E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
     steps:
@@ -56,6 +57,8 @@ jobs:
       - name: Provision the compiled smoke browser
         shell: bash
         run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke"; preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
+      - name: Compare bare signals through the host terminal
+        run: bun packages/e2e/src/packaged/native-terminal-diagnostic.ts
       - name: Exercise native interruption, inherited output and archive cleanup
         shell: bash
         working-directory: packages/e2e
@@ -88,5 +91,6 @@ jobs:
           path: |
             packages/e2e/test-results/native-fixtures.log
             test-results/ci
+            native-profile.jsonl
           include-hidden-files: true
           if-no-files-found: warn

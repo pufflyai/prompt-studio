@@ -35,6 +35,7 @@ export const runExtensionSmoke = async (input: {
     phase = name;
     started = performance.now();
     process.stderr.write(`Extension smoke: ${name}\n`);
+    process.stderr.write(`SIGNAL LISTENERS ${process.listenerCount("SIGINT")} STDIN ${process.stdin.isTTY}\n`);
   };
   try {
     const { chromium } = loadSmokePlaywright();

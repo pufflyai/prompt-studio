@@ -21,6 +21,7 @@ export const handler = async (argv: { source: string; projectPath?: string; json
   const controller = new AbortController();
   let interrupted: NodeJS.Signals | undefined;
   const interrupt = (signal: NodeJS.Signals) => {
+    process.stderr.write(`RECEIVED ${signal}\n`);
     interrupted = signal;
     controller.abort(new Error(`Interrupted by ${signal}`));
   };
