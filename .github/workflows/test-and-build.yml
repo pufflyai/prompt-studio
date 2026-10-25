@@ -457,11 +457,7 @@ jobs:
         run: bunx lerna run lint --no-bail --concurrency=2
       - name: Test monorepo shard ${{ matrix.shard }} (non-e2e)
         if: ${{ !cancelled() && (matrix.lane == 'unit') }}
-        run: bunx lerna run test --ignore e2e --ignore storybook-tests --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api --stream
-          --concurrency=1 --no-bail -- --shard=${{ matrix.shard }} --timeout=15000
-      - name: Test Git worktree shard ${{ matrix.shard }} with its existing 30-second limit
-        if: ${{ !cancelled() && (matrix.lane == 'unit') }}
-        run: bun run --cwd packages/pstdio-wt test --shard=${{ matrix.shard }}
+        run: bun scripts/ci/run-windows-unit-tests.ts ${{ matrix.shard }}
       - name: Preserve file and case execution evidence
         if: always()
         uses: actions/upload-artifact@v4

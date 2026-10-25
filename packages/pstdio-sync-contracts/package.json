@@ -8,7 +8,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts src",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "test:integration": "bun scripts/isolated.ts"

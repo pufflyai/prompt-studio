@@ -6,7 +6,7 @@
     "dev": "astro dev",
     "build": "astro build --force",
     "preview": "astro preview",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts src",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
     "astro": "astro",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build"

@@ -106,14 +106,19 @@ const groupRuns = (id: string, group: TestGroup, priority: TestPriority) => {
     return [
       {
         ...base,
-        command: ["bun", "run", "test:integration", ...group.files.map((file) => relative(group.owner.dir, file))],
+        command: [
+          "bun",
+          "run",
+          "test:integration",
+          ...group.files.map((file) => relative(group.owner.dir, file).replaceAll("\\", "/")),
+        ],
       },
     ];
   return group.files.map((file) => ({
     ...base,
     id: `${id}:${file}`,
     files: [file],
-    command: ["bun", relative(group.owner.dir, file)],
+    command: ["bun", relative(group.owner.dir, file).replaceAll("\\", "/")],
   }));
 };
 
