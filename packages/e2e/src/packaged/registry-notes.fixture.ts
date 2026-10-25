@@ -1,5 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+
+export const registryNotesEngines = `^${EXTENSION_API_VERSION}`;
 
 export const writeRegistryNotes = async (source: string, version: string) => {
   await mkdir(source, { recursive: true });
@@ -11,7 +14,7 @@ export const writeRegistryNotes = async (source: string, version: string) => {
       displayName: "Notes",
       version,
       main: "extension.ts",
-      engines: { pstdio: "^0.2.0" },
+      engines: { pstdio: registryNotesEngines },
     }),
   );
   await writeFile(

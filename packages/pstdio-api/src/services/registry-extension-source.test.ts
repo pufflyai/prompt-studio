@@ -2,10 +2,14 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { packExtension, type RegistryRelease } from "pstdio-extensions/distribution";
 import { installExtensionSource, toExtensionEnableInput } from "../features/extensions/install-extension-source";
 import { createRegistryExtensionSource } from "./registry-extension-source";
 
+const [apiMajor, apiMinor] = EXTENSION_API_VERSION.split(".").map(Number);
+const hostApi = `^${EXTENSION_API_VERSION}`;
+const nextApi = `^${apiMajor}.${apiMinor + 1}.0`;
 const cleanups: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
@@ -17,7 +21,7 @@ const fixture = async () => {
   await import("node:fs/promises").then(({ mkdir }) => mkdir(source));
   const packages = new Map<string, Uint8Array>();
   const releases: RegistryRelease[] = [];
-  const publish = async (version: string, enginesPstdio = "^0.2.0", broken = false) => {
+  const publish = async (version: string, enginesPstdio = hostApi, broken = false) => {
     await writeFile(
       join(source, "package.json"),
       JSON.stringify({
@@ -80,7 +84,7 @@ test("upgrades the extension on an unchanged host to its newest compatible relea
   const { installed, recorded } = await f.first();
   expect(toExtensionEnableInput(installed).sourceKind).toBe("registry");
   await f.publish("0.45.2");
-  await f.publish("0.46.0", "^0.3.0");
+  await f.publish("0.46.0", nextApi);
   expect(await f.registry.canUpgrade(recorded)).toBe(true);
   const upgraded = await f.registry.installRecorded(recorded, f.options);
   expect(upgraded.metadata.version).toBe("0.45.2");
@@ -99,7 +103,7 @@ test("keeps the installed extension when the candidate cannot load or the regist
   const f = await fixture();
   const { installed, recorded } = await f.first();
   const before = await readFile(join(installed.targetPath, "extension.ts"), "utf8");
-  await f.publish("0.45.2", "^0.2.0", true);
+  await f.publish("0.45.2", hostApi, true);
   await expect(f.registry.installRecorded(recorded, f.options)).rejects.toThrow();
   expect(await readFile(join(installed.targetPath, "extension.ts"), "utf8")).toBe(before);
   await f.server.stop(true);

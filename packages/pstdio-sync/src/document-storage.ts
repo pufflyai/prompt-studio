@@ -1,4 +1,4 @@
-import { fingerprint, type StorageRecord } from "pstdio-sync-contracts";
+import { assertStorageLimits, fingerprint, type StorageRecord } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { captureCheckpoint } from "./checkpoint-capture";
 import { migrationAuthor } from "./document-author";
@@ -103,7 +103,7 @@ export const createDocumentStorage = (input: { owner: StorageOwner; store: Docum
           if (previous !== undefined && previous !== identity)
             throw new Error("Operation identity reused with changed payload");
           if (previous === undefined) {
-            validateDocumentGroup(doc, group);
+            assertStorageLimits(validateDocumentGroup(doc, group));
             const author = migrationAuthor(doc, state.migrationSeed, state.migrationHistory);
             doc.transact(() => {
               for (const edit of group.edits) applyDocumentEdit(doc, edit, author);

@@ -56,7 +56,7 @@ test(
           publisher: "example",
           version: "1.0.0",
           main: "extension.ts",
-          engines: { pstdio: "^0.2.1" },
+          engines: { pstdio: "^0.2.1 || ^0.3.0" },
         }),
       );
       const env = { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "retired-data" }]) };

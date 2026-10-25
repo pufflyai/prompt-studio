@@ -17,7 +17,7 @@ const runtimeFor = (names: [string, string]) =>
         version: "1.0.0",
         publisher: "example",
         main: "./extension.ts",
-        enginesPstdio: "^0.2.2",
+        enginesPstdio: "^0.3.0",
       },
       definition: { storageIndexes: [{ name, fields: { title: { path: ["title"], type: "string" as const } } }] },
     })),
@@ -69,7 +69,7 @@ test("an index candidate accepted before invalidation owns the fallback if the n
         publisher: "example",
         version: "1.0.0",
         main: "extension.ts",
-        engines: { pstdio: "^0.2.2" },
+        engines: { pstdio: "^0.3.0" },
       }),
     );
     await writeFile(join(root, "extension.ts"), "export default {};");
@@ -114,7 +114,7 @@ test("an index candidate accepted before invalidation owns the fallback if the n
               version: "1.0.0",
               publisher: "example",
               main: "./extension.ts",
-              enginesPstdio: "^0.2.2",
+              enginesPstdio: "^0.3.0",
             },
             definition: { storageIndexes: [{ name: index, fields: { title: { path: ["title"], type: "string" } } }] },
           },
