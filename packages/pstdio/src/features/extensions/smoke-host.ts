@@ -3,7 +3,7 @@ import { appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { requestRuntimeShutdown } from "../runtime/runtime-client";
-import { discoverRuntime, readRuntimeDescriptor, type RuntimeDescriptor } from "../runtime/runtime-descriptor";
+import { discoverRuntime, type RuntimeDescriptor, readRuntimeDescriptor } from "../runtime/runtime-descriptor";
 
 export const stopSmokeProcess = async (child: ChildProcess, descriptor?: RuntimeDescriptor | null) => {
   if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
@@ -14,12 +14,9 @@ export const stopSmokeProcess = async (child: ChildProcess, descriptor?: Runtime
     // runtime has an authenticated shutdown path that closes storage and its descriptor.
     const result =
       descriptor?.pid === child.pid
-        ? await requestRuntimeShutdown(descriptor, true, (url, options) =>
-            fetch(url, { ...options, signal: AbortSignal.timeout(1000) }),
-          )
+        ? await requestRuntimeShutdown(descriptor, true, undefined, AbortSignal.timeout(1000))
         : null;
-    if (result?.state !== "accepted" && child.exitCode === null && child.signalCode === null)
-      child.kill("SIGTERM");
+    if (result?.state !== "accepted" && child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");
     await stopped;
   } finally {
     clearTimeout(force);

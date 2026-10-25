@@ -103,6 +103,21 @@ describe("runtime client", () => {
     expect(result).toEqual({ state: "active", activity });
   });
 
+  test("an aborted shutdown request cannot leave a host cleanup waiting on HTTP", async () => {
+    const server = Bun.serve({ port: 0, fetch: () => new Response(null, { status: 202 }) });
+    try {
+      const result = await requestRuntimeShutdown(
+        { ...descriptor, origin: server.url.origin as typeof descriptor.origin },
+        true,
+        undefined,
+        AbortSignal.abort(),
+      );
+      expect(result).toEqual({ state: "failed" });
+    } finally {
+      await server.stop(true);
+    }
+  });
+
   test("reads activity with descriptor bearer authentication", async () => {
     let request: Request | undefined;
     const activity = { sessions: [], terminals: [{ id: "t1", label: "Shell" }], jobs: [] };
