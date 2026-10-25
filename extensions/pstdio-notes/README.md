@@ -14,13 +14,14 @@ Install Notes once for your user, then turn it on in each project that should us
 
 ## Write notes
 
-Expand **Notes** in the project sidebar to see your notes and folders. The tree starts collapsed and stays in the project sidebar when you open a note. Open a note to edit it in the Markdown editor. The editor shows headings, lists, links, tables, and code blocks as formatted text, and saves as you type.
+Select **Notes** in the project sidebar to open its page. Use its chevron to expand your notes and folders. The tree starts collapsed and stays in the project sidebar when you open a note. Open a note to edit it in the Markdown editor. The editor shows headings, lists, links, tables, and code blocks as formatted text, and saves as you type.
 
 ![Notes tool with Reading list selected in the sidebar and a tab showing a formatted heading and a list of articles to read.](../../documentation/images/notes-editor.png)
 
 The sidebar keeps your notes within reach while the open tab shows the note's body. This example is a Markdown note named **Reading list**, not a separate reading-list extension.
 
 - Choose **New note** next to **Notes**, or next to a folder, to start writing immediately. The note starts empty and is called **New note**.
+- The Notes page also offers **New note** in Main's **+** menu and in its default placeholder cards. Its Main tabs and selected note stay separate from other pages and return after navigation or reload.
 - Selecting a note opens it in a tab and keeps the project navigation in the sidebar.
 - The first nonempty save gives an untitled note a title from the beginning of its content, up to 80 characters. That title is saved in Markdown front matter and stays unchanged through later edits or clearing the body. A title you choose prevents the automatic rename.
 - Right-click a note and choose **Rename note** to change its title. The sidebar and open tabs update. The body stays the same.

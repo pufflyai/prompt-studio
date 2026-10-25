@@ -52,6 +52,10 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     const secondRow = sidebar.getByRole("option", { name: second.title, exact: true });
     await expect(firstRow).toHaveCount(0);
     await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
+    await sidebar
+      .getByRole("option", { name: "Notes", exact: true })
+      .getByRole("button", { name: "Expand group" })
+      .click();
     // Notes stay nested in the same project navigation.
     await expect(firstRow).toHaveAttribute("aria-level", "2");
     await expect(sidebar.getByRole("option", { name: "Tickets", exact: true })).toBeVisible();
@@ -71,7 +75,9 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
     await page.getByRole("button", { name: `Close ${first.title}`, exact: true }).click();
     await expect(firstRow).toHaveAttribute("aria-selected", "false");
-    await expect(page.getByText("No note open", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: "Available tabs" }).getByRole("button", { name: "New note", exact: true }),
+    ).toBeVisible();
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -98,6 +104,10 @@ test("keeps note titles independent of the body and renames them through the con
     const sidebar = page.locator('[data-workbench-region="sidenav"]');
     const row = sidebar.getByRole("option", { name: note.title, exact: true });
     await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
+    await sidebar
+      .getByRole("option", { name: "Notes", exact: true })
+      .getByRole("button", { name: "Expand group" })
+      .click();
     await row.click();
     const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
     await expect(editor).toBeEmpty();
