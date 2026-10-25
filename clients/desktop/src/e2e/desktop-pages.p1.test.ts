@@ -35,7 +35,7 @@ test("workbench readiness reports recovery while an existing page is still navig
 test("workbench readiness returns a newly opened page at the runtime origin", async () => {
   const server = Bun.serve({
     port: 0,
-    fetch: () => new Response("Workbench", { headers: { "content-type": "text/html" } }),
+    fetch: () => new Response('<div id="root">Workbench</div>', { headers: { "content-type": "text/html" } }),
   });
   try {
     const ready = waitForWorkbenchPage(lifecycle, server.url.origin);
@@ -50,7 +50,7 @@ test("workbench readiness returns a newly opened page at the runtime origin", as
 test("workbench readiness accepts a saved route restored before observation starts", async () => {
   const server = Bun.serve({
     port: 0,
-    fetch: () => new Response("Workbench", { headers: { "content-type": "text/html" } }),
+    fetch: () => new Response('<div id="root">Workbench</div>', { headers: { "content-type": "text/html" } }),
   });
   const workbench = await context.newPage();
   const savedUrl = new URL("/projects/saved/sessions", server.url).href;
@@ -65,6 +65,50 @@ test("workbench readiness accepts a saved route restored before observation star
   } finally {
     await workbench.goto(server.url.origin);
     await ready;
+    await server.stop(true);
+  }
+});
+
+test("workbench readiness waits for rendered content at the runtime origin", async () => {
+  const server = Bun.serve({
+    port: 0,
+    fetch: () => new Response('<div id="root"></div>', { headers: { "content-type": "text/html" } }),
+  });
+  try {
+    let resolved = false;
+    const ready = waitForWorkbenchPage(lifecycle, server.url.origin).then((page) => {
+      resolved = true;
+      return page;
+    });
+    const workbench = await context.newPage();
+    await workbench.goto(server.url.origin);
+    await playwrightExpect(workbench.locator("#root")).toBeAttached();
+    expect(resolved).toBe(false);
+    await workbench.evaluate(() => {
+      document.getElementById("root")!.textContent = "Workbench";
+    });
+    expect(await ready).toBe(workbench);
+  } finally {
+    await server.stop(true);
+  }
+});
+
+test("workbench readiness reports recovery while the renderer still has no content", async () => {
+  const server = Bun.serve({
+    port: 0,
+    fetch: () => new Response('<div id="root"></div>', { headers: { "content-type": "text/html" } }),
+  });
+  try {
+    const ready = waitForWorkbenchPage(lifecycle, server.url.origin).catch((error: Error) => error);
+    const workbench = await context.newPage();
+    await workbench.goto(server.url.origin);
+    await playwrightExpect(workbench.locator("#root")).toBeAttached();
+    await lifecycle.evaluate(() => {
+      document.body.innerHTML =
+        "<section><h1>Prompt Studio needs attention</h1><p>Renderer startup failed</p></section>";
+    });
+    expect(await ready).toMatchObject({ message: expect.stringContaining("Renderer startup failed") });
+  } finally {
     await server.stop(true);
   }
 });
