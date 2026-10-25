@@ -105,7 +105,10 @@ test("keeps note titles independent of the body and renames them through the con
     await editor.fill(body);
     await expect
       .poll(() =>
-        readFileSync(`${repoRoot}/.pstdio/extension-storage/pstdio-notes/documents/${note.id}/content.md`, "utf8"),
+        readFileSync(
+          `${repoRoot}/.pstdio/extension-storage/pstdio.pstdio-notes/documents/${note.id}/content.md`,
+          "utf8",
+        ),
       )
       .toContain(body);
     await expect(row).toHaveAttribute("aria-selected", "true");

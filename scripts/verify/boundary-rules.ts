@@ -4,6 +4,7 @@
 export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-service-telemetry": [],
   "pstdio-account-manager": ["pstdio-sync-contracts", "pstdio-service-telemetry"],
+  "pstdio-psx": ["pstdio-extensions"],
   "pstdio-relay": ["pstdio-account-manager", "pstdio-sync", "pstdio-sync-contracts", "pstdio-service-telemetry"],
   "pstdio-api-contracts": ["pstdio-sync-contracts"],
   "pstdio-sync-contracts": [],
@@ -139,5 +140,5 @@ export const DEFAULT_PRIVATE_EXPORT_LIMIT = 2;
 export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
   "pstdio-api": 2,
   "pstdio-api-contracts": 7,
-  "pstdio-extensions": 11,
+  "pstdio-extensions": 12,
 };

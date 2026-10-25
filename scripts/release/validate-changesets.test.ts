@@ -62,6 +62,19 @@ const writeWorkspace = (dependencyField: "dependencies" | "devDependencies") => 
 };
 
 describe("collectChangesetConfigIssues", () => {
+  test("allows an independently versioned extension outside the host group", async () => {
+    const root = writeWorkspace("devDependencies");
+    const dir = join(root, "packages", "notes");
+    mkdirSync(dir);
+    writeJson(join(dir, "package.json"), {
+      name: "notes",
+      publisher: "alice",
+      engines: { pstdio: "^0.2.0" },
+      version: "0.45.0",
+      private: true,
+    });
+    expect(await collectChangesetConfigIssues(root)).toEqual([]);
+  });
   test("reports a released workspace missing from the fixed group", async () => {
     const root = writeWorkspace("devDependencies");
     const dir = join(root, "packages", "new-extension");

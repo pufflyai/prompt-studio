@@ -123,7 +123,10 @@ export const buildDashboardMenuSlotRegistry = (metadata: DashboardExtensionMetad
   ]);
   const resourceKindsBySlotId = new Map<string, string>();
   const resourceOwnersBySlotId = new Map<string, string>();
-  const resourceKinds = [...hostResourceKinds, ...metadata.resourceKinds];
+  const resourceKinds = [
+    ...hostResourceKinds,
+    ...metadata.resourceKinds.map((kind) => ({ ...kind, id: kind.localId })),
+  ];
 
   for (const resourceKind of resourceKinds) {
     for (const slot of resourceKind.menuSlots ?? []) {
@@ -168,12 +171,23 @@ const modeTerms = (mode: ExtensionWhenExpression["mode"] | undefined) => {
   return modes.map((modeId) => `activeWorkbenchMode == ${contextValue(modeId)}`);
 };
 
+// Conditions name an extension's kind as `<publisher>.<name>.<kind>`; the workbench keys
+// resources by their local kind and keeps the owner in a separate context value.
+const splitResourceType = (resourceType: string) => {
+  const parts = resourceType.split(".");
+  if (parts.length < 3) return { owner: undefined, localType: resourceType };
+  return { owner: parts.slice(0, 2).join("."), localType: parts.slice(2).join(".") };
+};
+
 export const buildDashboardWorkbenchWhenExpression = (when: ExtensionMenuContribution["when"]) => {
   if (!when) return undefined;
 
   const resourceTypeTerms =
-    when.resourceType?.map((resourceType) => `${workbenchResourceTypeContextKey} == ${contextValue(resourceType)}`) ??
-    [];
+    when.resourceType?.map((resourceType) => {
+      const { owner, localType } = splitResourceType(resourceType);
+      const typeTerm = `${workbenchResourceTypeContextKey} == ${contextValue(localType)}`;
+      return owner ? `${typeTerm} && ${workbenchResourceOwnerContextKey} == ${contextValue(owner)}` : typeTerm;
+    }) ?? [];
   const metadataTerms = Object.entries(when.metadata ?? {})
     .filter((entry): entry is [string, string | number | boolean] => isContextPrimitive(entry[1]))
     .map(([key, value]) => `${workbenchResourceMetadataContextKey(key)} == ${contextValue(value)}`);
@@ -203,7 +217,7 @@ const contextMenuResourceKinds = (
   resourceKindsBySlotId: ReadonlyMap<string, string>,
 ) => {
   const resourceTypes = contribution.when?.resourceType ?? [];
-  if (resourceTypes.length > 0) return resourceTypes;
+  if (resourceTypes.length > 0) return resourceTypes.map((resourceType) => splitResourceType(resourceType).localType);
 
   const slotResourceKind = resourceKindsBySlotId.get(contribution.slotId);
   return slotResourceKind && slotResourceKind !== "project" ? [slotResourceKind] : [];

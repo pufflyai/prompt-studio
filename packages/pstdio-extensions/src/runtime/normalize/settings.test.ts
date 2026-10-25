@@ -40,13 +40,13 @@ describe("normalizeExtensionSources settings", () => {
     expect(runtime.diagnostics).toEqual([]);
     expect(runtime.settings).toEqual([
       expect.objectContaining({
-        id: "lab.counter.step",
+        id: "pstdio.lab.counter.step",
         key: "counter.step",
         extensionId: "pstdio.lab",
         contribution: expect.objectContaining({ type: "number", scope: "project", default: 1 }),
       }),
       expect.objectContaining({
-        id: "lab.greeting.tone",
+        id: "pstdio.lab.greeting.tone",
         key: "greeting.tone",
         extensionId: "pstdio.lab",
         contribution: expect.objectContaining({ type: "string", scope: "global", default: "friendly" }),

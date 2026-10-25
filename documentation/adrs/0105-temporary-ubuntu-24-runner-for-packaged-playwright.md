@@ -4,7 +4,7 @@ Proposed: 2026-10-24
 
 ## Decision
 
-This is a temporary workaround, not the intended design. The Linux job of `verify-packaged-toolchain.yml` runs on `ubuntu-24.04` instead of `ubuntu-latest`. All other jobs keep `ubuntu-latest`.
+This is a temporary workaround, not the intended design. The Linux job of `verify-packaged-toolchain.yml` and the `psx_delivery` job of `service-containers.yml` run on `ubuntu-24.04` instead of `ubuntu-latest`. Both install Playwright's Chromium. All other jobs keep `ubuntu-latest`.
 
 ## How it should work
 
@@ -16,12 +16,12 @@ GitHub moves the `ubuntu-latest` label to Ubuntu 26.04 from 2026-10-19 ([runner-
 
 ## Workaround and trade-offs
 
-One matrix entry names `ubuntu-24.04`. The packaged CLI and browser checks keep their workload, limits and assertions. The trade-off: the packaged Linux check does not run on the newest image until the pin is removed.
+One matrix entry and the `psx_delivery` job name `ubuntu-24.04`. The packaged CLI, browser and extension delivery checks keep their workload, limits and assertions. The trade-off: these checks do not run on the newest image until the pin is removed. `psx_delivery` also runs when the release workflow builds containers, so without the pin a 26.04 runner would block the release.
 
 ## Limitations
 
-Only this job is pinned. Another job that installs Playwright browsers on `ubuntu-latest` would fail the same way when it receives a 26.04 runner.
+Only these two jobs are pinned. Another job that installs Playwright browsers on `ubuntu-latest` would fail the same way when it receives a 26.04 runner.
 
 ## Removal
 
-When a Playwright release supports Chromium on Ubuntu 26.04, upgrade `@playwright/test`, set the matrix entry back to `ubuntu-latest`, confirm the packaged Linux check passes on a 26.04 runner, and delete this ADR.
+When a Playwright release supports Chromium on Ubuntu 26.04, upgrade `@playwright/test`, set both jobs back to `ubuntu-latest`, confirm the packaged Linux check passes on a 26.04 runner, and delete this ADR.

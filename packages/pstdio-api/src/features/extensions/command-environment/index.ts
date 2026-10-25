@@ -27,7 +27,6 @@ import { createExtensionFilesApi } from "./extension-files";
 import { createFilesApi } from "./files";
 import { createNotifyApi } from "./notifications";
 import { createExtensionPackageFilesApi } from "./package-files";
-import { createProjectFilesApi } from "./project-files";
 import { createResourcesApi } from "./resources";
 import { createScopedHostApis } from "./scoped-host-apis";
 import { createSettingsApi } from "./settings";
@@ -138,7 +137,7 @@ export const createCommandEnvironment = (
         },
         deps,
       ),
-      projectFiles: createProjectFilesApi(deps, input.projectId, provisioningWorkspaceId, signal),
+      projectFiles: createWorkspaceFileMount(resolveProjectPath, signal),
       workspaceFiles:
         input.workspaceId && workingFiles
           ? {

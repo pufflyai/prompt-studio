@@ -46,3 +46,14 @@ resource "digitalocean_spaces_bucket" "relay" {
     prevent_destroy = true
   }
 }
+
+resource "digitalocean_spaces_bucket" "psx" {
+  count         = contains(var.services, "psx") ? 1 : 0
+  name          = "${var.bucket_name}-psx"
+  region        = var.spaces_region
+  acl           = "private"
+  force_destroy = false
+  lifecycle {
+    prevent_destroy = true
+  }
+}

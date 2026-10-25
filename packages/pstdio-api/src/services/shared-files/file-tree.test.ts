@@ -9,7 +9,7 @@ test("independent offline children of an existing directory merge without a conf
   try {
     await f.mount().writeText("folder/base.md", "base");
     const peerRoot = join(f.root, "peer");
-    const peerPath = join(peerRoot, ".pstdio/extension-storage/example-documents/documents/folder");
+    const peerPath = join(peerRoot, ".pstdio/extension-storage/example.documents/documents/folder");
     const peer = createSharedArtifactMount(f.deps, { ...f.input, repoRoot: peerRoot });
     await peer.refresh();
     await writeFile(f.pathFor("documents/folder/a.md"), "A");

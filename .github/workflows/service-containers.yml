@@ -2,7 +2,7 @@ name: Service containers
 
 on:
   pull_request:
-    paths: ["services/**", "infra/**", "packages/pstdio-sync/**", "packages/pstdio-sync-contracts/**", "bun.lock", "package.json", ".dockerignore", ".github/workflows/service-containers.yml", ".github/workflows/release-packages.yml"]
+    paths: ["services/**", "infra/**", "packages/pstdio-sync/**", "packages/pstdio-sync-contracts/**", "packages/e2e/src/packaged/registry-*.fixture.ts", "packages/e2e/src/packaged/packaged-independent-extensions*", "bun.lock", "package.json", ".dockerignore", ".github/workflows/service-containers.yml", ".github/workflows/release-packages.yml"]
   workflow_call:
     inputs:
       ref:
@@ -17,13 +17,48 @@ permissions:
   contents: read
 
 jobs:
+  psx_delivery:
+    # Temporary: Playwright's Chromium does not install on Ubuntu 26.04 yet (ADR 0105).
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - run: bun install --frozen-lockfile
+      - run: bun run --cwd services/psx test:isolated
+      - run: docker build -f infra/psx/Dockerfile -t pstdio-psx-smoke .
+      - name: Build the packaged host for the delivery smoke
+        env:
+          PSTDIO_BUILD_PLATFORM_PKG: cli-linux-x64
+        run: bun run --cwd scripts build:all
+      - name: Upgrade a separately published extension on the same packaged host
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio
+          PSTDIO_PSX_REAL_SERVICE: "1"
+          PSTDIO_PSX_TEST_IMAGE: pstdio-psx-smoke
+        run: bun run --cwd packages/e2e test:packaged:cli -- --test-name-pattern "independently published"
+      - name: Provision Chromium for the UI delivery smoke
+        run: packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio extensions install-browser
+      - name: Upgrade through Settings
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio
+          PSTDIO_PSX_REAL_SERVICE: "1"
+          PSTDIO_PSX_TEST_IMAGE: pstdio-psx-smoke
+        run: bun run --cwd packages/e2e test:packaged:browser -- packaged-independent-extensions.spec.ts
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       matrix:
-        service: [relay, account-manager]
+        service: [relay, account-manager, psx]
     steps:
       - uses: actions/checkout@v5
         with:

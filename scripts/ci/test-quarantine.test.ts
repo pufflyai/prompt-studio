@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { join } from "node:path";
 import {
   bunTestSelection,
+  narrowStablePattern,
   quarantinePattern,
   verifyPlaywrightQuarantineReport,
   verifyQuarantineReport,
@@ -89,4 +90,13 @@ test("browser quarantine accepts a first-attempt failure but rejects skipped, re
   ).toThrow();
   expect(() => verifyPlaywrightQuarantineReport(report([]), ["browser saves"])).toThrow();
   expect(() => verifyPlaywrightQuarantineReport({ suites: [], errors: ["setup failed"] }, ["browser saves"])).toThrow();
+});
+
+test("a caller's name filter narrows the stable lane without running quarantined cases", () => {
+  const stable = bunTestSelection(cases, "packages/db", "linux", false).pattern!;
+  const pattern = new RegExp(narrowStablePattern(stable, "keeps data")!);
+  expect(pattern.test("keeps data cold")).toBe(true);
+  expect(pattern.test("keeps data (cold)")).toBe(false);
+  expect(pattern.test("ordinary behavior")).toBe(false);
+  expect(narrowStablePattern(undefined, "keeps data")).toBe("keeps data");
 });
