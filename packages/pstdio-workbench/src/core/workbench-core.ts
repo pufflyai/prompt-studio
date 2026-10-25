@@ -320,7 +320,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   registerArrangementCommands(core);
   connectModeLayoutCache(core, layoutCache);
   const breadcrumbSources = { breadcrumbs, locations: pageLocations, pages, navigationTrees, modes };
-  connectWorkbenchPageBreadcrumbs({ ...breadcrumbSources, resources: pageResources });
+  connectWorkbenchPageBreadcrumbs({ ...breadcrumbSources, layout, resources: pageResources });
   connectWorkbenchCoreState(core, input);
 
   return core;

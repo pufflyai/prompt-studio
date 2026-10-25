@@ -45,6 +45,7 @@ export {
   localContributionIdPattern,
   normalizeBooleanViewRule,
   packageAsset,
+  pagePlaceholderView,
   projectEvents,
   projectSlots,
   rebaseEditingChanges,

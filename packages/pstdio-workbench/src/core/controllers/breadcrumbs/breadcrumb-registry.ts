@@ -1,3 +1,4 @@
+import type { WorkbenchTabSnapshot } from "../../registries/layout/layout-types";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
@@ -11,6 +12,7 @@ export interface WorkbenchBreadcrumbItem {
   url?: string;
   onClick?: () => void;
   resource?: ResourceRef;
+  menu?: WorkbenchTabSnapshot["menu"];
 }
 
 export type WorkbenchBreadcrumbChangeListener = () => void;

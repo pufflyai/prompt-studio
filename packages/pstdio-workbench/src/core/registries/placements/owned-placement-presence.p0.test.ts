@@ -49,6 +49,20 @@ const setup = () => {
   return { workbench, open, sideWidgets };
 };
 describe("static placement presence", () => {
+  test.each(["nav", "sidenav", "activity", "status"] as const)("fixed %s chrome stays with its owner", (region) => {
+    const { workbench, open } = setup();
+    workbench.shellPlacements.registerPlacement({
+      id: "chrome",
+      region,
+      item: { kind: "view", presence: "fixed", view: { kind: "view", id: "tools" } },
+    });
+    open("start");
+    const chrome = workbench.layout.getLayout().regions[region].widgets[0]!;
+    expect(chrome.closable).toBe(false);
+    expect(() => workbench.closePlacement(chrome.placementIdentity!)).toThrow();
+    open("other-start");
+    expect(workbench.layout.getLayout().regions[region].widgets[0]?.widgetId).toBe(chrome.widgetId);
+  });
   test("shell placements seed fixed and open placements and keep closed ones hidden", () => {
     const { workbench } = setup();
     workbench.shellPlacements.registerPlacement({
@@ -92,7 +106,7 @@ describe("static placement presence", () => {
       .map((placement) => (placement.identity.kind === "shell" ? placement.identity.placementId : "other-owner"));
     expect(rendered.sort()).toEqual(["fixed", "open"]);
   });
-  test("a fixed placement is not closable", () => {
+  test("a deprecated fixed placement follows the open placement lifecycle", () => {
     const { workbench } = setup();
     workbench.shellPlacements.registerPlacement({
       id: "fixed",
@@ -106,11 +120,10 @@ describe("static placement presence", () => {
       },
       region: "side",
     });
-    expect(() =>
-      workbench.shellPlacements.closePlacement({ kind: "shell", placementId: "fixed", instanceKey: "default" }),
-    ).toThrow();
-    const placement = workbench.shellPlacements.resolvePlacements()[0];
-    expect(placement?.value.closable).toBe(false);
+    workbench.shellPlacements.closePlacement({ kind: "shell", placementId: "fixed", instanceKey: "default" });
+    expect(workbench.shellPlacements.resolvePlacements()).toEqual([]);
+    workbench.shellPlacements.openPlacement({ placementId: "fixed" });
+    expect(workbench.shellPlacements.resolvePlacements()[0]?.value.closable).toBe(true);
   });
   test("a closed optional placement stays closed when the user returns to its mode", () => {
     const { workbench, open, sideWidgets } = setup();

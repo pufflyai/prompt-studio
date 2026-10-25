@@ -1,10 +1,18 @@
 import type { PageOpenIntent, PlacementItem } from "@pstdio/sdk/extensions";
 import { contributionRefId, resourceKey } from "@pstdio/sdk/extensions";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
+import { type WorkbenchRegion, workbenchPanelRegions } from "../layout/layout-types";
 import type { ResourceRef } from "../resources/resource-registry";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "./placement-instance-key";
 export type WorkbenchPlacementPresence = "fixed" | "open" | "closed";
 export type WorkbenchOwnedPlacementItem = PlacementItem;
+export const placementItemForRegion = (item: PlacementItem, region: WorkbenchRegion) => {
+  if (item.kind === "view" && item.presence === "fixed" && workbenchPanelRegions.some((panel) => panel === region)) {
+    return { ...item, presence: "open" as const };
+  }
+  return { ...item };
+};
+export const staticPlacementClosable = (item: PlacementItem) => item.kind !== "view" || item.presence !== "fixed";
 export const placementItemViewId = (item: PlacementItem) =>
   contributionRefId(item.kind === "view" ? item.view : item.binding.view);
 /** A user's explicit open or close of an optional static placement. */
@@ -29,8 +37,6 @@ export const isStaticPlacementOpen = (item: WorkbenchOwnedPlacementItem, state: 
   if (item.presence === "fixed") return true;
   return (state.staticOverrides.get(id) ?? item.presence) === "open";
 };
-export const staticPlacementClosable = (item: WorkbenchOwnedPlacementItem) =>
-  item.kind !== "view" || item.presence !== "fixed";
 export const validateOwnedPlacementItem = (label: string, id: string, item: WorkbenchOwnedPlacementItem) => {
   if (item.kind === "binding" && item.binding.kinds.length === 0) {
     throw new Error(`${label} "${id}" must bind at least one resource kind`);

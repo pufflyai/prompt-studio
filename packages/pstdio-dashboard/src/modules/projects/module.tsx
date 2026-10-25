@@ -110,7 +110,7 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContext) => {
     chrome: { nav: false, sidenav: false, activity: false, status: false },
     floatingPanels: "hidden",
     panels: [],
-    regionSettings: { main: { showHeader: false } },
+    regionSettings: { main: { showHeader: false, acceptsTabs: false } },
     activate: () => undefined,
     enter: (modeCtx) => {
       const instanceId = modeCtx.overlays.openOverlay(requiredProjectPickerOverlay, { title: "Projects" });

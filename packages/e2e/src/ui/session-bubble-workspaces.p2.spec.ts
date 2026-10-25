@@ -83,7 +83,7 @@ test.describe("Session bubble workspace selection", () => {
 
     await page.getByRole("group", { name: "Panel controls" }).getByRole("button", { name: "Show Side Panel" }).click();
     await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
-    await page.getByRole("menuitem", { name: "Session", exact: true }).click();
+    await page.getByRole("menuitem", { name: "New session", exact: true }).click();
     const sidePanel = page.getByTestId("workbench-side-panel-attached");
     await expect(sidePanel).toBeVisible();
 

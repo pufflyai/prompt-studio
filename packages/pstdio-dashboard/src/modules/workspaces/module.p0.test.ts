@@ -171,6 +171,7 @@ describe("createWorkspacesModule", () => {
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
       workspaceSupportsFiles: true,
+      workspaceSupportsDiff: true,
       workspaceShorthand: "PS-307_A1",
     });
     const fileResource = {
@@ -181,6 +182,7 @@ describe("createWorkspacesModule", () => {
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     openWorkspacesPage(workbench, workspace);
+    expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceDiffs);
     openWorkspacesPage(workbench, fileResource);
     const layout = workbench.layout.getLayout();
     expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceFiles);

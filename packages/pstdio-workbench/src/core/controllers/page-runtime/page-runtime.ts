@@ -13,7 +13,7 @@ import { applyModePanelPolicy } from "../../registries/modes/mode-layout";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
-import { isPageSlotClosable, pagePlacementDeclarations } from "../../registries/pages/page-main";
+import { pageSlots } from "../../registries/pages/page-main";
 import {
   type CreateWorkbenchPageRegistryInput,
   createWorkbenchPageRegistry,
@@ -31,7 +31,7 @@ import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createDisposable } from "../../shared/disposable";
 import { restoreModePanelLayout } from "./mode-panel-layout";
-import { pageContextChanged, scopePageMainTabs } from "./page-main-tabs";
+import { belongsToActivePageContext, pageContextChanged, scopePageMainTabs } from "./page-main-tabs";
 import { closeDepartingPagePreviews, departingPagePreviews } from "./page-preview-lifetime";
 import { connectTrayPreviewRemoval } from "./tray-preview-removal";
 import { retainTrayPreviews } from "./tray-preview-retention";
@@ -73,8 +73,10 @@ const syncOwnedPanelMenus = (layout: LayoutModel) => {
 const bindPlacementsToActivePageLocation = (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) => {
   const ownerResourceKey = resourceKey(state.location?.resource);
   if (!ownerResourceKey) return state.placements;
+  // Tabs a shared tray retained from other pages or resources do not close with this Location.
   return state.placements.map((placement) =>
-    placement.value.role === "sub-panel" && placement.identity.kind === "page"
+    placement.value.role === "sub-panel" &&
+    belongsToActivePageContext({ ...placement.value, placementIdentity: placement.identity }, state)
       ? { ...placement, value: { ...placement.value, ownerResourceKey } }
       : placement,
   );
@@ -271,10 +273,9 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     resources,
     valuesEqual: (left, right) => JSON.stringify(left) === JSON.stringify(right),
     registerPagePlacements: (page) => {
-      const registrations = pagePlacementDeclarations(page).map((slot) => {
+      const registrations = pageSlots(page).map((slot) => {
         const viewId = contributionRefId(slot.item.kind === "view" ? slot.item.view : slot.item.binding.view);
         if (!viewId) throw new Error(`Workbench page slot view is not registered: ${page.id}.${slot.id}`);
-        const closable = isPageSlotClosable(slot);
         return registerWorkbenchViewPlacement(
           input.layout,
           input.views,
@@ -284,7 +285,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
             viewId,
             role: slot.role === "primary" ? "location" : "sub-panel",
             singleton: slot.item.kind === "view" || slot.item.binding.cardinality !== "many",
-            closable,
+            closable: true,
           },
           input.viewMenus,
         );

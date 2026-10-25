@@ -47,6 +47,7 @@ export const workbenchPages = {
   start: hostRef("page", "start"),
   sessions: hostRef("page", "sessions"),
   session: hostRef("page", "session"),
+  newSession: hostRef("page", "new-session"),
   workspaces: hostRef("page", "workspaces"),
   workspace: hostRef("page", "workspace"),
 };
@@ -69,6 +70,12 @@ export const workbenchPageDefinitions = {
     mode: workbenchModes.sessions,
     path: "session",
     primary: { cardinality: "one", resourceKinds: ["session", "session-draft"] },
+  },
+  newSession: {
+    ref: workbenchPages.newSession,
+    mode: workbenchModes.sessions,
+    path: "sessions/new",
+    primary: { cardinality: "one", resourceKinds: ["session-draft"] },
   },
   workspaces: {
     ref: workbenchPages.workspaces,

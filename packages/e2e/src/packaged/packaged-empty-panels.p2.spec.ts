@@ -4,6 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium, expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import {
+  expectNoDefaultHomePlaceholder,
+  observeHomeLoading,
+  verifyFastHeaderNavigation,
+  verifyPageHeaderChoices,
+} from "../helpers/home-loading";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { verifyEmptyPanelAddition } from "./packaged-empty-panel-addition";
 import { buildBinary } from "./packaged-helpers";
@@ -43,8 +49,24 @@ test("adding a tool keeps the other empty panel open", async () => {
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, started.descriptor);
     phase("signed in; open project");
+    await observeHomeLoading(page);
     await page.goto(`${started.baseUrl}/projects/${project.id}/`);
     await expect(page.getByText("Project home", { exact: true })).toBeVisible();
+    await expectNoDefaultHomePlaceholder(page);
+    await verifyPageHeaderChoices(page);
+    await verifyFastHeaderNavigation(page);
+    const mainEdge = page.getByLabel("Main header edge", { exact: true });
+    await expect(mainEdge).toBeVisible();
+    await mainEdge.focus();
+    await mainEdge.press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Show header", exact: true }).click();
+    const mainHeader = page.getByLabel("Main panel header", { exact: true });
+    await expect(mainHeader).toBeVisible();
+    await expect(mainHeader.getByRole("tab")).toHaveCount(0);
+    await mainHeader.focus();
+    await mainHeader.press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
+    await expect(mainEdge).toBeVisible();
     phase("project ready; check panel additions");
     await test.step("Add tools while preserving the other empty panel", () => verifyEmptyPanelAddition(page));
     phase("panel additions checked");

@@ -178,7 +178,6 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
       label: text(mode.label, mode.modeId),
       panels: mode.panelRegions,
       regionSettings: mode.regionSettings,
-      panelHeaders: "legacy",
       floatingPanels: mode.floatingPanels,
       defaultTheme: mode.defaultTheme,
       chrome: mode.chrome,
@@ -191,6 +190,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,
     metadata: toInternalWorkbenchExtensionMetadata(sourceInput.metadata, {
+      projectId: sourceInput.projectId,
       createTab: (metadata) => createWorkbenchExtensionTabPresentation(sourceInput, metadata),
     }),
   };

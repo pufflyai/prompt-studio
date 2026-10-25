@@ -50,7 +50,7 @@ export const verifyPackagedCollectionBreadcrumb = async (
   }, sessions.href);
   await expect(breadcrumbs).toContainText("Sessions");
   expect(await searchBefore!.evaluate((row) => row.isConnected)).toBe(true);
-  const modeReturn = sidenav.getByRole("button", { name: "Project", exact: true });
+  const modeReturn = sidenav.getByRole("button", { name: "Back to project", exact: true });
   await expect(modeReturn).toBeVisible();
   expect(await modeReturn.evaluate((button) => button.closest('[draggable="true"]'))).toBeNull();
   expect(
@@ -69,7 +69,7 @@ export const verifyPackagedCollectionBreadcrumb = async (
         const sample = () => {
           const nav = document.querySelector('[data-workbench-region="sidenav"]')!;
           const leaving = [...nav.querySelectorAll('[role="button"]')].some(
-            (row) => row.textContent?.trim() === "Project",
+            (row) => row.textContent?.trim() === "Back to project",
           );
           if (!leaving) {
             const rows = [...nav.querySelectorAll('[role="option"]')];

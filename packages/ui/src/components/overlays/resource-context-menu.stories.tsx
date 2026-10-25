@@ -2,7 +2,7 @@ import { Box, Icon, Input, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Eye } from "lucide-react";
 import { useState } from "react";
-import { expect, fireEvent, screen, userEvent, waitFor, within } from "storybook/test";
+import { expect, fireEvent, fn, screen, userEvent, waitFor, within } from "storybook/test";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { getIconComponent } from "@/components/primitives/icon-options";
 
@@ -132,6 +132,20 @@ type Story = StoryObj<typeof ResourceContextMenu>;
 
 export const Default: Story = {
   render: () => <ResourceContextMenu actions={createActions(4)}>{menuTarget}</ResourceContextMenu>,
+};
+
+export const SelectionAction: Story = {
+  args: {
+    children: menuTarget,
+    actions: [{ key: "toggle", label: "Toggle visibility", onSelect: fn() }],
+  },
+  play: async ({ canvasElement, args }) => {
+    fireEvent.contextMenu(within(canvasElement).getByText("Right-click here"));
+    const action = await screen.findByRole("menuitem", { name: "Toggle visibility" });
+    fireEvent.click(action);
+    expect(args.actions[0].onSelect).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+  },
 };
 
 export const VisibilitySubmenu: Story = {

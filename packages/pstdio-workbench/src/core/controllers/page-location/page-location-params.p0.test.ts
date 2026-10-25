@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { resolvePageParams } from "pstdio-api-contracts";
+import { createWorkbench } from "../../workbench-core";
 import { createWorkbenchPageBreadcrumbItems } from "./page-breadcrumbs";
 import { createPageLocationHarness, pageRef } from "./page-location-controller.test-support";
 
@@ -161,6 +162,7 @@ test("breadcrumb clicks restore parent params and preserve every ancestor", () =
     },
   });
   const crumbs = createWorkbenchPageBreadcrumbItems({
+    layout: createWorkbench().layout.getLayout(),
     location: h.registry.store.getState().location!,
     pages: Object.values(h.registry.store.getState().pages),
     navigationTrees: h.navigationTrees,

@@ -84,6 +84,10 @@ for (const shell of environments) {
       await openPackagedProject(app.page, project);
       await app.page.emulateMedia({ reducedMotion: "reduce" });
       await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
+      await app.page
+        .getByLabel("Main", { exact: true })
+        .getByRole("button", { name: "New session", exact: true })
+        .click();
       const modelMenu = app.page.getByRole("button", { name: "Select model", exact: true });
       const conversationHeading = app.page.getByRole("heading", { name: "No messages yet", exact: true });
       await expect(modelMenu).not.toContainText("Loading");

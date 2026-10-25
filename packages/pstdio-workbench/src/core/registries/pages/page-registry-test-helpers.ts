@@ -55,10 +55,6 @@ export const activatePage = (
 export const closePlacement = (registry: ReturnType<typeof createRegistry>, identity: PlacementIdentity) => {
   const internals = getWorkbenchPageRegistryInternals(registry);
   const result = internals.resolveClosePlacement(identity);
-  if (result.kind === "parent") {
-    activatePage(registry, { pageId: result.parentId }, result.pageStates);
-    return;
-  }
   activatePage(registry, result.target, result.pageStates);
 };
 export const activePagePlacements = (registry: ReturnType<typeof createRegistry>, slotId: string) =>

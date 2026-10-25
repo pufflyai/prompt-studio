@@ -23,7 +23,7 @@ export const writeNavigationExtension = (root: string) => {
       modes: [{ id: "policy", ref: { kind: "mode", id: "policy" }, label: "Policy", regions: ["main", "side", "secondary"], regionSettings: { side: { canOpen: true, canClose: false, acceptsTabs: true, resizable: false, movable: false, floatable: false } } }],
       resourceKinds: [{ id: "record", ref: { kind: "resource-kind", id: "record" } }],
       views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: { kind: "file", resourceKind: { kind: "resource-kind", id: "record" }, load: () => ({ content: "probe", editable: false }) } }],
-      pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" }, slots: [], panels: {} }],
+      pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, regionSettings: { main: { showHeader: false } }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one", empty: { view: { kind: "view", id: "document" }, breadcrumb: { label: "New record", icon: "add", menu: [{ id: "record", rows: [{ id: "open", label: "Open record", action: { kind: "page", page: { kind: "page", id: "record" }, resource: { type: "record", id: "record-1" } } }] }] } } }, slots: [], panels: {} }],
       commands: [{
       id: "open-document", ref: { kind: "command", id: "open-document" }, title: "Open document",
       run(ctx: { navigation: { open(target: unknown): void } }) {
@@ -51,7 +51,36 @@ export const expectPackagedNavigation = async (input: {
   });
   const metadata = await metadataResponse.json();
   expect(metadata.pages).toContainEqual(
-    expect.objectContaining({ localId: "record", document: { metadataKey: "documentId" } }),
+    expect.objectContaining({
+      localId: "record",
+      document: { metadataKey: "documentId" },
+      regionSettings: { main: { showHeader: false } },
+      main: expect.objectContaining({
+        empty: {
+          view: { kind: "view", id: "document", extensionId: "test.navigation-probe" },
+          breadcrumb: {
+            label: "New record",
+            icon: "add",
+            menu: [
+              {
+                id: "record",
+                rows: [
+                  {
+                    id: "open",
+                    label: "Open record",
+                    action: {
+                      kind: "page",
+                      page: { kind: "page", id: "record", extensionId: "test.navigation-probe" },
+                      resource: { type: "record", id: "record-1" },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      }),
+    }),
   );
   expect(metadata.modes).toContainEqual(
     expect.objectContaining({

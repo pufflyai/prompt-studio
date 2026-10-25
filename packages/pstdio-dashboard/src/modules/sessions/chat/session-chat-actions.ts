@@ -2,10 +2,10 @@ import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { HarnessParamValues } from "@pstdio/ui/param-editor";
-import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
+import { batchWorkbenchChanges } from "@pstdio/workbench";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { createDashboardSessionResource } from "@/shared/app/resources";
-import { resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
+import { sessionPanelRef } from "../bubble/session-panel-placements";
 import { toSessionNotice } from "../data/session-notice";
 import { rememberDashboardSessionResource } from "../state/session-selection";
 import {
@@ -14,6 +14,7 @@ import {
   type PendingFollowUpState,
   updatePendingFollowUp,
 } from "./session-chat-state";
+import { type SessionViewContext, sessionViewPlacement, sessionViewShowsDraft } from "./session-view-context";
 
 // Post-send work runs on the request promise. Callbacks passed to TanStack's `mutate()` are
 // skipped once the chat panel unmounts, which would leave the message without an owner.
@@ -45,22 +46,14 @@ export type FollowUpMutation = {
 
 const createSessionTitle = (prompt: string) => prompt.slice(0, 100) || "Session";
 
-// The user may have moved the panel to another session while the request was open.
-const placementShowsDraft = (input: WorkbenchPanelRenderInput, draftKey: string) => {
-  const placement = Object.values(input.workbench.layout.getLayout().regions)
-    .flatMap((region) => region.widgets)
-    .find((widget) => widget.widgetId === input.instance.instanceId);
-  return Boolean(placement && resolveDashboardSessionViewForPlacement(placement).draftKey === draftKey);
-};
-
 export const openCreatedSessionFromDraft = (args: {
-  input: WorkbenchPanelRenderInput;
+  input: SessionViewContext;
   draftKey: string;
   sessionId: string;
   prompt: string;
   projectId: string;
 }) => {
-  if (!placementShowsDraft(args.input, args.draftKey)) return undefined;
+  if (!sessionViewShowsDraft(args.input, args.draftKey)) return undefined;
   const title = createSessionTitle(args.prompt);
   const resource = createDashboardSessionResource(args.sessionId, title, args.projectId);
 
@@ -72,13 +65,33 @@ export const openCreatedSessionFromDraft = (args: {
     return identity;
   }
   if (identity?.kind === "page") {
-    const result = args.input.workbench.pageLocations.navigate({
-      kind: "page",
-      page: workbenchPages.session,
-      resource,
+    const placement = sessionViewPlacement(args.input)!;
+    const workbench = args.input.workbench;
+    const routed =
+      placement.region === "main" &&
+      workbench.layout.getActivePanel("main")?.instanceId === placement.instance.instanceId;
+    if (!routed) {
+      return batchWorkbenchChanges(() => {
+        const session = workbench.modePlacements.openPlacement({
+          panel: sessionPanelRef(workbench.modes.getActiveModeId() ?? "project"),
+          resource,
+          region: placement.region,
+          open: "pin",
+        });
+        workbench.closePlacement(identity);
+        return session;
+      });
+    }
+    return batchWorkbenchChanges(() => {
+      const result = workbench.pageLocations.navigate({
+        kind: "page",
+        page: workbenchPages.session,
+        resource,
+      });
+      if (!result.ok) throw new Error(result.diagnostic.message);
+      if (sessionViewPlacement(args.input)) workbench.closePlacement(identity);
+      return identity;
     });
-    if (!result.ok) throw new Error(result.diagnostic.message);
-    return identity;
   }
   throw new Error("A session draft must be opened through an owned placement.");
 };

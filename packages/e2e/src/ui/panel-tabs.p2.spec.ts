@@ -51,7 +51,7 @@ test("opens the Session tab context menu while normal clicks only select", async
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
     .getByRole("menu", { name: "Add panel" })
-    .getByRole("menuitem", { name: "Session", exact: true });
+    .getByRole("menuitem", { name: "New session", exact: true });
   if (await sessionChoice.isVisible()) await sessionChoice.click();
   await expect(page.locator('[data-workbench-panel-header="side"]').getByRole("tab")).toHaveCount(1);
   const sessionTab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
@@ -93,7 +93,7 @@ test.describe("webview outside interactions", () => {
     await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
     const header = page.locator('[data-workbench-panel-header="side"]');
     await header.getByRole("button", { name: "Add panel", exact: true }).click();
-    const session = page.getByRole("menuitem", { name: "Session", exact: true });
+    const session = page.getByRole("menuitem", { name: "New session", exact: true });
     if (await session.isVisible()) await session.click();
     const tab = header.getByRole("tab", { name: /New session/, selected: true });
     const menu = page.getByRole("menu", { name: "New session context menu", exact: true });

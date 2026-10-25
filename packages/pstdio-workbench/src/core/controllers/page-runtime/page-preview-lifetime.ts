@@ -28,7 +28,8 @@ export const closeDepartingPagePreviews = (state: State, previous: State, layout
       if (!widget.placementIdentity) return [];
       const key = placementIdentityKey(widget.placementIdentity);
       const incoming = state.placements.find((entry) => placementIdentityKey(entry.identity) === key);
-      return incoming?.value.tabRetention === "preview" &&
+      return incoming &&
+        (incoming.value.tabRetention ?? widget.tabRetention) === "preview" &&
         resourceKey(incoming.value.resource) === resourceKey(widget.resource)
         ? [key]
         : [];

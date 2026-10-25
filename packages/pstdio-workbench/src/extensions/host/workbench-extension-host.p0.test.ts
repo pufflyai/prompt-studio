@@ -360,7 +360,7 @@ describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
       expect.objectContaining({
         panelId: `workbench.mode-placement.${extensionId}.placement.outline`,
         viewId: treeViewId,
-        closable: false,
+        closable: true,
       }),
     );
     expect(workbench.statusBar.listItems()).toEqual([

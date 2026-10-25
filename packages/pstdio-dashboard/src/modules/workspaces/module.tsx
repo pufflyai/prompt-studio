@@ -155,6 +155,7 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
     },
     main: {
       kind: "panels",
+      landing: "changes",
       empty: {
         kind: "view",
         id: dashboardWidgetIds.workspaceSummary,

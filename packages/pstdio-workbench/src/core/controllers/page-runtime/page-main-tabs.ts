@@ -5,11 +5,12 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../registries/layout/layout-types";
 import { placementIdentityKey, reconcileOwnedPlacements } from "../../registries/layout/placement-reconciliation";
-import { pagePlacementDeclarations } from "../../registries/pages/page-main";
+import { pageSlots } from "../../registries/pages/page-main";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { pageResourceContextKey } from "../../registries/pages/page-resource-context";
 import { ownsStaticPageInstance } from "../../registries/pages/page-state-key";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
+import { collectionMainOwner } from "./collection-main-owner";
 
 type State = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
 
@@ -68,7 +69,7 @@ const mainTabNeedsCache = (widget: WorkbenchWidgetPlacement, state: State, chang
   if (identity.kind !== "page") return changingPage;
   if (identity.pageId !== state.activePageId) return true;
   const page = state.pages[identity.pageId];
-  const slot = page && pagePlacementDeclarations(page).find((slot) => slot.id === identity.slotId);
+  const slot = page && pageSlots(page).find((slot) => slot.id === identity.slotId);
   const constraint = slot?.item.kind === "binding" ? slot.item.binding : page?.resource;
   // A changed declaration must not restore a resource that its slot no longer accepts.
   if (constraint && (!widget.resource || !resourceMatchesConstraint(constraint, widget.resource))) return false;
@@ -77,6 +78,12 @@ const mainTabNeedsCache = (widget: WorkbenchWidgetPlacement, state: State, chang
       pageResourceContextKey(page, widget.resource) !== pageResourceContextKey(page, state.location?.resource),
   );
 };
+
+/** True when a tab is content of the active page and resource, not one a shared tray retained. */
+export const belongsToActivePageContext = (widget: WorkbenchWidgetPlacement, state: State) =>
+  widget.placementIdentity?.kind === "page" &&
+  widget.placementIdentity.pageId === state.activePageId &&
+  !mainTabNeedsCache(widget, state, false);
 
 const restoreMainTabs = (input: PageTabsInput, current: State["placements"], shared: ReadonlySet<string>) => {
   const { state, previous, layout, pageLayout } = input;
@@ -92,17 +99,25 @@ const restoreMainTabs = (input: PageTabsInput, current: State["placements"], sha
     if (shared.has(key)) continue;
     const existing = placements.find((entry) => placementIdentityKey(entry.identity) === key);
     placements = placements.filter((entry) => placementIdentityKey(entry.identity) !== key);
+    const value = activated.has(key) && existing ? existing.value : refreshPageTab(input, widget);
     placements.push({
       identity,
       region: "main",
       order,
-      value: activated.has(key) && existing ? existing.value : widget,
+      // Another page's primary view is an ordinary tab here. As a Location it would
+      // own this page's resource context and hide the page's own tabs.
+      value:
+        value.role === "location" && identity.kind === "page" && identity.pageId !== state.activePageId
+          ? { ...value, role: "sub-panel" as const }
+          : value,
     });
   }
   return placements;
 };
 
-const refreshSharedPageTab = (input: PageTabsInput, widget: WorkbenchWidgetPlacement) => {
+const refreshPageTab = (input: PageTabsInput, widget: WorkbenchWidgetPlacement) => {
+  // Declarations own close behavior; a saved layout only owns the tab's placement.
+  widget = { ...widget, closable: input.getWidget(widget.contributionId)?.closable ?? widget.closable };
   const identity = widget.placementIdentity;
   if (identity?.kind !== "page" || !widget.resource) return widget;
   const instance = Object.entries(input.state.pageStates)
@@ -123,7 +138,7 @@ const refreshSharedPageTab = (input: PageTabsInput, widget: WorkbenchWidgetPlace
 const sharedPageTabValue = (input: PageTabsInput, widget: WorkbenchWidgetPlacement) => {
   const key = placementIdentityKey(widget.placementIdentity!);
   const explicit = input.state.reconciliation.activate.find((entry) => placementIdentityKey(entry.identity) === key);
-  return explicit ? { ...explicit.value, widgetId: widget.widgetId } : refreshSharedPageTab(input, widget);
+  return explicit ? { ...explicit.value, widgetId: widget.widgetId } : refreshPageTab(input, widget);
 };
 
 const canRestoreSharedPageTab = (input: PageTabsInput, widget: WorkbenchWidgetPlacement, leavingPage: boolean) => {
@@ -165,7 +180,15 @@ export const scopePageMainTabs = (input: PageTabsInput) => {
   const changingPage = pageContextChanged(state, previous);
   const sameMode = state.projectId === previous.projectId && state.activeModeId === previous.activeModeId;
   const sharedLayout = sameMode ? layout : modeLayout;
-  const departing = previous.activePageId ? sharedKeys(layout, true) : new Set<string>();
+  const pages = Object.values(state.pages);
+  const owner = collectionMainOwner(state.pages[state.activePageId], pages);
+  // A collection and its detail routes keep one Main tray, so their tabs never depart it.
+  const sameTray =
+    sameMode &&
+    owner?.main.kind === "panels" &&
+    !owner.resource &&
+    owner === collectionMainOwner(previous.pages[previous.activePageId ?? ""], pages);
+  const departing = previous.activePageId && !sameTray ? sharedKeys(layout, true) : new Set<string>();
   const shared = sharedKeys(sharedLayout, false);
   const activated = new Set(state.reconciliation.activate.map((entry) => placementIdentityKey(entry.identity)));
   const retained = state.placements.filter((entry) => {

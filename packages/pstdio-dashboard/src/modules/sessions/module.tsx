@@ -24,10 +24,10 @@ import {
 } from "@/shared/workbench/dashboard-navigation-contribution";
 import { setDashboardSidenavSelection, updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
-import { createSessionTabPresentation } from "./bubble/session-tab-presentation";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { subscribeSessionListData } from "./data/session-data-subscription";
 import { createSessionIndicator } from "./session-indicator";
+import { registerSessionPages } from "./session-pages";
 import { registerSessionResourceActions } from "./session-resource-actions";
 import { registerSessionResourceRetention } from "./session-resource-retention";
 import { registerSessionResourceSync } from "./session-resource-sync";
@@ -38,6 +38,19 @@ const SessionWidget = lazy(() =>
 );
 
 const registerSessionWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardSessionDraftPersistence) => {
+  ctx.views.registerView({
+    id: dashboardWidgetIds.newSession,
+    title: "New session",
+    icon: "MessageSquarePlus",
+    body: {
+      kind: "react",
+      render: (input) => (
+        <Suspense fallback={<Spinner />}>
+          <SessionWidget input={input} drafts={drafts} />
+        </Suspense>
+      ),
+    },
+  });
   ctx.views.registerView(
     {
       id: dashboardWidgetIds.session,
@@ -76,60 +89,14 @@ const createSessionsNavigationNode = () => ({
   canHide: true,
   target: { kind: "page" as const, page: workbenchPages.sessions },
 });
-const registerSessionsPage = (ctx: WorkbenchModuleContext) => {
-  ctx.pages.registerPage({
-    id: dashboardViews.sessions.id,
-    ref: workbenchPages.sessions,
-    title: dashboardViews.sessions.label,
-    icon: dashboardViews.sessions.icon,
-    path: "sessions",
-    modeId: "project",
-    main: {
-      kind: "view",
-      view: {
-        kind: "view",
-        id: dashboardWidgetIds.session,
-      },
-      cardinality: "one",
-      tab: createSessionTabPresentation(ctx),
-    },
-    slots: [],
-  });
-  return ctx.pages.registerPage({
-    id: workbenchPages.session.id,
-    ref: workbenchPages.session,
-    title: "Session",
-    icon: dashboardViews.sessions.icon,
-    path: "session",
-    modeId: "project",
-    parentId: dashboardViews.sessions.id,
-    resource: {
-      kinds: [
-        {
-          kind: "resource-kind",
-          id: "session",
-        },
-        {
-          kind: "resource-kind",
-          id: "session-draft",
-        },
-      ],
-    },
-    main: {
-      kind: "view",
-      view: {
-        kind: "view",
-        id: dashboardWidgetIds.session,
-      },
-      cardinality: "one",
-      tab: createSessionTabPresentation(ctx),
-    },
-    slots: [],
-  });
-};
 const syncSessionsPageSelection = (ctx: WorkbenchModuleContext) => {
   const state = ctx.pages.store.getState();
-  if (state.activePageId !== dashboardViews.sessions.id && state.activePageId !== workbenchPages.session.id) return;
+  if (
+    ![workbenchPages.sessions.id, workbenchPages.session.id, workbenchPages.newSession.id].some(
+      (id) => id === state.activePageId,
+    )
+  )
+    return;
   const resource = state.location?.resource;
   if (resource?.type !== "session") {
     forgetDashboardSession(ctx);
@@ -222,7 +189,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       });
       ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "MessageSquarePlus" });
       registerSessionWidgets(ctx, input.sessionDraftPersistence);
-      registerSessionsPage(ctx);
+      registerSessionPages(ctx);
       registerSidenavSessions(ctx);
       registerSessionResourceActions(ctx);
       const unsubscribeResourceSync = registerSessionResourceSync(ctx, input.sessionSelectionPersistence);

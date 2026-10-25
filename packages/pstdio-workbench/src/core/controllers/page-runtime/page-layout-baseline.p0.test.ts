@@ -189,3 +189,13 @@ test("pinning the default resource preview creates an override", () => {
   s.w.pages.pinPlacement(primary.placementIdentity!, "preview");
   expect(mainScopes(s.saved)).toEqual([]);
 });
+
+test("header choices do not retain baseline resources and follow the page across resources", () => {
+  const s = conversations();
+  s.navigate("conversation", "first");
+  s.w.shell.setHeaderVisible("main", false);
+  s.navigate("conversation", "second");
+  expect(s.w.getOpenResources().map((resource) => resource.id)).toEqual(["second"]);
+  expect(s.w.shell.getPanelPolicy("main").showHeader).toBe(false);
+  expect(mainScopes(s.saved)).toEqual([]);
+});

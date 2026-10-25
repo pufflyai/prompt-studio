@@ -21,6 +21,7 @@ import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../share
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchRegionBackground } from "../theme/workbench-theme-background";
 import { ModeChromeView, useModeChrome } from "./mode-chrome";
+import { PanelPlaceholder } from "./panel-placeholder";
 import { usePanelViewSlot, WorkbenchPanelViewSlot } from "./panel-view-hosts";
 import { RegionScrollArea } from "./region-scroll-area";
 import { useRetainedViewPlacements } from "./use-retained-view-placements";
@@ -200,10 +201,16 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
     }
   };
   const additive = region === "sidenav";
-  const placeholderView =
+  const hostPlaceholderView =
     placeholder && placement ? (
       <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
     ) : null;
+  const placeholderView =
+    !activePlacement && panelRegion ? (
+      <PanelPlaceholder workbench={workbench} region={panelRegion} fallback={hostPlaceholderView} />
+    ) : (
+      hostPlaceholderView
+    );
 
   return (
     <Flex

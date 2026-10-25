@@ -92,6 +92,20 @@ import { defineNavigationTree, defineView, workbenchModes } from "@pstdio/sdk/ex
 const projectItems = defineView({ id: "project-items", title: "Items", body: { kind: "tree", body: async () => [] } });
 const projectNavigation = defineNavigationTree({ id: "project-items", owner: workbenchModes.project, view: projectItems.ref, resourceScope: "project" });
 if (projectNavigation.resourceScope !== "project") throw new Error("Navigation lost its resource scope");
+import type { ExtensionDiagnosticsResponse } from "@pstdio/sdk/api";
+type PageMain = ExtensionDiagnosticsResponse["roots"][number]["check"]["pages"][number]["main"];
+type Placeholder = Extract<NonNullable<Extract<PageMain, { kind: "panels" }>["empty"]>, { view: unknown }>;
+type Menus = NonNullable<NonNullable<Placeholder["breadcrumb"]>["menu"]>;
+type MenuAction = NonNullable<Menus[number]["rows"][number]["action"]>;
+type CompoundPanel = Extract<Extract<MenuAction, { kind: "compound" }>["targets"][number], { kind: "panel" }>;
+const consumePanelTarget = (target: CompoundPanel) => {
+  if (target.panel.kind === "page-slot") {
+    const page: { extensionId: string; kind: "page"; id: string } = target.panel.page;
+    return page.id;
+  }
+  return target.panel.id;
+};
+void consumePanelTarget;
 ` +
       (react && imports.includes("@pstdio/ui")
         ? `

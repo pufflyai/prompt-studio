@@ -11,6 +11,27 @@ import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionBubbleModule } from "./bubble/module";
 import { createSessionsModule } from "./module";
 
+test("Sessions Add opens a new session tab without offering the routed session resource", async () => {
+  const workbench = createWorkbench();
+  workbench.registerModule(createWorkspacesModule());
+  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+  workbench.registerModule(createSessionBubbleModule());
+  workbench.registerModule(createSessionsModule());
+  openSessionsPage(workbench);
+  expect(workbench.layout.listPanelInstances("main")).toHaveLength(0);
+  await workbench.composition
+    .panelsFor("main")
+    .addable.find((entry) => entry.contribution.rendererId === dashboardWidgetIds.sessionBubble)!.open!();
+  expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.newSession);
+  expect(workbench.layout.listPanelInstances("main")).toEqual([
+    expect.objectContaining({ viewId: dashboardWidgetIds.newSession }),
+  ]);
+  openSessionsPage(workbench, createDashboardSessionResource("session-1", "Existing session", "project-1"));
+  workbench.closePlacement(workbench.layout.getActivePanel("main")!.placementIdentity!);
+  expect(workbench.composition.panelsFor("main").addable.map((entry) => entry.contribution.rendererId)).toEqual([
+    dashboardWidgetIds.sessionBubble,
+  ]);
+});
 describe("createSessionsModule", () => {
   test("registers the session resource kind", () => {
     const workbench = createWorkbench();
@@ -75,7 +96,7 @@ describe("createSessionsModule", () => {
     });
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Sessions", "My session"]);
   });
-  test("reuses the main tab when another session is selected", () => {
+  test("keeps existing session tabs when another session is selected", () => {
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
     const first = createDashboardSessionResource("session-1", "First session", "project-1");
@@ -85,8 +106,8 @@ describe("createSessionsModule", () => {
     openSessionsPage(workbench, first);
     openSessionsPage(workbench, second);
     const mainTabs = workbench.layout.getLayout().regions.main.widgets;
-    expect(mainTabs).toHaveLength(1);
-    expect(mainTabs[0]?.resourceKey).toBe(resourceKey(second));
+    expect(mainTabs.map((tab) => tab.resourceKey)).toEqual([resourceKey(first), resourceKey(second)]);
+    expect(workbench.layout.getActivePanel("main")?.resourceKey).toBe(resourceKey(second));
   });
   test("updates the breadcrumb when starting a new session from sessions", async () => {
     const workbench = createWorkbench();
@@ -100,6 +121,8 @@ describe("createSessionsModule", () => {
     openSessionsPage(workbench, session);
     await workbench.commands.executeCommand(dashboardCommandIds.createSession);
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Sessions", "New session"]);
+    expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.newSession);
+    expect(workbench.layout.listPanelInstances("main")).toHaveLength(2);
   });
   test("navigates back from a session to the sessions root", async () => {
     const workbench = createWorkbench();
@@ -140,12 +163,10 @@ describe("createSessionsModule", () => {
     workbench.pageLocations.goBack();
     await Promise.resolve();
     expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.sessions);
-    expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.session);
-    expect(workbench.layout.getLayout().activeResourceKey).toBeUndefined();
-    expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.viewId)).toEqual([
-      dashboardWidgetIds.session,
-    ]);
-    expect(workbench.layout.getLayout().regions.main.widgets[0]?.viewId).toBe(dashboardWidgetIds.session);
+    expect(workbench.layout.getActivePanel("main")?.resourceKey).toBe(resourceKey(session));
+    expect(workbench.layout.getLayout().activeResourceKey).toBe(resourceKey(session));
+    expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(1);
+    expect(workbench.breadcrumbs.getItems()?.at(-1)?.title).toBe("Sessions");
     workbench.pageLocations.goForward();
     await Promise.resolve();
     expect(workbench.pages.store.getState().location?.resource).toMatchObject({ type: "session", id: "session-2" });
@@ -161,7 +182,8 @@ describe("createSessionsModule", () => {
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.registerModule(createSessionsModule());
     await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
-    expect(workbench.layout.getLayout().regions.main.widgets[0]?.viewId).toBe(dashboardWidgetIds.session);
+    expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(0);
+    expect(workbench.breadcrumbs.getItems()?.at(-1)?.title).toBe("Sessions");
     expect(workbench.getPrimaryResource()).toBeUndefined();
   });
   test("returns to the last opened session from global navigation", async () => {

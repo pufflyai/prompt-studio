@@ -5,6 +5,7 @@ import {
   dashboardActiveResourceIdContextKey,
   dashboardActiveResourceKindContextKey,
 } from "@/shared/extensions/workbench-extension-contributions";
+import { sessionPanelContext } from "../chat/session-view-context";
 import { resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
 import { subscribeSessionData } from "../data/session-data-subscription";
 import { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
@@ -27,7 +28,8 @@ export const SessionWidget = (props: SessionWidgetProps) => {
     refresh();
     return unsubscribe;
   }, [input.instance]);
-  const history = useDashboardSessionMessages(input, view.sessionId);
+  const context = sessionPanelContext(input);
+  const history = useDashboardSessionMessages(context, view.sessionId);
   // Hide the open action when this workspace is already the active resource — you are looking at it.
   const isWorkspaceOpen = useWorkbenchStore(
     input.workbench.context.store,
@@ -41,7 +43,7 @@ export const SessionWidget = (props: SessionWidgetProps) => {
       // Draft, pending message, attachments and harness picks belong to one conversation. A tab that
       // switches sessions in place gets a fresh panel instead of carrying them over.
       key={view.draftKey}
-      input={input}
+      input={context}
       view={view}
       history={history}
       drafts={drafts}

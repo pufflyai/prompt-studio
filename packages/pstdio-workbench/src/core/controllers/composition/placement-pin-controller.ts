@@ -13,7 +13,11 @@ export const createPlacementPinController =
       .find((item) => item.placementIdentity && placementIdentityKey(item.placementIdentity) === key);
     if (!placement) throw new Error(`Placement is not open: ${key}`);
     const open = pinned ? "pin" : "preview";
-    if (!placement.tabRetention || (placement.tabRetention === "persistent") === pinned) return;
+    if ((placement.tabRetention === "persistent") === pinned) return;
+    if (!placement.resource) {
+      core.layout.updatePanel(placement.widgetId, { pinned, strategy: { kind: pinned ? "persistent" : "preview" } });
+      return;
+    }
     if (identity.kind === "page" && isDetachedPagePlacement(core, placement))
       editSharedPagePlacement(core, placement, identity, { kind: "retention", open });
     else if (identity.kind === "page") core.pages.pinPlacement(identity, open);

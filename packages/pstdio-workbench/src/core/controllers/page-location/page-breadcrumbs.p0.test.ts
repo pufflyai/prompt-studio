@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { NavigationTargetPage, PageLocation } from "@pstdio/sdk/extensions";
 import { createNavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry";
+import { createWorkbench } from "../../workbench-core";
 import { createWorkbenchBreadcrumbController } from "../breadcrumbs/breadcrumb-registry";
 import { createWorkbenchPageBreadcrumbItems, setWorkbenchPageBreadcrumbs } from "./page-breadcrumbs";
 
@@ -10,6 +11,7 @@ const resources = {
   toUri: (resource: { type: string; id: string }) => `pstdio://${resource.type}/${resource.id}`,
   fromUri: () => undefined,
 };
+const layout = createWorkbench().layout.getLayout();
 const navigationTrees = createNavigationTreeRegistry();
 // A page that owns a content navigation tree starts a Sidenav level.
 const openLevel = (pageId: string) =>
@@ -34,6 +36,50 @@ const page = (id: string, title: string): WorkbenchPageContribution => ({
   main: { kind: "view", view: { kind: "view", id: "content" }, cardinality: "one" },
   slots: [],
 });
+test("a current page supplies breadcrumb actions without owning a tab or resource", () => {
+  const sessions = {
+    ...page("sessions", "Sessions"),
+    main: {
+      kind: "panels" as const,
+      empty: {
+        view: { kind: "view" as const, id: "composer" },
+        breadcrumb: {
+          label: "New session",
+          menu: [
+            {
+              id: "sessions",
+              rows: [
+                { id: "new", label: "New session", action: { kind: "command" as const, commandId: "new-session" } },
+              ],
+            },
+          ],
+        },
+      },
+    },
+  };
+  const items = createWorkbenchPageBreadcrumbItems({
+    location: { page: sessions.ref },
+    pages: [sessions],
+    navigationTrees,
+    layout,
+    modes,
+    resources,
+    navigate() {},
+  });
+  expect(items[0]).toMatchObject({ title: "New session", menu: sessions.main.empty.breadcrumb.menu });
+  const child = page("session", "Session");
+  const parents = createWorkbenchPageBreadcrumbItems({
+    location: { page: child.ref, parent: { page: sessions.ref } },
+    pages: [sessions, child],
+    navigationTrees,
+    layout,
+    modes,
+    resources,
+    navigate() {},
+  });
+  expect(parents[0]?.title).toBe("Sessions");
+  expect(parents[0]?.menu).toBeUndefined();
+});
 describe("page breadcrumbs", () => {
   test("names a child page when it shares its parent's resource", () => {
     const tickets = page("tickets", "Tickets");
@@ -48,6 +94,7 @@ describe("page breadcrumbs", () => {
       },
       pages: [tickets, ticket, requests],
       navigationTrees,
+      layout,
       modes,
       resources,
       navigate: () => undefined,
@@ -71,6 +118,7 @@ describe("page breadcrumbs", () => {
       },
       pages: [tickets, ticket],
       navigationTrees,
+      layout,
       modes,
       resources,
       navigate: (target) => targets.push(target),
@@ -99,6 +147,7 @@ describe("page breadcrumbs", () => {
       location: { page: workspace.ref, resource },
       pages: [workspace],
       navigationTrees,
+      layout,
       modes,
       resources,
       navigate: () => undefined,
@@ -107,10 +156,10 @@ describe("page breadcrumbs", () => {
     expect(items[0].resource).toEqual(resource);
     expect(items[0].onClick).toBeUndefined();
   });
-  test("returns a panel page to its fixed main panel from its current breadcrumb", () => {
+  test("returns a panel page to its declared landing panel from its current breadcrumb", () => {
     const library: WorkbenchPageContribution = {
       ...page("artifacts", "Artifacts"),
-      main: { kind: "panels", empty: { kind: "view", id: "empty" } },
+      main: { kind: "panels", empty: { kind: "view", id: "empty" }, landing: "library" },
       slots: [
         {
           id: "library",
@@ -125,6 +174,7 @@ describe("page breadcrumbs", () => {
       location: { page: library.ref },
       pages: [library],
       navigationTrees,
+      layout,
       modes,
       resources,
       navigate: (target) => targets.push(target),
@@ -153,6 +203,7 @@ describe("page breadcrumbs", () => {
       location,
       pages: [tickets, ticket],
       navigationTrees,
+      layout,
       modes,
       resources,
       navigate: (target) => targets.push(target),
@@ -174,6 +225,7 @@ describe("page breadcrumbs", () => {
       },
       pages: [workspaces, workspace],
       navigationTrees,
+      layout,
       modes,
       resources,
       navigate: () => undefined,
@@ -200,6 +252,7 @@ describe("page breadcrumbs", () => {
       location,
       pages: [tickets, ticket],
       navigationTrees,
+      layout,
       modes,
       resources,
       navigate: (target) => targets.push(target),
@@ -217,6 +270,8 @@ describe("page breadcrumbs", () => {
     });
     expect(items?.at(-1)?.onClick).toBeUndefined();
   });
+});
+describe("breadcrumb navigation levels", () => {
   test("marks only the crumbs that open a Sidenav level", () => {
     const tickets = page("tickets", "Tickets");
     const sessions = page("sessions", "Sessions");
@@ -227,6 +282,7 @@ describe("page breadcrumbs", () => {
         location,
         pages,
         navigationTrees,
+        layout,
         modes,
         resources,
         navigate: () => undefined,
