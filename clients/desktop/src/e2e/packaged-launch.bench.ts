@@ -66,7 +66,7 @@ test("warm attach restores the workbench within budget", async () => {
             const { values } = await workbenchState();
             return [values[selectedProjectKey], JSON.parse(values[pageLocationKey] ?? "null")?.location?.page?.id];
           })
-          .toEqual([project.id, "sessions"]);
+          .toEqual([project.id, "session-composer"]);
         const theme =
           (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark" ? "pstdio-light" : "pstdio-dark";
         await page.evaluate(() =>
