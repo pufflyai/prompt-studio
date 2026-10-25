@@ -1,4 +1,4 @@
-import { execFile, execFileSync, spawn } from "node:child_process";
+import { execFile, execFileSync, spawn, spawnSync } from "node:child_process";
 import { contract } from "./contract";
 
 interface BenchmarkCase {
@@ -25,7 +25,7 @@ const kill = (pid: number, signal: NodeJS.Signals) => {
 const terminateTree = (pid: number) => {
   if (process.platform === "win32") {
     execFileSync("taskkill", ["/pid", String(pid), "/T", "/F"], { timeout: 1_000, stdio: "ignore" });
-    return;
+    return [];
   }
   // Freeze the owned group at expiry before inspecting children that made new groups
   // (Chromium does this). Do not let synchronous work run during that inspection.
@@ -41,10 +41,35 @@ const terminateTree = (pid: number) => {
       previous = descendants.size;
       for (const [child, parent] of rows) if (descendants.has(parent)) descendants.add(child);
     }
-    for (const child of [...descendants].reverse()) if (child !== pid) kill(child, "SIGKILL");
+    descendants.delete(pid);
+    for (const child of [...descendants].reverse()) kill(child, "SIGKILL");
+    return [...descendants];
   } finally {
     kill(-pid, "SIGKILL");
   }
+};
+
+// SIGKILL takes effect when the kernel next schedules the process, so a busy descendant
+// can keep running briefly. Zombies (Z, X) and macOS processes that are exiting (E) are stopped.
+const runningPids = (pids: number[]) => {
+  if (!pids.length) return [];
+  const rows = spawnSync("ps", ["-o", "pid=,stat=", "-p", pids.join(",")], { encoding: "utf8", timeout: 1_000 });
+  return rows.stdout
+    .trim()
+    .split("\n")
+    .map((row) => row.trim().split(/\s+/))
+    .filter(([pid, state]) => pid && state && !/^[ZX]/.test(state) && !state.includes("E"))
+    .map(([pid]) => Number(pid));
+};
+
+const awaitStopped = async (pids: number[]) => {
+  const deadline = performance.now() + 1_000;
+  let running = runningPids(pids);
+  while (running.length && performance.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    running = runningPids(running);
+  }
+  return running.length ? [`Owned descendants still running after termination: ${running.join(", ")}`] : [];
 };
 
 const docker = (args: string[]) =>
@@ -109,15 +134,19 @@ export const runBenchmarkCase = async (input: BenchmarkCase) => {
     if (termination) return;
     status = reason;
     const errors: string[] = [];
+    let killed: number[] = [];
     if (child.pid) {
       try {
-        terminateTree(child.pid);
+        killed = terminateTree(child.pid);
       } catch (error) {
         errors.push(String(error));
         child.kill("SIGKILL");
       }
     }
-    termination = stopContainers(input.containerFilters ?? []).then((results) => [...errors, ...results]);
+    termination = Promise.all([stopContainers(input.containerFilters ?? []), awaitStopped(killed)]).then((results) => [
+      ...errors,
+      ...results.flat(),
+    ]);
     // A failed OS kill must not leave the supervisor awaiting exit indefinitely.
     reapTimer = setTimeout(() => {
       if (child.connected) child.disconnect();
