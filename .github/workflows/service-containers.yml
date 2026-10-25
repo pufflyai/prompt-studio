@@ -38,12 +38,12 @@ jobs:
         env:
           PSTDIO_BUILD_PLATFORM_PKG: cli-linux-x64
         run: bun run --cwd scripts build:all
-      - name: Upgrade a separately published extension on the same packaged host
+      - name: Check reproducible archives and upgrade an independently published extension
         env:
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio
           PSTDIO_PSX_REAL_SERVICE: "1"
           PSTDIO_PSX_TEST_IMAGE: pstdio-psx-smoke
-        run: bun run --cwd packages/e2e test:packaged:cli -- --test-name-pattern "independently published"
+        run: bun run --cwd packages/e2e test:packaged:cli -- --test-name-pattern "independently published|identical archives across time"
       - name: Provision Chromium for the UI delivery smoke
         run: packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio extensions install-browser
       - name: Upgrade through Settings
