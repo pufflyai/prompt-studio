@@ -15,10 +15,13 @@ export const workbenchPanelPolicy = (
   const mode = modeId ? core.modes.getMode(modeId) : undefined;
   const state = proposed;
   const page = state.activePageId ? core.pages.getPage(state.activePageId) : undefined;
+  const settings = core.layout.getRegionSettings(region, modeId);
+  // Deprecated extension API: alwaysShowTabs false keeps hiding a tabbed Main header until its batched removal.
+  const legacyHiddenTabs = settings?.showHeader === undefined && settings?.alwaysShowTabs === false;
   const policy = resolvePanelPolicy({
     region,
     mode,
-    settings: core.layout.getRegionSettings(region, modeId),
+    settings,
     pageShowHeader:
       page && page.modeId === modeId
         ? page.regionSettings?.[region as "main" | "side" | "secondary"]?.showHeader
@@ -31,7 +34,9 @@ export const workbenchPanelPolicy = (
     ...policy,
     acceptsTabs,
     showHeader:
-      region === "main" && page?.modeId === modeId ? policy.provided && !isSingleViewPage(page) : policy.showHeader,
+      region === "main" && page?.modeId === modeId
+        ? policy.provided && !isSingleViewPage(page) && !legacyHiddenTabs
+        : policy.showHeader,
   };
 };
 
