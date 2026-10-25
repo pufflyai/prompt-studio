@@ -19,9 +19,9 @@ Reviewers own two separate labels: `breaking-change` for incompatible behavior o
 
 The PR author owns `waiting-for-release`. Add it to an extension PR that uses SDK or UI changes that are merged but not yet published to npm. Name the SDK or UI PR it waits for in the description. The `published_extensions` CI job fails on such a PR until the next release, so do not merge it. After the release, raise the extension's `@pstdio/sdk` or `@pstdio/ui` range to the published version, rerun CI, and remove the label once `published_extensions` passes. The workflow never manages this label.
 
-`removed-from-queue` is not an area label. The **Merge queue removals** workflow manages it; see [Merge queue stage](0002-testing.md#merge-queue-stage).
+`removed-from-queue` is not an area label. The **Merge queue removals** workflow manages it; see [Merge queue stage](0015-ci-stages.md#stage-guarantees).
 
-`ci:full` is not an area label. A person adds it to run the full Test and Build stage on a PR; see [CI stages](0002-testing.md#ci-stages).
+`ci:full` is not an area label. A person adds it to request separate full functional diagnostics for a same-repository PR. The trusted label handler dispatches the trusted base-branch Test and Build workflow with `profile=production` and the exact PR merge SHA as `source_sha`. That run reports `production_ci_passed`; it does not replace or delay the ordinary required `ci_passed` fast gate. Fork PRs receive an explicit manual diagnostic instruction instead of automatic dispatch. These functional diagnostics are not an immutable release certificate and do not replace P3 performance qualification. See [request deeper diagnostics](0015-ci-stages.md#deeper-diagnostics-and-qualification).
 
 ## SDK and extension separation
 
@@ -53,7 +53,7 @@ Opening, reopening, pushing commits, editing the base, and editing labels also r
 
 ## Current enforcement
 
-PS-78 implements PRD PS-76. Since 2026-10-12, the active `main` ruleset requires `ci_passed` and merges through a merge queue (see [Tests](0002-testing.md#merge-queue-stage)). It does not require `sdk-extension-separation`, so that status is advisory. Repository settings can change independently of this checkout; inspect the active ruleset before changing enforcement.
+PS-78 implements PRD PS-76. The CI architecture retains the existing `ci_passed` required context and ALLGREEN merge queue (see [CI stages](0015-ci-stages.md)). It does not require replacing that context or weakening protection when the job layout changes. `sdk-extension-separation` remains advisory under the documented policy. Repository settings can change independently of this checkout; inspect the active ruleset and check identity before changing enforcement.
 
 The area-label workflow evaluates pull request heads and manual dispatches.
 
@@ -69,7 +69,7 @@ A failing workflow alone does not enforce separation. Current whole-package mapp
 ## Local validation
 
 ```bash
-bun test scripts/ci/pr-risk-labels.test.ts
+bun test scripts/ci/pr-risk-labels.p0.test.ts
 ```
 
 The tests cover classification outcomes, reversions, failed classification, changed head/base snapshots, manual label removal during a run, and API errors. GitHub rollout checks above prove the actual hosted permissions and merge gate.

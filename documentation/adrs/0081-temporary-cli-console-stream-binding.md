@@ -30,4 +30,4 @@ The binding lives in `packages/pstdio/src/features/cli-output.ts` and is install
 
 ## Removal
 
-Remove the console binding when the minimum supported Bun version delivers complete `console.log` output to a slow pipe after `process.stdout` exists. Check with `packages/e2e/src/cli/piped-output.test.ts` against the new Bun version. Keep waiting for output before exit; Node-compatible streams need it in any case.
+Remove the console binding when the minimum supported Bun version delivers complete `console.log` output to a slow pipe after `process.stdout` exists. Check with `packages/e2e/src/cli/piped-output.p2.test.ts` against the new Bun version. Keep waiting for output before exit; Node-compatible streams need it in any case.

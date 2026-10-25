@@ -14,7 +14,7 @@ These rules are for contributors and agents who change this extension in the Pro
 
 - Run `bun test extensions/pstdio-artifacts` and `bun run --cwd extensions/pstdio-artifacts typecheck`.
 - Component and preview stories live in the dashboard Storybook under **Extensions/Artifacts**.
-- The browser tests are `packages/e2e/src/ui/artifacts.spec.ts` and `packages/e2e/src/ui/html-preview.spec.ts`. They cover agent publication, project separation, preview isolation and blocked navigation, theme changes without losing state, library and artifact tabs, clickable breadcrumbs, published links, live updates, old revisions, clickable cards, rename, delete, translated controls, and reading a snapshot after its source file is removed.
+- App browser tests live at `packages/e2e/src/ui/artifacts.p2.spec.ts`. Component tests live at `packages/storybook-tests/src/ui/pstdio-dashboard/artifacts.p2.spec.ts` and `packages/storybook-tests/src/ui/pstdio-dashboard/html-preview.p2.spec.ts`. Together they cover agent publication, project separation, preview isolation and blocked navigation, theme changes without losing state, library and artifact tabs, clickable breadcrumbs, published links, live updates, old revisions, clickable cards, rename, delete, translated controls, and reading a snapshot after its source file is removed.
 
 ## Storage
 

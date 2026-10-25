@@ -25,15 +25,15 @@ Extension Lab, the extension testbench, packaged smoke checks, Storybook, and Pl
 
 | Invariant | Owning proof |
 | --- | --- |
-| Mode and page placements share a region without deleting each other | `owned-placement-layout.test.ts`, `placement-reconciliation.test.ts`, and the Workbench Page Composition story |
-| Leaving a page removes only that page's placements | `page-registry-transition.test.ts` and `page-runtime.test.ts` |
-| Leaving a mode removes its page and mode placements together | `page-location-controller.test.ts` and `workbench-core-page-navigation.test.ts` |
-| One canonical location drives history and breadcrumbs | `page-location-controller.test.ts`, `page-location-codec.test.ts`, and `page-breadcrumbs.test.ts` |
-| Page navigation selects the declared mode | `page-registry-transition.test.ts` and `extension-lab-pages.spec.ts` |
+| Mode and page placements share a region without deleting each other | `owned-placement-layout.p0.test.ts`, `placement-reconciliation.p0.test.ts`, and the Workbench Page Composition story |
+| Leaving a page removes only that page's placements | `page-registry-transition.p0.test.ts` and `page-runtime.p0.test.ts` |
+| Leaving a mode removes its page and mode placements together | `page-location-controller.p0.test.ts` and `workbench-core-page-navigation.p0.test.ts` |
+| One canonical location drives history and breadcrumbs | `page-location-controller.p0.test.ts`, `page-location-codec.p0.test.ts`, and `page-breadcrumbs.p0.test.ts` |
+| Page navigation selects the declared mode | `page-registry-transition.p0.test.ts` and `extension-lab-pages.spec.ts` |
 | Start, Tickets, Ticket, Sessions, Workspaces, and Lab replace the active page | Dashboard module tests and page Playwright journeys |
-| Page and mode Sidenav sections compose and clean up by owner | `dashboard-sidenav.test.ts` and the Dashboard Sidenav story |
-| Webviews use explicit page or panel navigation | `extension-webview-capabilities.test.ts` and `extension-webview-command.test.ts` |
-| Packaged extensions expose the same page metadata | `packaged-serve-smoke.test.ts` and extension composition conformance tests |
+| Page and mode Sidenav sections compose and clean up by owner | `dashboard-sidenav.p0.test.ts` and the Dashboard Sidenav story |
+| Webviews use explicit page or panel navigation | `extension-webview-capabilities.p0.test.ts` and `extension-webview-command.p0.test.ts` |
+| Packaged extensions expose the same page metadata | `packaged-serve-smoke.p2.test.ts` and extension composition conformance tests |
 
 ## Requirements
 

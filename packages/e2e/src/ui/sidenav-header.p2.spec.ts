@@ -1,0 +1,277 @@
+import { expect, type Locator, type Page } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
+import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { uiOrigin as apiBase } from "../ui-server";
+import { test } from "./helpers/notification-settings";
+import { showSidenavEntry } from "./helpers/sidenav-navigation";
+
+test.use({ notificationsEnabled: true });
+
+const allSectionRowNames = ["Search", "Notifications", "Sessions", "Workspaces", "Tickets"] as const;
+const withoutWorkspaces = allSectionRowNames.filter((name) => name !== "Workspaces");
+
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "PS-174 Sidenav" }, folderPath),
+  });
+  expect(response.ok()).toBe(true);
+  return (await response.json()) as { id: string };
+};
+
+const createSession = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  title: string,
+) => {
+  const response = await request.post(`${apiBase}/v1/sessions`, {
+    data: {
+      project_id: projectId,
+      title,
+      prompt: title,
+      agent: "pstdio.workbench-fixture.harness.fake",
+    },
+  });
+  expect(response.ok()).toBe(true);
+};
+
+const waitForTicketsExtension = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
+  await expect
+    .poll(
+      async () => {
+        const response = await request.get(`${apiBase}/v1/projects/${projectId}/extensions/ui`);
+        if (!response.ok()) return false;
+        const metadata = (await response.json()) as { views?: Array<{ id: string; body?: { kind?: string } }> };
+        return (
+          metadata.views?.some(
+            (view) => view.id === "pstdio.pstdio-planner.view.tickets" && view.body?.kind === "kanban",
+          ) ?? false
+        );
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
+};
+
+const prepareDashboard = async (page: Page, projectId: string) => {
+  await page.addInitScript((selectedProjectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
+  }, projectId);
+  await page.setViewportSize({ width: 1280, height: 720 });
+};
+
+const row = (sidenav: Locator, name: (typeof allSectionRowNames)[number]) =>
+  name === "Workspaces" || name === "Notifications"
+    ? sidenav
+        .getByRole("option", {
+          name: new RegExp(`^${name}(?:\\s|$)`),
+        })
+        .first()
+    : sidenav.getByRole("option", { name, exact: true }).first();
+
+const expectSidenavSections = async (
+  sidenav: Locator,
+  visibleNames: readonly (typeof allSectionRowNames)[number][] = withoutWorkspaces,
+) => {
+  const rows = visibleNames.map((name) => row(sidenav, name));
+  for (const sectionRow of rows) await expect(sectionRow).toBeVisible({ timeout: 30_000 });
+
+  const topEdges: number[] = [];
+  for (const sectionRow of rows) {
+    topEdges.push(await sectionRow.evaluate((element) => element.getBoundingClientRect().top));
+  }
+  expect(topEdges).toEqual([...topEdges].sort((left, right) => left - right));
+  await expect(sidenav.locator('[data-workbench-panel-header="sidenav"]')).toHaveCount(0);
+  await expect(sidenav.getByRole("tablist")).toHaveCount(0);
+};
+
+test("removes and restores owner-scoped collections across project and session pages", async ({ page, request }) => {
+  test.setTimeout(45_000);
+  const project = await createProject(request);
+  await waitForTicketsExtension(request, project.id);
+  await createSession(request, project.id, "Existing sidenav session");
+  await prepareDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}`);
+
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await row(sidenav, "Tickets").click();
+  const nav = page.locator('[data-workbench-region="nav"]');
+  const projectButton = nav.getByRole("button", { name: /PS-174 Sidenav$/ });
+  await expect(projectButton).toBeVisible({ timeout: 30_000 });
+  const projectBox = await projectButton.boundingBox();
+  const breadcrumbBox = await nav.getByRole("navigation", { name: "breadcrumb" }).boundingBox();
+  expect(projectBox).not.toBeNull();
+  expect(breadcrumbBox).not.toBeNull();
+  expect(projectBox!.x).toBeLessThan(breadcrumbBox!.x);
+  await expectSidenavSections(sidenav);
+
+  const stableElements = [await projectButton.elementHandle()];
+  for (const name of withoutWorkspaces) stableElements.push(await row(sidenav, name).elementHandle());
+  expect(stableElements.every(Boolean)).toBe(true);
+
+  await (await showSidenavEntry(page, "Workspaces")).click();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Workspaces", { exact: true }),
+  ).toBeVisible();
+  await expectSidenavSections(sidenav, allSectionRowNames);
+  for (const element of stableElements) expect(await element!.evaluate((node) => node.isConnected)).toBe(true);
+
+  await row(sidenav, "Sessions").click();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
+  ).toBeVisible();
+  await expect(sidenav.locator('[data-tree-list-node-id="sessions"]')).toHaveCount(0);
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute("data-tree-list-node-id", "search");
+  await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: "Existing sidenav session", exact: true })).toBeVisible();
+  await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: "Settings", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Navigate back" }).click();
+  await expectSidenavSections(sidenav, allSectionRowNames);
+  await row(sidenav, "Tickets").click();
+  await expect(row(sidenav, "Tickets")).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
+  await expectSidenavSections(sidenav, allSectionRowNames);
+});
+
+test("customizes the Sidenav from any point and persists section visibility", async ({ page, request }) => {
+  test.setTimeout(45_000);
+  const project = await createProject(request);
+  await waitForTicketsExtension(request, project.id);
+  await prepareDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}`);
+
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  const projectButton = page.locator('[data-workbench-region="nav"]').getByRole("button", { name: /PS-174 Sidenav$/ });
+  await expect(projectButton).toBeVisible({ timeout: 30_000 });
+  await expectSidenavSections(sidenav);
+
+  await row(sidenav, "Search").click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
+  const searchToggle = page.getByRole("menuitem", { name: /Search/ });
+  const workspacesToggle = page.getByRole("menuitem", { name: /Workspaces/ });
+  await expect(searchToggle).toBeVisible();
+  await expect(workspacesToggle).toBeVisible();
+  for (const name of ["Header", "Navigation", "Footer"]) {
+    await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
+  }
+  await workspacesToggle.click();
+  await expect(row(sidenav, "Workspaces")).toBeVisible();
+  await workspacesToggle.click();
+  await expect(row(sidenav, "Workspaces")).toHaveCount(0);
+  await searchToggle.click();
+  await expect(row(sidenav, "Search")).toHaveCount(0);
+  await expect(searchToggle).toBeVisible();
+  await searchToggle.click();
+  await expect(row(sidenav, "Search")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(searchToggle).toBeHidden();
+
+  await row(sidenav, "Tickets").click({ button: "right" });
+  const ticketsToggle = page.getByRole("menuitem", { name: "Tickets", exact: true });
+  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
+  await expect(ticketsToggle).toBeVisible();
+  await ticketsToggle.click();
+  await expect(row(sidenav, "Tickets")).toHaveCount(0);
+  await expect(ticketsToggle).toBeVisible();
+  await ticketsToggle.click();
+  await expect(row(sidenav, "Tickets")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.reload();
+  await expectSidenavSections(sidenav, withoutWorkspaces);
+  await expect(row(sidenav, "Workspaces")).toHaveCount(0);
+
+  await row(sidenav, "Search").click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
+  await searchToggle.click();
+  await expect(row(sidenav, "Search")).toHaveCount(0);
+  await page.getByRole("menuitem", { name: "Reset to default", exact: true }).click();
+  await expect(row(sidenav, "Search")).toBeVisible();
+  await expectSidenavSections(sidenav);
+
+  const resetTopEdges = await Promise.all(
+    [row(sidenav, "Search"), row(sidenav, "Notifications")].map(async (item) => (await item.boundingBox())!.y),
+  );
+  expect(resetTopEdges[0]).toBeLessThan(resetTopEdges[1]);
+});
+
+test("renders the ticket tree inside the Sidenav resource section", async ({ page, request }) => {
+  test.setTimeout(45_000);
+  const project = await createProject(request);
+  await waitForTicketsExtension(request, project.id);
+  const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
+  const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
+  expect(defaultStatus).toBeTruthy();
+  const ticket = await createPlannerTicket(request, apiBase, project.id, {
+    content: "Sidenav resource ticket",
+    statusId: defaultStatus!.id,
+  });
+  await createPlannerTicketFile(request, apiBase, project.id, ticket.id, {
+    name: "research.md",
+    content: "# Research",
+  });
+  await prepareDashboard(page, project.id);
+  await page.goto("/");
+  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+
+  const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  await card.getByText(ticket.title, { exact: true }).click();
+
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await expect(row(sidenav, "Search")).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: new RegExp(`^${ticket.shorthand}(?:\\s|$)`) })).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: /research/ })).toBeVisible();
+});
+
+test("moves rows back into an emptied header or footer", async ({ page, request }) => {
+  const project = await createProject(request);
+  await waitForTicketsExtension(request, project.id);
+  await prepareDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}`);
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  const option = (name: string) => sidenav.getByRole("option", { name, exact: true });
+  const zone = sidenav.locator("[data-tree-list-empty-drop-zone]");
+  await expect(option("Tickets")).toBeVisible({ timeout: 30_000 });
+  await showSidenavEntry(page, "Workspaces");
+  const lowerHalfOf = (target: Locator) => async () => {
+    const box = (await target.boundingBox())!;
+    return box.y + box.height * 0.75;
+  };
+  const middleOf = (target: Locator) => async () => {
+    await expect(target).toHaveCount(1);
+    const box = (await target.boundingBox())!;
+    return box.y + box.height / 2;
+  };
+  const drag = async (source: Locator, targetY: () => Promise<number>) => {
+    const from = (await source.boundingBox())!;
+    await page.mouse.move(from.x + 40, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 40, from.y + from.height / 2 + 8, { steps: 4 });
+    await page.mouse.move(from.x + 40, await targetY(), { steps: 12 });
+    await expect(sidenav.locator("[data-tree-list-drop-indicator]")).toHaveCount(1);
+    await page.mouse.up();
+    // dnd-kit swallows clicks for 50ms after a drop so the drop is not also a click.
+    await page.waitForTimeout(100);
+  };
+  const top = async (target: Locator) => (await target.boundingBox())!.y;
+
+  await drag(option("Search"), lowerHalfOf(option("Workspaces")));
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).not.toHaveAttribute(
+    "data-tree-list-node-id",
+    "search",
+  );
+  await expect(zone).toHaveCount(0);
+  await drag(option("Search"), middleOf(zone));
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute("data-tree-list-node-id", "search");
+
+  await drag(option("Settings"), lowerHalfOf(option("Workspaces")));
+  await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Workspaces")));
+  expect(await top(option("Settings"))).toBeLessThan(await top(option("Scribble")));
+  await drag(option("Settings"), middleOf(zone));
+  expect(await top(option("Settings"))).toBeGreaterThan(await top(option("Scribble")));
+});

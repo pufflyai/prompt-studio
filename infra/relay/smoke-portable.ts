@@ -1,14 +1,18 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { portableSmokeImages } from "./portable-smoke-images";
 
 const root = resolve(import.meta.dir, "../..");
 const project = `pstdio-portable-${crypto.randomUUID()}`;
 const directory = await mkdtemp(join(tmpdir(), project));
+const imageOption = process.argv.indexOf("--prebuilt-images");
+const images = imageOption < 0 ? undefined : await Bun.file(process.argv[imageOption + 1]!).json();
+const imagePlan = portableSmokeImages(project, images);
 const env = {
   ...process.env,
-  RELAY_IMAGE: `${project}-relay`,
-  MANAGER_IMAGE: `${project}-manager`,
+  RELAY_IMAGE: imagePlan.images.relay,
+  MANAGER_IMAGE: imagePlan.images.manager,
   RELAY_DOMAIN: "relay.fixture.test",
   MANAGER_DOMAIN: "authority",
   RELAY_DB_PASSWORD: "relay_portable_fixture_only",
@@ -78,8 +82,15 @@ config.services["manager-migrate"].command = [
   "migrateAccountManager",
   "manager_runtime",
 ];
-config.services.relay.build = { context: root, dockerfile: "infra/relay/Dockerfile", target: "runtime" };
-config.services.manager.build = { context: root, dockerfile: "infra/account-manager/Dockerfile" };
+if (imagePlan.prebuilt) {
+  for (const name of ["relay", "manager", "relay-migrate", "manager-migrate"]) {
+    delete config.services[name].build;
+    config.services[name].pull_policy = "never";
+  }
+} else {
+  config.services.relay.build = { context: root, dockerfile: "infra/relay/Dockerfile", target: "runtime" };
+  config.services.manager.build = { context: root, dockerfile: "infra/account-manager/Dockerfile" };
+}
 for (const name of ["smoke", "initialize", "tls"]) {
   config.services[name] = fixtures.services[name];
   config.services[name].networks = { edge: {}, relay: {}, manager: {} };
@@ -119,7 +130,7 @@ await Bun.write(path, JSON.stringify(config));
 const compose = ["docker", "compose", "-p", project, "-f", path];
 console.log(`Portable deployment smoke: ${project}`);
 try {
-  await run([...compose, "build", "relay", "manager", "tls", "initialize", "smoke"]);
+  await run([...compose, "build", ...imagePlan.buildServices]);
   await run([...compose, "run", "--rm", "--no-deps", "tls"]);
   await run([...compose, "up", "-d", "--wait", "relay-db", "manager-db", "objects"]);
   for (const name of ["relay", "manager"]) {

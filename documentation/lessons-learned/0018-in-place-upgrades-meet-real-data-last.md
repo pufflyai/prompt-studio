@@ -28,4 +28,4 @@ The 0.46 nightly carried two upgrades that each rewrote all local data: a PGlite
 - Log the root error with its cause chain, not the query text or parameters. When a log says `unable to serialize`, replay the failing step on a copy to see the real error.
 - When a step fails at startup, stop retrying it on every request. Report it once and wait for a new start.
 
-Tests: `pglite-current-home.test.ts` and `packaged-database-retirement.test.ts` cover retiring an old home. `resource-records.test.ts` saves 24 records of 8 MB each in one commit.
+Tests: `pglite-current-home.p1.test.ts` and `packaged-database-retirement.p1.test.ts` cover retiring an old home. `resource-records.p1.test.ts` saves 24 records of 8 MB each in one commit.

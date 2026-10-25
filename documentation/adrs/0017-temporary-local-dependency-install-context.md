@@ -12,7 +12,7 @@ The extension installer validates a prepared snapshot before replacing an instal
 
 ## External limitation
 
-Bun 1.3.14 records local directory resolutions relative to the source checkout in its lockfile, including when the manifest uses an absolute `file:` path. Copying an unchanged manifest and lockfile to installation staging then running Bun fails to find the provider. The regression test in `extension-development-dependencies.test.ts` reproduces this with a real provider and consumer.
+Bun 1.3.14 records local directory resolutions relative to the source checkout in its lockfile, including when the manifest uses an absolute `file:` path. Copying an unchanged manifest and lockfile to installation staging then running Bun fails to find the provider. The regression test in `extension-development-dependencies.p0.test.ts` reproduces this with a real provider and consumer.
 
 ## Temporary workaround
 

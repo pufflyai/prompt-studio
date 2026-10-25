@@ -11,14 +11,14 @@
     "pstdio": "^0.1.6 || ^0.2.0 || ^0.3.0"
   },
   "scripts": {
-    "lint": "tsc --noEmit",
+    "lint": "bun check",
     "test": "bun test"
   },
   "dependencies": {
     "@pstdio/sdk": "0.43.1"
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "typescript": "6.0.2"
   }
 }

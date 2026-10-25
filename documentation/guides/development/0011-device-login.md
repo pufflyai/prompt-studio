@@ -61,10 +61,10 @@ The browser bridge uses Better Auth's [single-use token plugin](https://better-a
 Run the focused Docker checks:
 
 ```sh
-bun run --cwd services/account-manager test:isolated src/native-devices.test.ts src/native-login.test.ts src/manager-http.test.ts src/google-library.test.ts
+bun run --cwd services/account-manager test:integration src/native-devices.p1.integration.ts src/native-login.p1.integration.ts src/manager-http.p1.integration.ts src/google-library.p1.integration.ts
 ```
 
-`native-devices.test.ts` starts an owned HTTPS manager and runs [`native-devices.integration.ts`](../../../packages/pstdio-api/src/services/account/native-devices.integration.ts) against it. Two host fixtures log in as devices of one Google user. Each sees both devices; one renames and removes the other; the removed device stops renewing and stops syncing. A restarted device keeps its login. A cloud project turns on and off, logout clears the login, a second Google user gets a separate account, and local data written before login stays unchanged.
+`native-devices.p1.integration.ts` starts an owned HTTPS manager and runs [`native-devices.integration.fixture.ts`](../../../packages/pstdio-api/src/services/account/native-devices.integration.fixture.ts) against it. Two host fixtures log in as devices of one Google user. Each sees both devices; one renames and removes the other; the removed device stops renewing and stops syncing. A restarted device keeps its login. A cloud project turns on and off, logout clears the login, a second Google user gets a separate account, and local data written before login stays unchanged.
 
 The relay runtime test checks that adding a cloud project keeps earlier sockets, that a changed credential discards stale in-flight starts, and that removed projects stop syncing. The packaged smoke checks full-host account wiring and that projects stay local without a login.
 

@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Open a project in an existing folder or create a folder first. The host owns navigation and creation. Matches the folder picker states in Pencil node LmcML.",
+          "Open a project in an existing folder or create a folder first. The host owns navigation and creation. Hidden folders start hidden; press Cmd/Ctrl+Shift+. to toggle them. Matches the folder picker states in Pencil node LmcML.",
       },
     },
   },
@@ -112,5 +112,24 @@ export const CreateFolderNamed: Story = {
     await userEvent.type(canvas.getByRole("textbox", { name: "New folder name" }), "assets");
     await expect(canvas.getByRole("button", { name: "Create folder", exact: true })).toBeEnabled();
     await expect(canvas.queryByRole("textbox", { name: "Filter folders" })).not.toBeInTheDocument();
+  },
+};
+
+export const HiddenFolders: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement.ownerDocument.body);
+    const folders = within(canvas.getByLabelText("Folders"));
+    const filter = canvas.getByRole("textbox", { name: "Filter folders" });
+    await expect(folders.queryByRole("option", { name: ".research" })).not.toBeInTheDocument();
+    await userEvent.click(filter);
+    await userEvent.keyboard("{Control>}{Shift>}[Period]{/Shift}{/Control}");
+    await expect(folders.getByRole("option", { name: ".research" })).toBeVisible();
+    await expect(filter).toHaveValue("");
+    await userEvent.type(filter, "research");
+    await expect(folders.getAllByRole("option")).toHaveLength(1);
+    await userEvent.keyboard("{Meta>}{Shift>}[Period]{/Shift}{/Meta}");
+    await expect(folders.queryByRole("option", { name: ".research" })).not.toBeInTheDocument();
+    await userEvent.clear(filter);
+    await expect(folders.getAllByRole("option")).toHaveLength(3);
   },
 };

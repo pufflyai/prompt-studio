@@ -14,7 +14,7 @@ Three version numbers matter when you build or install an extension. They answer
 | SDK package version | The `@pstdio/sdk` package in your extension's `package.json`. It gives your code its types and helpers. | `version` in `node_modules/@pstdio/sdk/package.json`. |
 | Extension API version | `EXTENSION_API_VERSION`, the extension contract that a host supports. Your manifest's `engines.pstdio` names the API versions your extension works with. | `pst extensions check` prints the API version of the `pst` you ran. The runtime's version is not printed; find it from the app version. `@pstdio/sdk/extensions` exports the constant. |
 
-The app and the SDK are released together with the same number. The extension API has its own number, because it changes only when the contract changes. For example, release 0.43.1 ships extension API 0.1.6.
+Stable app and SDK releases share the same number. SDK and UI previews can be published separately, with versions ending in `-preview.sha-<commit>`. Pin exact preview versions in extension dependencies. Each new SDK package records its extension API in `pstdio.extensionApiVersion` in its package manifest. The extension API has its own number, because it changes only when the contract changes. For example, release 0.43.1 ships extension API 0.1.6.
 
 The host decides what loads. It compares its own extension API version with `engines.pstdio`. Updating `@pstdio/sdk` in your extension does not update the app. A newer SDK can compile code that calls APIs your app does not have yet.
 

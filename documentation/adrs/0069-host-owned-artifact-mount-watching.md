@@ -54,8 +54,8 @@ This is the intended design, not a temporary workaround.
 
 ## Verification
 
-- `packages/pstdio-extensions/src/fs-watch/directory-tree-watcher.test.ts`: new folder registration, entries written before a handle starts, folders removed and created again, a folder replaced by a file, symlink skip, folder limit, close. The per-folder tests also run on Linux.
+- `packages/pstdio-extensions/src/fs-watch/directory-tree-watcher.p0.test.ts`: new folder registration, entries written before a handle starts, folders removed and created again, a folder replaced by a file, symlink skip, folder limit, close. The per-folder tests also run on Linux.
 - `packages/pstdio-api/src/features/extensions/artifact-mount-watch/*.test.ts`: one event per burst, echo drop for mount writes and deletes, the once-per-second limit, the 200-path and folder limits, a removed mount folder, hooks that write into their own mount, reconcile on a moved default workspace and a disabled extension, and a dispose that waits for running reconciles and hooks.
-- `packages/sdk/src/extensions/webview-events.test.ts`: `artifactChanged(mount)` resolves to `artifact.changed:<extension-id>.artifact.<mount>`.
+- `packages/sdk/src/extensions/webview-events.p0.test.ts`: `artifactChanged(mount)` resolves to `artifact.changed:<extension-id>.artifact.<mount>`.
 - The existing source watcher tests stay green on the shared tree watcher.
-- `packages/e2e/src/ui/artifact-mount-watch.spec.ts`: an open webview refreshes after a direct file edit, and a mount write through a command does not refresh it.
+- `packages/e2e/src/ui/artifact-mount-watch.p2.spec.ts`: an open webview refreshes after a direct file edit, and a mount write through a command does not refresh it.

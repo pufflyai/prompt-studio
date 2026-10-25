@@ -14,9 +14,9 @@
     "scope": "repo"
   },
   "scripts": {
-    "test": "bun test src",
-    "lint": "tsc --noEmit",
-    "typecheck": "tsc --noEmit"
+    "test": "bun ../../../scripts/ci/run-bun-tests.ts src",
+    "lint": "bun check",
+    "typecheck": "bun check"
   },
   "dependencies": {
     "@chakra-ui/react": "3.32.0",
@@ -31,7 +31,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "typescript": "6.0.2",
