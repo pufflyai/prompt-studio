@@ -4,13 +4,19 @@ import { join, resolve } from "node:path";
 
 const root = mkdtempSync(join(tmpdir(), "native-signal-"));
 try {
-  for (const mode of ["compiled", "compiled-console", "interpreted-console"]) {
+  for (const mode of ["compiled-child", "compiled-child-console"]) {
     const script = join(root, "child.ts");
     const executable = join(root, "probe.exe");
     await Bun.write(script, `
+      import {spawn} from "node:child_process";
+      if(process.argv.includes("--probe-child")) {setInterval(()=>{},1000)} else {
       ${mode.includes("console") ? `const {bindCliOutput}=await import(${JSON.stringify(resolve(import.meta.dir,"../../packages/pstdio/src/features/cli-output.ts"))});bindCliOutput();` : ""}
       process.once("SIGINT",()=>{process.stderr.write("INTERRUPTED\\n");process.exit(130)});
+      const subprocess=spawn(process.execPath,["--probe-child"],{detached:true,windowsHide:true,stdio:["ignore","pipe","pipe"]});
+      process.once("exit",()=>subprocess.kill());
+      await Bun.sleep(250);
       console.log("READY");setInterval(()=>{},1000);
+      }
     `);
     const compiled = mode.startsWith("compiled");
     if (compiled) {
