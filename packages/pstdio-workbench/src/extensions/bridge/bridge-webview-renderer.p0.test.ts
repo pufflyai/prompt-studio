@@ -71,7 +71,28 @@ describe("createBridgeWebviewRenderer", () => {
       props: { props: unknown };
     };
 
-    expect(element.props.props).toEqual({ marker: "custom", webviewId: "lab.page" });
+    expect(element.props.props).toMatchObject({ marker: "custom", webviewId: "lab.page" });
+  });
+
+  test("preserves viewer navigation context when a host supplies custom guest props", () => {
+    const { workbench, widget, placement } = setupWebviewWidget();
+    placement.section = { anchors: [{ id: "installation", heading: "Installation" }] };
+    placement.position = { line: 12, column: 3 };
+    placement.pageContext = { page: { extensionId: "lab", kind: "page", id: "page" }, params: { filter: "active" } };
+    const renderer = createBridgeWebviewRenderer({ createProps: () => ({ marker: "custom" }) });
+
+    const element = renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined }) as {
+      props: { props: unknown };
+    };
+
+    expect(element.props.props).toMatchObject({
+      marker: "custom",
+      viewLocation: {
+        section: { anchors: [{ id: "installation", heading: "Installation" }] },
+        position: { line: 12, column: 3 },
+        pageContext: { page: { extensionId: "lab", kind: "page", id: "page" }, params: { filter: "active" } },
+      },
+    });
   });
 
   test("uses the injected createTheme factory", () => {
@@ -95,7 +116,7 @@ describe("createBridgeWebviewRenderer", () => {
       props: { props: unknown };
     };
 
-    expect(element.props.props).toEqual({ placement, resource: placement.resource });
+    expect(element.props.props).toMatchObject({ placement, resource: placement.resource });
   });
 
   test("passes bridge config from the widget into the extension frame", () => {
