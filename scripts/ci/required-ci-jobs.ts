@@ -26,6 +26,7 @@ export const plannedCiJobs = (scope: Scope) => {
     license_check: scope.license,
     browser_smoke: scope.browserSmoke,
     sdk_api_report: scope.sdkApiReport,
+    source_coverage: scope.sourceCoverage,
   }))
     if (selected) add(id);
   jobs.push(...matrixPlan("database_tests", scope.databaseMatrix, (row) => `${row.package} ${row.shard}`));

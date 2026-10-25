@@ -86,6 +86,8 @@ Production binds evidence to the original source SHA, version SHA, actual toolch
 
 Deep P2/P3 validation runs nightly and for stable candidates. Nightly publication retains basic integrity and all-or-nothing publication without waiting for deep diagnostics. Stable publication waits for full matching certification of its own candidate. A source-built nightly Windows diagnostic cannot certify a stable published Windows app.
 
+Source line coverage comes from the full nightly's existing stable P0–P2 Bun jobs, including the isolated API files and Windows source shards. Each process owns a separate lcov report beside its case evidence. Aggregation requires the selected producer artifacts for the same attempt and revision. Missing, failed, partial or uninstrumented source evidence blocks the nightly result. Quarantine and P3 stay outside the percentage. Browser and compiled journeys retain execution evidence; their processes do not supply source line hits. The report lists unimported production files rather than inventing coverage for them. The Coverage workflow publishes only a successful full nightly's measurement, with no second test run.
+
 ## Deeper diagnostics and qualification
 
 `ci:full` dispatches separate functional diagnostics for a same-repository PR through the trusted base workflow. Its `production_ci_passed` result does not replace the ordinary `ci_passed` gate. Forks need a maintainer-driven diagnostic run. Functional source diagnostics do not certify release artifacts or replace P3 validation.

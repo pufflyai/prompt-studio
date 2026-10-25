@@ -5,6 +5,7 @@ import { affectedPackages } from "./ci-packages";
 import { partitionPackageChecks } from "./package-check-matrix";
 import { productionDesktopPlatforms, productionToolchainPlatforms } from "./production-platforms";
 import { plannedCiJobs, requiredCiJobs } from "./required-ci-jobs";
+import { sourceCoverageArtifacts } from "./source-coverage-artifacts";
 import { discoverTestFiles, priorityFromFile } from "./test-discovery";
 import { createTestMatrices } from "./test-matrices";
 import type { TestPriority } from "./test-policy";
@@ -52,6 +53,7 @@ export const resolveCiScope = (input: CiScopeInput) => {
   return {
     stage,
     production,
+    sourceCoverage: production && releaseChannel === "nightly",
     affectedOwners,
     ...matrices,
     appMatrix: stage === "pull_request" ? [] : matrices.appMatrix,
@@ -101,9 +103,12 @@ if (import.meta.main) {
     profile,
     releaseChannel: process.env.RELEASE_CHANNEL || undefined,
   });
-  const outputs = Object.entries({ ...scope, requiredJobs: requiredCiJobs(scope), gatePlan: plannedCiJobs(scope) }).map(
-    ([key, value]) => `${key}=${Array.isArray(value) ? JSON.stringify(value) : value}`,
-  );
+  const outputs = Object.entries({
+    ...scope,
+    requiredJobs: requiredCiJobs(scope),
+    gatePlan: plannedCiJobs(scope),
+    coverageArtifacts: sourceCoverageArtifacts(scope, Number(process.env.GITHUB_RUN_ATTEMPT ?? 1)),
+  }).map(([key, value]) => `${key}=${Array.isArray(value) ? JSON.stringify(value) : value}`);
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `${outputs.join("\n")}\n`);
   const summary = [`## CI scope (${scope.stage})`, ...outputs.map((line) => `- ${line}`)].join("\n");
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`);
