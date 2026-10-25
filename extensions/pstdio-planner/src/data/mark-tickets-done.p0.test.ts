@@ -3,6 +3,7 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { fixture } from "../commands/auto-build.fixture";
 import { makeCommandContext } from "../commands/command-context.fixture";
 import { createTicketCommand } from "../commands/create-ticket";
+import { nextTicketsCommand } from "../commands/next-tickets";
 import { statusesCollection } from "./collections";
 import { markTicketsDone } from "./mark-tickets-done";
 import { ticketsCollection } from "./ticket-context.fixture";
@@ -24,7 +25,7 @@ test("completion clears only dependency blocker text backed by the completed dep
   expect((await collection.get(unlinked.id))?.blockedReason).toBe(reason);
 });
 
-test("all named prerequisites must finish before persistent dependency blocker cleanup", async () => {
+test("dependency waiting stays in links after the stored blocker text is cleared", async () => {
   const { ctx, ticket, storage } = await fixture();
   const first = await ticket("First prerequisite");
   const second = await ticket("Second prerequisite");
@@ -32,12 +33,13 @@ test("all named prerequisites must finish before persistent dependency blocker c
   const reason = `Complete ${first.shorthand} and ${second.shorthand} before implementing this dependent contract.`;
   await ticketsCollection(storage).put(child.id, { ...child, blockedReason: reason });
   await markTicketsDone(ctx, [first.id]);
-  expect((await ticketsCollection(storage).get(child.id))?.blockedReason).toBe(reason);
-  await markTicketsDone(ctx, [second.id]);
   expect(await ticketsCollection(storage).get(child.id)).toMatchObject({
     blockedReason: null,
     dependsOn: [first.id, second.id],
   });
+  expect((await nextTicketsCommand.run(ctx, {})).waiting).toContainEqual(
+    expect.objectContaining({ id: child.id, reason: "dependency-not-ready" }),
+  );
 });
 
 test("merge destination follows explicit IDs after every status is renamed", async () => {
