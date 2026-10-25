@@ -156,55 +156,33 @@ test("interruption stops the browser and host while retaining requested evidence
     url.protocol = "ws:";
     const terminal = new WebSocket(url, { headers: runtimeAuthorization(control.descriptor) });
     logTestPhase("launch interruptible extension smoke");
-    const messages = new ReadableStream<TerminalWebSocketServerMessage>({
-      start(controller) {
-        terminal.onopen = () =>
-          terminal.send(
-            JSON.stringify({
-              type: "open",
-              request: {
-                command: [PACKAGED_BINARY_PATH, "extensions", "test", source, "--json", "--keep-home"],
-                cwd: root,
-                env: { ...smokeEnv, TMPDIR: root, TMP: root, TEMP: root },
-                cols: 200,
-                rows: 40,
-              },
-            }),
-          );
-        terminal.onmessage = (event) => controller.enqueue(JSON.parse(String(event.data)));
-        terminal.onerror = () => {
-          terminal.onclose = null;
-          controller.error(new Error("Extension smoke terminal failed"));
-        };
-        terminal.onclose = () => controller.close();
-      },
-      cancel() {
-        terminal.onopen = null;
-        terminal.onmessage = null;
-        terminal.onerror = null;
-        terminal.onclose = null;
-        terminal.close();
-      },
-    });
-    const reader = messages.getReader();
-    const next = async () => {
-      const message = await reader.read();
-      if (message.done) throw new Error("Extension smoke terminal closed before process exit");
-      if (message.value.type === "error") throw new Error(message.value.message);
-      return message.value;
+    let output = "";
+    const exited = Promise.withResolvers<Extract<TerminalWebSocketServerMessage, { type: "exit" }>>();
+    terminal.onopen = () =>
+      terminal.send(
+        JSON.stringify({
+          type: "open",
+          request: {
+            command: [PACKAGED_BINARY_PATH, "extensions", "test", source, "--json", "--keep-home"],
+            cwd: root,
+            env: { ...smokeEnv, TMPDIR: root, TMP: root, TEMP: root },
+            cols: 200,
+            rows: 40,
+          },
+        }),
+      );
+    terminal.onmessage = (event) => {
+      const message = JSON.parse(String(event.data)) as TerminalWebSocketServerMessage;
+      if (message.type === "data") output += Buffer.from(message.chunk, "base64").toString();
+      if (message.type === "error") exited.reject(new Error(message.message));
+      if (message.type === "exit") exited.resolve(message);
     };
+    terminal.onerror = () => exited.reject(new Error("Extension smoke terminal failed"));
+    terminal.onclose = () => exited.reject(new Error("Extension smoke terminal closed before process exit"));
     try {
-      let output = "";
-      const exited = (async () => {
-        while (true) {
-          const message = await next();
-          if (message.type === "exit") return message;
-          if (message.type === "data") output += Buffer.from(message.chunk, "base64").toString();
-        }
-      })();
       await Promise.race([
         held.promise,
-        exited.then(() => {
+        exited.promise.then(() => {
           throw new Error(`Smoke process exited before reaching the held webview: ${output}`);
         }),
       ]);
@@ -214,7 +192,7 @@ test("interruption stops the browser and host while retaining requested evidence
       // Drive a real Ctrl+C through the host terminal on every platform. On Windows,
       // child.kill("SIGTERM") force-terminates a process without running its signal handler.
       terminal.send(JSON.stringify({ type: "write", data: Buffer.from("\u0003").toString("base64") }));
-      const message = await exited;
+      const message = await exited.promise;
       expect({ code: message.code, output }).toMatchObject({ code: 130 });
       expect(() => process.kill(descriptor.pid, 0)).toThrow();
       expect(existsSync(join(retained, "browser-profile"))).toBe(true);
@@ -227,7 +205,6 @@ test("interruption stops the browser and host while retaining requested evidence
       terminal.onerror = null;
       terminal.onclose = null;
       terminal.close();
-      await reader.cancel().catch(() => {});
       await stopProcess(control.child);
     }
   } finally {
