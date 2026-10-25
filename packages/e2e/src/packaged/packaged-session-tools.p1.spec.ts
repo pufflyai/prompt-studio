@@ -2,10 +2,10 @@ import type { ChildProcess } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type Browser, chromium, expect, test } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { verifySessionTools } from "../helpers/session-tools";
+import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 

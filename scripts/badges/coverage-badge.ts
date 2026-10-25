@@ -44,6 +44,7 @@ interface CoverageArtifactsInput {
   reports: CoverageReport[];
   scope: string;
   execution?: ExecutionEvidence[];
+  workflowRunId?: number;
 }
 export const writeCoverageArtifacts = (input: CoverageArtifactsInput) => {
   const { root, output, reports, scope, execution } = input;
@@ -60,6 +61,7 @@ export const writeCoverageArtifacts = (input: CoverageArtifactsInput) => {
     trackedFiles: tracked.stdout.split("\0").filter(Boolean),
     reports,
     execution,
+    workflowRunId: input.workflowRunId,
   });
   mkdirSync(dirname(resolve(output)), { recursive: true });
   writeFileSync(output, `${JSON.stringify(badge, null, 2)}\n`);
