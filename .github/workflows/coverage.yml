@@ -31,26 +31,18 @@ jobs:
       run_id: ${{ steps.source.outputs.run_id }}
       artifact_id: ${{ steps.source.outputs.artifact_id }}
     steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
       - name: Select the successful full nightly measurement
         id: source
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
-        run: |
-          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > run.json
-          jq -e '.name == "Release Packages" and .head_branch == "main" and .conclusion == "success"' run.json > /dev/null
-          attempt=$(jq -r '.run_attempt' run.json)
-          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts?per_page=100" > artifacts.json
-          artifact_id=$(jq -r --arg name "nightly-source-coverage-attempt-$attempt" \
-            '[.[].artifacts[] | select(.name == $name and .expired == false)] |
-            if length == 0 then "" elif length == 1 then .[0].id else error("Ambiguous nightly coverage") end' artifacts.json)
-          # Other releases have no measurement and skip, but a requested run must publish.
-          if [ -z "$artifact_id" ] && [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            echo "::error::Run $SOURCE_RUN_ID has no unexpired nightly-source-coverage-attempt-$attempt artifact."
-            exit 1
-          fi
-          echo "run_id=$(jq -r '.id' run.json)" >> "$GITHUB_OUTPUT"
-          echo "artifact_id=$artifact_id" >> "$GITHUB_OUTPUT"
+        run: bun scripts/badges/select-nightly-source-coverage.ts
 
   # Only this job can write to the repository, and it runs no project code.
   publish:

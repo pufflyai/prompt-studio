@@ -222,6 +222,7 @@ jobs:
         with:
           name: package_checks-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
           path: test-results/ci
+          include-hidden-files: true
           if-no-files-found: warn
           include-hidden-files: true
       - name: Require committed generated outputs to match their source
@@ -327,6 +328,7 @@ jobs:
         with:
           name: bun-contract-results-${{ matrix.priority }}-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
           path: test-results/ci
+          include-hidden-files: true
           if-no-files-found: warn
           include-hidden-files: true
       - name: Require committed generated outputs to match their source
@@ -375,6 +377,7 @@ jobs:
         with:
           name: database_tests-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
           path: test-results/ci
+          include-hidden-files: true
           if-no-files-found: warn
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
@@ -476,6 +479,7 @@ jobs:
         with:
           name: windows_test_and_build-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
           path: test-results/ci
+          include-hidden-files: true
           if-no-files-found: warn
           include-hidden-files: true
       - name: Require committed generated outputs to match their source
@@ -549,6 +553,7 @@ jobs:
         with:
           name: windows_database_tests-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
           path: test-results/ci
+          include-hidden-files: true
           if-no-files-found: warn
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
