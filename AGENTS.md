@@ -144,7 +144,7 @@ Run tests often, but run only the tests for the code you changed:
 - One package: `bun run --cwd packages/<name> test`
 - One e2e spec: `bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts`
 
-Choose the smallest test scope that covers the changed behavior. Include affected callers or integration tests when the change crosses a package boundary. The full test run comes later, before the PR is marked ready. See [Finishing a pull request](#finishing-a-pull-request). Do not run `bun run validate` unless the user explicitly asks for full validation.
+Choose the smallest test scope that covers the changed behavior. Include affected callers or integration tests when the change crosses a package boundary. Run all tests only when the feature is ready, before the PR is marked ready. See [Finishing a pull request](#finishing-a-pull-request). Do not run `bun run validate` unless the user explicitly asks for full validation.
 
 ### 3. Refactor: clean up
 
@@ -261,16 +261,15 @@ Run `bun run dev:playwright`. Open the dashboard URL printed by the command with
 
 ## Finishing a pull request
 
-When the implementation is done, follow these steps in order:
+Build each feature with the [test-driven workflow](#required-workflow-test-driven-development). While you develop, run only the tests relevant to your change. When the feature is ready:
 
 1. **Build.** Run `bun run build`.
-2. **Run the relevant tests.** Run the tests for the changed code and its callers, as described in [step 2 of the workflow](#2-green-make-the-test-pass).
-3. **Open the PR.** Push the branch and open a draft PR, as described in [Git](#git).
-4. **Run all tests.** Run `bun run test`. It runs every package's tests, then the E2E script, CLI, UI and Vite terminal suites. Run it again after merging `main` into the branch, because a merge can combine changes that each passed alone. Fix every failure and push the fix.
-5. **Mark the PR ready.** Run `gh pr ready` only when all tests pass and CI is green on the latest commit. See [CI completion](#ci-completion).
-6. **Answer review comments.** Read every review comment on the PR, including inline comments on the code. `gh pr view <number> --comments` shows the conversation, and `gh api repos/pufflyai/prompt-studio/pulls/<number>/comments` shows the inline comments. Fix the valid ones and reply to each comment. After a fix, rerun the affected tests and wait for CI on the new commit.
+2. **Open the PR.** Push the branch and open a draft PR, as described in [Git](#git).
+3. **Run all tests.** Run `bun run test`. It runs every package's tests, then the E2E script, CLI, UI and Vite terminal suites. Run it again after merging `main` into the branch, because a merge can combine changes that each passed alone. Fix every failure and push the fix.
+4. **Mark the PR ready.** Run `gh pr ready` only when all tests pass and CI is green on the latest commit. See [CI completion](#ci-completion).
+5. **Answer review comments.** Read every review comment on the PR, including inline comments on the code. `gh pr view <number> --comments` shows the conversation, and `gh api repos/pufflyai/prompt-studio/pulls/<number>/comments` shows the inline comments. Fix the valid ones and reply to each comment. After a fix, rerun the affected tests and wait for CI on the new commit.
 
-Documentation-only PRs skip steps 1 and 4.
+Documentation-only PRs skip steps 1 and 3.
 
 ## CI completion
 
