@@ -1,10 +1,18 @@
 import type { HarnessContext } from "@pstdio/sdk/extensions";
+import { resolvePiCommand } from "./cli";
+import type { PiProcessOptions } from "./process";
 
 export const MINIMUM_VERSION = "0.73.1";
 
-export const detectPi = async (ctx: HarnessContext) => {
+export const detectPi = async (ctx: HarnessContext, options: PiProcessOptions = {}) => {
   try {
-    const result = await ctx.process.run({ command: ["pi", "--version"], timeoutMs: 3000 });
+    const resolved = options.command ? { command: options.command, env: {} } : resolvePiCommand();
+    const result = await ctx.process.run({
+      command: [...resolved.command, "--version"],
+      env: { ...options.env, ...resolved.env },
+      cwd: options.cwd,
+      timeoutMs: 3000,
+    });
     const version = [result.stdout, result.stderr]
       .map((text) => Bun.stripANSI(text).trim())
       .find((text) => /^\d+\.\d+\.\d+$/.test(text));

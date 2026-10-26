@@ -1,5 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import spawn from "cross-spawn";
+import { resolvePiCommand } from "./cli";
 
 export interface PiProcessOptions {
   command?: string[];
@@ -27,10 +28,11 @@ const terminateTree = async (child: ChildProcessWithoutNullStreams, signal: Node
 
 export const startPiProcess = (args: string[], options: PiProcessOptions = {}) => {
   options.signal?.throwIfAborted();
-  const [command, ...prefix] = options.command ?? ["pi"];
+  const resolved = options.command ? { command: options.command, env: {} } : resolvePiCommand();
+  const [command, ...prefix] = resolved.command;
   const child = spawn(command, [...prefix, ...args], {
     cwd: options.cwd,
-    env: { ...process.env, ...options.env },
+    env: { ...process.env, ...options.env, ...resolved.env },
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true,
     detached: process.platform !== "win32",

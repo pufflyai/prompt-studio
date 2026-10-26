@@ -1,5 +1,6 @@
 import type { AgentModel, HarnessContext, HarnessProvider, HarnessStartInput } from "@pstdio/sdk/extensions";
 import { l10n, params, reconcileMessageHistory } from "@pstdio/sdk/extensions";
+import { getPiAuthentication, runPiAccountWorker } from "./authentication";
 import { detectPi } from "./detection";
 import { readPiHistory } from "./history";
 import { type PiProcessOptions, piRequest } from "./process";
@@ -56,10 +57,15 @@ export const createPiHarness = (options: PiProcessOptions = {}) => {
       }),
     },
     capabilities: () => [],
-    detect: detectPi,
+    detect: (ctx) => detectPi(ctx, options),
+    getAuthentication: (ctx, input) => getPiAuthentication(ctx, input, options),
+    authenticate: (ctx, input, channel) =>
+      request(ctx, (signal) =>
+        runPiAccountWorker({ type: "authenticate", input }, { ...options, signal }, channel),
+      ).then(() => {}),
     listModels: (ctx) =>
       request(ctx, async (signal) => {
-        if (!(await detectPi(ctx)).available) return [];
+        if (!(await detectPi(ctx, options)).available) return [];
         signal.throwIfAborted();
         const data = await piRequest("get_available_models", ["--no-session"], { ...options, signal });
         const models = data.models as Array<{ provider: string; id: string; name: string; reasoning: boolean }>;

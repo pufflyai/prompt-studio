@@ -1,8 +1,8 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import type { HarnessContext, JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
+import { resolvePiCommand } from "./cli";
 import { createPiHarness } from "./harness";
 import { startPiProcess } from "./process";
 
@@ -79,11 +79,10 @@ export const piFixture = async (installed = false) => {
   );
   await Bun.write(join(root, "agent/settings.json"), JSON.stringify({ retry: { enabled: false } }));
   await Bun.write(join(root, "hello.txt"), "Hello file");
-  const command = installed
-    ? ["pi"]
-    : [process.execPath, join(dirname(fileURLToPath(import.meta.resolve("@mariozechner/pi-coding-agent"))), "cli.js")];
+  const command = installed ? ["pi"] : resolvePiCommand({ which: () => null }).command;
+  if (!installed) Object.assign(env, resolvePiCommand({ which: () => null }).env);
   const run: HarnessContext["process"]["run"] = async (input) => {
-    const process = startPiProcess(input.command.slice(1), { command, env: { ...env, ...input.env } });
+    const process = startPiProcess([], { command: input.command, env: { ...env, ...input.env }, cwd: input.cwd });
     process.child.stdin.end();
     const [chunks, exit] = await Promise.all([Array.fromAsync(process.child.stdout), process.exited]);
     return { stdout: Buffer.concat(chunks).toString(), stderr: process.diagnostics(), exitCode: exit.code ?? 1 };
