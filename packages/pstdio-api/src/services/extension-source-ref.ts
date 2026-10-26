@@ -19,9 +19,9 @@ export const parseExtensionSourceRef = (sourceRef: string | null) => {
 };
 
 export const resolveExtensionReleaseCommit = async (originUrl: string, releaseRef: string, run = runCommand) => {
-  if (gitCommitPattern.test(releaseRef)) return releaseRef.toLowerCase();
   const bundled = await resolveBundledExtensionCommit(originUrl, releaseRef);
   if (bundled) return bundled;
+  if (gitCommitPattern.test(releaseRef)) return releaseRef.toLowerCase();
 
   const tagRef = releaseRef.startsWith("refs/") ? releaseRef : `refs/tags/${releaseRef}`;
   const branchRef = releaseRef.startsWith("refs/") ? null : `refs/heads/${releaseRef}`;
