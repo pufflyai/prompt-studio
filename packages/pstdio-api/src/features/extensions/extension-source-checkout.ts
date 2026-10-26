@@ -1,10 +1,58 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createRegistryClient } from "pstdio-extensions/distribution";
+import { requireGitExecutable } from "pstdio-wt";
+import { prepareBundledExtensionSource } from "./bundled-extension-source";
 import { findExtensionCatalogEntry, type GitExtensionOrigin, packagedExtensionCatalog } from "./extension-catalog";
-import { type ExtensionRepositoryOptions, prepareExtensionRepository } from "./extension-repository";
+import { type CommandOptions, type CommandResult, runCommand } from "./install-extension-dependencies";
+
+// Extension sources come from https remotes, or from local repositories that a catalog file names.
+// Every other transport is refused, including `ext::`, which runs commands.
+export const extensionSourceGitConfig = [
+  "-c",
+  "protocol.allow=never",
+  "-c",
+  "protocol.https.allow=always",
+  "-c",
+  "protocol.file.allow=always",
+];
+
+export const isExtensionSourceUrl = (url: string) => url.startsWith("https://") || url.startsWith("file://");
+
+// Fetching a ref instead of `clone --branch` lets the ref be a branch, a tag, or a full commit SHA.
+const cloneRepoSparse = async (
+  checkoutPath: string,
+  paths: string[],
+  run: (command: string, args: string[], options: CommandOptions) => Promise<CommandResult>,
+  repositoryUrl: string,
+  ref?: string,
+  signal?: AbortSignal,
+) => {
+  const executable = requireGitExecutable();
+  const target = `${repositoryUrl}${ref ? ` at ${ref}` : ""}`;
+  const git = async (args: string[], failure: string) => {
+    signal?.throwIfAborted();
+    const result = await run(executable, args, { cwd: checkoutPath, ...(signal ? { signal } : {}) });
+    signal?.throwIfAborted();
+    if (result.exitCode !== 0) throw new Error(`${failure}: ${result.stderr.trim() || result.stdout.trim()}`);
+    return result.stdout.trim();
+  };
+
+  mkdirSync(checkoutPath, { recursive: true });
+  await git(["init"], `Failed to create a checkout for ${target}`);
+  // `--` keeps a stored URL or ref that starts with `-` from being read as an option.
+  await git(["remote", "add", "--", "origin", repositoryUrl], `Failed to add remote ${repositoryUrl}`);
+  await git(["sparse-checkout", "set", ...paths], `Failed to fetch ${paths.join(", ")}`);
+  await git(
+    [...extensionSourceGitConfig, "fetch", "--depth", "1", "--filter=blob:none", "--", "origin", ref ?? "HEAD"],
+    `Failed to fetch ${target}`,
+  );
+  // A partial clone downloads file contents during checkout, so checkout also needs the transport limits.
+  await git([...extensionSourceGitConfig, "checkout", "FETCH_HEAD"], `Failed to check out ${target}`);
+  return git(["rev-parse", "HEAD"], "Failed to resolve the installed commit");
+};
 
 const packagedEntry = (installName: string) =>
   packagedExtensionCatalog.extensions.find((entry) => entry.installName === installName);
@@ -37,8 +85,9 @@ export const prepareNamedSource = async (
     return registry.prepare(release, join(tempDir, "extension-source"), signal);
   }
   const ref = originRef(entry.origin, explicitRef, hostReleaseRef);
+  if (!explicitRef) return prepareReleaseExtensionSource(entry.origin, tempDir, ref, signal);
   const checkoutPath = join(tempDir, "extension-source");
-  const commit = await prepareExtensionRepository(checkoutPath, [entry.origin.path], entry.origin.url, ref, { signal });
+  const commit = await cloneRepoSparse(checkoutPath, [entry.origin.path], runCommand, entry.origin.url, ref, signal);
   return {
     path: join(checkoutPath, entry.origin.path),
     ref: namedSourceRef(commit, entry.origin),
@@ -52,15 +101,28 @@ export const prepareGitExtensionSource = async (
   signal?: AbortSignal,
 ) => {
   const checkoutPath = join(tempDir, "extension-source");
-  const commit = await prepareExtensionRepository(checkoutPath, [origin.path], origin.url, releaseRef, { signal });
+  const commit = await cloneRepoSparse(checkoutPath, [origin.path], runCommand, origin.url, releaseRef, signal);
   return { path: join(checkoutPath, origin.path), ref: namedSourceRef(commit, origin) };
+};
+
+export const prepareReleaseExtensionSource = async (
+  origin: GitExtensionOrigin,
+  tempDir: string,
+  ref: string,
+  signal?: AbortSignal,
+) => {
+  const bundled = await prepareBundledExtensionSource(origin, tempDir, ref, { signal });
+  if (bundled) return { path: bundled.path, ref: namedSourceRef(bundled.commit, origin) };
+  return prepareGitExtensionSource(origin, tempDir, ref, signal);
 };
 
 export const createSharedNamedSourceCheckout = async (
   names: string[],
-  options: ExtensionRepositoryOptions & {
+  options: {
     hostReleaseRef?: string;
     ref?: string;
+    runCommand?: (command: string, args: string[], opts: CommandOptions) => Promise<CommandResult>;
+    signal?: AbortSignal;
   } = {},
 ) => {
   const tempDir = mkdtempSync(join(tmpdir(), "pstdio-extension-shared-"));
@@ -104,14 +166,28 @@ export const createSharedNamedSourceCheckout = async (
     for (const group of groups.values()) {
       const checkoutPath = join(tempDir, `extension-source-${index}`);
       index += 1;
-      const commit = await prepareExtensionRepository(
+      const remaining: typeof entries = [];
+      for (const entry of group.entries) {
+        const bundled = options.ref
+          ? null
+          : await prepareBundledExtensionSource(entry.origin, checkoutPath, group.ref, options);
+        if (bundled)
+          preparedByName.set(entry.installName, {
+            path: bundled.path,
+            ref: namedSourceRef(bundled.commit, entry.origin),
+          });
+        else remaining.push(entry);
+      }
+      if (remaining.length === 0) continue;
+      const commit = await cloneRepoSparse(
         checkoutPath,
-        group.entries.map((entry) => entry.origin.path),
+        remaining.map((entry) => entry.origin.path),
+        options.runCommand ?? runCommand,
         group.url,
         group.ref,
-        options,
+        options.signal,
       );
-      for (const entry of group.entries) {
+      for (const entry of remaining) {
         preparedByName.set(entry.installName, {
           path: join(checkoutPath, entry.origin.path),
           ref: namedSourceRef(commit, entry.origin),

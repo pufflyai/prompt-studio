@@ -74,10 +74,8 @@ export const unpackExtension = async (bytes: Uint8Array, target: string, expecte
   return contents.manifest;
 };
 
-export const packExtension = async (root: string) => {
-  const raw = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+const archiveExtension = async (root: string, raw: Record<string, unknown>, includes: string[] | null) => {
   const manifest = packageMetadata(raw);
-  const includes = Array.isArray(raw.files) ? (raw.files as string[]) : null;
   const ignore = createExtensionIgnoreMatcher(root);
   const files: Record<string, Uint8Array> = {};
   const visit = async (dir: string) => {
@@ -111,4 +109,14 @@ export const packExtension = async (root: string) => {
     sha256: packageSha256(bytes),
     filename: `${extensionStorageDirectory(manifest.id)}-${manifest.version}.tgz`,
   };
+};
+
+export const packExtension = async (root: string) => {
+  const raw = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+  return archiveExtension(root, raw, Array.isArray(raw.files) ? raw.files : null);
+};
+
+export const packExtensionSource = async (root: string) => {
+  const raw = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+  return archiveExtension(root, raw, null);
 };

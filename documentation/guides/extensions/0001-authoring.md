@@ -34,7 +34,7 @@ pst --version
 
 Each command prints a version number. If `pst` prints `env: node: No such file or directory`, install Node.js or use the desktop app's `pst`.
 
-Prompt Studio installs extensions without a system Git installation on macOS, Linux, and Windows. Your project folder does not need to be a Git repository. Git is still needed for features that manage Git workspaces.
+The app includes its catalog extension sources, so installing them does not require Git. Registry packages and local folder installs also work without Git. Git workspaces and explicit Git source refs require a working system Git installation. Your project folder does not need to be a Git repository.
 
 This guide uses two folders. Keep them separate:
 

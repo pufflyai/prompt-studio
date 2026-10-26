@@ -60,10 +60,47 @@ const idleExtensionService = {
 const emptyWorkspaceService = { getDefault: async () => null };
 
 describe("extension upgrade service", () => {
-  test("rejects command and insecure transports for release lookup", async () => {
-    for (const url of ["ext::sh -c touch% /tmp/probe", "http://example.com/repo", "ssh://example.com/repo"]) {
-      await expect(resolveExtensionReleaseCommit(url, "main")).rejects.toThrow("HTTPS or file URL");
-    }
+  test("resolves an annotated release tag to its commit", async () => {
+    const releaseCommit = "b".repeat(40);
+    const run = mock(async () => ({
+      exitCode: 0,
+      stderr: "",
+      stdout: `${"a".repeat(40)}\trefs/tags/pstdio@0.27.0\n${releaseCommit}\trefs/tags/pstdio@0.27.0^{}\n`,
+    }));
+
+    expect(await resolveExtensionReleaseCommit("https://example.com/extensions.git", "pstdio@0.27.0", run)).toBe(
+      releaseCommit,
+    );
+    expect(run).toHaveBeenCalledWith(
+      expect.stringMatching(/git(?:\.exe)?$/),
+      expect.arrayContaining(["https://example.com/extensions.git"]),
+      expect.any(Object),
+    );
+  });
+
+  test("ends git options before the remote URL and allows only https and file transport", async () => {
+    const run = mock(async () => ({ exitCode: 0, stderr: "", stdout: `${"c".repeat(40)}\trefs/heads/main\n` }));
+
+    await resolveExtensionReleaseCommit("https://example.com/extensions.git", "main", run);
+
+    expect(run).toHaveBeenCalledWith(
+      expect.stringMatching(/git(?:\.exe)?$/),
+      [
+        "-c",
+        "protocol.allow=never",
+        "-c",
+        "protocol.https.allow=always",
+        "-c",
+        "protocol.file.allow=always",
+        "ls-remote",
+        "--",
+        "https://example.com/extensions.git",
+        "refs/tags/main^{}",
+        "refs/tags/main",
+        "refs/heads/main",
+      ],
+      expect.any(Object),
+    );
   });
 
   test("ignores a recorded source whose origin is not an https or file URL", () => {

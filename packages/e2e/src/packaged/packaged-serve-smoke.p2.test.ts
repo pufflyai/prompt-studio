@@ -34,7 +34,7 @@ beforeAll(() => {
 // extension-browser-install.p2.test.ts installs the cached Playwright package and visits a smoke page.
 
 test(
-  "installs catalog defaults and checks for upgrades without Git on PATH",
+  "installs bundled defaults without Git and does not offer Git workspaces",
   expectPackagedGitFreeExtensions,
   PACKAGED_TEST_TIMEOUT,
 );

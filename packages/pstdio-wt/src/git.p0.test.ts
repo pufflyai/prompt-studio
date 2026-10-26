@@ -4,6 +4,34 @@ import { GitError, git, gitBytes, resolveGitExecutable } from "./git";
 import { createTempRepo } from "./test-helpers";
 
 describe("git", () => {
+  test("does not resolve a missing Git executable on any supported platform", () => {
+    for (const platform of ["darwin", "linux", "win32"] as const) {
+      expect(resolveGitExecutable({ platform, which: () => null })).toBeNull();
+    }
+  });
+
+  test("does not launch Apple's Git stub when developer tools are missing", () => {
+    expect(
+      resolveGitExecutable({
+        platform: "darwin",
+        which: () => "/usr/bin/git",
+        developerDirectory: () => null,
+      }),
+    ).toBeNull();
+  });
+
+  test("uses developer tools selected outside the default Xcode location", () => {
+    const executable = join("/custom/Xcode.app/Contents/Developer", "usr/bin/git");
+    expect(
+      resolveGitExecutable({
+        platform: "darwin",
+        which: () => "/usr/bin/git",
+        developerDirectory: () => "/custom/Xcode.app/Contents/Developer",
+        exists: (path) => path === executable,
+      }),
+    ).toBe(executable);
+  });
+
   test("bypasses the Git for Windows cmd launcher", () => {
     const command = resolveGitExecutable({
       exists: (path) => path === "C:\\Program Files\\Git\\mingw64\\bin\\git.exe",

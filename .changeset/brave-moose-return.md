@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Install extension sources and resolve upgrades without requiring system Git.
+Bundle catalog extension sources so core installs without Git, and guard optional system Git features.

@@ -1,61 +1,29 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 export const expectPackagedGitFreeExtensions = async () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-packaged-no-git-"));
+  const npmConfigPath = join(root, ".npmrc");
+  const registry = await startLocalWorkspaceRegistry({
+    configPath: npmConfigPath,
+    outputRoot: root,
+    packagePaths: [join(import.meta.dirname, "../../../sdk")],
+  });
   let child: ChildProcess | undefined;
   try {
-    const repository = join(root, "repository");
-    const extension = join(repository, "extensions", "demo");
-    mkdirSync(extension, { recursive: true });
-    writeFileSync(
-      join(extension, "package.json"),
-      JSON.stringify({
-        name: "demo",
-        publisher: "test",
-        version: "1.0.0",
-        main: "./extension.ts",
-        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
-      }),
-    );
-    writeFileSync(join(extension, "extension.ts"), "export default {};\n");
-    for (const args of [
-      ["init"],
-      ["add", "."],
-      ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "Extension release"],
-      ["tag", "release"],
-    ]) {
-      const result = Bun.spawnSync(["git", ...args], { cwd: repository });
-      expect(result.exitCode, result.stderr.toString()).toBe(0);
-    }
-    const catalog = join(root, "catalog.json");
-    writeFileSync(
-      catalog,
-      JSON.stringify({
-        version: 1,
-        extensions: [
-          {
-            installName: "demo",
-            displayName: "Demo",
-            description: "Git-free installation fixture",
-            default: true,
-            origin: { kind: "git", url: pathToFileURL(repository).href, path: "extensions/demo", ref: "release" },
-          },
-        ],
-      }),
-    );
+    const pathKey = Object.keys(process.env).find((key) => key.toUpperCase() === "PATH") ?? "PATH";
     const started = await startPackagedServe(root, {
+      [pathKey]: join(root, "no-executables"),
       PATH: join(root, "no-executables"),
-      PSTDIO_EXTENSION_CATALOG: catalog,
-      PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source: "demo", skipInstall: true }]),
-      PSTDIO_EXTENSION_RELEASE_REF: "release",
+      NPM_CONFIG_USERCONFIG: npmConfigPath,
+      PSTDIO_EXTENSION_CATALOG: "",
+      PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source: "pstdio-skills" }]),
     });
     child = started.child;
     const projectFolder = join(root, "project");
@@ -75,10 +43,25 @@ export const expectPackagedGitFreeExtensions = async () => {
       extensions: { installName: string; enabled: boolean; canUpgrade: boolean }[];
     };
     expect(body.extensions).toContainEqual(
-      expect.objectContaining({ installName: "demo", enabled: true, canUpgrade: false }),
+      expect.objectContaining({ installName: "pstdio-skills", enabled: true, canUpgrade: false }),
     );
+    const providers = await fetch(`${started.baseUrl}/v1/projects/${project.id}/workspace-providers`, { headers });
+    expect(providers.status).toBe(200);
+    expect(await providers.json()).toEqual([]);
+    const gitInstall = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/install`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        source: { kind: "catalog", name: "pstdio-skills", ref: "main" },
+        installName: "git-skills",
+        skipInstall: true,
+      }),
+    });
+    expect(gitInstall.status).toBe(409);
+    expect(await gitInstall.json()).toMatchObject({ code: "git_unavailable" });
   } finally {
     if (child) await stopProcess(child);
+    await registry.close();
     rmSync(root, { recursive: true, force: true });
   }
 };
