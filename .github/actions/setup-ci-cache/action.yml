@@ -45,6 +45,8 @@ runs:
     - name: Start the job's Nx HTTP cache
       shell: bash
       run: bun scripts/ci/build-cache.ts
+    # The only CI writer of these shared declarations. Parallel checks only read them:
+    # a package script that regenerates them can expose a half-written file to another typecheck.
     - name: Generate installed Chakra theme declarations
       shell: bash
       run: bun run --cwd packages/ui typegen:tokens

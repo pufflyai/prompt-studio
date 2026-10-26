@@ -30,16 +30,26 @@ test("packaged Planner board pans with a mouse and keeps ticket and column actio
     phase("runtime ready");
     const folder = join(root, "project");
     mkdirSync(folder);
-    const response = await fetch(`${runtime.baseUrl}/v1/projects`, {
-      method: "POST",
-      headers: { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "Board panning" }, folder)),
+    const creatingProject = (async () => {
+      const response = await fetch(`${runtime.baseUrl}/v1/projects`, {
+        method: "POST",
+        headers: { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" },
+        body: JSON.stringify(folderProjectInput({ name: "Board panning" }, folder)),
+      });
+      expect(response.status).toBe(201);
+      const { id } = (await response.json()) as { id: string };
+      phase("project created");
+      return id;
+    })();
+    const launchingBrowser = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
+      browser = opened;
+      return opened;
     });
-    expect(response.status).toBe(201);
-    const { id } = (await response.json()) as { id: string };
-    phase("project created");
-    browser = await chromium.launch(PROVISIONED_CHROMIUM);
-    const page = await browser.newPage({
+    const [projectSetup, browserSetup] = await Promise.allSettled([creatingProject, launchingBrowser]);
+    if (projectSetup.status === "rejected") throw projectSetup.reason;
+    if (browserSetup.status === "rejected") throw browserSetup.reason;
+    const id = projectSetup.value;
+    const page = await browserSetup.value.newPage({
       viewport: { width: 1000, height: 720 },
       extraHTTPHeaders: runtimeAuthorization(runtime.descriptor),
     });
