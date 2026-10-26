@@ -26,7 +26,7 @@ The session composer shows the model menu only for harnesses that implement `lis
 
 ## Installation and sign-in
 
-In the planned 0.46.0 release, the Codex, Claude Code, and OpenCode extensions declare private, pinned CLI dependencies. The extension installer downloads their native platform packages without running install scripts. Each harness prefers a CLI on PATH and otherwise resolves its private native executable. Detection, model discovery, sessions, and sign-in share that resolver. See [ADR 0110](../../adrs/0110-temporary-native-cli-package-resolution.md) for the temporary package-layout dependency.
+Provider extensions own CLI discovery and installation. Detection, model discovery, sessions, and sign-in must use the same executable and native credential storage.
 
 The unreleased extension API 0.3.0 adds optional `HarnessProvider.getAuthentication(ctx, { model })` and `authenticate(ctx, input, channel)`. Account state describes the selected model provider as `signed_in`, `signed_out`, `not_required`, or `unknown`, plus a catalog of providers and their native sign-in methods. Discovery never starts sign-in or returns credentials. Account status uses `GET /v1/agents/{agentId}/authentication`, separately from cached CLI availability.
 
@@ -38,7 +38,7 @@ Codex offers ChatGPT device authentication and API-key login through its native 
 
 Closing the channel cancels the account flow. Disabling or retiring the extension also cancels its flows and waits for worker cleanup. Completion refreshes account state and model queries. Native status, rather than a successful login action alone, determines readiness. Conversation history remains readable while setup is required.
 
-Status probes use `codex login status`, `claude auth status`, and `opencode auth list`. Probe failures remain unknown rather than reporting a signed-out account. OpenCode 1.x only provides text count summaries; unrecognized output remains unknown. See the [Codex CLI reference](https://developers.openai.com/codex/cli/reference/), [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference), and [OpenCode CLI reference](https://opencode.ai/docs/cli/).
+Probe failures remain unknown rather than reporting a signed-out account. See the [Codex CLI reference](https://developers.openai.com/codex/cli/reference/), [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference), and [OpenCode CLI reference](https://opencode.ai/docs/cli/).
 
 SDK/host support must ship before released extensions rely on the new field. An older host can ignore the optional result field, but cannot show the sign-in action.
 
