@@ -124,10 +124,18 @@ test("preserves synchronous context factories, streams and extension error codes
   };
   const run = source!.definition.commands![0]!.run;
   expect(await run(ctx as never, {})).toEqual({ value: "item", chunks: ["one", "two"] });
-  await expect(Promise.resolve(run(ctx as never, { fail: true }))).rejects.toMatchObject({
+  // Normal awaiting avoids Bun's nested matcher loop (ADR 0110).
+  const failure = await Promise.resolve(run(ctx as never, { fail: true })).then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+  expect(failure).toBeInstanceOf(Error);
+  expect(failure).toMatchObject({
     code: "source_failure",
     message: "source failed",
   });
+  expect(await run(ctx as never, {})).toEqual({ value: "item", chunks: ["one", "two"] });
+  expect(owner.inspect()).toMatchObject({ state: "ready", pendingCalls: 0 });
 });
 
 test("an explicit command after cancellation restores its adopted bytes without replaying the failed call", async () => {
@@ -152,9 +160,13 @@ test("rejects unsupported command payloads explicitly", async () => {
     `export default { commands: [{ id: 'run', ref: { kind: 'command', id: 'run' }, title: 'Run', run: () => new Map([['x', 1]]) }] };`,
   );
   const source = await owner.load();
-  await expect(Promise.resolve(source!.definition.commands![0]!.run({} as never, {}))).rejects.toThrow(
-    "Unsupported extension payload prototype",
+  const failure = await Promise.resolve(source!.definition.commands![0]!.run({} as never, {})).then(
+    () => undefined,
+    (error: unknown) => error,
   );
+  expect(failure).toBeInstanceOf(Error);
+  expect((failure as Error).message).toContain("Unsupported extension payload prototype");
+  expect(owner.inspect()).toMatchObject({ state: "ready", pendingCalls: 0 });
 });
 
 test("a failed initialization reaps its owner before an explicit retry", async () => {
