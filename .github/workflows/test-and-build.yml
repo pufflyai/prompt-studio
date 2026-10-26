@@ -1,4 +1,4 @@
-name: Compare pinned native Bun installer versions
+name: Compare owned native Bun installer binaries
 on:
   workflow_dispatch:
 permissions:
@@ -29,31 +29,22 @@ jobs:
           install-strategy: native
       - name: Build the normal current candidate and check integrity
         run: bun run --cwd scripts verify:packages --profile integrity
-      - name: Preserve the current Bun for source preparation
-        run: bun -e 'import { mkdir } from "node:fs/promises"; const root = `${process.env.RUNNER_TEMP}/ps-932-current-bun`; await mkdir(root); await Bun.write(`${root}/bun.exe`, Bun.file(process.execPath))'
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ matrix.installer }}
-      - name: Identify the measured installer
-        shell: pwsh
-        run: |
-          "PS932_INSTALL_BINARY=$((Get-Command bun).Source)" >> $env:GITHUB_ENV
-          bun --version
-          bun --revision
+      - name: Prepare a separate verified native installer binary
+        env:
+          PS932_INSTALL_VERSION: ${{ matrix.installer }}
+        run: bun packages/e2e/src/packaged/prepare-installer-binary.ts
       - name: Prepare with current Bun and observe the selected installer
         working-directory: packages/e2e
-        shell: pwsh
         env:
           BUN_CONFIG_MAX_HTTP_REQUESTS: "16"
-        run: |
-          $env:PATH = "$env:RUNNER_TEMP/ps-932-current-bun;$env:PATH"
-          & "$env:RUNNER_TEMP/ps-932-current-bun/bun.exe" src/packaged/observe-planner-installer.ts
+        run: bun src/packaged/observe-planner-installer.ts
       - name: Keep complete installer diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: arm-bun-installer-${{ matrix.installer }}
           path: |
+            ${{ runner.temp }}/ps-932-installer-runtime-*/identity.json
             ${{ runner.temp }}/ps-932-planner-installer-*/summary.json
             ${{ runner.temp }}/ps-932-planner-installer-*/installer.*.log
           if-no-files-found: error
