@@ -1,4 +1,4 @@
-name: Measure native package install concurrency with standard cleanup
+name: Qualify native suites through shared Windows ARM HTTP policy
 on:
   workflow_dispatch:
 permissions:
