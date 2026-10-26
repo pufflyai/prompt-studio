@@ -67,13 +67,20 @@ export const runPlaywright = async (
   child.stdout?.on("data", (chunk) => {
     output += chunk;
   });
+  // A stopped launcher passes the signal on and cleans up after Playwright and its servers exit.
+  const forward = (signal: NodeJS.Signals) => child.kill(signal);
+  process.on("SIGINT", forward);
+  process.on("SIGTERM", forward);
   try {
+    // "close" waits for the child's output streams as well as its exit.
     const exitCode = await new Promise<number>((resolve, reject) => {
       child.on("error", reject);
-      child.on("exit", (code) => resolve(code ?? 1));
+      child.on("close", (code) => resolve(code ?? 1));
     });
     return { exitCode, output };
   } finally {
+    process.off("SIGINT", forward);
+    process.off("SIGTERM", forward);
     rmSync(runFolder, { recursive: true, force: true });
   }
 };
