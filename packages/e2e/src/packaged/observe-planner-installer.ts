@@ -20,6 +20,7 @@ const env: NodeJS.ProcessEnv = {
   BUN_BE_BUN: "1",
   BUN_INSTALL_CACHE_DIR: cache,
 };
+if (process.env.PS932_INSTALL_THREADS) env.UV_THREADPOOL_SIZE = process.env.PS932_INSTALL_THREADS;
 const startedAt = performance.now();
 const child = Bun.spawn(argv, {
   cwd: target,
@@ -37,6 +38,8 @@ const summary = JSON.stringify(
     argv,
     cwd: target,
     http: env.BUN_CONFIG_MAX_HTTP_REQUESTS,
+    workerOverride: env.UV_THREADPOOL_SIZE,
+    goMaxProcs: env.GOMAXPROCS,
     elapsedMs: performance.now() - startedAt,
     exitCode,
     usage: { cpuTime: usage?.cpuTime, maxRSS: usage?.maxRSS, ops: usage?.ops },

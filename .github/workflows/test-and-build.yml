@@ -1,4 +1,4 @@
-name: Analyze the existing native scan recording
+name: Compare cold ARM installer worker scheduling
 on:
   workflow_dispatch:
 permissions:
@@ -8,25 +8,39 @@ jobs:
   native:
     runs-on: windows-11-arm
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        workers: [default, "2"]
+    env:
+      CI_PRIORITY: P2
+      PSTDIO_VERIFY_PLATFORM_PKG: cli-win-arm64
+      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - uses: actions/download-artifact@v4
+      - uses: actions/setup-node@v5
         with:
-          name: archive-extraction-windows-11-arm
-          run-id: 40325365575
-          github-token: ${{ github.token }}
-          path: ${{ runner.temp }}/ps-932-existing-trace
-      - name: Analyze the saved trace without repeating extraction
+          node-version: "24"
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Build the normal compiled candidate and check integrity
+        run: bun run --cwd scripts verify:packages --profile integrity
+      - name: Observe the frozen Planner install with unchanged dependencies
+        working-directory: packages/e2e
         env:
-          PS932_TRACE_ROOT: ${{ runner.temp }}/ps-932-existing-trace
-        run: bun packages/e2e/src/packaged/analyze-defender-recording.ts
-      - name: Keep trace reports
+          BUN_CONFIG_MAX_HTTP_REQUESTS: "16"
+          PS932_INSTALL_THREADS: ${{ matrix.workers != 'default' && matrix.workers || '' }}
+        run: bun src/packaged/observe-planner-installer.ts
+      - name: Keep complete installer diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: native-scan-analysis
-          path: ${{ runner.temp }}/ps-932-existing-trace/analysis/*
+          name: arm-planner-workers-${{ matrix.workers }}
+          path: |
+            ${{ runner.temp }}/ps-932-planner-installer-*/summary.json
+            ${{ runner.temp }}/ps-932-planner-installer-*/installer.*.log
           if-no-files-found: error
