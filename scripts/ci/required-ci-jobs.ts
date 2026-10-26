@@ -88,6 +88,7 @@ export const plannedCiJobs = (scope: Scope) => {
       "P2",
     );
     add("quarantined_browser_tests", ["quarantined_browser_tests"], "P2");
+    add("quarantined_native_ui_tests", ["quarantined_native_ui_tests"], "P2");
   }
   return jobs;
 };

@@ -47,3 +47,21 @@ test("queue native owners provide delivered integrity while production requires 
   const production = plannedCiJobs(resolveCiScope({ ...input, event: "workflow_dispatch", profile: "production" }));
   expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(6);
 });
+
+test("production cannot pass without native UI quarantine execution", () => {
+  const scope = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
+  const plan = plannedCiJobs(scope);
+  expect(plan.find((job) => job.id === "quarantined_native_ui_tests")?.priority).toBe("P2");
+  const observed = plan.flatMap((job) =>
+    job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })),
+  );
+  expect(evaluateCiGate(plan, observed, false, true).outcome).toBe("success");
+  expect(
+    evaluateCiGate(
+      plan,
+      observed.filter((job) => job.name !== "quarantined_native_ui_tests"),
+      false,
+      true,
+    ).outcome,
+  ).toBe("failure");
+});

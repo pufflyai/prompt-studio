@@ -287,5 +287,33 @@
     "reason": "Timed out after 30 seconds filling the chat editor of a New session tab, before the held session request was sent, with no server errors; a re-run of the same job on the same commit passed. Keep the held-request and tab-switch assertions.",
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40146393788/job/121029956537"],
     "removeWhen": "Find why the New session editor sometimes does not accept input, fix it, then pass ten independent Linux runs within the existing 30 second allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "clients/desktop/src/cli/windows-user-path.p0.test.ts",
+    "name": "Windows PATH install preserves long values and environment references",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-932 / desktop Windows PATH",
+    "reason": "The first Windows PATH case exceeded its existing 15 second allowance during its final PowerShell registry read in full validation. The unchanged main file passes all three cases with both default and job-owned temp storage; first PowerShell startup takes 5.1 to 7.5 seconds and later reads about 0.3 seconds. The cause of the intermittent timeout remains unconfirmed. Quarantine authorized on 2026-10-26; preserve the registry value, type, Unicode, environment references and cleanup assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40347335129/job/121657790470",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40349488316"
+    ],
+    "removeWhen": "Identify and fix the slow PowerShell or registry phase, then pass ten independent Windows x64 runs within the existing 15 second allowance without retries or prewarming."
+  },
+  {
+    "runner": "playwright-ui",
+    "file": "packages/e2e/src/ui/ticket-session-status.p2.spec.ts",
+    "name": "follows the latest workspace session status and opens it in the Side Panel",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-954 / ticket workspace session navigation",
+    "reason": "On macOS ARM64, both a full suite and a focused unchanged-main run opened the session Side Panel but unexpectedly replaced the ticket board. Other unchanged-main and PS-932 runs pass. The retargeted nested-control defect in PS-954 is proven separately; it has not been established as the cause of this intermittent failure. PS-954 retains main-reproduction.log and main-trace.zip. Quarantine authorized on 2026-10-26; preserve status transitions, board visibility, panel closing and keyboard navigation.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/pull/1477",
+      "https://github.com/pufflyai/prompt-studio/pull/1455"
+    ],
+    "removeWhen": "Trace and fix the navigation that replaces the board, then pass ten independent macOS ARM64 runs with all original assertions and limits, without retries."
   }
 ]
