@@ -17,6 +17,7 @@ import {
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+import { traceBrowserArchitecture } from "./trace-browser-architecture";
 
 setupPackagedSmokeTests();
 
@@ -38,8 +39,9 @@ for (const kind of ["streaming", "panels"] as const) {
           child = runtime.child;
           return runtime;
         });
-        const openingPage = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
+        const openingPage = chromium.launch(PROVISIONED_CHROMIUM).then(async (opened) => {
           browser = opened;
+          await traceBrowserArchitecture(opened);
           return opened.newPage();
         });
         const creatingProject = startingRuntime.then(async (started) => {
