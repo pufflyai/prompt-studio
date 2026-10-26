@@ -25,6 +25,7 @@ describe("shipped extension composition", () => {
       ["zipline.issue", "pstdio.extension-lab"],
       ["pigeon.thread", "pstdio.extension-lab"],
       ["kiln.object", "pstdio.extension-lab"],
+      ["marmalade.document", "pstdio.extension-lab"],
       ["glass-lab-artifact", "pstdio.workbench-fixture"],
     ]);
     expect(runtime.placements.filter((placement) => placement.extensionId === "pstdio.pstdio-planner")).toEqual([]);
