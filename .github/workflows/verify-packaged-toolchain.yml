@@ -102,6 +102,19 @@ jobs:
       - name: Require every compiled CLI quarantine case to have executed
         if: inputs.profile == 'full' && runner.os == 'Windows' && !cancelled() && steps.toolchain.outcome == 'success'
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun
+      - name: Preserve retained failed smoke evidence
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path test-results/smoke-probe | Out-Null
+          Get-ChildItem -Path $env:RUNNER_TEMP -Directory -Filter "pstdio-extension-test-*" | ForEach-Object {
+            $destination = Join-Path test-results/smoke-probe $_.Name
+            New-Item -ItemType Directory -Force -Path $destination | Out-Null
+            foreach ($name in @("evidence", "result.json", "dashboard.png")) {
+              $source = Join-Path $_.FullName $name
+              if (Test-Path $source) { Copy-Item -Recurse $source $destination }
+            }
+          }
       - name: Preserve packaged toolchain evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -111,4 +124,5 @@ jobs:
             packages/e2e/test-results
             packages/e2e/playwright-report
             test-results/quarantine
+            test-results/smoke-probe
           if-no-files-found: warn
