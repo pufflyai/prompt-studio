@@ -7,7 +7,11 @@ import { ensureWorkspaceConfig } from "../../workspaces/workspace-config";
 import { InvalidWorkspaceParamsError } from "../../workspaces/workspace-provider-params";
 import type { ProjectsRouteDeps } from "../deps";
 import { createProjectBodySchema, projectResponseSchema, toProjectResponse } from "../dto";
-import { retryProjectExtensions, setupProjectExtensions } from "../project-extension-setup";
+import {
+  prepareDefaultProjectExtensions,
+  retryProjectExtensions,
+  setupProjectExtensions,
+} from "../project-extension-setup";
 import { initializeProjectWorkspace, resolveInitialWorkspace, withFolderCreation } from "../project-folder";
 
 export const createProjectRoute = createRoute({
@@ -83,10 +87,13 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
           const existing = await openExistingProject(deps, initial);
           if (existing) return c.json(existing, 200);
           const existingProjects = await deps.projectService.list();
-          let extensionWarnings: ExtensionSetupWarning[] = [];
+          // A visible first project means its shared defaults are ready for later
+          // projects to discover. Concurrent first requests join the install queue.
+          const preparationWarnings = existingProjects.length === 0 ? await prepareDefaultProjectExtensions(deps) : [];
+          let extensionWarnings: ExtensionSetupWarning[] = preparationWarnings;
           const project = await deps.projectService.create({ name: initial.name }, async (project) => {
             await initializeProjectWorkspace(deps, project.id, initial.initial, async () => {
-              extensionWarnings = await setupProjectExtensions(deps, project.id, existingProjects.length === 0);
+              extensionWarnings = [...preparationWarnings, ...(await setupProjectExtensions(deps, project.id, false))];
               if (input.agents)
                 await applyProjectHarnessSelection(deps, { projectId: project.id, selectedHarnessIds: input.agents });
               return extensionWarnings;

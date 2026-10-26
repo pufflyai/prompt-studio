@@ -24,6 +24,8 @@ Choose or create one folder to open a local project. A folder belongs to at most
 
 `POST /v1/projects` takes an optional name and one `initial_workspace` with `provider_id` and `params`. Local onboarding uses `pstdio.root` and `{ "path": "/chosen/folder" }`. The server owns default extension setup, config files, and workspace provisioning. Missing agents do not block opening a project. Failed setup stays unavailable and reopening the same folder retries the same project and workspace.
 
+The first folder-project request prepares shared default extensions before inserting its project row. Concurrent first requests join the default installation queue, so another project cannot discover a partial install. Later projects discover the installed tools without reinstalling defaults the user removed. Preparation warnings remain attached to the initial workspace's setup error and can be retried on the same project.
+
 `POST /v1/projects/{id}/retry-setup` retries setup for an existing local or remote project. It returns the default workspace, including any remaining `setup_error` or provider failure. Retries keep the project, workspace, provider reference, and pending provider operation. A remote resource that already exists is resolved, not created again.
 
 The folder picker starts at the host's home directory. It supports hidden folders, a typed path, parent navigation, selecting the current folder, and creating one child folder. Cancelling the picker leaves a newly created folder in place.
