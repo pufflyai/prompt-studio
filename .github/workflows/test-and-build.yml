@@ -30,7 +30,7 @@ jobs:
       - name: Build the normal current candidate and check integrity
         run: bun run --cwd scripts verify:packages --profile integrity
       - name: Preserve the current Bun for source preparation
-        run: bun -e 'await Bun.write(`${process.env.RUNNER_TEMP}/ps-932-parent-bun.exe`, Bun.file(process.execPath))'
+        run: bun -e 'import { mkdir } from "node:fs/promises"; const root = `${process.env.RUNNER_TEMP}/ps-932-current-bun`; await mkdir(root); await Bun.write(`${root}/bun.exe`, Bun.file(process.execPath))'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ matrix.installer }}
@@ -45,7 +45,9 @@ jobs:
         shell: pwsh
         env:
           BUN_CONFIG_MAX_HTTP_REQUESTS: "16"
-        run: '& "$env:RUNNER_TEMP/ps-932-parent-bun.exe" src/packaged/observe-planner-installer.ts'
+        run: |
+          $env:PATH = "$env:RUNNER_TEMP/ps-932-current-bun;$env:PATH"
+          & "$env:RUNNER_TEMP/ps-932-current-bun/bun.exe" src/packaged/observe-planner-installer.ts
       - name: Keep complete installer diagnostics
         if: always()
         uses: actions/upload-artifact@v4
