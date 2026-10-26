@@ -80,9 +80,7 @@ export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
         onChange={(event) => setQuery(event.target.value)}
       />
     ) : null;
-  const choices = (
-    <KeyboardChoices entries={filtered} path={state.path} search={search && !selection} onActivate={activate} />
-  );
+  const choices = <KeyboardChoices entries={filtered} search={search && !selection} onActivate={activate} />;
   if (selection)
     return (
       <Dialog.Root

@@ -1,6 +1,6 @@
 import { normalizeHotkey, validateHotkey } from "@tanstack/hotkeys";
 import { getKeybindingSteps } from "../../registries/keybindings/keybinding-registry";
-import type { ShortcutAssignment } from "../../registries/keybindings/shortcut-preferences";
+import { type ShortcutAssignment, sharedShortcutLayer } from "../../registries/keybindings/shortcut-preferences";
 import type { WorkbenchCore } from "../../workbench-core-types";
 
 export const validateShortcutAlias = (aliases: Record<string, string>, id: string, alias: string) => {
@@ -16,7 +16,8 @@ export const validateShortcutAlias = (aliases: Record<string, string>, id: strin
 export const validateShortcutAssignment = (core: WorkbenchCore, id: string, assignment: ShortcutAssignment) => {
   if (assignment.disabled) return;
   const binding = core.keybindings.listCatalog().find((binding) => core.keybindings.getId(binding) === id);
-  const layer = assignment.layer === "direct" ? undefined : (assignment.layer ?? binding?.layer);
+  const assigned = assignment.layer === "direct" ? undefined : (assignment.layer ?? binding?.layer);
+  const layer = assigned ? sharedShortcutLayer(assigned) : undefined;
   const steps = getKeybindingSteps(assignment.keybinding ?? binding?.keybinding ?? "");
   if (!steps.length) return;
   if (layer) {
@@ -24,12 +25,7 @@ export const validateShortcutAssignment = (core: WorkbenchCore, id: string, assi
       throw new Error("Layer shortcuts use letters or numbers separated by spaces.");
     const key = steps.join(" ").toUpperCase();
     const overlap = core.keyboard.catalog().some((candidate) => {
-      if (
-        candidate.id === id ||
-        candidate.binding.layer !== layer ||
-        (layer === "extensions" && candidate.binding.sourceExtensionId !== binding?.sourceExtensionId)
-      )
-        return false;
+      if (candidate.id === id || candidate.binding.layer !== layer) return false;
       const other = getKeybindingSteps(candidate.binding.keybinding).join(" ").toUpperCase();
       return other && (other.startsWith(`${key} `) || key.startsWith(`${other} `));
     });

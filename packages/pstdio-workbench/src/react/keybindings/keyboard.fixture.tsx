@@ -7,7 +7,7 @@ export const createKeyboardWorkbench = (count = 4) => {
   workbench.keybindings.registerKeybinding({
     action: { kind: "command", commandId: "lab.open" },
     keybinding: "O",
-    layer: "extensions",
+    layer: "go",
     sourceExtensionId: "pstdio.extension-lab",
     sourceExtensionLabel: "Extension Lab",
   });

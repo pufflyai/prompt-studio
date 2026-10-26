@@ -7,11 +7,12 @@ export const shortcutLayers = {
   go: "G",
   create: "C",
   current: "A",
-  extensions: "E",
   settings: "S",
   help: "H",
 } as const;
-export type ShortcutLayer = keyof typeof shortcutLayers;
+export type ShortcutLayer = keyof typeof shortcutLayers | "extensions";
+/** Legacy extension bindings join shared actions until their author chooses a specific group. */
+export const sharedShortcutLayer = (layer: ShortcutLayer) => (layer === "extensions" ? "current" : layer);
 export interface ShortcutAssignment {
   keybinding?: string;
   disabled?: boolean;
@@ -19,6 +20,7 @@ export interface ShortcutAssignment {
 }
 export interface ShortcutPreferences {
   overrides: Record<string, ShortcutAssignment>;
+  /** @deprecated Choose a shared action layer instead of an extension alias. */
   aliases: Record<string, string>;
 }
 export const readShortcutPreferences = (preferences?: PreferenceRegistry): ShortcutPreferences => {

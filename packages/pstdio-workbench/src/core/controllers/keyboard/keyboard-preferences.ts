@@ -28,9 +28,11 @@ export const createKeyboardPreferences = (getCore: () => WorkbenchCore, refresh:
     await core.preferences.setValue(SHORTCUT_PREFERENCE_KEY, { ...config, overrides }, { scope: "user" });
     refresh();
   },
+  /** @deprecated Assign the action to a shared layer instead. */
   getAlias(extensionId: string) {
     return readShortcutPreferences(getCore().preferences).aliases[extensionId];
   },
+  /** @deprecated Assign the action to a shared layer instead. */
   async setAlias(extensionId: string, alias: string) {
     const core = getCore();
     const config = readShortcutPreferences(core.preferences);

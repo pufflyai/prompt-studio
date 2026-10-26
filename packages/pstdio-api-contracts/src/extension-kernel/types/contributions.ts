@@ -264,7 +264,15 @@ export interface FileIconThemeContribution extends ContributionDefinition<"file-
  * and display labels are all delegated to `@tanstack/hotkeys`.
  */
 export type KeybindingChord = string;
-export type ShortcutLayer = "view" | "go" | "create" | "current" | "extensions" | "settings" | "help";
+export type ShortcutLayer =
+  | "view"
+  | "go"
+  | "create"
+  | "current"
+  | "settings"
+  | "help"
+  /** @deprecated Choose a shared action layer. Legacy bindings join Current view. */
+  | "extensions";
 
 export interface KeybindingContribution extends ContributionDefinition<"keybinding"> {
   /** A sequence relative to Leader; sharing a key opens the common action/target chooser. */

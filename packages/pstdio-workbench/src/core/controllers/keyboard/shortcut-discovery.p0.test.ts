@@ -26,29 +26,26 @@ test("many shortcut hints share availability evaluation until their context chan
   expect(reads).toBe(2);
 });
 
-test("extension discovery uses its name and only advertises pressable keys", async () => {
+test("extension actions use shared groups and only advertise pressable keys", async () => {
   const core = createWorkbench();
   const action = { kind: "command" as const, commandId: "open-lab" };
   core.commands.registerCommand({ id: "open-lab", label: "Open lab" }, { execute() {} });
   core.keybindings.registerKeybinding({
     action,
     keybinding: "O",
-    layer: "extensions",
+    layer: "go",
     sourceExtensionId: "pstdio.extension-lab",
     sourceExtensionLabel: "Extension Lab",
   });
   core.keyboard.open();
-  expect(core.keyboard.hints().get(getNavigationTargetKey(action))).toBeUndefined();
-  await core.keyboard.press("E");
-  const entry = core.keyboard.entries()[0]!;
-  expect(entry.label).toBe("Extension Lab");
-  await core.keyboard.press(entry.key);
+  expect(core.keyboard.hints().get(getNavigationTargetKey(action))).toBe("G → O");
+  await core.keyboard.press("G");
   expect(core.keyboard.hints().get(getNavigationTargetKey(action))).toBe("O");
   core.commands.registerCommand({ id: "nested", label: "Nested" }, { execute() {} });
   core.keybindings.registerKeybinding({
     action: { kind: "command", commandId: "nested" },
     keybinding: ["A", "R"],
-    layer: "extensions",
+    layer: "go",
     sourceExtensionId: "pstdio.extension-lab",
     sourceExtensionLabel: "Extension Lab",
   });
@@ -64,6 +61,33 @@ test("opening discovery refreshes dynamic availability", () => {
   visible = true;
   core.keyboard.open();
   expect(core.keyboard.catalog().find((entry) => entry.id === "live")?.disabled).toBe(false);
+});
+
+test("legacy extension actions remain accessible in the shared action group without a resource", async () => {
+  const core = createWorkbench();
+  let calls = 0;
+  core.commands.registerCommand(
+    { id: "legacy", label: "Open extension tool" },
+    {
+      execute: () => {
+        calls++;
+      },
+    },
+  );
+  core.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "legacy" },
+    keybinding: "O",
+    layer: "extensions",
+    sourceExtensionId: "acme.tool",
+  });
+  core.keyboard.open();
+  expect(core.keyboard.catalog().find((entry) => entry.binding.sourceExtensionId === "acme.tool")?.keys).toEqual([
+    "A",
+    "O",
+  ]);
+  await core.keyboard.press("A");
+  await core.keyboard.press("O");
+  expect(calls).toBe(1);
 });
 
 test("shortcut hints show the configured opening chord", async () => {

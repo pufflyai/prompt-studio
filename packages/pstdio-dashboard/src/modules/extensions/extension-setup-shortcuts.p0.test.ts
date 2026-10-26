@@ -38,11 +38,7 @@ test("shared setup shortcuts follow public contribution metadata and disappear o
       .filter((entry) => entry.binding.sourceExtensionId === "acme.worker" && entry.binding.layer === "create")
       .map((entry) => entry.binding.label),
   ).toEqual(["New session with Worker (helper)", "New session with Reviewer (review)"]);
-  expect(
-    core.keyboard.catalog().find((entry) => entry.binding.id === "acme.worker.setup.configure-arbitrary.harness-id")
-      ?.binding.action,
-  ).toMatchObject({ args: { panelId: "runtime" } });
-  expect(core.keyboard.catalog().some((entry) => entry.binding.sourceExtensionId === "acme.skills")).toBe(true);
+  expect(core.keyboard.catalog().filter((entry) => entry.binding.sourceExtensionId)).toHaveLength(2);
   for (const registration of dispose) registration.dispose();
   expect(core.keyboard.catalog().some((entry) => entry.binding.sourceExtensionId === "acme.worker")).toBe(false);
 });

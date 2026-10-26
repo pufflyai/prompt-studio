@@ -33,6 +33,32 @@ describe("createSettingsModule", () => {
     expect(workbench.commands.getCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID)).toBeDefined();
   });
 
+  test("shared settings shortcuts cover extension setup, appearance, runtime, and skills", () => {
+    const workbench = createWorkbench();
+    const registration = workbench.registerModule(createSettingsModule());
+    const destinations = workbench.keyboard
+      .catalog()
+      .filter(
+        (shortcut) =>
+          shortcut.binding.layer === "settings" &&
+          shortcut.binding.action.kind === "command" &&
+          shortcut.binding.action.commandId === WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
+      )
+      .map((shortcut) => [
+        shortcut.keys.join(" "),
+        shortcut.binding.action.kind === "command" && shortcut.binding.action.args,
+      ]);
+    expect(destinations).toEqual(
+      expect.arrayContaining([
+        ["S E", { panelId: "extensions" }],
+        ["S I", { panelId: "appearance" }],
+        ["S R", { panelId: "runtime" }],
+        ["S S", { panelId: "skills" }],
+      ]),
+    );
+    registration.dispose();
+  });
+
   test("registers the workbench and project settings sections", () => {
     const workbench = createWorkbench();
 

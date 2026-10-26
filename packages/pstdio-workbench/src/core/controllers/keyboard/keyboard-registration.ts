@@ -16,7 +16,7 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
         type: "object",
         scope: "user",
         default: { overrides: {}, aliases: {} },
-        description: "Personal keyboard shortcuts and pinned extension aliases.",
+        description: "Personal keyboard shortcuts.",
       },
     },
   });

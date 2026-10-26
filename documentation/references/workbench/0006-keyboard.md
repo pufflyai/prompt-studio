@@ -4,11 +4,11 @@ Navigate visible panels, choose an action's target, and discover available keybo
 
 ## Enter shortcut mode
 
-Press **Alt+Shift+Space** to enter shortcut mode. A small bubble appears at the bottom center, using the planner zoom control's surface. It shows the opening chord and current sequence, including the last completed navigation key. Hover to reveal choices that continue from the current prefix. Up/Down also reveals choices for keyboard selection; `/` opens search. Choose View (V), Go (G), Create (C), Current view (A), Extensions (E), Settings (S), or Help (H). Backspace returns one level; Enter or Escape finishes. Keyboard Shortcuts under Help is a searchable reference. Shortcut editing and alias controls are deferred.
+Press **Alt+Shift+Space** to enter shortcut mode. A small bubble appears at the bottom center, using the planner zoom control's surface. It shows the opening chord and current sequence, including the last completed navigation key. Hover to reveal choices that continue from the current prefix. Up/Down also reveals choices for keyboard selection; `/` opens search. Choose View (V), Go (G), Create (C), Current view (A), Settings (S), or Help (H). Backspace returns one level; Enter or Escape finishes. Keyboard Shortcuts under Help is a searchable reference. Shortcut editing controls are deferred.
 
 On macOS, Alt is Option. Entry matches the physical Space key even when Option produces a non-breaking space. Shortcut sequences use a small redo arrow between steps. The bubble has no Back/Exit buttons or instructional footer. Required action and target choices still use an explicit modal.
 
-Extensions appear under E as selectable rows with their display names. Use Up/Down and Enter, or click a name, to choose one.
+Extensions contribute to these shared groups. No flow requires choosing an extension by name first.
 
 ## Navigation
 
@@ -28,6 +28,10 @@ When actions share an initial, the host sorts the available actions by name, wit
 
 Settings → T is the single default shortcut for choosing a color theme. Theme providers contribute themes to that shared picker rather than registering another shortcut. Installed tools contribute Go → K for Planner Kanban, Go → T for Timeline, and Go → A for Artifacts.
 
+Settings → E opens extension settings, I appearance and file icon themes, R agent runtime and skill setup, and S contributed skills. These destinations are registered once, regardless of the number of providers.
+
+Creation uses the same UI as the resource's existing entry point. Notes create and open directly, with bound empty parameters instead of an optional-parameter dialog. Ticket shortcuts and the palette invoke the board's `createRow.command`, so the shared creation dialog supplies markdown, attachments, editable properties, and the same submission handler. Artifact creation opens the library's existing creation choices.
+
 ## Current view and conflicts
 
 Current view considers the selected presentation in every visible panel, including attached menus. Hidden tabs and collapsed panels do not contribute. An action that has several targets opens a modal with resource names and panel locations. Different actions sharing a key first require an action choice. Nothing is selected initially, and Enter on the heading executes nothing. Search, digits, arrows and Enter, or pointer selection choose an explicit row.
@@ -38,7 +42,7 @@ Choices retain their identities while the selector is open. A missing or unavail
 
 An extension adds optional `layer`, `targetScope`, and `sticky` fields to its existing `defineKeybinding` contributions. Existing direct bindings keep their behavior. Layer keys are relative to their group. Shared layer keys are allowed because the host resolves action and target ambiguity. `targetScope` is `project`, `resource`, or `panel`. `sticky` retains shortcut mode after execution; ordinary actions finish. Go destinations and other bindings for the exact same action default to sticky. An explicit `sticky: false` remains a one-shot override.
 
-The Extensions group shows extension names. Use Up/Down and Enter, click a name, or search to choose an extension. Then press the displayed action key. An internal extension ID is never a key a person must type. Hints outside a chosen extension omit paths that cannot be typed directly.
+Choose a shared group by the action's purpose. The old `extensions` layer is deprecated; existing bindings join Current view as project actions until their author chooses a more specific group. Extension aliases are deprecated. Internal extension IDs never appear as keys a person must type.
 
 The resolved catalog supplies execution, the shortcut reference, contribution details, navigation hints, menus, and palette hints. Hints match the typed action and its arguments. Navigation hints appear in shortcut mode, preserve existing badges, and show only remaining keys that can complete from the current prefix. After V, a Go action's G → A hint is hidden. Available direct chords can still appear because they work from any prefix. All consumers share the catalog for unchanged workbench inputs; action execution rechecks current availability.
 

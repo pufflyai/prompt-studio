@@ -1,5 +1,5 @@
 import { getKeybindingSteps, type RegisteredKeybinding } from "../../registries/keybindings/keybinding-registry";
-import { readShortcutPreferences, shortcutLayers } from "../../registries/keybindings/shortcut-preferences";
+import { sharedShortcutLayer, shortcutLayers } from "../../registries/keybindings/shortcut-preferences";
 import { getNavigationTargetKey } from "../../registries/navigation/navigation-target-key";
 import { scopeWorkbenchResourceContextValues } from "../../registries/resources/resource-registry";
 import { matchesContextExpression } from "../../shared/context/context-key-service";
@@ -42,8 +42,6 @@ const applicable = (core: WorkbenchCore, binding: RegisteredKeybinding, target?:
     core.commands.isCommandEnabled(binding.action.commandId, args, context)
   );
 };
-export const extensionShortcutAlias = (core: WorkbenchCore, extensionId: string) =>
-  readShortcutPreferences(core.preferences).aliases[extensionId];
 export const resolveShortcutCatalog = (
   core: WorkbenchCore,
   visibleTargets = visibleKeyboardTargets(core),
@@ -60,16 +58,9 @@ export const resolveShortcutCatalog = (
   return bindings.map(({ declared, binding }) => {
     const navigates = navigation.has(getNavigationTargetKey(binding.action));
     const prefix: string[] = [];
-    if (binding.layer) prefix.push(shortcutLayers[binding.layer]);
-    if (binding.layer === "extensions" && binding.sourceExtensionId) {
-      const alias = extensionShortcutAlias(core, binding.sourceExtensionId);
-      if (alias) prefix.push(...alias.toUpperCase());
-      else prefix.push(binding.sourceExtensionId.toUpperCase());
-    }
-    let targets =
-      (binding.targetScope && binding.targetScope !== "project") || binding.layer === "current"
-        ? visibleTargets.filter((target) => applicable(core, binding, target))
-        : [];
+    if (binding.layer) prefix.push(shortcutLayers[sharedShortcutLayer(binding.layer)]);
+    const contextual = binding.targetScope ? binding.targetScope !== "project" : binding.layer === "current";
+    let targets = contextual ? visibleTargets.filter((target) => applicable(core, binding, target)) : [];
     if (binding.targetScope === "resource") {
       const resources = new Set<string>();
       targets = targets.filter((target) => {
@@ -80,7 +71,6 @@ export const resolveShortcutCatalog = (
         return true;
       });
     }
-    const contextual = Boolean(binding.targetScope && binding.targetScope !== "project") || binding.layer === "current";
     return {
       id: core.keybindings.getId(declared),
       label: navigates ? navigationLabel(shortcutLabel(core, binding)) : shortcutLabel(core, binding),

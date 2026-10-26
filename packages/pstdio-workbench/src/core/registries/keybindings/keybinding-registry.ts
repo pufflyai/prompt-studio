@@ -11,7 +11,7 @@ import type { CommandRegistry } from "../commands/command-registry";
 import type { NavigationTarget } from "../navigation/navigation-registry";
 import { getNavigationTargetKey } from "../navigation/navigation-target-key";
 import type { PreferenceRegistry } from "../preferences/preference-registry";
-import { readShortcutPreferences, type ShortcutLayer } from "./shortcut-preferences";
+import { readShortcutPreferences, type ShortcutLayer, sharedShortcutLayer } from "./shortcut-preferences";
 
 export interface Keybinding {
   id?: string;
@@ -79,11 +79,16 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     `${binding.sourceExtensionId ?? "workbench"}:${binding.layer ?? "direct"}:${getNavigationTargetKey(binding.action)}`;
   const resolve = (binding: RegisteredKeybinding) => {
     const override = readShortcutPreferences(deps.preferences?.()).overrides[getId(binding)];
+    const assigned = override?.layer === "direct" ? undefined : (override?.layer ?? binding.layer);
+    const layer = assigned ? sharedShortcutLayer(assigned) : undefined;
+    let defaultScope: Keybinding["targetScope"];
+    if (assigned === "extensions") defaultScope = "project";
+    else if (layer === "current") defaultScope = "panel";
     return {
       ...binding,
-      targetScope: binding.targetScope ?? (binding.layer === "current" ? "panel" : undefined),
+      targetScope: binding.targetScope ?? defaultScope,
       keybinding: override?.keybinding ?? binding.keybinding,
-      layer: override?.layer === "direct" ? undefined : (override?.layer ?? binding.layer),
+      layer,
       disabled: override?.disabled === true,
     };
   };

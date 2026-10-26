@@ -26,12 +26,7 @@ const ShortcutRow = (props: {
         description={`${owner} · ${shortcut.binding.layer ?? "Direct"} · ${status}`}
         endContent={
           assigned ? (
-            <WorkbenchShortcutKeys
-              shortcut={shortcut}
-              ownerLabel={owner}
-              openingChord={openingChord}
-              catalog={catalog}
-            />
+            <WorkbenchShortcutKeys shortcut={shortcut} openingChord={openingChord} catalog={catalog} />
           ) : undefined
         }
       />

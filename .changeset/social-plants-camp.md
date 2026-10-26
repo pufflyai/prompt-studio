@@ -4,4 +4,4 @@
 "@pstdio/sdk": minor
 ---
 
-Add resource-first creation shortcuts with numbered conflicts, numbered tabs and placeholder cards, mode-return navigation, and a shared shortcut reference.
+Add shared keyboard action groups with resource creation through existing forms, numbered conflicts, numbered tabs and placeholder cards, mode-return navigation, and a shared shortcut reference.

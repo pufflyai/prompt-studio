@@ -3,13 +3,12 @@ import type { KeyboardChoice } from "../../core/controllers/keyboard/keyboard-co
 
 interface KeyboardChoicesProps {
   entries: KeyboardChoice[];
-  path: string[];
   search: boolean;
   onActivate(key: string): void;
 }
 
 export const KeyboardChoices = (props: KeyboardChoicesProps) => {
-  const { entries, path, search, onActivate } = props;
+  const { entries, search, onActivate } = props;
   return entries.map((entry) => (
     <ListRow
       key={entry.key}
@@ -19,11 +18,7 @@ export const KeyboardChoices = (props: KeyboardChoicesProps) => {
       variant="full-width"
       label={entry.label}
       disabled={entry.disabled}
-      endContent={
-        search || (path.length === 1 && path[0] === "E" && entry.key.length > 1) ? undefined : (
-          <PaletteShortcut binding={entry.key} />
-        )
-      }
+      endContent={search ? undefined : <PaletteShortcut binding={entry.key} />}
       onActivate={() => onActivate(entry.key)}
     />
   ));
