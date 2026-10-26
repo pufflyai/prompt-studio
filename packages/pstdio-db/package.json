@@ -8,6 +8,9 @@
   },
   "nx": {
     "targets": {
+      "test": {
+        "parallelism": false
+      },
       "test:coverage": {
         "parallelism": false
       }
