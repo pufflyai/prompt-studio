@@ -2,6 +2,8 @@
 
 Status: Partial implementation. Default rollout is blocked.
 
+The 2026-10-27 architecture review is recorded in [ADR 0117](../../adrs/0117-explicit-extension-runtime-ownership.md). Further runtime expansion is on hold for that review. The proposed next step is explicit source/snapshot/invocation/session ownership and a typed capability protocol, followed by smaller delivery stages. The current draft is not a proposal to solve the remaining gaps by adding more proxy exceptions or increasing the retained-owner cap.
+
 The responsive extension execution PRD is not complete. This change starts its command owner path and resource coordinator, and cancels obsolete webview builds. It does not claim the M1–M4 exit gates or the full acceptance matrix.
 
 ## Current execution path
