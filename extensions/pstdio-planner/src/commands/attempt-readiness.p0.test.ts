@@ -53,6 +53,15 @@ test("resolves a commit revision as an attempt base", async () => {
   });
 });
 
+test("checks the Git base without loading workspace creation options", async () => {
+  const ctx = context();
+  ctx.workspaces.listProviders = async () => {
+    throw new Error("Workspace creation options are not needed to resolve a commit");
+  };
+  const result = await loadAttemptReadiness(ctx, "T-1", { base: "main" });
+  expect(result.readiness).toMatchObject({ decision: "ready", mode: "main" });
+});
+
 test.each(["--is-inside-work-tree", "HEAD^{tree}"])("rejects %s as an attempt base", async (base) => {
   await expect(loadAttemptReadiness(context(), "T-1", { base })).rejects.toThrow();
 });

@@ -124,7 +124,10 @@ if (import.meta.main) {
     if (!manifest.scripts?.[script]) throw new Error(`Missing ${script} runner for ${owner.name}`);
     const command = ["bun", "run", script, ...files.map((file) => `./${file}`)];
     // Preserve the existing Windows fixture allowances; source test limits stay unchanged elsewhere.
-    if (process.platform === "win32" && ["pstdio-db", "harness-codex", "pstdio-planner"].includes(owner.name))
+    if (
+      process.platform === "win32" &&
+      ["pstdio-db", "harness-codex", "pstdio-planner", "@pstdio/desktop"].includes(owner.name)
+    )
       command.push("--timeout=15000");
     return [
       {

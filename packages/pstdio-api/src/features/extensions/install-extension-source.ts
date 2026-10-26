@@ -2,7 +2,12 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, statSync, unlinkSync 
 import { cp, rm } from "node:fs/promises";
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { extensionStorageDirectory, readPackageManifest, readPackageManifestMetadata } from "pstdio-extensions";
+import {
+  extensionStorageDirectory,
+  readPackageManifest,
+  readPackageManifestMetadata,
+  remapPackageAssets,
+} from "pstdio-extensions";
 import { parseRegistrySourceRef, unpackExtension } from "pstdio-extensions/distribution";
 import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
@@ -312,17 +317,20 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     // A replacement must activate every managed view before the working source is replaced.
     if (targetExists && !reuseExisting) await validateExtensionWebviews(loaded, installPath, installName, input.signal);
     const sourceHash = hashExtensionSource(installPath);
+    let snapshot = { check, manifest: loaded.manifest };
     if (installPath !== targetPath) {
+      // Resolve asset bases while staging still exists, before its folder is promoted.
+      snapshot = remapPackageAssets(snapshot, installPath, targetPath) as typeof snapshot;
       const preserveDependencies = linkedInstalledDependencies;
       if (linkedInstalledDependencies) unlinkSync(join(installPath, "node_modules"));
       await promotePreparedSource(installPath, targetPath, Boolean(input.force), preserveDependencies);
-      for (const extension of check.extensions) extension.sourcePath = targetPath;
+      for (const extension of snapshot.check.extensions)
+        extension.sourcePath = join(targetPath, relative(installPath, extension.sourcePath));
     }
 
     return {
-      check,
+      ...snapshot,
       installName,
-      manifest: loaded.manifest,
       metadata: loaded.metadata,
       source:
         resolvedSource.kind === "named"

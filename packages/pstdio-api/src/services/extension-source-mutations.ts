@@ -17,3 +17,33 @@ export const createExtensionSourceMutations = () => {
     return work;
   };
 };
+
+export const createExtensionSourceRefresh =
+  (
+    mutateSource: ReturnType<typeof createExtensionSourceMutations>,
+    notifyInstalledSourcesChanged: (sourcePath?: string) => Promise<void>,
+  ) =>
+  <T>(sourcePath: string, mutate: (notify: (changedPath?: string) => Promise<void>) => Promise<T>) => {
+    const changedPaths: Array<string | undefined> = [];
+    const refresh = async () => {
+      // Refresh can compile views and report their results. Release source ownership
+      // before awaiting it, so readers and result writers cannot wait on this caller.
+      for (const changedPath of changedPaths) await notifyInstalledSourcesChanged(changedPath);
+    };
+
+    return mutateSource(sourcePath, () =>
+      mutate(async (changedPath) => {
+        changedPaths.push(changedPath);
+      }),
+    ).then(
+      async (result) => {
+        await refresh();
+        return result;
+      },
+      async (error) => {
+        // A secondary refresh failure must not replace the failed source operation.
+        await refresh().catch(() => {});
+        throw error;
+      },
+    );
+  };

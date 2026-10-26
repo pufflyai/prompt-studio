@@ -90,13 +90,16 @@ describe("ticket work in shared folders", () => {
     expect(action).not.toHaveBeenCalled();
   });
 
-  test("managed attempts still require a usable Git provider", async () => {
+  test("managed attempts still require a usable Git base", async () => {
     await expect(
       runAttemptCommand.run(
         ...makeCommandArgs({
           storage: createMemoryStorage(),
           params: { ticket: "T-1" },
-          overrides: { workspaces: { getDefault: async () => home, listProviders: async () => [] } },
+          overrides: {
+            workspaces: { getDefault: async () => home },
+            process: { run: async () => ({ exitCode: 128, stdout: "", stderr: "Not a Git repository" }) },
+          },
         }),
       ),
     ).rejects.toThrow("Planner attempts require a Git repository");

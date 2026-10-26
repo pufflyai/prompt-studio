@@ -907,6 +907,7 @@ jobs:
         os:
           - ubuntu-latest
           - windows-latest
+          - macos-15
     env:
       E2E_TEST_LANE: quarantine
       CI_PRIORITY: P2
@@ -938,6 +939,51 @@ jobs:
         if: ${{ !cancelled() }}
         run: git diff --exit-code
     name: quarantined_bun_tests (${{ matrix.os }})
+  quarantined_native_ui_tests:
+    needs: scope
+    if: needs.scope.outputs.production == 'true'
+    runs-on: macos-15
+    timeout-minutes: 18
+    env:
+      E2E_TEST_LANE: quarantine
+      CI_PRIORITY: P2
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.source_sha || github.sha }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: package.json
+      - name: Require the affected native platform
+        run: bun -e 'if (process.platform !== "darwin" || process.arch !== "arm64") throw new Error("Native UI quarantine requires macOS ARM64");'
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Build source UI test dependencies
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - name: Install native Chromium
+        run: bunx playwright@1.60.0 install chromium
+      - name: Run every registered native UI case without retries
+        continue-on-error: true
+        run: bun scripts/ci/run-quarantined-tests.ts playwright-ui --scope e2e --prebuilt
+      - name: Require first-attempt native UI quarantine execution
+        run: bun scripts/ci/verify-quarantine-reports.ts playwright-ui
+      - name: Preserve native UI quarantine evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quarantined-native-ui-${{ runner.os }}-${{ runner.arch }}-results-attempt-${{ github.run_attempt }}
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+            test-results/quarantine
+          if-no-files-found: warn
+      - name: Require committed generated outputs to match their source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
   quarantined_browser_tests:
     needs: scope
     if: needs.scope.outputs.production == 'true'

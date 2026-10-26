@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -55,27 +55,33 @@ export const runPlaywright = async (
   options: { stdio: "inherit" | "pipe" } = { stdio: "inherit" },
 ) => {
   const runFolder = mkdtempSync(join(tmpdir(), "pstdio-e2e-run-"));
-  const child = spawn(command.cmd, command.args, {
-    env: {
-      ...env,
-      E2E_HOME: env.E2E_HOME ?? join(runFolder, "home"),
-      E2E_BUN_CACHE_DIR: env.E2E_BUN_CACHE_DIR ?? join(runFolder, "bun-cache"),
-    },
-    stdio: options.stdio,
-  });
-  let output = "";
-  child.stdout?.on("data", (chunk) => {
-    output += chunk;
-  });
-  // A stopped launcher passes the signal on and cleans up after Playwright and its servers exit.
-  const forward = (signal: NodeJS.Signals) => child.kill(signal);
+  let child: ChildProcess | undefined;
+  // A child can announce readiness before spawn returns. Own interruption before starting it.
+  const forward = (signal: NodeJS.Signals) => child?.kill(signal);
   process.on("SIGINT", forward);
   process.on("SIGTERM", forward);
   try {
+    const runningChild = spawn(command.cmd, command.args, {
+      env: {
+        ...env,
+        E2E_HOME: env.E2E_HOME ?? join(runFolder, "home"),
+        E2E_BUN_CACHE_DIR: env.E2E_BUN_CACHE_DIR ?? join(runFolder, "bun-cache"),
+      },
+      stdio: options.stdio,
+    });
+    child = runningChild;
+    let output = "";
+    runningChild.stdout?.on("data", (chunk) => {
+      output += chunk;
+    });
     // "close" waits for the child's output streams as well as its exit.
     const exitCode = await new Promise<number>((resolve, reject) => {
-      child.on("error", reject);
-      child.on("close", (code) => resolve(code ?? 1));
+      runningChild.on("error", reject);
+      runningChild.on("close", (code, signal) => {
+        if (code !== null) return resolve(code);
+        if (signal === "SIGINT") return resolve(130);
+        resolve(signal === "SIGTERM" ? 143 : 1);
+      });
     });
     return { exitCode, output };
   } finally {
