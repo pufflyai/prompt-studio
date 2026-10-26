@@ -154,6 +154,26 @@ export default defineExtension({
   keybindings: [
     ...plannerShortcuts,
     defineKeybinding({
+      id: "create-ticket",
+      layer: "create",
+      key: ticketResourceKind.ref.id[0]!.toUpperCase(),
+      action: { kind: "command", target: { command: newTicketCommand.ref } },
+    }),
+    defineKeybinding({
+      id: "go-kanban",
+      layer: "go",
+      key: "K",
+      sticky: true,
+      action: plannerUi.navigationItems.find((item) => item.id === "tickets")!.action,
+    }),
+    defineKeybinding({
+      id: "go-timeline",
+      layer: "go",
+      key: "T",
+      sticky: true,
+      action: { kind: "page", page: timelinePage.ref },
+    }),
+    defineKeybinding({
       id: "open-tickets",
       key: "Alt+Shift+P",
       action: ticketsPageTarget,
