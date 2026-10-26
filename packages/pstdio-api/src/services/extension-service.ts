@@ -20,7 +20,7 @@ import {
   createWebviewBuildReports,
   reloadInstalledSourceBySourcePath as reloadInstalledSourceBySourcePathImpl,
 } from "./extension-reload";
-import { createExtensionSourceMutations } from "./extension-source-mutations";
+import { createExtensionSourceMutations, createExtensionSourceRefresh } from "./extension-source-mutations";
 import { createInstalledSourceRegistrar } from "./extension-source-registration";
 import { uninstallProjectExtension as uninstallProjectExtensionImpl } from "./extension-uninstall";
 import type { createProjectService } from "./project-service";
@@ -191,23 +191,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return { installedSource, instance };
   };
 
-  const mutateSourceAndRefresh = async <T>(
-    sourcePath: string,
-    mutate: (notify: (changedPath?: string) => Promise<void>) => Promise<T>,
-  ) => {
-    const changedPaths: Array<string | undefined> = [];
-    try {
-      return await mutateSource(sourcePath, () =>
-        mutate(async (changedPath) => {
-          changedPaths.push(changedPath);
-        }),
-      );
-    } finally {
-      // Refresh can compile views and report their results. Release source ownership
-      // before awaiting it, so readers and result writers cannot wait on this caller.
-      for (const changedPath of changedPaths) await notifyInstalledSourcesChanged(changedPath);
-    }
-  };
+  const mutateSourceAndRefresh = createExtensionSourceRefresh(mutateSource, notifyInstalledSourcesChanged);
 
   const syncInstalledSourceForProject = (input: SyncInstalledSourceInput) =>
     mutateSourceAndRefresh(input.sourcePath, async (notify) => {

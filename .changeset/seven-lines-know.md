@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Keep extension metadata stable, relocate installed assets, release source locks before refresh, and validate explicit workspace bases directly.
+Keep extension metadata stable, relocate installed assets, preserve source sync errors while refreshing outside locks, and validate explicit workspace bases directly.
