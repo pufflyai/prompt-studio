@@ -57,8 +57,3 @@ runs:
       run: |
         "TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
         "TMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
-    - name: Bound Windows ARM Bun HTTP concurrency
-      if: runner.os == 'Windows' && runner.arch == 'ARM64'
-      shell: pwsh
-      # Keep the hosted runner's HTTP scheduling policy outside the application. See ADR 0115.
-      run: '"BUN_CONFIG_MAX_HTTP_REQUESTS=16" >> $env:GITHUB_ENV'
