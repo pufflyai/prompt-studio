@@ -1,14 +1,11 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { isPackagedRuntime } from "pstdio-paths";
+import { join } from "node:path";
 import type { ExtensionDiagnostic } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
-import { createExtensionProcessEnvironment } from "../process-environment";
 import { type ExtensionResourceCoordinator, extensionWorkCosts, selectExtensionResources } from "../resource-policy";
 import { createOwnerEndpoint } from "./endpoint";
-import type { OwnerMessage } from "./protocol";
+import { spawnExtensionOwner } from "./spawn-owner";
 import { createSupervisedFunctionWrapper } from "./supervised-functions";
 import { terminateOwnerProcess } from "./terminate-process";
 
@@ -23,6 +20,12 @@ export class ExtensionOwnerError extends Error {
   }
 }
 
+const healthySourceMetadata = (source: LoadedExtensionSource | null, diagnostics: ExtensionDiagnostic[]) => {
+  if (!source || diagnostics.some((item) => item.severity === "error")) return undefined;
+  const { definition: _definition, ...metadata } = source;
+  return metadata;
+};
+
 export const createExtensionOwner = (input: {
   path: string;
   initializationMs?: number;
@@ -36,6 +39,8 @@ export const createExtensionOwner = (input: {
   let child: Bun.Subprocess | undefined;
   let endpoint: ReturnType<typeof createOwnerEndpoint> | undefined;
   let loading: Promise<LoadedExtensionSource | null> | undefined;
+  let initialized = false;
+  let failure: ExtensionOwnerError | undefined;
   let root: string | undefined;
   let stopped = false;
   let disposed = false;
@@ -48,6 +53,7 @@ export const createExtensionOwner = (input: {
   const listeners = new Set<() => void>();
 
   const terminate = async (error: ExtensionOwnerError) => {
+    failure = error;
     const previous = child;
     reaping = Promise.all([reaping, previous?.exited]).then(() => {});
     admission.abort(error);
@@ -56,6 +62,7 @@ export const createExtensionOwner = (input: {
     endpoint?.close(error);
     endpoint = undefined;
     child = undefined;
+    initialized = false;
     loading = undefined;
     for (const dispose of listeners) dispose();
     listeners.clear();
@@ -111,6 +118,16 @@ export const createExtensionOwner = (input: {
     watchSignal,
   });
 
+  const prepareRoot = async (startedGeneration: number) => {
+    await reaping;
+    const ownerRoot = root ?? (await mkdtemp(join(tmpdir(), "pstdio-extension-owner-")));
+    if (stopped || disposed || generation !== startedGeneration) {
+      if (ownerRoot !== root) await rm(ownerRoot, { recursive: true, force: true });
+      throw new ExtensionOwnerError("extension_owner_stopped", "Extension owner stopped during startup.", "cancelled");
+    }
+    return ownerRoot;
+  };
+
   const load = () => {
     if (stopped || disposed)
       return Promise.reject(
@@ -123,41 +140,13 @@ export const createExtensionOwner = (input: {
     if (loading) return loading;
     const startedGeneration = generation;
     const initialize = async () => {
-      await reaping;
-      const ownerRoot = root ?? (await mkdtemp(join(tmpdir(), "pstdio-extension-owner-")));
-      if (stopped || disposed || generation !== startedGeneration) {
-        if (ownerRoot !== root) await rm(ownerRoot, { recursive: true, force: true });
-        throw new ExtensionOwnerError(
-          "extension_owner_stopped",
-          "Extension owner stopped during startup.",
-          "cancelled",
-        );
-      }
-      root = ownerRoot;
-      const packaged = input.runtime?.packaged ?? isPackagedRuntime();
-      const args = packaged
-        ? ["--pstdio-extension-owner"]
-        : [
-            "--no-env-file",
-            join(dirname(fileURLToPath(import.meta.resolve("pstdio-extensions"))), "runtime/owner/entry.ts"),
-          ];
-      const started = Bun.spawn([input.runtime?.executable ?? process.execPath, ...args], {
-        env: createExtensionProcessEnvironment(process.env, { PSTDIO_HOME: root }),
-        cwd: root,
-        stdin: "ignore",
-        stdout: "ignore",
-        stderr: "ignore",
-        detached: process.platform !== "win32",
-        serialization: "json",
-        ipc: (message) => {
-          void endpoint
-            ?.receive(message as OwnerMessage)
-            .catch(() =>
-              terminate(
-                new ExtensionOwnerError("extension_owner_protocol", "Extension owner sent an invalid message."),
-              ),
-            );
-        },
+      root = await prepareRoot(startedGeneration);
+      const started = spawnExtensionOwner(root, input.runtime, (message) => {
+        void endpoint
+          ?.receive(message)
+          .catch(() =>
+            terminate(new ExtensionOwnerError("extension_owner_protocol", "Extension owner sent an invalid message.")),
+          );
       });
       child = started;
       endpoint = createOwnerEndpoint((message) => started.send(message));
@@ -187,12 +176,23 @@ export const createExtensionOwner = (input: {
           prepared?: { entryPath: string; packagePath: string };
         };
         diagnostics = loaded.diagnostics;
-        if (loaded.source && !diagnostics.some((item) => item.severity === "error")) {
+        const metadata = healthySourceMetadata(loaded.source, diagnostics);
+        if (metadata) {
           prepared = loaded.prepared;
-          const { definition: _definition, ...metadata } = loaded.source;
           previous = metadata;
         }
+        initialized = true;
+        failure = undefined;
         return wrapFunctions(loaded.source) as LoadedExtensionSource | null;
+      } catch (error) {
+        if (child === started)
+          await terminate(
+            new ExtensionOwnerError(
+              "extension_owner_initialization_failed",
+              "Extension owner initialization failed. An explicit invocation can retry.",
+            ),
+          );
+        throw error;
       } finally {
         clearTimeout(timer);
       }
@@ -221,6 +221,14 @@ export const createExtensionOwner = (input: {
     get diagnostics() {
       return diagnostics;
     },
+    inspect: () => {
+      const details = { pendingCalls: endpoint?.stats().pending ?? 0, failureCode: failure?.code };
+      if (stopped || disposed) return { ...details, state: "stopped" as const };
+      if (child && !initialized) return { ...details, state: "starting" as const };
+      if (child) return { ...details, state: "ready" as const };
+      if (failure) return { ...details, state: "failed" as const };
+      return { ...details, state: "idle" as const };
+    },
     load,
     stop: async () => {
       stopped = true;
@@ -229,8 +237,12 @@ export const createExtensionOwner = (input: {
       );
     },
     restart: async () => {
+      stopped = true;
+      const restartingGeneration = generation + 1;
       await terminate(new ExtensionOwnerError("extension_owner_restarted", "Extension owner restarted by the host."));
+      if (generation !== restartingGeneration) return;
       stopped = false;
+      failure = undefined;
     },
     dispose: async () => {
       disposed = true;

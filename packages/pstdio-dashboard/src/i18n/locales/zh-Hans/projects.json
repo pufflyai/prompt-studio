@@ -156,6 +156,23 @@
         "title": "替换 {{name}}？",
         "message": "这将替换已安装的文件。使用此扩展的其他项目也会使用新文件。",
         "action": "替换"
+      },
+      "execution": {
+        "ready": "扩展已就绪",
+        "running": "扩展正在运行",
+        "starting": "扩展正在启动",
+        "failed": "扩展执行已中断",
+        "stopped": "扩展已停止",
+        "unavailable": "无法获取执行状态",
+        "stop": "停止",
+        "restart": "重新启动",
+        "cancel": "取消",
+        "confirm": {
+          "stop": "停止扩展",
+          "restart": "重新启动扩展"
+        },
+        "impact": "以下项目中正在运行的调用将结束：{{projects}}。",
+        "retained": "已保存的数据和已接受操作的结果会保留。重新启动会重置临时状态。失败的操作不会重试。"
       }
     }
   },

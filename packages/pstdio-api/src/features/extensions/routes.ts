@@ -30,6 +30,12 @@ import {
 } from "./endpoints/extension-connections";
 import { extensionDiagnosticsHandler, extensionDiagnosticsRoute } from "./endpoints/extension-diagnostics";
 import {
+  controlExtensionExecutionHandler,
+  controlExtensionExecutionRoute,
+  extensionExecutionHandler,
+  extensionExecutionRoute,
+} from "./endpoints/extension-execution";
+import {
   deleteExtensionFileHandler,
   deleteExtensionFileRoute,
   getExtensionFileContentHandler,
@@ -145,6 +151,8 @@ const registerProjectExtensionRoutes = (
   routes.openapi(listProjectExtensionsRoute, listProjectExtensionsHandler(deps));
   routes.openapi(installExtensionRoute, installExtensionHandler(deps));
   routes.openapi(extensionDiagnosticsRoute, extensionDiagnosticsHandler(deps));
+  routes.openapi(extensionExecutionRoute, extensionExecutionHandler(deps));
+  routes.openapi(controlExtensionExecutionRoute, controlExtensionExecutionHandler(deps));
   routes.openapi(getMarketplaceExtensionContributionsRoute, getMarketplaceExtensionContributionsHandler(deps));
   routes.openapi(getExtensionContributionsRoute, getExtensionContributionsHandler(deps));
   routes.openapi(setProjectExtensionEnabledRoute, setProjectExtensionEnabledHandler(deps));

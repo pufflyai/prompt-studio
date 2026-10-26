@@ -77,6 +77,14 @@ test("Stop cancels import loops, stays stopped on reads, and explicit Restart pe
   expect((await owner.load())?.manifest.id).toBe("test.owner");
 });
 
+test("a later Stop remains authoritative when a Restart is still reaping the old process", async () => {
+  const owner = extension("export default {};");
+  await owner.load();
+  await Promise.all([owner.restart(), owner.stop()]);
+  await expect(owner.load()).rejects.toMatchObject({ code: "extension_owner_stopped" });
+  expect(owner.inspect().state).toBe("stopped");
+});
+
 test("shares module state, preserves scopes and binary values, and settles an owner killed during a call", async () => {
   const owner =
     extension(`let count = 0; export default { commands: [{ id: 'run', ref: { kind: 'command', id: 'run' }, title: 'Run', run: async (ctx, input) => {
@@ -146,6 +154,15 @@ test("rejects unsupported command payloads explicitly", async () => {
   await expect(Promise.resolve(source!.definition.commands![0]!.run({} as never, {}))).rejects.toThrow(
     "Unsupported extension payload prototype",
   );
+});
+
+test("a failed initialization reaps its owner before an explicit retry", async () => {
+  const owner = extension("export default { unsupported: Symbol('value') };");
+  await expect(owner.load()).rejects.toThrow("Unsupported extension payload: symbol");
+  expect(owner.pid).toBeUndefined();
+  expect(owner.inspect().state).toBe("failed");
+  writeFileSync(join(owner.sourcePath, "extension.ts"), "export default {};");
+  expect((await owner.load())?.manifest.id).toBe("test.owner");
 });
 
 test("keeps synchronous IDs, migration helpers, positions, URLs and middleware results synchronous", async () => {

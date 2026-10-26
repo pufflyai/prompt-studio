@@ -148,6 +148,23 @@
         "title": "Replace {{name}}?",
         "message": "This replaces the installed files. Other projects using this extension will use the new files too.",
         "action": "Replace"
+      },
+      "execution": {
+        "ready": "Extension ready",
+        "running": "Extension running",
+        "starting": "Extension starting",
+        "failed": "Extension execution interrupted",
+        "stopped": "Extension stopped",
+        "unavailable": "Execution status unavailable",
+        "stop": "Stop",
+        "restart": "Restart",
+        "cancel": "Cancel",
+        "confirm": {
+          "stop": "Stop extension",
+          "restart": "Restart extension"
+        },
+        "impact": "Running calls will end in these projects: {{projects}}.",
+        "retained": "Saved data and accepted effects are kept. Restart resets temporary state. Failed work is not retried."
       }
     },
     "machineTokens": {

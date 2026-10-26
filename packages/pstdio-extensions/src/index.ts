@@ -94,6 +94,7 @@ export { collectIconFontAssets } from "./runtime/normalize/icon-fonts";
 export {
   disposeExtensionOwners,
   extensionOwnersEnabled,
+  inspectExtensionOwners,
   loadExtensionPackageForHost,
   loadExtensionSourcesForHost,
   restartExtensionOwners,

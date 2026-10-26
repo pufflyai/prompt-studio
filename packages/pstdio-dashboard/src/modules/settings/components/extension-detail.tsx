@@ -29,6 +29,7 @@ export interface ExtensionDetailProps {
   unavailableHarnesses?: AgentInfo[];
   settings: ExtensionSettingValueRecord[];
   settingsViews?: ReactNode;
+  executionControls?: ReactNode;
   toggling?: boolean;
   reloading?: boolean;
   upgrading?: boolean;
@@ -56,6 +57,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     unavailableHarnesses = [],
     settings,
     settingsViews,
+    executionControls,
     toggling,
     reloading,
     upgrading,
@@ -186,6 +188,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         </Stack>
 
         {failed && <ExtensionDetailHealth extension={extension} upgrading={upgrading} onUpgrade={onUpgrade} />}
+        {executionControls}
 
         {!failed && diagnostics.length > 0 && (
           <AlertMessage

@@ -11,6 +11,7 @@ export * from "./control-declarations";
 export * from "./controls-renderer";
 export * from "./data-table-renderer";
 export * from "./execute";
+export * from "./execution";
 export * from "./host-capabilities";
 export * from "./install";
 export * from "./installation";

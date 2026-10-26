@@ -3,6 +3,26 @@ import type { CommandOutcome } from "../extensions";
 import { createClient } from "./client";
 import { PstdioApiError } from "./request";
 
+test("inspects and controls extension execution through the same scoped host endpoint", async () => {
+  const calls: Request[] = [];
+  const client = createClient({
+    baseUrl: "http://host",
+    fetch: (async (url, init) => {
+      calls.push(new Request(url, init));
+      return Response.json({ available: true, stopped: false, owners: [], affectedProjects: [] });
+    }) as typeof fetch,
+  }).extensions;
+  await client.execution.get("project/one", "instance/one");
+  await client.execution.stop("project/one", "instance/one");
+  await client.execution.restart("project/one", "instance/one");
+  expect(calls.map((call) => call.url)).toEqual(
+    Array(3).fill("http://host/v1/projects/project%2Fone/extensions/instance%2Fone/execution"),
+  );
+  expect(calls.map((call) => call.method)).toEqual(["GET", "POST", "POST"]);
+  expect(await calls[1]!.json()).toEqual({ action: "stop" });
+  expect(await calls[2]!.json()).toEqual({ action: "restart" });
+});
+
 test("command execution keeps legacy field access and complete rejection details", async () => {
   const outcome = {
     ok: false,

@@ -8,6 +8,7 @@ import { createExtensionOwner, ExtensionOwnerError } from "./supervisor";
 
 const owners = new Map<string, ReturnType<typeof createExtensionOwner>>();
 const stopped = new Set<string>();
+const restarting = new Map<string, object>();
 const canonical = (path: string) => {
   try {
     return realpathSync(path);
@@ -85,17 +86,32 @@ export const loadExtensionSourcesForHost: typeof loadExtensionSources = async (o
 export const stopExtensionOwners = async (sourcePath: string) => {
   const path = canonical(sourcePath);
   stopped.add(path);
+  restarting.delete(path);
   await Promise.all([...owners].filter(([key]) => key.startsWith(`${path}\0`)).map(([, owner]) => owner.stop()));
+};
+export const inspectExtensionOwners = (sourcePath: string) => {
+  const path = canonical(sourcePath);
+  return {
+    available: extensionOwnersEnabled(),
+    stopped: stopped.has(path),
+    owners: [...owners].filter(([key]) => key.startsWith(`${path}\0`)).map(([, owner]) => owner.inspect()),
+  };
 };
 export const restartExtensionOwners = async (sourcePath: string) => {
   const path = canonical(sourcePath);
+  const token = {};
+  restarting.set(path, token);
+  stopped.add(path);
   await Promise.all([...owners].filter(([key]) => key.startsWith(`${path}\0`)).map(([, owner]) => owner.restart()));
+  if (restarting.get(path) !== token) return;
+  restarting.delete(path);
   stopped.delete(path);
 };
 export const disposeExtensionOwners = async () => {
   const closing = [...owners.values()];
   owners.clear();
   stopped.clear();
+  restarting.clear();
   await Promise.all(closing.map((owner) => owner.dispose()));
   await disposeExtensionPreparation();
 };

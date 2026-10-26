@@ -12,6 +12,7 @@ export type {
   BoardViewUpdate,
   CreateAutomationRunInput,
   ExtensionDiagnosticsResponse,
+  ExtensionExecution,
   InstallExtensionRequest,
   InstallExtensionResponse,
   InstalledExtensionSource,

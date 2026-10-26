@@ -18,6 +18,7 @@ import {
   useUpgradeProjectExtension,
 } from "@/shared/extensions/use-project-extensions";
 import { ExtensionDetail } from "./extension-detail";
+import { ExtensionExecutionSection } from "./extension-execution-section";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionSettingsViews } from "./extension-settings-views";
 
@@ -130,6 +131,9 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         automations={automations}
         diagnostics={diagnostics}
         settings={settingsQuery.data?.settings ?? []}
+        executionControls={
+          projectId ? <ExtensionExecutionSection projectId={projectId} instanceId={extension.id} /> : undefined
+        }
         settingsViews={
           settingsInput && settingsPanels.length ? (
             <ExtensionSettingsViews input={settingsInput} panels={settingsPanels} />

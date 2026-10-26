@@ -158,6 +158,23 @@
         "title": "Remplacer {{name}} ?",
         "message": "Les fichiers installés seront remplacés. Les autres projets qui utilisent cette extension utiliseront aussi les nouveaux fichiers.",
         "action": "Remplacer"
+      },
+      "execution": {
+        "ready": "Extension prête",
+        "running": "Extension en cours",
+        "starting": "Démarrage de l’extension",
+        "failed": "Exécution de l’extension interrompue",
+        "stopped": "Extension arrêtée",
+        "unavailable": "État d’exécution indisponible",
+        "stop": "Arrêter",
+        "restart": "Redémarrer",
+        "cancel": "Annuler",
+        "confirm": {
+          "stop": "Arrêter l’extension",
+          "restart": "Redémarrer l’extension"
+        },
+        "impact": "Les appels en cours seront interrompus dans ces projets : {{projects}}.",
+        "retained": "Les données enregistrées et les effets déjà acceptés sont conservés. Le redémarrage réinitialise l’état temporaire. Les opérations échouées ne sont pas relancées."
       }
     }
   },
