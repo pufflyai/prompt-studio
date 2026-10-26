@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import { ResizableSplitLayout, type ResourceContextAction, type ThemePreferenceStorage, Toaster } from "@pstdio/ui";
+import { ResizableSplitLayout, type ThemePreferenceStorage, Toaster } from "@pstdio/ui";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
@@ -27,6 +27,7 @@ import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
 import { FullscreenKeyboard } from "./fullscreen-controls";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
+import { useSidenavContextActions } from "./use-sidenav-context-actions";
 import { useWorkbenchLayoutFlags } from "./use-workbench-layout-flags";
 import { useWorkbenchArrangement, WorkbenchArrangementFrame } from "./workbench-arrangement";
 import { WorkbenchBody } from "./workbench-body";
@@ -75,10 +76,10 @@ const createSidePanelHost = () => {
 const WorkbenchContent = (props: WorkbenchProps) => {
   const { workbench, renderParamField, sidePanelBubbleIcon, onOpenSidePanel, titleBar, panelControlsPlacement } = props;
   const arrangement = useWorkbenchArrangement(workbench);
-  const [sidenavContextActions, setSidenavContextActions] = useState<ResourceContextAction[]>([]);
+  const { contextActions: sidenavContextActions, onSidenavContextActionsChange } = useSidenavContextActions(workbench);
   installWorkbenchTreeRenderer(workbench, {
     renderParamField,
-    onSidenavContextActionsChange: setSidenavContextActions,
+    onSidenavContextActionsChange,
   });
   installWorkbenchKanbanRenderer(workbench, { renderParamField });
   installWorkbenchDataTableRenderer(workbench, { renderParamField });
@@ -241,7 +242,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 };
 
 export const Workbench = (props: WorkbenchProps) => {
-  const projectId = useWorkbenchStore(props.workbench.pages.store, (state) => state.projectId);
   const themePreferences = useWorkbenchThemePreferences(props.workbench);
   const mode = useWorkbenchStore(props.workbench.modes.store, (state) =>
     state.activeModeId ? state.modes[state.activeModeId] : undefined,
@@ -257,7 +257,7 @@ export const Workbench = (props: WorkbenchProps) => {
       themeStorage={props.themeStorage}
     >
       <WorkbenchTabDragProvider workbench={props.workbench}>
-        <WorkbenchPanelViewHosts key={projectId} workbench={props.workbench}>
+        <WorkbenchPanelViewHosts workbench={props.workbench}>
           <WorkbenchContent {...props} />
         </WorkbenchPanelViewHosts>
       </WorkbenchTabDragProvider>

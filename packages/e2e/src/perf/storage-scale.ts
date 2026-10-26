@@ -52,8 +52,8 @@ const runLayer = async (kind: Workload, root: string, layer: string, emit: (data
   const repo = resolve(import.meta.dirname, "../../../..");
   const script =
     layer === "sync"
-      ? "packages/pstdio-sync/src/relay/document-scale.bench.ts"
-      : "packages/pstdio-db/src/services/extension-storage/document-scale.bench.ts";
+      ? "packages/pstdio-sync/src/relay/document-scale.diagnostic.ts"
+      : "packages/pstdio-db/src/services/extension-storage/document-scale.diagnostic.ts";
   const phases = layer === "sync" ? ["owner"] : ["prepare", ...Array(10).fill("sample")];
   for (const [index, phase] of phases.entries()) {
     const args = [script, kind, String(count)];

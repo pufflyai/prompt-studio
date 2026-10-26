@@ -1,6 +1,10 @@
-export const stressTicketCount = 1000;
+// Benchmarks raise this to measure larger projects; the dev stress fixture keeps 1,000.
+export const stressTicketCount = Number(process.env.PSTDIO_PLANNER_STRESS_TICKETS ?? 1000);
+// The saved view needs its 25 matching tickets, so a smaller or non-integer count cannot measure it.
+if (!Number.isInteger(stressTicketCount) || stressTicketCount < 25)
+  throw new Error("PSTDIO_PLANNER_STRESS_TICKETS must be a whole number of at least 25");
 export const focusCount = 25;
-export const focusViewTitle = "Focus 25 of 1,000";
+export const focusViewTitle = `Focus 25 of ${stressTicketCount.toLocaleString("en-US")}`;
 export const trackNames = ["Stress Client", "Stress API", "Stress Storage", "Stress Integrations", "Stress Release"];
 const focusTitle = "Planner stress focus";
 

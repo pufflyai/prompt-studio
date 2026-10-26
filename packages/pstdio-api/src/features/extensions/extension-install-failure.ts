@@ -1,4 +1,5 @@
 import { basename, dirname } from "node:path";
+import { ExtensionRegistryError } from "pstdio-extensions/distribution";
 import { ExtensionNameConflictError, ProjectNotFoundError } from "../../services/extension-service";
 import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-unavailable-error";
 import { ExtensionNotInCatalogError } from "./extension-catalog";
@@ -27,6 +28,7 @@ const existingSource = async (targetPath: string) => {
 };
 
 export const extensionInstallFailure = async (error: unknown) => {
+  if (error instanceof ExtensionRegistryError) return { body: { error: error.message }, status: 400 as const };
   if (error instanceof InvalidExtensionFolderError) return { body: { error: error.message }, status: 400 as const };
   if (error instanceof ProjectNotFoundError) return { body: { error: error.message }, status: 404 as const };
   if (error instanceof ExtensionNotInCatalogError)

@@ -21,6 +21,7 @@ import {
 
 type WebviewAssetRouteDeps = Pick<
   ExtensionsRouteDeps,
+  | "accountService"
   | "extensionRuntimeCatalog"
   | "extensionService"
   | "workspaceService"

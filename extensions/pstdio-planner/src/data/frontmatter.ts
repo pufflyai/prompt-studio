@@ -11,6 +11,7 @@ export { applyFrontmatter, stripFrontmatter } from "@pstdio/sdk/data";
 // extension; the host only provides the generic file primitive (ctx.projectFiles).
 
 export interface TicketFrontmatterFields {
+  resourceId?: string;
   shorthand: string;
   createdAt: string;
   draft: boolean | null;
@@ -26,6 +27,7 @@ const formatList = (values: string[]) => `[${values.map(q).join(", ")}]`;
 export const buildTicketFrontmatter = (fields: TicketFrontmatterFields) => {
   const lines = ["---", `ticket_id: ${q(fields.shorthand)}`];
 
+  if (fields.resourceId) lines.push(`resource_id: ${q(fields.resourceId)}`);
   if (fields.userPrompt) lines.push(`user_prompt: ${q(fields.userPrompt)}`);
   lines.push(`created: ${q(fields.createdAt)}`);
   if (fields.draft !== null) lines.push(`draft: ${fields.draft}`);
@@ -47,6 +49,7 @@ export const extractTicketTitle = (content: string) => {
 };
 
 export interface ParsedTicketFrontmatter {
+  resourceId?: string;
   userPrompt?: string;
   draft?: boolean;
   parentShorthand?: string;
@@ -64,6 +67,7 @@ const parseList = (raw: string) => {
 };
 
 const FRONTMATTER_KEYS: Record<string, keyof ParsedTicketFrontmatter> = {
+  resource_id: "resourceId",
   user_prompt: "userPrompt",
   parent_id: "parentShorthand",
   blocked_reason: "blockedReason",
@@ -109,4 +113,16 @@ export const parseTicketFrontmatter = (content: string): ParsedTicketFrontmatter
   }
 
   return result;
+};
+
+export const withTicketCheckoutIdentity = (content: string, ticket: { id: string; shorthand: string }) => {
+  const delimiter = content.startsWith("---") ? findClosingFrontmatterDelimiter(content) : undefined;
+  const identity = `ticket_id: ${q(ticket.shorthand)}\nresource_id: ${q(ticket.id)}`;
+  if (!delimiter) return `---\n${identity}\n---\n\n${content}`;
+  const fields = content
+    .slice(3, delimiter.start)
+    .trim()
+    .split("\n")
+    .filter((line) => !/^(ticket_id|resource_id):/.test(line));
+  return `---\n${identity}\n${fields.length ? `${fields.join("\n")}\n` : ""}${content.slice(delimiter.start)}`;
 };

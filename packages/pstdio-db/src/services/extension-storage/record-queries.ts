@@ -86,13 +86,7 @@ export const listProjectedRecords = async (connection: Reader, owner: StorageOwn
       return left.recordId < right.recordId ? -1 : 1;
     });
 
-export const createRecordQueries = (
-  db: DbClient,
-  owner: StorageOwner,
-  /** Moves records out of an old owner document before indexes are built. */
-  upgrade: () => Promise<void>,
-  diagnostics?: StorageDiagnostics,
-) => {
+export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnostics?: StorageDiagnostics) => {
   const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
   const ownerWhere = (table: typeof current | typeof indexes | typeof projections) =>
     and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
@@ -126,7 +120,6 @@ export const createRecordQueries = (
         (await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json))
       )
         return;
-      await upgrade();
       await db.transaction(async (tx) => {
         await dropRecordIndexes(tx, ownerWhere(indexes)!);
         await tx.delete(indexes).where(ownerWhere(indexes));
@@ -199,6 +192,10 @@ export const createRecordQueries = (
         const index = await getIndex(tx, query.index);
         const revision = await getRevision(tx);
         validatePredicate(index, query.where);
+        if (query.where === undefined && query.groupBy === undefined && index.prefix === undefined) {
+          const [projection] = await tx.select().from(projections).where(ownerWhere(projections));
+          return { revision, count: projection?.live_count ?? 0, groups: [] };
+        }
         const group =
           query.groupBy === undefined
             ? sql`NULL::jsonb`

@@ -1,4 +1,5 @@
 import {
+  defineArtifactMount,
   defineExtension,
   defineNavigationItem,
   defineNavigationTree,
@@ -10,6 +11,8 @@ import {
 } from "@pstdio/sdk/extensions";
 
 const note = defineResourceKind({ id: "scribble-note", label: "Note" });
+// Note bodies are files. Records are for small structured data, and the host refuses records over 256 KiB.
+const noteFiles = defineArtifactMount({ id: "notes", path: "notes", label: "Notes" });
 const documents = [
   { id: "welcome", label: "Welcome note", content: "# Welcome\n\nWrite something here.\n" },
   { id: "ideas", label: "Ideas note", content: "# Ideas\n\nKeep your ideas here.\n" },
@@ -19,15 +22,14 @@ const editor = defineView({
   title: "Note",
   body: {
     kind: "file",
-    load: async (ctx, { renderer }) => ({
-      fileName: `${renderer.resource!.id}.md`,
-      content:
-        (await ctx.storage.get<string>(`scribble:${renderer.resource!.id}`)) ??
-        documents.find((document) => document.id === renderer.resource!.id)?.content ??
-        "",
-    }),
+    load: async (ctx, { renderer }) => {
+      const fileName = `${renderer.resource!.id}.md`;
+      const files = ctx.artifacts.mount(noteFiles.id);
+      const initial = documents.find((document) => document.id === renderer.resource!.id)?.content ?? "";
+      return { fileName, content: (await files.exists(fileName)) ? await files.readText(fileName) : initial };
+    },
     save: async (ctx, { renderer, content }) => {
-      await ctx.storage.set(`scribble:${renderer.resource!.id}`, content);
+      await ctx.artifacts.mount(noteFiles.id).writeText(`${renderer.resource!.id}.md`, content);
     },
   },
 });
@@ -68,6 +70,7 @@ const files = defineView({
   },
 });
 export default defineExtension({
+  artifactMounts: [noteFiles],
   resourceKinds: [note],
   views: [editor, files],
   pages: [scribblePage],

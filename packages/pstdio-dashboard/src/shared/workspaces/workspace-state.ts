@@ -1,4 +1,4 @@
-import type { SyncedRow } from "@/lib/sync/collections";
+import { getCollection, type SyncedRow } from "@/lib/sync/collections";
 
 export const workspaceState = (workspace: Partial<SyncedRow>) => {
   const providerError = workspace.provider_error_json as { message?: string } | undefined;
@@ -10,3 +10,9 @@ export const workspaceState = (workspace: Partial<SyncedRow>) => {
     return workspace.is_default ? "unattached" : "unavailable";
   return "ready";
 };
+
+// A cloud project from another device has its data here, but its project folder is not on this device yet.
+export const isProjectFolderMissing = (projectId: string) =>
+  [...getCollection("workspaces").state.values()].some(
+    (row) => row.project_id === projectId && row.is_default && !row.deleted_at && workspaceState(row) === "unattached",
+  );

@@ -17,6 +17,7 @@ export const createFileReconciler = (input: {
   projection: ReturnType<typeof fileProjection>;
   open: () => Promise<Storage>;
   signal?: AbortSignal;
+  assertWritable?: () => Promise<void>;
 }) => {
   const { tree, io } = input;
   const included = (path: string) =>
@@ -116,7 +117,10 @@ export const createFileReconciler = (input: {
     };
     for (const path of [...paths].sort((a, b) => a.split("/").length - b.split("/").length)) await capturePath(path);
     addClaims(changes, nodes, state);
-    if (changes.size) await storage.records.commit({ operationId: crypto.randomUUID(), edits: [...changes.values()] });
+    if (changes.size) {
+      await input.assertWritable?.();
+      await storage.records.commit({ operationId: crypto.randomUUID(), edits: [...changes.values()] });
+    }
     return { disk, paths };
   };
   const project = async (storage: Storage, state: FileProjection, captured: Awaited<ReturnType<typeof capture>>) => {

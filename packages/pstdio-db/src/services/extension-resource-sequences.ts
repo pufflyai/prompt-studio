@@ -1,11 +1,11 @@
 import { and, eq, sql } from "drizzle-orm";
 import { createStorageId } from "pstdio-api-contracts";
 import {
+  coreOwnerId,
   nextResourceNumber,
   rememberResourceNumber,
   resourceIdentity,
   resourceNumbers,
-  resourceNumbersOwnerId,
 } from "pstdio-sync";
 import type { DbClient } from "../db/connection.pglite";
 import { extension_resource_sequences as sequences } from "../db/schemas.pg";
@@ -28,7 +28,7 @@ export const createExtensionResourceSequencesDBService = (
   const ready = upgradeResourceIdentityIndexes(db, documents);
   const store = createResourceNumberStore(documents, ready);
   const { identity, identityMany, findByShorthand } = createResourceIdentityIndex(db, ready);
-  const owner = (projectId: string) => ({ workbenchId: projectId, extensionId: resourceNumbersOwnerId });
+  const owner = (projectId: string) => ({ workbenchId: projectId, extensionId: coreOwnerId });
 
   const allocate = async (input: AllocationInput) => {
     await ready;

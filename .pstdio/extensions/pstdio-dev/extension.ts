@@ -9,6 +9,7 @@ import {
   workspaceEvents,
   workspaceSlots,
 } from "@pstdio/sdk/extensions";
+import { repairRemovedCommand, repairRemovedSchedule } from "./merge-queue-repair";
 
 const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
 const BUILD_COMMAND = ["bun", "run", "build"];
@@ -160,7 +161,13 @@ const stopIsolationCommand = defineCommand({
 });
 
 export default defineExtension({
-  commands: [discoverHighImpactIssuesCommand, openInVscodeCommand, openInIsolationCommand, stopIsolationCommand],
+  commands: [
+    discoverHighImpactIssuesCommand,
+    openInVscodeCommand,
+    openInIsolationCommand,
+    stopIsolationCommand,
+    repairRemovedCommand,
+  ],
   skills: [
     defineSkill({
       id: "patch-release",
@@ -185,6 +192,7 @@ export default defineExtension({
       schedule: "0 12 * * *",
       command: discoverHighImpactIssuesCommand.ref,
     }),
+    repairRemovedSchedule,
   ],
   hooks: [
     // Install + build run in the background so session launch isn't blocked on them.

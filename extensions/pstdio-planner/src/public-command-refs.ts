@@ -82,7 +82,8 @@ export const planner = {
   readTickets: plannerCommand<Record<string, never>, PlannerTicket[]>("read-tickets"),
   readStatuses: plannerCommand<Record<string, never>, { statuses: PlannerStatus[] }>("ticket-status.read"),
   readTags: plannerCommand<Record<string, never>, { tags: PlannerTag[] }>("ticket-tag.read"),
-  getTicket: plannerCommand<{ id: string }, PlannerTicket | null>("get-ticket"),
+  // An old ticket number shared by several tickets after an offline merge returns every match.
+  getTicket: plannerCommand<{ id: string }, PlannerTicket | PlannerTicket[] | null>("get-ticket"),
   setTicketAttribute: plannerCommand<{ rowId: string; attributeId: string; value: string }, PlannerTicket | null>(
     "set-ticket-attribute",
   ),

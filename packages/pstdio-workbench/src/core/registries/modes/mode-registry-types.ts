@@ -29,8 +29,10 @@ export interface WorkbenchModeContribution {
   id: string;
   label?: string;
   defaultTheme?: string;
+  /** Allow Main fullscreen while this mode is active. Defaults to true. */
+  canFullscreen?: boolean;
   floatingPanels?: "visible" | "hidden";
-  /** Published extension headers retain their existing implicit tab visibility. */
+  /** @deprecated Main follows main.presentation. Legacy auxiliary headers use regionSettings.showHeader. */
   panelHeaders?: "legacy";
   chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", string | false>>;
   panels?: readonly WorkbenchPanelRegion[];

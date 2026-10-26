@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { autoBuildCommand } from "../../commands/auto-build";
 import type { pauseAutoBuildCommand, resumeAutoBuildCommand } from "../../commands/auto-build-lifecycle";
 import type { configureAutoBuildCommand, readAutoBuildCommand } from "../../commands/auto-build-mode";
+import type { stopAutoBuildCommand } from "../../commands/auto-build-stop";
 import type { openReviewRequestCommand, reviewCommand } from "../../commands/review-requests";
 import type { setTicketAttributeCommand } from "../../commands/set-ticket-attribute";
 import type { commands } from "../commands/index";
@@ -18,6 +19,7 @@ type PlanCommands = typeof commands & {
   "auto-build.configure": typeof configureAutoBuildCommand;
   "auto-build.pause": typeof pauseAutoBuildCommand;
   "auto-build.resume": typeof resumeAutoBuildCommand;
+  "auto-build.stop": typeof stopAutoBuildCommand;
   "auto-build.read": typeof readAutoBuildCommand;
   review: typeof reviewCommand;
   "review-requests.open": typeof openReviewRequestCommand;

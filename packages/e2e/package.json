@@ -4,26 +4,27 @@
   "type": "module",
   "scripts": {
     "test": "bun run test:scripts && bun run test:cli && bun run test:ui && bun run test:vite-terminal",
-    "test:cli": "bun test --preload ./src/scripts/bun-process-cleanup.ts src/cli --timeout 30000 --silent",
-    "test:scripts": "bun test --preload ./src/scripts/bun-process-cleanup.ts src/scripts src/helpers src/local-workspace-registry.test.ts src/default-extensions.test.ts --timeout 30000 --silent",
-    "test:packaged": "bun run test:packaged:cli && bun run test:packaged:browser",
+    "test:cli": "bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/cli --timeout 30000 --silent",
+    "test:scripts": "bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/scripts src/helpers src/local-workspace-registry.p0.test.ts src/default-extensions.p0.test.ts --timeout 30000 --silent",
+    "test:packaged": "bun run test:packaged:cli && bun run test:packaged:browser && bun run test:packaged:benchmark",
     "test:packaged:cli": "bun src/packaged/run-packaged-cli-tests.ts",
     "test:packaged:browser": "playwright test --config playwright.packaged.config.ts",
     "prepare:isolated-paged-collections": "bun src/packaged/prepare-isolated-paged-collections.ts",
     "validate:isolated-paged-collections": "bun src/packaged/validate-isolated-paged-collections.ts",
     "test:ui": "bun run src/scripts/run-playwright.ts",
     "test:smoke": "bun run src/scripts/run-playwright.ts --config playwright.smoke.config.ts",
-    "test:pr": "bun run src/scripts/run-playwright.ts --config playwright.pr.config.ts",
     "test:vite-terminal": "bun run src/scripts/run-vite-terminal-playwright.ts",
     "perf:frontend": "bun run --cwd ../.. build -- --scope e2e --scope pstdio-dashboard --include-dependencies && bun run src/scripts/run-playwright.ts -c playwright.perf.config.ts",
     "perf:frontend:trace": "PLAYWRIGHT_TRACE=on bun run perf:frontend",
-    "test:planner-stress": "bun src/perf/planner-stress.ts",
-    "perf:subnav": "bun src/perf/subnav-benchmark.ts",
+    "test:planner-stress": "bun src/perf/planner-stress.p3.bench.ts",
+    "perf:subnav": "bun src/perf/subnav.p3.bench.ts",
     "report": "playwright show-report",
-    "perf:planner-board-cold-open": "bun src/perf/planner-board-cold-open.ts",
+    "perf:planner-board-cold-open": "bun src/perf/planner-board-cold-open.p3.bench.ts",
     "perf:storage-scale": "bun src/perf/storage-scale.ts",
     "perf:storage-scale:build": "bun build src/perf/storage-scale-extension.ts --target bun --external @pstdio/sdk/extensions --outfile dist/storage-scale/scale.js",
-    "perf:timing-window": "bun src/perf/storage-timing-window.ts"
+    "perf:timing-window": "bun src/perf/storage-timing-window.ts",
+    "test:packaged:benchmark": "playwright test --config playwright.packaged-benchmark.config.ts",
+    "bench:planner-stress": "bun src/perf/planner-stress.p3.bench.ts --packaged"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
@@ -48,11 +49,13 @@
     "pstdio-planner": "workspace:*",
     "pstdio-reports": "workspace:*",
     "pstdio-skills": "workspace:*",
+    "pstdio-sync": "workspace:*",
     "pstdio-wt": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "remote-workspaces": "workspace:*",
     "workbench-fixture": "workspace:*",
-    "storage-scale-fixture": "workspace:*"
+    "storage-scale-fixture": "workspace:*",
+    "pstdio-scripts": "workspace:*"
   }
 }

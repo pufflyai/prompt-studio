@@ -4,13 +4,15 @@ Log in once with Google on each computer. Each computer becomes a device of your
 
 ## Log in
 
-Use the HTTPS account service URL from your administrator. It may include a path, such as `https://base.example.test/accounts`. The examples use `https://accounts.example.test`.
+Prompt Studio uses the hosted account service at `https://base.prompt.studio/accounts` by default.
 
 ```sh
-pst login --manager https://accounts.example.test
+pst login
 ```
 
 Login opens Google in the system browser on the computer that runs the native host. Use `--open-browser=false` to open the printed URL yourself on that same computer. A remote host needs its own browser and loopback access; the dashboard does not forward this callback.
+
+For a self-hosted service, pass `pst login --manager https://accounts.example.test`, or set `PSTDIO_ACCOUNT_MANAGER_ORIGIN` in the host's environment before starting it. An explicit address takes precedence over the environment setting, which takes precedence over the hosted default. HTTPS addresses may include a path. The account service supplies the relay address after login.
 
 After login, the host keeps one device credential. It does not keep your Google session. Logging in again on the same computer replaces the credential.
 
@@ -21,16 +23,36 @@ pst projects list
 pst projects cloud PROJECT_ID
 ```
 
-The project keeps its ID, folder and local data. Every device of your account that has this project syncs it. To get the project on another computer, log in there and bind the same project ID to a folder:
+The project keeps its ID, folder and local data. Every device of your account syncs it, together with its name and the `origin` git remote of its folder. A device notices a new cloud project when it starts, logs in, creates or binds the project, or checks the account again, which it does every minute.
+
+To stop syncing a project, run `pst projects local PROJECT_ID`. Every device keeps its local copy. A project that syncs cannot be deleted on one device, because every device of the account gets every cloud project back. Make it local first, then delete it.
+
+## Get your cloud projects on a new computer
+
+After you log in on a new or reset computer, every cloud project of your account appears in the project picker with its name. Its data, such as tickets, notes and artifacts, downloads without a folder. Until the first download finishes, the project reports `first-download-incomplete`.
+
+The second line of each cloud project in the picker says where it is on this computer:
+
+| Line | Meaning |
+| --- | --- |
+| Cloud · not on this device yet | The first download has not finished. |
+| Cloud · waiting to download | Newer changes from other devices are still on their way. |
+| Cloud · ready offline · no folder yet | All data is here. The project's files are not. |
+| Cloud · needs attention | Some synced data could not be read. |
+| The folder path | The project has a folder on this computer. |
+
+A project opens before its download finishes. After the first download, opening it reads the downloaded data directly.
+
+The project's files come later. The first time something needs them, such as opening Files, creating a workspace or starting a session with an agent that works on files, Prompt Studio asks for a folder. It offers to clone the project's recorded git remote, or to use a folder that already holds the same repository. Work that needs files on a computer without the project's folder fails with the error "This project's files are not on this device."
+
+To use a folder you already have from the command line, bind the project ID to it:
 
 ```sh
 pst projects environment
 pst projects bind PROJECT_ID --environment ENVIRONMENT_ID --name Notes --path /absolute/path/to/notes
 ```
 
-The environment ID comes from `pst projects environment` on that computer. A device notices a cloud project when it starts, logs in, or creates or binds the project.
-
-To stop syncing a project, run `pst projects local PROJECT_ID`. Every device keeps its local copy.
+The environment ID comes from `pst projects environment` on that computer.
 
 ## Manage devices
 
@@ -53,7 +75,7 @@ The host APIs are available through `createClient(...).account` in `@pstdio/sdk/
 import { createClient } from "@pstdio/sdk/client";
 
 const client = createClient();
-const login = await client.account.login("https://accounts.example.test");
+const login = await client.account.login();
 // Open login.url on the native host's computer, then wait for "complete".
 const { status } = await client.account.loginStatus(login.id);
 const devices = await client.account.devices();
@@ -61,6 +83,8 @@ await client.account.syncProject("PROJECT_ID");
 ```
 
 See [AccountClient](../../../packages/sdk/src/client/account.ts) for the exact methods and response types.
+
+`account.login(managerOrigin?)` uses the host's account service when the address is omitted. Pass an address to override it for that login. `ctx.account.login()` and the webview account client use the same host setting.
 
 On `main`, `account.cancelLogin(id)` cancels a pending native login. `account.projectSyncStatus(projectId)` returns the project's sync `state` and whether all known content has been verified on this device. These additions use the same API 0.2.1 additive step as device login.
 

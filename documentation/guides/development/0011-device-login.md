@@ -4,6 +4,8 @@ The native host keeps one device credential per login. The account manager owns 
 
 See [Log in and sync cloud projects](../sdk/0004-device-login.md) for the commands, the native file path and SDK usage.
 
+`pst login` and `client.account.login()` use `https://base.prompt.studio/accounts` by default. The native account service resolves the address once per login: an explicit `--manager` or SDK argument first, then `PSTDIO_ACCOUNT_MANAGER_ORIGIN` from the host's environment, then the hosted default. An invalid configured address fails validation; it never silently switches services. Restart the host after changing its environment. Extensions use the same resolution through `ctx.account.login()` and the webview account client.
+
 ## Account service setup
 
 Use an owned HTTPS account service configured as described in [account authority development](0007-account-manager.md). Register its full Google callback URL, for example `https://accounts.example.test/api/auth/callback/google`, in the owned Google OAuth client. `MANAGER_ORIGIN` is that account service's HTTPS address; `RELAY_AUDIENCE` is the relay's HTTPS address. Either address may include a path, as described in [account authority development](0007-account-manager.md#addresses-with-a-path). These are separate services and identities.
@@ -61,10 +63,10 @@ The browser bridge uses Better Auth's [single-use token plugin](https://better-a
 Run the focused Docker checks:
 
 ```sh
-bun run --cwd services/account-manager test:isolated src/native-devices.test.ts src/native-login.test.ts src/manager-http.test.ts src/google-library.test.ts
+bun run --cwd services/account-manager test:integration src/native-devices.p1.integration.ts src/native-login.p1.integration.ts src/manager-http.p1.integration.ts src/google-library.p1.integration.ts
 ```
 
-`native-devices.test.ts` starts an owned HTTPS manager and runs [`native-devices.integration.ts`](../../../packages/pstdio-api/src/services/account/native-devices.integration.ts) against it. Two host fixtures log in as devices of one Google user. Each sees both devices; one renames and removes the other; the removed device stops renewing and stops syncing. A restarted device keeps its login. A cloud project turns on and off, logout clears the login, a second Google user gets a separate account, and local data written before login stays unchanged.
+`native-devices.p1.integration.ts` starts an owned HTTPS manager and runs [`native-devices.integration.fixture.ts`](../../../packages/pstdio-api/src/services/account/native-devices.integration.fixture.ts) against it. Two host fixtures log in as devices of one Google user. Each sees both devices; one renames and removes the other; the removed device stops renewing and stops syncing. A restarted device keeps its login. A cloud project turns on and off, logout clears the login, a second Google user gets a separate account, and local data written before login stays unchanged.
 
 The relay runtime test checks that adding a cloud project keeps earlier sockets, that a changed credential discards stale in-flight starts, and that removed projects stop syncing. The packaged smoke checks full-host account wiring and that projects stay local without a login.
 

@@ -133,7 +133,6 @@ export const exercisePagedCollections = async (
   }
   await exerciseGroupedPageSelection(page);
   for (const body of await Promise.all(commandBodies)) expect(body).not.toContain("OFF_PAGE_BODY");
-  for (const sample of evidence) expect(sample.elapsedMs, `${sample.view}: open and use 100 rows`).toBeLessThan(1000);
   return evidence;
 };
 

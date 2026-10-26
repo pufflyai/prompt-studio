@@ -17,6 +17,8 @@ function normalizeItem(ext: NormalizedExtension, action: NavigationTargetItem): 
     });
     return normalizePageTarget(action);
   }
+  if (action.kind === "viewer")
+    return { ...action, ...(action.page ? { page: normalizeContributionRef(ext, action.page) } : {}) };
   if (action.kind === "panel") {
     return {
       ...action,

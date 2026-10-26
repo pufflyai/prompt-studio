@@ -9,6 +9,7 @@ import { TreeListNodes } from "./tree-list-nodes";
 import type { TreeListMovePolicy } from "./tree-list-reorder";
 import { TreeListReveal } from "./tree-list-reveal";
 import { TreeListRow } from "./tree-list-row";
+import { TreeListSelectionProvider } from "./tree-list-selection-context";
 import { TreeListSortable } from "./tree-list-sortable";
 import { VirtualTreeList } from "./tree-list-virtual";
 import { useTreeListKeyboardNavigation } from "./use-tree-list-keyboard-navigation";
@@ -29,6 +30,14 @@ export interface TreeListProps {
   expandedNodeIds?: string[];
   /** Active node id, or ids, used for selection styling. */
   activeNodeId?: string | string[] | null;
+  /** Controlled multiselection: click replaces, Ctrl/Cmd toggles, Shift extends a visible range.
+   * Space/Enter select; Shift+Up/Down extends; Alt+Up/Down emits a sibling move through onMoveNode.
+   * The host persists selection and enforces domain rules. */
+  onSelectionChange?: (nodeIds: string[]) => void;
+  /** Declare that the host moves the selected set when the source is selected.
+   * Keyboard targets then sit outside the selected sibling block. Defaults to source-only moves.
+   * This does not move nodes; the host must apply the same policy to pointer and keyboard requests. */
+  moveSelection?: boolean;
   /** Compact rows suit app navigation; tree rows suit file/resource hierarchies. */
   rowVariant?: TreeListRowVariant;
   sectionGap?: StackProps["gap"];
@@ -90,6 +99,7 @@ const StackTreeList = (props: TreeListProps) => {
     <Stack
       ref={keyboard.rootRef}
       role="listbox"
+      aria-multiselectable={Boolean(props.onSelectionChange) || undefined}
       gap={sectionGap}
       w="full"
       minW="0"
@@ -184,10 +194,12 @@ export const TreeList = (props: TreeListProps) => {
     <StackTreeList {...props} />
   );
   const paddedContent = (
-    <TreeListMoveSurface onMoveNode={props.onMoveNode}>
-      {props.leadingContent}
-      {content}
-    </TreeListMoveSurface>
+    <TreeListSelectionProvider tree={props}>
+      <TreeListMoveSurface onMoveNode={props.onMoveNode}>
+        {props.leadingContent}
+        {content}
+      </TreeListMoveSurface>
+    </TreeListSelectionProvider>
   );
 
   if (!props.backgroundContextActions || props.backgroundContextActions.length === 0) {

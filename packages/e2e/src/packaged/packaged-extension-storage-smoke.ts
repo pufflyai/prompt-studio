@@ -8,7 +8,7 @@ export const expectExtensionDraftStorage = async (input: {
   projectFolder: string;
   headers: Record<string, string>;
 }) => {
-  const projectFolder = realpathSync(input.projectFolder);
+  const projectFolder = realpathSync.native(input.projectFolder);
   const execute = async (owner: string, command: string, params: Record<string, string>) => {
     const response = await fetch(
       `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.${owner}.command.${command}/execute`,
@@ -25,11 +25,11 @@ export const expectExtensionDraftStorage = async (input: {
   };
   const ticket = await execute("pstdio-planner", "write-ticket", { title: "Extension storage draft" });
   expect(ticket.path).toBe(
-    join(projectFolder, ".pstdio/extension-storage/pstdio-planner/tickets", ticket.shorthand!, "ticket.md"),
+    join(projectFolder, ".pstdio/extension-storage/pstdio.pstdio-planner/tickets", ticket.shorthand!, "ticket.md"),
   );
   expect(readFileSync(ticket.path, "utf8")).toContain("Extension storage draft");
   const report = await execute("pstdio-reports", "reports.write", { kind: "review", template: "review" });
-  const directory = join(projectFolder, ".pstdio/extension-storage/pstdio-reports/reports/review");
+  const directory = join(projectFolder, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review");
   expect(report.path).toBe(join(directory, "report.md"));
   expect(report.filesPath).toBe(join(directory, "files"));
   expect(existsSync(report.path)).toBe(true);

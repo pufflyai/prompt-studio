@@ -8,7 +8,7 @@ Measured: 2026-10-20. PRD 0014 R23 says relay storage for a document stays below
 bun run --cwd services/relay bench:storage-bound
 ```
 
-It needs Docker. It starts throwaway PostgreSQL and RustFS containers on loopback ports, runs the workload against the real blind document store, prints a table and a JSON summary, and removes the containers. It is a manual benchmark and does not run in CI. CI runs the same check in `services/relay/src/storage/sync-bound.integration.ts` with ten cycles of ten updates, which fits the default test allowance.
+It needs Docker. It starts throwaway PostgreSQL and RustFS containers on loopback ports, runs the workload against the real blind document store, prints a table and a JSON summary, and removes the containers. It is a manual benchmark and does not run in CI. CI runs the same check in `services/relay/src/storage/sync-bound.p1.integration.ts` with ten cycles of ten updates, which fits the default test allowance.
 
 ## Workload
 

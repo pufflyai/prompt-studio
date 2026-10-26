@@ -2,18 +2,18 @@ import { Badge, Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/
 import type { WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { pigeonThreads } from "./pigeon-data";
-import { pigeonHomePage } from "./pigeon-pages";
 import { pigeonStore } from "./pigeon-state";
-import { initials, useShowcaseStore } from "./showcase-store";
+import { initials, usePageSelection, useShowcaseStore } from "./showcase-store";
 
 export const PigeonReadingPane = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const state = useShowcaseStore(pigeonStore);
-  const thread = pigeonThreads.find((item) => item.id === input.instance.resource?.id);
+  const selected = usePageSelection(input.workbench);
+  const thread = pigeonThreads.find((item) => item.id === selected);
   if (!thread) return null;
   const archive = () => {
     pigeonStore.setState({ archivedIds: [...state.archivedIds, thread.id] });
-    input.workbench.pageLocations.navigate({ kind: "page", page: pigeonHomePage });
+    input.workbench.pageLocations.updateParams({ selection: null });
   };
   return (
     <Stack h="full" overflowY="auto" gap="lg" p="lg">
@@ -23,7 +23,7 @@ export const PigeonReadingPane = (props: { input: WorkbenchPanelRenderInput }) =
             aria-label="Back to inbox"
             size="sm"
             variant="ghost"
-            onClick={() => input.workbench.pageLocations.navigate({ kind: "page", page: pigeonHomePage })}
+            onClick={() => input.workbench.pageLocations.updateParams({ selection: null })}
           >
             <WorkbenchIcon name="ArrowLeft" />
           </IconButton>

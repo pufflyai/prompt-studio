@@ -1,7 +1,9 @@
 import { realpathSync } from "node:fs";
-import { homedir } from "node:os";
-import { isAbsolute, relative, resolve } from "node:path";
+import { mkdtemp, rm } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import type { InstallExtensionRequest } from "@pstdio/sdk/api";
+import { unpackExtension } from "pstdio-extensions/distribution";
 import { expandHomePath } from "pstdio-paths";
 import { apiClient } from "../api-client";
 import { uploadExtensionSource } from "./upload-source";
@@ -29,6 +31,17 @@ export const localExtensionSourceRequest = async (
   },
 ) => {
   const source = resolve(expandHomePath(sourcePath, homedir()));
+  if (source.endsWith(".tgz")) {
+    const temporary = await mkdtemp(join(tmpdir(), "pstdio-extension-package-"));
+    try {
+      const manifest = await unpackExtension(await Bun.file(source).bytes(), temporary);
+      return {
+        upload: uploadExtensionSource(temporary, { ...options, installName: options.installName ?? manifest.id }),
+      };
+    } finally {
+      await rm(temporary, { recursive: true, force: true });
+    }
+  }
   const origin = process.env.PSTDIO_API_URL;
   const localHost = !origin || ["localhost", "127.0.0.1", "[::1]"].includes(new URL(origin).hostname);
   if (localHost) {

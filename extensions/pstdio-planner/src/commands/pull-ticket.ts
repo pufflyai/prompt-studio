@@ -2,26 +2,34 @@ import { type ArtifactMount, defineCommand, type ExtensionStorageApi, params } f
 import { ticketsCollection } from "../data/collections";
 import { requireTicketDraftFiles, ticketFilesDir, ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";
 import { findTicket } from "../data/resolve";
+import { refreshTicketCheckout } from "../data/ticket-checkout";
+import { readTicketFileContent } from "../data/ticket-file-content";
 import { validateTicketFileName } from "../data/ticket-file-name";
+import type { TicketContext } from "../data/ticket-identity";
 import { pullTicketImages } from "../data/ticket-images";
-import type { StoredTicket } from "../data/types";
+import type { Ticket } from "../data/types";
 
 const pullTicket = async (input: {
   storage: ExtensionStorageApi;
+  resources: TicketContext["resources"];
   projectFiles: ArtifactMount;
-  ticket: StoredTicket;
+  ticket: Ticket;
   force: boolean;
 }) => {
   const { projectFiles, ticket } = input;
+  await refreshTicketCheckout(projectFiles, ticket);
   const markdownPath = ticketMarkdownPath(ticket.shorthand);
 
   // Without --force, never clobber local edits.
   if (!input.force && (await projectFiles.exists(markdownPath))) return { shorthand: ticket.shorthand, skipped: true };
 
   for (const file of ticket.files ?? []) validateTicketFileName(file.name);
-  await projectFiles.writeText(markdownPath, await ticketToMarkdown(input.storage, ticket));
+  await projectFiles.writeText(markdownPath, await ticketToMarkdown(input, ticket));
   for (const file of ticket.files ?? []) {
-    await projectFiles.writeText(`${ticketFilesDir(ticket.shorthand)}/${file.name}`, file.content);
+    await projectFiles.writeText(
+      `${ticketFilesDir(ticket.shorthand)}/${file.name}`,
+      await readTicketFileContent(input.storage, ticket.id, file),
+    );
   }
   await pullTicketImages(input.storage, projectFiles, ticket);
 
@@ -29,7 +37,7 @@ const pullTicket = async (input: {
 };
 
 // `pst tickets pull`: materialize a ticket (or every non-archived ticket) from
-// extension storage into the local `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/` tree.
+// extension storage into the local `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/` tree.
 export const pullTicketCommand = defineCommand({
   id: "pull-ticket",
   mutating: true,
@@ -47,18 +55,18 @@ export const pullTicketCommand = defineCommand({
     const force = commandParams.force ?? false;
 
     if (commandParams.id !== undefined) {
-      const ticket = await findTicket(ctx.storage, commandParams.id);
+      const ticket = await findTicket(ctx, commandParams.id);
       if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
       return {
-        ...(await pullTicket({ storage: ctx.storage, projectFiles, ticket, force })),
+        ...(await pullTicket({ storage: ctx.storage, resources: ctx.resources, projectFiles, ticket, force })),
         path: resolvePath(ticketMarkdownPath(ticket.shorthand)),
       };
     }
 
-    const tickets = (await ticketsCollection(ctx.storage).list()).filter((ticket) => !ticket.archived);
+    const tickets = (await ticketsCollection(ctx).list()).filter((ticket) => !ticket.archived);
     const results = [];
     for (const ticket of tickets) {
-      results.push(await pullTicket({ storage: ctx.storage, projectFiles, ticket, force }));
+      results.push(await pullTicket({ storage: ctx.storage, resources: ctx.resources, projectFiles, ticket, force }));
     }
     return { pulled: results.filter((result) => !result.skipped).length, total: tickets.length };
   },

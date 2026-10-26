@@ -6,5 +6,5 @@ export const documents = defineArtifactMount({
   label: l10n("mounts.documents", "Notes"),
 });
 
-// The SDK does not expose a mount's workspace path. Extension files live under the package name.
-export const documentsPath = `.pstdio/extension-storage/pstdio-notes/${documents.path}/`;
+// The SDK does not expose a mount's workspace path. Extension files live under the full extension ID.
+export const documentsPath = `.pstdio/extension-storage/pstdio.pstdio-notes/${documents.path}/`;

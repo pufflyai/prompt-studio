@@ -45,7 +45,7 @@ export function useAutoBuild(client: PlanClient) {
       setSaving(false);
     }
   };
-  const transition = async (action: "pause" | "resume") => {
+  const transition = async (action: "pause" | "resume" | "stop") => {
     setSaving(true);
     setError(undefined);
     try {

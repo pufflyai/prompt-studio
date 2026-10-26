@@ -8,6 +8,8 @@
     "coverage:badge": "bun --cwd .. ./scripts/badges/coverage-badge.ts",
     "lint": "bun run typecheck && biome check .",
     "release:notes": "bun --cwd .. ./scripts/release/release-notes.ts",
+    "release:packages:version": "bun --cwd .. ./scripts/release/package-preview-version.ts",
+    "release:packages:publish": "bun --cwd .. ./scripts/release/package-preview-publish.ts",
     "release:checksums": "bun --cwd .. ./scripts/release/generate-checksums.ts",
     "release:extension-lockfiles:sync": "bun --cwd .. ./scripts/release/sync-extension-lockfiles.ts",
     "release:lockfile:sync": "bun --cwd .. ./scripts/release/sync-lockfile-workspace-dependencies.ts",
@@ -18,8 +20,8 @@
     "release:readme": "bun --cwd .. ./scripts/release/sync-package-readme.ts",
     "release:stamp-dates": "bun --cwd .. ./scripts/release/stamp-changelog-dates.ts",
     "release:version": "bash ./release/version.sh",
-    "test": "bun test --silent",
-    "typecheck": "tsc --noEmit",
+    "test": "bun ci/run-bun-tests.ts --silent",
+    "typecheck": "bun check",
     "validate:changesets": "bun --cwd .. ./scripts/release/validate-changesets.ts",
     "verify:boundaries": "bun --cwd .. ./scripts/verify/verify-boundaries.ts",
     "verify:docs-links": "bun --cwd .. ./scripts/verify/docs-links.ts",
@@ -39,7 +41,10 @@
   },
   "devDependencies": {
     "@changesets/config": "3.1.3",
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "typescript": "6.0.2"
+  },
+  "exports": {
+    "./test-quarantine": "./ci/test-quarantine.ts"
   }
 }

@@ -10,7 +10,7 @@ import {
   packageAsset,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
-import { type ExampleName, exampleResources } from "./state-defaults";
+import { exampleResources } from "./state-defaults";
 
 const baseUrl = new URL("../extension.ts", import.meta.url).href;
 export const webview = (id: string, title: string, capabilities: WebviewCapabilityDeclaration[] = []) =>
@@ -24,7 +24,7 @@ export const webview = (id: string, title: string, capabilities: WebviewCapabili
     },
   });
 interface ExampleDefinition {
-  name: ExampleName;
+  name: keyof typeof exampleResources;
   label: string;
   icon: string;
   primary: ViewRef;

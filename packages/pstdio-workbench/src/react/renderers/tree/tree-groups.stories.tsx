@@ -6,8 +6,8 @@ import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
-const TreeGroups = (props: { counts?: boolean }) => {
-  const { counts } = props;
+const TreeGroups = (props: { counts?: boolean; chrome?: boolean }) => {
+  const { counts, chrome } = props;
   const [fixture] = useState(() => {
     const values = new Map<string, string>();
     const storage = {
@@ -15,7 +15,12 @@ const TreeGroups = (props: { counts?: boolean }) => {
       setItem: (key: string, value: string) => void values.set(key, value),
     };
     const workbench = createWorkbench();
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      chrome: chrome ? { sidenav: "group-navigation" } : undefined,
+      activate: () => undefined,
+    });
     workbench.views.registerView({
       id: "group-navigation",
       title: "Navigation",
@@ -95,6 +100,7 @@ const meta = {
   title: "pstdio-workbench/Guides/Tree groups",
   component: TreeGroups,
   parameters: { layout: "fullscreen" },
+  tags: ["tree-groups"],
 } satisfies Meta<typeof TreeGroups>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -113,8 +119,15 @@ export const CreateAndRename: Story = {
     await userEvent.clear(input);
     await userEvent.type(input, "Product research{Enter}");
     await expect(canvas.getByText("Product research")).toBeVisible();
+    const header = canvas.getByText("Product research").closest("[aria-expanded]");
+    await expect(header).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(canvas.getByText("Product research"));
+    await expect(header).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(canvas.getByText("Product research"));
+    await expect(header).toHaveAttribute("aria-expanded", "false");
   },
 };
+export const ModeChromeGroups: Story = { args: { chrome: true }, play: CreateAndRename.play };
 
 export const ReorderGroups: Story = {
   play: async ({ canvasElement }) => {

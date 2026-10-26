@@ -1,16 +1,13 @@
 import { parsePageUrl, type ResourceRef, serializePageUrl } from "@pstdio/sdk/extensions";
-import { artifactPage, artifactPanelRef, libraryPageRef, libraryPanelRef } from "./artifact-refs";
+import { artifactPage, libraryPageRef } from "./artifact-refs";
 import { extensionId } from "./events";
 
 export { artifactPage } from "./artifact-refs";
 
 export { changedEvent, extensionId } from "./events";
 export const libraryTarget = {
-  kind: "compound" as const,
-  targets: [
-    { kind: "page" as const, page: libraryPageRef },
-    { kind: "panel" as const, panel: libraryPanelRef },
-  ],
+  kind: "page" as const,
+  page: libraryPageRef,
 };
 
 export const artifactResource = (projectId: string, id: string, label?: string) =>
@@ -23,16 +20,10 @@ export const artifactResource = (projectId: string, id: string, label?: string) 
   }) satisfies ResourceRef;
 
 export const artifactTarget = (projectId: string, id: string, label?: string) => ({
-  kind: "compound" as const,
-  targets: [
-    { kind: "page" as const, page: libraryPageRef },
-    {
-      kind: "panel" as const,
-      panel: artifactPanelRef,
-      resource: artifactResource(projectId, id, label),
-      open: "pin" as const,
-    },
-  ],
+  kind: "page" as const,
+  page: artifactPage.ref,
+  resource: artifactResource(projectId, id, label),
+  open: "pin" as const,
 });
 
 export const artifactUrl = (projectId: string, id: string) =>

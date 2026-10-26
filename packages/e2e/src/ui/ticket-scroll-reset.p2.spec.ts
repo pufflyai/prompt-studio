@@ -1,0 +1,140 @@
+import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
+import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { uiOrigin as apiBase } from "../ui-server";
+
+const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
+  const res = await request.get(`${apiBase}/v1/projects`);
+  expect(res.ok()).toBe(true);
+
+  const projects = (await res.json()) as { id: string }[];
+  for (const project of projects) {
+    await request.delete(`${apiBase}/v1/projects/${project.id}`);
+  }
+};
+
+const createProjectViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  name: string,
+  folderPath?: string,
+) => {
+  const res = await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name }, folderPath) });
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as { id: string; name: string };
+};
+
+const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
+  await page.addInitScript((selectedProjectId) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
+  }, projectId);
+};
+
+const longMarkdown = (label: string) =>
+  Array.from({ length: 120 }, (_, index) => `${label} line ${String(index + 1).padStart(3, "0")}`).join("\n\n");
+
+const editorScrollTop = async (page: import("@playwright/test").Page) => {
+  const editor = page.locator('[role="textbox"]:visible').first();
+  await expect(editor).toBeVisible();
+  return editor.evaluate((element) => {
+    const ancestors: HTMLElement[] = [];
+    let current: HTMLElement | null = element;
+    while (current) {
+      ancestors.push(current);
+      current = current.parentElement;
+    }
+    const scrollableAncestors = ancestors.filter((ancestor) => {
+      const overflowY = getComputedStyle(ancestor).overflowY;
+      return ancestor.scrollHeight > ancestor.clientHeight && ["auto", "scroll", "overlay"].includes(overflowY);
+    });
+    const scrollOwner = scrollableAncestors.at(-1);
+    return scrollOwner?.scrollTop ?? 0;
+  });
+};
+
+const scrollEditor = async (page: import("@playwright/test").Page, fraction: number) => {
+  const editor = page.locator('[role="textbox"]:visible').first();
+  await expect(editor).toBeVisible();
+  await editor.evaluate((element, fraction) => {
+    const ancestors: HTMLElement[] = [];
+    let current: HTMLElement | null = element;
+    while (current) {
+      ancestors.push(current);
+      current = current.parentElement;
+    }
+    const scrollableAncestors = ancestors.filter((ancestor) => {
+      const overflowY = getComputedStyle(ancestor).overflowY;
+      return ancestor.scrollHeight > ancestor.clientHeight && ["auto", "scroll", "overlay"].includes(overflowY);
+    });
+    const scrollOwner = scrollableAncestors.at(-1);
+    if (!scrollOwner) throw new Error("Scroll viewport not found");
+    scrollOwner.scrollTop = (scrollOwner.scrollHeight - scrollOwner.clientHeight) * fraction;
+  }, fraction);
+};
+
+test("restores markdown scroll when returning to a retained ticket or file", async ({ page, request }) => {
+  await deleteAllProjects(request);
+  const project = await createProjectViaApi(request, "Ticket Scroll Reset Project");
+  const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
+  const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
+  expect(defaultStatus).toBeTruthy();
+
+  const ticket = await createPlannerTicket(request, apiBase, project.id, {
+    content: longMarkdown("ticket-scroll-reset"),
+    statusId: defaultStatus!.id,
+  });
+  await createPlannerTicketFile(request, apiBase, project.id, ticket.id, {
+    name: "scroll-proof.md",
+    content: longMarkdown("file-scroll-reset"),
+  });
+  await bypassOnboarding(page, project.id);
+  await page.goto("/");
+  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+
+  const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
+  await expect(card).toBeVisible({ timeout: 15_000 });
+  await card.click();
+
+  await expect(page.locator('[role="textbox"]:visible').first()).toContainText("ticket-scroll-reset line 001");
+  // Different offsets prove each retained document owns its scroll position.
+  await scrollEditor(page, 0.5);
+  await expect.poll(() => editorScrollTop(page)).toBeGreaterThan(0);
+  const ticketScroll = await editorScrollTop(page);
+
+  const fileRow = page.getByRole("option", { name: "scroll-proof" });
+  await expect(fileRow).toBeVisible({ timeout: 15_000 });
+  await fileRow.click();
+  await expect(fileRow).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('[role="textbox"]:visible').first()).toContainText("file-scroll-reset line 001");
+  await expect.poll(() => editorScrollTop(page)).toBe(0);
+  await scrollEditor(page, 1);
+  await expect.poll(() => editorScrollTop(page)).toBeGreaterThan(0);
+  const fileScroll = await editorScrollTop(page);
+  expect(fileScroll).toBeGreaterThan(ticketScroll);
+
+  const ticketRow = page.getByRole("option", {
+    name: new RegExp(ticket.shorthand),
+  });
+  await ticketRow.click();
+  await expect(ticketRow).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('[role="textbox"]:visible').first()).toContainText("ticket-scroll-reset line 001");
+
+  await expect.poll(() => editorScrollTop(page)).toBe(ticketScroll);
+  await fileRow.click();
+  await expect.poll(() => editorScrollTop(page)).toBe(fileScroll);
+
+  await page.getByRole("button", { name: "Back to project", exact: true }).click();
+  await page.getByRole("option", { name: "Artifacts", exact: true }).click();
+  const main = page.locator('[data-workbench-panel="main"]');
+  await main
+    .getByRole("tab", { name: "Artifacts", exact: true })
+    .getByRole("button", { name: "Close Artifacts", exact: true })
+    .click();
+  await expect(main.getByRole("group", { name: "Available tabs" })).toBeVisible();
+  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+  await card.click();
+  await expect.poll(() => editorScrollTop(page)).toBe(ticketScroll);
+  await fileRow.click();
+  await expect.poll(() => editorScrollTop(page)).toBe(fileScroll);
+});

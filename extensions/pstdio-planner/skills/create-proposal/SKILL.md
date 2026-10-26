@@ -33,7 +33,7 @@ Before saving a proposal that adds or changes UI, read `pst pstdio-planner refin
 
 ## Ticket files
 
-Put planning material in `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/files/<name>`. The next `pst tickets save` attaches the file to the ticket. Put implementation, test, validation, and review evidence in reports instead; see [Reports](https://prompt.studio/docs/extensions/reports/#write-a-report).
+Put planning material in `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/files/<name>`. The next `pst tickets save` attaches the file to the ticket. Put implementation, test, validation, and review evidence in reports instead; see [Reports](https://prompt.studio/docs/extensions/reports/#write-a-report).
 
 Add a file only when the person needs it to judge the proposal:
 

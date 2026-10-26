@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { handleDialogAcceptShortcut } from "@/components/overlays/dialog-accept-shortcut";
 import type { Param, ParamValueMap } from "@/components/param-editor/param-editor.types";
 import { ParamEditorHorizontal } from "@/components/param-editor/param-editor-horizontal";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { useKanbanCreatePreference } from "./kanban-create-preference.store";
 import { KanbanCreateSubmit } from "./kanban-create-submit";
 import { CreateFieldControl } from "./kanban-renderer-create-field";
@@ -205,7 +206,6 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
       <Dialog.Backdrop />
       <Dialog.Positioner>
         <Dialog.Content
-          maxH="calc(100% - 48px)"
           onKeyDownCapture={(event) => handleDialogAcceptShortcut(event, () => void submit(), valid && !submitting)}
         >
           <Dialog.Header>
@@ -214,49 +214,51 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
               <CloseButton size="sm" disabled={submitting} onClick={discard} />
             </Dialog.CloseTrigger>
           </Dialog.Header>
-          <Dialog.Body>
-            <Stack gap="md">
-              {config.fields.map((field) => (
-                <CreateFieldControl
-                  key={field.id}
-                  field={field}
-                  removeLabel={config.labels.removeFile}
-                  value={values[field.id]}
-                  disabled={submitting}
-                  onChange={(value) =>
-                    setDraft((current) => current && { ...current, values: { ...current.values, [field.id]: value } })
-                  }
-                />
-              ))}
-              {editableAttributes.length > 0 ? (
-                <Stack gap="2xs">
-                  <Text textStyle="label/S/medium">{config.labels.properties}</Text>
-                  <ParamEditorHorizontal
-                    variant="small"
-                    params={editableAttributes.map((attribute) =>
-                      attributeToParam(attribute, attribute.id === columnAttributeId),
-                    )}
-                    defaultValues={attributeValues as ParamValueMap}
-                    readOnly={submitting}
-                    onChange={(attributeId, value) =>
-                      setDraft(
-                        (current) =>
-                          current && {
-                            ...current,
-                            attributeValues: { ...current.attributeValues, [attributeId]: value },
-                          },
-                      )
+          <ScrollArea flex="1" minH="0" height="auto">
+            <Dialog.Body>
+              <Stack gap="md">
+                {config.fields.map((field) => (
+                  <CreateFieldControl
+                    key={field.id}
+                    field={field}
+                    removeLabel={config.labels.removeFile}
+                    value={values[field.id]}
+                    disabled={submitting}
+                    onChange={(value) =>
+                      setDraft((current) => current && { ...current, values: { ...current.values, [field.id]: value } })
                     }
                   />
-                </Stack>
-              ) : null}
-              {error ? (
-                <Text textStyle="paragraph/S/regular" color="fg.error">
-                  {error}
-                </Text>
-              ) : null}
-            </Stack>
-          </Dialog.Body>
+                ))}
+                {editableAttributes.length > 0 ? (
+                  <Stack gap="2xs">
+                    <Text textStyle="label/S/medium">{config.labels.properties}</Text>
+                    <ParamEditorHorizontal
+                      variant="small"
+                      params={editableAttributes.map((attribute) =>
+                        attributeToParam(attribute, attribute.id === columnAttributeId),
+                      )}
+                      defaultValues={attributeValues as ParamValueMap}
+                      readOnly={submitting}
+                      onChange={(attributeId, value) =>
+                        setDraft(
+                          (current) =>
+                            current && {
+                              ...current,
+                              attributeValues: { ...current.attributeValues, [attributeId]: value },
+                            },
+                        )
+                      }
+                    />
+                  </Stack>
+                ) : null}
+                {error ? (
+                  <Text textStyle="paragraph/S/regular" color="fg.error">
+                    {error}
+                  </Text>
+                ) : null}
+              </Stack>
+            </Dialog.Body>
+          </ScrollArea>
           <Dialog.Footer justifyContent="end">
             <HStack gap="2">
               <Button size="sm" variant="ghost" disabled={submitting} onClick={close}>

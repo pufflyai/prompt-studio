@@ -95,7 +95,7 @@ The report must explain the change and include outputs that a reviewer can inspe
 6. Complete the report at the returned `path`.
 7. Run `pst reports save --name <returned-name>` and keep its `reportId` for revision submission.
 
-Report creation never overwrites an existing report. When the base file exists, the command returns a numbered report such as `change_request_01` at `.pstdio/extension-storage/pstdio-reports/reports/change_request/report_01.md`.
+Report creation never overwrites an existing report. When the base file exists, the command returns a numbered report such as `change_request_01` at `.pstdio/extension-storage/pstdio.pstdio-reports/reports/change_request/report_01.md`.
 
 Only an independent reviewer creates a review report. The implementation agent uses a change request report.
 

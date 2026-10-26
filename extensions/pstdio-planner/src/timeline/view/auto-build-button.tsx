@@ -37,12 +37,26 @@ export interface AutoBuildButtonProps {
   stuck?: boolean;
   disabled?: boolean;
   configuration?: Omit<AutoBuildFormProps, "onClose" | "t">;
+  onStop: () => Promise<boolean>;
   onOpenSession: (session: AutoBuildSession) => void;
   t: (key: string, fallback?: string) => string;
 }
 
 export function AutoBuildButton(props: AutoBuildButtonProps) {
-  const { enabled, paused, completed, supervisor, running, error, stuck, disabled, configuration, starting, t } = props;
+  const {
+    enabled,
+    paused,
+    completed,
+    supervisor,
+    running,
+    error,
+    stuck,
+    disabled,
+    configuration,
+    onStop,
+    starting,
+    t,
+  } = props;
   const [content, setContent] = useState<"configuration" | "sessions" | null>(null);
   const anchor = useRef<HTMLButtonElement>(null);
   const failed = (!completed && supervisor?.status === "failed") || Boolean(error);
@@ -60,6 +74,9 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
   const activity = status?.replaceAll("_", " ") ?? "off";
   const close = () => {
     if (!disabled) setContent(null);
+  };
+  const stop = async () => {
+    if (await onStop()) setContent(null);
   };
 
   return (
@@ -82,6 +99,7 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
         failed={failed}
         anchor={anchor}
         onClose={close}
+        onStop={() => void stop()}
         onConfigure={() => setContent("configuration")}
       />
       <Dialog.Root

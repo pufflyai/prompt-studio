@@ -1,8 +1,9 @@
-import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
+import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DraftHarnessCommandInput, HarnessCommandState, HarnessOperation } from "pstdio-api-contracts";
 import { getApiClient } from "@/lib/api";
 import { assertCurrentNativeAction } from "../chat/native-action-state";
+import { type SessionViewContext, sessionViewIsOpen } from "../chat/session-view-context";
 
 export const useHarnessCommands = (
   sessionId: string | null,
@@ -11,11 +12,9 @@ export const useHarnessCommands = (
   createCommand: (
     operation: HarnessOperation,
   ) => Promise<{ status: "completed" | "started"; sessionId: string; message?: string }>,
-  input: WorkbenchPanelRenderInput,
+  input: SessionViewContext,
 ) => {
-  const open = useWorkbenchStore(input.workbench.layout.store, () =>
-    input.workbench.host.getOpenPlacementIds().has(input.instance.instanceId),
-  );
+  const open = useWorkbenchStore(input.workbench.layout.store, () => sessionViewIsOpen(input));
   const client = useQueryClient();
   const queryKey = ["harness-commands", sessionId, harnessId, sessionId ? undefined : draft];
   const state = useQuery<HarnessCommandState & { harnessId: string }>({

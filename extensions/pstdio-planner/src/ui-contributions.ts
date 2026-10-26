@@ -1,8 +1,6 @@
-import type { ViewRef } from "@pstdio/sdk/extensions";
 import {
   defineNavigationItem,
   defineNavigationTree,
-  definePage,
   defineSettingsPanel,
   defineSettingsSection,
   defineView,
@@ -28,11 +26,11 @@ import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STAT
 import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
 import { REVIEW_REQUEST_ICON } from "./data/review-request-summary";
 import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES, ticketBoard, timelineBoard } from "./data/ticket-board";
-import { ticketActivationTarget, ticketDocumentPage, ticketRequestsPage } from "./data/ticket-page-target";
+import { ticketActivationTarget } from "./data/ticket-page-target";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
-import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
 import { ticketNavigationStructure } from "./ticket-navigation-structure";
+import { createTicketPages } from "./ticket-pages";
 import { timelineViewSchema } from "./timeline/commands/view-schema";
 import { planChanged } from "./timeline/contracts";
 import { queryWorkflowSettings, saveWorkflowSettings } from "./views/workflow-settings";
@@ -50,40 +48,6 @@ const createTagSettingsView = (baseUrl: string) =>
       capabilities: ["commands.execute"],
     },
   });
-const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
-  const ticketsPage = definePage({
-    id: "tickets",
-    title: l10n("kanbanRenderers.tickets.title", "Tickets"),
-    icon: "square-kanban",
-    path: "tickets",
-    mode: workbenchModes.project,
-    main: {
-      kind: "view",
-      view: tickets,
-      cardinality: "one",
-    },
-    slots: [],
-  });
-  const ticketDetailPage = definePage({
-    id: ticketDocumentPage.id,
-    title: l10n("panels.ticketEditor.title", "Ticket"),
-    icon: "component",
-    path: ticketDocumentPage.path,
-    document: ticketDocumentPage.document,
-    mode: workbenchModes.project,
-    parent: ticketsPage.ref,
-    resource: {
-      kinds: [ticketResourceKind.ref],
-    },
-    main: {
-      kind: "view",
-      view: editor,
-      cardinality: "one",
-    },
-    slots: [],
-  });
-  return { ticketDetailPage, ticketsPage };
-};
 export const createPlannerUi = (baseUrl: string) => {
   const tagSettings = createTagSettingsView(baseUrl);
   const settingsSection = defineSettingsSection({ id: "planner", title: "Project Planner", order: 25 });
@@ -116,17 +80,6 @@ export const createPlannerUi = (baseUrl: string) => {
       entry: packageAsset("./src/views/ticket-review-requests.tsx", baseUrl),
       capabilities: ["commands.execute"],
     },
-  });
-  const requestsPage = definePage({
-    id: ticketRequestsPage.id,
-    title: l10n("requests.page.title", "Needs attention"),
-    icon: REVIEW_REQUEST_ICON,
-    parent: { kind: "page", id: "tickets" },
-    path: "ticket-requests",
-    mode: workbenchModes.project,
-    resource: { kinds: [ticketResourceKind.ref] },
-    main: { kind: "view", view: requests.ref, cardinality: "one" },
-    slots: [],
   });
   const tickets = defineView({
     id: ticketBoard.id,
@@ -229,7 +182,11 @@ export const createPlannerUi = (baseUrl: string) => {
       emptyTitle: l10n("controls.ticketProperties.emptyTitle", "No ticket selected"),
     },
   });
-  const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
+  const { ticketDetailPage, ticketsPage, ticketBoardPanel, requestsPage } = createTicketPages(
+    tickets.ref,
+    editor.ref,
+    requests.ref,
+  );
   return {
     views: [
       statusSettings,
@@ -243,6 +200,7 @@ export const createPlannerUi = (baseUrl: string) => {
       workflowSettings,
     ],
     pages: [ticketsPage, ticketDetailPage, requestsPage],
+    placements: [ticketBoardPanel],
     viewMenus: [
       defineViewMenu({
         id: "ticket.properties",
