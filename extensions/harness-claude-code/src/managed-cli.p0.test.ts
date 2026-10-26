@@ -74,3 +74,17 @@ test("uses a native executable for interactive sign-in through a Windows npm shi
     }),
   ).toBe(native);
 });
+
+test("native resolution outside Linux skips diagnostic reports", () => {
+  const previous = process.report!.getReport;
+  process.report!.getReport = () => {
+    throw new Error("Report unavailable");
+  };
+  try {
+    expect(
+      resolveManagedClaude({ platform: "darwin", resolvePackage: () => "/private/package.json", exists: () => true }),
+    ).not.toBeNull();
+  } finally {
+    process.report!.getReport = previous;
+  }
+});
