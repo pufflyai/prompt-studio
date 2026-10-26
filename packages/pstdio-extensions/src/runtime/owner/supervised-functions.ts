@@ -12,18 +12,20 @@ export const createSupervisedFunctionWrapper = (owner: {
   cpuGroup: object;
   resources?: ExtensionResourceCoordinator;
   isLive: () => boolean;
+  generation: () => number;
   recover: (path: string[], args: unknown[]) => Promise<unknown>;
   signal: () => AbortSignal;
   awaitExit: () => Promise<void>;
   watchSignal: (signal: AbortSignal) => () => void;
 }) => {
   const wrap = (value: unknown, path: string[] = []): unknown => {
-    if (typeof value === "function")
+    if (typeof value === "function") {
+      const generation = owner.generation();
       return async (...args: unknown[]) => {
         const context = args[0] as { signal?: AbortSignal } | undefined;
         const signal = context?.signal instanceof AbortSignal ? context.signal : undefined;
         signal?.throwIfAborted();
-        if (!owner.isLive()) return owner.recover(path, args);
+        if (!owner.isLive() || owner.generation() !== generation) return owner.recover(path, args);
         const invocation = prepareInvocation(context, args);
         const invoke = async () => {
           const cleanup = signal ? owner.watchSignal(signal) : () => {};
@@ -49,6 +51,7 @@ export const createSupervisedFunctionWrapper = (owner: {
             )
           : invoke();
       };
+    }
     if (Array.isArray(value)) return value.map((item, index) => wrap(item, [...path, String(index)]));
     if (!value || typeof value !== "object") return value;
     return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, wrap(item, [...path, key])]));

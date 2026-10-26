@@ -111,6 +111,55 @@ test("host execution controls report shared projects, stop a loop and recover pe
     expect(recovered.outcome).toMatchObject({ ok: true, value: first.id });
     const enabled = await handle.deps.extensionService.getProjectExtensionInstance(first.id, instance.id);
     expect(enabled?.instance.enabled).toBe(true);
+
+    const adopted = await handle.deps.extensionRuntimeCatalog.get(first.id);
+    writeFileSync(join(sourcePath, "extension.ts"), "throw new Error('invalid candidate'); export default {};\n");
+    const failedReload = await post(`/v1/projects/${first.id}/extensions/${instance.id}/reload`);
+    expect(failedReload.status).toBe(200);
+    expect((await failedReload.json()).status).toBe("error");
+    const retained = await handle.deps.extensionRuntimeCatalog.get(first.id);
+    expect(retained.generation).toBe(adopted.generation);
+    expect(retained.runtime.commands[0]?.run).toBe(adopted.runtime.commands[0]?.run);
+    const stillWorking = await (
+      await post(`/v1/projects/${first.id}/extensions/commands/test.controlled.command.work/execute`)
+    ).json();
+    expect(stillWorking.outcome).toMatchObject({ ok: true, value: first.id });
+
+    writeFileSync(
+      join(sourcePath, "extension.ts"),
+      `export default { commands: [{
+      id: 'work', ref: { kind: 'command', id: 'work' }, title: 'Work', run: () => 'repaired'
+    }] };`,
+    );
+    const repaired = await post(`/v1/projects/${first.id}/extensions/${instance.id}/reload`);
+    expect((await repaired.json()).status).toBe("loaded");
+    const replacement = await handle.deps.extensionRuntimeCatalog.get(first.id);
+    expect(replacement.generation).toBeGreaterThan(retained.generation);
+    expect(
+      (await (await post(`/v1/projects/${first.id}/extensions/commands/test.controlled.command.work/execute`)).json())
+        .outcome,
+    ).toMatchObject({ ok: true, value: "repaired" });
+
+    writeFileSync(join(sourcePath, "extension.ts"), "while (true) {}; export default {};\n");
+    const importing = post(`/v1/projects/${first.id}/extensions/${instance.id}/reload`);
+    let initializing = false;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const inspection = await (await handle.app.request(base)).json();
+      if (inspection.owners.some((owner: { state: string }) => owner.state === "starting")) {
+        initializing = true;
+        break;
+      }
+      await Bun.sleep(5);
+    }
+    expect(initializing).toBe(true);
+    expect((await post(base, { action: "stop" })).status).toBe(200);
+    expect((await (await importing).json()).status).toBe("error");
+    expect((await handle.deps.extensionRuntimeCatalog.get(first.id)).generation).toBe(replacement.generation);
+    expect((await post(base, { action: "restart" })).status).toBe(200);
+    expect(
+      (await (await post(`/v1/projects/${first.id}/extensions/commands/test.controlled.command.work/execute`)).json())
+        .outcome,
+    ).toMatchObject({ ok: true, value: "repaired" });
   } finally {
     await handle?.close();
     for (const [key, value] of Object.entries(previous)) {

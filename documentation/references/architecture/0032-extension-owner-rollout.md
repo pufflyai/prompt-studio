@@ -10,6 +10,8 @@ The API's source loader and project source cache use the host loader exported by
 
 Owners share unchanged canonical source/load keys, including across project snapshots. Distinct installed paths stay separate. An owner keeps its prepared bundle for explicit recovery after an exit or cancellation, so recovery does not adopt an edit made since the snapshot was loaded. Failed calls are not replayed. Module state resets in the replacement process; host storage remains authoritative.
 
+Adopted callback wrappers retain their process generation. After replacement, every later call resolves against that owner's restored definition rather than a closed bridge handle. A failed Reload reports its stored diagnostic without triggering the adoption refresh. Real API tests retain both generation and handler identity after a throwing candidate or canceled import loop; a repaired candidate then adopts successfully.
+
 The supervisor starts from the existing filtered environment and an isolated temporary working directory. Source-mode Bun also disables automatic environment-file loading. The child gets its own temporary `PSTDIO_HOME`, rather than the host's database, descriptor or credentials. Filesystem access is still governed by the OS user. This implements no OS filesystem sandbox; [ADR 0058](../../adrs/0058-isolate-extension-backends.md) remains separate work.
 
 The packaged CLI contains the owner entry. It re-executes the same binary through an internal IPC entry point. App shutdown disposes registered owners before awaiting extension startup work.

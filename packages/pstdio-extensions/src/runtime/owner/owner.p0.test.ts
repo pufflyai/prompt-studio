@@ -144,6 +144,7 @@ test("an explicit command after cancellation restores its adopted bytes without 
   expect(await failed).toMatchObject({ code: "extension_owner_cancelled" });
   writeFileSync(join(owner.sourcePath, "extension.ts"), "throw new Error('unadopted edit');");
   expect(await run({} as never, {})).toBe("adopted");
+  expect(await run({} as never, {})).toBe("adopted");
 });
 
 test("rejects unsupported command payloads explicitly", async () => {

@@ -143,7 +143,7 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
     });
 
     deps.emitInstalledSource(updated);
-    await deps.notifyInstalledSourcesChanged(existing.source_path);
+    // Failure diagnostics do not adopt the rejected source or invalidate healthy handlers.
     return { installedSource: updated, check: null };
   }
 };

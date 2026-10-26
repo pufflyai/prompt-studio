@@ -112,6 +112,7 @@ export const createExtensionOwner = (input: {
     cpuGroup,
     resources,
     isLive: () => Boolean(child),
+    generation: () => generation,
     recover: recoverHandler,
     signal: () => admission.signal,
     awaitExit: () => reaping,
