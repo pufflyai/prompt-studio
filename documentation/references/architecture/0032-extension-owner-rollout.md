@@ -50,6 +50,8 @@ Stop is supervisor-owned and works during import or without a live command. It r
 
 The initialization deadline is 10 seconds in the pilot. It is separate from command execution: a legitimate long command has no new execution deadline. User cancellation terminates the shared owner, so every call using that source process can be affected. Termination does not undo accepted host writes. Platform process cleanup uses a POSIX process group or Windows `taskkill /T`; native platform verification is still required.
 
+POSIX cleanup also terminates descendants remaining in the process group after the owner itself exits. A real-child regression covers that case. Windows descendant ownership after parent exit still needs a native job-object or equivalent lifecycle implementation; the POSIX test is not evidence for it. Processes that deliberately escape their ownership group are not contained by this pilot's process separation.
+
 The registry currently caps retained owners at 16 and releases them at runtime shutdown. Reference-based reclamation of adopted, candidate, invocation and session generations is not implemented. This cap is an explicit pilot bound, not the PRD's memory admission policy.
 
 ## Resource coordinator

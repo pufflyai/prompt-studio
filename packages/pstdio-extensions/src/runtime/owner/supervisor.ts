@@ -10,6 +10,7 @@ import { type ExtensionResourceCoordinator, extensionWorkCosts, selectExtensionR
 import { createOwnerEndpoint } from "./endpoint";
 import type { OwnerMessage } from "./protocol";
 import { createSupervisedFunctionWrapper } from "./supervised-functions";
+import { terminateOwnerProcess } from "./terminate-process";
 
 export class ExtensionOwnerError extends Error {
   readonly code: string;
@@ -57,22 +58,7 @@ export const createExtensionOwner = (input: {
     loading = undefined;
     for (const dispose of listeners) dispose();
     listeners.clear();
-    if (previous && previous.exitCode === null) {
-      if (process.platform === "win32") {
-        const kill = Bun.spawn(["taskkill", "/pid", String(previous.pid), "/T", "/F"], {
-          stdout: "ignore",
-          stderr: "ignore",
-        });
-        await kill.exited;
-      } else {
-        try {
-          process.kill(-previous.pid, "SIGKILL");
-        } catch {
-          previous.kill("SIGKILL");
-        }
-      }
-      await previous.exited;
-    }
+    if (previous) await terminateOwnerProcess(previous);
     if (disposed && root) {
       const obsoleteRoot = root;
       root = undefined;
