@@ -26,12 +26,22 @@ for (const kind of ["streaming", "panels"] as const) {
       const phase = (name: string) => logTestPhase(`Packaged chat motion: ${name} (${Date.now() - startedAt}ms)`);
       const root = mkdtempSync(join(tmpdir(), "pstdio-packaged-chat-motion-"));
       let child: ChildProcess | undefined;
-      const browser = await chromium.launch(PROVISIONED_CHROMIUM);
+      let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
       try {
-        const started = await startPackagedServe(root, {
+        const startingRuntime = startPackagedServe(root, {
           PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture"),
+        }).then((runtime) => {
+          child = runtime.child;
+          return runtime;
         });
-        child = started.child;
+        const launchingBrowser = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
+          browser = opened;
+          return opened;
+        });
+        const [runtimeSetup, browserSetup] = await Promise.allSettled([startingRuntime, launchingBrowser]);
+        if (runtimeSetup.status === "rejected") throw runtimeSetup.reason;
+        if (browserSetup.status === "rejected") throw browserSetup.reason;
+        const started = runtimeSetup.value;
         phase("runtime ready");
         const headers = runtimeAuthorization(started.descriptor);
         const folder = join(root, "chat-project");
@@ -59,7 +69,7 @@ for (const kind of ["streaming", "panels"] as const) {
         });
         expect(idleResponse.ok).toBe(true);
         phase("second conversation created");
-        const page = await browser.newPage({ extraHTTPHeaders: headers });
+        const page = await browserSetup.value.newPage({ extraHTTPHeaders: headers });
         await page.addInitScript((projectId) => {
           localStorage.setItem("onboarding-complete", "true");
           localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
@@ -75,7 +85,7 @@ for (const kind of ["streaming", "panels"] as const) {
           phase("panel motion checked");
         }
       } finally {
-        await browser.close();
+        await browser?.close();
         if (child) await stopProcess(child);
         rmSync(root, { recursive: true, force: true });
       }
