@@ -12,6 +12,7 @@ export { createPagePlaceholderBreadcrumbSchema } from "./extensions/page-placeho
 export * from "./extensions.terminal";
 export * from "./files";
 export * from "./harness";
+export * from "./harness-authentication";
 export * from "./harness-commands";
 export * from "./history-reconciliation";
 export * from "./link-icons";

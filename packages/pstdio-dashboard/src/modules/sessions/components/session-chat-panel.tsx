@@ -8,7 +8,6 @@ import { ArrowUpRight } from "lucide-react";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
 import { useApiFileParts } from "@/lib/api-file-url";
-import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
@@ -30,16 +29,16 @@ import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import type { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useStopSession } from "../hooks/use-stop-session";
-import { canSubmitSessionMessage } from "../runtime/session-runtime-selection";
 import { useSessionLinks } from "./session-chat-links";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionChatWorkspaceHub } from "./session-chat-workspace-hub";
-import { SessionComposerFallback } from "./session-composer-fallback";
+import { SessionPersonalDevice } from "./session-personal-device";
 import { SessionQueuedChatPanel } from "./session-queued-chat-panel";
 import { useCommandComposer } from "./use-command-composer";
 import { usePendingSessionFollowUp } from "./use-pending-session-follow-up";
 import { useSessionChatDraft } from "./use-session-chat-draft";
 import { useSessionDraftAttachments } from "./use-session-draft-attachments";
+import { useSessionHarness } from "./use-session-harness";
 import { useSessionModelSelection } from "./use-session-model-selection";
 
 interface DashboardSessionChatPanelProps {
@@ -115,15 +114,6 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     setHarnessParamOverrides,
   } = useSessionModelSelection(view, projectId);
   const draftAttachments = useSessionDraftAttachments(projectId, view.draftKey, drafts);
-  const { data: agents = [], isSuccess: availabilityChecked } = useAgents(projectId);
-  const noHarnessAvailable =
-    Boolean(projectId) && availabilityChecked && !agents.some((agent) => agent.availability.type === "INSTALLED");
-  const canSubmit = canSubmitSessionMessage({
-    agentOptions: agents.map((agent) => ({ value: agent.id, disabled: agent.availability.type === "NOT_FOUND" })),
-    selectedAgent,
-    selectedModel,
-    requiresModel: agents.find((agent) => agent.id === selectedAgent)?.supportsModels ?? true,
-  });
   const chatDraft = useSessionChatDraft(drafts, view.draftKey);
   const openCreatedSession = (createdSessionId: string, prompt: string) => {
     if (projectId) openCreatedSessionFromDraft({ input, sessionId: createdSessionId, prompt, projectId });
@@ -162,6 +152,16 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const chatMessages = useApiFileParts(splitDisplay.messages);
   const effectiveStreaming = streaming || view.status === "in_progress" || pendingWork;
   const canInterrupt = Boolean(sessionId) && effectiveStreaming && !stopSession.isPending;
+  const interrupt = sessionId && canInterrupt && !view.device ? () => stopSession.mutate(sessionId) : undefined;
+  const { account, canSubmit, noHarnessAvailable, needsLogin, setup, commands, submitAccountCommand } =
+    useSessionHarness({
+      input,
+      projectId,
+      selectedAgent,
+      selectedModel,
+      otherDevice: Boolean(view.device),
+      onInterrupt: interrupt,
+    });
 
   const send = (
     text: string,
@@ -169,6 +169,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     questionResponse: ChatInputQuestionResponse | undefined,
     onSubmitted?: () => void,
   ) => {
+    const accountCommand = submitAccountCommand(text, () => chatDraft.change(""));
+    if (accountCommand) return accountCommand;
     const command = commandComposer.submit(text, attachments, questionResponse, onSubmitted);
     if (command) return command;
     return submitSessionMessage({
@@ -193,7 +195,6 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
       onSessionCreated: (createdSessionId) => openCreatedSession(createdSessionId, text),
     });
   };
-  const unsent = pendingFollowUp?.failure ? pendingFollowUp : null;
 
   const decision = commandComposer.decision && {
     ...commandComposer.decision,
@@ -203,105 +204,103 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     chatDraft.change("");
     draftAttachments.clearSubmittedAttachments();
   });
-  const interrupt = sessionId && canInterrupt && !view.device ? () => stopSession.mutate(sessionId) : undefined;
 
   return (
     // The widget host sizes itself to its content, so the chat panel is pinned
     // to the region bounds and scrolls its messages internally instead of growing.
     <Box position="relative" h="full" w="full">
-      <Box position="absolute" inset="0" overflow="hidden" display="flex" flexDirection="column">
-        <Box flex="1" minH="0" overflow="hidden">
-          <SessionQueuedChatPanel
-            // Keying on the session id gives each session its own draft and scroll
-            // state, so switching sessions in the bubble is a real switch.
-            conversationKey={`dashboard-workbench-session:${view.id}`}
-            messages={chatMessages}
-            linkHandler={links.handler}
-            conversationNotices={
-              <>
-                {commandComposer.notices}
-                {links.notice}
-                <SessionChatNotices
-                  error={error}
-                  queueError={queueError}
-                  reconnect={reconnect}
-                  refreshQueue={refreshQueue}
-                  unsent={
-                    unsent?.failure
-                      ? {
-                          notice: unsent.failure,
-                          ...sessionUnsentActions(unsent, {
-                            clear: () => updatePendingFollowUp(view.draftKey, null),
-                            send,
-                            restore: (text, attachments) => {
-                              chatDraft.change(text);
-                              draftAttachments.restoreAttachments(attachments);
-                            },
-                          }),
-                        }
-                      : undefined
-                  }
-                />
-              </>
-            }
-            queuedFollowUps={splitDisplay.queuedFollowUps}
-            loading={loading}
-            streaming={effectiveStreaming}
-            streamingStartedAt={streamingStartedAt}
-            emptyStateTitle={emptyStateTitle}
-            emptyStateDescription={emptyStateDescription}
-            loaderComponent={<ChatSkeleton />}
-            chatInputPlaceholder="Reply to the agent..."
-            chatInputDefaultValue={chatDraft.text}
-            onChatInputChange={chatDraft.change}
-            chatInputCommands={commandComposer.suggestions}
-            composerDecision={decision}
-            composerFallback={
-              view.device || noHarnessAvailable ? (
-                <SessionComposerFallback input={input} deviceName={view.device?.name} onInterrupt={interrupt} />
-              ) : undefined
-            }
-            attachedResources={attachedResources}
-            projectId={projectId}
-            sessionId={sessionId}
-            draftKey={view.draftKey}
-            drafts={drafts}
-            queue={queue}
-            refreshQueue={refreshQueue}
-            draftAttachments={draftAttachments}
-            modelControls={{
-              projectId,
-              view,
-              selectedAgent,
-              setSelectedAgent,
-              selectedModel,
-              setSelectedModel,
-              harnessParamOverrides,
-              setHarnessParamOverrides,
-              children: commandComposer.controls,
-            }}
-            submitDisabled={!canSubmit || Boolean(view.device)}
-            inputDisabled={Boolean(view.device)}
-            workspaceHub={
-              <SessionChatWorkspaceHub
-                view={view}
-                projectId={projectId}
-                selectedWorkspaceId={selectedWorkspaceId}
-                setSelectedWorkspaceId={setSelectedWorkspaceId}
-                onSelectWorkspace={
-                  openWorkspaceOnSelection
-                    ? (workspace) => void openSelectedWorkspace(input, workspace, projectId)
+      <Box position="absolute" inset="0" overflow="hidden">
+        <SessionQueuedChatPanel
+          // Keying on the session id gives each session its own draft and scroll
+          // state, so switching sessions in the bubble is a real switch.
+          conversationKey={`dashboard-workbench-session:${view.id}`}
+          messages={chatMessages}
+          linkHandler={links.handler}
+          conversationNotices={
+            <>
+              {commandComposer.notices}
+              {account.notice}
+              {chatMessages.length > 0 ? setup : null}
+              {links.notice}
+              <SessionChatNotices
+                error={error}
+                queueError={queueError}
+                reconnect={reconnect}
+                refreshQueue={refreshQueue}
+                unsent={
+                  pendingFollowUp?.failure
+                    ? {
+                        notice: pendingFollowUp.failure,
+                        ...sessionUnsentActions(pendingFollowUp, {
+                          clear: () => updatePendingFollowUp(view.draftKey, null),
+                          send,
+                          restore: (text, attachments) => {
+                            chatDraft.change(text);
+                            draftAttachments.restoreAttachments(attachments);
+                          },
+                        }),
+                      }
                     : undefined
                 }
-                additions={view.additions}
-                deletions={view.deletions}
-                action={workspaceAction}
               />
-            }
-            onSubmitMessage={view.device ? undefined : submit}
-            onInterrupt={interrupt}
-          />
-        </Box>
+            </>
+          }
+          queuedFollowUps={splitDisplay.queuedFollowUps}
+          loading={loading}
+          streaming={effectiveStreaming}
+          streamingStartedAt={streamingStartedAt}
+          emptyStateTitle={emptyStateTitle}
+          emptyStateDescription={emptyStateDescription}
+          emptyStateContent={setup}
+          hideComposer={noHarnessAvailable}
+          loaderComponent={<ChatSkeleton />}
+          chatInputPlaceholder="Reply to the agent..."
+          chatInputDefaultValue={chatDraft.text}
+          onChatInputChange={chatDraft.change}
+          chatInputCommands={commands(commandComposer.suggestions)}
+          composerDecision={decision}
+          composerFallback={view.device ? <SessionPersonalDevice name={view.device.name} /> : undefined}
+          attachedResources={attachedResources}
+          projectId={projectId}
+          sessionId={sessionId}
+          draftKey={view.draftKey}
+          drafts={drafts}
+          queue={queue}
+          refreshQueue={refreshQueue}
+          draftAttachments={draftAttachments}
+          modelControls={{
+            projectId,
+            view,
+            selectedAgent,
+            setSelectedAgent,
+            selectedModel,
+            setSelectedModel,
+            harnessParamOverrides,
+            setHarnessParamOverrides,
+            children: commandComposer.controls,
+          }}
+          submitDisabled={Boolean(view.device) || (!canSubmit && !account.isCommand(chatDraft.text))}
+          messagesBlocked={needsLogin || noHarnessAvailable || account.checking || Boolean(account.progress)}
+          inputDisabled={Boolean(view.device)}
+          workspaceHub={
+            <SessionChatWorkspaceHub
+              view={view}
+              projectId={projectId}
+              selectedWorkspaceId={selectedWorkspaceId}
+              setSelectedWorkspaceId={setSelectedWorkspaceId}
+              onSelectWorkspace={
+                openWorkspaceOnSelection
+                  ? (workspace) => void openSelectedWorkspace(input, workspace, projectId)
+                  : undefined
+              }
+              additions={view.additions}
+              deletions={view.deletions}
+              action={workspaceAction}
+            />
+          }
+          onSubmitMessage={view.device ? undefined : submit}
+          onInterrupt={interrupt}
+        />
       </Box>
     </Box>
   );

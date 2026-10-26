@@ -11,6 +11,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
 // Also checks native harness controls and their structured values in packaged command handlers.
+// Packaged harnesses expose scoped account state and a private interactive account channel.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // Navigation metadata preserves tabless page presentation, panel views, slot replacements, caller-relative handoff and placeholder actions through the compiled host.

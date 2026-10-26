@@ -188,7 +188,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
   app.route("/v1", createAutomationRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createExtensionRoutes(deps));
-  app.route("/v1", createAgentRoutes(deps));
+  app.route("/v1", createAgentRoutes(deps, { allowedOrigins: terminalOrigins }));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createNotificationsRoutes(deps));
   app.route("/v1", createBoardViewsRoutes(deps));

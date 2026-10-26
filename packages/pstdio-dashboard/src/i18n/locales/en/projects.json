@@ -196,5 +196,28 @@
     "notNow": "Not now",
     "cloneAndContinue": "Clone and continue",
     "chooseFolder": "Choose folder"
+  },
+  "harnessAccount": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "loginTitle": "Sign in to {{name}}",
+    "logoutTitle": "Sign out of {{name}}",
+    "instructions": "Complete sign-in here. Your provider may open a browser.",
+    "completed": "Account command completed",
+    "failed": "Account action failed",
+    "cancel": "Cancel",
+    "close": "Close",
+    "managed": "Credentials are managed by the runtime",
+    "requiredDescription": "Sign in to send messages. You can also use /login in the chat.",
+    "noHarnessTitle": "No harness available",
+    "noHarnessDescription": "Enable an agent harness in Extensions to start chatting.",
+    "extensions": "Browse extensions",
+    "noArguments": "{{command}} does not accept arguments.",
+    "deviceInstructions": "Enter this code on the sign-in page.",
+    "starting": "Starting account action…",
+    "openPage": "Open sign-in page",
+    "waiting": "Waiting for sign-in to finish in your browser.",
+    "projectRequired": "Open a project before signing in.",
+    "continue": "Continue"
   }
 }
