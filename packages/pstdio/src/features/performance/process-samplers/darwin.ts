@@ -5,7 +5,12 @@ export const createDarwinProcessSampler = () => {
   const library = dlopen("/usr/lib/libproc.dylib", {
     proc_pid_rusage: { args: ["int", "int", "ptr"], returns: "int" },
     proc_pidinfo: { args: ["int", "int", "u64", "ptr", "int"], returns: "int" },
+    mach_timebase_info: { args: ["ptr"], returns: "int" },
   });
+  const timebase = new Uint32Array(2);
+  library.symbols.mach_timebase_info(ptr(timebase));
+  // Native CPU counters use Mach ticks, whose duration depends on the machine.
+  const millisecondsPerTick = timebase[0]! / timebase[1]! / 1_000_000;
   return {
     read: async (pid: number) => {
       // sys/resource.h rusage_info_v4: UUID followed by thirty-five uint64 fields.
@@ -29,7 +34,7 @@ export const createDarwinProcessSampler = () => {
       return {
         processStartId: fields.getBigUint64(80, true).toString(),
         startedAt,
-        cpuTimeMs: (number(16) + number(24)) / 1_000_000,
+        cpuTimeMs: (number(16) + number(24)) * millisecondsPerTick,
         residentBytes: number(64),
         peakResidentBytes: null,
         physicalFootprintBytes: number(72),

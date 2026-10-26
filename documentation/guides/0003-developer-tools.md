@@ -114,7 +114,7 @@ The packaged desktop benchmarks measure the idle workbench with monitoring off a
 
 Desktop snapshots use schema version 2 and keep the version-1 fields used by the existing meter. The `capture` field adds a capture id, host version, platform, timestamps, actual sample gaps, and a rolling history of at most 150 samples and 512 KiB. `pst performance` prints this same capture.
 
-The desktop observes its local Bun runtime from a separate process. A busy runtime therefore cannot prevent its CPU and memory readings. CPU is a percentage of one logical core; a process using several cores can exceed 100%. A new process or PID reuse starts a new CPU baseline. The first CPU percentage is unavailable, not zero.
+The desktop observes its local Bun runtime from a separate process. A busy runtime therefore cannot prevent its CPU and memory readings. Native CPU counters are converted to milliseconds before calculating CPU as a percentage of one logical core; a process using several cores can exceed 100%. On macOS this conversion uses the machine's clock tick duration. A new process or PID reuse starts a new CPU baseline. The first CPU percentage is unavailable, not zero.
 
 Memory fields use bytes. `residentBytes` is current resident memory. macOS also supplies `physicalFootprintBytes`, which includes compressed memory, and `peakPhysicalFootprintBytes` for its lifetime peak. Windows supplies `privateCommittedBytes` separately from resident working set. Linux supplies resident and peak resident memory from procfs. Missing optional measurements are `null`. Shared working sets overlap, so adding process memory is not an exact application total.
 
