@@ -13,6 +13,7 @@ export type OpencodeServerStore = {
 };
 
 export type OpencodeServerDeps = {
+  reuseExisting?: boolean;
   startServer: OpencodeServerStarter;
   serverStore: OpencodeServerStore;
   pingServer: (url: string) => Promise<boolean>;
@@ -96,19 +97,27 @@ export const createServerConnection = (deps: OpencodeServerDeps) => {
     }
   };
 
-  const establish = async (signal: AbortSignal) => {
-    signal.throwIfAborted();
+  const storedConnection = async () => {
+    if (deps.reuseExisting === false) return null;
     const stored = await deps.serverStore.read();
     if (stored) {
       if (await deps.pingServer(stored)) return { url: stored, owned: null };
       await clearStoredUrl(stored);
     }
+    return null;
+  };
+
+  const establish = async (signal: AbortSignal) => {
+    signal.throwIfAborted();
+    const stored = await storedConnection();
+    if (stored) return stored;
     let lastError: unknown;
     for (let offset = 0; offset < maxServerPortAttempts; offset += 1) {
       signal.throwIfAborted();
       const port = defaultServerPort + offset;
       const url = buildServerUrl(defaultServerHost, port);
       if (await deps.isPortOpen({ host: defaultServerHost, port })) {
+        if (deps.reuseExisting === false) continue;
         if (await deps.pingServer(url)) {
           await deps.serverStore.write(url);
           return { url, owned: null };

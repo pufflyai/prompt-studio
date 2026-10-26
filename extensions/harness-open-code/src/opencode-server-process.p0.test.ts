@@ -2,7 +2,17 @@ import { expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { startOpencodeServer } from "./opencode-server-process";
+import { opencodeServerCommand, startOpencodeServer } from "./opencode-server-process";
+
+test("Windows shell launchers preserve executable paths containing spaces", () => {
+  const file = "C:\\Users\\Jane Doe\\npm\\opencode.cmd";
+  expect(opencodeServerCommand(file, "win32")).toEqual({ file: `"${file}"`, shell: true });
+  expect(opencodeServerCommand(file.replace(".cmd", ".exe"), "win32")).toEqual({
+    file: file.replace(".cmd", ".exe"),
+    shell: false,
+  });
+  expect(opencodeServerCommand("/tools/opencode", "linux")).toEqual({ file: "/tools/opencode", shell: false });
+});
 
 test("an owned server drains both log pipes after readiness and stops exactly once", async () => {
   const root = mkdtempSync(join(tmpdir(), "opencode-server-"));

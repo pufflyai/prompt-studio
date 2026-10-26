@@ -125,7 +125,7 @@ test("API-key login sends a masked reply directly to the native account store", 
       emit: async () => {},
       request: async (prompt) => {
         questions.push(prompt);
-        return "fixture-api-key";
+        return "  fixture-api-key\n";
       },
     },
     fixture.deps,

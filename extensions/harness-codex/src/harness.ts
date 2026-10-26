@@ -111,6 +111,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
     getAuthentication: getCodexAuthentication,
     authenticate: async (ctx, input, channel) => {
       await authenticateCodex(ctx, input, channel);
+      await deps.runtime.refreshAuthentication();
       modelCache = undefined;
     },
     listModels,

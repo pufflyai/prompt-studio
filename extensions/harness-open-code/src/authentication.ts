@@ -109,8 +109,8 @@ export const createOpencodeAuthentication = (deps: AuthenticationDeps) => {
     const native = data.methods[choice.provider]?.[method] ?? { type: "api", label: "API key" };
     const inputs = await collectInputs(native, channel);
     if (native.type === "api") {
-      const key = await channel.request({ type: "input", title: "API key", secret: true });
-      if (!key.trim()) throw new Error("Enter an API key.");
+      const key = (await channel.request({ type: "input", title: "API key", secret: true })).trim();
+      if (!key) throw new Error("Enter an API key.");
       await request(
         path,
         "PUT",

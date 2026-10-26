@@ -37,7 +37,7 @@ test("authentication follows the model provider, preserves free models, and save
     expect((await auth.getAuthentication({ model: "anthropic/sonnet" })).status).toBe("signed_out");
     expect((await auth.getAuthentication({ model: "openai/gpt" })).status).toBe("signed_in");
     expect((await auth.getAuthentication({ model: "local/small" })).status).toBe("not_required");
-    const replies = ["anthropic", "0", "workspace", "private-key"];
+    const replies = ["anthropic", "0", "workspace", "  private-key\n"];
     await auth.authenticate(
       { action: "login", model: "anthropic/sonnet" },
       { signal: new AbortController().signal, emit: async () => {}, request: async () => replies.shift()! },

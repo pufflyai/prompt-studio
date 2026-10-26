@@ -2,6 +2,37 @@ import { expect, test } from "bun:test";
 import { createServerConnection } from "./opencode-server";
 import { createOpencodeService } from "./opencode-service";
 
+test("fresh account connections leave a discovered server owned by its caller", async () => {
+  const external = Bun.serve({ port: 0, fetch: () => Response.json({ healthy: true }) });
+  let startedPort: number | undefined;
+  let stopped = 0;
+  const connection = createServerConnection({
+    reuseExisting: false,
+    serverStore: { read: async () => external.url.origin, write: async () => {}, clear: async () => {} },
+    pingServer: async () => true,
+    isPortOpen: async ({ port }) => port === 4096,
+    startServer: async ({ port }) => {
+      startedPort = port;
+      return {
+        url: "http://127.0.0.1:4097",
+        dispose: async () => {
+          stopped++;
+        },
+      };
+    },
+  });
+  try {
+    expect(await connection.withServerUrl(async (value) => value)).toBe("http://127.0.0.1:4097");
+    expect(startedPort).toBe(4097);
+    await connection.dispose();
+    expect(stopped).toBe(1);
+    expect((await fetch(external.url)).ok).toBe(true);
+  } finally {
+    await connection.dispose();
+    await external.stop(true);
+  }
+});
+
 test("concurrent requests share a failed replacement and later requests can reconnect", async () => {
   const entered = [Promise.withResolvers<void>(), Promise.withResolvers<void>()];
   const release = [Promise.withResolvers<void>(), Promise.withResolvers<void>()];
