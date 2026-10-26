@@ -38,37 +38,40 @@ for (const kind of ["streaming", "panels"] as const) {
           browser = opened;
           return opened;
         });
-        const [runtimeSetup, browserSetup] = await Promise.allSettled([startingRuntime, launchingBrowser]);
-        if (runtimeSetup.status === "rejected") throw runtimeSetup.reason;
+        const creatingProject = startingRuntime.then(async (started) => {
+          phase("runtime ready");
+          const headers = runtimeAuthorization(started.descriptor);
+          const folder = join(root, "chat-project");
+          mkdirSync(folder);
+          const projectResponse = await fetch(`${started.baseUrl}/v1/projects`, {
+            method: "POST",
+            headers: { ...headers, "content-type": "application/json" },
+            body: JSON.stringify(
+              folderProjectInput({ name: "Chat motion", agents: ["pstdio.workbench-fixture.harness.fake"] }, folder),
+            ),
+          });
+          expect(projectResponse.ok).toBe(true);
+          const project = (await projectResponse.json()) as { id: string };
+          phase("project created");
+          // A second conversation lets history checks switch away and reopen the retained replay.
+          const idleResponse = await fetch(`${started.baseUrl}/v1/sessions`, {
+            method: "POST",
+            headers: { ...headers, "content-type": "application/json" },
+            body: JSON.stringify({
+              project_id: project.id,
+              title: "Idle connection",
+              prompt: "First idle-session message",
+              agent: "pstdio.workbench-fixture.harness.fake",
+            }),
+          });
+          expect(idleResponse.ok).toBe(true);
+          phase("second conversation created");
+          return { started, headers, folder, project };
+        });
+        const [projectSetup, browserSetup] = await Promise.allSettled([creatingProject, launchingBrowser]);
+        if (projectSetup.status === "rejected") throw projectSetup.reason;
         if (browserSetup.status === "rejected") throw browserSetup.reason;
-        const started = runtimeSetup.value;
-        phase("runtime ready");
-        const headers = runtimeAuthorization(started.descriptor);
-        const folder = join(root, "chat-project");
-        mkdirSync(folder);
-        const projectResponse = await fetch(`${started.baseUrl}/v1/projects`, {
-          method: "POST",
-          headers: { ...headers, "content-type": "application/json" },
-          body: JSON.stringify(
-            folderProjectInput({ name: "Chat motion", agents: ["pstdio.workbench-fixture.harness.fake"] }, folder),
-          ),
-        });
-        expect(projectResponse.ok).toBe(true);
-        const project = (await projectResponse.json()) as { id: string };
-        phase("project created");
-        // A second conversation lets history checks switch away and reopen the retained replay.
-        const idleResponse = await fetch(`${started.baseUrl}/v1/sessions`, {
-          method: "POST",
-          headers: { ...headers, "content-type": "application/json" },
-          body: JSON.stringify({
-            project_id: project.id,
-            title: "Idle connection",
-            prompt: "First idle-session message",
-            agent: "pstdio.workbench-fixture.harness.fake",
-          }),
-        });
-        expect(idleResponse.ok).toBe(true);
-        phase("second conversation created");
+        const { started, headers, folder, project } = projectSetup.value;
         const page = await browserSetup.value.newPage({ extraHTTPHeaders: headers });
         await page.addInitScript((projectId) => {
           localStorage.setItem("onboarding-complete", "true");

@@ -53,8 +53,6 @@ test("packaged Planner board pans with a mouse and keeps ticket and column actio
       viewport: { width: 1000, height: 720 },
       extraHTTPHeaders: runtimeAuthorization(runtime.descriptor),
     });
-    await signInBrowser(page, runtime.descriptor);
-    phase("browser signed in");
     await createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Pan board ticket" });
     await createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Edge scroll ticket" });
     await createPlannerTicket(page.request, runtime.baseUrl, id, {
@@ -63,7 +61,8 @@ test("packaged Planner board pans with a mouse and keeps ticket and column actio
     });
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     phase("tickets created");
-    await page.goto(`${runtime.baseUrl}/projects/${id}/`);
+    await signInBrowser(page, runtime.descriptor, `/projects/${id}/`);
+    phase("browser signed in");
     await page.getByRole("option", { name: "Tickets", exact: true }).click();
     phase("board opened");
     await verifyBoardPanning(page);
