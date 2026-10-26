@@ -84,7 +84,7 @@ export const plannedCiJobs = (scope: Scope) => {
     );
     add(
       "quarantined_bun_tests",
-      ["ubuntu-latest", "windows-latest"].map((os) => `quarantined_bun_tests (${os})`),
+      ["ubuntu-latest", "windows-latest", "macos-15"].map((os) => `quarantined_bun_tests (${os})`),
       "P2",
     );
     add("quarantined_browser_tests", ["quarantined_browser_tests"], "P2");

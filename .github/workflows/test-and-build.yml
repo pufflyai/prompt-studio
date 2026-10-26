@@ -907,6 +907,7 @@ jobs:
         os:
           - ubuntu-latest
           - windows-latest
+          - macos-15
     env:
       E2E_TEST_LANE: quarantine
       CI_PRIORITY: P2
