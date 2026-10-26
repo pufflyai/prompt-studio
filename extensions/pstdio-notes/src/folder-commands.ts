@@ -11,7 +11,7 @@ export const createFolderCommand = defineCommand({
   params: { title: params.text({ label: l10n("params.folderName", "Folder name"), required: true }) },
   async run(ctx, input) {
     const folder = await writeResourceInOrder(`folders:${ctx.projectId}`, () =>
-      createFolder(notesMount(ctx), input.title),
+      createFolder(notesMount(ctx), ctx.storage.ids.create(), input.title),
     );
     await ctx.events.emit(notesChanged, {});
     return folder;

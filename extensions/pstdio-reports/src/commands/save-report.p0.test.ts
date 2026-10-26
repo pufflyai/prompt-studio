@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
-import { REPORTS_COLLECTION } from "../data/collections";
+import { REPORTS_COLLECTION, reportsCollection } from "../data/collections";
 import { reportFilesDir } from "../data/draft-storage";
 import { makeCommandArgs } from "./command-context.fixture";
 import { saveReportCommand } from "./save-report";
@@ -33,6 +33,29 @@ const failReportPutAndBlobDeletes = (storage: ExtensionStorageApi): ExtensionSto
 });
 
 describe("save report", () => {
+  test("new evidence files use core IDs and keep them on later saves", async () => {
+    const storage = createMemoryStorage();
+    const projectFiles = createMemoryRepoFiles();
+    const written = await writeReportCommand.run(
+      ...makeCommandArgs({ storage, params: { name: "review", template: "review" }, overrides: { projectFiles } }),
+    );
+    const allocated: string[] = [];
+    const allocate = storage.ids.create;
+    storage.ids.create = () => {
+      const id = allocate();
+      allocated.push(id);
+      return id;
+    };
+    await projectFiles.writeText(`${reportFilesDir("review")}/evidence.txt`, "Evidence");
+    const args = makeCommandArgs({ storage, params: { name: "review" }, overrides: { projectFiles } });
+    await saveReportCommand.run(...args);
+    const first = (await reportsCollection(storage).get(written.reportId))!.files[0]!;
+    expect(allocated).toEqual([first.id]);
+    await saveReportCommand.run(...args);
+    expect((await reportsCollection(storage).get(written.reportId))!.files[0]!.id).toBe(first.id);
+    expect(allocated).toHaveLength(1);
+  });
+
   test("preserves the storage write error when rollback blob cleanup fails", async () => {
     const storage = createMemoryStorage();
     const projectFiles = createMemoryRepoFiles();

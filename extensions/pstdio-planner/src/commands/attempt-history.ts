@@ -91,7 +91,7 @@ export const addReviewCommentCommand = defineCommand({
       if (!parent || parent.threadId !== thread.id) throw new Error("Reply target does not belong to this thread.");
     }
     const comment: ReviewComment = {
-      id: crypto.randomUUID(),
+      id: ctx.storage.ids.create(),
       reviewId: thread.reviewId,
       threadId: thread.id,
       author: actorFromSource(ctx.source, ctx.invocationId),

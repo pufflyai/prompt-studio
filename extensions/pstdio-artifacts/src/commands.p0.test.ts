@@ -2,6 +2,28 @@ import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
 import { commands } from "./commands";
 
+test("publishing allocates artifact and revision identities through core", async () => {
+  const storage = createMemoryStorage();
+  const allocate = storage.ids.create;
+  const allocated: string[] = [];
+  storage.ids.create = () => {
+    const id = allocate();
+    allocated.push(id);
+    return id;
+  };
+  const projectFiles = createMemoryRepoFiles();
+  const snapshots = createMemoryRepoFiles();
+  await projectFiles.writeText("page.html", "<title>Core identity</title>");
+  const published = await commands.publish.run(
+    ...makeCommandArgs({
+      storage,
+      params: { file_path: "page.html" },
+      overrides: { projectFiles, artifacts: { mount: () => snapshots } },
+    }),
+  );
+  expect(allocated).toEqual([published.revisionId, published.artifactId]);
+});
+
 test("a selected remote workspace cannot publish a file from the local project folder", async () => {
   const storage = createMemoryStorage();
   const snapshots = createMemoryRepoFiles();
