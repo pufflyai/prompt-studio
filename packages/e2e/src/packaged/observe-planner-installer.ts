@@ -12,8 +12,8 @@ const cache = join(root, "cache", "extension-bun-install");
 await mkdir(cache, { recursive: true });
 const stdout = Bun.file(join(root, "installer.stdout.log"));
 const stderr = Bun.file(join(root, "installer.stderr.log"));
-const binary = process.env.E2E_PACKAGED_BINARY_PATH;
-if (!binary) throw new Error("Compiled candidate path is required");
+const binary = process.env.PS932_INSTALL_BINARY ?? process.env.E2E_PACKAGED_BINARY_PATH;
+if (!binary) throw new Error("Installer binary path is required");
 const argv = [binary, "install", "--frozen-lockfile", "--ignore-scripts", "--production", "--verbose"];
 const env: NodeJS.ProcessEnv = {
   ...createExtensionInstallEnvironment({ ...process.env, HOME: root }),
