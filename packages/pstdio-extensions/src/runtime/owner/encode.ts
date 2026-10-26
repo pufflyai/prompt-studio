@@ -1,6 +1,7 @@
 import type { createHandleStore, Handler, HandleScope } from "./handles";
 import { readLocalValue } from "./local-values";
-import { type OwnerMessage, protocolLimits, type WireValue } from "./protocol";
+import { type OwnerMessage, protocolLimits, remoteError, type WireValue } from "./protocol";
+import { encodeOwnerStream } from "./readable-stream";
 export const createOwnerEncoder = (
   store: ReturnType<typeof createHandleStore>,
   send: (message: OwnerMessage) => void,
@@ -61,7 +62,8 @@ export const createOwnerEncoder = (
       ancestors.delete(value);
     }
   };
-  const primitive = (value: unknown, scope?: HandleScope): WireValue | undefined => {
+  const scalar = (value: unknown, scope?: HandleScope): WireValue | undefined => {
+    if (value instanceof Error) return { type: "error-value", error: remoteError(value) };
     if (value === undefined) return { type: "undefined" };
     if (value === null || typeof value === "string" || typeof value === "boolean") return value;
     if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -79,12 +81,13 @@ export const createOwnerEncoder = (
     if (ancestors.size > 64) throw new Error("Extension payload nesting exceeds its depth limit.");
     const local = readLocalValue(value);
     if (local) return { type: "local", value: encode(local, scope, ancestors) };
-    const literal = primitive(value, scope);
+    const literal = scalar(value, scope);
     if (literal !== undefined) return literal;
     if (typeof value !== "object" || value === null) throw new Error(`Unsupported extension payload: ${typeof value}`);
     if (value instanceof AbortSignal) return signal(value, scope);
     if (value instanceof Promise) return promise(value, scope);
     if (value instanceof Uint8Array || value instanceof ArrayBuffer) return binary(value);
+    if (value instanceof ReadableStream) return encodeOwnerStream(value, store, scope);
     if (Symbol.asyncIterator in value) return iterable(value as AsyncIterable<unknown>, scope);
     return object(value, scope, ancestors);
   };

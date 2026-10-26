@@ -28,9 +28,9 @@ const invokeOwnerFunction = async (
   const cleanup = signal ? owner.watchSignal(signal) : () => {};
   let retained = false;
   try {
-    const result = await value(...args);
-    retained = retainOwnerResult(result, cleanup);
-    return result;
+    const result = retainOwnerResult(await value(...args), cleanup);
+    retained = result.retained;
+    return result.value;
   } catch (error) {
     // Ordinary extension errors leave the process live. Reaping is only
     // required when supervision interrupted this invocation's process.

@@ -4,13 +4,13 @@ Proposed: 2026-10-26
 
 ## Status
 
-Proposed. Native Windows verification is required before attributing the failures solely to the test runner.
+Accepted. Native Windows diagnostics run `40370020672` passes all five unit/lint jobs with ordinary asynchronous awaiting. The runtime source matches the previously tested JSON transport; only assertion style and additional correctness checks changed.
 
 ## Context
 
 Two real-owner regressions use `await expect(promise).rejects` to check an ordinary extension error and an unsupported return payload. Native Windows Bun 1.4.4 reaches the existing 15-second test allowance without settling the assertions. Cleanup then disposes the owner and the assertion sees that disposal error. Both JSON and Bun-native IPC framing reproduce the failure. The same tests pass on macOS development execution.
 
-Upstream [Bun issue 46506](https://github.com/oven-sh/bun/issues/46506) describes an asynchronous rejection that settles with normal promise awaiting but hangs in `.rejects`. [Issue 45020](https://github.com/oven-sh/bun/issues/45020) describes the nested assertion loop blocking while promise continuations need to run. These are evidence for a test-runner hypothesis, not proof of this Windows failure's cause.
+The repository already describes this failure mechanism in [lesson 0016](../lessons-learned/0016-bun-expect-rejects-blocks-pipe-reads.md). Upstream [Bun issue 46506](https://github.com/oven-sh/bun/issues/46506) describes an asynchronous rejection that settles with normal promise awaiting but hangs in `.rejects`. [Issue 45020](https://github.com/oven-sh/bun/issues/45020) describes the nested assertion loop blocking while promise continuations need to run. Native Windows now confirms that ordinary awaiting restores these owner regressions without a transport change.
 
 ## Decision
 

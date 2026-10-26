@@ -124,7 +124,7 @@ test("preserves synchronous context factories, streams and extension error codes
   };
   const run = source!.definition.commands![0]!.run;
   expect(await run(ctx as never, {})).toEqual({ value: "item", chunks: ["one", "two"] });
-  // Normal awaiting avoids Bun's nested matcher loop (ADR 0110).
+  // Normal awaiting avoids Bun's nested matcher loop (ADR 0116 and lesson 0016).
   const failure = await Promise.resolve(run(ctx as never, { fail: true })).then(
     () => undefined,
     (error: unknown) => error,

@@ -1,6 +1,7 @@
 import { deferredValue } from "./deferred-value";
 import { restoreLocalValue } from "./local-values";
-import type { WireValue } from "./protocol";
+import { errorFromRemote, type WireValue } from "./protocol";
+import { decodeOwnerStream } from "./readable-stream";
 export const createOwnerDecoder = (
   call: (handle: string, args: unknown[]) => Promise<unknown>,
   signals: Map<string, AbortController>,
@@ -15,6 +16,10 @@ export const createOwnerDecoder = (
         return restoreLocalValue(decode(value.value) as Parameters<typeof restoreLocalValue>[0]);
       case "bytes":
         return new Uint8Array(value.values);
+      case "stream":
+        return decodeOwnerStream(value.id, value.bytes, call, release);
+      case "error-value":
+        return errorFromRemote(value.error);
       case "array":
         return value.values.map((item) => decode(item, disposers));
       case "object":

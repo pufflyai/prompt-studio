@@ -2,7 +2,7 @@ import { createOwnerDecoder } from "./decode";
 import { createOwnerEncoder } from "./encode";
 import { createHandleStore } from "./handles";
 import { errorFromRemote, type OwnerMessage, protocolLimits, remoteError } from "./protocol";
-import { retainOwnerResult } from "./result-lifetime";
+import { discardOwnerResult, retainOwnerResult } from "./result-lifetime";
 
 interface PendingCall {
   resolve: (value: unknown) => void;
@@ -57,13 +57,27 @@ export const createOwnerEndpoint = (sendMessage: (message: OwnerMessage) => void
       return;
     }
     try {
-      const result = decode(message.value);
-      if (!retainOwnerResult(result, request.release)) request.release();
-      request.resolve(result);
+      const result = retainOwnerResult(decode(message.value), request.release);
+      if (!result.retained) request.release();
+      request.resolve(result.value);
     } catch (error) {
       request.release();
       request.reject(error);
     }
+  };
+  type RegisteredHandle = NonNullable<ReturnType<typeof store.functions.get>>;
+  const deliverResult = async (handle: RegisteredHandle, args: unknown[], id: string, dispose: () => void) => {
+    const returned = await handle.fn(...args);
+    if (closed) {
+      await discardOwnerResult(returned);
+      return false;
+    }
+    const result = retainOwnerResult(returned, dispose);
+    if (result.retained) store.cleanup.add(dispose);
+    // Factory-returned methods inherit the exporting invocation's authority and admission scope.
+    const value = handle.inContext(() => encode(result.value, handle.scope));
+    send({ type: "result", id, value });
+    return result.retained;
   };
   const invoke = async (message: Extract<OwnerMessage, { type: "call" }>) => {
     if (incoming.size >= protocolLimits.pending || incoming.has(message.id)) {
@@ -76,24 +90,21 @@ export const createOwnerEndpoint = (sendMessage: (message: OwnerMessage) => void
     }
     incoming.add(message.id);
     const disposers = new Set<() => void>();
+    const dispose = () => {
+      for (const run of disposers) run();
+      disposers.clear();
+      store.cleanup.delete(dispose);
+    };
     let retained = false;
     try {
       const handle = store.functions.get(message.handle);
       if (!handle) throw new Error("Extension bridge handle is unavailable or has been released.");
       const args = decode(message.args, disposers);
       if (!Array.isArray(args)) throw new Error("Extension bridge call arguments must be an array.");
-      const result = await handle.fn(...args);
-      const dispose = () => {
-        for (const run of disposers) run();
-        disposers.clear();
-        store.cleanup.delete(dispose);
-      };
-      retained = retainOwnerResult(result, dispose);
-      if (retained) store.cleanup.add(dispose);
-      // Factory-returned methods inherit the exporting invocation's authority and admission scope.
-      const value = handle.inContext(() => encode(result, handle.scope));
-      send({ type: "result", id: message.id, value });
+      retained = await deliverResult(handle, args, message.id, dispose);
     } catch (error) {
+      retained = false;
+      dispose();
       if (!closed) send({ type: "error", id: message.id, error: remoteError(error) });
     } finally {
       incoming.delete(message.id);

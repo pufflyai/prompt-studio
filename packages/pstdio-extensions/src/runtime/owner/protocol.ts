@@ -9,6 +9,8 @@ export type WireValue =
   | { type: "bytes"; values: number[] }
   | { type: "local"; value: WireValue }
   | { type: "function" | "promise" | "iterator"; id: string }
+  | { type: "stream"; id: string; bytes: boolean }
+  | { type: "error-value"; error: RemoteError }
   | { type: "signal"; id: string; aborted: boolean };
 
 export interface RemoteError {

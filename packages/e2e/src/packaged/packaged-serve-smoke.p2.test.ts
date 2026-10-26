@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -68,6 +68,48 @@ test("prepares source identities in a separate process using the packaged execut
     expect(preparation.pid).toBeUndefined();
   } finally {
     await preparation.dispose();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("packaged owner streams retain scoped callbacks and BYOB reader behavior", async () => {
+  const root = mkdtempSync(join(tmpdir(), "packaged-owner-stream-"));
+  const path = writeExtensionWithDependency(root);
+  writeFileSync(
+    join(path, "extension.ts"),
+    `import { marker } from 'test-dep/feature';
+    export default { commands: [{ id: 'stream', run: (ctx) => {
+      let sent = false;
+      return new ReadableStream({ type: 'bytes', async pull(controller) {
+        if (sent) { controller.close(); controller.byobRequest?.respond(0); return; }
+        sent = true;
+        controller.enqueue(new TextEncoder().encode(marker + ':' + await ctx.storage.get('key')));
+      } });
+    } }] };`,
+  );
+  const owner = createExtensionOwner({ path, runtime: { executable: PACKAGED_BINARY_PATH, packaged: true } });
+  try {
+    const source = await owner.load();
+    const stream = (await source!.definition.commands![0]!.run(
+      {
+        storage: {
+          get: async (key: string) => {
+            expect(key).toBe("key");
+            return "scoped";
+          },
+        },
+      } as never,
+      {},
+    )) as unknown as ReadableStream<Uint8Array>;
+    expect(stream).toBeInstanceOf(ReadableStream);
+    const reader = stream.getReader({ mode: "byob" });
+    const first = await reader.read(new Uint8Array(128));
+    expect(new TextDecoder().decode(first.value)).toBe("loaded-via-exports-subpath:scoped");
+    expect((await reader.read(new Uint8Array(128))).done).toBe(true);
+    reader.releaseLock();
+    expect(owner.inspect().pendingCalls).toBe(0);
+  } finally {
+    await owner.dispose();
     rmSync(root, { recursive: true, force: true });
   }
 });
