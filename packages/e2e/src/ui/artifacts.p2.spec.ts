@@ -60,8 +60,14 @@ for (const title of ["Project brief", "System diagram"]) {
       expect(result.outcome.status, result.outcome.reason).toBe("success");
       const target = result.outcome.navigationRequests[0];
       expect(target.resource.id).toBe(result.outcome.value.sessionId);
-      await expect(page).toHaveURL(new RegExp(result.outcome.value.sessionId));
-      await expect(page.locator('[data-workbench-panel="main"]').getByRole("tab")).toHaveCount(0);
+      // The command opens a Session panel target, which keeps the library as the page location.
+      expect(target).toMatchObject({ kind: "panel", panel: { id: "project-session" } });
+      const sessionTab = page
+        .locator('[data-workbench-panel-header="side"]')
+        .getByRole("tab", { name: target.resource.label, exact: true });
+      await expect(sessionTab).toHaveAttribute("aria-selected", "true");
+      expect(new URL(page.url()).pathname).toBe(libraryUrl);
+      await expect(frame.getByRole("button", { name: title, exact: true })).toBeVisible();
       const session = await request.get(`${uiOrigin}/v1/sessions/${result.outcome.value.sessionId}`);
       expect(session.ok()).toBe(true);
       expect((await session.json()).project_id).toBe(project.id);
@@ -164,8 +170,9 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     });
     await expect(preview.locator("html")).toHaveAttribute("data-theme", "light");
     await expect(preview.getByRole("button", { name: "Complete", exact: true })).toBeVisible();
+    // Theme changes keep the selected artifact's own page location.
     const url = new URL(page.url());
-    expect(url.pathname + url.search).toBe(libraryUrl);
+    expect(url.pathname + url.search).toBe(first.url);
     writeFileSync(join(repo, "update.html"), "<title>Second page</title><h1>Second page</h1>");
     const second = await execute("publish", { file_path: "update.html", url: first.url, label: "Second" });
     expect(second.url).toBe(first.url);

@@ -5,7 +5,7 @@ import {
   type ExtensionStorageApi,
   params,
 } from "@pstdio/sdk/extensions";
-import { reportsCollection } from "../data/collections";
+import { putReport, reportsCollection } from "../data/collections";
 import {
   fileNameFromPath,
   readReportMarkdown,
@@ -113,7 +113,7 @@ export const saveReportCommand = defineCommand({
           ...file,
           blobId: await upload({ name: file.name, data: bytes, mimeType: file.mimeType ?? undefined }),
         });
-      next = {
+      next = await putReport(ctx.storage, {
         ...report,
         kind: frontmatter.kind ?? report.kind,
         source: frontmatter.source ?? report.source,
@@ -121,8 +121,7 @@ export const saveReportCommand = defineCommand({
         files: nextFiles,
         draft: false,
         updatedAt: new Date().toISOString(),
-      };
-      await reportsCollection(ctx.storage).put(report.id, next);
+      });
     } catch (error) {
       await Promise.allSettled(uploaded.map((blobId) => blobs.delete(blobId)));
       throw error;
