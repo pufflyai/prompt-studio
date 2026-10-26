@@ -12,7 +12,7 @@ export const registerPerformanceSmokeTests = () => {
     const lines = createInterface({ input: (await import("node:stream")).Readable.fromWeb(observer.stdout) });
     const iterator = lines[Symbol.asyncIterator]();
     try {
-      observer.stdin.write(`${observer.pid}\n`);
+      observer.stdin.write(`${process.pid}\n`);
       await observer.stdin.flush();
       const line = await iterator.next();
       expect(line.done).toBe(false);
@@ -26,6 +26,18 @@ export const registerPerformanceSmokeTests = () => {
       }
       if (process.platform === "win32") expect(reading.privateCommittedBytes).toBeGreaterThan(0);
       if (process.platform === "linux") expect(reading.peakResidentBytes).toBeGreaterThan(0);
+      const before = process.cpuUsage();
+      while (process.cpuUsage(before).user < 250_000) {
+        // Enough CPU work to tolerate coarse native counters without depending on scheduling.
+      }
+      observer.stdin.write(`${process.pid}\n`);
+      await observer.stdin.flush();
+      const next = JSON.parse((await iterator.next()).value!);
+      const used = process.cpuUsage(before);
+      const expectedMs = (used.user + used.system) / 1000;
+      const measuredMs = next.cpuTimeMs - reading.cpuTimeMs;
+      expect(measuredMs).toBeGreaterThan(expectedMs * 0.8);
+      expect(measuredMs).toBeLessThan(expectedMs * 1.2);
       observer.stdin.write("2147483647\n");
       await observer.stdin.flush();
       expect(JSON.parse((await iterator.next()).value!)).toBeNull();
