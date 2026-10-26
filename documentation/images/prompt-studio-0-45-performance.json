@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "bars",
+    "title": "Move a ticket on a 1,000-ticket board",
+    "before": { "value": 2950, "label": "2.95 s" },
+    "after": { "value": 31, "label": "31 ms" },
+    "wide": true
+  },
+  { "kind": "number", "title": "Board after a restart", "value": "< 2 s" },
+  { "kind": "number", "title": "Ticket ready to edit", "value": "380 ms" },
+  {
+    "kind": "bars",
+    "title": "Open 1,000 sessions",
+    "before": { "value": 764, "label": "764 ms" },
+    "after": { "value": 151, "label": "151 ms" },
+    "wide": true
+  }
+]

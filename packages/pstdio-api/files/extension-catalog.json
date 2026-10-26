@@ -11,8 +11,8 @@
         "path": "extensions/harness-claude-code",
         "ref": "{hostRelease}"
       },
-      "publisher": "pufflyai",
-      "default": true
+      "default": true,
+      "extensionId": "pstdio.harness-claude-code"
     },
     {
       "installName": "harness-codex",
@@ -24,8 +24,8 @@
         "path": "extensions/harness-codex",
         "ref": "{hostRelease}"
       },
-      "publisher": "pufflyai",
-      "default": true
+      "default": true,
+      "extensionId": "pstdio.harness-codex"
     },
     {
       "installName": "harness-open-code",
@@ -37,8 +37,8 @@
         "path": "extensions/harness-open-code",
         "ref": "{hostRelease}"
       },
-      "publisher": "pufflyai",
-      "default": true
+      "default": true,
+      "extensionId": "pstdio.harness-open-code"
     },
     {
       "installName": "harness-pi",
@@ -63,8 +63,8 @@
         "path": "extensions/pstdio-base-themes",
         "ref": "{hostRelease}"
       },
-      "publisher": "pufflyai",
-      "default": true
+      "default": true,
+      "extensionId": "pstdio.pstdio-base-themes"
     },
     {
       "installName": "pstdio-artifacts",
@@ -76,8 +76,8 @@
         "path": "extensions/pstdio-artifacts",
         "ref": "{hostRelease}"
       },
-      "publisher": "pstdio",
-      "default": false
+      "default": false,
+      "extensionId": "pstdio.pstdio-artifacts"
     },
     {
       "installName": "pstdio-notes",
@@ -89,8 +89,8 @@
         "path": "extensions/pstdio-notes",
         "ref": "{hostRelease}"
       },
-      "publisher": "pstdio",
-      "default": false
+      "default": false,
+      "extensionId": "pstdio.pstdio-notes"
     },
     {
       "installName": "pstdio-planner",
@@ -102,8 +102,8 @@
         "path": "extensions/pstdio-planner",
         "ref": "{hostRelease}"
       },
-      "publisher": "pufflyai",
-      "default": false
+      "default": false,
+      "extensionId": "pstdio.pstdio-planner"
     },
     {
       "installName": "pstdio-reports",
@@ -115,8 +115,8 @@
         "path": "extensions/pstdio-reports",
         "ref": "{hostRelease}"
       },
-      "publisher": "pufflyai",
-      "default": false
+      "default": false,
+      "extensionId": "pstdio.pstdio-reports"
     },
     {
       "installName": "pstdio-skills",
@@ -128,8 +128,34 @@
         "path": "extensions/pstdio-skills",
         "ref": "{hostRelease}"
       },
-      "publisher": "pufflyai",
-      "default": true
+      "default": true,
+      "extensionId": "pstdio.pstdio-skills"
+    },
+    {
+      "installName": "extension-lab",
+      "extensionId": "pstdio.extension-lab",
+      "displayName": "Extension Lab",
+      "description": "Five complete example tools built with public extension pages, resources, modes, and themes.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/extension-lab",
+        "ref": "{hostRelease}"
+      },
+      "default": false
+    },
+    {
+      "installName": "remote-workspaces",
+      "extensionId": "pstdio.remote-workspaces",
+      "displayName": "Remote Workspaces",
+      "description": "Run agent sessions in PocketCoder workspaces on another machine.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/remote-workspaces",
+        "ref": "{hostRelease}"
+      },
+      "default": false
     }
   ]
 }

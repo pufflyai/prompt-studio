@@ -39,8 +39,8 @@ const SessionChatDraftStory = (props: { initiallyClosed?: boolean; showMain?: bo
   const [workbench] = useState(() => {
     const workbench = createWorkbench({ initialSidePanelMode: initiallyClosed ? "closed" : "attached" });
     workbench.registerModule(createWorkspacesModule());
-    workbench.registerModule(createSessionBubbleModule({ sessionDraftPersistence: drafts }));
     if (showMain) workbench.registerModule(createSessionsModule({ sessionDraftPersistence: drafts }));
+    else workbench.registerModule(createSessionBubbleModule({ sessionDraftPersistence: drafts }));
     selectDashboardProject(workbench, { id: "project-story", name: "Prompt Studio" });
     if (showMain) openSessionsPage(workbench);
     else openWorkspacesPage(workbench);

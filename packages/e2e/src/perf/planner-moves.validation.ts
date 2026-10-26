@@ -120,13 +120,8 @@ try {
   const title = tickets[0].title;
   console.info(JSON.stringify({ validatingTicket: tickets[0].id, title }));
   const current = await executePlanner<StressTicket>(api, project.id, "get-ticket", { id: tickets[0].id });
-  const statuses = await executePlanner<{ statuses: Array<{ id: string; canDragIn: boolean }> }>(
-    api,
-    project.id,
-    "ticket-status.read",
-    {},
-  );
-  const destination = statuses.value.statuses.find(({ id, canDragIn }) => id !== current.value.statusId && canDragIn)!;
+  const statuses = await executePlanner<{ statuses: Array<{ id: string }> }>(api, project.id, "ticket-status.read", {});
+  const destination = statuses.value.statuses.find(({ id }) => id !== current.value.statusId)!;
   const sourceViewport = page.locator(`[data-board-column-viewport="${current.value.statusId}"]`);
   await sourceViewport.evaluate((element) => {
     element.scrollTop = 0;

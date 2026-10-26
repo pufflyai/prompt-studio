@@ -1,10 +1,8 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
 
-// `pst tickets implement`: move the ticket to in-progress in extension storage and
-// launch the implementation agent through the host session capability.
+// Launch the responsible agent. It updates progress using current project statuses.
 export const implementTicketCommand = defineCommand({
   id: "implement-ticket",
   mutating: true,
@@ -15,10 +13,8 @@ export const implementTicketCommand = defineCommand({
     agent: params.harness({ label: "Model" }),
   },
   async run(ctx, commandParams) {
-    const ticket = await findTicket(ctx.storage, commandParams.id);
+    const ticket = await findTicket(ctx, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
-
-    await moveTicketToInProgress(ctx, ticket.id);
 
     return ctx.sessions.create({
       title: `Implement ticket: ${ticket.shorthand}`,

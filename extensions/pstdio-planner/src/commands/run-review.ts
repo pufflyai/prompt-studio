@@ -39,6 +39,7 @@ export const runReviewCommand = defineCommand({
   ],
   params: {
     workspaceId: params.text({ label: "Workspace", required: false, resolvedFrom: "resource" }),
+    expectedRevision: params.number(),
     harness: params.harness({ label: "Harness", required: false }),
   },
   async run(ctx, commandParams) {
@@ -48,7 +49,8 @@ export const runReviewCommand = defineCommand({
       if (!attempt) throw new Error(`Unknown managed attempt "${workspaceId}"`);
       const revision = attempt.revisions.at(-1);
       if (!revision) throw new Error("The attempt has no submitted revision.");
-      if (attempt.state !== "review_ready") throw new Error("The attempt revision is not ready for review.");
+      if (commandParams.expectedRevision !== undefined && revision.revision !== commandParams.expectedRevision)
+        throw new Error("Attempt revision changed before review launch.");
 
       const reviewId = crypto.randomUUID();
       const timestamp = new Date().toISOString();
@@ -123,7 +125,7 @@ export const runReviewCommand = defineCommand({
             ? { ...candidate, reviews: [...candidate.reviews, review] }
             : candidate,
         );
-        await putAttempt(ctx.storage, { ...attempt, state: "reviewing", revisions, updatedAt: timestamp });
+        await putAttempt(ctx.storage, { ...attempt, revisions, updatedAt: timestamp });
         await appendAttemptEvent(ctx.storage, {
           workspaceId,
           revision: revision.revision,

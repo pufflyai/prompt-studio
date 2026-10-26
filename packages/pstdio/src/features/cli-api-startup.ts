@@ -1,5 +1,5 @@
-const LOCAL_COMMANDS = new Set(["close", "logs", "performance", "serve"]);
-const LOCAL_EXTENSION_COMMANDS = new Set(["add", "check", "install-browser", "test"]);
+const LOCAL_COMMANDS = new Set(["close", "logs", "performance", "performance-observer", "serve"]);
+const LOCAL_EXTENSION_COMMANDS = new Set(["add", "check", "install-browser", "pack", "test"]);
 
 /** `groupPaths` lists command groups, such as `auth tokens`, which only print help. */
 export const shouldEnsureApiForCommand = (argv: { _: unknown[] }, groupPaths: ReadonlySet<string>) => {

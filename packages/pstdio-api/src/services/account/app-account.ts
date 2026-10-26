@@ -2,9 +2,11 @@ import { accountEvents } from "pstdio-api-contracts/extension-kernel";
 import type { AppConfig } from "../../app-config";
 import type { RouteDeps } from "../../features/deps";
 import { fireExtensionEventAsync } from "../../features/extensions/extension-event-runtime";
+import { recoverCloudProject } from "../../features/projects/cloud-project-recovery";
 import { connectAppRelay } from "../relay/runtime";
 import { createNativeAccount, nativeAccountFile } from "./native-account";
 import { createProjectSyncEvents } from "./project-sync-events";
+import { startRecoveryCapture } from "./recovery-capture";
 
 export const createAppAccount = (
   config: AppConfig,
@@ -17,6 +19,7 @@ export const createAppAccount = (
     projects,
   });
   let stopEvents = () => {};
+  let stopRecovery = async () => {};
   const connectAccountRelay = <T extends { deps: RouteDeps; close: () => Promise<void> }>(app: T) => {
     const syncEvents = createProjectSyncEvents({
       status: (projectId) => accountService.projectSyncStatus(projectId),
@@ -27,9 +30,10 @@ export const createAppAccount = (
       {
         ...app,
         close: async () => {
+          await stopRecovery();
           stopEvents();
-          syncEvents.close();
-          accountService.close();
+          await syncEvents.close();
+          await accountService.close();
           await app.close();
         },
       },
@@ -42,12 +46,28 @@ export const createAppAccount = (
           stopEvents = app.deps.eventBus.subscribe((event) => {
             if (event.table === "projects") void accountService.refresh();
           });
-          accountService.start(async (connections) => {
-            await relay.update(connections);
-            // Signing in or out, or a membership change, can change any project's state, including
-            // projects that never synced: they move between local and offline.
-            for (const project of await projects.list()) void syncEvents.changed(project.id);
-          }, relay.status);
+          let cloudProjects: string[] = [];
+          const recovery = startRecoveryCapture({
+            recovery: app.deps.extensionStorageService.recovery,
+            // A first point waits for the first full download, so it never holds a partial project.
+            projects: async () => {
+              const ready: string[] = [];
+              for (const id of cloudProjects) if ((await relay.status(id)).offlineReady) ready.push(id);
+              return ready;
+            },
+          });
+          stopRecovery = recovery.close;
+          accountService.start(
+            async (connections) => {
+              cloudProjects = connections.map((connection) => connection.workbenchId);
+              await relay.update(connections);
+              // Signing in or out, or a membership change, can change any project's state, including
+              // projects that never synced: they move between local and offline.
+              for (const project of await projects.list()) void syncEvents.changed(project.id);
+            },
+            relay.status,
+            (connection, signal) => recoverCloudProject(app.deps, connection, signal),
+          );
         },
       },
     );

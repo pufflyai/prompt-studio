@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { freshInstallArgs } from "./fresh-install";
@@ -72,21 +72,91 @@ const checkConsumer = (
   );
   const install = freshInstallArgs(repoRoot, directory);
   run(directory, react ? install : [...install, "--omit", "peer"]);
+  run(directory, [
+    "--eval",
+    `
+import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
+const path = new URL("../../package.json", import.meta.resolve("@pstdio/sdk/extensions"));
+const manifest = await Bun.file(path).json();
+if (manifest.pstdio?.extensionApiVersion !== EXTENSION_API_VERSION)
+  throw new Error("Packed SDK API metadata differs from its runtime API version");
+`,
+  ]);
   writeFileSync(
     join(directory, "consumer.ts"),
     imports
       .map((entry, index) => `import * as entry${index} from ${JSON.stringify(entry)}; export { entry${index} };`)
       .join("\n") +
       `
-import { defineNavigationTree, defineView, workbenchModes } from "@pstdio/sdk/extensions";
+import { type CollectionBadgeItem, defineNavigationTree, defineView, workbenchModes } from "@pstdio/sdk/extensions";
+const attentionBadge: CollectionBadgeItem = {
+  id: "attention", label: "1",
+  action: { kind: "panel", panel: { kind: "page-slot", page: { kind: "page", id: "tickets" }, id: "attention" }, resource: { type: "ticket", id: "one" } },
+};
+void attentionBadge;
 const projectItems = defineView({ id: "project-items", title: "Items", body: { kind: "tree", body: async () => [] } });
 const projectNavigation = defineNavigationTree({ id: "project-items", owner: workbenchModes.project, view: projectItems.ref, resourceScope: "project" });
 if (projectNavigation.resourceScope !== "project") throw new Error("Navigation lost its resource scope");
+import type { ExtensionDiagnosticsResponse } from "@pstdio/sdk/api";
+type PageMain = ExtensionDiagnosticsResponse["roots"][number]["check"]["pages"][number]["main"];
+type Placeholder = Extract<NonNullable<Extract<PageMain, { kind: "panels" }>["empty"]>, { view: unknown }>;
+type Menus = NonNullable<NonNullable<Placeholder["breadcrumb"]>["menu"]>;
+type MenuAction = NonNullable<Menus[number]["rows"][number]["action"]>;
+type CompoundPanel = Extract<Extract<MenuAction, { kind: "compound" }>["targets"][number], { kind: "panel" }>;
+const consumePanelTarget = (target: CompoundPanel) => {
+  if (target.panel.kind === "page-slot") {
+    const page: { extensionId: string; kind: "page"; id: string } = target.panel.page;
+    return page.id;
+  }
+  return target.panel.id;
+};
+void consumePanelTarget;
 ` +
+      (imports.includes("@pstdio/workbench")
+        ? `
+import { createWorkbench } from "@pstdio/workbench";
+const headerWorkbench = createWorkbench();
+headerWorkbench.modes.registerMode({ id: "legacy", activate() {}, regionSettings: { main: { alwaysShowTabs: false } } });
+headerWorkbench.modes.registerMode({ id: "native", activate() {}, regionSettings: { main: { showHeader: false } } });
+headerWorkbench.views.registerView({ id: "content", title: "Content", body: { kind: "react", render: () => null } });
+for (const presentation of [undefined, "page", "tabs"] as const) {
+  const id = presentation ?? "legacy";
+  const page = { kind: "page", extensionId: "consumer", id } as const;
+  headerWorkbench.pages.registerPage({ id, ref: page, title: id, path: id, modeId: presentation ? "native" : "legacy",
+    main: { kind: "view", presentation, view: { kind: "view", id: "content" }, cardinality: "one" }, slots: [] });
+  headerWorkbench.pageLocations.setProject("consumer");
+  headerWorkbench.pageLocations.navigate({ kind: "page", page });
+  if (headerWorkbench.shell.getPanelPolicy("main").showHeader !== (presentation === "tabs")) {
+    throw new Error("Page headers lost the legacy or explicit presentation policy");
+  }
+}
+headerWorkbench.dispose();
+`
+        : "") +
       (react && imports.includes("@pstdio/ui")
         ? `
 import { createElement } from "react";
-import { BubblePanel } from "@pstdio/ui";
+import { BubblePanel, ListRow, TreeList } from "@pstdio/ui";
+import { Canvas, zoomCanvas, type CanvasCamera } from "@pstdio/ui/canvas";
+import { DependencyTimeline } from "@pstdio/ui/dependency-timeline";
+let camera: CanvasCamera = { x: 0, y: 0, zoom: 1 };
+const canvas = createElement(Canvas, {
+  "aria-label": "Design canvas", variant: "pan", zoom: camera.zoom, minZoom: 0.1, maxZoom: 4,
+  onPan: (delta) => { camera = { ...camera, x: camera.x + delta.x, y: camera.y + delta.y }; },
+  onZoom: (change) => { camera = zoomCanvas(camera, change, { minZoom: 0.1, maxZoom: 4 }); },
+});
+canvas.props.onZoom({ factor: 2, anchor: { x: 100, y: 50 } });
+if (camera.zoom !== 2 || camera.x !== -100 || camera.y !== -50) throw new Error("Canvas zoom lost its anchor");
+const timeline = createElement(DependencyTimeline, { today: "2026-10-10", tracks: [{ id: "work", label: "Work" }], sections: [{ id: "release", header: "Release", items: [{ id: "item", trackId: "work", dependencies: [], content: createElement("button", null, "Item") }] }] });
+const outliner = createElement(TreeList, {
+  sections: [{ id: "layers", nodes: [{ id: "image", label: "Image", startContent: createElement("span"),
+    actionsVisibility: "always", actions: [{ id: "visibility", label: "Visibility", pressed: true, disabled: false }] }] }],
+  activeNodeId: ["image"], onSelectionChange: (ids: string[]) => void ids, moveSelection: true,
+  onMoveNode: (source: string) => void source,
+});
+const groupRow = createElement(ListRow, { label: "Group", isContainer: true, showExpandToggle: true,
+  expandOnClick: false, onToggleExpand: () => {}, startContent: createElement("span") });
+void [canvas, timeline, outliner, groupRow];
 import { CollectionViewBar, EMPTY_VIEW_FILTER, filterRowsByView, withTitleField } from "@pstdio/ui/collection-view";
 const panelOverlay = createElement(BubblePanel, { isOpen: true, overlay: createElement("div", { "data-drop-feedback": true }) });
 void panelOverlay;
@@ -118,6 +188,11 @@ void [invalidAttribute, invalidColumn];
         : ""),
   );
   writeStoragePackageConsumer(directory);
+  if (react && dependencies["@pstdio/ui"]) {
+    cpSync(join(directory, "node_modules/@pstdio/ui/examples/performance"), join(directory, "performance-example"), {
+      recursive: true,
+    });
+  }
   writeFileSync(
     join(directory, "tsconfig.json"),
     JSON.stringify({
@@ -130,20 +205,22 @@ void [invalidAttribute, invalidColumn];
         target: "ES2022",
         lib: ["ES2022", "ESNext.Disposable", "DOM", "DOM.Iterable"],
         jsx: "react-jsx",
-        types: react ? ["node"] : [],
+        types: react ? ["node", "vite/client"] : [],
       },
-      include: ["consumer.ts", "storage-consumer.ts"],
+      include: ["consumer.ts", "storage-consumer.ts", "performance-example/*.ts", "performance-example/*.tsx"],
     }),
   );
   run(directory, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
+  run(directory, ["check", "-p", "tsconfig.json"]);
   if (react) {
     writeFileSync(
       join(directory, "vite.config.ts"),
       `import { defineConfig } from "vite";
-export default defineConfig({ build: { lib: { entry: "consumer.ts", formats: ["es"] } } });`,
+export default defineConfig({ build: { lib: { entry: ${JSON.stringify(dependencies["@pstdio/ui"] ? { consumer: "consumer.ts", performance: "performance-example/view.tsx" } : "consumer.ts")}, formats: ["es"] } } });`,
     );
     run(directory, ["node_modules/vite/bin/vite.js", "build"]);
     if (dependencies["@pstdio/ui"]) {
+      process.stdout.write(run(directory, [join(repoRoot, "scripts/verify/ui-bundle-boundaries.ts")]));
       const monaco = verifyMonacoPackageAssets(directory);
       console.log(`Resolved @pstdio/ui Monaco files with ${monaco.workers} workers and ${monaco.fonts} fonts.`);
     }
@@ -159,10 +236,10 @@ export default defineConfig({ build: { lib: { entry: "consumer.ts", formats: ["e
   );
 };
 
-export const verifyPublicPackages = (repoRoot: string, sdkOnly = false) => {
+export const verifyPublicPackages = (repoRoot: string, packageNames = ["sdk", "ui", "pstdio-workbench"]) => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-public-packages-"));
   try {
-    const packages = (sdkOnly ? ["sdk"] : ["sdk", "ui", "pstdio-workbench"]).map((name) => {
+    const packages = packageNames.map((name) => {
       const path = resolve(repoRoot, "packages", name, ".publish");
       const archive = join(root, `${name}.tgz`);
       run(path, ["pm", "pack", "--filename", archive]);
@@ -176,4 +253,7 @@ export const verifyPublicPackages = (repoRoot: string, sdkOnly = false) => {
   }
 };
 
-if (import.meta.main) verifyPublicPackages(resolve(import.meta.dirname, "../.."), process.argv.includes("--sdk-only"));
+if (import.meta.main) {
+  const names = process.argv.includes("--sdk-only") ? ["sdk"] : process.argv.slice(2);
+  verifyPublicPackages(resolve(import.meta.dirname, "../.."), names.length ? names : undefined);
+}

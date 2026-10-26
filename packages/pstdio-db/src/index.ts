@@ -22,11 +22,13 @@ export {
   type ExtensionSettingOwnerType,
 } from "./services/extension-settings/extension-settings";
 export { createExtensionStorageDBService } from "./services/extension-storage/extension-storage";
+export { RecoveryPointError } from "./services/extension-storage/recovery-points";
 export { createExtensionUserDataDBService } from "./services/extension-user-data/extension-user-data";
 export { createFilesDBService } from "./services/files/files";
 export { createInstalledExtensionSourcesDBService } from "./services/installed-extension-sources/installed-extension-sources";
 export { legacyResourceOwner, sessionColumns, workspaceColumns } from "./services/legacy-resource-links";
 export { createNotificationsDBService } from "./services/notifications/notifications";
+export { createProjectInfoDBService } from "./services/project-info";
 export { createProjectsDBService } from "./services/projects/projects";
 export { pageBoundary, pageLimit, queryPage } from "./services/query-page";
 export { createResourceLinksDBService } from "./services/resource-links";

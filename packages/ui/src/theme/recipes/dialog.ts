@@ -18,7 +18,19 @@ export const dialogSlotRecipe = defineSlotRecipe({
   variants: {
     variant: {
       create: {
-        header: { display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+        content: {
+          "--dialog-margin": "spacing.lg",
+          maxH: "calc(100dvh - {spacing.lg} * 2)",
+        },
+        header: {
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexShrink: 0,
+        },
+        body: { overflow: "visible" },
+        footer: { flexShrink: 0 },
       },
     },
   },

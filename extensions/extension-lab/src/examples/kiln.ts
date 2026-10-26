@@ -1,4 +1,4 @@
-import { defineExtension, definePlacement } from "@pstdio/sdk/extensions";
+import { defineExtension, definePlacement, defineStatusBarItem, workbenchSlots } from "@pstdio/sdk/extensions";
 import { defineExample, webview } from "../definition";
 
 const views = [
@@ -10,14 +10,18 @@ const views = [
 ];
 const example = defineExample({
   name: "kiln",
-  floatingPanels: "hidden",
   label: "Kiln",
   icon: "Box",
   primary: views[0].ref,
-  chrome: { nav: views[3].ref, sidenav: false, activity: false, status: views[4].ref },
+  chrome: { nav: views[3].ref, sidenav: false, activity: false },
   regionSettings: {
-    side: { size: { defaultPx: 340, minPx: 300, maxPx: 440 }, collapsible: false, alwaysShowTabs: false },
-    secondary: { size: { defaultPx: 188, minPx: 188, maxPx: 188 }, collapsible: false, showHeader: false },
+    side: {
+      size: { defaultPx: 340, minPx: 300, maxPx: 440 },
+      canClose: false,
+      alwaysShowTabs: false,
+      floatable: false,
+    },
+    secondary: { size: { defaultPx: 188, minPx: 188, maxPx: 188 }, canClose: false, showHeader: false },
   },
   slots: [
     {
@@ -37,6 +41,14 @@ const example = defineExample({
   initialResource: true,
 });
 export default defineExtension({
+  statusBarItems: [
+    defineStatusBarItem({
+      id: "kiln-scene",
+      view: views[4].ref,
+      slot: workbenchSlots.statusBarLeading,
+      when: { mode: example.mode.ref },
+    }),
+  ],
   placements: [
     definePlacement({
       id: "kiln-timeline",

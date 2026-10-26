@@ -2,12 +2,12 @@ import { Text } from "@chakra-ui/react";
 import { HostStorageProvider } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, fireEvent, userEvent, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
-const TreeGroups = (props: { counts?: boolean }) => {
-  const { counts } = props;
+const TreeGroups = (props: { counts?: boolean; chrome?: boolean }) => {
+  const { counts, chrome } = props;
   const [fixture] = useState(() => {
     const values = new Map<string, string>();
     const storage = {
@@ -15,7 +15,12 @@ const TreeGroups = (props: { counts?: boolean }) => {
       setItem: (key: string, value: string) => void values.set(key, value),
     };
     const workbench = createWorkbench();
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "project",
+      label: "Project",
+      chrome: chrome ? { sidenav: "group-navigation" } : undefined,
+      activate: () => undefined,
+    });
     workbench.views.registerView({
       id: "group-navigation",
       title: "Navigation",
@@ -95,6 +100,7 @@ const meta = {
   title: "pstdio-workbench/Guides/Tree groups",
   component: TreeGroups,
   parameters: { layout: "fullscreen" },
+  tags: ["tree-groups"],
 } satisfies Meta<typeof TreeGroups>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -113,5 +119,39 @@ export const CreateAndRename: Story = {
     await userEvent.clear(input);
     await userEvent.type(input, "Product research{Enter}");
     await expect(canvas.getByText("Product research")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Change group icon" }));
+    await userEvent.click(await document.findByRole("button", { name: "book open" }));
+    await expect(
+      canvas.getByRole("button", { name: "Change group icon" }).querySelector("svg.lucide-book-open"),
+    ).toBeVisible();
+  },
+};
+export const ModeChromeGroups: Story = { args: { chrome: true }, play: CreateAndRename.play };
+
+export const ReorderGroups: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const document = within(canvasElement.ownerDocument.body);
+    for (const name of ["Research", "Product"]) {
+      fireEvent.contextMenu(await canvas.findByRole("option", { name: "Search" }));
+      await userEvent.click(await document.findByRole("menuitem", { name: "New group" }));
+      await userEvent.type(await canvas.findByRole("textbox", { name: "Group name" }), `${name}{Enter}`);
+    }
+    const source = canvas.getByText("Product", { exact: true });
+    const target = canvas.getByText("Research", { exact: true });
+    const from = source.getBoundingClientRect();
+    const to = target.getBoundingClientRect();
+    const x = from.x + from.width / 2;
+    const y = from.y + from.height / 2;
+    const pointer = userEvent.setup();
+    await pointer.pointer([
+      { target: source, keys: "[MouseLeft>]", coords: { clientX: x, clientY: y } },
+      { target: source, coords: { clientX: x, clientY: y - 8 } },
+      { target, coords: { clientX: x, clientY: to.y } },
+    ]);
+    await expect(canvasElement.querySelector("[data-panel-dragging]")).toBeNull();
+    await expect(canvasElement.querySelector("[data-workbench-edge-drop]")).toBeNull();
+    await pointer.pointer({ target, keys: "[/MouseLeft]", coords: { clientX: x, clientY: to.y } });
+    await waitFor(() => expect(source.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy());
   },
 };

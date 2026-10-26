@@ -1,12 +1,12 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { fileNameFromPath, requireTicketDraftFiles, ticketFilesDir, ticketFilesPattern } from "../data/draft-storage";
-import { findTicket } from "../data/resolve";
+import { requireTickets } from "../data/resolve";
 import { validateTicketFileName } from "../data/ticket-file-name";
 import { readTicketImageCheckout } from "../data/ticket-image-checkout";
 import { ticketImagePaths } from "../data/ticket-image-paths";
 
 // `pst tickets files`: compare a ticket's stored files against the local
-// `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/files/` directory so the user can see what is and
+// `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/files/` directory so the user can see what is and
 // isn't synced.
 export const listTicketFilesCommand = defineCommand({
   id: "list-ticket-files",
@@ -15,22 +15,26 @@ export const listTicketFilesCommand = defineCommand({
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
     const { projectFiles, resolvePath } = await requireTicketDraftFiles(ctx);
-    const ticket = await findTicket(ctx.storage, commandParams.id);
-    if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
+    const tickets = await requireTickets(ctx, commandParams.id);
+    const groups = await Promise.all(
+      tickets.map(async (ticket) => {
+        const images = ticketImagePaths(ticket, await readTicketImageCheckout(projectFiles, ticket.shorthand));
+        const stored = new Set([...(ticket.files ?? []), ...images].map((file) => validateTicketFileName(file.name)));
+        const local = new Set(
+          (await projectFiles.list(ticketFilesPattern(ticket.shorthand))).map((entry) =>
+            validateTicketFileName(fileNameFromPath(ticket.shorthand, entry.path)),
+          ),
+        );
 
-    const images = ticketImagePaths(ticket, await readTicketImageCheckout(projectFiles, ticket.shorthand));
-    const stored = new Set([...(ticket.files ?? []), ...images].map((file) => validateTicketFileName(file.name)));
-    const local = new Set(
-      (await projectFiles.list(ticketFilesPattern(ticket.shorthand))).map((entry) =>
-        validateTicketFileName(fileNameFromPath(ticket.shorthand, entry.path)),
-      ),
+        const files = [...new Set([...stored, ...local])].sort().map((name) => ({
+          file: name,
+          storage: stored.has(name) ? "yes" : "no",
+          local: local.has(name) ? "yes" : "no",
+          path: resolvePath(`${ticketFilesDir(ticket.shorthand)}/${name}`),
+        }));
+        return { id: ticket.id, shorthand: ticket.shorthand, files };
+      }),
     );
-
-    return [...new Set([...stored, ...local])].sort().map((name) => ({
-      file: name,
-      storage: stored.has(name) ? "yes" : "no",
-      local: local.has(name) ? "yes" : "no",
-      path: resolvePath(`${ticketFilesDir(ticket.shorthand)}/${name}`),
-    }));
+    return groups.length === 1 ? groups[0]!.files : groups;
   },
 });

@@ -17,6 +17,7 @@ import type { createExtensionService } from "./extension-service";
 import { createExtensionSourceInstaller } from "./extension-source-installer";
 import { parseExtensionSourceRef, resolveExtensionReleaseCommit } from "./extension-source-ref";
 import { ExtensionUpgradeUnavailableError } from "./extension-upgrade-unavailable-error";
+import { createRegistryExtensionSource } from "./registry-extension-source";
 
 export type ExtensionService = Pick<
   ReturnType<typeof createExtensionService>,
@@ -44,6 +45,8 @@ type UpgradeSource = {
   install_name: string;
   manifest_json?: unknown;
   source_ref: string | null;
+  source_kind?: string;
+  version?: string | null;
 };
 
 type InstallExtension = (input: InstallExtensionSourceInput) => ReturnType<typeof installExtensionSourceDefault>;
@@ -70,14 +73,19 @@ const repoForSource = async (deps: ExtensionUpgradeServiceDeps, projectId: strin
   const root = workspace?.root_path;
   return root && resolve(root, ".pstdio/extensions") === resolve(sourcePath, "..") ? root : undefined;
 };
+const matchesCatalogOrigin = (
+  entry: ExtensionCatalogEntry | undefined,
+  source: ReturnType<typeof parseExtensionSourceRef>,
+) => !entry || !source || (entry.origin.url === source.url && entry.origin.path === source.path);
 
 export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps) => {
   const install = deps.installExtensionSource ?? installExtensionSourceDefault;
+  const registry = createRegistryExtensionSource(deps, install);
   const catalog = deps.catalog ? Promise.resolve(deps.catalog) : getExtensionCatalog();
   const releaseCommits = new Map<string, Promise<string>>();
   const previewSources = new Map<string, ReturnType<typeof install>>();
   const catalogEntry = async (installName: string) =>
-    (await catalog).extensions.find((entry) => entry.installName === installName);
+    (await catalog).extensions.find((entry) => entry.installName === installName || entry.extensionId === installName);
   const releaseRefFor = (entry: ExtensionCatalogEntry) => {
     if (entry.origin.ref !== "{hostRelease}") return entry.origin.ref;
     if (deps.release) return deps.release.ref;
@@ -92,11 +100,23 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     }
     return commit;
   };
+  // A Git install from the catalog's own repository and folder is host-managed, so it moves
+  // to the registry. Any other Git or local source stays under its owner's control.
+  const canMoveToRegistry = async (
+    entry: ExtensionCatalogEntry | undefined,
+    parsed: ReturnType<typeof parseExtensionSourceRef>,
+    version: string | null | undefined,
+  ) => {
+    if (!entry || !parsed || !version || !matchesCatalogOrigin(entry, parsed)) return false;
+    return registry.canUpgradeCatalog(entry, version);
+  };
   const canUpgrade = async (source: UpgradeSource) => {
+    if (registry.matches(source)) return registry.canUpgrade(source);
     const entry = await catalogEntry(source.install_name);
     const parsed = parseExtensionSourceRef(source.source_ref);
+    if (deps.release?.source === "registry") return canMoveToRegistry(entry, parsed, source.version);
     if (!entry && !parsed) return false;
-    if (entry && parsed && (entry.origin.url !== parsed.url || entry.origin.path !== parsed.path)) return false;
+    if (!matchesCatalogOrigin(entry, parsed)) return false;
     let releaseRef: string | undefined;
     try {
       releaseRef = entry ? releaseRefFor(entry) : deps.release?.ref;
@@ -122,6 +142,9 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
 
   const installForRelease = async (installName: string, repoPath?: string) => {
     const entry = await requireCatalogEntry(installName);
+    if (deps.release?.source === "registry" && entry.extensionId) {
+      return registry.installCatalog(entry, { installName, force: true, repoPath });
+    }
     const workspaceSource = deps.release?.source === "workspace" && entry.origin.ref === "{hostRelease}";
     const source =
       workspaceSource && deps.release?.source === "workspace"
@@ -144,6 +167,16 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
 
   const prepareMarketplaceExtensionSource = async (installName: string) => {
     const entry = await requireCatalogEntry(installName);
+    if (deps.release?.source === "registry" && entry.extensionId) {
+      return registry.installCatalog(entry, {
+        env: {
+          ...process.env,
+          PSTDIO_HOME: join(resolvePstdioHome({ env: process.env }), "cache", "extension-previews"),
+        },
+        installName,
+        force: true,
+      });
+    }
     const existing = previewSources.get(installName);
     if (existing) return existing;
 
@@ -188,7 +221,13 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     const entry = await catalogEntry(existing.installedSource.install_name);
     const parsed = parseExtensionSourceRef(existing.installedSource.source_ref);
     let installed: Awaited<ReturnType<typeof install>>;
-    if (entry) {
+    if (registry.matches(existing.installedSource)) {
+      installed = await registry.installRecorded(existing.installedSource, {
+        installName: existing.installedSource.install_name,
+        force: true,
+        repoPath,
+      });
+    } else if (entry) {
       installed = await installForRelease(existing.installedSource.install_name, repoPath);
     } else if (parsed && deps.release?.ref) {
       const origin = { kind: "git" as const, url: parsed.url, path: parsed.path, ref: deps.release.ref };
@@ -228,6 +267,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     installSource,
     prepareMarketplaceExtensionSource,
     releaseRef: deps.release?.ref,
+    registry: deps.release?.source === "registry" ? deps.release.ref.slice(4) : undefined,
     upgrade,
   };
 };

@@ -1,6 +1,5 @@
 // Save review requests without starting or continuing an agent session.
 import type { CommandContext } from "@pstdio/sdk/extensions";
-import { isCompletedTicket } from "../timeline/model/workflow";
 import { actorFromSource } from "./attempt-actors";
 import { readAttempt } from "./attempt-storage";
 import type { AttemptState } from "./attempt-types";
@@ -9,7 +8,7 @@ import { keepOwnedRequest, publishRequestChange } from "./review-request-service
 import { listTicketReviewRequests, readReviewRequest, reviewRequestsCollection } from "./review-request-storage";
 import type { HumanRequestReason, ReviewRequest } from "./review-request-types";
 import { parseRequestBody } from "./review-request-validation";
-import { readTicketStatuses } from "./status-operations";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "./workflow-statuses";
 
 export interface CreateReviewRequestInput {
   ticket: string;
@@ -17,11 +16,12 @@ export interface CreateReviewRequestInput {
   instructions: string;
   request: unknown;
   reason?: HumanRequestReason;
+  affectedAction?: "implementation" | "merge";
   workspaceId?: string;
   revision?: number;
   sessionId?: string;
   expectedTicketStatusId?: string;
-  /** @deprecated Use workspace ownership and revision. Removed in 0.45. */
+  /** @deprecated Accepted but ignored. Use workspace ownership and revision. Removed in 0.45. */
   expectedAttemptState?: AttemptState;
 }
 
@@ -37,9 +37,6 @@ const readHandoffAttempt = async (ctx: CommandContext, input: CreateReviewReques
   if (!attempt || attempt.ticketId !== ticketId) {
     throw new Error("The workspace does not own this ticket handoff.");
   }
-  if (input.expectedAttemptState !== undefined && attempt.state !== input.expectedAttemptState) {
-    throw new Error("Attempt state changed before the handoff.");
-  }
   if (input.revision !== undefined && attempt.revisions.at(-1)?.revision !== input.revision) {
     throw new Error("Attempt revision changed before the handoff.");
   }
@@ -52,12 +49,15 @@ const sameHandoff = (request: ReviewRequest, input: CreateReviewRequestInput) =>
   request.context.attemptRevision === (input.revision ?? null) &&
   request.context.relatedSessionId === (input.sessionId ?? null);
 
-export const createReviewRequest = async (ctx: CommandContext, input: CreateReviewRequestInput) => {
-  const ticket = await findTicket(ctx.storage, input.ticket);
-  if (!ticket) throw new Error(`Unknown ticket "${input.ticket}"`);
-  if (isCompletedTicket(ticket, (await readTicketStatuses(ctx.storage)).statuses)) {
+const assertIncompleteTicket = async (ctx: CommandContext, statusId: string | null | undefined) => {
+  if (usableWorkflowStatuses(await readWorkflowStatuses(ctx)).completedStatusIds.includes(statusId ?? ""))
     throw new Error("The ticket is complete.");
-  }
+};
+
+export const createReviewRequest = async (ctx: CommandContext, input: CreateReviewRequestInput) => {
+  const ticket = await findTicket(ctx, input.ticket);
+  if (!ticket) throw new Error(`Unknown ticket "${input.ticket}"`);
+  await assertIncompleteTicket(ctx, ticket.statusId);
   if (input.expectedTicketStatusId !== undefined && ticket.statusId !== input.expectedTicketStatusId) {
     throw new Error("Ticket status changed before the handoff.");
   }
@@ -85,6 +85,7 @@ export const createReviewRequest = async (ctx: CommandContext, input: CreateRevi
     requestedBy: actorFromSource(ctx.source, ctx.invocationId),
     context: {
       reason: input.reason ?? null,
+      ...(input.affectedAction ? { affectedAction: input.affectedAction } : {}),
       workspaceId: input.workspaceId ?? null,
       attemptRevision: input.revision ?? null,
       sessionId: null,

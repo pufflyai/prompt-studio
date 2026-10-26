@@ -48,9 +48,6 @@ const toStoredStatus = (status: TicketStatusDraft, stored: StoredStatus | undefi
     sortOrder: status.sortOrder,
     isDefault: status.isDefault ?? false,
     canCreate: commands.includes(CREATE_COMMAND),
-    // Drag rules have no editor yet; transitions replace them, so keep what is stored.
-    canDragIn: stored?.canDragIn ?? true,
-    canDragOut: stored?.canDragOut ?? true,
     columnActions: commands.filter((command) => command !== CREATE_COMMAND),
   };
 };
@@ -81,9 +78,9 @@ export const saveStatusSettings = defineCommand({
     await Promise.all([
       ...next.map((status) => putStatus(ctx.storage, status)),
       ...removed.map((status) => statusesCollection(ctx.storage).delete(status.id)),
-      ...(await ticketsCollection(ctx.storage).list()).map((ticket) =>
+      ...(await ticketsCollection(ctx).list()).map((ticket) =>
         removed.some((status) => status.id === ticket.statusId)
-          ? putTicket(ctx.storage, { ...ticket, statusId: fallbackId })
+          ? putTicket(ctx, { ...ticket, statusId: fallbackId })
           : undefined,
       ),
     ]);

@@ -8,11 +8,11 @@ import { deadlineOrNone, loadPlan, writeStoredPlan } from "../timeline/commands/
 import { moveTicket } from "../timeline/model/edit-plan";
 
 export const moveTicketOnBoard = async (
-  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId" | "settings" | "resources">,
   input: KanbanRendererMove,
 ) =>
   withWriteGuard(ctx, "ticket-order", async () => {
-    const collection = ticketsCollection(ctx.storage);
+    const collection = ticketsCollection(ctx);
     const tickets = await collection.list();
     const existing = tickets.find(({ id }) => id === input.rowId);
     if (!existing) return { changed: 0 };

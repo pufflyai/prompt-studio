@@ -6,7 +6,9 @@ import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
 import type { RelayWorkbench } from "../relay/runtime";
+import { readManagerAccount } from "./manager-account";
 import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
+import { createMissingProjectRecovery } from "./missing-project-recovery";
 import { startNativeLogin } from "./native-login";
 import { createNativePresence } from "./native-presence";
 import { createNativeStore, type DeviceLogin } from "./native-store";
@@ -31,11 +33,37 @@ const devicesSchema = z.object({
     }),
   ),
 });
-const workbenchesSchema = z.array(z.object({ workbenchId: identitySchema }));
+
+const connectionFor = (login: DeviceLogin, workbenchId: string) => ({
+  accountId: login.accountId,
+  workbenchId,
+  environmentId: login.deviceId,
+  relayOrigin: login.relayOrigin,
+  managerOrigin: login.managerOrigin,
+  renewalGrant: login.token,
+});
 
 // Messages that are safe to show; other account failures stay generic.
 export class AccountRequestError extends Error {}
 export const accountUnavailableMessage = "Account request unavailable. Check the login and the account service.";
+
+const createAccountWatch = () => {
+  const listeners = new Set<() => void>();
+  return {
+    watch(listener: () => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    notify() {
+      for (const listener of listeners) listener();
+    },
+    close() {
+      listeners.clear();
+    },
+  };
+};
 
 export const createNativeAccount = (input: {
   file: string;
@@ -49,11 +77,16 @@ export const createNativeAccount = (input: {
       await refresh();
     },
   });
+  const changes = createAccountWatch();
   const logins = new Map<string, ReturnType<typeof startNativeLogin>>();
-  let cloudProjects: { credential: string; ids: string[] } | undefined;
+  let cloudProjects: { credential: string; ids: string[]; features: { relay: boolean } } | undefined;
   const projectsFor = (login: DeviceLogin | null) =>
     login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
+  const missing = createMissingProjectRecovery({
+    exists: async (id) => Boolean(await input.projects.get(id)),
+    recovered: () => void refresh(),
+  });
   // Until the relay runtime starts, no sync owner has downloaded anything in this run.
   let projectStatus = async (_projectId: string): Promise<ProjectSyncStatus> => ({
     state: "first-download-incomplete",
@@ -91,40 +124,23 @@ export const createNativeAccount = (input: {
   const devicePath = (id: string) => `/v1/devices/${encodeURIComponent(identitySchema.parse(id))}`;
   const projectPath = (id: string) => `/v1/workbenches/${encodeURIComponent(identitySchema.parse(id))}`;
 
-  // Syncs every cloud project that also exists on this device. Others start once they are created or bound here.
+  // Syncs every cloud project of the account that exists here, then recovers the missing ones.
+  // One that cannot be recovered yet is tried again on the next refresh.
   const publish = async (login: DeviceLogin | null) => {
     void presence.update(login);
-    const local = await Promise.all(
-      (projectsFor(login) ?? []).map(async (id) => ((await input.projects.get(id)) ? id : null)),
-    );
-    await update(
-      login
-        ? local
-            .filter((id) => id !== null)
-            .map((workbenchId) => ({
-              accountId: login.accountId,
-              workbenchId,
-              environmentId: login.deviceId,
-              relayOrigin: login.relayOrigin,
-              managerOrigin: login.managerOrigin,
-              renewalGrant: login.token,
-            }))
-        : [],
-    );
+    const local: string[] = [];
+    const absent: string[] = [];
+    for (const id of login ? (projectsFor(login) ?? []) : [])
+      (!missing.recovering(id) && (await input.projects.get(id)) ? local : absent).push(id);
+    await update(login ? local.map((id) => connectionFor(login, id)) : []);
+    missing.recover(login ? absent.map((id) => connectionFor(login, id)) : []);
   };
   const load = async () => {
     clearTimeout(retry);
     if (closed) return;
     let login = await readLogin();
     try {
-      cloudProjects = login
-        ? {
-            credential: login.token,
-            ids: workbenchesSchema
-              .parse(await managerRequest(login.managerOrigin, "/v1/workbenches", login.token))
-              .map((row) => row.workbenchId),
-          }
-        : undefined;
+      cloudProjects = login ? await readManagerAccount(login) : undefined;
     } catch (error) {
       if (login && denied(error)) {
         // Another device removed this one. A newer login saved meanwhile stays.
@@ -143,6 +159,7 @@ export const createNativeAccount = (input: {
       retry.unref?.();
     }
     await publish(login);
+    if (!closed) changes.notify();
   };
   // Refreshes run one at a time. Calls that arrive while one waits to start share it.
   const refresh = () => {
@@ -187,12 +204,18 @@ export const createNativeAccount = (input: {
   };
 
   return {
-    start(relay: (connections: RelayWorkbench[]) => Promise<void>, status: typeof projectStatus) {
+    start(
+      relay: (connections: RelayWorkbench[]) => Promise<void>,
+      status: typeof projectStatus,
+      recoverProject: Parameters<typeof missing.start>[0],
+    ) {
       update = relay;
       projectStatus = status;
+      missing.start(recoverProject);
       void refresh();
     },
     refresh,
+    watch: changes.watch,
     async login(managerOrigin: string) {
       const parsed = managerOriginSchema.safeParse(managerOrigin);
       if (!parsed.success)
@@ -220,10 +243,15 @@ export const createNativeAccount = (input: {
     },
     async status() {
       const login = await readLogin();
-      if (!login) return { login: null, cloudProjects: [], cloudProjectsLoaded: true };
+      if (!login) return { login: null, cloudProjects: [] as string[], cloudProjectsLoaded: true, features: null };
       const { token: _, ...device } = login;
       const projects = projectsFor(login);
-      return { login: device, cloudProjects: projects ?? [], cloudProjectsLoaded: !!projects };
+      return {
+        login: device,
+        cloudProjects: projects ?? [],
+        cloudProjectsLoaded: !!projects,
+        features: projects ? cloudProjects!.features : null,
+      };
     },
     async projectSyncStatus(projectId: string) {
       if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
@@ -259,13 +287,15 @@ export const createNativeAccount = (input: {
       await refresh();
       return { ok: true };
     },
-    close() {
+    async close() {
       closed = true;
       presence.close();
       clearTimeout(retry);
       update = async () => {};
       for (const login of logins.values()) login.close();
       logins.clear();
+      changes.close();
+      await missing.close();
     },
   };
 };

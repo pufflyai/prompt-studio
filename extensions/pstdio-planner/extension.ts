@@ -19,11 +19,11 @@ import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
-import { attemptStatusHooks } from "./src/hooks/attempt-status";
 import { autoBuildHooks, autoBuildSchedule } from "./src/hooks/auto-build";
 import { dependencyBlockerHooks } from "./src/hooks/dependency-blockers";
 import { gitMergedHook } from "./src/hooks/git-merged";
 import { reviewRequestCleanupHook } from "./src/hooks/review-request-cleanup";
+import { ticketRenumberedHook } from "./src/hooks/ticket-renumbered";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked } from "./src/planner-notifications";
 import { readStatusSettings, saveStatusSettings } from "./src/ticket-status-settings";
@@ -44,6 +44,16 @@ const templateCommandRefs = {
 export default defineExtension({
   settings: {
     properties: {
+      "workflow.statuses": {
+        type: "object",
+        scope: "project",
+        default: { completedStatusIds: [], blockedStatusIds: [], activeStatusIds: [], mergeTargetStatusId: null },
+        title: l10n("settings.workflow.statuses.title", "Workflow status selections"),
+        description: l10n(
+          "settings.workflow.statuses.description",
+          "Choose workflow statuses in this extension's Settings tab. Labels do not define behavior.",
+        ),
+      },
       "tickets.deleteLinkedWorkspaces": {
         type: "boolean",
         scope: "project",
@@ -61,7 +71,7 @@ export default defineExtension({
         title: l10n("settings.tickets.markDoneOnMerge.title", "Mark done on merge"),
         description: l10n(
           "settings.tickets.markDoneOnMerge.description",
-          "Move a ticket to Done when its workspace branch or linked pull request is merged.",
+          "Move a ticket to the selected status after merge when its workspace branch or linked pull request is merged.",
         ),
       },
 
@@ -151,7 +161,7 @@ export default defineExtension({
 
   schedules: [mergedPullRequestsSchedule, autoBuildSchedule],
   hooks: [
-    ...attemptStatusHooks,
+    ticketRenumberedHook,
     ...dependencyBlockerHooks,
     ...autoBuildHooks,
     gitMergedHook,
@@ -163,7 +173,7 @@ export default defineExtension({
       event: sessionEvents.awaitingInput,
       async run(ctx, payload) {
         const ticketRef = ticketRefFromLifecyclePayload(payload);
-        const ticket = ticketRef ? await findTicket(ctx.storage, ticketRef) : null;
+        const ticket = ticketRef ? await findTicket(ctx, ticketRef) : null;
         if (ticket) await notifyBlocked(ctx, ticket, payload.sessionId);
       },
     }),

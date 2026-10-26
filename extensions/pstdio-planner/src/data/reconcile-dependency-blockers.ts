@@ -1,30 +1,27 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { plannerTicketsChanged } from "../events";
-import { statusesCollection, ticketsCollection } from "./collections";
+import { ticketsCollection } from "./collections";
 import { dependencyBlockerIds, dependencyTicketIndex } from "./dependency-blockers";
 import { withWriteGuard } from "./write-guard";
 
+// Dependency waiting lives in links. Reads and saves already drop a dependency-only sentence that
+// names linked prerequisites, whatever their status, so stored copies are removed by the same rule.
 export const reconcileDependencyBlockers = async (
-  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId" | "settings" | "resources">,
 ) =>
   withWriteGuard(
     ctx,
     "dependency-blockers",
     async () => {
-      const collection = ticketsCollection(ctx.storage);
-      const [tickets, statuses] = await Promise.all([collection.list(), statusesCollection(ctx.storage).list()]);
-      const doneIds = new Set(statuses.filter(({ name }) => name.trim().toLowerCase() === "done").map(({ id }) => id));
+      const collection = ticketsCollection(ctx);
+      const tickets = await collection.list();
       const byRef = dependencyTicketIndex(tickets);
       const cleared: string[] = [];
       for (const listed of tickets) {
         if (!dependencyBlockerIds(listed, byRef)) continue;
-        // Re-read the blocker and its prerequisites so a later independent blocker is kept.
+        // Re-read the ticket so an independent blocker saved after the list is kept.
         const current = await collection.get(listed.id);
-        if (!current) continue;
-        const ids = dependencyBlockerIds(current, byRef);
-        if (!ids) continue;
-        const dependencies = await Promise.all(ids.map((id) => collection.get(id)));
-        if (!dependencies.every((ticket) => ticket && doneIds.has(ticket.statusId ?? ""))) continue;
+        if (!current || !dependencyBlockerIds(current, byRef)) continue;
         await collection.update(current.id, { ...current, blockedReason: null, updatedAt: new Date().toISOString() });
         cleared.push(current.id);
       }

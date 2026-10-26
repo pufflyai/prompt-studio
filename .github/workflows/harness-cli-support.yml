@@ -23,7 +23,7 @@ jobs:
     runs-on: ${{ matrix.harness.os || 'ubuntu-latest' }}
     timeout-minutes: 10
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         version: ${{ fromJSON(inputs.versions) }}
         harness:
@@ -77,4 +77,4 @@ jobs:
         working-directory: extensions/${{ matrix.harness.extension }}
         env:
           INSTALLED_CLI_TESTS: "1"
-        run: bun test src/installed-cli.test.ts
+        run: bun test src/installed-cli.p0.test.ts

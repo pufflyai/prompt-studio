@@ -4,7 +4,7 @@
 
 `pst close` asks the runtime to stop and then waits until the runtime process is gone. It checked this with `process.kill(pid, 0)`. In a Linux container where the test runner was PID 1, the runtime stopped within a second, removed its descriptor, and became a zombie. `pst close` kept waiting until the caller killed it.
 
-The packaged tests `runtime-lifecycle.test.ts` and `packaged.test.ts` ran `close` with `spawnSync` and a 60-second timeout, so each failed at about 60,060 ms. Bun then killed the processes the timed-out test had started, including the API that the next ticket test shared, so that test failed too.
+The packaged tests `runtime-lifecycle.p1.test.ts` and `packaged.p1.test.ts` ran `close` with `spawnSync` and a 60-second timeout, so each failed at about 60,060 ms. Bun then killed the processes the timed-out test had started, including the API that the next ticket test shared, so that test failed too.
 
 ## Why
 
@@ -20,4 +20,4 @@ This was reproduced with Bun 1.4.2 in `oven/bun:1.4.2` on linux-x64 and linux-ar
 - Run test containers with `--init` (or another init process) so zombies are reaped, but do not rely on it: users run Prompt Studio in containers without one.
 - When a synchronous child-process call in a test reaches its timeout, look for a process that waits for another process to exit. A `spawnSync` call blocks the test runner, so the test timeout fires only after the child's own timeout.
 
-Test: `packages/pstdio/src/features/runtime/process-liveness.test.ts` makes a zombie on Linux and checks that it counts as stopped.
+Test: `packages/pstdio/src/features/runtime/process-liveness.p1.test.ts` makes a zombie on Linux and checks that it counts as stopped.

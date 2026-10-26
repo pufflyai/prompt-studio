@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import type { AgentModel, HarnessParamDescriptor } from "@pstdio/sdk/extensions";
+import { resolveCodexCommand } from "./codex-process";
 
 const effortMetadata: Record<string, { label: string; icon: string }> = {
   minimal: { label: "Minimal", icon: "level-low" },
@@ -8,6 +9,7 @@ const effortMetadata: Record<string, { label: string; icon: string }> = {
   high: { label: "High", icon: "level-high" },
   xhigh: { label: "XHigh", icon: "level-xhigh" },
   max: { label: "Max", icon: "flame" },
+  ultra: { label: "Ultra", icon: "flame" },
 };
 
 const reasoningEffortParam = (efforts: string[], defaultValue?: string): HarnessParamDescriptor => ({
@@ -62,7 +64,10 @@ export const parseCodexModels = (input: unknown): AgentModel[] => {
 
 export const discoverCodexModels = () =>
   new Promise<AgentModel[]>((resolve, reject) => {
-    const child = spawn("codex", ["app-server", "--stdio"], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    const child = spawn(resolveCodexCommand(), ["app-server", "--stdio"], {
+      stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true,
+    });
     let buffer = "";
     let settled = false;
     const timer = setTimeout(() => finish(new Error("Codex model discovery timed out.")), 10_000);

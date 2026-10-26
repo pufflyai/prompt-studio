@@ -7,6 +7,7 @@ import type {
   QuestionResponse,
 } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
+import { authenticateOpencode } from "./account-action";
 import { opencodeCommandState, prepareOpencodeOperation } from "./commands";
 import { detectOpencode } from "./detection";
 import { recoverOpencodeMessages } from "./history-reconciliation";
@@ -21,7 +22,7 @@ import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-
 
 const readOpencodeModels = async (ctx: HarnessContext) => {
   try {
-    const result = await ctx.process.run({ command: ["opencode", "models", "--verbose"] });
+    const result = await ctx.process.run({ command: [resolveOpencodeCommand(), "models", "--verbose"] });
     if (result.exitCode !== 0) return "";
     return result.stdout.trim();
   } catch {
@@ -188,6 +189,11 @@ export const createOpencodeHarness = (
 
     capabilities: () => ["SessionFork", "ContextUsage", "SessionReattach"],
     detect: (ctx) => deps.detect(ctx),
+    getAuthentication: async (ctx, input) => (await serviceFor(ctx)).getAuthentication(input),
+    authenticate: async (ctx, input, channel) => {
+      await authenticateOpencode(ctx, input, channel, serviceOverrides);
+      modelCache = undefined;
+    },
 
     listModels,
     getCommandState: async (ctx, input) => opencodeCommandState(input, await serviceFor(ctx)),
@@ -316,3 +322,5 @@ export const createOpencodeHarness = (
     recoverMessages: (_ctx, input) => recoverOpencodeMessages(input),
   };
 };
+
+import { resolveOpencodeCommand } from "./cli";

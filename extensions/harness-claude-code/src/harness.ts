@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
+import { authenticateClaude, getClaudeAuthentication } from "./authentication";
 import { claudeCommandState, prepareClaudeOperation } from "./commands";
 import { detectClaude } from "./detection";
 import { recoverClaudeMessages } from "./history-reconciliation";
@@ -132,6 +133,8 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
 
     capabilities: () => ["SessionFork", "ContextUsage", "Approvals"],
     detect: (ctx) => deps.detect(ctx),
+    getAuthentication: getClaudeAuthentication,
+    authenticate: authenticateClaude,
     listModels,
     getCommandState: (_ctx, input) => claudeCommandState(input),
     prepareOperation: (ctx, input, operation) => prepareClaudeOperation(input, operation, ctx.projectId),

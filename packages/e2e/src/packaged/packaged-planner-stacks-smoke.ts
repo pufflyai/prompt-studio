@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { runTestCommand } from "../scripts/run-test-command";
+import { configurePlannerWorkflow } from "./packaged-planner-helpers";
 
 const git = async (path: string, ...args: string[]) => {
   const started = Date.now();
@@ -13,8 +14,9 @@ const git = async (path: string, ...args: string[]) => {
 };
 
 export async function expectPackagedDependencyStacks(input: { baseUrl: string; headers: Record<string, string> }) {
-  await expectDependencyStack(input, false);
-  await expectDependencyStack(input, true);
+  // Each scenario owns its project and Git repository. Finish both before the host is stopped.
+  const scenarios = await Promise.allSettled([expectDependencyStack(input, false), expectDependencyStack(input, true)]);
+  for (const scenario of scenarios) if (scenario.status === "rejected") throw scenario.reason;
 }
 
 async function expectDependencyStack(input: { baseUrl: string; headers: Record<string, string> }, conflict: boolean) {
@@ -57,6 +59,7 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
     expect(response.outcome.status).toBe("success");
     return response.outcome.value;
   };
+  await configurePlannerWorkflow(execute);
   const stop = async (id: string) => {
     for (let check = 0; check < 100; check++) {
       if ((await request(`/sessions/${id}`)).status === "completed") return;

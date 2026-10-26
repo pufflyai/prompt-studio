@@ -1,26 +1,37 @@
-import { type Disposable, type WorkbenchModuleContribution, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
+import {
+  type Disposable,
+  type SettingsRegistry,
+  type WorkbenchModuleContribution,
+  workbenchCommandPaletteMenuPath,
+} from "@pstdio/workbench";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
+import { registerPerformanceDiagnostics } from "@/shared/app/performance-diagnostics";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { DeveloperToolsPanel } from "./components/developer-tools-panel";
 import { PerformanceStatusItem } from "./components/performance-status-item";
 import { createPerformanceHost } from "./performance-host";
 import { createPerformanceMonitoringController } from "./performance-monitoring-controller";
+import { createPerformanceDiagnosticsAdapter } from "./performance-service";
 
 const SETTINGS_PANEL_ID = "developer-tools";
 const SETTINGS_VIEW_ID = "dashboard.settings.developer-tools";
 
 // Developer tools: the settings panel with the device-local performance switch, the frame-rate meter in
 // the status bar with its popover, and commands that open it or copy a snapshot.
-export const createPerformanceModule = () =>
+export const createPerformanceModule = (settings: SettingsRegistry) =>
   ({
     id: "dashboard.performance",
     activate(ctx) {
       const bridge = (globalThis as { promptStudioDesktop?: unknown }).promptStudioDesktop;
       const controller = createPerformanceMonitoringController(
         createPerformanceHost(bridge, resolveDashboardStorage(undefined)),
+      );
+      const unregisterController = registerPerformanceDiagnostics(
+        settings,
+        createPerformanceDiagnosticsAdapter(controller),
       );
       void controller.load();
 
@@ -118,6 +129,7 @@ export const createPerformanceModule = () =>
             stopSync();
             statusItem?.dispose();
             controller.dispose();
+            unregisterController();
           },
         },
       ];

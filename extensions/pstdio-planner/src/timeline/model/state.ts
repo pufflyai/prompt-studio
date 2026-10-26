@@ -1,7 +1,7 @@
 // Derive one displayed state from the ticket's workflow, requests, and prerequisites.
 
+import { emptyWorkflowStatuses, type WorkflowStatusSelections } from "../../data/workflow-statuses";
 import type { PlannerTicket } from "../planner";
-import { workflowName } from "./workflow";
 
 export type TicketState = "await-input" | "input-received" | "done" | "not-started" | "in-progress" | "blocked";
 
@@ -12,22 +12,27 @@ export interface StateSignals {
   unmet: boolean;
 }
 
-export function ticketState(ticket: PlannerTicket, signals: StateSignals, statusName: string | undefined) {
-  const status = workflowName(statusName);
-  if (status === "done") {
+export function ticketState(
+  ticket: PlannerTicket,
+  signals: StateSignals,
+  selections: WorkflowStatusSelections = emptyWorkflowStatuses(),
+) {
+  const status = ticket.statusId ?? "";
+  const active = selections.activeStatusIds.includes(status);
+  if (selections.completedStatusIds.includes(status)) {
     return "done" as const;
   }
   if (signals.humanNeeded) {
     return "await-input" as const;
   }
   // Active work supersedes old answers; input-received only marks idle tickets an agent should pick up.
-  if (signals.inputReceived && status !== "in-progress" && status !== "in-review") {
+  if (signals.inputReceived && !active) {
     return "input-received" as const;
   }
-  if (!signals.unmet && (status === "blocked" || ticket.blockedReason?.trim())) {
+  if (!signals.unmet && (selections.blockedStatusIds.includes(status) || ticket.blockedReason?.trim())) {
     return "blocked" as const;
   }
-  if (status === "in-progress" || status === "in-review") {
+  if (active) {
     return "in-progress" as const;
   }
   return "not-started" as const;

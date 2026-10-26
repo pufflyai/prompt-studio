@@ -1,4 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
+import type { CiFailureCause, CiStepTiming } from "./ci-timing";
 
 export interface CiJob {
   workflow: string;
@@ -15,6 +16,13 @@ export interface CiJob {
   failedSteps: string[];
   failures?: string[];
   logError?: string;
+  runCreated?: string;
+  created?: string | null;
+  runner?: string | null;
+  labels?: string[];
+  steps?: CiStepTiming[];
+  fullOverride?: boolean;
+  cause?: CiFailureCause;
 }
 
 export const parseFailedTests = (log: string) => {

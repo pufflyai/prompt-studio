@@ -8,7 +8,7 @@ The private account manager owns durable account and device authority separately
 
 The data owner's lifecycle methods remain internal. `createManagerAuthentication(config)` embeds Better Auth 1.7.10 for Google sign-in, persisted human sessions and signing keys. `createManagerHandler(auth, origin)` serves auth, device login and device management. Never expose private lifecycle methods directly to untrusted bodies or send the manager connection to extensions or native clients. A supplied Google subject or account ID is not permission.
 
-The component implements part of PS-735. The relay verifies the manager's signed access tokens: `bun run --cwd services/relay test:transport` and `test:isolated` run the relay against the actual manager with fixture keys and an owned HTTPS fixture. Live Google configuration, deployed role/network isolation, backups and production recovery remain separate proof. See [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
+The component implements part of PS-735. The relay verifies the manager's signed access tokens: `bun run --cwd services/relay test:integration` runs the relay against the actual manager with fixture keys and an owned HTTPS fixture. Live Google configuration, deployed role/network isolation, backups and production recovery remain separate proof. See [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
 
 ## Devices and cloud projects
 
@@ -21,6 +21,23 @@ A device is one client runtime. Its environment ID is its device ID. Logging in 
 - `manager_space_keys` holds the encryption keys of each cloud project: a project key and the key for the owner's private project data, one row per generation. The first key request for a cloud project creates generation 1. Removing a device adds the next generation of every key of the account, so the removed device cannot read data written afterward. Older generations stay. See [ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md).
 - Every renewal updates the device's last-seen time.
 
+## Cloud early access
+
+Signing in and managing devices work for every active account. Cloud projects, encryption keys and new relay access require the account's `relay` feature. `manager_account_features` stores one row per account and feature, with `grantedAt`. There is no grant by default, including for existing accounts after migration. Plans and billing are separate future work.
+
+An operator grants or revokes early access by the verified Google email after the person signs in once. Run these commands with the manager's private `DATABASE_URL` already set in the operator environment:
+
+```sh
+bun run --cwd services/account-manager account-feature grant --email person@example.com --feature relay
+bun run --cwd services/account-manager account-feature revoke --email person@example.com --feature relay
+```
+
+The production manager image includes the same command at `bun dist/account-feature.js`. An unknown, unverified or ambiguous email fails without creating an account. The command follows the stored Google subject to the product account; email itself is not the account identity. Repeating a grant keeps its original timestamp. Repeating a revoke succeeds.
+
+Without the feature, `GET /v1/workbenches` returns an empty list, adding a cloud project returns 403, key requests return 404 and access renewal returns 401. Revoking keeps project membership and keys so a later grant resumes access. It does not remove devices. Tokens already issued remain valid until their existing expiry. The relay continues to verify only the manager's tokens and never reads feature grants.
+
+`GET /v1/account` with a device credential returns `{ features: { relay: boolean } }`. The host refreshes this with project discovery. Its account status exposes the last loaded grants, or `null` before discovery or when signed out. The manager checks the current grant for every new Cloud request; cached host status is never authorization.
+
 ## Internal operations
 
 | Method | Behavior |
@@ -31,6 +48,7 @@ A device is one client runtime. Its environment ID is its device ID. Logging in 
 | `addWorkbench(input)` / `removeWorkbench(input)` | Make a project a cloud project of the account, or stop syncing it. Removing keeps the project's keys. |
 | `devices(accountId)` / `workbenches(accountId)` | List the account's active devices or cloud projects, without credential material. |
 | `authorize(token, workbenchId)` | Read current account, device and cloud project state. Return `{ accountId, workbenchId, deviceId }` or `null`. |
+| `setFeature({ accountId, feature, enabled })` | Private operator/fixture operation. Grant or revoke a feature under the same account lock used by renewal. Never expose it as a client API. |
 | `disable(intent)` | Disable account authorization and new logins. |
 | `reconcile(intent)` | Apply explicit current operator ownership/lifecycle and remove every device of the account, which adds a new key generation. This is the private recovery boundary, not a user-facing ownership-transfer API. |
 | `snapshot()` | Capture a consistent, versioned private manager snapshot (version 3). It includes encryption keys and excludes devices and credential digests. |
@@ -50,6 +68,7 @@ Better Auth owns `/api/auth/*`, including Google sign-in/callback, sessions, sig
 | GET /v1/native-login, /v1/native-callback | Browser. Starts Google sign-in and returns a single-use code to the native loopback callback. |
 | POST /v1/device-login | Google session and the manager's exact Origin. Body `{ deviceId, name, platform }`. Finds or creates the user's account, registers the device, and returns its credential and the relay origin. |
 | POST /v1/environment-access | Device credential plus JSON workbenchId; returns finite token and expiresAt. |
+| GET /v1/account | Device credential. Returns the account's feature grants. |
 | GET /v1/devices | Device credential. Returns this device's account and device IDs and the account's devices. |
 | POST /v1/devices/:id/rename, /v1/devices/:id/remove | Device credential. Rename or remove a device of the same account. |
 | GET /v1/workbenches | Device credential. Lists the account's cloud projects. |
@@ -76,6 +95,8 @@ An owned manager restore uses a new immutable operator request ID. It first vali
 
 The operator then establishes current ownership/lifecycle with a new reconciliation intent. Every device then logs in again with Google. Owned restore preserves known completion history; it does not recover unknown history absent from an external backup.
 
+Feature grants are current operator access policy and are excluded from historical snapshots, like device credentials. A restore preserves surviving feature rows; restoring into an empty database grants no features. After recovery, the operator checks current early access and grants it again when needed. Full database backups include the feature table.
+
 Restore receipts live outside account snapshots. Existence records committed completion, so a retry after a lost response cannot disable fresh registrations. Another intentional restore needs another request ID. Shared/exclusive PostgreSQL transaction locks serialize restore and authority mutations; snapshot reads use repeatable-read isolation.
 
 Restore inserts account, workbench, key and receipt history in bounded SQL batches inside that same transaction. Snapshot size does not change the atomic recovery boundary. Credential lookups use the unique digest index on `manager_devices`.
@@ -88,7 +109,7 @@ From the repository root:
 
 ```sh
 bun install --frozen-lockfile
-bun run --cwd services/account-manager test:isolated
+bun run --cwd services/account-manager test:integration
 bun run --cwd services/account-manager lint
 bun run --cwd services/account-manager build
 ```
@@ -97,7 +118,7 @@ The isolated command starts its own PostgreSQL container, creates distinct manag
 
 The smoke imports the actual bundled authority, starts the actual bundled HTTPS manager with run-owned TLS, and runs a separately bundled verifier with an empty environment. No manager DB or secret enters that verifier. Issuance, denied renewal after device removal, retained unexpired access during manager outage and clean shutdown are proved without source mounts or runtime installs. Only the smoke image includes OpenSSL for fresh fixture certificates; the production image stays slim.
 
-The Linux isolated infrastructure CI job runs the source suite and built image explicitly, alongside the relay checks. Manager changes select that job. Cross-platform package checks still build and lint this private owner; it has no ordinary `test` target that would launch Linux containers from Windows. Existing allowances and workloads remain unchanged. For a focused source file, append its path to `test:isolated`, such as `src/recovery.test.ts`; the built smoke still follows a passing source run.
+The Linux isolated infrastructure CI job runs the source suite and built image explicitly, alongside the relay checks. Manager changes select that job. Cross-platform package checks still build and lint this private owner; it has no ordinary `test` target that would launch Linux containers from Windows. Existing allowances and workloads remain unchanged. For a focused source file, append its path to `test:integration`, such as `src/recovery.p1.integration.ts`; the built smoke still follows a passing source run.
 
 Each run prints `manager-authority-<uuid>`. Its PostgreSQL data, containers and internal network belong to that run and are removed in cleanup. It publishes no host ports and mounts source read-only only in the source tester. The built smoke has no source mount. Fixture credentials are test-only. The developer application's database and unrelated Docker projects are never opened or changed.
 

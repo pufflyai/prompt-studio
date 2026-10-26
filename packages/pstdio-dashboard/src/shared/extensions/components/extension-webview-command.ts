@@ -1,4 +1,4 @@
-import type { ResourceRef } from "@pstdio/sdk/extensions";
+import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { createExtensionSlot, executeWorkbenchExtensionCommandResponse } from "@pstdio/workbench/extensions";
 
@@ -11,6 +11,7 @@ interface ExtensionCommandInput {
   slot?: import("@pstdio/sdk/api").CommandExecuteRequest["slot"];
 }
 interface ExecuteWebviewCommandInput extends ExtensionCommandInput {
+  placement?: PlacementIdentity;
   executeExtensionCommand: (input: ExtensionCommandInput) => Promise<unknown>;
   signal?: AbortSignal;
   workbench?: WorkbenchCore;
@@ -20,7 +21,12 @@ export const executeWebviewCommand = async (input: ExecuteWebviewCommandInput) =
   const { commandId, executeExtensionCommand, metadata, params, workspaceId, resource, slot, workbench } = input;
   const isExtensionCommand = commandId.includes(".command.");
   if (!isExtensionCommand && workbench?.commands.getCommand(commandId)) {
-    const value = await workbench.commands.executeCommand(commandId, params, { resource, signal: input.signal });
+    const value = await workbench.commands.executeCommand(commandId, params, {
+      resource,
+      signal: input.signal,
+      placement: input.placement,
+      projectId: input.projectId,
+    });
     return { commandId, extensionId: "pstdio", eventIds: [], outcome: { ok: true, status: "success", value } };
   }
   const execute = () =>
@@ -29,6 +35,7 @@ export const executeWebviewCommand = async (input: ExecuteWebviewCommandInput) =
     return executeWorkbenchExtensionCommandResponse(
       { projectId: input.projectId, workbench, executeCommand: execute },
       commandId,
+      { placement: input.placement, signal: input.signal },
     );
   }
   return execute();

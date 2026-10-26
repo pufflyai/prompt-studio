@@ -15,8 +15,6 @@ const createBoardActionIcon = (icon: string | undefined) => {
 export const toWorkbenchBoardColumnConfig = (config: WireBoardColumnConfig | undefined, localize: Localizer) =>
   ({
     color: config?.color,
-    canDragIn: config?.canDragIn,
-    canDragOut: config?.canDragOut,
     canCreate: config?.canCreate,
     actions: config?.actions?.map((action) => ({
       id: action.id,

@@ -6,7 +6,6 @@ export const durations = {
   "surface-enter": { value: "100ms" },
   "surface-exit": { value: "75ms" },
   "text-chunk": { value: "240ms" },
-  "hover-exit-delay": { value: "150ms" },
 };
 
 export const easings = {

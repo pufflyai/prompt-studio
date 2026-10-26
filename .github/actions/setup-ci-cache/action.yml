@@ -4,36 +4,49 @@ inputs:
   profile:
     description: Separate host and Playwright-container workspace paths.
     default: host
+  install-strategy:
+    description: Install workspace dependencies normally or with the native Node headers.
+    default: workspace
 runs:
   using: composite
   steps:
     - name: Locate the Bun download cache
       id: bun_cache
       shell: bash
-      run: |
-        bun -e 'import { appendFileSync } from "node:fs"; import { execFileSync } from "node:child_process"; appendFileSync(process.env.GITHUB_OUTPUT, `path=${execFileSync(process.execPath, ["pm", "cache"], { encoding: "utf8" }).trim()}\n`);'
+      run: >
+        bun -e 'import { appendFileSync } from "node:fs"; import { execFileSync } from "node:child_process";
+        appendFileSync(process.env.GITHUB_OUTPUT, `path=${execFileSync(process.execPath, ["pm", "cache"], { encoding: "utf8"
+        }).trim()}\n`);'
     - name: Restore dependency downloads
-      uses: actions/cache@v4
+      if: runner.os != 'Windows'
+      uses: actions/cache/restore@v4
       with:
         path: ${{ steps.bun_cache.outputs.path }}
         key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock', 'package.json') }}
-        restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
     - name: Install dependencies
       shell: bash
-      run: bun install --frozen-lockfile
+      env:
+        INSTALL_STRATEGY: ${{ inputs.install-strategy }}
+      run: |
+        if [ "$INSTALL_STRATEGY" = native ]; then
+          peers=()
+          if [ "${CI_PRIORITY:-P0}" = P1 ]; then peers=(--observe-peers); fi
+          bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "${CI_PRIORITY:-P0}" "${peers[@]}" -- node scripts/ci/install-native-dependencies.ts
+        else
+          bun install --frozen-lockfile
+        fi
     - name: Restore portable Nx task archives
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
         path: .cache/ci-build
-        key: nx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.profile }}-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha }}-${{ github.job }}-${{ strategy.job-index }}
+        key: nx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.profile }}-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha
+          }}-${{ github.job }}-${{ strategy.job-index }}
         restore-keys: nx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.profile }}-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-
     - name: Start the job's Nx HTTP cache
-      # Nx imports portable archives through its supported cache API. Its local database
-      # is machine-bound and cannot be copied between GitHub runners.
       shell: bash
       run: bun scripts/ci/build-cache.ts
+    # The only CI writer of these shared declarations. Parallel checks only read them:
+    # a package script that regenerates them can expose a half-written file to another typecheck.
     - name: Generate installed Chakra theme declarations
-      # Type generation writes into node_modules, outside Nx's declared build outputs.
-      # Consumers need it even when the UI build itself comes from the cache.
       shell: bash
       run: bun run --cwd packages/ui typegen:tokens

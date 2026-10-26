@@ -3,6 +3,7 @@ import { apiLogger } from "../../lib/logger";
 import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
 import type { createWorkspaceService } from "../../services/workspace-service";
+import { type ExtensionStorageIndexService, installExtensionStorageIndexes } from "./extension-storage-indexes";
 import {
   ExtensionRuntimeGenerationStaleError,
   ExtensionRuntimeLoadFailedError,
@@ -18,6 +19,17 @@ import {
   type LoadableExtensionSource,
 } from "./project-extension-runtime-sources";
 import { createProjectRuntimeActivation } from "./project-runtime-activation";
+
+const assertResourcePrefixes = (
+  loaded: Awaited<ReturnType<ReturnType<typeof createExtensionSourceCache>["collect"]>>,
+) => {
+  const runtime = normalizeExtensionSources(loaded.map((record) => record.source));
+  const errors = runtime.diagnostics.filter(
+    (diagnostic) => diagnostic.code.startsWith("extension_resource_prefix_") && diagnostic.severity === "error",
+  );
+  if (errors.length)
+    throw Object.assign(new Error(errors.map((error) => error.message).join("\n")), { diagnostics: errors });
+};
 
 type ProjectState = {
   /** Bumped on every invalidation; a load may publish only if it still matches. */
@@ -37,6 +49,7 @@ type ProjectState = {
 // Test seam: reports catalog activity without exposing handlers or settings.
 export type ProjectExtensionRuntimeCatalogObserver = {
   onLoadStart?: (event: { projectId: string; reason: string; revision: number }) => void;
+  /** The accepted candidate owns installed indexes, even when a later invalidation immediately marks it dirty. */
   onPublish?: (event: { projectId: string; generation: number; loadCount: number }) => void;
   onDiscard?: (event: { projectId: string; code: "extension_runtime_generation_stale" }) => void;
 };
@@ -50,6 +63,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
   projectService: ReturnType<typeof createProjectService>;
   workspaceService: ReturnType<typeof createWorkspaceService>;
   loadSources?: typeof loadExtensionSources;
+  extensionStorageService?: ExtensionStorageIndexService;
   observer?: ProjectExtensionRuntimeCatalogObserver;
 }) => {
   const sources = createExtensionSourceCache({ loadSources: deps.loadSources });
@@ -75,7 +89,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     return created;
   };
 
-  const buildRuntime = async (projectId: string, state: ProjectState) => {
+  const buildRuntime = async (projectId: string, state: ProjectState, validate: () => void) => {
     const project = await deps.projectService.get(projectId);
     if (!project) throw new ExtensionRuntimeProjectMissingError(projectId);
 
@@ -90,6 +104,8 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       cachedSources.flatMap((cached) => cached.diagnostics),
       { projectFolder: workspace?.root_path ?? undefined },
     );
+
+    await installExtensionStorageIndexes(deps.extensionStorageService, projectId, runtime, validate);
 
     return { enabledSources, project, runtime };
   };
@@ -128,7 +144,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     state.current = snapshot;
     state.staleView = null;
     state.loadedRevision = context.startRevision;
-    state.dirtyReason = null;
+    if (state.revision === context.startRevision) state.dirtyReason = null;
     deps.observer?.onPublish?.({ projectId: context.projectId, generation, loadCount: state.loadCount });
     apiLogger.info(
       {
@@ -173,9 +189,15 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     );
 
     try {
-      const loaded = await buildRuntime(projectId, state);
+      const loaded = await buildRuntime(projectId, state, () => {
+        if (state.revision !== context.startRevision) throw discardStaleLoad(context);
+      });
+      // Committed indexes belong to this healthy candidate. If an invalidation
+      // arrived during COMMIT, retain it as the fallback while loading the newer
+      // source. Never pair the previous handlers with newly accepted definitions.
+      const snapshot = publishSnapshot(state, context, loaded);
       if (state.revision !== context.startRevision) throw discardStaleLoad(context);
-      return publishSnapshot(state, context, loaded);
+      return snapshot;
     } catch (error) {
       if (error instanceof ExtensionRuntimeProjectMissingError) states.delete(projectId);
       else if (!(error instanceof ExtensionRuntimeGenerationStaleError)) logLoadFailure(context, error);
@@ -229,6 +251,12 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
   // Runs before an enable is persisted, so the candidate is described by its manifest
   // and source path rather than by a row.
+  const validateResourcePrefixSet = async (candidates: CandidateExtensionSource[]) => {
+    const loaded = (await Promise.all(candidates.map((candidate) => sources.load(candidate)))).filter(
+      (record) => record !== null,
+    );
+    assertResourcePrefixes(loaded);
+  };
   const validateResourcePrefixes = async (projectId: string, installedSource: CandidateExtensionSource) => {
     const enabled = (await deps.extensionService.listEnabledSourcesForProject(projectId)).filter(
       (record) => record.installedSource.extension_id !== installedSource.extension_id,
@@ -236,12 +264,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     const loaded = await sources.collect(enabled);
     const candidate = await sources.load(installedSource);
     if (candidate) loaded.push(candidate);
-    const runtime = normalizeExtensionSources(loaded.map((record) => record.source));
-    const errors = runtime.diagnostics.filter(
-      (diagnostic) => diagnostic.code.startsWith("extension_resource_prefix_") && diagnostic.severity === "error",
-    );
-    if (errors.length)
-      throw Object.assign(new Error(errors.map((error) => error.message).join("\n")), { diagnostics: errors });
+    assertResourcePrefixes(loaded);
   };
 
   const markDirty = (state: ProjectState, reason: RuntimeInvalidationReason) => {
@@ -295,6 +318,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     ...createProjectRuntimeActivation(get),
     invalidate,
     validateResourcePrefixes,
+    validateResourcePrefixSet,
     subscribeInvalidation: (listener: (input: RuntimeInvalidationInput) => void) => {
       invalidationListeners.add(listener);
       return () => {

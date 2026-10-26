@@ -36,6 +36,8 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
     if (id === selected) workbench.pageLocations.navigateToRootLevel();
     else void controller.select(workbench, id);
   };
+  if (typeof selected !== "string") return <WindowTitleBar platform={platform} />;
+
   return (
     <WindowTitleBar
       platform={platform}
@@ -54,7 +56,7 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
         onClose={(id) => void controller.close(workbench, id)}
         onReorder={(id, targetId) => controller.reorder(workbench, id, targetId)}
       />
-      <Tooltip content="Open / create project" openDelay={300} positioning={{ placement: "bottom" }}>
+      <Tooltip content="Open / create project" positioning={{ placement: "bottom" }}>
         <IconButton
           aria-label="Open / create project"
           variant="ghost"

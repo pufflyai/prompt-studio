@@ -160,8 +160,32 @@
     }
   },
   "list": {
+    "settings": "설정",
     "createProject": "프로젝트 생성",
     "noProjectsYet": "아직 프로젝트가 없습니다",
     "noProjectsDescription": "첫 번째 프로젝트를 만들어 시작하세요."
+  },
+  "harnessAccount": {
+    "login": "로그인",
+    "logout": "로그아웃",
+    "loginTitle": "{{name}}에 로그인",
+    "logoutTitle": "{{name}}에서 로그아웃",
+    "instructions": "여기서 로그인하세요. 공급자가 브라우저를 열 수 있습니다.",
+    "completed": "계정 명령 완료",
+    "failed": "인증 실패",
+    "cancel": "취소",
+    "close": "닫기",
+    "managed": "런타임에서 자격 증명을 관리합니다",
+    "requiredDescription": "메시지를 보내려면 로그인하세요. 채팅에서 /login을 사용할 수도 있습니다.",
+    "noHarnessTitle": "사용 가능한 에이전트가 없습니다",
+    "noHarnessDescription": "확장 프로그램에서 에이전트를 활성화하여 채팅을 시작하세요.",
+    "extensions": "확장 프로그램 보기",
+    "noArguments": "{{command}} 명령은 인수를 받지 않습니다.",
+    "deviceInstructions": "로그인 페이지에서 이 코드를 입력하세요.",
+    "starting": "작업 시작 중…",
+    "openPage": "로그인 페이지 열기",
+    "waiting": "브라우저에서 로그인을 완료하기를 기다리고 있습니다.",
+    "projectRequired": "로그인하기 전에 프로젝트를 여세요.",
+    "continue": "계속"
   }
 }

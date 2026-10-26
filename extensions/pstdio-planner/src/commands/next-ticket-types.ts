@@ -1,15 +1,19 @@
+import type { SessionRunSnapshot } from "@pstdio/sdk/extensions";
 import type { AttemptReadinessResult } from "../data/attempt-readiness";
 
 export interface NextTicket {
   id: string;
   ticket: string;
   title: string;
-  action: "start" | "resume" | "update-stack" | "recover-workspace";
+  action: "start" | "resume" | "update-stack" | "recover-workspace" | "repair";
   baseHeadSha?: string;
   workspaceId?: string;
   recoveryHeadSha?: string;
   recoveryBaseSha?: string;
   detail?: string;
+  expectedHeadSha?: string;
+  expectedRun?: SessionRunSnapshot;
+  evidenceKey?: string;
 }
 
 export interface WaitingTicket {

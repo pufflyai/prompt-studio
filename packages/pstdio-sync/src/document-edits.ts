@@ -1,6 +1,7 @@
 import { canonicalJson, type Json, type SharedEdit } from "pstdio-sync-contracts";
 import type * as Y from "yjs";
 import type { DocumentAuthor } from "./document-author";
+import { normalizeDocumentJson } from "./document-json";
 import { readValue, valueReference, writeValue } from "./document-values";
 import type { GroupCommit } from "./types";
 
@@ -41,6 +42,9 @@ const applyShared = (
   }
 };
 
+/** A record's named map. It stays in the document after the record is deleted. */
+export const recordTypeName = (recordId: string) => JSON.stringify(["record", recordId]);
+
 export const applyDocumentEdit = (document: Y.Doc, edit: GroupCommit["edits"][number], author?: DocumentAuthor) => {
   const records = document.getMap<string>("records");
   if (edit.deleted) {
@@ -51,15 +55,18 @@ export const applyDocumentEdit = (document: Y.Doc, edit: GroupCommit["edits"][nu
   let name = records.get(edit.recordId);
   if (!name) {
     if (document.getMap("deleted").has(edit.recordId) && edit.deleted !== false) return;
-    name = JSON.stringify(["record", edit.recordId]);
+    name = recordTypeName(edit.recordId);
     records.set(edit.recordId, name);
     document.getMap("deleted").delete(edit.recordId);
   }
   const record = document.getMap(name);
-  if (Object.hasOwn(edit, "replace")) writeValue(record, "value", edit.replace!, name, author);
-  if (edit.asset !== undefined && canonicalJson((record.get("asset") ?? null) as Json) !== canonicalJson(edit.asset))
-    record.set("asset", structuredClone(edit.asset));
-  for (const shared of edit.shared ?? []) {
+  if (Object.hasOwn(edit, "replace")) writeValue(record, "value", normalizeDocumentJson(edit.replace!), name, author);
+  if (edit.asset !== undefined) {
+    const asset = normalizeDocumentJson(edit.asset);
+    if (canonicalJson((record.get("asset") ?? null) as Json) !== canonicalJson(asset)) record.set("asset", asset);
+  }
+  for (const input of edit.shared ?? []) {
+    const shared = normalizeDocumentJson(input as unknown as Json) as unknown as SharedEdit;
     const apply = () => applyShared(document, record, name!, shared, author);
     if (author) author(name, "shared", shared as unknown as Json, apply);
     else apply();

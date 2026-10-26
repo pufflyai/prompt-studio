@@ -16,6 +16,7 @@ export interface WorkbenchShellRegionState {
 
 export interface WorkbenchShellController extends ReturnType<typeof createPanelPositionController> {
   getPanelPolicy(region: WorkbenchRegion): WorkbenchPanelPolicy;
+  /** @deprecated Page Main headers follow main.presentation. Retained for legacy auxiliary panels. */
   setHeaderVisible(region: WorkbenchRegion, visible: boolean): void;
   getRegionState(region: WorkbenchRegion): WorkbenchShellRegionState;
   setRegionOpen(region: WorkbenchShellOpenRegion, open: boolean): void;

@@ -12,6 +12,7 @@ import {
   workbenchPanelRegions,
   workbenchRegionTabLeadingMenuPath,
 } from "../../core";
+import { isSingleViewPage } from "../../core/registries/pages/page-main";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
@@ -23,10 +24,7 @@ import { suppressesSidenavTabStrip, toTabKey } from "./region-tabs-visibility";
 const isWorkbenchPanelRegion = (region: WorkbenchRegion): region is WorkbenchPanelRegion =>
   workbenchPanelRegions.some((panelRegion) => panelRegion === region);
 
-export const shouldShowRegionTabs = (
-  placements: WorkbenchWidgetPlacement[],
-  options: { alwaysShowTabs?: boolean } = {},
-) => placements.length > 1 || (placements.length === 1 && (options.alwaysShowTabs ?? placements[0]?.closable) === true);
+export const shouldShowRegionTabs = (placements: WorkbenchWidgetPlacement[]) => placements.length > 0;
 
 interface WorkbenchPanelHeaderVisibility {
   hasTabs?: boolean;
@@ -58,7 +56,6 @@ export const useWorkbenchRegionTabsState = (
   workbench: WorkbenchCore,
   region: WorkbenchRegion,
   visibilityStorageKey?: string,
-  hasPanelMenuOpeners = false,
 ) => {
   const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
@@ -75,6 +72,8 @@ export const useWorkbenchRegionTabsState = (
     return () => subscription.dispose();
   }, [workbench, storageKey]);
   const regionState = layoutState.layout.regions[region];
+  const pageState = useWorkbenchStore(workbench.pages.store, (state) => state);
+  const pageContent = region === "main" && isSingleViewPage(pageState.pages[pageState.activePageId ?? ""]);
   const subPanelPlacements = regionState.widgets.filter(
     (placement) =>
       placement.role === "sub-panel" &&
@@ -96,22 +95,11 @@ export const useWorkbenchRegionTabsState = (
   );
   const panelRegion = isWorkbenchPanelRegion(region) ? region : undefined;
   const eligibleSubPanels = panelRegion ? compositionPanels[panelRegion].addable : [];
-  const hasMovedPlacement = visiblePlacements.some(
-    (placement) => layoutState.widgets[placement.contributionId]?.region !== region,
-  );
   const showTabs =
-    !suppressesSidenavTabStrip(region, visiblePlacements) &&
-    ((hasPanelMenuOpeners && visiblePlacements.length > 0) ||
-      hasMovedPlacement ||
-      shouldShowRegionTabs(visiblePlacements, {
-        alwaysShowTabs:
-          regionState.headerVisible === true ||
-          (workbench.shell.getPanelPolicy(region).legacyHeaders || region === "main"
-            ? workbench.layout.getRegionSettings(region)?.alwaysShowTabs
-            : (workbench.layout.getRegionSettings(region)?.alwaysShowTabs ?? true)),
-      }));
+    !pageContent && !suppressesSidenavTabStrip(region, visiblePlacements) && shouldShowRegionTabs(visiblePlacements);
   const hasActions =
-    leadingItems.length > 0 || (eligibleSubPanels.length > 0 && (visiblePlacements.length === 0 || showTabs));
+    !pageContent &&
+    (leadingItems.length > 0 || (eligibleSubPanels.length > 0 && (visiblePlacements.length === 0 || showTabs)));
   const hasTrailingActions =
     region === "main" &&
     listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, headerTrailingMenuPath(region), {
@@ -141,7 +129,7 @@ export const useWorkbenchPanelRegionTabsState = (
 ) => {
   const [left, right] = useWorkbenchPanelMenus(workbench, region);
   const hasPanelMenus = [left, right].some((menu) => menu.has && menu.collapsed);
-  const tabs = useWorkbenchRegionTabsState(workbench, region, visibilityStorageKey, hasPanelMenus);
+  const tabs = useWorkbenchRegionTabsState(workbench, region, visibilityStorageKey);
   return { ...tabs, hasPanelMenus };
 };
 

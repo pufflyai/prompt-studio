@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
+import { resolveOpencodeCommand } from "./cli";
 
 export type OpencodeServer = { url: string; dispose: () => Promise<void> };
 export type OpencodeServerOptions = { host: string; port: number; signal: AbortSignal };
 export type OpencodeServerStarter = (options: OpencodeServerOptions) => Promise<OpencodeServer>;
 
-export const startOpencodeServer = async (options: OpencodeServerOptions, command = ["opencode"]) => {
+export const startOpencodeServer = async (options: OpencodeServerOptions, command = [resolveOpencodeCommand()]) => {
   const { host, port, signal } = options;
   signal.throwIfAborted();
   const [file, ...args] = command;
@@ -13,6 +14,7 @@ export const startOpencodeServer = async (options: OpencodeServerOptions, comman
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
     signal,
+    shell: process.platform === "win32" && /\.(cmd|bat)$/i.test(file!),
   });
   const exited = new Promise<void>((resolve) => child.once("close", () => resolve()));
   let closing: Promise<void> | undefined;

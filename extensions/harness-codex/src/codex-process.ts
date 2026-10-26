@@ -2,6 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { win32 } from "node:path";
 import type { Readable, Writable } from "node:stream";
+import { isPrivateCodexLauncher, resolveManagedCodex } from "./managed-cli";
 
 type SpawnedChild = {
   stdin: Writable;
@@ -21,10 +22,11 @@ export type SpawnDeps = {
 // executable rather than an extra `cmd.exe` layer between us and the process.
 // The vendored layout below is best-effort and tracks @openai/codex's current
 // packaging; if it moves, we fall back to running the shim through a shell.
-const resolveNativeCodex = (command: string, exists: (command: string) => boolean) => {
+const resolveNativeCodex = (command: string, exists: (command: string) => boolean, arch: string) => {
   if (win32.basename(command).toLowerCase() !== "codex.cmd") return null;
 
   const npmBinDir = win32.dirname(command);
+  const cpu = arch === "arm64" ? "aarch64" : "x86_64";
   const candidates = [
     win32.join(
       npmBinDir,
@@ -33,13 +35,13 @@ const resolveNativeCodex = (command: string, exists: (command: string) => boolea
       "codex",
       "node_modules",
       "@openai",
-      "codex-win32-x64",
+      `codex-win32-${arch}`,
       "vendor",
-      "x86_64-pc-windows-msvc",
+      `${cpu}-pc-windows-msvc`,
       "bin",
       "codex.exe",
     ),
-    win32.join(npmBinDir, "node_modules", "@openai", "codex", "vendor", "x86_64-pc-windows-msvc", "bin", "codex.exe"),
+    win32.join(npmBinDir, "node_modules", "@openai", "codex", "vendor", `${cpu}-pc-windows-msvc`, "bin", "codex.exe"),
   ];
 
   return candidates.find(exists) ?? null;
@@ -66,23 +68,31 @@ const preferSpawnableSibling = (command: string, exists: (command: string) => bo
 export const resolveCodexCommand = (
   input: {
     exists?: (command: string) => boolean;
+    arch?: string;
+    managed?: () => string | null;
     platform?: NodeJS.Platform | "win32";
     which?: (command: string) => string | null;
   } = {},
 ) => {
   const platform = input.platform ?? process.platform;
+  const arch = input.arch ?? process.arch;
   const which =
     input.which ??
     ((command: string) => (typeof Bun.which === "function" ? Bun.which(command, { PATH: process.env.PATH }) : null));
   const exists = input.exists ?? existsSync;
   const resolved = which("codex");
 
-  if (platform === "win32" && resolved) {
+  if (platform === "win32" && resolved && !isPrivateCodexLauncher(resolved)) {
     const target = preferSpawnableSibling(resolved, exists);
-    return resolveNativeCodex(target, exists) ?? target;
+    return (
+      resolveNativeCodex(target, exists, arch) ??
+      (input.managed ?? (() => resolveManagedCodex({ platform, arch })))() ??
+      target
+    );
   }
 
-  return resolved ?? "codex";
+  if (resolved && !isPrivateCodexLauncher(resolved)) return resolved;
+  return (input.managed ?? (() => resolveManagedCodex({ platform, arch })))() ?? resolved ?? "codex";
 };
 
 export const defaultSpawnProcess = (args: string[], options?: { cwd?: string; env?: Record<string, string> }) => {

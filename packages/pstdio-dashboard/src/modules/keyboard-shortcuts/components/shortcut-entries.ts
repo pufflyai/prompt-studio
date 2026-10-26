@@ -50,6 +50,7 @@ type ShortcutSources = ReturnType<typeof readShortcutSources>;
 const actionLabel = (sources: ShortcutSources, action: NavigationTarget): string => {
   if (action.kind === "command") return sources.commands[action.commandId]?.command.label ?? "Command";
   if (action.kind === "href") return action.href;
+  if (action.kind === "viewer") return action.resource.label ?? action.resource.id;
   if (action.kind === "compound") return action.targets.map((target) => actionLabel(sources, target)).join(" + ");
   if (action.kind === "page") {
     const page = sources.pages[contributionRefId(action.page)];

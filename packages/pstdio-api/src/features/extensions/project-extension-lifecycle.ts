@@ -9,9 +9,13 @@ import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgra
 import type { RouteDeps } from "../deps";
 import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
 import type { ExtensionsRouteDeps } from "./deps";
+import { setDeviceAutomationEnabled } from "./device-automations";
 import { extensionChangesWorkspaceProvisioning } from "./extension-skill-cleanup";
 import { toExtensionEnableInput } from "./install-extension-source";
 import { toProjectExtensionInstance } from "./project-extension-instance";
+import { openPublishedCatalog } from "./publication/catalog";
+import { removeSharedSelection, shareEnabledChoice } from "./publication/change-catalog";
+import { selectPublicationSource } from "./publication/prepare-activation";
 
 type LifecycleDeps = ExtensionsRouteDeps & {
   installedExtensionSourcesService: RouteDeps["installedExtensionSourcesService"];
@@ -47,6 +51,11 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
       canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
     });
 
+  const copiesOf = async (projectId: string, extensionId: string) =>
+    (await deps.extensionService.listProjectExtensionInstances(projectId)).filter(
+      ({ installedSource }) => installedSource.extension_id === extensionId,
+    );
+
   const install = async (projectId: string, input: InstallExtensionRequest | UploadExtensionRequest) => {
     if (!deps.extensionUpgradeService)
       throw new ExtensionUpgradeUnavailableError("Extension installation is unavailable.");
@@ -65,8 +74,13 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     if (!existing) return null;
     const requiresProvisioning = await changesWorkspaceProvisioning(existing.installedSource);
 
+    const extensionId = existing.installedSource.extension_id;
     const updated = await deps.extensionService.setProjectExtensionEnabled(instanceId, enabled);
     if (!updated) return null;
+    // Shared only after this device accepted the change, so other devices never get a state it refused.
+    // A leftover copy that this device does not run leaves the shared choice alone.
+    if (selectPublicationSource(await copiesOf(projectId, extensionId))?.instance.id === instanceId)
+      await shareEnabledChoice(deps, projectId, extensionId, enabled);
 
     await provisionWhenRequired(projectId, requiresProvisioning);
     return projectExtension(updated, existing.installedSource);
@@ -87,12 +101,7 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     );
     if (!schedule) return null;
 
-    await deps.extensionAutomationPreferencesService.set({
-      project_id: projectId,
-      extension_instance_id: instanceId,
-      automation_id: automationId,
-      enabled,
-    });
+    await setDeviceAutomationEnabled(deps, projectId, { scheduleId: automationId, instanceId, enabled });
 
     return {
       id: schedule.id,
@@ -119,11 +128,32 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
         `Extension still owns ${providerWorkspaces.length} provider-backed workspace(s). Delete them before uninstalling.`,
       );
     }
-    const result = await deps.extensionService.uninstallProjectExtension(input);
+    const extensionId = existing.installedSource.extension_id;
+    // Removing a leftover copy that this device does not run keeps the extension on every device.
+    const runsSelectedCopy =
+      selectPublicationSource(await copiesOf(input.projectId, extensionId))?.instance.id === input.instanceId;
+    // The shared removal comes first, so a sync cannot reinstall the extension in between.
+    const restoreSharedSelection = runsSelectedCopy
+      ? await removeSharedSelection(await openPublishedCatalog(deps, input.projectId), extensionId)
+      : undefined;
+    let result: Awaited<ReturnType<LifecycleDeps["extensionService"]["uninstallProjectExtension"]>>;
+    try {
+      result = await deps.extensionService.uninstallProjectExtension(input);
+    } catch (error) {
+      // This device still runs the extension, so other devices keep it too.
+      // The caller needs the uninstall's own error, even when restoring the shared selection fails.
+      await restoreSharedSelection?.().catch((restore) =>
+        apiLogger.error(
+          { event: "extension.publication.restore_failed", projectId: input.projectId, extensionId, err: restore },
+          "The shared extension selection could not be restored after a failed uninstall",
+        ),
+      );
+      throw error;
+    }
     if (!result) return null;
     if (input.deleteUserData) {
       try {
-        await deps.extensionConnectionService.removeExtension(input.projectId, existing.installedSource.extension_id);
+        await deps.extensionConnectionService.removeExtension(input.projectId, extensionId);
       } catch (error) {
         apiLogger.error(
           { err: error, event: "extension.connection_cleanup.deferred", projectId: input.projectId },

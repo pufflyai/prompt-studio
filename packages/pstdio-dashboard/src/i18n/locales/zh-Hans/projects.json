@@ -160,8 +160,32 @@
     }
   },
   "list": {
+    "settings": "设置",
     "createProject": "创建项目",
     "noProjectsYet": "暂无项目",
     "noProjectsDescription": "创建您的第一个项目以开始使用。"
+  },
+  "harnessAccount": {
+    "login": "登录",
+    "logout": "退出登录",
+    "loginTitle": "登录 {{name}}",
+    "logoutTitle": "退出 {{name}}",
+    "instructions": "在此完成登录。提供商可能会打开浏览器。",
+    "completed": "账户命令已完成",
+    "failed": "身份验证失败",
+    "cancel": "取消",
+    "close": "关闭",
+    "managed": "凭据由运行环境管理",
+    "requiredDescription": "登录后即可发送消息。您也可以在聊天中使用 /login。",
+    "noHarnessTitle": "没有可用的代理",
+    "noHarnessDescription": "在扩展中启用代理以开始聊天。",
+    "extensions": "浏览扩展",
+    "noArguments": "{{command}} 不接受参数。",
+    "deviceInstructions": "在登录页面输入此代码。",
+    "starting": "正在启动…",
+    "openPage": "打开登录页面",
+    "waiting": "等待在浏览器中完成登录。",
+    "projectRequired": "请先打开项目再登录。",
+    "continue": "继续"
   }
 }

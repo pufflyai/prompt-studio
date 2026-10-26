@@ -10,6 +10,7 @@ import type {
 import { isFileSourcePosition } from "@pstdio/sdk/extensions";
 import { normalizePageParams } from "pstdio-api-contracts";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
+import { resolvePageGroupDefault } from "./page-group-default";
 
 export const workbenchPageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:page:${ref.id}`;
 
@@ -266,7 +267,10 @@ export const normalizeWorkbenchPageTarget = (input: {
   pages: readonly WorkbenchPageContribution[];
   resources: WorkbenchPageResourceCodec;
   active?: PageLocation;
-}) => normalizePageTarget({ ...input, seen: new Set() });
+}) =>
+  resolvePageGroupDefault(normalizePageTarget({ ...input, seen: new Set() }), input.pages, (target) =>
+    normalizePageTarget({ ...input, target, active: undefined, seen: new Set() }),
+  );
 
 export const normalizeWorkbenchPageLocation = (input: {
   location: PageLocation;
@@ -300,7 +304,9 @@ export const normalizeWorkbenchPageLocation = (input: {
       }),
     };
   };
-  return normalize(input.location, new Set());
+  return resolvePageGroupDefault(normalize(input.location, new Set()), input.pages, (target) =>
+    normalizePageTarget({ ...input, target, seen: new Set() }),
+  );
 };
 
 export const normalizeDirectWorkbenchPageLocation = (input: {
@@ -314,17 +320,21 @@ export const normalizeDirectWorkbenchPageLocation = (input: {
 }) => {
   const page = pageForId(input.pages, input.pageId);
   if (!page) throw new Error(`Unknown page: ${input.pageId}`);
-  return {
-    pageId: page.id,
-    location: normalizeResolvedLocation({
-      page,
-      pages: input.pages,
-      resources: input.resources,
-      seen: new Set(),
-      ...(input.resource ? { resource: input.resource } : {}),
-      ...(input.section ? { section: input.section } : {}),
-      ...(input.position ? { position: input.position } : {}),
-      ...(input.params ? { params: input.params } : {}),
-    }),
-  };
+  return resolvePageGroupDefault(
+    {
+      pageId: page.id,
+      location: normalizeResolvedLocation({
+        page,
+        pages: input.pages,
+        resources: input.resources,
+        seen: new Set(),
+        ...(input.resource ? { resource: input.resource } : {}),
+        ...(input.section ? { section: input.section } : {}),
+        ...(input.position ? { position: input.position } : {}),
+        ...(input.params ? { params: input.params } : {}),
+      }),
+    },
+    input.pages,
+    (target) => normalizePageTarget({ ...input, target, seen: new Set() }),
+  );
 };

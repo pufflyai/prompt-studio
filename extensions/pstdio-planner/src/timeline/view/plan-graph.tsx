@@ -1,33 +1,20 @@
 // Show the plan as a dependency graph: the milestone timeline runs down the left, execution order runs down,
 // parallel work sits side by side, each milestone is a band, and collapsible tracks split every band into columns.
 import { Box } from "@chakra-ui/react";
-import { type RefObject, useState } from "react";
+import type { RefObject } from "react";
 import { layoutGraph } from "../model/graph-layout";
 import { dropRegion } from "./drop-region";
 import { GraphContent } from "./graph-content";
 import { geometry, newTrackWidth, trackHeaderHeight } from "./graph-geometry";
 import { TrackHeader } from "./graph-tracks";
 import type { PlanViewProps } from "./plan-view";
+import { useTimelinePresentation } from "./timeline-presentation";
 import { useCanvasPan } from "./use-canvas-pan";
 import { useCanvasZoom } from "./use-canvas-zoom";
 import { useCardHeights } from "./use-card-heights";
 import { useRevealCard } from "./use-reveal-card";
 import { useSize } from "./use-size";
 import { ZoomControls } from "./zoom-controls";
-
-// Track collapse is a view choice, like milestone collapse, so it stays local to the open timeline.
-function useCollapsedTracks() {
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
-  const toggle = (trackId: string) =>
-    setCollapsed((current) => {
-      const next = new Set(current);
-      if (!next.delete(trackId)) {
-        next.add(trackId);
-      }
-      return next;
-    });
-  return { collapsed, toggle };
-}
 
 // Place the visible tickets, leaving out collapsed milestones and collapsed tracks.
 function useGraphBox(
@@ -66,7 +53,9 @@ export function PlanGraph(props: PlanViewProps) {
   const { ref, width, height } = useSize();
   const { zoom, change } = useCanvasZoom(ref);
   const { panning, handlers } = useCanvasPan(ref, zoom, change);
-  const { collapsed, toggle } = useCollapsedTracks();
+  const presentation = useTimelinePresentation();
+  const collapsed = new Set(presentation.value.collapsedTracks);
+  const toggle = (id: string) => presentation.toggle("collapsedTracks", id);
   const { box, trackAt, rows } = useGraphBox(sections, tracks, collapsed, ref);
   const sourceTrackId = sections.flatMap(({ section }) => section.rows).find(({ id }) => id === props.dragId)?.trackId;
   const region = dropRegion(

@@ -8,12 +8,13 @@
     "./access": "./src/environment-access.ts"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/environment-access.ts src/server.ts --target bun --outdir dist",
+    "build": "bun build src/index.ts src/environment-access.ts src/server.ts --target bun --outdir dist && bun build scripts/account-feature.ts --target bun --outfile dist/account-feature.js",
+    "account-feature": "bun scripts/account-feature.ts",
     "start": "bun ./dist/server.js",
-    "test:isolated": "bun scripts/test-isolated.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
-    "db:generate": "drizzle-kit generate --config ./drizzle.config.ts"
+    "db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
+    "test:integration": "bun scripts/test-isolated.ts"
   },
   "dependencies": {
     "better-auth": "1.7.10",
@@ -25,7 +26,7 @@
     "pstdio-service-telemetry": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/pg": "^8.18.0",
     "drizzle-kit": "^0.31.9",
     "typescript": "6.0.2"

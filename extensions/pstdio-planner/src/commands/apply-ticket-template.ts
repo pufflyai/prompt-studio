@@ -4,10 +4,12 @@ import {
   readTicketMarkdown,
   requireTicketDraftFiles,
   ticketMarkdownPath,
-  writeTicketText,
+  writeTicketMarkdown,
 } from "../data/draft-storage";
 import { extractTicketTitle } from "../data/frontmatter";
+import { findTicket } from "../data/resolve";
 import { readOwnedTemplate } from "../data/template-store";
+import { refreshTicketCheckout } from "../data/ticket-checkout";
 
 const parseVariables = (values: string[] | undefined) => {
   const variables: Record<string, string> = {};
@@ -34,26 +36,29 @@ export const applyTicketTemplateCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const { projectFiles, resolvePath } = await requireTicketDraftFiles(ctx);
-    const current = await readTicketMarkdown(projectFiles, commandParams.id);
+    const ticket = await findTicket(ctx, commandParams.id);
+    if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
+    await refreshTicketCheckout(projectFiles, ticket);
+    const current = await readTicketMarkdown(projectFiles, ticket.shorthand);
     if (current === null) throw new Error(`Ticket not found: ${commandParams.id}`);
 
     const template = await readOwnedTemplate(ctx, commandParams.template);
     if (!template) throw new Error(`Template not found: ${commandParams.template}`);
     if (template.type !== "ticket") throw new Error(`Template is not a ticket template: ${commandParams.template}`);
 
-    const path = ticketMarkdownPath(commandParams.id);
-    await writeTicketText(
+    const path = ticketMarkdownPath(ticket.shorthand);
+    await writeTicketMarkdown(
       projectFiles,
-      commandParams.id,
+      ticket,
       renderPrompt(template.content, {
         CREATED_AT: new Date().toISOString(),
         USER_PROMPT: "",
         PARENT_ID: "",
-        TICKET_ID: commandParams.id,
+        TICKET_ID: ticket.shorthand,
         TICKET_TITLE: extractTicketTitle(current) ?? commandParams.id,
         ...parseVariables(commandParams.var),
       }),
     );
-    return { shorthand: commandParams.id, path: resolvePath(path) };
+    return { shorthand: ticket.shorthand, path: resolvePath(path) };
   },
 });

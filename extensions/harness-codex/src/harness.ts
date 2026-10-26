@@ -1,5 +1,6 @@
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
+import { authenticateCodex, getCodexAuthentication } from "./authentication";
 import { createCodexRuntime } from "./codex-runtime";
 import { codexCommandState, prepareCodexOperation } from "./commands";
 import { detectCodex } from "./detection";
@@ -51,6 +52,15 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
     label: l10n("harness.codex", "Codex"),
     skills: { dir: ".agents/skills" },
     params: {
+      service_tier: params.select({
+        label: l10n("harness.codex.service-tier.label", "Speed"),
+        description: l10n("harness.codex.service-tier.description", "Fast mode uses more of your Codex allowance."),
+        defaultValue: "default",
+        options: [
+          { label: "Standard", value: "default", icon: "Snail" },
+          { label: "Fast", value: "fast", icon: "Zap" },
+        ],
+      }),
       collaboration_mode: {
         control: "command",
         ...params.select({
@@ -98,6 +108,11 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
     // Host-managed worktrees run without provider approvals.
     capabilities: () => ["ContextUsage"],
     detect: (ctx) => deps.detect(ctx),
+    getAuthentication: getCodexAuthentication,
+    authenticate: async (ctx, input, channel) => {
+      await authenticateCodex(ctx, input, channel);
+      modelCache = undefined;
+    },
     listModels,
 
     start: (ctx, input) =>
@@ -133,6 +148,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
         input.cwd,
       ),
     recoverMessages: (_ctx, input) => recoverNativeHistory(input),
+    releaseSession: (ctx, input) => deps.runtime.releaseSession(ctx.projectId, input.sessionId),
     dispose: (ctx) => deps.runtime.disposeScope(ctx.projectId),
   };
 };

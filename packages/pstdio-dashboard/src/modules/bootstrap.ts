@@ -1,24 +1,18 @@
 import type { PageLocation } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
-import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
-import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-selection-persistence";
 import {
   getDashboardExtensionsReadyProjectId,
   subscribeDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { findDashboardSession } from "./sessions/data/dashboard-sessions";
 
 interface CreateBootstrapModuleInput {
   isInitialSyncComplete?: () => boolean;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
-  sessionSelectionPersistence?: DashboardSessionSelectionPersistence;
 }
-
-type BootstrapContext = Parameters<WorkbenchModuleContribution["activate"]>[0];
 
 const isCorePageLocation = (location: PageLocation | undefined) => {
   if (!location) return false;
@@ -27,47 +21,6 @@ const isCorePageLocation = (location: PageLocation | undefined) => {
     location = location.parent;
   }
   return true;
-};
-
-const selectedSession = (ctx: BootstrapContext, sessionId: string) =>
-  findDashboardSession(sessionId, getDashboardSelectedProjectId(ctx));
-
-const restoreSelectedSession = (
-  ctx: BootstrapContext,
-  sessionId: string | undefined,
-  isCurrent: () => boolean,
-  isInitialSyncComplete: () => boolean,
-) => {
-  if (!sessionId) return undefined;
-  let unsubscribe: (() => void) | undefined;
-
-  const restore = () => {
-    if (!isCurrent() || ctx.modes.getActiveModeId() !== "project") {
-      unsubscribe?.();
-      unsubscribe = undefined;
-      return;
-    }
-    const session = selectedSession(ctx, sessionId);
-    if (session && ctx.commands.getCommand(dashboardCommandIds.openSessionPanel)) {
-      unsubscribe?.();
-      unsubscribe = undefined;
-      void ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
-        preservePanelMode: true,
-        resource: session.resource,
-      });
-      return;
-    }
-    if (isInitialSyncComplete()) {
-      unsubscribe?.();
-      unsubscribe = undefined;
-    }
-  };
-
-  restore();
-  if (!unsubscribe && !isInitialSyncComplete() && isCurrent()) {
-    unsubscribe = subscribeDashboardData(restore);
-  }
-  return { dispose: () => unsubscribe?.() };
 };
 
 export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
@@ -80,15 +33,12 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       let generation = 0;
       let readyUnsubscribe: (() => void) | undefined;
       let selectionUnsubscribe: (() => void) | undefined;
-      let sessionRestore: { dispose(): void } | undefined;
 
       const disposePending = () => {
         readyUnsubscribe?.();
         readyUnsubscribe = undefined;
         selectionUnsubscribe?.();
         selectionUnsubscribe = undefined;
-        sessionRestore?.dispose();
-        sessionRestore = undefined;
       };
 
       const enterProjectSelection = () => {
@@ -140,12 +90,6 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
           readyUnsubscribe = undefined;
           const result = ctx.pageLocations.boot(projectId);
           if (!result.ok) return true;
-          sessionRestore = restoreSelectedSession(
-            ctx,
-            input.sessionSelectionPersistence?.getSelectedSessionId(),
-            () => run === generation && getDashboardSelectedProjectId(ctx) === projectId,
-            isInitialSyncComplete,
-          );
           return true;
         };
 

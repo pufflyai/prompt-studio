@@ -4,6 +4,7 @@ import { isUpdateChannel, type UpdateChannel } from "pstdio-paths";
 import type { DesktopProjectTabsState, DesktopStartupAppearance, DesktopWorkbenchState } from "../desktop-api";
 import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
+import { registerPerformanceCaptureIpc } from "../performance/performance-ipc";
 import { isAllowedIpcSender } from "../security/ipc-security";
 import { type TitleBarAppearance, titleBarOverlayOptions } from "../windows/title-bar-appearance";
 
@@ -38,6 +39,8 @@ type DesktopIpcOptions = {
     readonly enabled: boolean;
     setEnabled: (enabled: boolean) => Promise<void>;
     snapshot: () => unknown;
+    recordings?: () => unknown;
+    retainCapture?: () => Promise<() => Promise<void>>;
     reportFrames: (report: unknown) => void;
     reportRendererState: (report: unknown) => void;
   };
@@ -109,10 +112,17 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
     return options.performance.setEnabled(enabled);
   });
   handle(DESKTOP_CHANNELS.getPerformanceSnapshot, () => options.performance.snapshot());
+  handle(DESKTOP_CHANNELS.getPerformanceRecordings, () => options.performance.recordings?.() ?? null);
   handle(DESKTOP_CHANNELS.reportSlowFrames, (report) => options.performance.reportFrames(report));
   handle(DESKTOP_CHANNELS.reportRendererState, (report) => options.performance.reportRendererState(report));
 
+  const stopCaptureIpc = registerPerformanceCaptureIpc({
+    ipcMain: options.ipcMain,
+    assertSender: (event) => assertSender(event, options),
+    retain: () => options.performance.retainCapture?.() ?? Promise.resolve(async () => {}),
+  });
   return () => {
+    stopCaptureIpc();
     for (const channel of Object.values(DESKTOP_CHANNELS)) options.ipcMain.removeHandler(channel);
   };
 };

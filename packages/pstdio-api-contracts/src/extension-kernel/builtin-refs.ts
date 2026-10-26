@@ -47,6 +47,8 @@ export const workbenchPages = {
   start: hostRef("page", "start"),
   sessions: hostRef("page", "sessions"),
   session: hostRef("page", "session"),
+  newSession: hostRef("page", "new-session"),
+  sessionComposer: hostRef("page", "session-composer"),
   workspaces: hostRef("page", "workspaces"),
   workspace: hostRef("page", "workspace"),
 };
@@ -69,6 +71,18 @@ export const workbenchPageDefinitions = {
     mode: workbenchModes.sessions,
     path: "session",
     primary: { cardinality: "one", resourceKinds: ["session", "session-draft"] },
+  },
+  newSession: {
+    ref: workbenchPages.newSession,
+    mode: workbenchModes.sessions,
+    path: "sessions/new",
+    primary: { cardinality: "one", resourceKinds: ["session-draft"] },
+  },
+  sessionComposer: {
+    ref: workbenchPages.sessionComposer,
+    mode: workbenchModes.sessions,
+    path: "sessions/compose",
+    primary: { cardinality: "one", resourceKinds: [] },
   },
   workspaces: {
     ref: workbenchPages.workspaces,
@@ -98,6 +112,9 @@ export const workbenchPanelDefinitions = {
 } as const;
 
 export const workbenchSlots = {
+  /** Controls rendered inside the device-local Developer settings surface. */
+  developerSettings: hostRef("settings-panel", "developer.settings"),
+  globalSettings: hostRef("settings-panel", "global.settings"),
   projectSettings: hostRef("settings-panel", "project.settings"),
   /** Custom controls shown in the owner's extension detail Settings tab. */
   extensionSettings: hostRef("settings-panel", "extension.settings"),

@@ -162,8 +162,32 @@
     }
   },
   "list": {
+    "settings": "Configuración",
     "createProject": "Crear proyecto",
     "noProjectsYet": "Aún no hay proyectos",
     "noProjectsDescription": "Crea tu primer proyecto para comenzar."
+  },
+  "harnessAccount": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "loginTitle": "Iniciar sesión en {{name}}",
+    "logoutTitle": "Cerrar sesión en {{name}}",
+    "instructions": "Inicia sesión aquí. El proveedor puede abrir un navegador.",
+    "completed": "Comando de cuenta completado",
+    "failed": "Error de autenticación",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "managed": "El entorno administra las credenciales",
+    "requiredDescription": "Inicia sesión para enviar mensajes. También puedes usar /login en el chat.",
+    "noHarnessTitle": "No hay agentes disponibles",
+    "noHarnessDescription": "Activa una extensión de agente para empezar a conversar.",
+    "extensions": "Ver extensiones",
+    "noArguments": "{{command}} no acepta argumentos.",
+    "deviceInstructions": "Introduce este código en la página de inicio de sesión.",
+    "starting": "Iniciando…",
+    "openPage": "Abrir página de inicio de sesión",
+    "waiting": "Esperando a que termine el inicio de sesión en el navegador.",
+    "projectRequired": "Abre un proyecto antes de iniciar sesión.",
+    "continue": "Continuar"
   }
 }

@@ -77,6 +77,7 @@ const selectionActionSchema = z.object({
 });
 
 export const extensionDataTableRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
+  queryMode: z.literal("paged").optional(),
   toolbarActions: z.array(viewToolbarActionRecordSchema).optional(),
   columns: z.array(dataTableRendererColumnSchema).optional(),
   queryHandlerId: z.string(),

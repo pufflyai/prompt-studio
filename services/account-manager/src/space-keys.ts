@@ -1,5 +1,6 @@
 import { and, asc, eq, max } from "drizzle-orm";
 import type { SpaceKeys } from "pstdio-sync-contracts";
+import { readAccountFeatures } from "./account-features";
 import type { WorkbenchInput } from "./contracts";
 import type { ManagerTransaction } from "./database";
 import { spaceKeys, workbenches } from "./schema";
@@ -34,6 +35,7 @@ export const spaceKeysInTransaction = async (
   transaction: ManagerTransaction,
   input: WorkbenchInput,
 ): Promise<SpaceKeys | null> => {
+  if (!(await readAccountFeatures(transaction, input.accountId)).relay) return null;
   const [workbench] = await transaction
     .select({ id: workbenches.id })
     .from(workbenches)

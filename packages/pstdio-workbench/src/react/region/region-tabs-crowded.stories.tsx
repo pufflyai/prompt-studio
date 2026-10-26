@@ -2,7 +2,7 @@ import { Box, Text } from "@chakra-ui/react";
 import type { PageRef } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -74,17 +74,56 @@ export const MinimumWidth: Story = {
   ),
 };
 
+export const ScrollingStaysInPanel: Story = {
+  tags: ["!manifest", "tab-strip-scroll"],
+  args: { workbench: createCrowdedWorkbench() },
+  render: (args) => (
+    <ChakraProvider value={psTheme}>
+      <Box data-testid="outer-viewport" width="xs" overflow="hidden">
+        <Box width="sm">
+          <WorkbenchStory {...args} />
+        </Box>
+      </Box>
+    </ChakraProvider>
+  ),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const tab = await canvas.findByRole("tab", { name: "Design" });
+    const viewport = tab.closest<HTMLElement>('[data-part="viewport"]');
+    expect(viewport).not.toBeNull();
+    const panel = args.workbench.layout.getLayout().regions.secondary.widgets.find((p) => p.viewId === "tab-7")!;
+    args.workbench.layout.activatePanel(panel.widgetId);
+    await waitFor(() => expect(tab).toHaveAttribute("aria-selected", "true"));
+    await waitFor(() => expect(viewport!.scrollLeft).toBeGreaterThan(0));
+    expect(canvas.getByTestId("outer-viewport").scrollLeft).toBe(0);
+  },
+};
+
 export const FullTitle: Story = {
   ...SharedWidth,
   args: { workbench: createCrowdedWorkbench() },
   play: async ({ canvasElement }) => {
     const tab = await within(canvasElement).findByRole("tab", { name: "a-very-long-resource-name-component.tsx" });
     const page = within(canvasElement.ownerDocument.body);
+    const short = within(canvasElement).getByRole("tab", { name: "Diff" });
+    // Let the label's ResizeObserver commit before sending a synthetic hover.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     await userEvent.hover(tab);
     await expect(await page.findByRole("tooltip")).toHaveTextContent("a-very-long-resource-name-component.tsx");
-    await userEvent.keyboard("{Escape}");
     await userEvent.unhover(tab);
+    await userEvent.hover(short);
+    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
+    await userEvent.unhover(short);
+    await userEvent.hover(tab);
+    await expect(await page.findByRole("tooltip")).toHaveTextContent("a-very-long-resource-name-component.tsx");
+    await userEvent.unhover(tab);
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
     tab.focus();
     await expect(await page.findByRole("tooltip")).toHaveTextContent("a-very-long-resource-name-component.tsx");
+    await userEvent.keyboard("{Escape}");
+    short.focus();
+    await userEvent.hover(short);
+    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
   },
 };

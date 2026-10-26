@@ -55,9 +55,9 @@ Use synthetic fixtures only:
 
 ```sh
 bun run --cwd services/telemetry test
-bun run --cwd services/account-manager test:isolated src/renewal-failures.test.ts src/manager-http.test.ts
+bun run --cwd services/account-manager test:integration src/renewal-failures.p1.integration.ts src/manager-http.p1.integration.ts
 cd packages/pstdio-sync-contracts
-SYNC_TEST_ENTRY=../../services/relay/src/transport/telemetry.integration.ts bun scripts/isolated.ts
+bun scripts/isolated.ts ../../services/relay/src/transport/telemetry.p1.integration.ts
 ```
 
 The tests capture exact redacted envelopes at owned HTTP receivers, deny delivery, and exercise real PostgreSQL manager and relay call sites while health checks and valid snapshot reads remain available. The manager image smoke runs the bundled adapter tests. The relay image smoke verifies the production relay with its bundled dependencies.

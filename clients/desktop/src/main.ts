@@ -47,6 +47,18 @@ let state: DesktopState = initialDesktopState;
 let windowController: DesktopWindowController | null = null;
 const performanceMonitor = createDesktopPerformanceMonitor({
   windows: () => windowController,
+  backend: () => {
+    const descriptor = runtimeManager.runtime?.descriptor;
+    const identity = runtimeManager.processIdentity;
+    if (!identity) return null;
+    return {
+      id: identity.instanceId,
+      pid: identity.pid,
+      origin: descriptor?.origin ?? null,
+      token: descriptor?.token ?? null,
+      scope: "local",
+    };
+  },
   logEndpointFailure: (error) => {
     logger.warn(
       { event: "desktop.performance.endpoint.failed", message: String(error) },

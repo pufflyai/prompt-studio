@@ -28,6 +28,10 @@ async function wakeSupervisor(ctx: CommandContext) {
   try {
     const supervisor = await readAutoBuildSupervisor(ctx);
     const session = supervisor.sessionId ? await ctx.sessions.get(supervisor.sessionId) : null;
+    if (supervisor.sessionId && !session)
+      throw new Error(
+        "The Auto Build supervisor was removed. Inspect the paused run and its linked sessions before resetting its configuration.",
+      );
     if (isLiveSession(session)) return { prompted: false, sessionId: session!.id };
     // A first wake needs one viable ticket. The supervisor queries the full scope before dispatching.
     const {
@@ -60,10 +64,12 @@ async function wakeSupervisor(ctx: CommandContext) {
         title: "Auto Build supervisor",
         workspaceId: home?.id,
         prompt: initialSupervisorPrompt(mode),
+        harness: mode.supervisorModel,
       });
       supervisorId = created.id;
     }
-    await saveAutoBuildSupervisor(ctx, { ...supervisor, sessionId: supervisorId, lastWake: snapshot });
+    const { pendingWakeRevision: _pending, ...acknowledged } = supervisor;
+    await saveAutoBuildSupervisor(ctx, { ...acknowledged, sessionId: supervisorId, lastWake: snapshot });
     return { prompted: true, sessionId: supervisorId };
   } catch (error) {
     await pauseAutoBuildMode(ctx, mode);

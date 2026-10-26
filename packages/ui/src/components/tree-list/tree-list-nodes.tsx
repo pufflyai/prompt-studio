@@ -5,7 +5,7 @@ import type { TreeListDropIndicator } from "./tree-list-drop-indicator";
 import { getNodeChildren } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
 import { TreeListReveal } from "./tree-list-reveal";
-import { DropLine, SortableHost } from "./tree-list-sortable-host";
+import { canStartTreeListDrag, DropLine, SortableHost } from "./tree-list-sortable-host";
 
 interface TreeListNodesProps
   extends Omit<ComponentProps<typeof TreeListNodeRow>, "node" | "level" | "onFocus" | "tabIndex"> {
@@ -49,7 +49,15 @@ const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) 
           handle="child"
           liftedBg="bg.hover"
         >
-          {(listeners) => <Box onPointerDownCapture={(event) => listeners?.onPointerDown?.(event)}>{row}</Box>}
+          {(listeners) => (
+            <Box
+              onPointerDownCapture={(event) => {
+                if (canStartTreeListDrag(event.target)) listeners?.onPointerDown?.(event);
+              }}
+            >
+              {row}
+            </Box>
+          )}
         </SortableHost>
         {descendants}
         {indicator?.lineId === node.id && indicator.edge === "after" ? <DropLine edge="after" /> : null}

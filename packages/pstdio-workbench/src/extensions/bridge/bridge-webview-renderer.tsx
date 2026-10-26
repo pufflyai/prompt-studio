@@ -80,7 +80,7 @@ export const getBridgeWebviewHostEventPublisher = (workbench: WorkbenchCore, ins
 };
 
 export const renderBridgeWebviewFrame = (input: {
-  sizing?: "content-width";
+  sizing?: "content-width" | "content-height";
   context: BridgeWebviewRenderContext;
   createHostAdapters: CreateBridgeWebviewHostAdapters;
   createProps: CreateBridgeWebviewProps;
@@ -104,7 +104,14 @@ export const renderBridgeWebviewFrame = (input: {
           styles: webview.styles ?? [],
         },
       }}
-      props={createProps(context)}
+      props={{
+        ...createProps(context),
+        viewLocation: {
+          section: context.placement.section,
+          position: context.placement.position,
+          pageContext: context.placement.pageContext,
+        },
+      }}
       workbench={context.workbench}
       theme={createTheme(context)}
       capabilities={createExtensionWebviewHostCapabilities(

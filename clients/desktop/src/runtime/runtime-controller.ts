@@ -53,9 +53,10 @@ export const waitForDesktopRuntime = async (
     deps.signal.throwIfAborted();
     const discovery = await deps.discover(descriptorPath);
     deps.signal.throwIfAborted();
-    if (discovery.state === "healthy") {
-      if (!expectedInstanceId || discovery.descriptor.instanceId === expectedInstanceId) return discovery.descriptor;
-      throw new Error("A replacement runtime appeared while desktop was starting");
+    if (discovery.state === "healthy" || discovery.state === "starting") {
+      if (expectedInstanceId && discovery.descriptor.instanceId !== expectedInstanceId)
+        throw new Error("A replacement runtime appeared while desktop was starting");
+      if (discovery.state === "healthy") return discovery.descriptor;
     }
     if (discovery.state === "unsafe") throw new Error(`Runtime ownership is unsafe: ${discovery.reason}`);
     await deps.sleep(DISCOVERY_INTERVAL_MS);
