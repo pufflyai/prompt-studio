@@ -1,7 +1,7 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync } from "node:fs";
-import { readdir, rm, rmdir } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -32,18 +32,6 @@ interface CoreExtensionsFixture {
   extensions: { canUpgrade: boolean; enabled: boolean; id: string; installName: string; name: string }[];
   metadata: WorkbenchExtensionMetadata;
 }
-
-const removeFixture = async (root: string, levels: number) => {
-  const entries = await readdir(root, { withFileTypes: true });
-  await Promise.all(
-    entries.map(async (entry) => {
-      const path = join(root, entry.name);
-      if (entry.isDirectory() && levels > 0) await removeFixture(path, levels - 1);
-      else await rm(path, { recursive: true, force: true });
-    }),
-  );
-  await rmdir(root);
-};
 
 export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFixture) => Promise<void>) => {
   const startedAt = Date.now();
@@ -99,7 +87,7 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("runtime stopped");
     if (closeRegistry) await closeRegistry();
     phase("registry closed");
-    await removeFixture(tempRoot, 3);
+    await rm(tempRoot, { recursive: true, force: true });
     phase("files removed");
   }
 };
