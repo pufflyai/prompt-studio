@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,6 +7,11 @@ import { preparePlannerSource } from "./packaged-planner-source";
 
 const root = await mkdtemp(join(tmpdir(), "ps-932-planner-installer-"));
 const source = await preparePlannerSource(root);
+const frozenLock = await Bun.file(join(source, "bun.lock")).text();
+const frozenResolutions = [...frozenLock.matchAll(/^\s*"([^"]+)": \["([^"]+)",/gm)]
+  .map((match) => [match[1], match[2]?.replace(/file:.*[\\/]/, "file:")])
+  .sort();
+const frozenGraphHash = createHash("sha256").update(JSON.stringify(frozenResolutions)).digest("hex");
 const target = join(root, ".extension-install", "pstdio-planner");
 await cp(source, target, { recursive: true });
 const cache = join(root, "cache", "extension-bun-install");
@@ -35,6 +41,9 @@ const usage = child.resourceUsage();
 const summary = JSON.stringify(
   {
     root,
+    preparationBun: { version: Bun.version, revision: Bun.revision },
+    frozenResolutionCount: frozenResolutions.length,
+    frozenGraphHash,
     argv,
     cwd: target,
     http: env.BUN_CONFIG_MAX_HTTP_REQUESTS,
