@@ -103,9 +103,18 @@ export const runCommand = async (command: string, args: string[], options: Comma
       mark("spawn-returned");
       const exitCode = await child.exited;
       mark("exit-observed");
-      usageJson = JSON.stringify(child.resourceUsage(), (_key, value) =>
-        typeof value === "bigint" ? value.toString() : value,
-      );
+      const usage = child.resourceUsage();
+      usageJson = usage
+        ? JSON.stringify({
+            cpuTimeUs: {
+              user: usage.cpuTime.user.toString(),
+              system: usage.cpuTime.system.toString(),
+              total: usage.cpuTime.total.toString(),
+            },
+            maxRssBytes: usage.maxRSS,
+            ops: { in: usage.ops.in, out: usage.ops.out },
+          })
+        : undefined;
       const [stdout, stderr] = await Promise.all([stdoutFile.text(), stderrFile.text()]);
       mark("capture-read-done");
       console.log(
