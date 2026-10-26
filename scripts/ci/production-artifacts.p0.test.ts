@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { selectProductionArtifacts } from "./production-artifacts";
+import { productionPolicyFiles, selectProductionArtifacts } from "./production-artifacts";
 
 const artifact = (name: string) => ({ id: name.length, name, digest: `sha256:${"a".repeat(64)}`, expired: false });
 test("nightly requires only its published Linux and Apple Silicon desktop artifacts", () => {
@@ -48,4 +48,11 @@ test("candidate provenance must match the archive's recorded build", async () =>
   expect(() => requireProductionBuild({ ...identity, versionSha: "c".repeat(40) }, identity)).toThrow(
     "Candidate build identity mismatch",
   );
+});
+
+test("names policy files the same way on every platform so Windows evidence matches the candidate", () => {
+  const files = productionPolicyFiles();
+  expect(files).toContain("scripts/ci/production-artifacts.ts");
+  expect(files).toContain(".github/workflows/production-validation.yml");
+  expect(files).not.toContain("scripts/ci/production-artifacts.p0.test.ts");
 });
