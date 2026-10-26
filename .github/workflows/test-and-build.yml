@@ -1,4 +1,4 @@
-name: Combined default readiness and native cleanup qualification
+name: Native package manager command timing profile
 on:
   workflow_dispatch:
 permissions:
@@ -14,19 +14,11 @@ jobs:
         include:
           - os: windows-latest
             platform_pkg: cli-win-x64
-            cleanup: bun
           - os: windows-11-arm
             platform_pkg: cli-win-arm64
-            cleanup: bun
-          - os: windows-latest
-            platform_pkg: cli-win-x64
-            cleanup: node-pool64
-          - os: windows-11-arm
-            platform_pkg: cli-win-arm64
-            cleanup: node-pool64
     env:
       CI_PRIORITY: P2
-      E2E_CLEANUP_MODE: ${{ matrix.cleanup }}
+      E2E_INSTALL_PROFILE_ROOT: ${{ github.workspace }}/.pstdio/extension-storage/pstdio.pstdio-artifacts/native-pm-profile
       PSTDIO_BUILD_PLATFORM_PKG: ${{ matrix.platform_pkg }}
       PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
       E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
@@ -34,8 +26,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Require the delivered product and removal experiment only
-        run: git diff --exit-code 77092e1efebcd79cb92fccf3c59a49145f4a9ad4 -- . ':!.github/workflows/test-and-build.yml' ':!packages/e2e/src/packaged/packaged-core-extensions.fixture.ts' ':!packages/e2e/src/packaged/diagnostic-node-core-cleanup.ts' ':!documentation/adrs/0112-temporary-node-core-cleanup-experiment.md'
+      - name: Require the combined product and measurement only
+        run: git diff --exit-code c78f24f7b22e51bae809f51a577ef144fbc63809 -- . ':!.github/workflows/test-and-build.yml' ':!packages/e2e/src/packaged/packaged-core-extensions.fixture.ts' ':!packages/pstdio-api/src/features/extensions/install-extension-dependencies.ts'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -53,18 +45,15 @@ jobs:
       - name: Complete cold core features including removal
         working-directory: packages/e2e
         run: bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-core-extension-features.p2.test.ts --timeout 30000 --silent
-      - name: Complete cold defaults including removal
-        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
-        working-directory: packages/e2e
-        run: bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-core-extensions-smoke.p1.test.ts --timeout 30000 --silent
       - name: Verify compiled integrity after cold runtime cases
         if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
         run: bun run --cwd scripts verify:packages --prebuilt --profile integrity
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: combined-core-${{ matrix.platform_pkg }}-${{ matrix.cleanup }}
+          name: installer-command-profile-${{ matrix.platform_pkg }}
           path: |
+            .pstdio/extension-storage/pstdio.pstdio-artifacts/native-pm-profile
             packages/e2e/test-results
             test-results/ci
             packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe

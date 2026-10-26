@@ -60,6 +60,8 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
       }),
     });
     child = started.child;
+    child.stdout?.on("data", (chunk) => console.log("Native core runtime", chunk.toString()));
+    child.stderr?.on("data", (chunk) => console.error("Native core runtime", chunk.toString()));
     phase("runtime ready");
     const projectFolder = join(tempRoot, "project");
     mkdirSync(projectFolder);

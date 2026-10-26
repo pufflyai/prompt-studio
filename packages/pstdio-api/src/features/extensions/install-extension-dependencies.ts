@@ -1,4 +1,5 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionInstallEnvironment } from "pstdio-extensions";
@@ -34,13 +35,34 @@ export type DependencyInstallInput = {
 
 // File capture removes Bun 1.4.2's crashing Windows output-pipe lifecycle (ADR 0086).
 export const runCommand = async (command: string, args: string[], options: CommandOptions) => {
+  const commandId = crypto.randomUUID();
+  const marks: { phase: string; at: number }[] = [];
+  const mark = (phase: string) => marks.push({ phase, at: performance.now() });
+  mark("entered");
+  let childPid: number | undefined;
+  let actualArgv = [command, ...args];
+  let artifactPath: string | undefined;
+  const hashes = Object.fromEntries(
+    ["package.json", "bun.lock"].map((name) => {
+      const path = join(options.cwd, name);
+      return [name, existsSync(path) ? createHash("sha256").update(readFileSync(path)).digest("hex") : null];
+    }),
+  );
+  const cacheRoot = options.env?.BUN_INSTALL_CACHE_DIR;
+  const cacheExistedAtEntry = cacheRoot ? existsSync(cacheRoot) : null;
   try {
     options.signal?.throwIfAborted();
+    mark("resolve-start");
     const resolved = resolveProcessCommand([command, ...args]);
+    actualArgv = resolved.argv;
+    mark("resolve-done");
     const outputRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-command-"));
+    if (process.env.E2E_INSTALL_PROFILE_ROOT) artifactPath = join(process.env.E2E_INSTALL_PROFILE_ROOT, commandId);
+    mark("capture-root-created");
     try {
       const stdoutFile = Bun.file(join(outputRoot, "stdout"));
       const stderrFile = Bun.file(join(outputRoot, "stderr"));
+      mark("spawn-start");
       const child = Bun.spawn(resolved.argv, {
         cwd: options.cwd,
         env: options.env,
@@ -51,14 +73,42 @@ export const runCommand = async (command: string, args: string[], options: Comma
         windowsHide: true,
         windowsVerbatimArguments: resolved.windowsVerbatimArguments,
       });
+      childPid = child.pid;
+      mark("spawn-returned");
       const exitCode = await child.exited;
+      mark("exit-observed");
       const [stdout, stderr] = await Promise.all([stdoutFile.text(), stderrFile.text()]);
+      mark("capture-read-done");
+      console.log("Native package manager result", JSON.stringify({ commandId, exitCode, stdout, stderr }));
       return { exitCode, stdout, stderr };
     } finally {
+      mark("capture-backup-start");
+      if (artifactPath) {
+        mkdirSync(artifactPath, { recursive: true });
+        cpSync(outputRoot, artifactPath, { recursive: true });
+      }
+      mark("capture-backup-done");
+      mark("capture-cleanup-start");
       rmSync(outputRoot, { recursive: true, force: true });
+      mark("capture-cleanup-done");
     }
   } catch (error) {
     return { exitCode: 1, stdout: "", stderr: error instanceof Error ? error.message : String(error) };
+  } finally {
+    const record = {
+      commandId,
+      childPid,
+      actualArgv,
+      cwd: options.cwd,
+      marks,
+      hashes,
+      cacheRoot,
+      cacheExistedAtEntry,
+      parentBun: Bun.version,
+      bunBeBun: options.env?.BUN_BE_BUN,
+    };
+    console.log("Native package manager timing", JSON.stringify(record));
+    if (artifactPath) writeFileSync(join(artifactPath, "timing.json"), JSON.stringify(record));
   }
 };
 
