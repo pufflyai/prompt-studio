@@ -68,18 +68,14 @@ const AccountQuestion = (props: { question: HarnessAuthenticationQuestion; onRep
 export const HarnessBrowserProgress = (props: HarnessBrowserProgressProps) => {
   const { name, action, prompt, question, message, onReply, onCancel } = props;
   const { t } = useTranslation("projects");
+  const pending = prompt ? t("harnessAccount.waiting") : t("harnessAccount.starting");
+  const instructions = prompt?.code ? t("harnessAccount.deviceInstructions") : pending;
   return (
     <EmptyState
       title={
         question?.title ?? t(action === "login" ? "harnessAccount.loginTitle" : "harnessAccount.logoutTitle", { name })
       }
-      description={
-        question
-          ? undefined
-          : (message ??
-            prompt?.message ??
-            t(prompt?.code ? "harnessAccount.deviceInstructions" : "harnessAccount.waiting"))
-      }
+      description={question ? undefined : (message ?? prompt?.message ?? instructions)}
       icon={question ? undefined : <Spinner size="lg" />}
     >
       <Stack gap="sm" align="center" w="full" maxW="sm">
