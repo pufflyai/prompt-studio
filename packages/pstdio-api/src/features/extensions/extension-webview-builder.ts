@@ -7,7 +7,7 @@ import {
   selectExtensionResources,
 } from "pstdio-extensions";
 import { isPackagedRuntime } from "pstdio-paths";
-import { observeExtensionCompiler } from "./extension-compiler-observations";
+import { compilerResourceObservation, observeExtensionCompiler } from "./extension-compiler-observations";
 import { runCommand } from "./install-extension-dependencies";
 
 export const extensionWebviewBuildOptions = {
@@ -146,8 +146,7 @@ const runCompiler = async (input: ExtensionWebviewBuildInput, id: string) => {
       pid: child?.pid,
       exitCode: result?.exitCode,
       cancelled: input.signal.aborted,
-      cpuMicros: usage ? Number(usage.cpuTime.total) : undefined,
-      peakRssBytes: usage?.maxRSS,
+      ...compilerResourceObservation(usage),
     });
   }
 

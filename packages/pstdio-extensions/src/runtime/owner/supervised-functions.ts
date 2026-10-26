@@ -7,7 +7,7 @@ const prepareInvocation = (context: unknown, args: unknown[]) =>
     ? [prepareOwnerContext(context as Record<string, unknown>), ...args.slice(1)]
     : args;
 
-export const createSupervisedFunctionWrapper = (owner: {
+interface SupervisedOwner {
   sourcePath: string;
   cpuGroup: object;
   resources?: ExtensionResourceCoordinator;
@@ -17,7 +17,31 @@ export const createSupervisedFunctionWrapper = (owner: {
   signal: () => AbortSignal;
   awaitExit: () => Promise<void>;
   watchSignal: (signal: AbortSignal) => () => void;
-}) => {
+}
+
+const invokeOwnerFunction = async (
+  owner: SupervisedOwner,
+  value: (...args: unknown[]) => unknown,
+  args: unknown[],
+  signal?: AbortSignal,
+) => {
+  const cleanup = signal ? owner.watchSignal(signal) : () => {};
+  let retained = false;
+  try {
+    const result = await value(...args);
+    retained = retainOwnerResult(result, cleanup);
+    return result;
+  } catch (error) {
+    // Ordinary extension errors leave the process live. Reaping is only
+    // required when supervision interrupted this invocation's process.
+    if (!owner.isLive()) await owner.awaitExit();
+    throw error;
+  } finally {
+    if (!retained) cleanup();
+  }
+};
+
+export const createSupervisedFunctionWrapper = (owner: SupervisedOwner) => {
   const wrap = (value: unknown, path: string[] = []): unknown => {
     if (typeof value === "function") {
       const generation = owner.generation();
@@ -27,20 +51,7 @@ export const createSupervisedFunctionWrapper = (owner: {
         signal?.throwIfAborted();
         if (!owner.isLive() || owner.generation() !== generation) return owner.recover(path, args);
         const invocation = prepareInvocation(context, args);
-        const invoke = async () => {
-          const cleanup = signal ? owner.watchSignal(signal) : () => {};
-          let retained = false;
-          try {
-            const result = await value(...invocation);
-            retained = retainOwnerResult(result, cleanup);
-            return result;
-          } catch (error) {
-            await owner.awaitExit();
-            throw error;
-          } finally {
-            if (!retained) cleanup();
-          }
-        };
+        const invoke = () => invokeOwnerFunction(owner, value as (...args: unknown[]) => unknown, invocation, signal);
         return owner.resources
           ? owner.resources.run(
               owner.sourcePath,

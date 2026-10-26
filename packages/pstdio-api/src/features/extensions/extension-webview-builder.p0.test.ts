@@ -81,8 +81,14 @@ describe("buildExtensionWebview", () => {
       const exited = events.find((event) => event.phase === "exited")!;
       expect(exited.pid).toBeGreaterThan(0);
       expect(exited.exitCode).toBe(0);
-      expect(exited.cpuMicros).toBeGreaterThan(0);
-      expect(exited.peakRssBytes).toBeGreaterThan(0);
+      if (process.platform === "win32" && exited.resourceObservation === "unavailable") {
+        expect(exited.cpuMicros).toBeUndefined();
+        expect(exited.peakRssBytes).toBeUndefined();
+      } else {
+        expect(exited.resourceObservation).toBe("kernel_exit_usage");
+        expect(exited.cpuMicros).toBeGreaterThan(0);
+        expect(exited.peakRssBytes).toBeGreaterThan(0);
+      }
     } finally {
       unsubscribe();
       rmSync(root, { recursive: true, force: true });
