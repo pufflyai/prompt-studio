@@ -1,12 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { monitorEventLoopDelay } from "node:perf_hooks";
-import {
-  disposeExtensionOwners,
-  extensionPreparationPid,
-  restartExtensionOwners,
-  stopExtensionOwners,
-} from "pstdio-extensions";
+import { disposeExtensionOwners, extensionPreparationPid, inspectExtensionOwners } from "pstdio-extensions";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { subscribeExtensionCompilers } from "../extension-compiler-observations";
 
@@ -43,8 +38,6 @@ process.on("message", async (message: { id: number; kind: string }) => {
       lag.reset();
       compilers.length = 0;
     }
-    if (message.kind === "stop") await stopExtensionOwners(join(root, "extensions", "work"));
-    if (message.kind === "restart") await restartExtensionOwners(join(root, "extensions", "work"));
     if (message.kind === "close") {
       await handle.close();
       leakedPreparationPid = extensionPreparationPid();
@@ -61,6 +54,9 @@ process.on("message", async (message: { id: number; kind: string }) => {
         eventLoop: { resolutionMs: 10, p95Ms: lag.percentile(95) / 1e6, maxMs: lag.max / 1e6 },
         compilers: [...compilers],
         apiRssBytes: process.memoryUsage().rss,
+        ownerResources: Object.fromEntries(
+          ["work", "probe"].map((name) => [name, inspectExtensionOwners(join(root, "extensions", name))]),
+        ),
         preparationPid: extensionPreparationPid(),
         leakedPreparationPid,
       },

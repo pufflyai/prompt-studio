@@ -66,12 +66,19 @@ const runTrial = async (trial: number, mode: MeasurementMode) => {
 
     let recovery: { elapsedMs: number; completion: unknown } | null = null;
     if (mode === "owner") {
+      const executionPath = `/v1/projects/${host.projectId}/extensions/${work.instanceId}/execution`;
+      const shared = await host.json(executionPath);
+      if (
+        !shared.available ||
+        !shared.affectedProjects.some((project: { id: string }) => project.id === host.projectId)
+      )
+        throw new Error("Execution controls did not identify the affected project");
       const loop = host.json(host.commandPath("work", "loop"), {}).catch((error: Error) => ({ error: error.message }));
       await waitFor(() => existsSync(join(root, "loop-started")), "infinite command starts executing");
       const startedAt = performance.now();
-      await host.control("stop");
+      await host.json(executionPath, { action: "stop" });
       const completion = await loop;
-      await host.control("restart");
+      await host.json(executionPath, { action: "restart" });
       const fresh = await host.json(host.commandPath("work", "read"), {});
       if (!fresh.outcome.ok || !isDeepStrictEqual(fresh.outcome.value, computed.value))
         throw new Error("Fresh invocation did not recover persisted host storage");
@@ -90,7 +97,7 @@ const runTrial = async (trial: number, mode: MeasurementMode) => {
       initialized: initialized.outcome.value,
       reloadHost,
       recovery,
-      recoveryControl: "Internal supervisor Stop/Restart; public control API remains a release gate",
+      recoveryControl: "Authenticated host execution endpoint, Stop/Restart and fresh persisted read through HTTP",
     };
     await Bun.write(join(root, "result.json"), JSON.stringify(result, null, 2));
     return result;

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync } from "node:fs";
 import { availableParallelism, cpus, freemem, platform, release, totalmem } from "node:os";
 import { join, resolve } from "node:path";
+import type { inspectExtensionOwners } from "pstdio-extensions";
 import type { CompilerObservation } from "../extension-compiler-observations";
 import { fixtureVersion } from "./responsiveness-fixtures.fixture";
 
@@ -15,6 +16,7 @@ interface HostStats {
   eventLoop: { resolutionMs: number; p95Ms: number; maxMs: number };
   compilers: CompilerObservation[];
   apiRssBytes: number;
+  ownerResources: Record<string, ReturnType<typeof inspectExtensionOwners>>;
   leakedPreparationPid?: number;
 }
 export const startResponsivenessHost = async (root: string, mode: MeasurementMode, builds: boolean) => {
