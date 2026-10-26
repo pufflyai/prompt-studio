@@ -69,7 +69,7 @@ export const createExtensionOwner = (input: {
   const terminate = async (error: ExtensionOwnerError) => {
     failure = error;
     const previous = child;
-    reaping = Promise.all([reaping, previous?.exited]).then(() => {});
+    reaping = Promise.all([reaping, previous ? terminateOwnerProcess(previous) : undefined]).then(() => {});
     admission.abort(error);
     admission = new AbortController();
     generation++;
@@ -80,7 +80,9 @@ export const createExtensionOwner = (input: {
     loading = undefined;
     for (const dispose of listeners) dispose();
     listeners.clear();
-    if (previous) await terminateOwnerProcess(previous);
+    // Abort and explicit disposal can overlap. Every caller must await the same
+    // process cleanup before removing a working directory or starting a successor.
+    await reaping;
     if (disposed && root) {
       const obsoleteRoot = root;
       root = undefined;

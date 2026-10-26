@@ -110,32 +110,33 @@ export const createInstalledExtensionRuntime = (input: {
         reportBuildFailure: async (installedExtensionId, webviewId, error, expectedSource) => {
           // A snapshot serves each webview's built module URL, so a finished build — for
           // better or worse — changes what the snapshot must say.
-          input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
           const result = await input.extensionService.reportWebviewBuildFailure(
             installedExtensionId,
             webviewId,
             error,
             expectedSource,
           );
+          if (result.status === "reported")
+            input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
           return result.status;
         },
         reportBuildSuccess: async (installedExtensionId, webviewId, expectedSource) => {
-          input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
           const result = await input.extensionService.reportWebviewBuildSuccess(
             installedExtensionId,
             webviewId,
             expectedSource,
           );
+          if (result.status === "reported")
+            input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
           return result.status;
         },
         onError: reportError,
       })
     : { adopt: async () => {}, dispose: () => {}, ensure: async () => {}, refresh: async () => {} };
   const refreshWebviewsInBackground = (sourcePath?: string) => {
-    trackBackground(async () => {
-      await webviewBuildManager.refresh(sourcePath);
-      input.projectRuntimeCatalog.invalidate({ sourcePath, reason: "webviews_built" });
-    });
+    // Scanning an edit is not publication. Only a recorded build result changes
+    // the adopted view; unchanged or rejected edits keep the current generation.
+    trackBackground(() => webviewBuildManager.refresh(sourcePath));
   };
   // The source hash each source last provisioned workspaces from. Provisioning can write into a
   // watched folder, so a write that leaves the source unchanged must not provision again.

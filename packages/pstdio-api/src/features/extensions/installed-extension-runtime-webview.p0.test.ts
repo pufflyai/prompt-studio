@@ -11,6 +11,34 @@ const createProcess = (onRefresh?: (sourcePath?: string) => Promise<void>) => ({
 });
 
 describe("createInstalledExtensionRuntime targeted webview refresh", () => {
+  test("a watched edit without a published build leaves the adopted catalog current", async () => {
+    const invalidations: unknown[] = [];
+    let changed!: (path: string) => Promise<unknown>;
+    const runtime = createInstalledExtensionRuntime({
+      harnessRegistry: {} as never,
+      projectRuntimeCatalog: { invalidate: (event: unknown) => invalidations.push(event) } as never,
+      provisionWorkspacesUsingSource: async () => {},
+      extensionService: {} as never,
+      installedExtensionSourcesService: { list: async () => [] } as never,
+      projectService: { list: async () => [] } as never,
+      workspaceService: {} as never,
+      webviewBuilds: false,
+      createRootWatcher: async () => createProcess(),
+      createSourceWatcher: async (input) => {
+        changed = input.onSourceChanged;
+        return createProcess();
+      },
+    });
+    try {
+      await runtime.ready;
+      await changed("/missing-source");
+      await runtime.dispose();
+      expect(invalidations).toEqual([]);
+    } finally {
+      await runtime.dispose();
+    }
+  });
+
   test("waits for a targeted webview build when an installed source changes", async () => {
     let releaseTargetedBuild: () => void = () => {};
     let targetedRefreshFinished = false;
