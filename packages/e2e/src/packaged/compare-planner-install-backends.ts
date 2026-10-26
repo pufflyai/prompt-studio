@@ -4,6 +4,7 @@ import { cp, mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionInstallEnvironment } from "pstdio-extensions";
+import { inventoryInstalledDependencies } from "./installed-dependency-inventory";
 import { preparePlannerSource } from "./packaged-planner-source";
 
 const order = process.env.PS932_BACKEND_ORDER?.split(",");
@@ -67,13 +68,14 @@ for (const backend of order) {
     target,
     cache,
     frozenLockHash,
+    frozenPackageCount: [...frozenLock.matchAll(/^\s*"([^"]+)": \["([^"]+)",/gm)].length,
     unchangedLock: resultLock === frozenLock,
     elapsedMs,
     exitCode,
     http: env.BUN_CONFIG_MAX_HTTP_REQUESTS,
     workerOverride: env.UV_THREADPOOL_SIZE,
     usage: { cpuTime: usage?.cpuTime, maxRSS: usage?.maxRSS, ops: usage?.ops },
-    linkSamples: exitCode === 0 ? sampleLinkCounts(join(target, "node_modules", ".bun")) : [],
+    linkSamples: exitCode === 0 ? sampleLinkCounts(join(target, "node_modules")) : [],
   };
   summaries.push(summary);
   const json = JSON.stringify(summary, (_key, value) => (typeof value === "bigint" ? value.toString() : value), 2);
@@ -83,7 +85,18 @@ for (const backend of order) {
   console.log((await stderr.text()).slice(-1000));
   if (exitCode !== 0 || resultLock !== frozenLock) process.exitCode = 1;
 }
+const contents = order.map((backend) => ({
+  backend,
+  ...inventoryInstalledDependencies(join(root, backend, ".extension-install", "pstdio-planner", "node_modules")),
+}));
+const equalContents = contents[0]?.digest === contents[1]?.digest;
+if (!equalContents) process.exitCode = 1;
+console.log(JSON.stringify({ contents, equalContents }));
 await writeFile(
   join(root, "summary.json"),
-  JSON.stringify(summaries, (_key, value) => (typeof value === "bigint" ? value.toString() : value), 2),
+  JSON.stringify(
+    { installations: summaries, contents, equalContents },
+    (_key, value) => (typeof value === "bigint" ? value.toString() : value),
+    2,
+  ),
 );
