@@ -148,7 +148,7 @@ describe("claude-code harness detection", () => {
 
   test("reports availability with the CLI version", async () => {
     const harness = createClaudeCodeHarness();
-    expect(await harness.detect!(ctx)).toEqual({ available: true, version: "2.1.295 (Claude Code)" });
+    expect(await harness.detect!(ctx)).toMatchObject({ available: true, version: "2.1.295 (Claude Code)" });
   });
 
   test("lists no models when the CLI is missing", async () => {

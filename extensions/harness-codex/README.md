@@ -4,28 +4,22 @@ This extension lets Prompt Studio run OpenAI's Codex as an agent. You write the 
 
 Prompt Studio calls this kind of extension a harness: it starts an agent program, sends it your prompts, and shows the conversation. Prompt Studio installs this extension by default.
 
-## Install Codex first
+## Install and sign in
 
-Prompt Studio does not include Codex. Install the Codex command-line tool on the computer that runs Prompt Studio, so that the `codex` command works in a terminal:
+Prompt Studio installs a private Codex CLI with this extension. It uses an existing CLI on the runtime's PATH first, then its private copy. You do not need a global Node.js installation or a separate terminal to set up the private CLI.
 
-```sh
-bun add --global @openai/codex
-codex --version
-```
+1. Enable **Codex** in **Settings → Project → Extensions**.
+2. Open a chat and choose **Sign in** in the session background, or run `/login`.
+3. Choose ChatGPT or API key. For ChatGPT, Prompt Studio opens the sign-in page in your browser; enter the one-time code shown in the session background.
+4. The session updates when Codex confirms sign-in. Choose a model and start chatting.
 
-Prompt Studio supports Codex 0.157.0 and newer. An older version shows as unavailable, with the version it found and the version it needs. Update it with `bun add --global @openai/codex@latest`.
+Codex uses its native app-server device-code flow, so this works when the runtime is in Docker or on another machine without a localhost callback or terminal modal. If a browser blocks the new tab, choose **Open sign-in page**. **Cancel** stops the pending native login. Device-code login must be allowed in your ChatGPT security settings or workspace permissions; see [Codex authentication](https://learn.chatgpt.com/docs/auth).
 
-Run `codex login` once and sign in. Prompt Studio uses that sign-in and never asks for your OpenAI credentials.
+The CLI stores its own credentials; Prompt Studio does not copy them into extension settings. Installing the CLI does not sign you in automatically. The session background asks you to sign in and sending stays disabled when the native CLI reports that you are signed out. `/logout` removes stored credentials in the background. Credentials supplied by the runtime environment must be changed there.
 
-Check that Prompt Studio finds Codex:
+Prompt Studio supports Codex 0.157.0 and newer. An older CLI on PATH shows as unavailable with its version and the minimum required version. Update that CLI, or remove it from PATH to use the private installation. Private CLI versions update with the extension.
 
-```sh
-pst agents list
-```
-
-The Codex row should say `yes` under **Installed**. Prompt Studio checks this by running `codex --version`.
-
-If you removed the extension, install it again from **Settings → Project → Extensions**, or run `pst extensions add harness-codex` inside a linked project folder.
+If you removed the extension, install it again from **Settings → Project → Extensions** or run `pst extensions add harness-codex`.
 
 ## Choose Codex
 
@@ -39,7 +33,7 @@ pst sessions create --prompt "Review this repository" \
   --agent pstdio.harness-codex.harness.codex --model <model>
 ```
 
-If the `codex` command is missing, Codex shows as unavailable in the model menu.
+If neither CLI installation can run, Codex shows as unavailable in the model menu.
 
 ## Models, speed and reasoning effort
 
@@ -53,7 +47,7 @@ The **Reasoning effort** option sets how much Codex thinks before it answers: Mi
 
 ## How it runs
 
-- Prompt Studio starts `codex app-server` on the computer that runs Prompt Studio and talks to it over standard input and output. Sessions that use the same `codex` command and environment share one app-server process. Each Prompt Studio session has its own Codex thread.
+- Prompt Studio starts the selected Codex executable's `app-server` on the computer that runs Prompt Studio and talks to it over standard input and output. Sessions that use the same executable and environment share one app-server process. Each Prompt Studio session has its own Codex thread.
 - Open session tabs keep their native resources, including inactive tabs. After the last tab closes, Prompt Studio keeps the session ready for 30 minutes after its last use, then releases its idle thread and tool servers. Active runs, native questions, goals, controls, and uncertain native execution stay alive. A later message resumes the saved thread and conversation. A saved async question can still be answered after its completed turn's resources are released. The app-server closes after its last thread or history reader releases it.
 - Each thread starts in the session's folder with approvals turned off and full file access (`approvalPolicy: "never"`, `sandbox: "danger-full-access"`). Codex can edit files and run commands there without asking first. Use a separate workspace, such as a Git worktree, when you want to keep your project folder unchanged.
 - Prompt Studio saves the conversation itself. When it needs Codex's own record, for example after a restart or before it continues an interrupted turn, it asks the app-server with `thread/read`. It does not read Codex's session files directly.
@@ -64,4 +58,4 @@ OpenAI labels the Codex app-server as experimental. [ADR 0064](../../documentati
 
 ## What is tested
 
-The harness tests replay recorded app-server traffic from Codex 0.157.0 and 0.162.0, and use local test servers for threads, history, questions, goals, and cleanup. CI also starts the installed Codex CLI, at the minimum supported version and, before a release, the latest one, without signing in. These tests check detection, protocol handling, real MCP child cleanup, and resuming a saved thread with a paused goal. They do not sign in to OpenAI or prove that a real, signed-in Codex turn works on your computer. A live run needs your own Codex installation and sign-in, as described in [Install Codex first](#install-codex-first).
+The harness tests replay recorded app-server traffic from Codex 0.157.0 and 0.162.0, and use local test servers for threads, history, questions, goals, and cleanup. Tests also check private executable discovery, PATH precedence, and the sign-in request without global PATH tools. CI also starts the installed Codex CLI, at the minimum supported version and, before a release, the latest one, without signing in. These tests check detection, protocol handling, real MCP child cleanup, and resuming a saved thread with a paused goal. They do not sign in to OpenAI or prove that a real, signed-in Codex turn works on your computer. A live run needs an available Codex CLI and sign-in, as described in [Install and sign in](#install-and-sign-in).

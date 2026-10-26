@@ -4,28 +4,20 @@ This extension lets Prompt Studio run OpenCode as an agent. You write the prompt
 
 Prompt Studio calls this kind of extension a harness: it starts an agent program, sends it your prompts, and shows the conversation. Prompt Studio installs this extension by default.
 
-## Install OpenCode first
+## Install and sign in
 
-Prompt Studio does not include OpenCode. Install it on the computer that runs Prompt Studio, so that the `opencode` command works in a terminal:
+Prompt Studio installs a private OpenCode CLI with this extension. It uses an existing CLI on the runtime's PATH first, then its private copy. You do not need a global Node.js installation or a separate terminal to set up the private CLI.
 
-```sh
-bun add --global opencode-ai
-opencode --version
-```
+1. Enable **OpenCode** in **Settings → Project → Extensions**.
+2. Open a chat and choose **Sign in** in the session background, or run `/login`.
+3. Choose your provider and sign-in method in the session background. Complete browser sign-in or enter the requested key or code.
+4. The session updates when the native CLI confirms sign-in. Choose a model and start chatting.
 
-Prompt Studio supports OpenCode 1.0.175 and newer. An older version shows as unavailable, with the version it found and the version it needs. Update it with `opencode upgrade`.
+Cancelling sign-in stops its native worker. The CLI stores its own credentials; Prompt Studio does not copy them into extension settings. Installing the CLI does not sign you in automatically. The session background asks you to sign in and sending stays disabled when the native CLI reports that you are signed out. Use `/logout` to remove stored credentials; OpenCode asks which provider to disconnect. Credentials supplied by the runtime environment must be changed there. OpenCode lets you choose which model provider to connect.
 
-Set up at least one model provider in OpenCode, for example with `opencode auth login`. Prompt Studio offers the models that `opencode models` lists, and never asks for your provider credentials.
+Prompt Studio supports OpenCode 1.0.175 and newer. An older CLI on PATH shows as unavailable with its version and the minimum required version. Update that CLI, or remove it from PATH to use the private installation. Private CLI versions update with the extension.
 
-Check that Prompt Studio finds OpenCode:
-
-```sh
-pst agents list
-```
-
-The OpenCode row should say `yes` under **Installed**. Prompt Studio checks this by running `opencode --version`.
-
-If you removed the extension, install it again from **Settings → Project → Extensions**, or with `pst extensions add harness-open-code`.
+If you removed the extension, install it again from **Settings → Project → Extensions** or run `pst extensions add harness-open-code`.
 
 ## Choose OpenCode
 
@@ -43,7 +35,7 @@ pst sessions create --prompt "Review this repository" \
   --agent pstdio.harness-open-code.harness.opencode --model <model>
 ```
 
-If the `opencode` command is missing, OpenCode shows as unavailable in the model menu.
+If neither CLI installation can run, OpenCode shows as unavailable in the model menu.
 
 ## Models and thinking
 

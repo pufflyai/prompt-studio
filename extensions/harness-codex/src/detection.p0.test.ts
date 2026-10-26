@@ -30,7 +30,7 @@ test("accepts the CLI version on stdout or stderr", async () => {
     ["\u001b[32mcodex-cli 0.160.1\u001b[0m\n", ""],
     ["", "\u001b[32mcodex-cli 0.160.1\u001b[0m\n"],
   ]) {
-    expect(await probe(stdout, stderr)).toEqual({ available: true, version: "codex-cli 0.160.1" });
+    expect(await probe(stdout, stderr)).toMatchObject({ available: true, version: "codex-cli 0.160.1" });
   }
 });
 
@@ -46,7 +46,7 @@ test("rejects a failed command even when it prints a version", async () => {
 
 test("accepts Codex 0.157.0 and every newer release", async () => {
   for (const version of ["codex-cli 0.157.0", "codex-cli 0.162.0", "codex-cli 0.200.3", "codex-cli 1.0.0"]) {
-    expect(await probe(version)).toEqual({ available: true, version });
+    expect(await probe(version)).toMatchObject({ available: true, version });
   }
 });
 

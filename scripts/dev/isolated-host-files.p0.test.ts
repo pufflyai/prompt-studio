@@ -17,6 +17,13 @@ afterEach(() => {
 const certificate = (name: string) => `-----BEGIN CERTIFICATE-----\n${name}\n-----END CERTIFICATE-----`;
 
 describe("agent credential mounts", () => {
+  test("starts without host login mounts when credential reuse is disabled", () => {
+    const home = temporaryRoot();
+    mkdirSync(join(home, ".codex"));
+    writeFileSync(join(home, ".codex", "auth.json"), "{}");
+    expect(resolveCredentialMounts(home, false)).toEqual({ mounted: [], missing: [] });
+  });
+
   test("mounts only the agent login files that exist on the host", () => {
     const home = temporaryRoot();
     mkdirSync(join(home, ".codex"));

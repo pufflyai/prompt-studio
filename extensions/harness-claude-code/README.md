@@ -4,28 +4,20 @@ This extension lets Prompt Studio run Anthropic's Claude Code as an agent. You w
 
 Prompt Studio calls this kind of extension a harness: it starts an agent program, sends it your prompts, and shows the conversation. Prompt Studio installs this extension by default.
 
-## Install Claude Code first
+## Install and sign in
 
-Prompt Studio does not include Claude Code. Install it on the computer that runs Prompt Studio, so that the `claude` command works in a terminal:
+Prompt Studio installs a private Claude Code CLI with this extension. It uses an existing CLI on the runtime's PATH first, then its private copy. You do not need a global Node.js installation or a separate terminal to set up the private CLI.
 
-```sh
-curl -fsSL https://claude.ai/install.sh | bash
-claude --version
-```
+1. Enable **Claude Code** in **Settings → Project → Extensions**.
+2. Open a chat and choose **Sign in** in the session background, or run `/login`.
+3. Choose your provider and sign-in method in the session background. Complete browser sign-in or enter the requested key or code.
+4. The session updates when the native CLI confirms sign-in. Choose a model and start chatting.
 
-Prompt Studio supports Claude Code 2.1.203 and newer. An older version shows as unavailable, with the version it found and the version it needs. Update it with `claude update`.
+Cancelling sign-in stops its native worker. The CLI stores its own credentials; Prompt Studio does not copy them into extension settings. Installing the CLI does not sign you in automatically. The session background asks you to sign in and sending stays disabled when the native CLI reports that you are signed out. Use `/logout` to remove stored credentials. Credentials supplied by the runtime environment must be changed there.
 
-Start `claude` once in a terminal and sign in. Prompt Studio uses that sign-in and never asks for your Anthropic credentials.
+Prompt Studio supports Claude Code 2.1.203 and newer. An older CLI on PATH shows as unavailable with its version and the minimum required version. Update that CLI, or remove it from PATH to use the private installation. Private CLI versions update with the extension.
 
-Check that Prompt Studio finds Claude Code:
-
-```sh
-pst agents list
-```
-
-The Claude Code row should say `yes` under **Installed**. Prompt Studio checks this by running `claude --version`.
-
-If you removed the extension, install it again from **Settings → Project → Extensions**, or with `pst extensions add harness-claude-code`.
+If you removed the extension, install it again from **Settings → Project → Extensions** or run `pst extensions add harness-claude-code`.
 
 ## Choose Claude Code
 
@@ -39,7 +31,7 @@ pst sessions create --prompt "Review this repository" \
   --agent pstdio.harness-claude-code.harness.claude-code --model <model>
 ```
 
-If the `claude` command is missing, Claude Code shows as unavailable in the model menu.
+If neither CLI installation can run, Claude Code shows as unavailable in the model menu.
 
 ## Models and thinking
 

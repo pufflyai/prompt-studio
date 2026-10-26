@@ -1,5 +1,6 @@
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
+import { authenticateCodex, getCodexAuthentication } from "./authentication";
 import { createCodexRuntime } from "./codex-runtime";
 import { codexCommandState, prepareCodexOperation } from "./commands";
 import { detectCodex } from "./detection";
@@ -107,6 +108,11 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
     // Host-managed worktrees run without provider approvals.
     capabilities: () => ["ContextUsage"],
     detect: (ctx) => deps.detect(ctx),
+    getAuthentication: getCodexAuthentication,
+    authenticate: async (ctx, input, channel) => {
+      await authenticateCodex(ctx, input, channel);
+      modelCache = undefined;
+    },
     listModels,
 
     start: (ctx, input) =>

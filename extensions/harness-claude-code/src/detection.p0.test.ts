@@ -30,7 +30,7 @@ test("accepts the CLI version on stdout or stderr", async () => {
     ["\u001b[32m2.1.295 (Claude Code)\u001b[0m\n", ""],
     ["", "\u001b[32m2.1.295 (Claude Code)\u001b[0m\n"],
   ]) {
-    expect(await probe(stdout, stderr)).toEqual({ available: true, version: "2.1.295 (Claude Code)" });
+    expect(await probe(stdout, stderr)).toMatchObject({ available: true, version: "2.1.295 (Claude Code)" });
   }
 });
 
@@ -54,7 +54,7 @@ test("accepts Claude Code 2.1.203 and every newer release", async () => {
     "2.2.0 (Claude Code)",
     "3.0.0 (Claude Code)",
   ]) {
-    expect(await probe(version)).toEqual({ available: true, version });
+    expect(await probe(version)).toMatchObject({ available: true, version });
   }
 });
 
