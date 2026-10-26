@@ -12,10 +12,10 @@ export type { ProjectSyncState, ProjectSyncStatus } from "../../project-sync";
 export interface ExtensionAccountApi {
   status(): Promise<AccountStatus>;
   /**
-   * Starts a native browser sign-in with the given account service. Open `url` in a browser on
+   * Starts a native browser sign-in. Omit the address to use the host's account service. Open `url` in a browser on
    * the computer that runs Prompt Studio, then poll `loginStatus` until it is no longer pending.
    */
-  login(managerOrigin: string): Promise<AccountLogin>;
+  login(managerOrigin?: string): Promise<AccountLogin>;
   loginStatus(id: string): Promise<AccountLoginStatus>;
   /** Cancels a pending sign-in. Returns `complete` when the sign-in had already finished. */
   cancelLogin(id: string): Promise<Exclude<AccountLoginStatus, "pending">>;

@@ -8,11 +8,10 @@ export const builder = (yargs: Argv) =>
   yargs
     .option("manager", {
       type: "string",
-      demandOption: true,
-      describe: "HTTPS account manager address, which may include a path",
+      describe: "Override the host's account manager address (HTTPS, may include a path)",
     })
     .option("open-browser", { type: "boolean", default: true, describe: "Open the sign-in URL in the system browser" });
-export const handler = async (args: Arguments<{ manager: string; openBrowser: boolean }>) => {
+export const handler = async (args: Arguments<{ manager?: string; openBrowser: boolean }>) => {
   const client = apiClient().account;
   const login = await client.login(args.manager);
   console.log(`Log in at ${login.url}`);
