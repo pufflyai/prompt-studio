@@ -17,18 +17,23 @@ const canonical = (path: string) => {
 };
 export const extensionOwnersEnabled = () => process.env.PSTDIO_EXTENSION_PROCESS_OWNERS === "1";
 
-// The rollout remains explicit until all callback, credential and native release gates pass.
-// A failed owner never falls back to importing that source into the API process.
-export const loadExtensionPackageForHost: typeof loadExtensionPackage = async (pkg, diagnostics, options = {}) => {
-  if (!extensionOwnersEnabled()) return loadExtensionPackage(pkg, diagnostics, options);
-  const path = canonical(pkg.path);
+const assertRunning = (path: string) => {
   if (stopped.has(path))
     throw new ExtensionOwnerError(
       "extension_owner_stopped",
       "This extension owner is stopped. Restart it explicitly to run work.",
       "cancelled",
     );
+};
+
+// The rollout remains explicit until all callback, credential and native release gates pass.
+// A failed owner never falls back to importing that source into the API process.
+export const loadExtensionPackageForHost: typeof loadExtensionPackage = async (pkg, diagnostics, options = {}) => {
+  if (!extensionOwnersEnabled()) return loadExtensionPackage(pkg, diagnostics, options);
+  const path = canonical(pkg.path);
+  assertRunning(path);
   const key = `${path}\0${await extensionLoadKeyForHost(path)}\0${options.apiProvider ?? "host"}`;
+  assertRunning(path);
   let owner = owners.get(key);
   if (!owner) {
     if (owners.size >= 16)
