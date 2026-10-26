@@ -317,3 +317,52 @@ describe("extensionService installed source sync", () => {
     expect(projectInstances).toHaveLength(1);
   });
 });
+
+test("preserves a synchronization error when the following refresh also fails", async () => {
+  const project = await projectService.create({ name: "Failed source sync" });
+  const primaryError = new Error("Instance notification failed");
+  const refreshError = new Error("Source refresh failed");
+  const eventBus = new EventBus();
+  eventBus.subscribe((event) => {
+    if (event.table === "extension_instances" && event.op === "set") throw primaryError;
+  });
+  let refreshes = 0;
+  const failingService = createExtensionService({
+    sourceExists: () => true,
+    extensionInstancesService,
+    installedExtensionSourcesService,
+    extensionUserDataService,
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
+    eventBus,
+    projectService,
+    onInstalledSourcesChanged: () => {
+      refreshes++;
+      throw refreshError;
+    },
+  });
+
+  await expect(failingService.syncInstalledSourceForProject(createServiceInput(project.id))).rejects.toBe(primaryError);
+  expect(refreshes).toBe(1);
+  expect(await installedExtensionSourcesService.getByInstallName("planner")).not.toBeNull();
+  expect(await extensionInstancesService.list()).toHaveLength(1);
+});
+
+test("reports a refresh error after synchronization succeeds", async () => {
+  const project = await projectService.create({ name: "Failed source refresh" });
+  const refreshError = new Error("Source refresh failed");
+  const failingService = createExtensionService({
+    sourceExists: () => true,
+    extensionInstancesService,
+    installedExtensionSourcesService,
+    extensionUserDataService,
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
+    projectService,
+    onInstalledSourcesChanged: () => {
+      throw refreshError;
+    },
+  });
+
+  await expect(failingService.syncInstalledSourceForProject(createServiceInput(project.id))).rejects.toBe(refreshError);
+  expect(await installedExtensionSourcesService.getByInstallName("planner")).not.toBeNull();
+  expect(await extensionInstancesService.list()).toHaveLength(1);
+});
