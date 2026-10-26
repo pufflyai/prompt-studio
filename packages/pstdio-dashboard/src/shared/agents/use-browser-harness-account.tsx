@@ -1,7 +1,4 @@
-import type {
-  HarnessAuthenticationPrompt,
-  HarnessAuthenticationQuestion,
-} from "pstdio-api-contracts";
+import type { HarnessAuthenticationPrompt, HarnessAuthenticationQuestion } from "pstdio-api-contracts";
 import { useEffect, useRef, useState } from "react";
 import { getApiClient } from "@/lib/api";
 import { HarnessBrowserProgress } from "./harness-browser-progress";
@@ -37,11 +34,7 @@ export const useBrowserHarnessAccount = (projectId?: string, agentId?: string, m
     active.current = null;
     setState(null);
   };
-  const start = (
-    action: "login" | "logout",
-    name: string,
-    onComplete: () => void | Promise<void>,
-  ) => {
+  const start = (action: "login" | "logout", name: string, onComplete: () => void | Promise<void>) => {
     if (!agentId) return;
     cancel();
     const controller = new AbortController();
