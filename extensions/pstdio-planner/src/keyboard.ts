@@ -1,21 +1,14 @@
 import { defineKeybinding } from "@pstdio/sdk/extensions";
+import { createTicketCommand } from "./commands/create-ticket";
 import { changeKeyboardStatus, keyboardStatusOptions } from "./commands/keyboard-status";
-import { newTicketCommand } from "./commands/new-ticket";
 import { runAttemptCommand } from "./commands/run-attempt";
 import { breakIntoSubTicketsCommand, refineTicketCommand } from "./commands/ticket-actions";
 import { ticketsPageTarget } from "./data/ticket-page-target";
 import { ticketResourceKind } from "./resource-kinds";
 import { timelinePage } from "./timeline/pages";
-
 export const plannerKeyboardCommands = [changeKeyboardStatus, keyboardStatusOptions];
 export const plannerShortcuts = [
-  defineKeybinding({
-    id: "go-tickets",
-    layer: "go",
-    key: "P",
-    sticky: true,
-    action: ticketsPageTarget,
-  }),
+  defineKeybinding({ id: "go-tickets", layer: "go", key: "K", sticky: true, action: ticketsPageTarget }),
   defineKeybinding({
     id: "go-timeline",
     layer: "go",
@@ -26,39 +19,9 @@ export const plannerShortcuts = [
   defineKeybinding({
     id: "create-ticket",
     layer: "create",
-    key: "P",
-    action: { kind: "command", target: { command: newTicketCommand.ref } },
+    key: ticketResourceKind.ref.id[0]!.toUpperCase(),
+    action: { kind: "command", target: { command: createTicketCommand.ref } },
   }),
-  defineKeybinding({
-    id: "extension-open",
-    layer: "extensions",
-    key: "O",
-    sticky: true,
-    action: ticketsPageTarget,
-  }),
-  defineKeybinding({
-    id: "extension-timeline",
-    layer: "extensions",
-    key: "T",
-    sticky: true,
-    action: { kind: "page", page: timelinePage.ref },
-  }),
-  ...(
-    [
-      ["new", "N", newTicketCommand],
-      ["refine", "R", refineTicketCommand],
-      ["status", "S", changeKeyboardStatus],
-      ["implement", "I", runAttemptCommand],
-      ["children", "B", breakIntoSubTicketsCommand],
-    ] as const
-  ).map(([id, key, command]) =>
-    defineKeybinding({
-      id: `extension-${id}`,
-      layer: "extensions",
-      key,
-      action: { kind: "command", target: { command: command.ref } },
-    }),
-  ),
   ...(
     [
       ["status", "S", changeKeyboardStatus],

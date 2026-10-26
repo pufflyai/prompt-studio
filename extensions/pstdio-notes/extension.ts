@@ -31,7 +31,7 @@ export default defineExtension({
     defineKeybinding({
       id: "new-note",
       key: "Mod+Alt+N",
-      action: { kind: "command", target: { command: createNoteCommand.ref } },
+      action: { kind: "command", target: { command: createNoteCommand.ref, params: {} } },
     }),
   ],
   navigationTrees: [notesTreeNavigation],

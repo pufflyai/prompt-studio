@@ -38,15 +38,15 @@ export default defineExtension({
     }),
     ...(
       [
-        ["write", "N", writeReportCommand],
-        ["open", "O", readReportCommand],
+        ["read", "O", readReportCommand],
         ["save", "S", saveReportCommand],
       ] as const
     ).map(([id, key, command]) =>
       defineKeybinding({
-        id: `extension-${id}`,
-        layer: "extensions",
+        id: `current-${id}`,
+        layer: "current",
         key,
+        targetScope: "project",
         action: { kind: "command", target: { command: command.ref } },
       }),
     ),

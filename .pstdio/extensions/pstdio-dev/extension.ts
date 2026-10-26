@@ -187,7 +187,8 @@ export default defineExtension({
     ).map(([id, key, command]) =>
       defineKeybinding({
         id: `keyboard-${id}`,
-        layer: "extensions",
+        layer: "current",
+        targetScope: "project",
         key,
         action: { kind: "command", target: { command: command.ref } },
       }),

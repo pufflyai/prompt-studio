@@ -12,8 +12,8 @@ import {
 import { plannerTemplates } from "./extension-assets";
 import { plannerCommands } from "./src/commands";
 import { mergedPullRequestsSchedule } from "./src/commands/check-merged-pull-requests";
+import { createTicketCommand } from "./src/commands/create-ticket";
 import { implementationTargetsCommand } from "./src/commands/implementation-targets";
-import { newTicketCommand } from "./src/commands/new-ticket";
 import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
@@ -153,35 +153,11 @@ export default defineExtension({
   navigationItems: [...plannerUi.navigationItems, timelineNavigation],
   keybindings: [
     ...plannerShortcuts,
-    defineKeybinding({
-      id: "create-ticket",
-      layer: "create",
-      key: ticketResourceKind.ref.id[0]!.toUpperCase(),
-      action: { kind: "command", target: { command: newTicketCommand.ref } },
-    }),
-    defineKeybinding({
-      id: "go-kanban",
-      layer: "go",
-      key: "K",
-      sticky: true,
-      action: plannerUi.navigationItems.find((item) => item.id === "tickets")!.action,
-    }),
-    defineKeybinding({
-      id: "go-timeline",
-      layer: "go",
-      key: "T",
-      sticky: true,
-      action: { kind: "page", page: timelinePage.ref },
-    }),
-    defineKeybinding({
-      id: "open-tickets",
-      key: "Alt+Shift+P",
-      action: ticketsPageTarget,
-    }),
+    defineKeybinding({ id: "open-tickets", key: "Alt+Shift+P", action: ticketsPageTarget }),
     defineKeybinding({
       id: "new-ticket",
       key: "Mod+Alt+P",
-      action: { kind: "command", target: { command: newTicketCommand.ref } },
+      action: { kind: "command", target: { command: createTicketCommand.ref } },
     }),
   ],
   navigationTrees: plannerUi.navigationTrees,

@@ -55,8 +55,8 @@ export default defineExtension({
   keybindings: [
     defineKeybinding({
       id: "keyboard-launch",
-      layer: "extensions",
-      key: "N",
+      layer: "create",
+      key: "S",
       action: { kind: "command", target: { command: launch.ref } },
     }),
   ],
