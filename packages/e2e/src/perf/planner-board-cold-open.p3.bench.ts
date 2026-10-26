@@ -13,7 +13,8 @@ const repoRoot = join(import.meta.dirname, "../../../..");
 const board = "pstdio.pstdio-planner.view.tickets";
 // The saved view filters by stored option IDs. While loading, none of them may reach the screen.
 const rawLabels = /\bin-progress\b|default-priority-low|Unavailable field/;
-const targetMs = 2_000;
+// Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest sample 2,426 ms) plus about 20%.
+const targetMs = 3_000;
 
 interface Fixture {
   projectId: string;

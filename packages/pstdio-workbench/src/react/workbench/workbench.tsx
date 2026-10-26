@@ -242,7 +242,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 };
 
 export const Workbench = (props: WorkbenchProps) => {
-  const projectId = useWorkbenchStore(props.workbench.pages.store, (state) => state.projectId);
   const themePreferences = useWorkbenchThemePreferences(props.workbench);
   const mode = useWorkbenchStore(props.workbench.modes.store, (state) =>
     state.activeModeId ? state.modes[state.activeModeId] : undefined,
@@ -258,7 +257,7 @@ export const Workbench = (props: WorkbenchProps) => {
       themeStorage={props.themeStorage}
     >
       <WorkbenchTabDragProvider workbench={props.workbench}>
-        <WorkbenchPanelViewHosts key={projectId} workbench={props.workbench}>
+        <WorkbenchPanelViewHosts workbench={props.workbench}>
           <WorkbenchContent {...props} />
         </WorkbenchPanelViewHosts>
       </WorkbenchTabDragProvider>

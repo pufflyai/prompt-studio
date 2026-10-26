@@ -33,7 +33,7 @@ export const timelinePage = definePage({
   path: "ticket-timeline",
   icon: "chart-no-axes-gantt",
   mode: workbenchModes.project,
-  main: { kind: "view", view: timelineView.ref, cardinality: "one" },
+  main: { kind: "view", presentation: "page", view: timelineView.ref, cardinality: "one" },
   slots: [],
 });
 

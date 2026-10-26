@@ -25,6 +25,10 @@ test(
         offlineReady: false,
       });
       const environment = await client.runtime.environment();
+      const hostedLogin = await client.account.login();
+      expect(new URL(hostedLogin.url).origin).toBe("https://base.prompt.studio");
+      expect(new URL(hostedLogin.url).pathname).toBe("/accounts/v1/native-login");
+      await client.account.cancelLogin(hostedLogin.id);
       const login = await client.account.login("https://manager.fixture.test");
       const url = new URL(login.url);
       expect(url.origin).toBe("https://manager.fixture.test");

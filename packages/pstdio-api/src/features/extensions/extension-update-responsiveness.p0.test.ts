@@ -26,12 +26,17 @@ const createTree = () => {
 
 const countHeartbeats = async (work: () => unknown) => {
   let heartbeats = 0;
-  const timer = setInterval(() => heartbeats++, 0);
+  // Observe event-loop turns directly. A zero-delay timer can be clamped beyond a fast async removal.
+  const heartbeat = () => {
+    heartbeats++;
+    immediate = setImmediate(heartbeat);
+  };
+  let immediate = setImmediate(heartbeat);
   try {
     await work();
     return heartbeats;
   } finally {
-    clearInterval(timer);
+    clearImmediate(immediate);
   }
 };
 

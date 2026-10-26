@@ -123,4 +123,18 @@ test("restores markdown scroll when returning to a retained ticket or file", asy
   await expect.poll(() => editorScrollTop(page)).toBe(ticketScroll);
   await fileRow.click();
   await expect.poll(() => editorScrollTop(page)).toBe(fileScroll);
+
+  await page.getByRole("button", { name: "Back to project", exact: true }).click();
+  await page.getByRole("option", { name: "Artifacts", exact: true }).click();
+  const main = page.locator('[data-workbench-panel="main"]');
+  await main
+    .getByRole("tab", { name: "Artifacts", exact: true })
+    .getByRole("button", { name: "Close Artifacts", exact: true })
+    .click();
+  await expect(main.getByRole("group", { name: "Available tabs" })).toBeVisible();
+  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+  await card.click();
+  await expect.poll(() => editorScrollTop(page)).toBe(ticketScroll);
+  await fileRow.click();
+  await expect.poll(() => editorScrollTop(page)).toBe(fileScroll);
 });

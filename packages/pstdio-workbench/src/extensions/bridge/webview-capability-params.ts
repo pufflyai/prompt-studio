@@ -141,7 +141,7 @@ const schemas = {
     z.object({ op: z.literal("projectSyncStatus"), ...projectId }),
   ]),
   "account.manage": z.discriminatedUnion("op", [
-    z.object({ op: z.literal("login"), managerOrigin: identifier }),
+    z.object({ op: z.literal("login"), managerOrigin: identifier.optional() }),
     z.object({ op: z.literal("cancelLogin"), id: identifier }),
     z.object({ op: z.literal("logout") }),
     z.object({ op: z.literal("renameDevice"), id: identifier, name: z.string() }),

@@ -1,15 +1,17 @@
 import { defineExtension, type ViewContribution } from "@pstdio/sdk/extensions";
+import { marmaladeCommands } from "./src/apps/marmalade/marmalade-commands";
 import boombox from "./src/examples/boombox";
 import kiln from "./src/examples/kiln";
+import marmalade from "./src/examples/marmalade";
 import pigeon from "./src/examples/pigeon";
 import scribble from "./src/examples/scribble";
 import zipline from "./src/examples/zipline";
 import { commands } from "./src/state-commands";
 
-const examples = [scribble, boombox, zipline, pigeon, kiln];
+const examples = [scribble, boombox, zipline, pigeon, kiln, marmalade];
 export default defineExtension({
   defaultLocale: "en",
-  commands: Object.values(commands),
+  commands: [...Object.values(commands), ...Object.values(marmaladeCommands)],
   statusBarItems: [...scribble.statusBarItems, ...zipline.statusBarItems, ...kiln.statusBarItems],
   modes: examples.flatMap((example) => example.modes),
   placements: [...boombox.placements, ...kiln.placements],
