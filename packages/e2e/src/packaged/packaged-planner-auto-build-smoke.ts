@@ -65,6 +65,7 @@ export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
   expect(resumed.revision).not.toBe(beforePause.revision);
   expect(await execute("next-tickets", {})).toMatchObject({ tickets: [], waiting: [] });
   await execute("auto-build.pause", {});
+  expect(await execute("auto-build.stop", {})).toMatchObject({ state: "stopped", enabled: false });
   expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
     enabled: false,
   });

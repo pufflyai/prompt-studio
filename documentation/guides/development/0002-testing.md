@@ -303,6 +303,10 @@ Tests have two kinds of time limit. [ADR 0067](../../adrs/0067-separate-performa
 
 Functional tests do not assert timings. Benchmarks do not measure test-only setup, tracing, or cleanup, but they include initialization a person waits for, such as macOS checks on the first launch of a signed app. Helpers wait within the deadline of the test that calls them. Do not add a shorter cap inside a helper; it can end a slow but valid phase before the test can report it. Keep prompt failures for real errors, such as a process that exits.
 
+The database package's `test` and `test:coverage` tasks declare Nx `parallelism: false`. Nx runs each without competing package tasks from the same invocation. The export-worker check starts both real database engines within its existing allowance; concurrent package work can starve that setup. Other package tasks keep their normal concurrency. `NX_PARALLEL` alone does not limit Lerna's explicit package concurrency.
+
+The subnav benchmark measures trusted clicks and request completion in the browser's monotonic clock. Match every observed request to its [Resource Timing](https://www.w3.org/TR/resource-timing/) entry, including repeated URLs. Missing or ambiguous timing fails the measurement. Do not subtract browser `performance.timeOrigin` from protocol wall-clock timestamps: those clocks can disagree and report minutes for a request the browser completed in milliseconds. Network observation still verifies quiescence, response status, content and all linked sessions.
+
 To review a timeout:
 
 1. Find the slow phase: dependency setup, app readiness, the operation, cleanup, reporting, or the whole job. Playwright steps and benchmark attachments show phase timings.

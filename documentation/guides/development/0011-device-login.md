@@ -4,6 +4,8 @@ The native host keeps one device credential per login. The account manager owns 
 
 See [Log in and sync cloud projects](../sdk/0004-device-login.md) for the commands, the native file path and SDK usage.
 
+`pst login` and `client.account.login()` use `https://base.prompt.studio/accounts` by default. The native account service resolves the address once per login: an explicit `--manager` or SDK argument first, then `PSTDIO_ACCOUNT_MANAGER_ORIGIN` from the host's environment, then the hosted default. An invalid configured address fails validation; it never silently switches services. Restart the host after changing its environment. Extensions use the same resolution through `ctx.account.login()` and the webview account client.
+
 ## Account service setup
 
 Use an owned HTTPS account service configured as described in [account authority development](0007-account-manager.md). Register its full Google callback URL, for example `https://accounts.example.test/api/auth/callback/google`, in the owned Google OAuth client. `MANAGER_ORIGIN` is that account service's HTTPS address; `RELAY_AUDIENCE` is the relay's HTTPS address. Either address may include a path, as described in [account authority development](0007-account-manager.md#addresses-with-a-path). These are separate services and identities.
