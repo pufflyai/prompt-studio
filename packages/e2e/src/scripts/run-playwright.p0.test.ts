@@ -88,7 +88,11 @@ test("removes the run's server home and Bun cache when Playwright exits", async 
 test("keeps a Bun cache the caller provides", async () => {
   const cache = mkdtempSync(join(tmpdir(), "caller-bun-cache-"));
   try {
-    const run = await runPlaywright(fakeRun(0), { PATH: process.env.PATH, E2E_BUN_CACHE_DIR: cache }, { stdio: "pipe" });
+    const run = await runPlaywright(
+      fakeRun(0),
+      { PATH: process.env.PATH, E2E_BUN_CACHE_DIR: cache },
+      { stdio: "pipe" },
+    );
     const [home] = JSON.parse(run.output) as [string, string];
     expect(existsSync(join(cache, "used"))).toBe(true);
     expect(existsSync(home)).toBe(false);
