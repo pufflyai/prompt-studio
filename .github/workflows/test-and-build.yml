@@ -18,9 +18,14 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
       - uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
+      - name: Build source host test dependencies
+        run: bun run build -- --scope pstdio-api --include-dependencies
       - name: Prove detached lifetime after immediate and delayed readiness
         working-directory: packages/pstdio-api
         run: bun test ./src/features/extensions/extension-detached-process.p1.test.ts
