@@ -63,3 +63,28 @@ test("signing out with no stored account is an idempotent action", async () => {
     ),
   ).toBeNull();
 });
+
+test("account choices never default to a provider excluded from the requested action", async () => {
+  const providers = ["managed", "first", "second"].map((id) => ({
+    id,
+    label: id,
+    status: "signed_in" as const,
+    canLogout: id !== "managed",
+    methods: [],
+  }));
+  expect(
+    await chooseHarnessAuthentication(
+      { status: "signed_in", provider: "managed", providers },
+      { action: "logout" },
+      {
+        signal: new AbortController().signal,
+        emit: async () => {},
+        request: async (prompt) => {
+          if (prompt.type !== "select") throw Error("Expected provider choices");
+          expect(prompt.options.some((option) => option.id === prompt.initial)).toBe(true);
+          return prompt.initial!;
+        },
+      },
+    ),
+  ).toEqual({ provider: "first" });
+});

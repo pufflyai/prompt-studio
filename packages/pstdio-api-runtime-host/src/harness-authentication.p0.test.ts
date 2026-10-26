@@ -22,3 +22,30 @@ test("provider retirement cancels an account prompt and waits for worker cleanup
   expect(await rejected).toMatchObject({ name: "AbortError" });
   expect(cleaned).toBe(true);
 });
+
+test("a retired provider cannot start a later account flow", async () => {
+  const lifetime = createHarnessAuthenticationLifetime();
+  await lifetime.dispose();
+  let started = false;
+  await expect(
+    lifetime.run({ signal: new AbortController().signal, emit: async () => {}, request: async () => "" }, async () => {
+      started = true;
+    }),
+  ).rejects.toMatchObject({ name: "AbortError" });
+  expect(started).toBe(false);
+});
+
+test("retirement before account dispatch prevents native worker startup", async () => {
+  const lifetime = createHarnessAuthenticationLifetime();
+  let started = false;
+  const operation = lifetime.run(
+    { signal: new AbortController().signal, emit: async () => {}, request: async () => "" },
+    async () => {
+      started = true;
+    },
+  );
+  const outcome = operation.catch((cause) => cause);
+  await lifetime.dispose();
+  expect(await outcome).toMatchObject({ name: "AbortError" });
+  expect(started).toBe(false);
+});

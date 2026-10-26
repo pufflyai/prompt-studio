@@ -33,7 +33,7 @@ export const chooseHarnessAuthentication = async (
         : await channel.request({
             type: "select",
             title: "Choose a provider",
-            initial: authentication.provider,
+            initial: providers.find((provider) => provider.id === authentication.provider)?.id ?? providers[0]!.id,
             options: providers.map((provider) => ({ id: provider.id, label: provider.label })),
           });
   const provider = providers.find((provider) => provider.id === providerId);

@@ -208,6 +208,7 @@
     "cancel": "Cancel",
     "close": "Close",
     "managed": "Credentials are managed by the runtime",
+    "unavailable": "Account setup is unavailable for this harness.",
     "requiredDescription": "Sign in to send messages. You can also use /login in the chat.",
     "noHarnessTitle": "No harness available",
     "noHarnessDescription": "Enable an agent harness in Extensions to start chatting.",

@@ -178,6 +178,7 @@
     "cancel": "Cancelar",
     "close": "Cerrar",
     "managed": "El entorno administra las credenciales",
+    "unavailable": "La configuración de la cuenta no está disponible para este agente.",
     "requiredDescription": "Inicia sesión para enviar mensajes. También puedes usar /login en el chat.",
     "noHarnessTitle": "No hay agentes disponibles",
     "noHarnessDescription": "Activa una extensión de agente para empezar a conversar.",
