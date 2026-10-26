@@ -41,6 +41,7 @@ export const runCommand = async (command: string, args: string[], options: Comma
     try {
       const stdoutFile = Bun.file(join(outputRoot, "stdout"));
       const stderrFile = Bun.file(join(outputRoot, "stderr"));
+      const startedAt = performance.now();
       const child = Bun.spawn(resolved.argv, {
         cwd: options.cwd,
         env: options.env,
@@ -52,6 +53,9 @@ export const runCommand = async (command: string, args: string[], options: Comma
         windowsVerbatimArguments: resolved.windowsVerbatimArguments,
       });
       const exitCode = await child.exited;
+      process.stderr.write(
+        `Installer resource probe ${JSON.stringify({ cwd: options.cwd, http: options.env?.BUN_CONFIG_MAX_HTTP_REQUESTS, elapsedMs: performance.now() - startedAt, usage: child.resourceUsage() })}\n`,
+      );
       const [stdout, stderr] = await Promise.all([stdoutFile.text(), stderrFile.text()]);
       return { exitCode, stdout, stderr };
     } finally {

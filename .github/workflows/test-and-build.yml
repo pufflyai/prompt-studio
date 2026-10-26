@@ -1,4 +1,4 @@
-name: Diagnose native ARM extension-smoke in the full packaged workload
+name: Compare cold ARM installer resource use
 on:
   workflow_dispatch:
 permissions:
@@ -6,9 +6,31 @@ permissions:
   actions: read
 jobs:
   native:
-    uses: ./.github/workflows/verify-packaged-toolchain.yml
-    with:
-      ref: ${{ github.sha }}
-      profile: full
-      priority: P2
-      platforms: '[{"os":"windows-11-arm","platform_pkg":"cli-win-arm64"}]'
+    runs-on: windows-11-arm
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        http: ["1", "4", "16"]
+    env:
+      CI_PRIORITY: P2
+      PSTDIO_VERIFY_PLATFORM_PKG: cli-win-arm64
+      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Build the normal compiled candidate and check integrity
+        run: bun run --cwd scripts verify:packages --profile integrity
+      - name: Compare both complete cold core cases once
+        working-directory: packages/e2e
+        env:
+          BUN_CONFIG_MAX_HTTP_REQUESTS: ${{ matrix.http }}
+        run: bun test --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-core-extension-features.p2.test.ts src/packaged/packaged-core-extensions-smoke.p1.test.ts
