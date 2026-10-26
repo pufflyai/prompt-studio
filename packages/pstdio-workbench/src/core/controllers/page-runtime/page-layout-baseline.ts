@@ -62,6 +62,8 @@ export const isDefaultPageMain = (
   resources = defaultPageResourceCodec,
 ) => {
   if (!page || (page.resource && !resource)) return false;
+  // Entering the page opens its independent landing, so any Main tray, including an empty one, is a saved choice.
+  if (page.main.kind === "panels" && typeof page.main.landing === "object") return false;
   const expected = defaultMain(page, resource, resources);
   const main = layout.regions.main;
   if (main.widgets.length !== expected.length) return false;

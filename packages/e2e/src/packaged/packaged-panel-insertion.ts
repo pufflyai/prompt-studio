@@ -165,8 +165,11 @@ const verifyNearbyTabTargets = async (page: Page) => {
   await page.reload();
   const bottom = page.locator('[data-workbench-panel="secondary"]:visible');
   await expect(bottom.getByRole("tab", { selected: true })).toBeVisible();
+  // The closed Artifacts library stays closed after reload; its card can reopen it.
   await expect(main.getByRole("tab")).toHaveCount(0);
-  await expect(main.locator('iframe[title="Artifacts"]')).toBeVisible();
+  await expect(
+    main.getByRole("group", { name: "Available tabs" }).getByRole("button", { name: "Artifacts", exact: true }),
+  ).toBeVisible();
   await expect.poll(async () => (await bottom.boundingBox())!.y < (await main.boundingBox())!.y).toBe(true);
 };
 
