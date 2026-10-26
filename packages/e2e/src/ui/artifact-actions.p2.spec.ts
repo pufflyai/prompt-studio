@@ -58,7 +58,8 @@ for (const action of ["rename", "delete"] as const) {
         await expect(dialog).toBeVisible();
         expect(await execute("list", {})).toHaveLength(2);
         await dialog.getByRole("button", { name: "Delete", exact: true }).click();
-        await expect(page.getByRole("tab", { name: "Release report", exact: true })).toHaveCount(0);
+        // The deleted artifact's viewer closes; only the library tab remains.
+        await expect(page.locator('[data-workbench-panel="main"]').getByRole("tab")).toHaveText(["Artifacts"]);
         await expect(frame.getByRole("button", { name: "Reference page", exact: true })).toBeVisible();
         expect((await execute("list", {})).map((item: { artifactId: string }) => item.artifactId)).toEqual([
           reference.artifactId,
