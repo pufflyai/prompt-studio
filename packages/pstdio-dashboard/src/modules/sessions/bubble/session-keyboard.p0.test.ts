@@ -6,12 +6,10 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionsModule } from "../module";
-import { createSessionBubbleModule } from "./module";
 
 test("new session in an open tab targets the chosen presentation without adding a tab", async () => {
   const core = createWorkbench();
   core.registerModule(createWorkspacesModule());
-  core.registerModule(createSessionBubbleModule());
   core.registerModule(createSessionsModule());
   selectDashboardProject(core, { id: "project-1", name: "Project" });
   openWorkspacesPage(core);

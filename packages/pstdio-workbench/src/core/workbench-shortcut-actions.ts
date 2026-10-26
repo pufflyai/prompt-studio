@@ -1,4 +1,21 @@
+import { createKeyboardController } from "./controllers/keyboard/keyboard-controller";
+import { createKeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import type { WorkbenchCore } from "./workbench-core-types";
+
+export const createWorkbenchKeyboard = (
+  resolveCore: () => WorkbenchCore,
+  commands: WorkbenchCore["commands"],
+  context: WorkbenchCore["context"],
+) => ({
+  keyboard: createKeyboardController(resolveCore),
+  keybindings: createKeybindingRegistry({
+    commands,
+    context,
+    preferences: () => resolveCore().preferences,
+    actions: () => workbenchShortcutActions(resolveCore()),
+  }),
+});
+
 export const workbenchShortcutActions = (core: WorkbenchCore) => [
   ...core.navigationTrees.listActions(),
   ...Object.values(core.layout.menuStore.getState().itemsByPath)

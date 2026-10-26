@@ -6,6 +6,7 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 const destinationLabel = (core: WorkbenchCore, action: NavigationTarget): string => {
   if (action.kind === "command") return core.commands.getCommand(action.commandId)?.command.label ?? action.commandId;
   if (action.kind === "href") return action.href;
+  if (action.kind === "viewer") return action.resource.label ?? action.resource.id;
   if (action.kind === "compound") return action.targets.map((target) => destinationLabel(core, target)).join(" + ");
   if (action.kind === "page") {
     const title = core.pages.store.getState().pages[contributionRefId(action.page)]?.title;

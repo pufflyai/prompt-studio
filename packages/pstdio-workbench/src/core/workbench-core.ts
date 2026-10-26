@@ -14,7 +14,6 @@ import {
   createMainFullscreen,
   isFullscreenRegionFocusable,
 } from "./controllers/fullscreen/main-fullscreen";
-import { createKeyboardController } from "./controllers/keyboard/keyboard-controller";
 import { registerKeyboardCommands } from "./controllers/keyboard/keyboard-registration";
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
 import { createWorkbenchPageLocationController } from "./controllers/page-location/page-location-controller";
@@ -46,7 +45,6 @@ import { createModeSidePanel } from "./controllers/side-panel/mode-side-panel";
 import { createWorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
 import { createCommandPaletteResourceRegistry } from "./registries/command-palette-resources/command-palette-resource-registry";
 import { createCommandRegistry } from "./registries/commands/command-registry";
-import { createKeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel } from "./registries/layout/layout-model";
 import type { LayoutPersistenceAdapter } from "./registries/layout/layout-model-types";
 import { createMenuRegistry } from "./registries/menus/menu-registry";
@@ -82,7 +80,7 @@ import { createCoreViews } from "./workbench-core-views";
 import { createWorkbenchModuleRegistry } from "./workbench-module-registry";
 import { createPagePersistenceScopeHandler } from "./workbench-page-persistence";
 import { setWorkbenchRenderers } from "./workbench-renderers";
-import { workbenchShortcutActions } from "./workbench-shortcut-actions";
+import { createWorkbenchKeyboard } from "./workbench-shortcut-actions";
 
 export * from "./workbench-core-types";
 
@@ -273,13 +271,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     focus,
     fullscreen: createMainFullscreen(() => core),
     host: createWorkbenchHost(layout, layoutCache, pages.getContent),
-    keyboard: createKeyboardController(() => core),
-    keybindings: createKeybindingRegistry({
-      commands,
-      context,
-      preferences: () => core.preferences,
-      actions: () => workbenchShortcutActions(core),
-    }),
+    ...createWorkbenchKeyboard(() => core, commands, context),
     layout,
     modes,
     modePlacements,
