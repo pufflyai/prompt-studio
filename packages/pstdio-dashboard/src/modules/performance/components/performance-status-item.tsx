@@ -1,9 +1,11 @@
 import { Box, Button, HStack, Popover, Portal, Text } from "@chakra-ui/react";
 import { ScrollArea, Tooltip } from "@pstdio/ui";
+import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useQuery } from "@tanstack/react-query";
 import { Gauge, TriangleAlert } from "lucide-react";
 import { useRef, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
+import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { useOpenExtensionViews } from "@/shared/extensions/open-extension-views";
 import { pausedExtensions, usePausedExtensions } from "@/shared/extensions/paused-extensions";
 import { useProjectExtensions } from "@/shared/extensions/use-project-extensions";
@@ -16,13 +18,17 @@ const performanceSnapshotQueryKey = ["performance-snapshot"] as const;
 
 interface PerformanceStatusItemProps {
   controller: PerformanceMonitoringController;
-  projectId?: string;
+  input: WorkbenchPanelRenderInput;
 }
 
 // The trailing status bar meter: the last 12 seconds of frame rate and the
 // current fps. It exists only while monitoring is on and opens the popover.
 export const PerformanceStatusItem = (props: PerformanceStatusItemProps) => {
-  const { controller, projectId } = props;
+  const { controller, input } = props;
+  const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
+    const value = state.values[dashboardSelectedProjectIdContextKey];
+    return typeof value === "string" ? value : undefined;
+  });
   const contentRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation("settings");
   const buckets = useSyncExternalStore(controller.frameRate.subscribe, controller.frameRate.getBuckets);
