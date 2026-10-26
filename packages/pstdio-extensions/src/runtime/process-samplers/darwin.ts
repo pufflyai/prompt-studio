@@ -6,7 +6,14 @@ export const createDarwinProcessSampler = () => {
     proc_pid_rusage: { args: ["int", "int", "ptr"], returns: "int" },
     proc_listallpids: { args: ["ptr", "int"], returns: "int" },
     proc_pidinfo: { args: ["int", "int", "u64", "ptr", "int"], returns: "int" },
+    mach_timebase_info: { args: ["ptr"], returns: "int" },
   });
+  const timebase = new Uint32Array(2);
+  if (library.symbols.mach_timebase_info(ptr(timebase)) !== 0 || !timebase[1]) {
+    library.close();
+    throw new Error("Cannot read the kernel CPU timebase.");
+  }
+  const millisecondsPerTick = timebase[0]! / timebase[1]! / 1_000_000;
   return {
     list: async () => {
       const count = library.symbols.proc_listallpids(null, 0) + 32;
@@ -34,7 +41,7 @@ export const createDarwinProcessSampler = () => {
       const number = (offset: number) => Number(fields.getBigUint64(offset, true));
       return {
         processStartId: fields.getBigUint64(80, true).toString(),
-        cpuTimeMs: (number(16) + number(24)) / 1_000_000,
+        cpuTimeMs: (number(16) + number(24)) * millisecondsPerTick,
         residentBytes: number(64),
         peakResidentBytes: null,
         physicalFootprintBytes: number(72),

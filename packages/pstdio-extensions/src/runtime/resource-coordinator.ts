@@ -19,6 +19,7 @@ export class ExtensionResourceError extends Error {
 interface WaitingJob {
   cpuGroup: object;
   owner: string;
+  projectId?: string;
   cost: ResourceCost;
   bytes: number;
   queuedAt: number;
@@ -43,6 +44,7 @@ export const createResourceCoordinator = (
   let runningMemory = 0;
   let queuedBytes = 0;
   let lastOwner: string | undefined;
+  let lastProject: string | undefined;
   let checking = false;
   let stopped = false;
   let wake: ReturnType<typeof setTimeout> | undefined;
@@ -84,6 +86,7 @@ export const createResourceCoordinator = (
           (a, b) =>
             b.priority + Math.floor((now - b.queuedAt) / 1000) - (a.priority + Math.floor((now - a.queuedAt) / 1000)) ||
             Number(a.owner === lastOwner) - Number(b.owner === lastOwner) ||
+            Number(a.projectId === lastProject) - Number(b.projectId === lastProject) ||
             a.queuedAt - b.queuedAt,
         );
         const job = candidates[0];
@@ -94,6 +97,7 @@ export const createResourceCoordinator = (
         cpu.set(job.cpuGroup, job, job.cost.cpu);
         runningMemory += job.cost.memory;
         lastOwner = job.owner;
+        lastProject = job.projectId;
         job.start();
       }
     } catch (error) {
@@ -111,7 +115,7 @@ export const createResourceCoordinator = (
     owner: string,
     cost: ResourceCost,
     signal: AbortSignal | undefined,
-    metadata: { bytes?: number; priority?: number; onWaiting?: () => void; cpuGroup?: object } = {},
+    metadata: { bytes?: number; priority?: number; onWaiting?: () => void; cpuGroup?: object; projectId?: string } = {},
   ) => {
     signal?.throwIfAborted();
     if (!Number.isFinite(cost.cpu) || cost.cpu <= 0 || !Number.isFinite(cost.memory) || cost.memory < 0)
@@ -143,6 +147,7 @@ export const createResourceCoordinator = (
         job = {
           cpuGroup: metadata.cpuGroup ?? {},
           owner,
+          projectId: metadata.projectId,
           cost: { ...cost },
           bytes,
           priority: metadata.priority ?? 0,
@@ -203,7 +208,7 @@ export const createResourceCoordinator = (
     cost: ResourceCost,
     signal: AbortSignal | undefined,
     work: () => Promise<T>,
-    metadata: { bytes?: number; priority?: number; onWaiting?: () => void; cpuGroup?: object } = {},
+    metadata: { bytes?: number; priority?: number; onWaiting?: () => void; cpuGroup?: object; projectId?: string } = {},
   ) => {
     signal?.throwIfAborted();
     if (holdsExtensionAdmission(identity)) return work();

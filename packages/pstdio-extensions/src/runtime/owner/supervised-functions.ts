@@ -22,7 +22,7 @@ export const createSupervisedFunctionWrapper = (owner: {
     if (typeof value === "function") {
       const generation = owner.generation();
       return async (...args: unknown[]) => {
-        const context = args[0] as { signal?: AbortSignal } | undefined;
+        const context = args[0] as { signal?: AbortSignal; projectId?: string } | undefined;
         const signal = context?.signal instanceof AbortSignal ? context.signal : undefined;
         signal?.throwIfAborted();
         if (!owner.isLive() || owner.generation() !== generation) return owner.recover(path, args);
@@ -47,7 +47,12 @@ export const createSupervisedFunctionWrapper = (owner: {
               extensionWorkCosts.invocation,
               AbortSignal.any([owner.signal(), ...(signal ? [signal] : [])]),
               invoke,
-              { priority: 2, bytes: 512 * 1024 + JSON.stringify(args.slice(1)).length * 2, cpuGroup: owner.cpuGroup },
+              {
+                priority: 2,
+                bytes: 512 * 1024 + JSON.stringify(args.slice(1)).length * 2,
+                cpuGroup: owner.cpuGroup,
+                projectId: context?.projectId,
+              },
             )
           : invoke();
       };

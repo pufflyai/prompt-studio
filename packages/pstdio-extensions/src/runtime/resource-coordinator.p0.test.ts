@@ -156,6 +156,38 @@ test("gives another owner a turn before a second queued job from the same owner"
   expect(order[0]).toBe("b2");
 });
 
+test("gives another project a turn within the same installed source", async () => {
+  const scheduler = createResourceCoordinator({ capacity: async () => ({ cpu: 1, memory: 256 }) });
+  const order: string[] = [];
+  let finish!: () => void;
+  const first = scheduler.run(
+    "shared",
+    { cpu: 1, memory: 128 },
+    undefined,
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    { projectId: "a" },
+  );
+  await Bun.sleep(0);
+  const jobs = ["a", "a", "b"].map((projectId, index) =>
+    scheduler.run(
+      "shared",
+      { cpu: 1, memory: 128 },
+      undefined,
+      async () => {
+        order.push(`${projectId}${index}`);
+      },
+      { projectId },
+    ),
+  );
+  finish();
+  await Promise.all([first, ...jobs]);
+  expect(order[0]).toBe("b2");
+  scheduler.dispose();
+});
+
 test("admits no compiler when memory cannot fit and resumes when headroom returns", async () => {
   let memory = 64;
   const scheduler = createResourceCoordinator({ capacity: async () => ({ cpu: 2, memory }) });
