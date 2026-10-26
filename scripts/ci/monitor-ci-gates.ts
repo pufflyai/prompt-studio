@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { currentCiProvenance } from "./ci-provenance";
-import { createCiResultsClient } from "./ci-results-client";
+import { createCiResultsClient, TemporaryCiResultsError } from "./ci-results-client";
 import { evaluateCiGate, isGateJob, matchesJob, type ObservedJob, type PlannedJob } from "./test-policy";
 
 interface Job extends ObservedJob {
@@ -13,6 +13,7 @@ export const monitorCiGates = async (
   env: Record<string, string | undefined>,
   plan: PlannedJob[],
   wait = () => new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+  now = Date.now,
 ) => {
   if (!plan.length) throw new Error("No selected CI jobs");
   const repository = env.GITHUB_REPOSITORY;
@@ -20,11 +21,9 @@ export const monitorCiGates = async (
   const attempt = Number(env.GITHUB_RUN_ATTEMPT);
   if (!repository || !runId || !attempt || !env.GH_TOKEN) throw new Error("Missing CI run identity");
   const base = `${env.GITHUB_API_URL ?? "https://api.github.com"}/repos/${repository}/actions/runs/${runId}`;
-  const request = createCiResultsClient(env.GH_TOKEN);
-  let previous = "";
-  for (;;) {
+  const request = createCiResultsClient(env.GH_TOKEN, now);
+  const read = async () => {
     const run = (await request(base)) as { run_attempt: number; head_sha: string };
-    if (run.run_attempt !== attempt) throw new Error("CI run was superseded by another attempt");
     const jobs: Job[] = [];
     for (let page = 1; ; page++) {
       const body = (await request(`${base}/attempts/${attempt}/jobs?per_page=100&page=${page}`)) as {
@@ -32,8 +31,23 @@ export const monitorCiGates = async (
         total_count: number;
       };
       jobs.push(...body.jobs);
-      if (jobs.length >= body.total_count || !body.jobs.length) break;
+      if (jobs.length >= body.total_count || !body.jobs.length) return { run, jobs };
     }
+  };
+  let previous = "";
+  for (;;) {
+    let observed: Awaited<ReturnType<typeof read>>;
+    try {
+      observed = await read();
+    } catch (error) {
+      // An unread graph is still pending; the job's execution allowance bounds the wait.
+      if (!(error instanceof TemporaryCiResultsError)) throw error;
+      console.warn(`::warning::${error.message}; waiting for the next read`);
+      await wait();
+      continue;
+    }
+    const { run, jobs } = observed;
+    if (run.run_attempt !== attempt) throw new Error("CI run was superseded by another attempt");
     const monitor = jobs.find((job) => job.name === "validation_results" || job.name.endsWith(" / validation_results"));
     const prefix = monitor?.name.slice(0, -"validation_results".length) ?? "";
     const suite = jobs.filter((job) => job.name.startsWith(prefix));

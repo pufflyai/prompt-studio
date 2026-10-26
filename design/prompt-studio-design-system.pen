@@ -21337,6 +21337,69 @@
                                   "height": 12
                                 }
                               }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "UimKf",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Contributed actions",
+                              "context": "Optional native data table and Kanban actions. Show only when at least one action is visible. Buttons use size xs (28px).",
+                              "enabled": false,
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "id": "TBzjO",
+                                  "name": "Action separator",
+                                  "fill": "$ds-border",
+                                  "width": 1,
+                                  "height": 24
+                                },
+                                {
+                                  "id": "hZEeR",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Run experiment",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "primary",
+                                    "size": "xs"
+                                  },
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "icon": "play",
+                                      "width": 14,
+                                      "height": 14
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Run experiment"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "t6j6X8",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Refresh results",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "outline",
+                                    "size": "xs"
+                                  },
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "icon": "refresh-cw",
+                                      "width": 14,
+                                      "height": 14
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Refresh results"
+                                    }
+                                  }
+                                }
+                              ]
                             }
                           ]
                         },
@@ -24385,6 +24448,33 @@
                           ]
                         }
                       ]
+                    },
+                    {
+                      "id": "reJWU",
+                      "type": "ref",
+                      "ref": "XrEDw",
+                      "name": "Collection view bar · contributed actions",
+                      "width": "fill_container",
+                      "descendants": {
+                        "Js4rH/k9XlqC": {
+                          "content": "All rows"
+                        },
+                        "UWfsk": {
+                          "enabled": false
+                        },
+                        "O10oTj": {
+                          "enabled": false
+                        },
+                        "o6x3a": {
+                          "enabled": false
+                        },
+                        "UimKf": {
+                          "enabled": true
+                        },
+                        "FjxiE": {
+                          "enabled": false
+                        }
+                      }
                     }
                   ]
                 },

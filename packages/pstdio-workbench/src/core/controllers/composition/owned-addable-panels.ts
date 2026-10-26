@@ -121,6 +121,8 @@ const addShellPanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddP
   }
 };
 const addModePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPanel) => {
+  // Navigation opens a mode panel only in its own mode, so offer none before a mode is active.
+  if (!input.modeId) return;
   for (const placement of core.modePlacements.listPlacements(input.modeId)) {
     if (input.region === "main" && placement.item.kind === "view" && !offersPageMain(core, placement.ref)) continue;
     const addableIn = placement.addableIn ?? placement.movableTo;

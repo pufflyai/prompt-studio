@@ -62,3 +62,26 @@ describe("placement add command availability", () => {
     expect(addable()).toHaveLength(1);
   });
 });
+
+test("offers a mode's panels only while that mode is active", () => {
+  const workbench = createWorkbench();
+  workbench.views.registerView({ id: "chat", title: "Chat", body: { kind: "react", render: () => null } });
+  workbench.modes.registerMode({ id: "project", activate: () => undefined });
+  workbench.modes.registerMode({ id: "notes", activate: () => undefined });
+  workbench.modePlacements.registerPlacement({
+    id: "chat",
+    ref: { extensionId: "test", kind: "placement", id: "chat" },
+    modeId: "project",
+    region: "side",
+    item: { kind: "view", view: { kind: "view", id: "chat" }, presence: "closed" },
+  });
+  const addable = () => workbench.composition.panelsFor("side").addable;
+
+  // Before any mode is active, no mode owns a panel.
+  expect(addable()).toEqual([]);
+  workbench.modes.setActiveMode("notes");
+  expect(addable()).toEqual([]);
+
+  workbench.modes.setActiveMode("project");
+  expect(addable().map((panel) => panel.contribution.title)).toEqual(["Chat"]);
+});

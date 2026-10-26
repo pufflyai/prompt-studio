@@ -16,10 +16,12 @@ export const openSessionBubbleWidgets = (
   ctx: Pick<WorkbenchModuleContext, "navigation" | "modes">,
   input: OpenSessionBubbleWidgetsInput = {},
 ) => {
-  if (!input.resource) return undefined;
+  // Each mode owns its session panel. A project that is still loading has no mode, so no session panel yet.
+  const modeId = ctx.modes.getActiveModeId();
+  if (!input.resource || !modeId) return undefined;
   return ctx.navigation.openTarget({
     kind: "panel",
-    panel: sessionPanelRef(ctx.modes.getActiveModeId() ?? "project"),
+    panel: sessionPanelRef(modeId),
     resource: input.resource,
     open: input.tabRetention === "persistent" ? "pin" : "preview",
     region: input.region,
