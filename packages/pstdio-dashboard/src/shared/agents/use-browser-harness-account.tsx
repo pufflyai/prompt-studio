@@ -44,7 +44,7 @@ export const useBrowserHarnessAccount = (projectId?: string, agentId?: string, m
     action: "login" | "logout",
     name: string,
     authentication: HarnessAuthentication,
-    onComplete: () => void,
+    onComplete: () => void | Promise<void>,
   ) => {
     if (!agentId) return;
     cancel();
@@ -101,14 +101,15 @@ export const useBrowserHarnessAccount = (projectId?: string, agentId?: string, m
             }),
         },
       )
-      .then(() => {
-        if (active.current === operation) onComplete();
+      .then(async () => {
+        if (active.current === operation) await onComplete();
       })
       .catch((cause: unknown) => {
         if (!controller.signal.aborted && active.current === operation)
           setError(cause instanceof Error ? cause.message : String(cause));
       })
       .finally(() => {
+        controller.abort();
         page?.closeUnused();
         if (active.current === operation) {
           active.current = null;

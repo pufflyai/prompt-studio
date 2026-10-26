@@ -22,10 +22,11 @@ export const useHarnessAccount = (
   });
   const browser = useBrowserHarnessAccount(projectId, agent?.id, model);
   const authentication = query.data;
-  const refresh = () => {
-    void queries.invalidateQueries({ queryKey: ["harness-authentication"] });
-    void queries.invalidateQueries({ queryKey: ["agent-models"] });
-  };
+  const refresh = () =>
+    Promise.all([
+      queries.invalidateQueries({ queryKey: ["harness-authentication"] }),
+      queries.invalidateQueries({ queryKey: ["agent-models"] }),
+    ]).then(() => {});
   const start = (action: "login" | "logout") => {
     if (authentication && agent) browser.start(action, agent.name, authentication, refresh);
   };

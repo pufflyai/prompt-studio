@@ -44,3 +44,22 @@ test("account choices use the selected model provider and never log out an envir
   });
   expect(questions).toHaveLength(2);
 });
+
+test("signing out with no stored account is an idempotent action", async () => {
+  expect(
+    await chooseHarnessAuthentication(
+      {
+        status: "signed_out",
+        providers: [{ id: "native", label: "Native", status: "signed_out", canLogout: false, methods: [] }],
+      },
+      { action: "logout" },
+      {
+        signal: new AbortController().signal,
+        emit: async () => {},
+        request: async () => {
+          throw Error("No question is needed");
+        },
+      },
+    ),
+  ).toBeNull();
+});

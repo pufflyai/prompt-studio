@@ -13,6 +13,12 @@ export const chooseHarnessAuthentication = async (
   const providers = authentication.providers.filter((provider) =>
     input.action === "logout" ? provider.canLogout : provider.methods.length > 0,
   );
+  if (
+    input.action === "logout" &&
+    !providers.length &&
+    authentication.providers.every((provider) => provider.status === "signed_out" || provider.status === "not_required")
+  )
+    return null;
   if (!providers.length)
     throw new Error(
       input.action === "logout"
