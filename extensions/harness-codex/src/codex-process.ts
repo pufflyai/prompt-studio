@@ -84,6 +84,7 @@ export const resolveCodexCommand = (
 
   if (platform === "win32" && resolved && !isPrivateCodexLauncher(resolved)) {
     const target = preferSpawnableSibling(resolved, exists);
+    if (!isWindowsShim(target) && !target.toLowerCase().endsWith(".ps1")) return target;
     return (
       resolveNativeCodex(target, exists, arch) ??
       (input.managed ?? (() => resolveManagedCodex({ platform, arch })))() ??

@@ -22,6 +22,7 @@ import {
 import type { OpencodeSessionMessage } from "./opencode-types";
 
 type OpencodeServiceDeps = {
+  reuseExisting?: boolean;
   startServer: OpencodeServerStarter;
   serverStore: OpencodeServerStore;
   pingServer: (url: string) => Promise<boolean>;
@@ -121,6 +122,7 @@ const buildMessageParts = async (prompt: string, attachments: HarnessAttachment[
 
 export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = {}) => {
   const deps: OpencodeServiceDeps = {
+    reuseExisting: overrides.reuseExisting,
     startServer: overrides.startServer ?? defaultStartServer,
     serverStore: overrides.serverStore ?? { read: async () => null, write: async () => {}, clear: async () => {} },
     pingServer: overrides.pingServer ?? defaultPingServer,

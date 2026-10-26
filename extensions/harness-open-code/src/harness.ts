@@ -192,6 +192,7 @@ export const createOpencodeHarness = (
     getAuthentication: async (ctx, input) => (await serviceFor(ctx)).getAuthentication(input),
     authenticate: async (ctx, input, channel) => {
       await authenticateOpencode(ctx, input, channel, serviceOverrides);
+      await services.invalidateAuthentication();
       modelCache = undefined;
     },
 

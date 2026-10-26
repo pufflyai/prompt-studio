@@ -38,8 +38,8 @@ export const runCodexAccountAction = async (
       return { authenticated: false };
     }
     if (method === "api_key") {
-      const apiKey = await ctx.request({ type: "input", title: "OpenAI API key", secret: true });
-      if (!apiKey.trim()) throw new Error("Enter an API key.");
+      const apiKey = (await ctx.request({ type: "input", title: "OpenAI API key", secret: true })).trim();
+      if (!apiKey) throw new Error("Enter an API key.");
       await rpc.request("account/login/start", { type: "apiKey", apiKey }, undefined, ctx.signal);
       return;
     }

@@ -304,3 +304,20 @@ test.each([
   expect(await disposed).toBe("released");
   expect(await b.done).toEqual({ status: "disconnected" });
 });
+
+test("account refresh leaves active work running and starts later turns on new credentials", async () => {
+  const { runtime, children, calls } = setup();
+  const a = input("a");
+  const first = await runtime.run(a);
+  await runtime.refreshAuthentication();
+  expect(children).toHaveLength(1);
+  expect(calls.some((call) => call.method === "turn/interrupt")).toBe(false);
+  children[0].emit({
+    method: "turn/completed",
+    params: { threadId: first.agentSessionId, turn: { id: "turn-1", status: "completed" } },
+  });
+  expect(await first.done).toEqual({ status: "completed" });
+  const resumed = await runtime.run({ ...a, agentSessionId: first.agentSessionId });
+  expect(children).toHaveLength(2);
+  await resumed.stop();
+});

@@ -134,7 +134,10 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
     capabilities: () => ["SessionFork", "ContextUsage", "Approvals"],
     detect: (ctx) => deps.detect(ctx),
     getAuthentication: getClaudeAuthentication,
-    authenticate: authenticateClaude,
+    authenticate: async (ctx, input, channel) => {
+      await authenticateClaude(ctx, input, channel);
+      modelCache = undefined;
+    },
     listModels,
     getCommandState: (_ctx, input) => claudeCommandState(input),
     prepareOperation: (ctx, input, operation) => prepareClaudeOperation(input, operation, ctx.projectId),
