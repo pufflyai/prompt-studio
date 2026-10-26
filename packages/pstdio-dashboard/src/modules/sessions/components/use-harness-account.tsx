@@ -28,7 +28,7 @@ export const useHarnessAccount = (
       queries.invalidateQueries({ queryKey: ["agent-models"] }),
     ]).then(() => {});
   const start = (action: "login" | "logout") => {
-    if (authentication && agent) browser.start(action, agent.name, authentication, refresh);
+    if (authentication && agent) browser.start(action, agent.name, refresh);
   };
   const commands = authentication?.providers.length
     ? (["login", "logout"] as const).map((action) => ({
