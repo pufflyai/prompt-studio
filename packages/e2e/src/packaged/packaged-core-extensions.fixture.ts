@@ -1,12 +1,12 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync } from "node:fs";
-import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
+import { removeDiagnosticNativeCore } from "./diagnostic-native-core-cleanup";
 import { preparePlannerSource } from "./packaged-planner-source";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -60,8 +60,6 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
       }),
     });
     child = started.child;
-    child.stdout?.on("data", (chunk) => console.log("Native core runtime", chunk.toString()));
-    child.stderr?.on("data", (chunk) => console.error("Native core runtime", chunk.toString()));
     phase("runtime ready");
     const projectFolder = join(tempRoot, "project");
     mkdirSync(projectFolder);
@@ -89,7 +87,7 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("runtime stopped");
     if (closeRegistry) await closeRegistry();
     phase("registry closed");
-    await rm(tempRoot, { recursive: true, force: true });
+    await removeDiagnosticNativeCore(tempRoot);
     phase("files removed");
   }
 };

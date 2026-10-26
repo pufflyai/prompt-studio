@@ -1,18 +1,6 @@
-import { createHash } from "node:crypto";
-import { once } from "node:events";
-import {
-  cpSync,
-  existsSync,
-  type FSWatcher,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  watch,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { createExtensionInstallEnvironment } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
 import { traceSetupPhase } from "../../lib/setup-phase";
@@ -46,49 +34,13 @@ export type DependencyInstallInput = {
 
 // File capture removes Bun 1.4.2's crashing Windows output-pipe lifecycle (ADR 0086).
 export const runCommand = async (command: string, args: string[], options: CommandOptions) => {
-  const commandId = crypto.randomUUID();
-  const marks: { phase: string; at: number }[] = [];
-  const mark = (phase: string) => marks.push({ phase, at: performance.now() });
-  mark("entered");
-  let childPid: number | undefined;
-  let actualArgv = [command, ...args];
-  let artifactPath: string | undefined;
-  let usageJson: string | undefined;
-  const emissions: { stream: string; from: number; to: number; at: number }[] = [];
-  const hashes = Object.fromEntries(
-    ["package.json", "bun.lock"].map((name) => {
-      const path = join(options.cwd, name);
-      return [name, existsSync(path) ? createHash("sha256").update(readFileSync(path)).digest("hex") : null];
-    }),
-  );
-  const cacheRoot = options.env?.BUN_INSTALL_CACHE_DIR;
-  const cacheExistedAtEntry = cacheRoot ? existsSync(cacheRoot) : null;
   try {
     options.signal?.throwIfAborted();
-    mark("resolve-start");
     const resolved = resolveProcessCommand([command, ...args]);
-    actualArgv = resolved.argv;
-    mark("resolve-done");
     const outputRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-command-"));
-    if (process.env.E2E_INSTALL_PROFILE_ROOT) artifactPath = join(process.env.E2E_INSTALL_PROFILE_ROOT, commandId);
-    mark("capture-root-created");
-    let observer: FSWatcher | undefined;
-    const offsets = { stdout: 0, stderr: 0 };
-    const sample = () => {
-      for (const stream of ["stdout", "stderr"] as const) {
-        const path = join(outputRoot, stream);
-        if (!existsSync(path)) continue;
-        const size = Bun.file(path).size;
-        if (size <= offsets[stream]) continue;
-        emissions.push({ stream, from: offsets[stream], to: size, at: performance.now() });
-        offsets[stream] = size;
-      }
-    };
     try {
       const stdoutFile = Bun.file(join(outputRoot, "stdout"));
       const stderrFile = Bun.file(join(outputRoot, "stderr"));
-      observer = watch(outputRoot, sample);
-      mark("spawn-start");
       const child = Bun.spawn(resolved.argv, {
         cwd: options.cwd,
         env: options.env,
@@ -99,67 +51,14 @@ export const runCommand = async (command: string, args: string[], options: Comma
         windowsHide: true,
         windowsVerbatimArguments: resolved.windowsVerbatimArguments,
       });
-      childPid = child.pid;
-      mark("spawn-returned");
       const exitCode = await child.exited;
-      mark("exit-observed");
-      const usage = child.resourceUsage();
-      usageJson = usage
-        ? JSON.stringify({
-            cpuTimeUs: {
-              user: usage.cpuTime.user.toString(),
-              system: usage.cpuTime.system.toString(),
-              total: usage.cpuTime.total.toString(),
-            },
-            maxRssBytes: usage.maxRSS,
-            ops: { in: usage.ops.in, out: usage.ops.out },
-          })
-        : undefined;
       const [stdout, stderr] = await Promise.all([stdoutFile.text(), stderrFile.text()]);
-      mark("capture-read-done");
-      console.log(
-        "Native package manager result",
-        JSON.stringify({ commandId, exitCode, stdout: stdout.slice(0, 4000), stderr: stderr.slice(0, 4000) }),
-      );
       return { exitCode, stdout, stderr };
     } finally {
-      mark("observer-close-start");
-      if (observer) {
-        const closed = once(observer, "close");
-        observer.close();
-        await closed;
-      }
-      mark("observer-close-done");
-      sample();
-      mark("capture-backup-start");
-      if (artifactPath) {
-        mkdirSync(artifactPath, { recursive: true });
-        cpSync(outputRoot, artifactPath, { recursive: true });
-      }
-      mark("capture-backup-done");
-      mark("capture-cleanup-start");
       rmSync(outputRoot, { recursive: true, force: true });
-      mark("capture-cleanup-done");
     }
   } catch (error) {
     return { exitCode: 1, stdout: "", stderr: error instanceof Error ? error.message : String(error) };
-  } finally {
-    const record = {
-      commandId,
-      childPid,
-      actualArgv,
-      cwd: options.cwd,
-      marks,
-      hashes,
-      cacheRoot,
-      cacheExistedAtEntry,
-      parentBun: Bun.version,
-      bunBeBun: options.env?.BUN_BE_BUN,
-      usage: usageJson ? JSON.parse(usageJson) : null,
-      emissions,
-    };
-    console.log("Native package manager timing", JSON.stringify(record));
-    if (artifactPath) writeFileSync(join(artifactPath, "timing.json"), JSON.stringify(record));
   }
 };
 
@@ -202,7 +101,6 @@ export const installDependencies = async (targetPath: string, input: DependencyI
   const packaged = (input.isPackagedRuntime ?? isPackagedRuntime)();
   const env = createExtensionInstallEnvironment(input.env ?? process.env);
   const args = ["install", "--frozen-lockfile", "--ignore-scripts", ...(input.production ? ["--production"] : [])];
-  if (basename(targetPath) === "pstdio-planner") args.push("--verbose");
   const command = packaged
     ? resolveManagedBunCommand({
         args,
