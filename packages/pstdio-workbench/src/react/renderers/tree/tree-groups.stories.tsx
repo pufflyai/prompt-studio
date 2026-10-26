@@ -119,11 +119,12 @@ export const CreateAndRename: Story = {
     await userEvent.clear(input);
     await userEvent.type(input, "Product research{Enter}");
     await expect(canvas.getByText("Product research")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Change group icon" }));
-    await userEvent.click(await document.findByRole("button", { name: "book open" }));
-    await expect(
-      canvas.getByRole("button", { name: "Change group icon" }).querySelector("svg.lucide-book-open"),
-    ).toBeVisible();
+    const header = canvas.getByText("Product research").closest("[aria-expanded]");
+    await expect(header).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(canvas.getByText("Product research"));
+    await expect(header).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(canvas.getByText("Product research"));
+    await expect(header).toHaveAttribute("aria-expanded", "false");
   },
 };
 export const ModeChromeGroups: Story = { args: { chrome: true }, play: CreateAndRename.play };
