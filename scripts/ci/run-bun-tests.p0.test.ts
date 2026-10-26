@@ -48,7 +48,7 @@ const registeredFixture = async (source?: string) => {
     { cwd: root },
   );
   const evidence = join(root, "evidence.json");
-  const run = async (args: string[], quarantine = false) => {
+  const run = async (args: string[], quarantine = false, overrides: NodeJS.ProcessEnv = {}) => {
     const child = Bun.spawn([process.execPath, join(scripts, "run-bun-tests.ts"), ...args], {
       cwd,
       env: {
@@ -56,6 +56,7 @@ const registeredFixture = async (source?: string) => {
         CI_PRIORITY: "P2",
         E2E_TEST_LANE: quarantine ? "quarantine" : "stable",
         BUN_TEST_EVIDENCE_FILE: evidence,
+        ...overrides,
       },
       stdout: "ignore",
       stderr: "ignore",
@@ -67,6 +68,34 @@ const registeredFixture = async (source?: string) => {
   };
   return { root, cwd, marker, run };
 };
+
+test("nightly source coverage follows stable execution and leaves quarantine uninstrumented", async () => {
+  const fixture = await registeredFixture(`import { test, expect } from "bun:test";
+    import { stable, registered } from "./behavior";
+    test("stable case", () => expect(stable()).toBe(1));
+    test("registered case", () => expect(registered()).toBe(2));`);
+  try {
+    await writeFile(
+      join(fixture.cwd, "behavior.ts"),
+      "export const stable = () => 1;\nexport const registered = () => 2;\n",
+    );
+    const env = { CI_SOURCE_COVERAGE: "1" };
+    const stable = await fixture.run(["./registered.test.ts"], false, env);
+    expect(stable.code).toBe(0);
+    expect(stable.evidence.coverage).toEqual({ file: "coverage/lcov.info", sourceRoot: "repository" });
+    const lcov = await readFile(join(fixture.root, "coverage/lcov.info"), "utf8");
+    expect(lcov).toContain("SF:packages/fixture/behavior.ts");
+    expect(stable.evidence.cases.filter((entry: { outcome: string }) => entry.outcome === "success")).toHaveLength(1);
+    const quarantine = await fixture.run(["./registered.test.ts"], true, env);
+    expect(quarantine.code).toBe(0);
+    expect(quarantine.evidence.coverage).toBeNull();
+    const performance = await fixture.run(["./registered.test.ts"], false, { ...env, CI_PRIORITY: "P3" });
+    expect(performance.code).toBe(0);
+    expect(performance.evidence.coverage).toBeNull();
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
 
 test.each([
   "fixture",

@@ -68,7 +68,13 @@ const runCommand = (runner: string, files: string[], owner: TestPackage, storybo
   }
   if (runner === "performance") return performanceCommand(paths, owner);
   if (storybook) throw new Error("A Storybook owner requires the component runner");
-  if (owner.scripts.test && owner.name !== "e2e" && owner.name !== "storybook-tests" && runner !== "browser-helper")
+  if (
+    owner.scripts.test &&
+    owner.scripts.test.trim() !== "bun test" &&
+    owner.name !== "e2e" &&
+    owner.name !== "storybook-tests" &&
+    runner !== "browser-helper"
+  )
     return ["bun", "run", "test", ...paths.map((path) => `./${path}`)];
   const wrapper = relative(owner.dir, "scripts/ci/run-bun-tests.ts").replaceAll("\\", "/");
   const preload =
@@ -106,14 +112,19 @@ const groupRuns = (id: string, group: TestGroup, priority: TestPriority) => {
     return [
       {
         ...base,
-        command: ["bun", "run", "test:integration", ...group.files.map((file) => relative(group.owner.dir, file))],
+        command: [
+          "bun",
+          "run",
+          "test:integration",
+          ...group.files.map((file) => relative(group.owner.dir, file).replaceAll("\\", "/")),
+        ],
       },
     ];
   return group.files.map((file) => ({
     ...base,
     id: `${id}:${file}`,
     files: [file],
-    command: ["bun", relative(group.owner.dir, file)],
+    command: ["bun", relative(group.owner.dir, file).replaceAll("\\", "/")],
   }));
 };
 

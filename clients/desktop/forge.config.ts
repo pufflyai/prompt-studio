@@ -9,7 +9,7 @@ import { version } from "./package.json";
 import { writeCliInstallScripts } from "./src/packaging/cli-install-scripts";
 import { DeviceDmgMaker } from "./src/packaging/device-dmg-maker";
 import { finalizeWindowsSidecar } from "./src/packaging/finalize-windows-sidecar";
-import { desktopPackageName } from "./src/packaging/package-layout";
+import { desktopPackageName, windowsPackageVersion } from "./src/packaging/package-layout";
 import { notarizeMacApp } from "./src/release/notarize-macos";
 import { resolveDesktopSigning } from "./src/release/release-config";
 import { validateSidecarArtifact } from "./src/runtime/sidecar-artifact";
@@ -84,7 +84,11 @@ const config: ForgeConfig = {
     {
       name: "@electron-forge/maker-squirrel",
       platforms: ["win32"],
-      config: { name: "PromptStudio", windowsSign: signing.squirrelWindowsSign },
+      config: {
+        name: "PromptStudio",
+        version: windowsPackageVersion(version),
+        windowsSign: signing.squirrelWindowsSign,
+      },
     },
     { name: "@electron-forge/maker-zip", platforms: ["darwin", "linux"], config: {} },
     new DeviceDmgMaker(

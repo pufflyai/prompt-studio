@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
@@ -103,23 +102,24 @@ describe("performance endpoint", () => {
     const path = endpointPath();
     const endpoint = await openPerformanceEndpoint(path, () => ({ ok: true }));
     try {
-      const identity = execFileSync("whoami", ["/user", "/fo", "csv", "/nh"], { encoding: "utf8" });
-      const sid = identity.match(/S-1-5-\d+(?:-\d+)+/)![0]!;
-      const targets = [
-        [dirname(path), "Directory"],
-        [path, "File"],
-      ] as const;
-      for (const [target, kind] of targets) {
-        const output = await runWindowsPowerShell(
-          `
-$acl = [System.IO.${kind}]::GetAccessControl($env:PSTDIO_ACL_TEST_PATH)
-$rules = $acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])
-foreach ($rule in $rules) { [Console]::WriteLine($rule.IdentityReference.Value) }
+      // Query both ACLs in one PowerShell process; startup dominates the check on Windows.
+      const output = await runWindowsPowerShell(
+        `
+$sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$directory = [System.IO.Directory]::GetAccessControl([System.IO.Path]::GetDirectoryName($env:PSTDIO_ACL_TEST_PATH))
+$file = [System.IO.File]::GetAccessControl($env:PSTDIO_ACL_TEST_PATH)
+@{
+  sid = $sid
+  directory = @($directory.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]) | ForEach-Object { $_.IdentityReference.Value })
+  file = @($file.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]) | ForEach-Object { $_.IdentityReference.Value })
+} | ConvertTo-Json -Compress
 `,
-          { PSTDIO_ACL_TEST_PATH: target },
-        );
-        expect(output.split(/\r?\n/)).toEqual([sid]);
-      }
+        { PSTDIO_ACL_TEST_PATH: path },
+      );
+      const permissions = JSON.parse(output);
+      expect(permissions.sid).toMatch(/^S-1-5-\d+(?:-\d+)+$/);
+      expect(permissions.directory).toEqual([permissions.sid]);
+      expect(permissions.file).toEqual([permissions.sid]);
       expect(await read(path)).toEqual({ ok: true });
       expect(await read(path, "wrong-token")).toBeNull();
     } finally {

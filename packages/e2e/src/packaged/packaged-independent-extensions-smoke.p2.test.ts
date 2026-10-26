@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,33 +10,39 @@ import { writeRegistryNotes } from "./registry-notes.fixture";
 import { startRegistryService } from "./registry-service.fixture";
 import { startRegistryWireFixture } from "./registry-wire.fixture";
 
+const closeFixtureRuntime = async (root: string, home: string) => {
+  if (existsSync(join(home, "runtime.json"))) await runPackagedAsync(["close", "--force"], root, { PSTDIO_HOME: home });
+};
+
 test("a packaged CLI gives unchanged extension contents identical archives across time", async () => {
   const root = await mkdtemp(join(tmpdir(), "packaged-extension-reproducibility-"));
+  const home = join(root, "home");
   try {
     const source = join(root, "notes");
-    const home = join(root, "home");
     await mkdir(home);
     await writeRegistryNotes(source, "0.45.1");
     const args = ["extensions", "pack", source, "--out-dir", root];
     const path = (await runPackagedAsync(args, root, { PSTDIO_HOME: home })).trim();
+    expect(existsSync(join(home, "runtime.json"))).toBe(false);
     const first = await Bun.file(path).bytes();
     await Bun.sleep(1100);
     const repeated = (await runPackagedAsync(args, root, { PSTDIO_HOME: home })).trim();
     expect(await Bun.file(repeated).bytes()).toEqual(first);
   } finally {
+    await closeFixtureRuntime(root, home);
     await rm(root, { recursive: true, force: true });
   }
 });
 
 test("a packaged host packs, installs and upgrades an independently published extension without changing host version", async () => {
   const root = await mkdtemp(join(tmpdir(), "packaged-independent-extensions-"));
+  const home = join(root, "host");
   const registry =
     process.env.PSTDIO_PSX_REAL_SERVICE === "1" ? await startRegistryService() : await startRegistryWireFixture();
   let host: Awaited<ReturnType<typeof startPackagedServe>> | undefined;
   let registryClosed = false;
   try {
     const source = join(root, "notes");
-    const home = join(root, "host");
     const repo = join(root, "project");
     for (const dir of [home, repo]) await mkdir(dir);
     const publish = async (version: string) => {
@@ -49,6 +56,7 @@ test("a packaged host packs, installs and upgrades an independently published ex
     };
     const before = await runPackagedAsync(["--version"], root, { PSTDIO_HOME: home });
     await publish("0.45.1");
+    expect(existsSync(join(home, "runtime.json"))).toBe(false);
     host = await startPackagedServe(home, { PSTDIO_EXTENSION_RELEASE_REF: `psx:${registry.origin}` });
     const response = await fetch(`${host.baseUrl}/v1/projects`, {
       method: "POST",
@@ -93,6 +101,7 @@ test("a packaged host packs, installs and upgrades an independently published ex
     );
   } finally {
     if (host) await stopProcess(host.child);
+    await closeFixtureRuntime(root, home);
     if (!registryClosed) await registry.close();
     await rm(root, { recursive: true, force: true });
   }

@@ -12,7 +12,7 @@
     "db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts src",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
     "bench:storage-bound": "bun scripts/storage-bound.p3.bench.ts",
     "test:integration": "bun scripts/test-isolated.ts && bun ../../packages/pstdio-sync-contracts/scripts/isolated.ts"
   },

@@ -7,6 +7,7 @@ test("lists unimported production files without inventing executable line counts
     revision: "a".repeat(40),
     scope: "daily-production/linux-x64",
     measuredAt: "2026-10-25T00:00:00Z",
+    workflowRunId: 200,
     trackedFiles: [
       "packages/api/src/imported.ts",
       "packages/api/src/unimported.ts",
@@ -27,6 +28,7 @@ test("lists unimported production files without inventing executable line counts
   expect(report).toMatchObject({
     revision: "a".repeat(40),
     scope: "daily-production/linux-x64",
+    workflowRunId: 200,
     source: {
       coveredLines: 1,
       totalLines: 2,

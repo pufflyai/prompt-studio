@@ -22,6 +22,8 @@ resource "digitalocean_database_user" "service" {
   for_each   = local.services
   cluster_id = digitalocean_database_cluster.cloud.id
   name       = each.key
+  # Temporary: provider 2.106.0 reads empty PostgreSQL settings (ADR 0109).
+  settings {}
 }
 
 data "digitalocean_database_ca" "cloud" {

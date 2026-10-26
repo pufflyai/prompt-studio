@@ -79,6 +79,7 @@ test("dashboard keeps project selection open when no project is selected", async
   await path.fill(folder);
   await path.press("Enter");
   await page.getByRole("button", { name: "Open folder", exact: true }).click();
+  await page.getByRole("dialog", { name: "Open project folder", exact: true }).waitFor({ state: "hidden" });
   await expect(page.getByRole("option", { name: "Home", exact: true })).toBeVisible();
   await expect(page.getByTestId("start-page")).toBeVisible();
 });

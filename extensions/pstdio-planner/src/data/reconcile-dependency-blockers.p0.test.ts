@@ -79,3 +79,18 @@ test("ticket updates keep dependency waiting in links and preserve independent b
   await updateTicketCommand.run(ctx, { id: child.id, blockedReason: "" });
   expect(await ticketsCollection(storage).get(child.id)).toMatchObject({ blockedReason: null, dependsOn: [parent.id] });
 });
+
+test("clears a dependency-only blocker before its prerequisite is done and keeps the dependency link", async () => {
+  const { ctx, ticket, storage } = await fixture();
+  const parent = await ticket("Unfinished prerequisite");
+  const child = await ticket("Dependent contract", [parent.id]);
+  await ticketsCollection(storage).put(child.id, {
+    ...child,
+    blockedReason: `Complete ${parent.shorthand} before implementing this dependent contract.`,
+  });
+  expect(await reconcileDependencyBlockers(ctx)).toEqual([child.id]);
+  expect(await ticketsCollection(storage).get(child.id)).toMatchObject({ blockedReason: null, dependsOn: [parent.id] });
+  expect((await nextTicketsCommand.run(ctx, {})).waiting).toContainEqual(
+    expect.objectContaining({ id: child.id, reason: "dependency-not-ready" }),
+  );
+});

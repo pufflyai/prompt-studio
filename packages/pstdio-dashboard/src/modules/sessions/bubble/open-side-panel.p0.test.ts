@@ -128,3 +128,22 @@ test("reopens the active session when several session tabs exist", async () => {
   await openDashboardSidePanel(workbench);
   expect(workbench.layout.getActivePanel("side")?.instanceId).toBe(session?.instanceId);
 });
+
+test("a Side Panel requested while the project loads opens its session once the project mode starts", async () => {
+  const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  workbench.registerModule(createWorkspacesModule());
+  workbench.registerModule(createSessionBubbleModule());
+  // A saved project waits for its synced rows before the project mode starts.
+  expect(workbench.modes.getActiveModeId()).toBeUndefined();
+
+  const opened = openDashboardSidePanel(workbench);
+  expect(workbench.layout.listPanelInstances("side")).toHaveLength(0);
+
+  selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+  openWorkspacesPage(workbench);
+  await opened;
+  expect(workbench.sidePanel.getMode()).toBe("floating");
+  expect(workbench.layout.listPanelInstances("side")).toEqual([
+    expect.objectContaining({ viewId: dashboardWidgetIds.sessionBubble }),
+  ]);
+});

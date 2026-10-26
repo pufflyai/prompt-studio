@@ -26,9 +26,9 @@ declare global {
 }
 
 const STORY_IDS = {
-  largeConversation: "chat-ui-chat-panel-performance--large-conversation",
-  sessionSwitching: "chat-ui-chat-panel-performance--session-switching",
-  streamingScenario: "chat-ui-chat-panel-performance--streaming-scenario",
+  largeConversation: "patterns-chat-chat-panel-performance--large-conversation",
+  sessionSwitching: "patterns-chat-chat-panel-performance--session-switching",
+  streamingScenario: "patterns-chat-chat-panel-performance--streaming-scenario",
 } as const;
 
 const BUDGETS = {
@@ -189,7 +189,8 @@ test.describe("chat panel performance", () => {
     console.info("session-switching", switchMetric);
     console.info("session-switching-profiler", profiler);
 
-    expect(switchStartDelay).toBeLessThan(400);
+    // Set on 2026-10-26 from hosted ubuntu-24.04 runs (slowest 407 ms) plus about 20%.
+    expect(switchStartDelay).toBeLessThan(500);
     expectWithinBudget(switchMetric?.totalMs ?? 0, BUDGETS.sessionSwitchMs);
     expectWithinBudget(longTasks, BUDGETS.totalLongTaskMs);
     expect(await page.getByTestId("chat-perf-message-count").textContent()).toContain("1000 messages");

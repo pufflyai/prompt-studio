@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "../scripts/playwright-test";
 
 test("command queries refresh once per matching event and unsubscribe on unmount", async ({ page }) => {
   const root = mkdtempSync(join(tmpdir(), "command-query-"));

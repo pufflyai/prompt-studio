@@ -95,7 +95,7 @@ These commands run exactly the named priority on the current host and build requ
 
 P0 owns fast local rules and static checks. P1 owns essential integrated product contracts. P2 owns full feature, browser, platform and distribution breadth. P3 owns maintained performance and endurance acceptance workloads. A slow essential behavior stays P1. Merge duplicate assertions under one owner; do not move an assertion to nightly only because it takes time.
 
-See [CI stages and qualification](0015-ci-stages.md) for the complete contract allocation and stage rules.
+See [CI stages](0015-ci-stages.md) for when each priority runs.
 
 ## Unused code
 
@@ -108,7 +108,11 @@ See [CI stages and qualification](0015-ci-stages.md) for the complete contract a
 
 `bun run test:coverage` runs every package's `test:coverage` script with an lcov reporter. Packages and first-party extensions with tests define a `test:coverage` script. It uses the same conditions and runner as the package's `test` script. Run one with `bun run --cwd <package-or-extension> test:coverage`. Build the monorepo first, because this command does not build dependencies.
 
-The README coverage badge shows imported production-source line coverage. The Coverage workflow runs daily at 04:31 UTC and on manual dispatch. It runs `bun run test:coverage`, then `bun run --cwd scripts coverage:badge -- <path>`. The script merges workspace `coverage/**/lcov.info` reports and writes badge data plus `coverage-report.json`. A separate job with write access publishes both files to the `badges` branch. Pull requests that change coverage tooling run focused reporting tests without a second full test pass.
+The README coverage badge uses the full nightly validation's stable P0–P2 source tests. Existing Bun jobs collect lcov alongside their case evidence; they do not run again for coverage. Linux and Windows reports use repository-relative source paths, so imported line hits merge across jobs and platforms. P3 benchmarks stay uninstrumented. Quarantine cases do not contribute to the source percentage.
+
+The nightly `source_coverage` job requires every selected source producer's artifact from the current attempt, including hidden extension paths. It rejects stale revisions, partial executions and missing measurements, then writes `coverage.json` and `coverage-report.json`. The Coverage workflow publishes those files to `badges` only after the complete nightly Release Packages workflow succeeds. It runs no tests. Its manual dispatch takes a successful nightly run ID and fails if that run has no unexpired measurement. The report records the source workflow run so an older nightly cannot replace a newer published measurement. Reporting tests are ordinary P0 tests selected by the main CI workflow.
+
+For a source-only rehearsal, manually dispatch Test and Build with profile `production` and release channel `nightly`. This measures coverage and validates the nightly platform policy without publishing a release. Local `bun run test:coverage` and `bun run --cwd scripts coverage:badge -- <path>` remain available for package diagnostics; they do not replace the official nightly measurement.
 
 The report records the checked-out Git revision, measurement time and `COVERAGE_SCOPE`. It lists tracked production TypeScript files absent from the imported-file denominator separately; their executable-line counts are unknown. Generated files, declarations, stories, test helpers and fixture packages do not contribute to the denominator. Browser and compiled execution are separate evidence and never become source percentages.
 
@@ -116,24 +120,15 @@ Set `COVERAGE_EXECUTION_REPORT` to a JSON array of execution evidence when attac
 
 The shared test preload owns its temporary home until the global `afterAll` hook, after every test file. Individual tests must close app handles, subscriptions and child processes in `finally` blocks or register `onTestFinished` cleanup as soon as a fixture opens. Caller-provided storage belongs to the caller. Copy requested failure evidence into its retained artifact location before disposing fixtures. Tests that change `process.env` run serially; the preload restores the environment after each test. The API per-file process driver remains required by [ADR 0018](../../adrs/0018-temporary-api-test-process-isolation.md).
 
+Packaged Playwright specs and benchmarks import `test` from `src/scripts/playwright-test.ts`. Its automatic fixture cancels pending command, readiness, and shutdown waits after a timeout. Biome rejects direct imports of Playwright's base `test` in these files, so new browser tests keep the same cleanup.
+
 A package's report also lists source files from the packages its tests import. The script merges line hits per file, so each source file counts once. It leaves out tests, stories, fixtures, mocks, test helpers, dependencies, build output, and files outside the repository. Bun reports only files that a test loads, so files that no test imports are missing from the total. Bun's lcov output has no function names, so function coverage cannot be merged and the badge shows lines only.
 
 ## CI stages
 
-[CI stages and qualification](0015-ci-stages.md) owns selection, failure collection, evidence, cache promotion, exact-candidate certification and rollback.
+[CI stages](0015-ci-stages.md) describes what runs on pull requests, in the merge queue, on `main`, in the nightly and in a stable release, and what to do when a PR leaves the queue. It also covers failure handling, evidence, build caches and release certification.
 
-| Stage | Required work |
-| --- | --- |
-| Pull request | Affected P0 rules, types, lint and public contracts selected through workspace dependencies |
-| Merge queue | Complete P0/P1 and essential Linux/macOS delivered startup |
-| Main | Matching queue provenance and startup smoke |
-| Nightly/release | Critical contracts, separate P2 breadth and P3 measurements |
-
-The PR and queue targets remain below three and eight minutes of active execution, including setup, builds, tests, reports and cleanup. GitHub queue and runner wait time is reported separately and does not count against these targets. Complete production qualification retains its forty-minute active execution target. Hosted first-attempt results must establish those targets.
-
-P0 package rows share their builds between lint and unit checks. API/database rows split priorities and retain API per-file process isolation. App and component suites run independently. Each component row builds and tests only its owner. Production adds functional permutations, Windows and all native CLI hosts; stable publication requires complete matching evidence for its exact artifacts.
-
-P1 alone fails fast. Other priorities complete selected independent work. Keep the existing `ci_passed` identity and ALLGREEN queue rule. `ci:full` requests separate trusted production functional diagnostics without replacing the required PR result.
+Windows unit jobs divide the complete P0/P1/P2 file set into four shards before grouping files by owner. Each owner runs only its assigned files. Package scripts must not add a broad `src` selector, because Bun combines that selector with the assigned paths and repeats other shards' tests. The existing 15-second test allowance remains unchanged; Git worktree tests keep their existing 30-second allowance.
 
 The Merge queue removals workflow retains first-failure links and the `removed-from-queue` label. Repair the cause before requeuing. Weekly CI failure reports retain first-attempt scheduling, setup, build, test, reporting and cleanup evidence; a later passing rerun does not resolve the underlying failure.
 
@@ -153,7 +148,11 @@ On pull requests, the CI job runs for selected extension, SDK, UI, API contract,
 
 ## Extension smoke checks
 
-The user-facing `pst extensions test` command is described in [Smoke checks](../extensions/0006-smoke-checks.md). To check its packaged behavior in this repository, build dashboard assets first, run `bun run validate`, then `bun run --cwd scripts verify:packages`. Packaged consumer fixtures exercise passing views, startup exceptions, capability denials caught by guest code, forged host diagnostics, fixed main panels, and browser setup without external JavaScript runtimes. For interactive dashboard validation use `bun run dev:playwright` and stop it with `bun run dev:playwright:down`. These contributor commands are not prerequisites for installed CLI users.
+The user-facing `pst extensions test` command is described in [Smoke checks](../extensions/0006-smoke-checks.md). To check its packaged behavior in this repository, build dashboard assets first, run the affected package's tests and checks, then `bun run --cwd scripts verify:packages`. Packaged consumer fixtures exercise passing views, startup exceptions, capability denials caught by guest code, forged host diagnostics, fixed main panels, and browser setup without external JavaScript runtimes. For interactive dashboard validation use `bun run dev:playwright` and stop it with `bun run dev:playwright:down`. These contributor commands are not prerequisites for installed CLI users.
+
+`pst extensions pack` is a local file operation. Its archive tests require that packing starts no runtime, then check reproducibility, installation, upgrades and directory cleanup. A live runtime retaining archive-fixture files is an ownership failure; filesystem retries cannot repair it.
+
+The interruption fixture holds a webview's HTTP request open before sending real Ctrl+C through the terminal. It requires interruption status 130, runtime exit, descriptor removal and successful reopening of the retained Chromium profile. A phase message alone does not prove the operation is still active. On Windows, direct process termination bypasses signal handlers, so it cannot test graceful interruption.
 
 Package verification provisions Chromium through the compiled CLI before starting the timed tests, including on Windows x64. The install test reuses the browser and package caches while checking a fresh caller directory with no external JavaScript runtimes. Cold downloads remain subject to the existing CI job limit instead of the runtime test's 30-second deadline. The compiled bundle leaves out Playwright's optional BiDi modules; see [ADR 0029](../../adrs/0029-temporary-chromium-only-playwright-bundle.md).
 
@@ -303,6 +302,8 @@ Tests have two kinds of time limit. [ADR 0067](../../adrs/0067-separate-performa
 - An **execution allowance** limits a whole test, fixture, or job. It covers setup, the operation, and cleanup. Reaching it means the work did not finish. A timed-out run gives a lower bound, not a measured duration.
 
 Functional tests do not assert timings. Benchmarks do not measure test-only setup, tracing, or cleanup, but they include initialization a person waits for, such as macOS checks on the first launch of a signed app. Helpers wait within the deadline of the test that calls them. Do not add a shorter cap inside a helper; it can end a slow but valid phase before the test can report it. Keep prompt failures for real errors, such as a process that exits.
+
+The subnav benchmark measures trusted clicks and request completion in the browser's monotonic clock. Match every observed request to its [Resource Timing](https://www.w3.org/TR/resource-timing/) entry, including repeated URLs. Missing or ambiguous timing fails the measurement. Do not subtract browser `performance.timeOrigin` from protocol wall-clock timestamps: those clocks can disagree and report minutes for a request the browser completed in milliseconds. Network observation still verifies quiescence, response status, content and all linked sessions.
 
 To review a timeout:
 

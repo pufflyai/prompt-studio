@@ -2,8 +2,8 @@ import type { ChildProcess } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type Browser, chromium, expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
 import { changeThemeThroughCommandPalette } from "../ui/helpers/theme-picker";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
