@@ -49,4 +49,17 @@ Every unchanged save ran zero compilers. Each rapid burst recorded subsequent sa
 
 The recreated fixture exposed watcher serialization that delayed newer revisions until old builds ended, source-cache invalidation that adopted backend edits during asset publication, and conflicting sibling status writes that repeated graph scans. Regression tests now cover those rules. Trusted source preparation uses the same scanning, hashing and staging functions in a Bun subprocess under the owner comparison control.
 
+## Linux container observation: four CPUs, 6 GiB
+
+The same three-pair comparison also ran at clean revision [ea705501a](https://github.com/pufflyai/prompt-studio/commit/ea705501ac2ce6d8369d1f27b36db6f0409ae173) on the [Linux container profile](0030-extension-worker-prototype.md#linux-container-observation-four-cpus-6-gib). The cgroup allowed four CPUs and 6 GiB, with affinity CPUs 0–3. Both modes retained four compiler slots and disabled adaptive admission.
+
+| Operation | Inline preparation | Subprocess preparation |
+| --- | ---: | ---: |
+| Cold six-view activation | 1,626 ms | 1,579 ms |
+| Shared same-size edit | 1,459 ms | 1,265 ms |
+| Five rapid edits | 1,971 ms | 2,072 ms |
+| Repair and matching diagnostic clearance | 1,509 ms | 1,332 ms |
+
+Shared-edit project-read p95 was 512.28 ms inline and 5.53 ms with subprocess preparation (18.17 ms maximum). Another command's p95 was 513.45 ms and 12.93 ms (41.72 ms maximum). Rapid-edit project/command p95 was 3.85/8.36 ms with subprocess preparation; maxima were 9.34/52.87 ms. Every probe succeeded. Unchanged saves spawned no compilers; invalid/repair correctness and cleanup checks passed. This profile also retains obsolete compilation work, as recorded per trial.
+
 Native development runs must be read separately from the original Linux evidence. The cold-build and shared-edit completion comparison, p95/maximum latency, compiler CPU/RSS and cleanup results are recorded in raw trial reports. Native and constrained-host budgets, adaptive resource admission and the complete release matrix remain open. Default rollout stays off; see [the rollout inventory](0032-extension-owner-rollout.md).
