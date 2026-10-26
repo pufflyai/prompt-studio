@@ -26,7 +26,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Require the delivered source without diagnostic changes
-        run: git diff --exit-code f02971bc8e3d764e6162a7fddd51b4d778a552c0 -- . ':!.github/workflows/test-and-build.yml'
+        run: git diff --exit-code c1b344942ef22aaa426270dbc01668a4f7ec5ca4 -- . ':!.github/workflows/test-and-build.yml'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -49,7 +49,10 @@ jobs:
           src/packaged/packaged-serve-helpers.p2.test.ts
           src/packaged/packaged-planner-smoke.p2.test.ts
           src/packaged/packaged-board-panning-smoke.p2.test.ts
-          --test-name-pattern 'interruption stops|a packaged CLI gives|a packaged host packs|fixture shutdown|runner cancellation|dependency stacks|recovers missing|adopts a feature|board pans'
+          src/packaged/packaged-chat-motion-smoke.p2.test.ts
+          src/packaged/packaged-collection-view-order-smoke.p2.test.ts
+          src/packaged/packaged-core-extension-features.p2.test.ts
+          --test-name-pattern 'interruption stops|a packaged CLI gives|a packaged host packs|fixture shutdown|runner cancellation|dependency stacks|recovers missing|adopts a feature|board pans|retains streaming|Kanban and data table|core extension features'
           --timeout 30000 --silent
       - name: Preserve native evidence
         if: always()
