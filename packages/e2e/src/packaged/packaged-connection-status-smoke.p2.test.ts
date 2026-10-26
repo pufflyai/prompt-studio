@@ -6,14 +6,14 @@ import { join } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { expectPackagedStatusBarOrder } from "./packaged-status-bar-order";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<string, string>) => {
-  const browser = await chromium.launch(PROVISIONED_CHROMIUM);
+  const browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
   try {
     const page = await browser.newPage({ extraHTTPHeaders: headers });
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
