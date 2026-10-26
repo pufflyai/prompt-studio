@@ -13,7 +13,7 @@ interface BuiltinCommand {
   id: string;
   label: string;
   icon: string;
-  keybinding: KeybindingSequence;
+  keybinding?: KeybindingSequence;
   execute: (workbench: WorkbenchCore) => void;
 }
 
@@ -37,9 +37,8 @@ const builtinCommands: BuiltinCommand[] = [
   },
   {
     id: "workbench.action.changeTheme",
-    label: "Change Theme",
+    label: "Choose color theme",
     icon: "Palette",
-    keybinding: "Alt+Shift+T",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ view: "theme" }),
   },
   {
@@ -89,11 +88,12 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       },
       { execute: () => command.execute(workbench) },
     );
-    workbench.keybindings.registerKeybinding({
-      action: { kind: "command", commandId: command.id },
-      keybinding: command.keybinding,
-      when: "!inputFocus",
-    });
+    if (command.keybinding)
+      workbench.keybindings.registerKeybinding({
+        action: { kind: "command", commandId: command.id },
+        keybinding: command.keybinding,
+        when: "!inputFocus",
+      });
     const layer = layers[command.id];
     if (layer)
       workbench.keybindings.registerKeybinding({ action: { kind: "command", commandId: command.id }, ...layer });

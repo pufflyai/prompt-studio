@@ -32,16 +32,4 @@ export const registerSessionKeyboard = (ctx: WorkbenchModuleContext) => {
     layer: "current",
     targetScope: "panel",
   });
-  const newTab = "dashboard.newSessionTab";
-  ctx.commands.registerCommand(
-    { id: newTab, label: "New session tab" },
-    {
-      execute: () => ctx.commands.executeCommand("workbench.keyboard.newTab", { resourceKind: "session-draft" }),
-    },
-  );
-  ctx.keybindings.registerKeybinding({
-    action: { kind: "command", commandId: newTab },
-    keybinding: "S",
-    layer: "create",
-  });
 };

@@ -10,7 +10,14 @@ export const registerExtensionSetupShortcuts = (core: WorkbenchModuleContributio
   const labels = new Map(
     metadata.extensions.map((extension) => [extension.id, extension.displayName || extension.name]),
   );
-  const register = (extensionId: string, id: string, key: string, label: string, action: Keybinding["action"]) => {
+  const register = (
+    extensionId: string,
+    id: string,
+    key: string,
+    label: string,
+    action: Keybinding["action"],
+    layer: Keybinding["layer"] = "extensions",
+  ) => {
     if (action.kind === "command" && !core.commands.getCommand(action.commandId)) return;
     registrations.push(
       core.keybindings.registerKeybinding({
@@ -18,7 +25,7 @@ export const registerExtensionSetupShortcuts = (core: WorkbenchModuleContributio
         label,
         sourceExtensionId: extensionId,
         sourceExtensionLabel: labels.get(extensionId),
-        layer: "extensions",
+        layer,
         keybinding: key,
         action,
       }),
@@ -35,11 +42,18 @@ export const registerExtensionSetupShortcuts = (core: WorkbenchModuleContributio
     const label = harness.label ?? harness.localId;
     const multiple = metadata.harnesses!.filter((entry) => entry.extensionId === harness.extensionId).length > 1;
     const title = multiple ? `${label} (${harness.localId})` : label;
-    register(harness.extensionId, `new-${harness.id}`, "N", `New session with ${title}`, {
-      kind: "command",
-      commandId: dashboardCommandIds.createSession,
-      args: { harnessId: harness.id },
-    });
+    register(
+      harness.extensionId,
+      `new-${harness.id}`,
+      "S",
+      `New session with ${title}`,
+      {
+        kind: "command",
+        commandId: dashboardCommandIds.createSession,
+        args: { harnessId: harness.id },
+      },
+      "create",
+    );
     register(harness.extensionId, `configure-${harness.id}`, "S", "Configure agent", settings("runtime"));
   }
   const skillOwners = new Set((metadata.skills ?? []).map((skill) => skill.extensionId));
@@ -49,10 +63,6 @@ export const registerExtensionSetupShortcuts = (core: WorkbenchModuleContributio
   }
   const themeOwners = new Set((metadata.themes ?? []).map((theme) => theme.extensionId));
   for (const extensionId of themeOwners) {
-    register(extensionId, "theme", "T", "Choose color theme", {
-      kind: "command",
-      commandId: "workbench.action.changeTheme",
-    });
     register(extensionId, "icons", "I", "Choose file icon theme", settings("appearance"));
   }
   return registrations;

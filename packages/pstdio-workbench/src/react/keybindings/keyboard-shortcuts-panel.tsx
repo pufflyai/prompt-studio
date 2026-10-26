@@ -3,13 +3,18 @@ import { ListRow, ScrollArea } from "@pstdio/ui";
 import { useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import type { ResolvedShortcut } from "../../core/controllers/keyboard/shortcut-catalog";
-import { shortcutOpeningChord } from "../../core/controllers/keyboard/shortcut-menu";
+import { shortcutDisplayKeys, shortcutOpeningChord } from "../../core/controllers/keyboard/shortcut-menu";
 import { getKeybindingSteps } from "../../core/registries/keybindings/keybinding-registry";
 import { WorkbenchShortcutKeys } from "./shortcut-keys";
 import { useShortcutCatalog } from "./use-shortcut-catalog";
 
-const ShortcutRow = (props: { shortcut: ResolvedShortcut; owner: string; openingChord: string }) => {
-  const { shortcut, owner, openingChord } = props;
+const ShortcutRow = (props: {
+  shortcut: ResolvedShortcut;
+  owner: string;
+  openingChord: string;
+  catalog: ResolvedShortcut[];
+}) => {
+  const { shortcut, owner, openingChord, catalog } = props;
   const assigned = getKeybindingSteps(shortcut.binding.keybinding).length > 0;
   let status = "Unassigned";
   if (assigned) status = shortcut.disabled ? "Inactive" : "Assigned";
@@ -21,7 +26,12 @@ const ShortcutRow = (props: { shortcut: ResolvedShortcut; owner: string; opening
         description={`${owner} · ${shortcut.binding.layer ?? "Direct"} · ${status}`}
         endContent={
           assigned ? (
-            <WorkbenchShortcutKeys shortcut={shortcut} ownerLabel={owner} openingChord={openingChord} />
+            <WorkbenchShortcutKeys
+              shortcut={shortcut}
+              ownerLabel={owner}
+              openingChord={openingChord}
+              catalog={catalog}
+            />
           ) : undefined
         }
       />
@@ -43,7 +53,7 @@ export const WorkbenchKeyboardShortcutsPanel = (props: KeyboardShortcutsPanelPro
   const owner = (shortcut: ResolvedShortcut) =>
     ownerLabels[shortcut.binding.sourceExtensionId ?? ""] ?? shortcut.binding.sourceExtensionLabel ?? "Core";
   const filtered = catalog.filter((shortcut) =>
-    `${shortcut.label} ${shortcut.id} ${owner(shortcut)} ${shortcut.keys.join(" ")}`
+    `${shortcut.label} ${shortcut.id} ${owner(shortcut)} ${shortcutDisplayKeys(shortcut, openingChord, catalog).join(" ")}`
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
@@ -63,7 +73,13 @@ export const WorkbenchKeyboardShortcutsPanel = (props: KeyboardShortcutsPanelPro
       <Dialog.Body p="0">
         <ScrollArea maxH="palette-results-height" showHorizontalScrollbar={false}>
           {filtered.map((shortcut) => (
-            <ShortcutRow key={shortcut.id} shortcut={shortcut} owner={owner(shortcut)} openingChord={openingChord} />
+            <ShortcutRow
+              key={shortcut.id}
+              shortcut={shortcut}
+              owner={owner(shortcut)}
+              openingChord={openingChord}
+              catalog={catalog}
+            />
           ))}
         </ScrollArea>
       </Dialog.Body>

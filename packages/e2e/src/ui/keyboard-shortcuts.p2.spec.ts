@@ -8,7 +8,7 @@ import { changeThemeThroughCommandPalette } from "./helpers/theme-picker";
 
 test.use({ notificationsEnabled: true });
 
-test("typed session creation adds a Secondary tab and Close selects that instance", async ({ page, request }) => {
+test("new-tab creation adds a Secondary tab and Close selects that instance", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Typed session tabs" }),
   });
@@ -20,8 +20,8 @@ test("typed session creation adds a Secondary tab and Close selects that instanc
   const secondary = page.locator('[data-workbench-region="secondary"]');
   const before = await secondary.getByRole("tab").count();
   await page.keyboard.press("Alt+Shift+Space");
-  await page.keyboard.press("c");
-  await page.keyboard.press("s");
+  await page.keyboard.press("v");
+  await page.keyboard.press("n");
   await page
     .getByRole("dialog", { name: "New tab · destination", exact: true })
     .getByRole("button", { name: /Secondary/ })
@@ -64,7 +64,7 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   for (const label of [
     "Toggle Command Palette",
     "Run Command",
-    "Change Theme",
+    "Choose color theme",
     "Go back",
     "Go forward",
     "Toggle Sidenav",
@@ -141,7 +141,9 @@ test("the theme picker opens on the current theme and Escape keeps it", { tag: "
   // Keep a parked pointer from selecting a row when the keyboard opens the picker.
   await page.mouse.move(0, 0);
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    await page.keyboard.press("Alt+Shift+T");
+    await page.keyboard.press("Alt+Shift+Space");
+    await page.keyboard.press("s");
+    await page.keyboard.press("t");
     const picker = page.getByRole("dialog");
     await expect(picker.getByRole("option", { selected: true })).toHaveText(/pstdio-dark/);
     await expect(html).toHaveAttribute("data-theme", "pstdio-dark");

@@ -4,4 +4,4 @@
 "@pstdio/sdk": minor
 ---
 
-Add layered keyboard navigation, a shortcut back to mode navigation, a searchable shortcut reference, and bounded webview keyboard handoff.
+Add resource-first creation shortcuts with numbered conflicts, numbered tabs and placeholder cards, mode-return navigation, and a shared shortcut reference.

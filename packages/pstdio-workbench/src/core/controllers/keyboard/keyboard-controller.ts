@@ -1,19 +1,15 @@
-import { shortcutLayers } from "../../registries/keybindings/shortcut-preferences";
 import { getNavigationTargetKey } from "../../registries/navigation/navigation-target-key";
 import { createDisposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { openPanelWidget } from "../composition/panel-widget-open";
 import { createKeyboardActionRunner } from "./keyboard-action-runner";
+import { pressKeyboardKey } from "./keyboard-key-handler";
+import { type KeyboardEmptyPanels, listKeyboardNumberedTargets } from "./keyboard-numbered-targets";
 import { createKeyboardPreferences } from "./keyboard-preferences";
-import {
-  type KeyboardPresentation,
-  type KeyboardTabStrips,
-  listKeyboardTabs,
-  visibleKeyboardTargets,
-} from "./keyboard-presentations";
+import { type KeyboardPresentation, type KeyboardTabStrips, visibleKeyboardTargets } from "./keyboard-presentations";
 import { createShortcutCatalogReader, createShortcutHintReader } from "./shortcut-catalog-reader";
-import { runShortcutMatches } from "./shortcut-matches";
-import { matchShortcutPath, shortcutMenuEntries } from "./shortcut-menu";
+import { shortcutMenuEntries } from "./shortcut-menu";
 
 export interface KeyboardChoice {
   key: string;
@@ -44,6 +40,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
     initialState: { active: false, path: [], message: "", restoreFocus: false },
   });
   const strips: KeyboardTabStrips = new Map();
+  const emptyPanels: KeyboardEmptyPanels = new Map();
   const visibility = new Map<string, () => readonly string[]>();
   let choices: KeyboardActionChoice[] = [];
   const stack: Array<{ title: string; choices: KeyboardActionChoice[] }> = [];
@@ -51,7 +48,11 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
     catalogReader.invalidate();
     store.setState({ ...store.getState() });
   };
-  const listTabs = () => listKeyboardTabs(getCore(), strips);
+  const listNumberedTargets = () => listKeyboardNumberedTargets(getCore(), strips, emptyPanels);
+  const listTabs = () =>
+    listNumberedTargets().flatMap((target) =>
+      target.kind === "tab" ? [{ ...target.tab, number: target.number }] : [],
+    );
   const visibleTargets = () => {
     if (!visibility.size) return visibleKeyboardTargets(getCore());
     const ids = new Set([...visibility.values()].flatMap((read) => [...read()]));
@@ -107,10 +108,22 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
     store: store as WorkbenchStore<KeyboardState>,
     refresh,
     listTabs,
+    listNumberedTargets,
     catalog,
     entries: () => shortcutMenuEntries(catalog(), store.getState().path),
     select,
     message,
+    registerEmptyPanel(
+      region: KeyboardPresentation["region"],
+      reader: () => { top: number; left: number } | undefined,
+    ) {
+      emptyPanels.set(region, reader);
+      refresh();
+      return createDisposable(() => {
+        if (emptyPanels.get(region) === reader) emptyPanels.delete(region);
+        refresh();
+      });
+    },
     registerVisibleRegion(id: string, reader: () => readonly string[]) {
       visibility.set(id, reader);
       refresh();
@@ -156,9 +169,32 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       if (selected) core.focus.setActiveRegion(selected.region);
     },
     async selectTab(number: number) {
-      const tab = listTabs().find((tab) => tab.number === number);
-      if (tab) activate(tab);
-      else message(`Tab ${number} is not available.`);
+      const target = listNumberedTargets().find((target) => target.number === number);
+      if (!target) {
+        message(`Tab ${number} is not available.`);
+        return;
+      }
+      if (target.kind === "tab") {
+        activate({ ...target.tab, number });
+        return;
+      }
+      const core = getCore();
+      const panel = core.composition
+        .panelsFor(target.region)
+        .addable.find((panel) => panel.panelId === target.panel.panelId);
+      if (!panel) {
+        message("This panel is no longer available.");
+        return;
+      }
+      stop(false);
+      await openPanelWidget({
+        workbench: core,
+        widget: panel.contribution,
+        region: target.region,
+        resource: core.getPrimaryResource(),
+        open: panel.open,
+        pinned: panel.pinned,
+      });
     },
     selectPresentation(id: string, resourceId?: string) {
       const tab = presentations().find((tab) => tab.id === id && (!resourceId || tab.resource?.id === resourceId));
@@ -196,55 +232,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
         store.setState({ selection: undefined });
       } else store.setState({ path: store.getState().path.slice(0, -1) });
     },
-    async press(input: string) {
-      if (!store.getState().active) return;
-      if (input === "Escape") {
-        controller.finish();
-        return;
-      }
-      if (store.getState().selection) {
-        if (input === "Backspace") controller.back();
-        else await controller.choose(input);
-        return;
-      }
-      if (input === "Enter") {
-        controller.finish();
-        return;
-      }
-      if (input === "ArrowLeft" || input === "ArrowRight") {
-        store.setState({ lastKey: input });
-        const navigation = catalog(true).filter(
-          (shortcut) =>
-            !shortcut.disabled &&
-            shortcut.binding.layer === "view" &&
-            shortcut.keys.length === 2 &&
-            shortcut.keys[1] === input.toUpperCase(),
-        );
-        if (navigation.length) await runShortcutMatches(navigation, select, run);
-        return;
-      }
-      if (input === "Backspace") {
-        controller.back();
-        return;
-      }
-      const key = input.toUpperCase();
-      const path = [...store.getState().path, key];
-      if (!store.getState().path.length && Object.values(shortcutLayers).some((candidate) => candidate === key)) {
-        store.setState({ path, lastKey: undefined });
-        return;
-      }
-      const matches = matchShortcutPath(catalog(true), path);
-      if (matches.complete.length) {
-        store.setState({ lastKey: key });
-        await runShortcutMatches(matches.candidates, select, run);
-        return;
-      }
-      if (matches.hasChildren) {
-        store.setState({ path, lastKey: undefined });
-        return;
-      }
-      message(`No shortcut for ${input}.`);
-    },
+    press: (input: string) => pressKeyboardKey({ controller, store, catalog, select, run, message }, input),
     async invoke(id: string) {
       const shortcut = catalog(true).find((candidate) => candidate.id === id);
       if (shortcut && !shortcut.disabled) await run(shortcut);

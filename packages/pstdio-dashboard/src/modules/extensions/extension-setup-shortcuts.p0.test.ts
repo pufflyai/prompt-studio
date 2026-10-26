@@ -29,13 +29,13 @@ test("shared setup shortcuts follow public contribution metadata and disappear o
   });
   const shortcut = core.keyboard
     .catalog()
-    .find((entry) => entry.binding.sourceExtensionId === "acme.worker" && entry.binding.keybinding === "N")!;
+    .find((entry) => entry.binding.sourceExtensionId === "acme.worker" && entry.binding.layer === "create")!;
   await core.keyboard.invoke(shortcut.id);
   expect(created).toEqual({ harnessId: "arbitrary.harness-id" });
   expect(
     core.keyboard
       .catalog()
-      .filter((entry) => entry.binding.sourceExtensionId === "acme.worker" && entry.binding.keybinding === "N")
+      .filter((entry) => entry.binding.sourceExtensionId === "acme.worker" && entry.binding.layer === "create")
       .map((entry) => entry.binding.label),
   ).toEqual(["New session with Worker (helper)", "New session with Reviewer (review)"]);
   expect(
@@ -45,4 +45,58 @@ test("shared setup shortcuts follow public contribution metadata and disappear o
   expect(core.keyboard.catalog().some((entry) => entry.binding.sourceExtensionId === "acme.skills")).toBe(true);
   for (const registration of dispose) registration.dispose();
   expect(core.keyboard.catalog().some((entry) => entry.binding.sourceExtensionId === "acme.worker")).toBe(false);
+});
+
+test("session creation is grouped under C S and a provider is chosen by number", async () => {
+  const core = createWorkbench();
+  let created: unknown;
+  core.commands.registerCommand(
+    { id: dashboardCommandIds.createSession, label: "New session" },
+    {
+      execute: (args) => {
+        created = args;
+      },
+    },
+  );
+  const registrations = registerExtensionSetupShortcuts(core, {
+    extensions: [{ id: "agents", name: "agents", displayName: "Agents", sourcePath: "" }],
+    harnesses: [
+      { extensionId: "agents", localId: "codex", id: "codex", label: "Codex" },
+      { extensionId: "agents", localId: "claude", id: "claude", label: "Claude Code" },
+    ],
+    themes: [],
+    skills: [],
+  });
+  core.keyboard.open();
+  await core.keyboard.press("c");
+  await core.keyboard.press("s");
+  const choice = core.keyboard.store.getState().selection?.choices.find((item) => item.label.includes("Codex"));
+  expect(choice).toBeDefined();
+  await core.keyboard.press(choice!.key);
+  expect(created).toEqual({ harnessId: "codex" });
+  for (const registration of registrations) registration.dispose();
+});
+
+test("all color theme providers share one Settings T shortcut", () => {
+  const core = createWorkbench();
+  registerExtensionSetupShortcuts(core, {
+    extensions: [
+      { id: "themes-a", name: "themes-a", displayName: "Themes A", sourcePath: "" },
+      { id: "themes-b", name: "themes-b", displayName: "Themes B", sourcePath: "" },
+    ],
+    themes: [
+      { extensionId: "themes-a", localId: "dark", id: "dark" },
+      { extensionId: "themes-b", localId: "light", id: "light" },
+    ],
+    harnesses: [],
+    skills: [],
+  });
+  const shortcuts = core.keyboard
+    .catalog()
+    .filter(
+      (entry) =>
+        entry.binding.action.kind === "command" && entry.binding.action.commandId === "workbench.action.changeTheme",
+    );
+  expect(shortcuts).toHaveLength(1);
+  expect(shortcuts[0]?.keys).toEqual(["S", "T"]);
 });

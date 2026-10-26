@@ -16,9 +16,17 @@ Extensions appear under E as selectable rows with their display names. Use Up/Do
 
 Left and Right select the previous or next tab across the visible layout and wrap at either end. One tab has an outline for the keyboard selection, even when several panels each have a selected tab. Navigation keeps shortcut mode active, including Go actions and their aliases. Labels use Go to sessions, Go to tickets, and the same pattern for other destinations; history actions use Go back and Go forward. A completed action keeps its current group available. Enter or Escape returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
 
-Alt+Shift+1 through Alt+Shift+9 directly select global tab numbers. These chords work without opening the keyboard menu and do not open a picker. Numbers follow spatial placement, then displayed tab order within each strip. Opening, closing, moving, reordering, or changing the layout recomputes contiguous numbers. Numbers appear on tabs while keyboard mode is active. View → T opens a searchable picker for tabs beyond nine. Direct selection outside keyboard mode stays outside it.
+Alt+Shift+1 through Alt+Shift+9 directly select global tab numbers. Inside keyboard mode, plain 1 through 9 do the same from any navigation group. Empty-panel cards share this numbering: their displayed number opens that card in its own panel. Cards show the direct chord outside keyboard mode and the plain number inside it. An action or target chooser owns its own numbers while open. Numbers follow spatial placement and displayed tab/card order, and recompute when the layout changes. View → T opens a searchable picker beyond nine. Direct selection outside keyboard mode stays outside it.
 
-View → N chooses a destination and addable panel type for a persistent new tab. Create → S starts the Session tab flow. Current view → N starts a fresh session in an existing Session tab. View → O moves one tab while preserving its identity; View → R repositions a whole panel using its allowed positions. Canceling an unfinished flow changes nothing.
+View → N chooses a destination and addable panel type for a persistent new tab. Current view → N starts a fresh session in an existing Session tab. View → O moves one tab while preserving its identity; View → R repositions a whole panel using its allowed positions. Canceling an unfinished flow changes nothing.
+
+## Creation and shared settings
+
+Create actions use C followed by the first letter of the canonical resource-kind ID: N for note, T for ticket, A for artifact, S for session, and W for workspace. Extensions bind their public creation command in the `create` layer and derive that letter from the resource kind. They do not add an extension-name step.
+
+When actions share an initial, the host sorts the available actions by name, with action identity as the tie-breaker, and offers numbered choices. For example, C → A → 1 can select Analysis and C → A → 2 Artifact. The numbers stay fixed while the chooser is open, even when contributions change. Session providers share C → S; type the displayed number to choose Codex, Claude Code, or another provider. The shortcut reference includes the numbered continuation.
+
+Settings → T is the single default shortcut for choosing a color theme. Theme providers contribute themes to that shared picker rather than registering another shortcut. Installed tools contribute Go → K for Planner Kanban, Go → T for Timeline, and Go → A for Artifacts.
 
 ## Current view and conflicts
 

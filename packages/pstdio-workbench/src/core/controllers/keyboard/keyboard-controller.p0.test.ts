@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "../../workbench-core";
+import { shortcutDisplayKeys } from "./shortcut-menu";
 
 const setup = () => {
   const core = createWorkbench({ initialSidePanelMode: "attached" });
@@ -198,6 +199,58 @@ test("navigation stays sticky and direct selection outside mode stays outside", 
   await core.keyboard.press("Enter");
   expect(core.keyboard.store.getState().active).toBe(false);
   expect(core.focus.getActiveRegion()).toBe("secondary");
+});
+
+test.each(["", "g", "v"])("plain digits select numbered tabs from any navigation prefix: %s", async (prefix) => {
+  const { core, ticket } = setup();
+  const first = ticket("A");
+  const second = ticket("B", "secondary");
+  core.layout.activateWidget(first.widgetId);
+  core.keyboard.open();
+  for (const key of prefix) await core.keyboard.press(key);
+  await core.keyboard.press("2");
+  expect(core.layout.getLayout().activeWidgetId).toBe(second.widgetId);
+  expect(core.keyboard.store.getState().message).toBe("");
+  expect(core.keyboard.store.getState().active).toBe(true);
+});
+
+test("create actions sharing a resource initial split into stable numbered choices", async () => {
+  const { core } = setup();
+  const created: string[] = [];
+  for (const resource of ["artifact", "analysis"]) {
+    const id = `create-${resource}`;
+    core.commands.registerCommand(
+      { id, label: `Create ${resource}` },
+      {
+        execute: () => {
+          created.push(resource);
+        },
+      },
+    );
+    core.keybindings.registerKeybinding({
+      action: { kind: "command", commandId: id },
+      layer: "create",
+      keybinding: "A",
+    });
+  }
+  core.keyboard.open();
+  await core.keyboard.press("c");
+  await core.keyboard.press("a");
+  expect(core.keyboard.store.getState().selection?.choices.map((choice) => choice.label)).toEqual([
+    "Create analysis",
+    "Create artifact",
+  ]);
+  const catalog = core.keyboard.catalog();
+  const analysis = catalog.find((entry) => entry.label === "Create analysis")!;
+  expect(shortcutDisplayKeys(analysis, "Alt+Shift+Space", catalog)).toEqual(["Alt+Shift+Space", "C", "A", "1"]);
+  core.commands.registerCommand({ id: "another", label: "Create a chart" }, { execute() {} });
+  core.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "another" },
+    layer: "create",
+    keybinding: "A",
+  });
+  await core.keyboard.press("1");
+  expect(created).toEqual(["analysis"]);
 });
 
 test("any contributed shortcut can declare sticky behavior", async () => {

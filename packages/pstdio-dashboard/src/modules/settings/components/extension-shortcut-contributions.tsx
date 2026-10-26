@@ -20,7 +20,7 @@ const EffectiveShortcuts = (props: { workbench: WorkbenchCore; extensionId: stri
           variant="full-width"
           label={shortcut.label}
           description={`${shortcut.binding.targetScope ?? "project"}${shortcut.binding.sticky ? " · Sticky" : ""}${shortcut.disabled ? " · Inactive" : ""}`}
-          endContent={<WorkbenchShortcutKeys shortcut={shortcut} openingChord={openingChord} />}
+          endContent={<WorkbenchShortcutKeys shortcut={shortcut} openingChord={openingChord} catalog={catalog} />}
         />
       ))}
       <Button

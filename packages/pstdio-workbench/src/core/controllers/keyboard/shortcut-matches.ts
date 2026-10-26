@@ -3,11 +3,7 @@ import type { KeyboardActionChoice } from "./keyboard-controller";
 import { presentationResourceKey, regionLabel } from "./keyboard-presentations";
 import type { ResolvedShortcut } from "./shortcut-catalog";
 
-export const runShortcutMatches = async (
-  candidates: ResolvedShortcut[],
-  select: (title: string, choices: KeyboardActionChoice[]) => void,
-  run: (shortcut: ResolvedShortcut) => Promise<void>,
-) => {
+export const groupShortcutMatches = (candidates: ResolvedShortcut[]) => {
   const groups = new Map<string, ResolvedShortcut[]>();
   for (const shortcut of candidates) {
     const key = getNavigationTargetKey(shortcut.binding.action);
@@ -15,6 +11,22 @@ export const runShortcutMatches = async (
     group.push(shortcut);
     groups.set(key, group);
   }
+  const actionGroups = [...groups.values()];
+  if (candidates.every((candidate) => candidate.binding.layer === "create"))
+    actionGroups.sort(
+      (a, b) =>
+        a[0]!.label.localeCompare(b[0]!.label, "en") ||
+        getNavigationTargetKey(a[0]!.binding.action).localeCompare(getNavigationTargetKey(b[0]!.binding.action), "en"),
+    );
+  return actionGroups;
+};
+
+export const runShortcutMatches = async (
+  candidates: ResolvedShortcut[],
+  select: (title: string, choices: KeyboardActionChoice[]) => void,
+  run: (shortcut: ResolvedShortcut) => Promise<void>,
+) => {
+  const actionGroups = groupShortcutMatches(candidates);
   const runGroup = async (group: ResolvedShortcut[]) => {
     const seen = new Set<string>();
     const targets = group
@@ -40,13 +52,13 @@ export const runShortcutMatches = async (
       })),
     );
   };
-  if (groups.size === 1) {
-    await runGroup([...groups.values()][0]!);
+  if (actionGroups.length === 1) {
+    await runGroup(actionGroups[0]!);
     return;
   }
   select(
     "Choose action",
-    [...groups.values()].map((group, index) => ({
+    actionGroups.map((group, index) => ({
       key: String(index + 1),
       label: group[0]!.label,
       choose: () => runGroup(group),

@@ -12,7 +12,7 @@ export const keyboardBubbleSlotRecipe = defineSlotRecipe({
       bg: "bg",
       borderWidth: "1px",
       borderColor: "border",
-      borderRadius: "md",
+      borderRadius: "2xs",
       width: "max-content",
       maxW: "keyboard-bubble-max",
       overflow: "hidden",

@@ -3,6 +3,7 @@ import { shortcutLayers } from "../../registries/keybindings/shortcut-preference
 import { getNavigationTargetKey } from "../../registries/navigation/navigation-target-key";
 import type { KeyboardState } from "./keyboard-controller";
 import type { ResolvedShortcut } from "./shortcut-catalog";
+import { groupShortcutMatches } from "./shortcut-matches";
 
 export const shortcutOpeningChord = (catalog: ResolvedShortcut[]) =>
   getKeybindingSteps(
@@ -15,10 +16,24 @@ export const shortcutExtensionLabel = (shortcut: ResolvedShortcut) =>
 const extensionNeedsChoice = (shortcut: ResolvedShortcut) =>
   shortcut.binding.layer === "extensions" && shortcut.keys[1] === shortcut.binding.sourceExtensionId?.toUpperCase();
 
-export const shortcutDisplayKeys = (shortcut: ResolvedShortcut, openingChord: string) => {
+const creationChoiceNumber = (shortcut: ResolvedShortcut, catalog: ResolvedShortcut[]) => {
+  if (shortcut.disabled || shortcut.binding.layer !== "create") return undefined;
+  const groups = groupShortcutMatches(matchShortcutPath(catalog, shortcut.keys).candidates);
+  if (groups.length <= 1) return undefined;
+  const key = getNavigationTargetKey(shortcut.binding.action);
+  const index = groups.findIndex((group) => getNavigationTargetKey(group[0]!.binding.action) === key);
+  return index < 0 ? undefined : String(index + 1);
+};
+
+export const shortcutDisplayKeys = (
+  shortcut: ResolvedShortcut,
+  openingChord: string,
+  catalog: ResolvedShortcut[] = [],
+) => {
   if (!shortcut.binding.layer) return getKeybindingSteps(shortcut.binding.keybinding);
   if (extensionNeedsChoice(shortcut)) return getKeybindingSteps(shortcut.binding.keybinding);
-  return [openingChord, ...shortcut.keys];
+  const number = creationChoiceNumber(shortcut, catalog);
+  return [openingChord, ...shortcut.keys, ...(number ? [number] : [])];
 };
 
 export const shortcutPathLabels = (catalog: ResolvedShortcut[], path: string[]) =>
@@ -76,7 +91,8 @@ export const shortcutHints = (catalog: ResolvedShortcut[], state: KeyboardState)
     if (shortcut.binding.layer) {
       const within = shortcut.keys.slice(0, state.path.length).every((key, index) => key === state.path[index]);
       if (!within || (extensionNeedsChoice(shortcut) && state.path.length < 2)) continue;
-      hint = shortcut.keys.slice(state.path.length).join(" → ");
+      const number = creationChoiceNumber(shortcut, catalog);
+      hint = [...shortcut.keys.slice(state.path.length), ...(number ? [number] : [])].join(" → ");
     }
     hints.set(getNavigationTargetKey(shortcut.binding.action), hint);
   }

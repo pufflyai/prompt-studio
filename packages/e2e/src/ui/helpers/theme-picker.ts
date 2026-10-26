@@ -7,8 +7,8 @@ export const changeThemeThroughCommandPalette = async (page: Page) => {
   await palette.getByRole("textbox").fill(">Run Command");
   await palette.getByRole("option", { name: /Run Command/ }).click();
   await expect(palette.getByRole("textbox")).toHaveValue("> ");
-  await palette.getByRole("textbox").fill(">Change Theme");
-  await palette.getByRole("option", { name: /Change Theme/ }).click();
+  await palette.getByRole("textbox").fill(">Choose color theme");
+  await palette.getByRole("option", { name: /Choose color theme/ }).click();
 
   await expect(palette.getByPlaceholder("Search themes")).toBeVisible();
   await palette.getByRole("option", { name: "pstdio-light", exact: true }).click();

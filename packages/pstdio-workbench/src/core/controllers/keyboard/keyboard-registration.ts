@@ -66,7 +66,7 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
     { id, label: "Select tab beyond nine" },
     {
       execute: () => {
-        const tabs = core.keyboard.listTabs().filter((tab) => tab.number > 9);
+        const tabs = core.keyboard.listNumberedTargets().filter((tab) => tab.number > 9);
         if (!tabs.length) {
           core.keyboard.message("There are no tabs beyond nine.");
           return;
@@ -76,7 +76,7 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
           tabs.map((tab, index) => ({
             key: String(index + 1),
             label: `${tab.number} · ${tab.label} · ${tab.region}`,
-            choose: () => core.keyboard.selectPresentation(tab.id, tab.resource?.id),
+            choose: () => core.keyboard.selectTab(tab.number),
           })),
         );
       },
