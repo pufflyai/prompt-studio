@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, windows-11-arm]
+        os: [windows-11-arm]
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
@@ -26,5 +26,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: archive-extraction-${{ matrix.os }}
-          path: ${{ runner.temp }}/ps-932-archive-extraction-*/summary.json
+          path: |
+            ${{ runner.temp }}/ps-932-archive-extraction-*/summary.json
+            ${{ runner.temp }}/ps-932-archive-extraction-*/defender*
           if-no-files-found: error
