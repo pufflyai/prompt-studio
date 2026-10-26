@@ -19,8 +19,7 @@ import {
 } from "@/shared/workspaces/workspace-options";
 import { createDraftCommandSession } from "../chat/create-draft-command-session";
 import { splitQueuedFollowUps } from "../chat/queued-follow-ups";
-import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
-import { updatePendingFollowUp } from "../chat/session-chat-state";
+import { clearPendingFollowUp, openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
 import { sessionDraftSubmission } from "../chat/session-draft-submission";
 import { sessionUnsentActions } from "../chat/session-unsent-actions";
 import type { SessionViewContext } from "../chat/session-view-context";
@@ -232,7 +231,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
                     ? {
                         notice: pendingFollowUp.failure,
                         ...sessionUnsentActions(pendingFollowUp, {
-                          clear: () => updatePendingFollowUp(view.draftKey, null),
+                          clear: () => clearPendingFollowUp(view.draftKey, pendingFollowUp),
                           send,
                           restore: (text, attachments) => {
                             chatDraft.change(text);

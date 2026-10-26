@@ -65,7 +65,7 @@ export const openCreatedSessionFromDraft = (args: {
 let nextPendingId = 0;
 
 // Only the submission that finished leaves; a newer submission keeps its own state.
-const clearPendingFollowUp = (conversationKey: string, pending: PendingFollowUpState) =>
+export const clearPendingFollowUp = (conversationKey: string, pending: PendingFollowUpState) =>
   updatePendingFollowUp(conversationKey, (current) =>
     current?.userMessageId === pending.userMessageId ? null : current,
   );
