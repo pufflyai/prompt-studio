@@ -8,10 +8,12 @@ interface UnsentActionsInput {
   restore: (text: string, attachments: SessionAttachment[]) => void;
 }
 export const sessionUnsentActions = (unsent: PendingFollowUpState, input: UnsentActionsInput) => ({
-  onRetry: () => {
-    input.clear();
-    void input.send(unsent.prompt, unsent.attachments ?? [], unsent.questionResponse).catch(() => {});
-  },
+  // A blocked send may never create a replacement submission. Keep its message recoverable.
+  onRetry: () =>
+    input.send(unsent.prompt, unsent.attachments ?? [], unsent.questionResponse).then(
+      () => input.clear(),
+      () => {},
+    ),
   onClose: () => {
     input.clear();
     if (!unsent.questionResponse) input.restore(unsent.prompt, unsent.attachments ?? []);

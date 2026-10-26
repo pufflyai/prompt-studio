@@ -40,7 +40,7 @@ Closing the channel cancels the account flow. Disabling or retiring the extensio
 
 Probe failures remain unknown rather than reporting a signed-out account. See the [Codex CLI reference](https://developers.openai.com/codex/cli/reference/), [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference), and [OpenCode CLI reference](https://opencode.ai/docs/cli/).
 
-SDK/host support must ship before released extensions rely on the new field. An older host can ignore the optional result field, but cannot show the sign-in action.
+SDK/host support must ship before released extensions rely on `getAuthentication` and `authenticate`. An older host does not call these optional methods, so it cannot show the sign-in action.
 
 ## Supported CLI versions
 
