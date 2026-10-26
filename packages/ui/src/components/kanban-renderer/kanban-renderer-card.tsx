@@ -1,5 +1,5 @@
 import { HStack, Stack, Text, Wrap } from "@chakra-ui/react";
-import type { DragEventHandler, MouseEvent, ReactNode } from "react";
+import { type DragEventHandler, type MouseEvent, type ReactNode, useRef } from "react";
 import type { WorkspaceBadgeProps } from "@/components/primitives/workspace-badge";
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 import { HighlightedText } from "../collection-view/highlighted-text";
@@ -38,10 +38,14 @@ export const KanbanRendererCard = (props: KanbanRendererCardProps) => {
     onClick,
   } = props;
 
+  const pointerStartedOnControl = useRef(false);
   const hasBadges = badges.length > 0 || customSlots.length > 0;
   const clickCursor = onClick ? "pointer" : "default";
   const cursor = draggable ? "grab" : clickCursor;
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    const startedOnControl = pointerStartedOnControl.current;
+    pointerStartedOnControl.current = false;
+    if (event.detail > 0 && startedOnControl) return;
     if (event.defaultPrevented) return;
     if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) return;
     onClick?.();
@@ -62,6 +66,18 @@ export const KanbanRendererCard = (props: KanbanRendererCardProps) => {
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onPointerDownCapture={(event) => {
+        if (!event.isPrimary) return;
+        const control =
+          event.target instanceof Element
+            ? event.target.closest('button, a, input, textarea, select, [role="button"], [contenteditable="true"]')
+            : null;
+        // A control can move during a live update, making the browser target its card on release.
+        pointerStartedOnControl.current = Boolean(control && event.currentTarget.contains(control));
+      }}
+      onPointerCancel={(event) => {
+        if (event.isPrimary) pointerStartedOnControl.current = false;
+      }}
       onClick={onClick ? handleClick : undefined}
       data-selected={isSelected ? "true" : undefined}
       data-testid="renderer-card"
