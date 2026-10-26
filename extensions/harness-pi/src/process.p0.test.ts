@@ -1,7 +1,7 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { createPiHarness } from "./harness";
-import { piRecords, piRequest } from "./process";
+import { piRecords, piRequest, startPiProcess } from "./process";
 import { startPiTurn } from "./turn";
 
 test("decodes split UTF-8 and keeps Unicode separators inside JSON records", async () => {
@@ -69,3 +69,29 @@ test("an unexpected process signal reports failure", async () => {
   const session = await turn.session;
   expect(await session.done).toEqual({ status: "failed" });
 });
+
+test.skipIf(process.platform !== "darwin")(
+  "cleanup signals its owned child when macOS refuses a group signal",
+  async () => {
+    const worker = startPiProcess([], {
+      command: [process.execPath, "-e", "process.stdin.resume(); setInterval(() => {}, 1000)"],
+    });
+    const pid = worker.child.pid!;
+    const kill = process.kill.bind(process);
+    const signals = spyOn(process, "kill").mockImplementation((target, signal) => {
+      if (target === -pid) throw Object.assign(new Error("Group is exiting"), { code: "EPERM" });
+      return kill(target, signal);
+    });
+    try {
+      await worker.stop();
+      expect((await worker.exited).signal).toBe("SIGTERM");
+      expect(signals).toHaveBeenCalledWith(-pid, "SIGTERM");
+    } finally {
+      signals.mockRestore();
+      try {
+        kill(pid, "SIGKILL");
+      } catch {}
+      await worker.exited;
+    }
+  },
+);
