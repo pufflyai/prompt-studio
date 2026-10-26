@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
 import { buildPlaywrightEnv, runPlaywright } from "./run-playwright";
 
@@ -98,5 +98,37 @@ test("keeps a Bun cache the caller provides", async () => {
     expect(existsSync(home)).toBe(false);
   } finally {
     rmSync(cache, { recursive: true, force: true });
+  }
+});
+
+test("removes the run's folders when the launcher is stopped", async () => {
+  const launcher = Bun.spawn(
+    [
+      process.execPath,
+      "-e",
+      `const { runPlaywright } = await import(${JSON.stringify(new URL("./run-playwright.ts", import.meta.url).href)});
+      const run = await runPlaywright(
+        {
+          cmd: process.execPath,
+          args: ["-e", "console.log(process.pid + ' ' + process.env.E2E_HOME); setInterval(() => {}, 1000)"],
+        },
+        { PATH: process.env.PATH },
+      );
+      process.exit(run.exitCode);`,
+    ],
+    { stdout: "pipe" },
+  );
+  const { value } = await launcher.stdout.getReader().read();
+  const [pid, home] = new TextDecoder().decode(value).trim().split(" ") as [string, string];
+  try {
+    expect(existsSync(dirname(home))).toBe(true);
+    launcher.kill("SIGTERM");
+    await launcher.exited;
+    expect(existsSync(dirname(home))).toBe(false);
+  } finally {
+    try {
+      process.kill(Number(pid), "SIGKILL");
+    } catch {}
+    rmSync(dirname(home), { recursive: true, force: true });
   }
 });
