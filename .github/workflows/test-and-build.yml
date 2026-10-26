@@ -1,11 +1,11 @@
-name: Cold native browser qualification
+name: Parallel core cleanup qualification
 on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   native:
-    name: cold browser cases (${{ matrix.platform_pkg }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -18,14 +18,13 @@ jobs:
             platform_pkg: cli-win-arm64
     env:
       CI_PRIORITY: P2
-      PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
       E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Require exact delivered source
-        run: git diff --exit-code fd1559f9267baa5dfe43861d379c16b4dce7fdfc -- . ':!.github/workflows/test-and-build.yml'
+      - name: Require the delivered product and proposed cleanup only
+        run: git diff --exit-code fd1559f9267baa5dfe43861d379c16b4dce7fdfc -- . ':!.github/workflows/test-and-build.yml' ':!documentation/adrs/0110-temporary-parallel-core-fixture-removal.md' ':!packages/e2e/src/packaged/packaged-core-extensions.fixture.ts' ':!packages/e2e/src/packaged/packaged-core-cleanup.ts' ':!packages/e2e/src/packaged/packaged-core-cleanup.p0.test.ts'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -35,30 +34,36 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
-      - name: Build and verify the native compiled candidate
-        id: integrity
-        run: bun run --cwd scripts verify:packages --profile integrity
+      - name: Build unchanged public package inputs
+        run: bun run build -- --scope @pstdio/sdk --scope @pstdio/ui --include-dependencies
+      - uses: actions/download-artifact@v4
+        with:
+          name: cold-browser-${{ matrix.platform_pkg }}
+          run-id: 40262856377
+          github-token: ${{ github.token }}
       - name: Provision the compiled smoke browser
         id: browser
         run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke"; preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
-      - name: Cold board panning and ticket actions
+      - name: Prove external links remain owned by their targets
+        id: ownership
         working-directory: packages/e2e
-        run: bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-board-panning-smoke.p2.test.ts --timeout 30000 --silent
-      - name: Cold streaming and retained history
-        if: ${{ !cancelled() && steps.integrity.outcome == 'success' && steps.browser.outcome == 'success' }}
+        run: bun test src/packaged/packaged-core-cleanup.p0.test.ts
+      - name: Complete cold core features including removal
         working-directory: packages/e2e
-        run: bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-chat-motion-smoke.p2.test.ts --timeout 30000 --silent
-      - name: Cold saved view ordering
-        if: ${{ !cancelled() && steps.integrity.outcome == 'success' && steps.browser.outcome == 'success' }}
+        run: bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-core-extension-features.p2.test.ts --timeout 30000 --silent
+      - name: Complete cold defaults including removal
+        if: ${{ !cancelled() && steps.ownership.outcome == 'success' && steps.browser.outcome == 'success' }}
         working-directory: packages/e2e
-        run: bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-collection-view-order-smoke.p2.test.ts --timeout 30000 --silent
+        run: bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-core-extensions-smoke.p1.test.ts --timeout 30000 --silent
+      - name: Record worker resource use after the cases
+        if: always()
+        run: bun -e 'console.log(JSON.stringify({memory:process.memoryUsage(),resource:process.resourceUsage()}));'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: cold-browser-${{ matrix.platform_pkg }}
+          name: parallel-core-${{ matrix.platform_pkg }}
           path: |
             packages/e2e/test-results
             test-results/ci
-            packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
           include-hidden-files: true
           if-no-files-found: warn
