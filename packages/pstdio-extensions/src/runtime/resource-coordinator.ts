@@ -7,11 +7,10 @@ export interface ResourceCost {
 }
 
 export class ExtensionResourceError extends Error {
-  constructor(
-    readonly code: "extension_queue_full" | "extension_resource_deadline",
-    message: string,
-  ) {
+  readonly code: "extension_queue_full" | "extension_resource_deadline";
+  constructor(code: "extension_queue_full" | "extension_resource_deadline", message: string) {
     super(message);
+    this.code = code;
     this.name = "ExtensionResourceError";
   }
 }

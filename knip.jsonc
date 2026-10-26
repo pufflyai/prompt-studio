@@ -218,6 +218,8 @@
         "scripts/**/*.ts",
         "src/index.ts",
         "src/bridge/guest/bootstrap.ts",
+        // The subprocess supervisor launches this source-mode entry by path.
+        "src/runtime/owner/entry.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts"
       ],

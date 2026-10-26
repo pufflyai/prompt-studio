@@ -11,12 +11,12 @@ import { prepareOwnerContext } from "./local-values";
 import type { OwnerMessage } from "./protocol";
 
 export class ExtensionOwnerError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly completion: "cancelled" | "unknown" = "unknown",
-  ) {
+  readonly code: string;
+  readonly completion: "cancelled" | "unknown";
+  constructor(code: string, message: string, completion: "cancelled" | "unknown" = "unknown") {
     super(message);
+    this.code = code;
+    this.completion = completion;
     this.name = "ExtensionOwnerError";
   }
 }
