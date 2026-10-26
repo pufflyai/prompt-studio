@@ -23,7 +23,7 @@ test("an exiting owner also terminates its surviving children", async () => {
     `import { writeFileSync } from 'node:fs';
     const child = Bun.spawn([process.execPath, '-e', 'setInterval(() => {}, 1000)'], { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore' });
     writeFileSync(${JSON.stringify(marker)}, String(child.pid));
-    export default { commands: [{ id: 'exit', run: () => process.exit(1) }] };`,
+    export default { commands: [{ id: 'exit', run: () => process.kill(process.pid, 'SIGKILL') }] };`,
   );
   const owner = createExtensionOwner({ path: root });
   let childPid: number | undefined;
