@@ -1,12 +1,13 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
-import { removeDiagnosticNativeCore } from "./diagnostic-native-core-cleanup";
+import { captureCoreReparseMetadata } from "./diagnostic-core-reparse-profile";
 import { preparePlannerSource } from "./packaged-planner-source";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -87,7 +88,8 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("runtime stopped");
     if (closeRegistry) await closeRegistry();
     phase("registry closed");
-    await removeDiagnosticNativeCore(tempRoot);
+    await captureCoreReparseMetadata(tempRoot);
+    await rm(tempRoot, { recursive: true, force: true });
     phase("files removed");
   }
 };
