@@ -37,12 +37,17 @@ export const expectPackagedQueuedSubmission = async (page: Page, sessionId: stri
     const secondGrip = page.getByRole("button", { name: "Drag queued follow-up 2", exact: true });
     for (const label of [second, first]) {
       const handle = await secondGrip.boundingBox();
-      const target = await rows.first().boundingBox();
       expect(handle).not.toBeNull();
-      expect(target).not.toBeNull();
       await page.mouse.move(handle!.x + handle!.width / 2, handle!.y + handle!.height / 2);
       await page.mouse.down();
+      await page.mouse.move(handle!.x + handle!.width / 2 + 8, handle!.y + handle!.height / 2);
+      await expect(rows.nth(1)).toHaveAttribute("data-drag-source", "true");
+      const target = await rows.first().boundingBox();
+      expect(target).not.toBeNull();
       await page.mouse.move(target!.x + target!.width / 2, target!.y + target!.height / 8, { steps: 5 });
+      // Release only after the UI confirms insertion, rather than a previous combine target.
+      await expect(rows.first().locator(':scope > [aria-hidden="true"]')).toBeVisible();
+      await expect(rows.first()).toHaveAttribute("data-combine-target", "false");
       await page.mouse.up();
       await expect(rows.first().getByRole("button", { name: label!, exact: true })).toBeVisible();
     }
