@@ -1,7 +1,9 @@
 import { realpathSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { discoverExtensionPackages } from "../discovery";
-import { extensionLoadKey, loadExtensionPackage, type loadExtensionSources } from "../loader";
+import { loadExtensionPackage, type loadExtensionSources } from "../loader";
+import { extensionLoadKeyForHost } from "../preparation/source-inputs";
+import { disposeExtensionPreparation } from "../preparation/supervisor";
 import { createExtensionOwner, ExtensionOwnerError } from "./supervisor";
 
 const owners = new Map<string, ReturnType<typeof createExtensionOwner>>();
@@ -26,7 +28,7 @@ export const loadExtensionPackageForHost: typeof loadExtensionPackage = async (p
       "This extension owner is stopped. Restart it explicitly to run work.",
       "cancelled",
     );
-  const key = `${path}\0${extensionLoadKey(path)}\0${options.apiProvider ?? "host"}`;
+  const key = `${path}\0${await extensionLoadKeyForHost(path)}\0${options.apiProvider ?? "host"}`;
   let owner = owners.get(key);
   if (!owner) {
     if (owners.size >= 16)
@@ -90,4 +92,5 @@ export const disposeExtensionOwners = async () => {
   owners.clear();
   stopped.clear();
   await Promise.all(closing.map((owner) => owner.dispose()));
+  await disposeExtensionPreparation();
 };

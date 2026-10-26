@@ -8,7 +8,7 @@ import type { createWorkspaceService } from "../../services/workspace-service";
 import type { HarnessRegistryService } from "../harnesses/harness-registry-service";
 import { syncInstalledExtensionsForProjects } from "./default-extensions";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
-import { hashExtensionSource, type LoadedExtensionSnapshot } from "./extension-runtime";
+import { hashExtensionSourceForHost as hashExtensionSource, type LoadedExtensionSnapshot } from "./extension-runtime";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
@@ -48,6 +48,14 @@ export const createInstalledExtensionRuntime = (input: {
   const createWebviewBuildManager = input.createWebviewBuildManager ?? createExtensionWebviewBuildManager;
   const reportError = (err: unknown) =>
     apiLogger.error({ err, event: "extensions.webview_build.error" }, "Extension webview build manager failed");
+  let disposed = false;
+  const backgroundWork = new Set<Promise<void>>();
+  const trackBackground = (run: () => Promise<void>) => {
+    if (disposed) return;
+    const work = run().catch(reportError);
+    backgroundWork.add(work);
+    void work.finally(() => backgroundWork.delete(work));
+  };
   // Forward reference to refresh(): a repo root sync that marks sources missing must reconcile the
   // source watcher and webview builds, which are only wired together once all processes exist below.
   let triggerRuntimeRefresh: () => Promise<void> = async () => {};
@@ -124,10 +132,10 @@ export const createInstalledExtensionRuntime = (input: {
       })
     : { adopt: async () => {}, dispose: () => {}, ensure: async () => {}, refresh: async () => {} };
   const refreshWebviewsInBackground = (sourcePath?: string) => {
-    webviewBuildManager
-      .refresh(sourcePath)
-      .then(() => input.projectRuntimeCatalog.invalidate({ sourcePath, reason: "webviews_built" }))
-      .catch(reportError);
+    trackBackground(async () => {
+      await webviewBuildManager.refresh(sourcePath);
+      input.projectRuntimeCatalog.invalidate({ sourcePath, reason: "webviews_built" });
+    });
   };
   // The source hash each source last provisioned workspaces from. Provisioning can write into a
   // watched folder, so a write that leaves the source unchanged must not provision again.
@@ -135,7 +143,7 @@ export const createInstalledExtensionRuntime = (input: {
   const provisionWhenSourceChanged = async (sourcePath: string) => {
     // The root watcher handles a removed folder.
     if (!existsSync(sourcePath)) return;
-    const sourceHash = hashExtensionSource(sourcePath);
+    const sourceHash = await hashExtensionSource(sourcePath);
     if (provisionedSourceHashes.get(sourcePath) === sourceHash) return;
     provisionedSourceHashes.set(sourcePath, sourceHash);
     await input.provisionWorkspacesUsingSource(sourcePath);
@@ -146,8 +154,10 @@ export const createInstalledExtensionRuntime = (input: {
   const sourceWatcher = createSourceWatcher({
     listInstalledSources: listExistingInstalledSources,
     onSourceChanged: async (sourcePath) => {
-      await webviewBuildManager.refresh(sourcePath);
-      await provisionWhenSourceChanged(sourcePath);
+      // The watcher serializes notifications. Return after scheduling so a later edit can
+      // supersede active compilers instead of waiting for their obsolete output.
+      refreshWebviewsInBackground(sourcePath);
+      trackBackground(() => provisionWhenSourceChanged(sourcePath));
     },
     onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
   });
@@ -184,11 +194,13 @@ export const createInstalledExtensionRuntime = (input: {
   return {
     ready,
     dispose: async () => {
+      disposed = true;
       webviewBuildManager.dispose();
       await ready.catch(() => {});
       for (const result of await Promise.allSettled([rootWatcher, sourceWatcher])) {
         if (result.status === "fulfilled") result.value.dispose();
       }
+      await Promise.all(backgroundWork);
     },
     ensureWebviews: webviewBuildManager.ensure,
     refresh,

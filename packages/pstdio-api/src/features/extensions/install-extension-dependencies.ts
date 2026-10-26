@@ -17,6 +17,7 @@ export type CommandOptions = {
   cwd: string;
   env?: NodeJS.ProcessEnv;
   signal?: AbortSignal;
+  onSpawn?: (child: Pick<Bun.Subprocess, "pid" | "resourceUsage">) => void;
 };
 
 export type DependencyInstallInput = {
@@ -51,6 +52,11 @@ export const runCommand = async (command: string, args: string[], options: Comma
         windowsHide: true,
         windowsVerbatimArguments: resolved.windowsVerbatimArguments,
       });
+      try {
+        options.onSpawn?.(child);
+      } catch {
+        // An observation must not abandon a live child.
+      }
       const exitCode = await child.exited;
       const [stdout, stderr] = await Promise.all([stdoutFile.text(), stderrFile.text()]);
       return { exitCode, stdout, stderr };

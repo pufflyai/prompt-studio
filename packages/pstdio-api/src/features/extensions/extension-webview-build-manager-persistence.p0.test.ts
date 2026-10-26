@@ -4,8 +4,44 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { buildExtensionWebview } from "./extension-webview-builder";
-import { writeExtension } from "./test-utils/webview-build-fixture";
+import { writeExtension, writeManagedBuildOutput } from "./test-utils/webview-build-fixture";
 import { setup } from "./test-utils/webview-failure-fixture";
+
+test("sibling views do not invalidate each other's conditional status writes", async () => {
+  const root = mkdtempSync(join(tmpdir(), "webview-report-contention-"));
+  const sourcePath = join(root, "extension");
+  writeExtension(sourcePath, { first: "src/first.tsx", second: "src/second.tsx", third: "src/third.tsx" });
+  let revision = 0;
+  let attempts = 0;
+  let reported = 0;
+  const manager = createExtensionWebviewBuildManager({
+    listInstalledSources: async () => [
+      { id: "lab", install_name: "lab", source_path: sourcePath, updated_at: String(revision) },
+    ],
+    buildWebview: async (input) => {
+      writeManagedBuildOutput(input);
+      return { success: true, details: "" };
+    },
+    reportBuildFailure: async () => "reported",
+    reportBuildSuccess: async (_id, _view, expected) => {
+      attempts++;
+      await Bun.sleep(10);
+      if (expected.updatedAt !== String(revision)) return "source-changed";
+      revision++;
+      reported++;
+      return "reported";
+    },
+    webviewCacheRoot: join(root, "cache"),
+  });
+  try {
+    await manager.ensure("lab");
+    expect(reported).toBe(3);
+    expect(attempts).toBe(3);
+  } finally {
+    manager.dispose();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test("retries a repaired cache's unwritten result without rebuilding", async () => {
   const fixture = await setup();

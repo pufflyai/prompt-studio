@@ -15,6 +15,7 @@ import { createProjectService } from "../../services/project-service";
 import { createSyncService } from "../../services/sync-service";
 import { EventBus } from "../sync/event-bus";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
+import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
 import { createInstalledExtensionRuntime, selectExistingSources } from "./installed-extension-runtime";
 
@@ -82,6 +83,60 @@ describe("selectExistingSources", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+});
+
+test("forwards a later watched edit while an earlier webview build is still running", async () => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-overlapping-watched-builds-"));
+  writeExtension(root, "watched");
+  const firstBuild = Promise.withResolvers<void>();
+  const started = Promise.withResolvers<void>();
+  const superseded = Promise.withResolvers<void>();
+  let notify: Listener | undefined;
+  let refreshCount = 0;
+  const runtime = createInstalledExtensionRuntime({
+    ...noopRuntimeDeps,
+    extensionService: {} as never,
+    installedExtensionSourcesService: {
+      list: async () => [{ install_name: "watched", source_path: root }],
+    } as never,
+    projectService: { list: async () => [] } as never,
+    workspaceService: {} as never,
+    webviewBuilds: true,
+    createRootWatcher: async () => createProcess(),
+    createSourceWatcher: (config) =>
+      createExtensionSourceWatcher({
+        ...config,
+        watch: (_path, listener) => {
+          notify = listener;
+          return new FakeWatcher(listener);
+        },
+      }),
+    createWebviewBuildManager: () =>
+      createProcess(async () => {
+        refreshCount++;
+        if (refreshCount === 2) {
+          started.resolve();
+          await firstBuild.promise;
+        }
+        if (refreshCount === 3) superseded.resolve();
+      }),
+  });
+  const withinDeadline = (work: Promise<void>) =>
+    Promise.race([work, Bun.sleep(1000).then(() => Promise.reject(new Error("Watched edit was blocked")))]);
+  try {
+    await runtime.ready;
+    writeFileSync(join(root, "view.ts"), "export const revision = 1;");
+    notify!("change", "view.ts");
+    await withinDeadline(started.promise);
+    writeFileSync(join(root, "view.ts"), "export const revision = 2;");
+    notify!("change", "view.ts");
+    await withinDeadline(superseded.promise);
+    expect(refreshCount).toBe(3);
+  } finally {
+    firstBuild.resolve();
+    await runtime.dispose();
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 describe("createInstalledExtensionRuntime", () => {

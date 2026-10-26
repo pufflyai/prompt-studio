@@ -1,9 +1,9 @@
 import { dirname } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { extensionLoadKey } from "pstdio-extensions";
+import { extensionLoadKeyForHost as extensionLoadKey, hashExtensionSourceForHost } from "pstdio-extensions";
 import {
   checkExtensionSource,
-  hashExtensionSource,
+  type hashExtensionSource,
   type LoadedExtensionSnapshot,
 } from "../features/extensions/extension-runtime";
 
@@ -63,13 +63,13 @@ const validationError = (diagnostics: Array<{ code: string; message: string; sev
 };
 
 const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSource) => {
-  const hash = deps.hashExtension ?? hashExtensionSource;
+  const hash = deps.hashExtension ?? hashExtensionSourceForHost;
   const check = deps.checkExtension ?? checkExtensionSource;
   let nextSourceHash: string | null = null;
 
   try {
-    nextSourceHash = hash(existing.source_path);
-    const loadKey = extensionLoadKey(existing.source_path);
+    nextSourceHash = await hash(existing.source_path);
+    const loadKey = await extensionLoadKey(existing.source_path);
     const result = await check(existing.source_path, dirname(existing.source_path));
     if (!result.loaded || result.check.errorCount > 0) throw validationError(result.check.diagnostics);
 

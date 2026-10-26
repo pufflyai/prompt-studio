@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { LoadedExtension } from "./extension-runtime";
-import { inspectManagedWebviewBuildInputs, prepareManagedWebviewBuildSource } from "./extension-webview-build-source";
+import { inspectWebviewInputsForHost, prepareWebviewSourceForHost } from "./extension-webview-build-source";
 import { buildExtensionWebview } from "./extension-webview-builder";
 import { classifyWebviewEntry, collectExtensionWebviews, resolvePackageAssetFile } from "./extension-webviews";
 
@@ -24,11 +24,14 @@ export const validateExtensionWebviews = async (
         packageName: loaded.metadata.name,
         packagePath,
       };
-      const source = prepareManagedWebviewBuildSource({
-        ...input,
-        buildInputs: inspectManagedWebviewBuildInputs(input),
-        shellDir: join(root, String(index), "source"),
-      });
+      const source = await prepareWebviewSourceForHost(
+        {
+          ...input,
+          buildInputs: await inspectWebviewInputsForHost(input),
+          shellDir: join(root, String(index), "source"),
+        },
+        signal,
+      );
       if (!source.success) throw new Error(`Extension webview ${view.id} cannot activate: ${source.details}`);
       const outcome = await buildExtensionWebview({
         entryPath: source.entryPath,

@@ -7,6 +7,9 @@ const rawArgs = hideBin(process.argv);
 if (rawArgs.length === 1 && rawArgs[0] === "--pstdio-extension-owner") {
   const { runExtensionOwner } = await import("pstdio-extensions");
   runExtensionOwner();
+} else if (rawArgs.length === 1 && rawArgs[0] === "--pstdio-extension-preparation") {
+  const { runExtensionPreparation } = await import("pstdio-extensions");
+  runExtensionPreparation();
 } else {
   // Fast path: answer `--version` without loading the rest of the CLI. Everything
   // else lives in `./cli-main`, imported lazily so trivial invocations don't pay

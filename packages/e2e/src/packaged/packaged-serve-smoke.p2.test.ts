@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { createExtensionOwner } from "pstdio-extensions";
+import { createExtensionOwner, createExtensionPreparation } from "pstdio-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
@@ -51,6 +51,23 @@ test("starts and stops an extension owner using the packaged executable and decl
     await expect(owner.load()).rejects.toMatchObject({ code: "extension_owner_stopped" });
   } finally {
     await owner.dispose();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("prepares source identities in a separate process using the packaged executable", async () => {
+  const root = mkdtempSync(join(tmpdir(), "packaged-extension-preparation-"));
+  const preparation = createExtensionPreparation({ executable: PACKAGED_BINARY_PATH, packaged: true });
+  try {
+    const path = writeExtensionWithDependency(root);
+    const key = await preparation.run("loadKey", path);
+    expect(key.length).toBeGreaterThan(0);
+    expect(preparation.pid).toBeGreaterThan(0);
+    expect(preparation.pid).not.toBe(process.pid);
+    await preparation.dispose();
+    expect(preparation.pid).toBeUndefined();
+  } finally {
+    await preparation.dispose();
     rmSync(root, { recursive: true, force: true });
   }
 });

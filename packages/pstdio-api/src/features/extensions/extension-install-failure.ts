@@ -3,7 +3,7 @@ import { ExtensionRegistryError } from "pstdio-extensions/distribution";
 import { ExtensionNameConflictError, ProjectNotFoundError } from "../../services/extension-service";
 import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-unavailable-error";
 import { ExtensionNotInCatalogError } from "./extension-catalog";
-import { checkExtensionSource, hashExtensionSource } from "./extension-runtime";
+import { checkExtensionSource, hashExtensionSourceForHost as hashExtensionSource } from "./extension-runtime";
 import {
   ExtensionAlreadyInstalledError,
   ExtensionValidationFailedError,
@@ -21,7 +21,7 @@ const existingSource = async (targetPath: string) => {
     installName: basename(targetPath),
     metadata: metadata.metadata,
     manifest: metadata.manifest,
-    sourceHash: hashExtensionSource(targetPath),
+    sourceHash: await hashExtensionSource(targetPath),
     targetPath,
     source: { kind: "local", path: targetPath },
   };

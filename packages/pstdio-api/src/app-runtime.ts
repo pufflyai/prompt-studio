@@ -154,7 +154,13 @@ const createAppCloser = (input: {
         try {
           await hooksStopped;
         } finally {
-          await input.closeDb();
+          try {
+            // Startup and watcher cleanup may finish preparation after the early cancellation.
+            // Reap their processes after all lifecycle owners have stopped producing work.
+            await disposeExtensionOwners();
+          } finally {
+            await input.closeDb();
+          }
         }
       }
     })();

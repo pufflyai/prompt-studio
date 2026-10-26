@@ -30,6 +30,16 @@ interface BuildAttempt extends ManagedWebviewBuildIdentity {
   work: Promise<ManagedWebviewBuildResult> | ManagedWebviewBuildResult;
 }
 
+const serializeSourceReport = (reporting: Map<symbol, Promise<void>>, group: symbol, run: () => Promise<void>) => {
+  // Sibling views update the same conditional source row. Validate after taking the
+  // reporting turn so their own successes do not trigger repeated graph scans.
+  const work = (reporting.get(group) ?? Promise.resolve()).catch(() => {}).then(run);
+  reporting.set(group, work);
+  return work.finally(() => {
+    if (reporting.get(group) === work) reporting.delete(group);
+  });
+};
+
 const cancelBuildAttempts = (
   attempts: Map<string, BuildAttempt>,
   shouldCancel: (attempt: BuildAttempt, key: string) => boolean,
@@ -41,10 +51,26 @@ const cancelBuildAttempts = (
   }
 };
 
+const retireRemovedViews = (
+  attempts: Map<string, BuildAttempt>,
+  installedExtensionId: string,
+  webviews: CollectedExtensionWebview[],
+) => {
+  const keys = new Set(webviews.map((view) => processKey(installedExtensionId, view.id)));
+  cancelBuildAttempts(attempts, (attempt, key) => attempt.row.id === installedExtensionId && !keys.has(key));
+};
+
+const settleBuilds = async (work: Promise<void>[]) => {
+  for (const result of await Promise.allSettled(work)) {
+    if (result.status === "rejected") throw result.reason;
+  }
+};
+
 export const createExtensionWebviewBuildManager = (input: CreateExtensionWebviewBuildManagerInput) => {
   const attempts = new Map<string, BuildAttempt>();
   const checked = new Map<string, Set<string>>();
   const pending = new Map<string, Promise<void>>();
+  const reporting = new Map<symbol, Promise<void>>();
   const activeStages = new Set<string>();
   const activeBuilds = new Set<AbortController>();
   const backoff = createWebviewBuildBackoff();
@@ -71,7 +97,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     webviewCacheRoot,
   });
 
-  const reconcileResult = async (key: string, attempt: BuildAttempt, result: ManagedWebviewBuildResult) => {
+  const reconcileCurrentResult = async (key: string, attempt: BuildAttempt, result: ManagedWebviewBuildResult) => {
     if (result.status === "unavailable") return;
     const isCurrent = () => !disposed && attempts.get(key) === attempt;
     while (isCurrent()) {
@@ -90,14 +116,22 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     }
   };
 
+  const reconcileResult = (
+    key: string,
+    attempt: BuildAttempt,
+    result: ManagedWebviewBuildResult,
+    reportGroup: symbol,
+  ) => serializeSourceReport(reporting, reportGroup, () => reconcileCurrentResult(key, attempt, result));
+
   const buildManagedWebview = async (
     row: InstalledSourceWithManifest,
     snapshot: LoadedExtensionSnapshot,
     webview: CollectedExtensionWebview,
+    reportGroup: symbol,
     validatedSource?: LoadedExtensionSnapshot,
   ) => {
     const key = processKey(row.id, webview.id);
-    const inspected = inspectWebviewBuild(row, snapshot.loaded.metadata.name, webview);
+    const inspected = await inspectWebviewBuild(row, snapshot.loaded.metadata.name, webview);
     const { signature } = inspected;
     const paths = resolveManagedWebviewPaths({ installedExtensionId: row.id, webviewCacheRoot, webviewId: webview.id });
     let attempt = attempts.get(key);
@@ -143,16 +177,11 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     }
     attempt.users++;
     try {
-      await reconcileResult(key, attempt, await attempt.work);
+      await reconcileResult(key, attempt, await attempt.work, reportGroup);
     } finally {
       attempt.users--;
     }
     if (attempt.users === 0 && attempts.get(key) === attempt) attempts.delete(key);
-  };
-
-  const retireRemovedViews = (installedExtensionId: string, webviews: CollectedExtensionWebview[]) => {
-    const keys = new Set(webviews.map((view) => processKey(installedExtensionId, view.id)));
-    cancelBuildAttempts(attempts, (attempt, key) => attempt.row.id === installedExtensionId && !keys.has(key));
   };
 
   const refreshRow = async (installedExtensionId: string, validatedSource?: LoadedExtensionSnapshot) => {
@@ -163,13 +192,10 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     const webviews = collectExtensionWebviews(snapshot.loaded).filter(
       (view) => classifyWebviewEntry(view.entry).kind === "managed",
     );
-    if (validatedSource) retireRemovedViews(row.id, webviews);
-    const results = await Promise.allSettled(
-      webviews.map((view) => buildManagedWebview(row, snapshot, view, validatedSource)),
-    );
-    for (const result of results) {
-      if (result.status === "rejected") throw result.reason;
-    }
+    if (validatedSource) retireRemovedViews(attempts, row.id, webviews);
+    // Replacements must not wait behind an obsolete reporter still finishing host I/O.
+    const reportGroup = Symbol();
+    await settleBuilds(webviews.map((view) => buildManagedWebview(row, snapshot, view, reportGroup, validatedSource)));
     return webviews.map((view) => view.id);
   };
 

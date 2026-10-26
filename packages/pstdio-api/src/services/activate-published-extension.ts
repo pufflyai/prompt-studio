@@ -1,6 +1,9 @@
 import { rm } from "node:fs/promises";
 import type { createExtensionInstancesDBService, createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { hashExtensionSource, type LoadedExtension } from "../features/extensions/extension-runtime";
+import {
+  hashExtensionSourceForHost as hashExtensionSource,
+  type LoadedExtension,
+} from "../features/extensions/extension-runtime";
 
 interface Activation {
   projectId: string;
@@ -39,7 +42,7 @@ const registerActivation = async (deps: ActivationDeps, input: Activation) => {
           display_name: source.loaded.metadata.displayName,
           extension_id: source.loaded.metadata.id,
           manifest_json: source.loaded.manifest,
-          source_hash: hashExtensionSource(source.path),
+          source_hash: await hashExtensionSource(source.path),
           loaded_revision: source.revision,
           source_kind: "registry",
           source_path: source.path,

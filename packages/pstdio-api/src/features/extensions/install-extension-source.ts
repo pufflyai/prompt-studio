@@ -10,7 +10,7 @@ import {
   checkExtensionSource,
   checkExtensionsRoot,
   formatExtensionsCheck,
-  hashExtensionSource,
+  hashExtensionSourceForHost as hashExtensionSource,
   readExtensionSourceMetadata,
 } from "./extension-runtime";
 import { prepareNamedSource } from "./extension-source-checkout";
@@ -311,7 +311,7 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
 
     // A replacement must activate every managed view before the working source is replaced.
     if (targetExists && !reuseExisting) await validateExtensionWebviews(loaded, installPath, installName, input.signal);
-    const sourceHash = hashExtensionSource(installPath);
+    const sourceHash = await hashExtensionSource(installPath);
     if (installPath !== targetPath) {
       const preserveDependencies = linkedInstalledDependencies;
       if (linkedInstalledDependencies) unlinkSync(join(installPath, "node_modules"));

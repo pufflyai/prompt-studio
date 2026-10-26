@@ -101,6 +101,14 @@ export {
 } from "./runtime/owner/loader";
 export { runExtensionOwner } from "./runtime/owner/run-owner";
 export { createExtensionOwner, ExtensionOwnerError } from "./runtime/owner/supervisor";
+export { runExtensionPreparation } from "./runtime/preparation/run-preparation";
+export { extensionLoadKeyForHost, hashExtensionSourceForHost } from "./runtime/preparation/source-inputs";
+export {
+  createExtensionPreparation,
+  disposeExtensionPreparation,
+  extensionPreparationPid,
+  prepareExtensionWork,
+} from "./runtime/preparation/supervisor";
 export { createReadBoundary } from "./runtime/read-boundary";
 export { createResourceCoordinator, ExtensionResourceError, extensionResources } from "./runtime/resource-coordinator";
 export { workbenchIconNames } from "./runtime/workbench-icon-names";

@@ -58,6 +58,13 @@ export type ProjectExtensionRuntimeCatalog = ReturnType<typeof createProjectExte
 
 type CandidateExtensionSource = LoadableExtensionSource & { extension_id: string };
 
+const recheckSources = (sources: ReturnType<typeof createExtensionSourceCache>, input: RuntimeInvalidationInput) => {
+  // Asset publication changes URLs and diagnostics, not the adopted backend definition.
+  if (input.reason === "webviews_built") return;
+  if (input.sourcePath) sources.recheck(input.sourcePath);
+  else if (!input.projectId) sources.recheckAll();
+};
+
 export const createProjectExtensionRuntimeCatalog = (deps: {
   extensionService: ReturnType<typeof createExtensionService>;
   projectService: ReturnType<typeof createProjectService>;
@@ -275,11 +282,11 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
   // Marks affected projects dirty; the replacement snapshot builds lazily on the
   // next read, so several invalidations coalesce into one load.
   const invalidate = (input: RuntimeInvalidationInput) => {
+    recheckSources(sources, input);
     let affected = 0;
 
     if (input.sourcePath) {
       const sourcePath = canonicalSourcePath(input.sourcePath);
-      sources.recheck(sourcePath);
       for (const [projectId, state] of states) {
         if (projectId !== input.projectId && !state.knownSourcePaths.has(sourcePath)) continue;
         markDirty(state, input.reason);
@@ -292,7 +299,6 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
         affected = 1;
       }
     } else {
-      sources.recheckAll();
       for (const state of states.values()) {
         markDirty(state, input.reason);
         affected += 1;

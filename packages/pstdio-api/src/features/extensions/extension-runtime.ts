@@ -27,6 +27,7 @@ import { emptyCheck } from "./empty-extension-check";
 import { addDiagnostic, isRecord, type UnknownRecord } from "./extension-diagnostics";
 import { mergeCheck } from "./merge-checks";
 
+export { hashExtensionSourceForHost } from "pstdio-extensions";
 export { hashExtensionSource } from "./hash-extension-source";
 
 export type ExtensionMetadata = {

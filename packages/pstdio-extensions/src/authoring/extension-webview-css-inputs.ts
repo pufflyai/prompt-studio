@@ -1,4 +1,4 @@
-// CSS URLs are relative to the stylesheet even without a leading "./".
+// CSS URLs resolve relative to the stylesheet even without a leading "./".
 export const collectLocalCssInputs = (content: string) => {
   const inputs: string[] = [];
   const css = content.replace(/\/\*[\s\S]*?\*\//g, "");

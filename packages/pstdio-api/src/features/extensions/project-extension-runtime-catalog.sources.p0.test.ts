@@ -99,6 +99,20 @@ afterEach(() => {
 });
 
 describe("project extension runtime catalog with real sources", () => {
+  test("an asset publication retains adopted callbacks until explicit source adoption", async () => {
+    const path = join(createTempDir(), "adopted");
+    writeRuntimeExtension(path, "adopted");
+    const catalog = createCatalog({ sources: () => [sourceRow({ id: "adopted", extensionId: "pstdio.hello", path })] });
+    const first = await catalog.get("p1");
+    writeRuntimeExtension(path, "candidate");
+    catalog.invalidate({ sourcePath: path, reason: "webviews_built" });
+    const assets = await catalog.get("p1");
+    expect(assets.runtime.commands[0]?.id).toBe("pstdio.hello.command.adopted");
+    expect(assets.runtime.commands[0]?.run).toBe(first.runtime.commands[0]?.run);
+    catalog.invalidate({ sourcePath: path, reason: "source_changed" });
+    expect((await catalog.get("p1")).runtime.commands[0]?.id).toBe("pstdio.hello.command.candidate");
+  });
+
   test("repeated project reads reuse one module import per source", async () => {
     const path = join(createTempDir(), "counter");
     writeRuntimeExtension(path, "count");

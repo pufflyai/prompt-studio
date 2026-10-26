@@ -1,4 +1,4 @@
-import { extensionLoadKey } from "pstdio-extensions";
+import { extensionLoadKeyForHost as extensionLoadKey } from "pstdio-extensions";
 import type { LoadedExtension, LoadedExtensionSnapshot } from "./extension-runtime";
 import type { createWebviewBuildBackoff } from "./extension-webview-build-backoff";
 import type { InstalledSourceWithManifest } from "./extension-webview-build-runner";
@@ -18,12 +18,12 @@ const loadWebviewSource = async (input: SourceLoadInput) => {
   let key: string | undefined;
   try {
     while (true) {
-      key = extensionLoadKey(row.source_path);
+      key = await extensionLoadKey(row.source_path);
       if (input.validatedSource?.loadKey === key) return input.validatedSource;
       if (backoff.isBlocked(row.id, key)) return null;
       const loaded = await loadSource(row.source_path);
       if (loaded.diagnostics.some((diagnostic) => diagnostic.severity === "error")) break;
-      if (key !== extensionLoadKey(row.source_path)) continue;
+      if (key !== (await extensionLoadKey(row.source_path))) continue;
       return { loaded, loadKey: key };
     }
   } catch (error) {
@@ -47,7 +47,8 @@ export const loadCurrentWebviewSource = async (
     if (!snapshot) return null;
     const current = (await input.listInstalledSources()).find((row) => row.id === input.installedExtensionId);
     if (!current) return null;
-    if (row.source_path !== current.source_path || snapshot.loadKey !== extensionLoadKey(current.source_path)) continue;
+    if (row.source_path !== current.source_path || snapshot.loadKey !== (await extensionLoadKey(current.source_path)))
+      continue;
     return { row: current, snapshot };
   }
 };

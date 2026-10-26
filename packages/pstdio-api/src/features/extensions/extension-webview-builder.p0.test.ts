@@ -4,9 +4,35 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { runInNewContext } from "node:vm";
+import { type CompilerObservation, subscribeExtensionCompilers } from "./extension-compiler-observations";
 import { buildExtensionWebview } from "./extension-webview-builder";
 
 describe("buildExtensionWebview", () => {
+  test("reports actual compiler lifecycle and measured child resource use", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-compiler-observations-"));
+    const events: CompilerObservation[] = [];
+    const unsubscribe = subscribeExtensionCompilers((event) => events.push(event));
+    writeFileSync(join(root, "main.ts"), "console.log('measured');");
+    try {
+      const result = await buildExtensionWebview({
+        entryPath: join(root, "main.ts"),
+        outdir: join(root, "out"),
+        signal: new AbortController().signal,
+      });
+      expect(result.success).toBe(true);
+      expect(events.map((event) => event.phase)).toEqual(["queued", "spawned", "exited"]);
+      expect(new Set(events.map((event) => event.id)).size).toBe(1);
+      const exited = events.find((event) => event.phase === "exited")!;
+      expect(exited.pid).toBeGreaterThan(0);
+      expect(exited.exitCode).toBe(0);
+      expect(exited.cpuMicros).toBeGreaterThan(0);
+      expect(exited.peakRssBytes).toBeGreaterThan(0);
+    } finally {
+      unsubscribe();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("keeps deferred view modules in loadable browser chunks", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-lazy-test-"));
     const entryPath = join(root, "main.ts");

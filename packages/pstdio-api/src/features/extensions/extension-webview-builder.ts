@@ -1,6 +1,7 @@
 import { availableParallelism } from "node:os";
 import { dirname } from "node:path";
 import { isPackagedRuntime } from "pstdio-paths";
+import { observeExtensionCompiler } from "./extension-compiler-observations";
 import { runCommand } from "./install-extension-dependencies";
 
 export const extensionWebviewBuildOptions = {
@@ -67,21 +68,38 @@ const releaseBuildSlot = () => {
 // build cannot see a replaced extension folder. Each build runs in a new Bun process (ADR 0070).
 export const buildExtensionWebview: ExtensionWebviewBuilder = async (input) => {
   if (input.signal.aborted) return { success: false, details: "Build aborted." };
-
+  const id = crypto.randomUUID();
+  observeExtensionCompiler({ id, phase: "queued", at: Date.now() });
   await acquireBuildSlot();
-  let result: Awaited<ReturnType<typeof runCommand>>;
+  let result: Awaited<ReturnType<typeof runCommand>> | undefined;
+  let child: Pick<Bun.Subprocess, "pid" | "resourceUsage"> | undefined;
   try {
     if (input.signal.aborted) return { success: false, details: "Build aborted." };
     result = await runCommand(process.execPath, buildArguments(input), {
       cwd: dirname(input.entryPath),
       env: { ...process.env, NO_COLOR: "1", ...(isPackagedRuntime() ? { BUN_BE_BUN: "1" } : {}) },
       signal: input.signal,
+      onSpawn: (spawned) => {
+        child = spawned;
+        observeExtensionCompiler({ id, phase: "spawned", at: Date.now(), pid: spawned.pid });
+      },
     });
   } finally {
+    const usage = child?.resourceUsage();
+    observeExtensionCompiler({
+      id,
+      phase: "exited",
+      at: Date.now(),
+      pid: child?.pid,
+      exitCode: result?.exitCode,
+      cancelled: input.signal.aborted,
+      cpuMicros: usage ? Number(usage.cpuTime.total) : undefined,
+      peakRssBytes: usage?.maxRSS,
+    });
     releaseBuildSlot();
   }
 
   if (input.signal.aborted) return { success: false, details: "Build aborted." };
-  if (result.exitCode === 0) return { success: true, details: "" };
-  return { success: false, details: result.stderr.trim() || result.stdout.trim() || "Webview build failed." };
+  if (result?.exitCode === 0) return { success: true, details: "" };
+  return { success: false, details: result?.stderr.trim() || result?.stdout.trim() || "Webview build failed." };
 };

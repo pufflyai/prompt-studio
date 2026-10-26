@@ -1,6 +1,6 @@
 import { existsSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { extensionLoadKey } from "pstdio-extensions";
+import { extensionLoadKeyForHost as extensionLoadKey } from "pstdio-extensions";
 import type { LoadedExtensionSnapshot } from "./extension-runtime";
 import { signatureFor } from "./extension-webview-build-backoff";
 import { prepareWebviewBuildCache, publishedWebviewModule } from "./extension-webview-build-cache";
@@ -9,7 +9,7 @@ import {
   runExtensionWebviewBuild,
   webviewBuildFailure,
 } from "./extension-webview-build-runner";
-import { inspectManagedWebviewBuildInputs, prepareManagedWebviewBuildSource } from "./extension-webview-build-source";
+import { inspectWebviewInputsForHost, prepareWebviewSourceForHost } from "./extension-webview-build-source";
 import type { ExtensionWebviewBuilder } from "./extension-webview-builder";
 import type { loadCurrentWebviewSource } from "./extension-webview-source-load";
 import {
@@ -20,13 +20,13 @@ import {
   resolvePackageAssetFile,
 } from "./extension-webviews";
 
-export const inspectWebviewBuild = (
+export const inspectWebviewBuild = async (
   row: InstalledSourceWithManifest,
   packageName: string,
   webview: CollectedExtensionWebview,
 ) => {
   const sourceEntryPath = resolvePackageAssetFile(webview.entry);
-  const buildInputs = inspectManagedWebviewBuildInputs({
+  const buildInputs = await inspectWebviewInputsForHost({
     entryPath: sourceEntryPath,
     installName: row.install_name,
     packageName,
@@ -60,8 +60,8 @@ export const findCurrentBuildSource = async (
       resolvePackageAssetFile(owned.entry) !== resolvePackageAssetFile(identity.webview.entry)
     )
       return null;
-    const inspected = inspectWebviewBuild(current.row, current.snapshot.loaded.metadata.name, owned);
-    if (current.snapshot.loadKey !== extensionLoadKey(current.row.source_path)) continue;
+    const inspected = await inspectWebviewBuild(current.row, current.snapshot.loaded.metadata.name, owned);
+    if (current.snapshot.loadKey !== (await extensionLoadKey(current.row.source_path))) continue;
     return inspected.signature === identity.signature ? current.row : null;
   }
 };
@@ -79,7 +79,7 @@ interface BuildContext {
   webviewCacheRoot: string;
 }
 
-interface BuildInput extends ReturnType<typeof inspectWebviewBuild>, ManagedWebviewBuildIdentity {
+interface BuildInput extends Awaited<ReturnType<typeof inspectWebviewBuild>>, ManagedWebviewBuildIdentity {
   signal: AbortSignal;
   isCurrent: () => boolean;
 }
@@ -99,14 +99,17 @@ export const createManagedWebviewBuilder = (context: BuildContext) => async (inp
   context.activeStages.add(stageDir);
   context.activeStages.add(sourceDir);
   try {
-    const source = prepareManagedWebviewBuildSource({
-      buildInputs,
-      entryPath: sourceEntryPath,
-      installName: row.install_name,
-      packageName,
-      packagePath: row.source_path,
-      shellDir: sourceDir,
-    });
+    const source = await prepareWebviewSourceForHost(
+      {
+        buildInputs,
+        entryPath: sourceEntryPath,
+        installName: row.install_name,
+        packageName,
+        packagePath: row.source_path,
+        shellDir: sourceDir,
+      },
+      input.signal,
+    );
     if (!source.success)
       return { status: "failure" as const, error: webviewBuildFailure(row.install_name, webview.id, source.details) };
     const outcome = await runExtensionWebviewBuild({

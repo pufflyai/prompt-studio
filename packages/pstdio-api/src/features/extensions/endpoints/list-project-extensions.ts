@@ -5,7 +5,7 @@ import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
 import { getExtensionCatalog } from "../extension-catalog";
-import { hashExtensionSource } from "../extension-runtime";
+import { hashExtensionSourceForHost as hashExtensionSource } from "../extension-runtime";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
 const errorSchema = z.object({ error: z.string() });
@@ -40,9 +40,14 @@ export const listProjectExtensionsHandler = (
       const installedRecords = records.filter(({ installedSource }) => existsSync(installedSource.source_path));
       const extensions = await Promise.all(
         installedRecords.map(async ({ instance, installedSource }) =>
-          toProjectExtensionInstance(instance, installedSource, hashExtensionSource(installedSource.source_path), {
-            canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
-          }),
+          toProjectExtensionInstance(
+            instance,
+            installedSource,
+            await hashExtensionSource(installedSource.source_path),
+            {
+              canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
+            },
+          ),
         ),
       );
       const installedNames = new Set(installedRecords.map(({ installedSource }) => installedSource.install_name));

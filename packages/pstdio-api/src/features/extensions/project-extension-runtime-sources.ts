@@ -1,7 +1,7 @@
 import { existsSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import {
-  extensionLoadKey,
+  extensionLoadKeyForHost as extensionLoadKey,
   type LoadedExtensionSource,
   loadExtensionSourcesForHost as loadExtensionSources,
   normalizeExtensionSources,
@@ -43,14 +43,15 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
   // them. An uninstalled source stops being enabled, so it is never retained.
   const lastHealthyByPath = new Map<string, CachedSource>();
 
-  const load = (installedSource: LoadableExtensionSource) => {
+  const load = async (installedSource: LoadableExtensionSource) => {
     const key = canonicalSourcePath(installedSource.source_path);
     const cached = sourcesByPath.get(key);
     if (cached && !uncheckedPaths.has(key)) return cached.loading;
     uncheckedPaths.delete(key);
     // Read before the import, so an edit made during the import changes the key next time.
-    const loadKey = extensionLoadKey(installedSource.source_path);
-    if (cached?.loadKey === loadKey) return cached.loading;
+    const loadKey = await extensionLoadKey(installedSource.source_path);
+    const current = sourcesByPath.get(key);
+    if (current?.loadKey === loadKey) return current.loading;
 
     const loading: Promise<CachedSource | null> = (input.loadSources ?? loadExtensionSources)({
       extensionPackages: [{ path: installedSource.source_path, sourceKind: installedSource.source_kind }],
