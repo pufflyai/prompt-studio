@@ -77,7 +77,8 @@ test("resizes, closes, and reopens the Secondary Panel within the interaction bu
   const reopen = await measure(page, {
     trigger: showPanelButton,
     interact: () => showPanelButton.click(),
-    settledSelector: separatorSelector,
+    // A collapsed panel keeps its separator in the DOM, so only the expanded separator ends the sample.
+    settledSelector: `${separatorSelector}[data-collapsed="false"]`,
     ready: () => expect(separator).toBeVisible(),
   });
 

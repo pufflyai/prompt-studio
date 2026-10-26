@@ -68,6 +68,7 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
             }
           : undefined
       }
+      onStop={() => autoBuild.transition("stop")}
       t={t}
     />
   );

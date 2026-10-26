@@ -1,4 +1,5 @@
 import type { Locator, Page, Request } from "@playwright/test";
+import { measureSubnavRequests, type SubnavRequestClockInput } from "./subnav-resource-clock";
 
 export interface SubnavSample {
   destination: "sessions" | "ticket";
@@ -211,9 +212,15 @@ export const measureSubnav = async (
   // Waiting for quiescence verifies completion, but the quiet interval is excluded from the sample.
   await page.waitForFunction(() => performance.now() - window.__subnavBenchmark.lastMutation >= 200);
   await recorder.settled(since);
-  const state = await page.evaluate(() => window.__subnavBenchmark);
-  const requestRows = [];
-  const origin = await page.evaluate(() => performance.timeOrigin);
+  const { state, resources } = await page.evaluate(() => ({
+    state: window.__subnavBenchmark,
+    resources: (performance.getEntriesByType("resource") as PerformanceResourceTiming[]).map((entry) => ({
+      name: entry.name,
+      responseEnd: entry.responseEnd,
+    })),
+  }));
+  const responses = [];
+  const clocks: SubnavRequestClockInput[] = [];
   for (const [request, entry] of recorder.entries(since)) {
     const timing = request.timing();
     const response = await request.response();
@@ -222,19 +229,17 @@ export const measureSubnav = async (
     const sessions = Array.isArray(sections)
       ? sections.find((section: { id?: string }) => section.id === "sessions")
       : undefined;
-    requestRows.push({
+    clocks.push({ url: request.url(), timing, elapsedMs: (entry.finished ?? performance.now()) - entry.started });
+    responses.push({
       path: new URL(request.url()).pathname,
       status: response?.status(),
       outcomeOk: result?.outcome?.ok,
       ...(sessions ? { sessionRows: sessions.nodes.length } : {}),
-      durationMs: timing.responseEnd >= 0 ? timing.responseEnd : (entry.finished ?? performance.now()) - entry.started,
-      completedMs:
-        timing.responseEnd >= 0
-          ? timing.startTime + timing.responseEnd - origin - state.started
-          : performance.timeOrigin + (entry.finished ?? performance.now()) - origin - state.started,
       ...(entry.failure ? { failure: entry.failure } : {}),
     });
   }
+  const measured = measureSubnavRequests(clocks, resources, state.started);
+  const requestRows = responses.map((response, index) => ({ ...response, ...measured[index]! }));
   const structureMs = state.structure - state.started;
   const lastRequestMs = Math.max(0, ...requestRows.map((row) => row.completedMs));
   const dataMs = Math.max(structureMs, state.stableFrame - state.started, lastRequestMs);

@@ -26,9 +26,9 @@ declare global {
 }
 
 const STORY_IDS = {
-  largeConversation: "chat-ui-chat-panel-performance--large-conversation",
-  sessionSwitching: "chat-ui-chat-panel-performance--session-switching",
-  streamingScenario: "chat-ui-chat-panel-performance--streaming-scenario",
+  largeConversation: "patterns-chat-chat-panel-performance--large-conversation",
+  sessionSwitching: "patterns-chat-chat-panel-performance--session-switching",
+  streamingScenario: "patterns-chat-chat-panel-performance--streaming-scenario",
 } as const;
 
 const BUDGETS = {
