@@ -97,11 +97,14 @@ const rebaseCopiedLink = async (
 // Junctions store absolute destinations on Windows. Update links into the moved
 // install while retaining links to dependencies owned by a sibling checkout.
 export const prepareNodeModulesRelocation = async (sourcePath: string, targetPath: string) => {
+  const started = Date.now();
+  let directories = 0;
   const nodeModules = join(sourcePath, "node_modules");
   const canonicalSource = realpathSync.native(sourcePath);
   const canonicalTarget = join(realpathSync.native(dirname(targetPath)), basename(targetPath));
   const links: { path: string; destination: string; directory: boolean }[] = [];
   const collect = async (directory: string) => {
+    directories++;
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name);
       if (entry.isDirectory()) await collect(path);
@@ -117,11 +120,14 @@ export const prepareNodeModulesRelocation = async (sourcePath: string, targetPat
     }
   };
   if (existsSync(nodeModules)) await collect(nodeModules);
+  console.log("Native relocation scan", Date.now() - started, directories, links.length, sourcePath);
   return () => {
+    const started = Date.now();
     for (const { path, destination, directory } of links) {
       unlinkSync(path);
       symlinkSync(destination, path, directory ? "junction" : "file");
     }
+    console.log("Native relocation apply", Date.now() - started, links.length, targetPath);
   };
 };
 

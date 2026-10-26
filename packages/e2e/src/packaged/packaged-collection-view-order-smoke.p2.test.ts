@@ -10,7 +10,6 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
-import { traceBrowserArchitecture } from "./trace-browser-architecture";
 
 const verifyOrder = async (page: Page, projectId: string, boardId: string) => {
   const phase = (name: string) => console.log(`Packaged view order: ${boardId}: ${name} (${Date.now()})`);
@@ -88,9 +87,8 @@ test("packaged Kanban and data table view tabs save pointer and keyboard order",
       phase("project created");
       return id;
     })();
-    const openingPage = chromium.launch(PROVISIONED_CHROMIUM).then(async (opened) => {
+    const openingPage = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
       browser = opened;
-      await traceBrowserArchitecture(opened);
       return opened.newPage({ extraHTTPHeaders: runtimeAuthorization(runtime.descriptor) });
     });
     const [projectSetup, browserSetup] = await Promise.allSettled([creatingProject, openingPage]);

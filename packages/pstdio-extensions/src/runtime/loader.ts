@@ -192,13 +192,16 @@ const createRuntimePackage = (packagePath: string, entryPath: string, packageNam
 };
 
 const importFresh = async (filePath: string, packagePath: string, packageName: string) => {
+  const started = Date.now();
   const runtimePackage = createRuntimePackage(packagePath, filePath, packageName);
+  console.log("Native snapshot", Date.now() - started, packagePath);
   // Extension dependencies use their published exports, independently of the host's development conditions.
   const entryPath = await bundleEntry(
     runtimePackage.entryPath,
     runtimePackage.packagePath,
     dirname(runtimePackage.entryPath),
   );
+  console.log("Native backend bundle", Date.now() - started, packagePath);
   const mod = await importWithCacheKey(entryPath);
   return remapPackageAssets(mod, runtimePackage.packagePath, packagePath);
 };
