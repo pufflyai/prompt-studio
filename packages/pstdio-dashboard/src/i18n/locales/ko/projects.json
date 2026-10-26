@@ -176,6 +176,7 @@
     "cancel": "취소",
     "close": "닫기",
     "managed": "런타임에서 자격 증명을 관리합니다",
+    "unavailable": "이 하네스에서는 계정을 설정할 수 없습니다.",
     "requiredDescription": "메시지를 보내려면 로그인하세요. 채팅에서 /login을 사용할 수도 있습니다.",
     "noHarnessTitle": "사용 가능한 에이전트가 없습니다",
     "noHarnessDescription": "확장 프로그램에서 에이전트를 활성화하여 채팅을 시작하세요.",

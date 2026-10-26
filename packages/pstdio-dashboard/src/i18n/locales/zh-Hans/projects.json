@@ -176,6 +176,7 @@
     "cancel": "取消",
     "close": "关闭",
     "managed": "凭据由运行环境管理",
+    "unavailable": "此工具暂时无法设置账户。",
     "requiredDescription": "登录后即可发送消息。您也可以在聊天中使用 /login。",
     "noHarnessTitle": "没有可用的代理",
     "noHarnessDescription": "在扩展中启用代理以开始聊天。",
