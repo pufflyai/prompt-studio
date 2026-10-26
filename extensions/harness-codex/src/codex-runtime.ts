@@ -6,10 +6,11 @@ import type { Turn } from "./protocol/v2/Turn";
 import type { ResumeSpawnInput, StartSpawnInput } from "./session-input";
 
 export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpawnProcess }) => {
+  let authenticationGeneration = 0;
   const servers = new Map<string, ReturnType<typeof createAppServerTransport>>();
   const workers = new Map<
     string,
-    { projectId?: string; sessionId?: string; worker: ReturnType<typeof createCodexWorker> }
+    { projectId?: string; sessionId?: string; stale?: boolean; worker: ReturnType<typeof createCodexWorker> }
   >();
   const readers = new Map<AbortController, { projectId?: string; done: Promise<void> }>();
   const disposeReaders = async (projectId?: string, all = false) => {
@@ -23,7 +24,7 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
       Object.entries(serverEnvironment(env)).sort(([a], [b]) => a.localeCompare(b)),
     ]);
   const server = (env?: Record<string, string>) => {
-    const key = serverKey(env);
+    const key = JSON.stringify([serverKey(env), authenticationGeneration]);
     let transport = servers.get(key);
     if (!transport || transport.isClosed()) {
       transport = createAppServerTransport(serverEnvironment(env), deps);
@@ -49,8 +50,18 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
     }
     return owned;
   };
+  const releaseStale = async (key: string, value: NonNullable<ReturnType<typeof workers.get>>) => {
+    if (value.stale && (await value.worker.releaseIdle()) && workers.get(key) === value) workers.delete(key);
+  };
   return {
     worker,
+    refreshAuthentication: async () => {
+      authenticationGeneration++;
+      const owned = [...workers.entries()];
+      for (const [, value] of owned) value.stale = true;
+      await Promise.all(owned.map(([key, value]) => releaseStale(key, value)));
+      for (const [key, transport] of servers) if (transport.isClosed()) servers.delete(key);
+    },
     releaseSession: async (projectId: string | undefined, sessionId: string) => {
       const selected = [...workers].filter(
         ([, value]) => value.projectId === projectId && value.sessionId === sessionId,
@@ -98,7 +109,15 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
     run: (
       input: StartSpawnInput & Partial<ResumeSpawnInput>,
       command?: { method: string; params: Record<string, unknown>; goal?: boolean },
-    ) => worker(input).run(input, command),
+    ) => {
+      const key = keyOf(input);
+      const current = workers.get(key);
+      // Existing turns keep their transport. The next idle invocation loads the new account.
+      return (async () => {
+        if (current) await releaseStale(key, current);
+        return worker(input).run(input, command);
+      })();
+    },
     dispose: async () => {
       // Shutdown ends the entire provider generation, including any unanswered native requests.
       const owned = [...workers.values()];

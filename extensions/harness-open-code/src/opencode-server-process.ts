@@ -6,15 +6,21 @@ export type OpencodeServer = { url: string; dispose: () => Promise<void> };
 export type OpencodeServerOptions = { host: string; port: number; signal: AbortSignal };
 export type OpencodeServerStarter = (options: OpencodeServerOptions) => Promise<OpencodeServer>;
 
+export const opencodeServerCommand = (file: string, platform: NodeJS.Platform = process.platform) => {
+  const shell = platform === "win32" && /\.(cmd|bat)$/i.test(file);
+  return { file: shell ? `"${file}"` : file, shell };
+};
+
 export const startOpencodeServer = async (options: OpencodeServerOptions, command = [resolveOpencodeCommand()]) => {
   const { host, port, signal } = options;
   signal.throwIfAborted();
   const [file, ...args] = command;
-  const child = spawn(file!, [...args, "serve", "--hostname", host, "--port", String(port)], {
+  const launcher = opencodeServerCommand(file!);
+  const child = spawn(launcher.file, [...args, "serve", "--hostname", host, "--port", String(port)], {
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
     signal,
-    shell: process.platform === "win32" && /\.(cmd|bat)$/i.test(file!),
+    shell: launcher.shell,
   });
   const exited = new Promise<void>((resolve) => child.once("close", () => resolve()));
   let closing: Promise<void> | undefined;

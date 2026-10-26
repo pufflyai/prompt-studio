@@ -3,11 +3,15 @@ import { resolveCodexCommand } from "./codex-process";
 
 describe("resolveCodexCommand", () => {
   test("prefers a CLI on PATH over the private installation", () => {
-    expect(resolveCodexCommand({ which: () => "/tools/codex", managed: () => "/private/codex" })).toBe("/tools/codex");
+    expect(
+      resolveCodexCommand({ platform: "linux", which: () => "/tools/codex", managed: () => "/private/codex" }),
+    ).toBe("/tools/codex");
   });
 
   test("uses the private installation when Codex is missing from PATH", () => {
-    expect(resolveCodexCommand({ which: () => null, managed: () => "/private/codex" })).toBe("/private/codex");
+    expect(resolveCodexCommand({ platform: "linux", which: () => null, managed: () => "/private/codex" })).toBe(
+      "/private/codex",
+    );
   });
 
   test("keeps the command name when neither installation is available", () => {
@@ -34,9 +38,17 @@ describe("resolveCodexCommand", () => {
     const command = resolveCodexCommand({
       platform: "win32",
       which: () => "C:\\Users\\me\\AppData\\Roaming\\npm\\codex.ps1",
+      managed: () => null,
       exists: (candidate) => candidate === cmd,
     });
 
     expect(command).toBe(cmd);
   });
+});
+
+test("prefers a native Windows PATH executable over the private installation", () => {
+  const command = "C:\\User Tools\\codex.exe";
+  expect(
+    resolveCodexCommand({ platform: "win32", which: () => command, managed: () => "C:\\private\\codex.exe" }),
+  ).toBe(command);
 });

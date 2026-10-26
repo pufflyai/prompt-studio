@@ -30,7 +30,7 @@ const installFixtures = async (prefix: string, state: "healthy" | "broken" | "ha
       source =
         state === "broken"
           ? `require('node:fs').writeFileSync(${JSON.stringify(join(prefix, "opencode.pid"))}, String(process.pid)); setInterval(() => {}, 1000);`
-          : `console.log(process.argv[2] === '--version' ? ${JSON.stringify(harness.version)} : 'opencode/test-model');`;
+          : `console.log(process.argv.includes('--version') ? ${JSON.stringify(harness.version)} : 'opencode/test-model');`;
     if (state === "broken" && (harness.command === "codex" || harness.command === "pi"))
       source = "console.error('broken install'); process.exit(7);";
     if (state === "hanging")
