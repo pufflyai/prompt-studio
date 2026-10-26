@@ -15,9 +15,9 @@ import { DropIndicator } from "@pstdio/ui";
 import { useState } from "react";
 import type { WorkbenchCore, WorkbenchStatusBarSlot, WorkbenchWidgetPlacement } from "../../core";
 import { useRetainedViewPlacements } from "../region/use-retained-view-placements";
-import { WorkbenchWidgetHost } from "../region/widget-host";
 import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { StatusItemContent } from "./status-item-content";
 
 interface StatusDrop {
   id: string;
@@ -84,7 +84,7 @@ const WorkbenchStatusBarItem = (props: WorkbenchStatusBarItemProps) => {
         }
       }}
     >
-      <WorkbenchWidgetHost workbench={workbench} region="status" placement={placement} />
+      <StatusItemContent workbench={workbench} placement={placement} visible={order >= 0} />
       {/* A drag must keep its pointer events in the host, even over an extension iframe. */}
       {activeId ? <Box position="absolute" inset="0" /> : null}
       {drop?.id === id ? (

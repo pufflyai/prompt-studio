@@ -7,9 +7,11 @@ import {
   defineNavigationTree,
   definePage,
   definePlacement,
+  defineStatusBarItem,
   defineView,
   packageAsset,
   workbenchModes,
+  workbenchSlots,
 } from "@pstdio/sdk/extensions";
 import { collectConventionDiagnostics } from "./conventions";
 import type { LoadedExtensionSource } from "./loader";
@@ -30,6 +32,27 @@ const wrap = (name: string, definition: LoadedExtensionSource["definition"]): Lo
   definition,
 });
 describe("extension convention diagnostics", () => {
+  test("reports a missing status detail view", () => {
+    const view = defineView({
+      id: "status",
+      title: "Status",
+      body: { kind: "webview", entry: packageAsset("./status.tsx", "file:///fake/lab/") },
+    });
+    const item = defineStatusBarItem({
+      id: "status",
+      view: view.ref,
+      popover: { kind: "view", id: "missing" },
+      slot: workbenchSlots.statusBarTrailing,
+    });
+    const runtime = normalizeExtensionSources([
+      wrap("lab", defineExtension({ views: [view], statusBarItems: [item] })),
+    ]);
+    const diagnostics = collectConventionDiagnostics(runtime).filter(
+      (item) => item.code === "extension_view_reference_missing",
+    );
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]?.metadata).toMatchObject({ failedReference: "pstdio.lab.view.missing" });
+  });
   test("flags unknown icon names", () => {
     const runtime = normalizeExtensionSources([
       wrap(
