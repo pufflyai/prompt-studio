@@ -76,7 +76,12 @@ test("full releases require Intel functional and performance proof while nightly
   expect(stable).toContain("signed-functional-darwin-x64");
   expect(stable).toContain("performance-desktop-darwin-x64");
   expect(nightly).not.toContain("signed-functional-darwin-x64");
-  expect(nightly).not.toContain("performance-desktop-darwin-x64");
   expect(nightly).toContain("signed-functional-win32-x64");
-  expect(nightly).toContain("performance-desktop-win32-x64");
+});
+
+test("only stable releases require P3 performance proof", () => {
+  const performance = (checks: string[]) => checks.filter((check) => check.startsWith("performance-"));
+  expect(performance(requiredProductionChecks("stable"))).toContain("performance-navigation-ubuntu-24.04");
+  expect(performance(requiredProductionChecks("stable"))).toContain("performance-desktop-win32-x64");
+  expect(performance(requiredProductionChecks("nightly"))).toEqual([]);
 });

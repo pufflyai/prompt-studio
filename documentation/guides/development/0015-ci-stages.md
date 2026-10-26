@@ -4,7 +4,7 @@ This guide explains how a change moves from a pull request to a stable release, 
 
 ```text
 pull request ──► merge queue ──► main ──► nightly (daily) ──► stable release (manual)
-   P0 (fast)      P0 + P1        smoke     P0–P3, all hosts     P0–P3, signed apps
+   P0 (fast)      P0 + P1        smoke     P0–P2, all hosts     P0–P3, signed apps
 ```
 
 Each stage checks more than the one before it. A later stage never trusts a result from a different commit: the queue tests the exact merged commit, and a release tests the exact files it will publish.
@@ -18,7 +18,7 @@ Every test file names its priority before the runner suffix, for example `sessio
 | P0 | Fast rules: types, validation, permissions, state changes, focused extension logic, repository and CI rules | Pull request, queue, nightly, stable | `session-state.p0.test.ts` |
 | P1 | Essential product behavior: session, workspace and extension lifecycles, data safety, restart and upgrade, sync, a working app, native and compiled startup | Queue, nightly, stable | `session-isolation.p1.test.ts`, `startup.p1.spec.ts` |
 | P2 | Breadth: extension feature workflows, component variants, more browsers and platforms, full install and update matrices | Nightly, stable | `planner-board.p2.spec.ts` |
-| P3 | Performance: startup, responsiveness, throughput, resource use, scale and endurance | Nightly, stable | `startup.p3.bench.ts`, `chat-rendering.p3.perf.ts` |
+| P3 | Performance: startup, responsiveness, throughput, resource use, scale and endurance | Stable (see [P3 in the nightly](#p3-in-the-nightly)) | `startup.p3.bench.ts`, `chat-rendering.p3.perf.ts` |
 
 Rules:
 
@@ -51,7 +51,7 @@ A local run only proves your own machine. It does not prove other platforms or s
 | Pull request | Push to a PR branch | Test and Build (`pull_request`) | P0, lint, types and public contracts for the changed workspaces and the workspaces that depend on them | The fast checks passed for this PR | under 3 min |
 | Merge queue | Add to queue | Test and Build (`merge_group`) | All P0 and P1, plus Linux and Apple Silicon desktop builds and startup | The exact merged commit is safe to land | under 8 min |
 | Main | Queue merges a commit | Test and Build (`push`) | Checks that main matches the tested queue commit, publishes the build cache, runs a startup smoke test | Main is the commit the queue tested, and it still starts | a few min |
-| Nightly | 03:00 UTC daily, or manual `nightly` | Release Packages → Production validation | P0–P2 on all hosts including Windows, P3 performance, coverage, signed apps for Linux and Apple Silicon | Nightly published; full results recorded for that commit | under 40 min of work |
+| Nightly | 03:00 UTC daily, or manual `nightly` | Release Packages → Production validation | P0–P2 on all hosts including Windows, coverage, signed apps for Linux and Apple Silicon | Nightly published; full results recorded for that commit | under 40 min of work |
 | Stable release | Manual `stable` | Release Packages → Production validation | Everything nightly runs, plus signed desktop apps for Linux, macOS (Intel and Apple Silicon) and Windows, and the Windows update check | A complete certificate for the exact release files allows publishing | under 40 min of work |
 
 Target times count real work: install, build, artifact transfer, tests, reports and cleanup. Time spent waiting in the queue or for a runner is reported separately. A target is never a reason to remove tests or to raise a time limit. See [CI timeouts and performance budgets](../../../AGENTS.md#ci-timeouts-and-performance-budgets).
@@ -128,11 +128,14 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
 - **Production validation** runs on the same files:
   - P0, P1 and P2 on Linux, macOS and Windows, with up to six P2 app shards
   - P1 and P2 against the signed desktop apps
-  - P3 performance measurements
   - container service checks
   - the packaged CLI on the other five native hosts
   - Windows source diagnostics
 - Source line coverage comes from the nightly's P0–P2 Bun jobs. The Coverage workflow publishes only a successful full nightly's measurement. Quarantined tests and P3 are not counted.
+
+### P3 in the nightly
+
+The P3 budgets were set on a fast developer machine. The hosted ubuntu-24.04 runner is 2–3.3 times slower in every phase, so the first full nightly failed P3 without a product regression. Until the budgets are qualified on CI runners, the `performance` job runs only for stable candidates, and nightly certification does not require P3 evidence. Do not raise a budget to make it pass: AGENTS.md requires approval of each exact value.
 
 Fix nightly failures before you start a stable release. The stable release runs the same checks, so the same failure blocks it.
 
@@ -142,7 +145,7 @@ Start **Release Packages** manually with the `stable` channel.
 
 1. `plan` picks the version and places the release tag.
 2. The release files are built once: npm packages, containers, and signed desktop apps for Linux x64, macOS x64, macOS arm64 and Windows x64. The Windows installer also gets an update check.
-3. **Production validation** runs everything the nightly runs, against those exact files, on all six native CLI hosts.
+3. **Production validation** runs everything the nightly runs, plus P3 performance, against those exact files, on all six native CLI hosts.
 4. `certify` writes a certificate. It ties the results to the source commit, version commit, toolchain, producing run and attempt, and the artifact IDs and digests.
 5. `publish` runs only if every job passed. It checks the certificate again before it downloads the files. Missing, expired, changed or partial results block publishing.
 

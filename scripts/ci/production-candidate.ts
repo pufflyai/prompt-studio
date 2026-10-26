@@ -74,10 +74,12 @@ export const certifyProduction = (
 
 export const requiredProductionChecks = (channel: string) => {
   const targets = productionDesktopPlatforms(channel).map((row) => row.target);
+  const functional = ["functional", "services", ...targets.map((target) => `signed-functional-${target}`)];
+  // P3 budgets gate stable releases only until they are qualified on CI runners.
+  if (channel !== "stable") return functional;
   return [
-    "functional",
-    "services",
-    ...targets.flatMap((target) => [`signed-functional-${target}`, `performance-desktop-${target}`]),
+    ...functional,
+    ...targets.map((target) => `performance-desktop-${target}`),
     "performance-backend-ubuntu-24.04",
     "performance-backend-macos-15",
     "performance-backend-windows-2025",
@@ -91,12 +93,15 @@ export const requiredProductionChecks = (channel: string) => {
 if (import.meta.main) {
   const candidate: ProductionCandidate = JSON.parse(readFileSync(process.argv[2]!, "utf8"));
   const results: Record<string, { result: string }> = JSON.parse(process.env.PRODUCTION_RESULTS ?? "{}");
-  const required = requiredProductionChecks(process.env.CHANNEL ?? "stable");
+  const channel = process.env.CHANNEL ?? "stable";
+  const required = requiredProductionChecks(channel);
   const evidence: ProductionEvidence[] = [];
   for await (const path of new Bun.Glob("production-evidence/**/*.json").scan("."))
     evidence.push(JSON.parse(readFileSync(path, "utf8")));
   const errors = certifyProduction(candidate, required, evidence);
-  for (const check of ["candidate", "functional", "signed_functional", "performance", "services"])
+  const jobs = ["candidate", "functional", "signed_functional", "services"];
+  if (channel === "stable") jobs.push("performance");
+  for (const check of jobs)
     if (results[check]?.result !== "success") errors.push(`${check}: ${results[check]?.result ?? "missing"}`);
   const releaseEligible =
     errors.length === 0 &&

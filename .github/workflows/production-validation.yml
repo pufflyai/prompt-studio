@@ -124,8 +124,10 @@ jobs:
       artifact_attempt: ${{ inputs.artifact_attempt }}
       kind: functional
       platforms: ${{ needs.candidate.outputs.desktop_matrix }}
+  # P3 budgets gate stable releases only until they are qualified on CI runners (see CI stages guide).
   performance:
     needs: candidate
+    if: inputs.channel == 'stable'
     uses: ./.github/workflows/production-performance.yml
     with:
       ref: ${{ inputs.ref }}

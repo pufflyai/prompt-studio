@@ -68,3 +68,7 @@ The required context remains `ci_passed`, so this change needs no replacement ch
 If qualification fails, revert the workflow/selection change to the last qualified gate while retaining the same required context and ALLGREEN queue. Remove stale queued candidates and test fresh candidates under the restored plan. Do not disable the gate, accept an incomplete certificate, or publish stable artifacts to make rollback appear successful.
 
 The operational commands and qualification checklist live in [CI stages](../guides/development/0015-ci-stages.md).
+
+## Update 2026-10-26: P3 gates stable releases only
+
+The first full nightly (Release Packages run 40262250183) failed P3 on the hosted ubuntu-24.04 runner, which is 2–3.3 times slower than the machine the budgets were set on. Local comparison showed no product regression. Until the budgets are qualified on CI runners, production validation runs the `performance` job only for stable candidates, and nightly certification no longer requires performance evidence. Stable publication still requires complete P3 evidence. Budgets stay unchanged.
