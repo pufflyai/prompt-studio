@@ -162,6 +162,8 @@ test("Marmalade pointer tools use document coordinates and layer controls do not
     const title = inspector.getByRole("option", { name: "Title", exact: true });
     const target = inspector.getByRole("option", { name: "Great Wave", exact: true });
     await title.click();
+    // The selected layer's properties push the layer list below the fold; scroll it like a user would.
+    await target.scrollIntoViewIfNeeded();
     const sourceBounds = await title.boundingBox();
     const targetBounds = await target.boundingBox();
     await page.mouse.move(sourceBounds!.x + 85, sourceBounds!.y + sourceBounds!.height / 2);

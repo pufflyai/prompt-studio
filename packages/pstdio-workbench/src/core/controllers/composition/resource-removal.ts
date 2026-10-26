@@ -58,6 +58,7 @@ export const removeWorkbenchResource = (
 ) =>
   batchWorkbenchChanges(() => {
     removeActiveWorkbenchResource(core, resource, retained);
-    core.pageLocations.removeResource(resource, retained);
+    // Leaving a removed resource's page restores the parent's saved tray, so purge saved trays first.
     removeCached(resource);
+    core.pageLocations.removeResource(resource, retained);
   });
