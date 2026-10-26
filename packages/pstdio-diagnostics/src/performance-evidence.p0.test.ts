@@ -44,7 +44,7 @@ const capture = (): PerformanceCapture => ({
 });
 
 test("reports response distribution, CPU time and observed peak and settled memory", () => {
-  const summary = summarizePerformanceEvidence(capture());
+  const summary = summarizePerformanceEvidence(capture(), ["backend"], Date.parse(capture().startedAt) + 4000);
   expect(summary.failures).toEqual([]);
   expect(summary.response).toMatchObject({ replies: 4, missedReplies: 0, p50Ms: 20, p95Ms: 40, maximumMs: 40 });
   expect(summary.processes[0]).toMatchObject({
@@ -56,6 +56,15 @@ test("reports response distribution, CPU time and observed peak and settled memo
     peakPhysicalFootprintBytes: null,
     settledHeapUsedBytes: null,
   });
+});
+
+test("requires a post-operation observation before reporting settled memory", () => {
+  const input = capture();
+  const latest = summarizePerformanceEvidence(input);
+  expect(latest.processes[0]).toMatchObject({ lastObservedResidentBytes: 150, settledResidentBytes: null });
+  const tooEarly = summarizePerformanceEvidence(input, ["backend"], Date.parse(input.startedAt) + 5000);
+  expect(tooEarly.processes[0]!.settledResidentBytes).toBeNull();
+  expect(tooEarly.failures).toContain("backend settling memory was not measured");
 });
 
 test("keeps timed-out replies out of percentiles and counts unavailable replies", () => {

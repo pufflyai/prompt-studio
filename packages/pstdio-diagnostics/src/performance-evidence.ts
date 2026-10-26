@@ -20,11 +20,15 @@ const memoryPeak = (observed: (number | null)[], lifetime: (number | null)[], bo
   };
 };
 
-const processSummary = (readings: Reading[], captureStartedAt: string) => {
+const processSummary = (readings: Reading[], capture: PerformanceCapture, operationEndedAt?: number) => {
   const first = readings[0]!;
   const last = readings.at(-1)!;
   const cpu = readings.map(({ value }) => value.cpuTimeMs);
   const startedAt = Date.parse(first.value.startedAt ?? "");
+  const captureStartedAt = capture.startedAt;
+  const settled =
+    operationEndedAt !== undefined &&
+    Date.parse(captureStartedAt) + last.elapsedMs >= operationEndedAt + capture.sampleIntervalMs;
   const bornDuringCapture =
     startedAt >= Date.parse(captureStartedAt) && startedAt <= Date.parse(captureStartedAt) + first.elapsedMs;
   const hasCpu =
@@ -54,18 +58,22 @@ const processSummary = (readings: Reading[], captureStartedAt: string) => {
     startedAt: first.value.startedAt ?? null,
     peakResidentBytes: residentPeak.value,
     residentPeakCoverage: residentPeak.coverage,
-    settledResidentBytes: last.value.residentBytes,
+    lastObservedResidentBytes: last.value.residentBytes,
+    settledResidentBytes: settled ? last.value.residentBytes : null,
     peakPhysicalFootprintBytes: footprintPeak.value,
     footprintPeakCoverage: footprintPeak.coverage,
-    settledPhysicalFootprintBytes: last.value.physicalFootprintBytes,
+    lastObservedPhysicalFootprintBytes: last.value.physicalFootprintBytes,
+    settledPhysicalFootprintBytes: settled ? last.value.physicalFootprintBytes : null,
     peakHeapUsedBytes: maximum(readings.map(({ value }) => value.heapUsedBytes)),
-    settledHeapUsedBytes: last.value.heapUsedBytes,
+    lastObservedHeapUsedBytes: last.value.heapUsedBytes,
+    settledHeapUsedBytes: settled ? last.value.heapUsedBytes : null,
     peakPrivateCommittedBytes: maximum(readings.map(({ value }) => value.privateCommittedBytes)),
-    settledPrivateCommittedBytes: last.value.privateCommittedBytes,
+    lastObservedPrivateCommittedBytes: last.value.privateCommittedBytes,
+    settledPrivateCommittedBytes: settled ? last.value.privateCommittedBytes : null,
   };
 };
 
-const processEvidence = (capture: PerformanceCapture, requiredRoles: Role[]) => {
+const processEvidence = (capture: PerformanceCapture, requiredRoles: Role[], operationEndedAt?: number) => {
   const readings = new Map<string, Reading[]>();
   for (const sample of capture.samples) {
     for (const value of sample.processes) {
@@ -75,7 +83,7 @@ const processEvidence = (capture: PerformanceCapture, requiredRoles: Role[]) => 
       readings.set(key, entries);
     }
   }
-  const processes = [...readings.values()].map((entries) => processSummary(entries, capture.startedAt));
+  const processes = [...readings.values()].map((entries) => processSummary(entries, capture, operationEndedAt));
   const failures: string[] = [];
   for (const role of requiredRoles) {
     const matches = processes.filter((process) => process.role === role);
@@ -84,6 +92,8 @@ const processEvidence = (capture: PerformanceCapture, requiredRoles: Role[]) => 
       continue;
     }
     if (matches.some((process) => process.cpuTimeMs === null)) failures.push(`${role} CPU time was not measured`);
+    if (operationEndedAt !== undefined && matches.at(-1)!.settledResidentBytes === null)
+      failures.push(`${role} settling memory was not measured`);
     const first = capture.samples.findIndex((sample) => roleExists(sample, role));
     const observed = capture.samples.slice(first);
     if (observed.some((sample) => !sample.processes.some((process) => process.role === role)))
@@ -99,9 +109,13 @@ const processEvidence = (capture: PerformanceCapture, requiredRoles: Role[]) => 
 };
 
 /** Summarize the host's evidence without replacing missing data or joining process lifetimes. */
-export const summarizePerformanceEvidence = (capture: PerformanceCapture, requiredRoles: Role[] = ["backend"]) => {
+export const summarizePerformanceEvidence = (
+  capture: PerformanceCapture,
+  requiredRoles: Role[] = ["backend"],
+  operationEndedAt?: number,
+) => {
   const failures: string[] = [];
-  const { processes, failures: processFailures } = processEvidence(capture, requiredRoles);
+  const { processes, failures: processFailures } = processEvidence(capture, requiredRoles, operationEndedAt);
   const durations: number[] = [];
   let timeouts = 0;
   let unavailable = 0;
@@ -133,6 +147,13 @@ export const summarizePerformanceEvidence = (capture: PerformanceCapture, requir
     hostVersion: capture.hostVersion,
     platform: capture.platform,
     sampleIntervalMs: capture.sampleIntervalMs,
+    settling:
+      operationEndedAt === undefined
+        ? null
+        : {
+            operationEndedAt: new Date(operationEndedAt).toISOString(),
+            minimumIdleMs: capture.sampleIntervalMs,
+          },
     firstElapsedMs: capture.samples[0]?.elapsedMs ?? null,
     lastElapsedMs: capture.samples.at(-1)?.elapsedMs ?? null,
     response: {

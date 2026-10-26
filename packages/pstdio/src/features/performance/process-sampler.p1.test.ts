@@ -17,7 +17,8 @@ test("samples a separate busy process without asking its event loop", async () =
     expect(second?.processStartId).toBe(first?.processStartId);
     expect(second!.cpuTimeMs).toBeGreaterThan(first!.cpuTimeMs);
     expect(second!.residentBytes).toBeGreaterThan(0);
-    expect(Date.parse(second!.startedAt!)).toBeGreaterThanOrEqual(launchedAt - 1000);
+    // Linux creation times are quantized to kernel clock ticks, not whole boot seconds.
+    expect(Date.parse(second!.startedAt!)).toBeGreaterThanOrEqual(launchedAt - 20);
     expect(Date.parse(second!.startedAt!)).toBeLessThanOrEqual(Date.now());
     if (process.platform === "darwin") {
       expect(second!.physicalFootprintBytes).toBeGreaterThan(0);

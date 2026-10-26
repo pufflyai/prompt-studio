@@ -7,7 +7,12 @@ import { owners, seedOwner, type Workload, workload } from "storage-scale-fixtur
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
 import { preparePlannerSource } from "../packaged/packaged-planner-source";
-import { runtimeAuthorization, startPackagedServe, stopProcess } from "../packaged/packaged-serve-helpers";
+import {
+  type PackagedRuntimeObservation,
+  runtimeAuthorization,
+  startPackagedServe,
+  stopProcess,
+} from "../packaged/packaged-serve-helpers";
 import { configuredContainer, startContainerRuntime } from "./storage-scale-container";
 
 export interface ScaleFixture {
@@ -57,9 +62,18 @@ const connectScaleRuntime = (runtime: ScaleBackend, startupMs: number) => {
   return { ...runtime, client, startupMs, request, execute };
 };
 
-export const startNativeScaleRuntime = async (home: string, environment: Record<string, string> = {}) => {
+export const startNativeScaleRuntime = async (
+  home: string,
+  environment: Record<string, string> = {},
+  observe?: (process: PackagedRuntimeObservation) => void,
+) => {
   const before = performance.now();
-  const native = await startPackagedServe(home, { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1", ...environment });
+  const native = await startPackagedServe(
+    home,
+    { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1", ...environment },
+    undefined,
+    observe,
+  );
   return connectScaleRuntime(
     {
       descriptor: native.descriptor,
@@ -82,9 +96,13 @@ export const startNativeScaleRuntime = async (home: string, environment: Record<
   );
 };
 
-export const startScaleRuntime = async (home: string, environment: Record<string, string> = {}) => {
+export const startScaleRuntime = async (
+  home: string,
+  environment: Record<string, string> = {},
+  observe?: (process: PackagedRuntimeObservation) => void,
+) => {
   const container = configuredContainer(home);
-  if (!container) return startNativeScaleRuntime(home, environment);
+  if (!container) return startNativeScaleRuntime(home, environment, observe);
   const before = performance.now();
   const runtime = await startContainerRuntime(container, environment);
   return connectScaleRuntime(runtime, performance.now() - before - runtime.controlPreparationMs);

@@ -24,7 +24,12 @@ export const attachBenchmarkPerformance = async (app: PackagedApp, name: string,
           (role) =>
             snapshot.capture.samples.filter((sample) =>
               sample.processes.some((process) => process.role === role && process.cpuTimeMs !== null),
-            ).length >= 2,
+            ).length >= 2 &&
+            snapshot.capture.samples.some(
+              (sample) =>
+                Date.parse(sample.capturedAt) >= endedAt + snapshot.capture.sampleIntervalMs &&
+                sample.processes.some((process) => process.role === role),
+            ),
         );
       },
       { message: "Benchmark requires backend and workbench CPU/memory capture" },
@@ -41,7 +46,7 @@ export const attachBenchmarkPerformance = async (app: PackagedApp, name: string,
   );
   if (!saved) throw new Error("Benchmark recording export is unavailable");
   const capture = restoreRecordedCapture(saved, snapshot.capture);
-  const summary = summarizePerformanceEvidence(capture, ["backend", "workbench"]);
+  const summary = summarizePerformanceEvidence(capture, ["backend", "workbench"], endedAt);
   await test.info().attach(`performance-${name}.json`, {
     contentType: "application/json",
     body: JSON.stringify(

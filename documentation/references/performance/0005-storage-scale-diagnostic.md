@@ -379,6 +379,13 @@ does not change the existing workload, operation boundaries, budgets or case cap
 Database and sync layer diagnostics retain their existing phase telemetry; they
 do not claim application capture coverage.
 
+The normal completion path observes memory after one existing sampling interval
+of post-workload idle time. It exports the operation end and minimum idle interval;
+this does not assert heap stability or force garbage collection. Immediate crashes
+keep their kill boundary. Their missing exit or settling readings remain explicit
+coverage failures instead of fabricated memory values. Observation and cleanup
+still fit within the existing case cap.
+
 Save commands, environment, exact commit, fixture manifests, full compressed input
 files, stored-shape verification, raw JSONL, stderr, screenshots, pause evidence,
 control calibration and coverage ledger under the change-request report's

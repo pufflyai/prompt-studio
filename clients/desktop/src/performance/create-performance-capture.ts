@@ -24,7 +24,8 @@ export const createDesktopCapture = (input: {
   recorder.write({ kind: "start", capture: capture.snapshot() });
   return {
     snapshot: () => capture.snapshot(),
-    sample: (...args: Parameters<PerformanceCaptureCollector["sample"]>) => capture.sample(...args).catch(input.onError),
+    sample: (...args: Parameters<PerformanceCaptureCollector["sample"]>) =>
+      capture.sample(...args).catch(input.onError),
     close: async () => {
       const id = capture.snapshot().id;
       capture.stop();

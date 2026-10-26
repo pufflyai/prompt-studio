@@ -10,6 +10,7 @@ import {
   summarizePerformanceEvidence,
 } from "pstdio-diagnostics";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
+import type { PackagedRuntimeObservation } from "../packaged/packaged-serve-helpers";
 import { configuredContainer } from "./storage-scale-container";
 import { type ScaleRuntime, startScaleRuntime } from "./storage-scale-runtime";
 
@@ -23,10 +24,20 @@ export const createObservedScaleRuntime = (root: string, emit: (row: object) => 
     const recorder = createPerformanceRecording(directory);
     const container = configuredContainer(home);
     let runtime: ScaleRuntime | undefined;
+    let observed: PackagedRuntimeObservation | undefined;
+    const onError = (error: unknown) => failures.push(`Performance sampling failed: ${String(error)}`);
     const capture = await startNativePerformanceCapture({
       hostVersion,
-      backend: () =>
-        runtime
+      backend: () => {
+        if (observed)
+          return {
+            id: observed.descriptor?.instanceId ?? null,
+            pid: observed.pid,
+            origin: observed.descriptor?.origin ?? null,
+            token: observed.descriptor?.token ?? null,
+            scope: "local",
+          };
+        return runtime
           ? {
               id: runtime.descriptor.instanceId,
               pid: container ? null : runtime.descriptor.pid,
@@ -34,38 +45,45 @@ export const createObservedScaleRuntime = (root: string, emit: (row: object) => 
               token: runtime.descriptor.token,
               scope: container ? "remote" : "local",
             }
-          : null,
+          : null;
+      },
       record: (captureId, sample) => recorder.write({ kind: "sample", captureId, sample }),
-      onError: (error) => failures.push(`Performance sampling failed: ${String(error)}`),
+      onError,
     }).catch((error) => {
       recorder.close();
       throw error;
     });
     let finishing: Promise<void> | undefined;
-    const finish = () =>
+    const finish = (reason: "completed" | "crashed" | "failed") =>
       (finishing ??= (async () => {
+        const operationEndedAt = Date.now();
         try {
+          if (reason === "completed")
+            await new Promise((resolve) => setTimeout(resolve, capture.snapshot().sampleIntervalMs));
           await capture.sample();
           const evidence = restoreRecordedCapture(readPerformanceRecordings(directory), capture.snapshot());
-          const summary = summarizePerformanceEvidence(evidence);
+          const summary = summarizePerformanceEvidence(evidence, ["backend"], operationEndedAt);
           failures.push(...summary.failures);
           const file = `${name}.json`;
           mkdirSync(root, { recursive: true });
-          writeFileSync(join(root, file), JSON.stringify({ summary, capture: evidence }));
-          emit({ phase: "performance-capture", file, summary, containerId: container?.containerId ?? null });
+          writeFileSync(join(root, file), JSON.stringify({ reason, summary, capture: evidence }));
+          emit({ phase: "performance-capture", file, reason, summary, containerId: container?.containerId ?? null });
         } finally {
           recorder.close();
           await capture.close();
         }
       })());
     try {
-      runtime = await startScaleRuntime(home, environment);
+      runtime = await startScaleRuntime(home, environment, (process) => {
+        observed = process;
+        void capture.sample().catch(onError);
+      });
       await capture.sample();
       return {
         ...runtime,
         stop: async () => {
           try {
-            await finish();
+            await finish("completed");
           } finally {
             await runtime!.stop();
           }
@@ -75,13 +93,13 @@ export const createObservedScaleRuntime = (root: string, emit: (row: object) => 
           try {
             await runtime!.crash();
           } finally {
-            await finish();
+            await finish("crashed");
           }
         },
       };
     } catch (error) {
       try {
-        await finish();
+        await finish("failed");
       } finally {
         await runtime?.stop();
       }
