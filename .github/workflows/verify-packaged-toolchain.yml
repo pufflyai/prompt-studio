@@ -40,6 +40,7 @@ jobs:
   verify:
     name: verify (${{ matrix.platform_pkg }})
     env:
+      BUN_CONFIG_MAX_HTTP_REQUESTS: "16"
       CI_PRIORITY: ${{ inputs.priority }}
       CI_GATE_PLAN: ${{ inputs.gate_plan }}
       GH_TOKEN: ${{ github.token }}

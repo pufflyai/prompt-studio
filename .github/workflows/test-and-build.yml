@@ -1,4 +1,4 @@
-name: Qualify complete native packaged suites with job temp storage
+name: Measure native package install concurrency with standard cleanup
 on:
   workflow_dispatch:
 permissions:
