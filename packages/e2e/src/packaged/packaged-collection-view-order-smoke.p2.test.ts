@@ -7,7 +7,7 @@ import { chromium, expect, type Page } from "@playwright/test";
 import { WORKSPACES_COLLECTION_ID } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
@@ -87,7 +87,7 @@ test("packaged Kanban and data table view tabs save pointer and keyboard order",
       phase("project created");
       return id;
     })();
-    const openingPage = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
+    const openingPage = chromium.launch(PACKAGED_DASHBOARD_BROWSER).then((opened) => {
       browser = opened;
       return opened.newPage({ extraHTTPHeaders: runtimeAuthorization(runtime.descriptor) });
     });

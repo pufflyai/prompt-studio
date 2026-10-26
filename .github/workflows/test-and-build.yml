@@ -1,4 +1,4 @@
-name: Locked source core qualification
+name: Actual tree Node cleanup comparison
 on:
   workflow_dispatch:
 permissions:
@@ -23,8 +23,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Require the delivered product and locked source only
-        run: git diff --exit-code fd1559f9267baa5dfe43861d379c16b4dce7fdfc -- . ':!.github/workflows/test-and-build.yml' ':!packages/e2e/src/packaged/packaged-extension-source.ts' ':!packages/e2e/src/packaged/decode-browser-architecture.ts'
+      - name: Require the delivered product and removal experiment only
+        run: git diff --exit-code 1791dc113e3937a0ed7bd001cb3b6c6458353fcd -- . ':!.github/workflows/test-and-build.yml' ':!packages/e2e/src/packaged/packaged-core-extensions.fixture.ts' ':!packages/e2e/src/packaged/diagnostic-node-core-cleanup.ts' ':!documentation/adrs/0112-temporary-node-core-cleanup-experiment.md'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -54,7 +54,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: locked-source-core-${{ matrix.platform_pkg }}
+          name: node-cleanup-core-${{ matrix.platform_pkg }}
           path: |
             packages/e2e/test-results
             test-results/ci

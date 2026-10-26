@@ -8,7 +8,7 @@ import { chromium } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import {
   createPackagedStreamingSession,
   expectPackagedPanelMotion,
@@ -38,7 +38,7 @@ for (const kind of ["streaming", "panels"] as const) {
           child = runtime.child;
           return runtime;
         });
-        const openingPage = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
+        const openingPage = chromium.launch(PACKAGED_DASHBOARD_BROWSER).then((opened) => {
           browser = opened;
           return opened.newPage();
         });
