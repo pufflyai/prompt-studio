@@ -1,5 +1,11 @@
 import { type ExtensionResourceCoordinator, extensionWorkCosts } from "../resource-policy";
 import { prepareOwnerContext } from "./local-values";
+import { retainOwnerResult } from "./result-lifetime";
+
+const prepareInvocation = (context: unknown, args: unknown[]) =>
+  context && typeof context === "object"
+    ? [prepareOwnerContext(context as Record<string, unknown>), ...args.slice(1)]
+    : args;
 
 export const createSupervisedFunctionWrapper = (owner: {
   sourcePath: string;
@@ -18,19 +24,19 @@ export const createSupervisedFunctionWrapper = (owner: {
         const signal = context?.signal instanceof AbortSignal ? context.signal : undefined;
         signal?.throwIfAborted();
         if (!owner.isLive()) return owner.recover(path, args);
+        const invocation = prepareInvocation(context, args);
         const invoke = async () => {
           const cleanup = signal ? owner.watchSignal(signal) : () => {};
+          let retained = false;
           try {
-            const invocation =
-              context && typeof context === "object"
-                ? [prepareOwnerContext(context as Record<string, unknown>), ...args.slice(1)]
-                : args;
-            return await value(...invocation);
+            const result = await value(...invocation);
+            retained = retainOwnerResult(result, cleanup);
+            return result;
           } catch (error) {
             await owner.awaitExit();
             throw error;
           } finally {
-            cleanup();
+            if (!retained) cleanup();
           }
         };
         return owner.resources

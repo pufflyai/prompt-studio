@@ -1,33 +1,14 @@
 import { createOwnerDecoder } from "./decode";
 import { createOwnerEncoder } from "./encode";
-import { createHandleStore, type Handler } from "./handles";
+import { createHandleStore } from "./handles";
 import { errorFromRemote, type OwnerMessage, protocolLimits, remoteError } from "./protocol";
+import { retainOwnerResult } from "./result-lifetime";
 
 interface PendingCall {
   resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
   release: () => void;
 }
-const retainForResult = (result: unknown, release: () => void) => {
-  const session = result as { done?: Promise<unknown>; invoke?: Handler } | undefined;
-  if (session?.done instanceof Promise) {
-    void session.done.then(release, release);
-    return;
-  }
-  if (session && typeof session.invoke === "function") {
-    const invoke = session.invoke;
-    session.invoke = async (...args) => {
-      try {
-        return await invoke(...args);
-      } finally {
-        release();
-      }
-    };
-    return;
-  }
-  release();
-};
-
 export const createOwnerEndpoint = (sendMessage: (message: OwnerMessage) => void) => {
   const store = createHandleStore();
   const pending = new Map<string, PendingCall>();
@@ -41,7 +22,13 @@ export const createOwnerEndpoint = (sendMessage: (message: OwnerMessage) => void
     sendMessage(message);
   };
   const encode = createOwnerEncoder(store, send);
-  const decode = createOwnerDecoder((handle, args) => call(handle, args), signals);
+  const decode = createOwnerDecoder(
+    (handle, args) => call(handle, args),
+    signals,
+    (id) => {
+      if (!closed) send({ type: "release", ids: [id] });
+    },
+  );
   const call = (handle: string, args: unknown[]) => {
     if (closed) return Promise.reject(closed);
     if (pending.size >= protocolLimits.pending)
@@ -71,7 +58,7 @@ export const createOwnerEndpoint = (sendMessage: (message: OwnerMessage) => void
     }
     try {
       const result = decode(message.value);
-      retainForResult(result, request.release);
+      if (!retainOwnerResult(result, request.release)) request.release();
       request.resolve(result);
     } catch (error) {
       request.release();
@@ -96,16 +83,13 @@ export const createOwnerEndpoint = (sendMessage: (message: OwnerMessage) => void
       const args = decode(message.args, disposers);
       if (!Array.isArray(args)) throw new Error("Extension bridge call arguments must be an array.");
       const result = await handle.fn(...args);
-      const done = (result as { done?: unknown } | undefined)?.done;
-      if (done instanceof Promise) {
-        retained = true;
-        const dispose = () => {
-          for (const run of disposers) run();
-          store.cleanup.delete(dispose);
-        };
-        store.cleanup.add(dispose);
-        void done.then(dispose, dispose);
-      }
+      const dispose = () => {
+        for (const run of disposers) run();
+        disposers.clear();
+        store.cleanup.delete(dispose);
+      };
+      retained = retainOwnerResult(result, dispose);
+      if (retained) store.cleanup.add(dispose);
       // Factory-returned methods inherit the exporting invocation's authority and admission scope.
       const value = handle.inContext(() => encode(result, handle.scope));
       send({ type: "result", id: message.id, value });
@@ -127,7 +111,7 @@ export const createOwnerEndpoint = (sendMessage: (message: OwnerMessage) => void
         signals.get(message.id)?.abort();
         return;
       case "release":
-        for (const id of message.ids) store.functions.delete(id);
+        for (const id of message.ids) store.releaseHandle(id);
         return;
       case "error":
       case "result":

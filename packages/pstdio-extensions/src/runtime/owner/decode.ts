@@ -4,6 +4,7 @@ import type { WireValue } from "./protocol";
 export const createOwnerDecoder = (
   call: (handle: string, args: unknown[]) => Promise<unknown>,
   signals: Map<string, AbortController>,
+  release: (id: string) => void,
 ) => {
   const decode = (value: WireValue, disposers?: Set<() => void>): unknown => {
     if (value === null || typeof value !== "object") return value;
@@ -21,7 +22,7 @@ export const createOwnerDecoder = (
       case "function":
         return (...args: unknown[]) => deferredValue(call(value.id, args));
       case "promise": {
-        const promise = call(value.id, []);
+        const promise = call(value.id, []).finally(() => release(value.id));
         void promise.catch(() => {});
         return promise;
       }
@@ -45,7 +46,11 @@ export const createOwnerDecoder = (
                 yield next.value;
               }
             } finally {
-              await call(value.id, ["return"]);
+              try {
+                await call(value.id, ["return"]);
+              } finally {
+                release(value.id);
+              }
             }
           },
         };

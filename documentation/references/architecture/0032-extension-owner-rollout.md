@@ -36,11 +36,11 @@ This inventory records transport coverage, not proof of complete behavioral pari
 | Resources, views, settings, sessions, workspaces, notifications, automation, account | Generic callable transport | Individual method parity and authorization evidence |
 | Nested commands, events, logging, navigation | Callable transport; invocation context is bound to host callback handles | End-to-end nested scheduling and delivery cases |
 | Process and network APIs | Host callable transport | Child attribution and cleanup under every lifecycle transition |
-| Connection streams and asynchronous iterators | Pull-based remote iterator handles | Stream cancellation, sustained-buffer and long-lived-session evidence |
+| Connection streams and asynchronous iterators | Pull-based remote iterator handles; returned streams retain host authority and signal until exhaustion or close, then release handles | Sustained-buffer and long-lived-session evidence; per-pull CPU attribution |
 | Terminal sessions | Explicit unsupported-operation error | Synchronous terminal handle and event contract |
 | Blob, ReadableStream, custom prototypes, cyclic/nonfinite values | Explicit payload rejection | Required assets/stream adapters before default rollout |
 
-Host capabilities are registered from the host-created context, not resolved from project IDs or permission claims supplied by an extension. Completed ordinary calls release their exported context handles. Session completion promises and prepared invocation handles have separate retention paths, but full remote-result lifetime and provider retirement remain release gates.
+Host capabilities are registered from the host-created context, not resolved from project IDs or permission claims supplied by an extension. Completed ordinary calls release their exported context handles. Returned iterators, session completion promises and prepared invocation handles have separate retention paths. Iterator close/exhaustion and one-shot promise completion release their remote handles. Repeated transport tests check that handle counts return to the live entry handles; a real owner test cancels a synchronous loop during stream production through its retained signal. Full nested-result lifetime and provider retirement remain release gates.
 
 ## Bounds and recovery
 

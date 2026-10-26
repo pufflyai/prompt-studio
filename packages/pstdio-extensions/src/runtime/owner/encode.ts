@@ -34,14 +34,15 @@ export const createOwnerEncoder = (
   };
   const iterable = (value: AsyncIterable<unknown>, scope?: HandleScope): WireValue => {
     const iterator = value[Symbol.asyncIterator]();
+    const dispose = () => {
+      void Promise.resolve(iterator.return?.()).catch(() => {});
+    };
     const id = store.register(
       (operation) => (operation === "return" ? iterator.return?.() : iterator.next()),
       undefined,
       scope,
+      dispose,
     );
-    (scope?.cleanup ?? store.cleanup).add(() => {
-      void Promise.resolve(iterator.return?.()).catch(() => {});
-    });
     return { type: "iterator", id };
   };
   const object = (value: object, scope: HandleScope | undefined, ancestors: Set<unknown>): WireValue => {
