@@ -100,7 +100,8 @@ try {
       if (!ready) rejectReady(new Error(`Recorder exited before readiness: ${exitCode} ${stdout} ${stderr}`));
       return exitCode;
     },
-    (error) => {
+    async (error) => {
+      await recorder.exited;
       rejectReady(error instanceof Error ? error : new Error(String(error)));
       results.push({ recordingError: String(error) });
       return 1;
