@@ -19,10 +19,14 @@ export const resolveManagedClaude = (
   const platform = input.platform ?? process.platform;
   const arch = input.arch ?? process.arch;
   if (!["darwin", "linux", "win32"].includes(platform) || !["x64", "arm64"].includes(arch)) return null;
-  const report = process.report?.getReport() as { header?: { glibcVersionRuntime?: string } };
-  const musl = input.musl ?? (process.platform === "linux" && !report?.header?.glibcVersionRuntime);
-  const suffix = platform === "linux" && musl ? "-musl" : "";
   try {
+    const musl =
+      input.musl ??
+      (platform === "linux" &&
+        process.platform === "linux" &&
+        !(process.report?.getReport() as { header?: { glibcVersionRuntime?: string } } | undefined)?.header
+          ?.glibcVersionRuntime);
+    const suffix = platform === "linux" && musl ? "-musl" : "";
     // Use the shipped native binary because extension installs skip wrapper postinstall scripts (ADR 0110).
     const manifest = (input.resolvePackage ?? installedPackage)(
       `@anthropic-ai/claude-code-${platform}-${arch}${suffix}`,

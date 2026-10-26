@@ -19,13 +19,17 @@ export const resolveManagedOpencode = (
   const platform = input.platform ?? process.platform;
   const arch = input.arch ?? process.arch;
   if (!["darwin", "linux", "win32"].includes(platform) || !["x64", "arm64"].includes(arch)) return null;
-  const report = process.report?.getReport() as { header?: { glibcVersionRuntime?: string } };
-  const musl = input.musl ?? (process.platform === "linux" && !report?.header?.glibcVersionRuntime);
-  const os = platform === "win32" ? "windows" : platform;
-  // The baseline x64 build also supports machines without AVX2.
-  const baseline = arch === "x64" ? "-baseline" : "";
-  const suffix = platform === "linux" && musl ? "-musl" : "";
   try {
+    const musl =
+      input.musl ??
+      (platform === "linux" &&
+        process.platform === "linux" &&
+        !(process.report?.getReport() as { header?: { glibcVersionRuntime?: string } } | undefined)?.header
+          ?.glibcVersionRuntime);
+    const os = platform === "win32" ? "windows" : platform;
+    // The baseline x64 build also supports machines without AVX2.
+    const baseline = arch === "x64" ? "-baseline" : "";
+    const suffix = platform === "linux" && musl ? "-musl" : "";
     // Native package paths are upstream implementation details. See ADR 0110.
     const manifest = (input.resolvePackage ?? installedPackage)(`opencode-${os}-${arch}${baseline}${suffix}`);
     const command = join(dirname(manifest), "bin", platform === "win32" ? "opencode.exe" : "opencode");
