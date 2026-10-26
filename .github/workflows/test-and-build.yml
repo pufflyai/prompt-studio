@@ -1,4 +1,4 @@
-name: Actual tree Node cleanup comparison
+name: Native cleanup traversal and I/O comparison
 on:
   workflow_dispatch:
 permissions:
@@ -14,10 +14,19 @@ jobs:
         include:
           - os: windows-latest
             platform_pkg: cli-win-x64
+            cleanup: node-sync
           - os: windows-11-arm
             platform_pkg: cli-win-arm64
+            cleanup: node-sync
+          - os: windows-latest
+            platform_pkg: cli-win-x64
+            cleanup: node-pool64
+          - os: windows-11-arm
+            platform_pkg: cli-win-arm64
+            cleanup: node-pool64
     env:
       CI_PRIORITY: P2
+      E2E_CLEANUP_MODE: ${{ matrix.cleanup }}
       E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
     steps:
       - uses: actions/checkout@v5
@@ -54,7 +63,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: node-cleanup-core-${{ matrix.platform_pkg }}
+          name: node-cleanup-core-${{ matrix.platform_pkg }}-${{ matrix.cleanup }}
           path: |
             packages/e2e/test-results
             test-results/ci

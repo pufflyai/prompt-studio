@@ -16,6 +16,8 @@ Awaited Bun removal exceeds the remaining allowance on actual Windows core fixtu
 
 Compare standard Node 24 asynchronous recursive removal on the unchanged actual fixture. Record real tree counts and link topology, Node executable/version/architecture, whole-case phases and cleanup duration. Own the child through the test process registry and await its close event. Require ordinary-path root disappearance and an external junction-target sentinel to survive. Do not change installation, feature assertions, cold inputs, retries or allowances.
 
+The default Node asynchronous operation also exceeded the remaining allowance on the actual 85,000-file tree. Compare Node's standard synchronous removal in an owned child against its asynchronous removal with a 64-thread I/O pool. The parent test remains asynchronous and enforces its existing deadline in both cases. Record pool selection and child peak resident memory. These measurements test library traversal overhead and bounded I/O parallelism; neither is accepted for delivery by this experiment.
+
 ## Limitations
 
 This diagnostic adds inventory and sentinel work. It adds a Node dependency only to an experiment. It is not an accepted workaround and does not change product behavior.

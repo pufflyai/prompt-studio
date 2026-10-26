@@ -39,15 +39,17 @@ export const removeDiagnosticCore = async (root: string) => {
   symlinkSync(external, join(root, "external-cleanup-target"), "junction");
   try {
     const removing = Date.now();
+    const mode = process.env.E2E_CLEANUP_MODE;
+    const operation = mode === "node-sync" ? "rmSync" : "await rm";
     await runTestCommand(
       "node",
       [
         "--input-type=module",
         "-e",
-        'import {rm} from "node:fs/promises"; console.error("Native cleanup runtime", JSON.stringify({path:process.execPath,version:process.version,arch:process.arch})); const start=Date.now(); await rm(process.argv[1],{recursive:true,force:true}); console.error("Native cleanup removal ms", Date.now()-start);',
+        `import {rm} from "node:fs/promises"; import {rmSync} from "node:fs"; console.error("Native cleanup runtime", JSON.stringify({path:process.execPath,version:process.version,arch:process.arch,pid:process.pid,pool:process.env.UV_THREADPOOL_SIZE??"default"})); const start=Date.now(); ${operation}(process.argv[1],{recursive:true,force:true}); console.error("Native cleanup removal",JSON.stringify({elapsedMs:Date.now()-start,maxRssKiB:process.resourceUsage().maxRSS,rssBytes:process.memoryUsage().rss}));`,
         root,
       ],
-      { cwd: tmpdir() },
+      { cwd: tmpdir(), env: { ...process.env, ...(mode === "node-pool64" ? { UV_THREADPOOL_SIZE: "64" } : {}) } },
     );
     expect(existsSync(root)).toBe(false);
     expect(await Bun.file(sentinel).text()).toBe("retained");
