@@ -6,6 +6,7 @@ import cmdShim from "cmd-shim";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
+import { installNativeProbeFixture } from "./harness-native-probe-fixture";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -35,6 +36,7 @@ const installFixtures = async (prefix: string, state: "healthy" | "broken" | "ha
     writeFileSync(script, `#!/usr/bin/env node\n${source}`);
     if (process.platform === "win32") {
       await cmdShim(script, join(prefix, harness.command));
+      await installNativeProbeFixture(prefix, harness.command, script);
     } else {
       writeFileSync(join(prefix, harness.command), `#!/bin/sh\nexec "${process.execPath}" "${script}" "$@"\n`, {
         mode: 0o755,
