@@ -1,4 +1,4 @@
-name: Compare cold ARM installer worker scheduling
+name: Observe complete cold ARM cases with two installer workers
 on:
   workflow_dispatch:
 permissions:
@@ -8,10 +8,6 @@ jobs:
   native:
     runs-on: windows-11-arm
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        workers: [default, "2"]
     env:
       CI_PRIORITY: P2
       PSTDIO_VERIFY_PLATFORM_PKG: cli-win-arm64
@@ -29,18 +25,11 @@ jobs:
           install-strategy: native
       - name: Build the normal compiled candidate and check integrity
         run: bun run --cwd scripts verify:packages --profile integrity
-      - name: Observe the frozen Planner install with unchanged dependencies
+      - name: Verify the compiled worker diagnostic is present
+        run: bun -e 'if (!(await Bun.file(process.env.E2E_PACKAGED_BINARY_PATH).text()).includes("PS932_INSTALL_THREADS")) throw new Error("Compiled installer worker diagnostic is missing")'
+      - name: Observe both complete cold core cases once
         working-directory: packages/e2e
         env:
           BUN_CONFIG_MAX_HTTP_REQUESTS: "16"
-          PS932_INSTALL_THREADS: ${{ matrix.workers != 'default' && matrix.workers || '' }}
-        run: bun src/packaged/observe-planner-installer.ts
-      - name: Keep complete installer diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: arm-planner-workers-${{ matrix.workers }}
-          path: |
-            ${{ runner.temp }}/ps-932-planner-installer-*/summary.json
-            ${{ runner.temp }}/ps-932-planner-installer-*/installer.*.log
-          if-no-files-found: error
+          PS932_INSTALL_THREADS: "2"
+        run: bun test --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-core-extension-features.p2.test.ts src/packaged/packaged-core-extensions-smoke.p1.test.ts

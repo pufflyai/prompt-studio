@@ -61,6 +61,7 @@ export const runCommand = async (command: string, args: string[], options: Comma
           {
             cwd: options.cwd,
             http: options.env?.BUN_CONFIG_MAX_HTTP_REQUESTS,
+            workerThreads: options.env?.UV_THREADPOOL_SIZE,
             pid: child.pid,
             argv: resolved.argv,
             childMs,
@@ -125,6 +126,7 @@ export const installDependencies = async (targetPath: string, input: DependencyI
   const run = input.runCommand ?? runCommand;
   const packaged = (input.isPackagedRuntime ?? isPackagedRuntime)();
   const env = createExtensionInstallEnvironment(input.env ?? process.env);
+  if (process.env.PS932_INSTALL_THREADS) env.UV_THREADPOOL_SIZE = process.env.PS932_INSTALL_THREADS;
   const args = ["install", "--frozen-lockfile", "--ignore-scripts", ...(input.production ? ["--production"] : [])];
   const command = packaged
     ? resolveManagedBunCommand({
