@@ -59,6 +59,8 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
       }),
     });
     child = started.child;
+    child.stdout?.on("data", (chunk) => process.stdout.write(`[Core stdout] ${chunk}`));
+    child.stderr?.on("data", (chunk) => process.stderr.write(`[Core stderr] ${chunk}`));
     phase("runtime ready");
     const projectFolder = join(tempRoot, "project");
     mkdirSync(projectFolder);
