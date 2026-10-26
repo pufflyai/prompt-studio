@@ -2,7 +2,7 @@ import { rmSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
-import { getSidenavEntry } from "../ui/helpers/sidenav-navigation";
+import { showSidenavEntry } from "../ui/helpers/sidenav-navigation";
 import { openWorkspace } from "../ui/helpers/workspace-files";
 import { createGitRepo } from "../ui/helpers/workspace-session-attempt";
 import { uiOrigin } from "../ui-server";
@@ -33,7 +33,7 @@ test("restores a resource layout within the interaction budget", async ({ page, 
     await preparePerfPage(page, project.id);
     await page.goto(`/projects/${project.id}/`);
 
-    const workspacesNavigation = await getSidenavEntry(page, "Workspaces");
+    const workspacesNavigation = await showSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
     await openWorkspace(page, shorthandA);
     await page.getByRole("button", { name: "Show Bottom Panel" }).click();

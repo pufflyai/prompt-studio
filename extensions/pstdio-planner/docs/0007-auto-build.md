@@ -6,7 +6,7 @@ Auto Build uses a supervisor to assign valid, unassigned tickets using your prom
 
 Open **Project Timeline** and click **Auto Build**. Enter the supervisor prompt at the top of the modal, choose its model and run options, set **Eligible tickets**, and click the primary **Auto Build** button. The information icon next to the title opens an explanation and a documentation link.
 
-Choose **Supervisor model**, its harness, and its run options directly in the same modal, using the controls from Run attempt. The prompt, model, options, and filters save together when you start Auto Build. Cancel leaves the saved configuration unchanged. The supervisor uses the default collaboration mode. Worker sessions still use the project default agent. Starting a new run uses the configured supervisor model; resuming preserves the current model.
+Choose **Supervisor model**, its harness, and its run options directly in the same modal, using the controls from Run attempt. The prompt, model, options, and filters save together when you start Auto Build. Cancel leaves the saved configuration unchanged. The supervisor uses the default collaboration mode. Worker sessions still use the project default agent. Pause Auto Build, choose **Stop Auto Build**, then start it again to use a different model for an existing supervisor.
 
 Starting Auto Build immediately queues a check. The first check starts the supervisor as soon as it finds eligible work; the supervisor then queries its full scope before launching tickets. The queued startup status stays available while that check runs.
 
@@ -44,13 +44,13 @@ Dependency waiting comes from `depends_on`, rather than a second text blocker. P
 
 Implementation follows the project's Planner settings, including adversarial review and pull request creation. Auto Build does not approve or merge work.
 
-## Inspect or pause Auto Build
+## Inspect or stop Auto Build
 
-While Auto Build is running, its button opens an activity popover. Click outside it or press Escape to close it. The popover shows pending review requests above startup, the supervisor, running ticket sessions, and failures. Its activity body scrolls while the header and action footer remain visible. If the scope and eligible filters match no unfinished tickets, it explains that there is no matching work. Pause the run before inspecting or changing its configuration.
+While Auto Build is running, its button opens an activity popover. Click outside it or press Escape to close it. The popover shows pending review requests above startup, the supervisor, running ticket sessions, and failures. Its activity body scrolls while the header and action footer remain visible. If the scope and eligible filters match no unfinished tickets, it explains that there is no matching work. Pause Auto Build, then choose **Stop Auto Build** to change its configuration.
 
 The header button always says **Auto Build**. It shows a Play icon when Auto Build is stopped without an error. While Auto Build is on, or after an error, it shows a colored status indicator: the session spinner while work runs, a blue moon while the supervisor sleeps, a red mark if the supervisor fails, and a green check when the run is complete. A run is complete when every ticket in the supervisor's saved scope has a completed status. Reopening one of those tickets clears the check. Click the button to open a popover with a separate supervisor row and running ticket sessions. Each row uses the normal session status icon and color. The popover shows used capacity and its limit. Click a session to inspect it.
 
-Click **Pause** in the footer to suspend new supervisor wake-ups and automatic dispatches. Current sessions continue. **Resume** retains the supervisor conversation, saved scope, and dispatch history. A failed wake-up keeps the run paused for inspection. Changes already saved in a workspace remain available. If the supervisor conversation is deleted, the run pauses and keeps its worker ownership history.
+Click **Pause** in the footer to suspend new supervisor wake-ups and automatic dispatches. Current sessions continue. **Resume** retains the supervisor conversation, saved scope, and dispatch history. While paused, the danger-colored **Stop Auto Build** action cancels every linked supervisor, implementation, review, repair, and request conversation, including queued follow-ups. Unrelated manual sessions continue. A failed cancellation keeps the run paused so Stop can be retried. Changes already saved in a workspace remain available. Starting after Stop creates a fresh supervisor conversation. If the supervisor conversation is deleted, the run pauses and keeps its worker ownership history. Stop it before starting another run.
 
 Auto Build keeps working when you close the timeline and resumes its checks after restarting Prompt Studio. Starting it again preserves your prompt, supervisor model, eligibility filters, and the merged-dependencies choice. A run saved before eligible filters existed stays stopped until you configure it.
 
@@ -97,4 +97,4 @@ For work that must build on a feature branch, pass the same `--base <branch>` to
 
 The Timeline **Display settings** menu includes **Show passed milestones** and **Show completed milestones**, both on by default. Passed means the milestone date is before today. Completed means every ticket in a nonempty milestone has a configured completed status. Search and ticket filters do not change that decision. Undated work stays visible. Milestone visibility and collapsed tracks and milestones are remembered for the project across reloads and saved-view changes.
 
-Use `pst pstdio-planner auto-build pause` and `resume` for the same lifecycle controls from the CLI.
+Use `pst pstdio-planner auto-build pause`, `resume`, and `stop` for the same lifecycle controls from the CLI. Stop requires a paused run.
