@@ -24,7 +24,9 @@ export const spawnExtensionOwner = (
     stdout: "ignore",
     stderr: "ignore",
     detached: process.platform !== "win32",
-    serialization: "json",
+    // Both ends run the same Bun executable. Use Bun's native IPC framing;
+    // the endpoint still enforces the bounded, explicitly encoded wire values.
+    serialization: "advanced",
     ipc: receive,
   });
   observeOwnerProcess(child);
