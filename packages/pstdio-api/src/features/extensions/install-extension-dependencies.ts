@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { once } from "node:events";
 import {
   cpSync,
   existsSync,
@@ -113,7 +114,13 @@ export const runCommand = async (command: string, args: string[], options: Comma
       );
       return { exitCode, stdout, stderr };
     } finally {
-      observer?.close();
+      mark("observer-close-start");
+      if (observer) {
+        const closed = once(observer, "close");
+        observer.close();
+        await closed;
+      }
+      mark("observer-close-done");
       sample();
       mark("capture-backup-start");
       if (artifactPath) {
