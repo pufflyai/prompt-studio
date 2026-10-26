@@ -59,9 +59,23 @@ for (const title of ["Project brief", "System diagram"]) {
       const result = await (await response).json();
       expect(result.outcome.status, result.outcome.reason).toBe("success");
       const target = result.outcome.navigationRequests[0];
-      expect(target.resource.id).toBe(result.outcome.value.sessionId);
-      await expect(page).toHaveURL(new RegExp(result.outcome.value.sessionId));
-      await expect(page.locator('[data-workbench-panel="main"]').getByRole("tab")).toHaveCount(0);
+      expect(target).toMatchObject({
+        kind: "panel",
+        open: "pin",
+        resource: { type: "session", id: result.outcome.value.sessionId },
+      });
+      await expect(page).toHaveURL(new RegExp(`${libraryUrl}$`));
+      await expect(
+        page
+          .getByRole("banner", { name: "Side panel header" })
+          .getByRole("tab", { name: `Create a ${title.toLowerCase()}`, exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole("region", { name: "Side Panel", exact: true }).getByRole("log")).toContainText(
+        "Fake Agent: completed",
+      );
+      await expect(
+        page.locator('[data-workbench-panel="main"]').getByRole("tab", { name: "Artifacts", exact: true }),
+      ).toBeVisible();
       const session = await request.get(`${uiOrigin}/v1/sessions/${result.outcome.value.sessionId}`);
       expect(session.ok()).toBe(true);
       expect((await session.json()).project_id).toBe(project.id);
