@@ -3,9 +3,9 @@ import type { PerformanceCapture, PerformanceProcessSample } from "pstdio-api-co
 type Role = PerformanceProcessSample["role"];
 type Reading = { elapsedMs: number; value: PerformanceProcessSample };
 
+// Local scope starts at spawn; a missing reply must not postpone native coverage.
 const roleExists = (sample: PerformanceCapture["samples"][number], role: Role) =>
-  sample.processes.some((process) => process.role === role) ||
-  (role === "backend" && sample.backend.scope === "local" && sample.backend.state === "reply");
+  sample.processes.some((process) => process.role === role) || (role === "backend" && sample.backend.scope === "local");
 
 const maximum = (values: (number | null)[]) => {
   const measured = values.filter((value): value is number => value !== null && Number.isFinite(value));

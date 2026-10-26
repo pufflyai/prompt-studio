@@ -141,6 +141,17 @@ test("fails missing startup readings once the local backend is answering", () =>
   expect(summarizePerformanceEvidence(input).failures).toContain("backend process readings are missing");
 });
 
+for (const state of ["unavailable", "timeout"] as const) {
+  test(`fails missing native startup readings when the local response state is ${state}`, () => {
+    const input = capture();
+    for (const sample of input.samples.slice(0, 2)) {
+      sample.processes = [];
+      sample.backend = { ...sample.backend, runtimeId: null, state, durationMs: null };
+    }
+    expect(summarizePerformanceEvidence(input).failures).toContain("backend process readings are missing");
+  });
+}
+
 test("allows startup samples before a backend exists without inventing measurements", () => {
   const input = capture();
   for (const sample of input.samples.slice(0, 2)) {

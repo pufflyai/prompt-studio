@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import type { PerformanceRecordingExport } from "pstdio-api-contracts/performance-diagnostics";
+import type { PerformanceRecordingExport, PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
 import { restoreRecordedCapture, summarizePerformanceEvidence } from "pstdio-diagnostics";
 import type { PackagedApp } from "./packaged-app-helpers";
 import { readSnapshot } from "./packaged-performance-helpers";
@@ -14,6 +14,7 @@ export const enableBenchmarkMonitoring = (home: string) => {
 };
 
 export const attachBenchmarkPerformance = async (app: PackagedApp, name: string, endedAt: number) => {
+  let settlingError: unknown;
   // Read settling evidence after the operation clock stops. This never changes its budget or workload.
   await expect
     .poll(
@@ -34,26 +35,65 @@ export const attachBenchmarkPerformance = async (app: PackagedApp, name: string,
       },
       { message: "Benchmark requires backend and workbench CPU/memory capture" },
     )
-    .toBe(true);
-  const snapshot = await readSnapshot(app.page);
-  if (snapshot?.version !== 2) throw new Error("Benchmark requires a version-two performance capture");
-  const saved = await app.page.evaluate(() =>
-    (
-      window as unknown as {
-        promptStudioDesktop: { getPerformanceRecordings: () => Promise<PerformanceRecordingExport | null> };
-      }
-    ).promptStudioDesktop.getPerformanceRecordings(),
-  );
-  if (!saved) throw new Error("Benchmark recording export is unavailable");
-  const capture = restoreRecordedCapture(saved, snapshot.capture);
-  const summary = summarizePerformanceEvidence(capture, ["backend", "workbench"], endedAt);
-  await test.info().attach(`performance-${name}.json`, {
-    contentType: "application/json",
-    body: JSON.stringify(
-      { operation: { startedAt: app.startedAt, endedAt }, readAt: Date.now(), summary, capture },
-      null,
-      2,
-    ),
-  });
+    .toBe(true)
+    .catch((error: unknown) => {
+      settlingError = error;
+    });
+  let snapshot: PerformanceSnapshot | null = null;
+  let saved: PerformanceRecordingExport | null = null;
+  let summary: ReturnType<typeof summarizePerformanceEvidence>;
+  const operation = { startedAt: app.startedAt, endedAt };
+  try {
+    const [live, recordings] = await Promise.allSettled([
+      readSnapshot(app.page),
+      app.page.evaluate(() =>
+        (
+          window as unknown as {
+            promptStudioDesktop: { getPerformanceRecordings: () => Promise<PerformanceRecordingExport | null> };
+          }
+        ).promptStudioDesktop.getPerformanceRecordings(),
+      ),
+    ]);
+    if (live.status === "fulfilled") snapshot = live.value;
+    if (recordings.status === "fulfilled") saved = recordings.value;
+    if (live.status === "rejected") throw live.reason;
+    if (recordings.status === "rejected") throw recordings.reason;
+    if (snapshot?.version !== 2) throw new Error("Benchmark requires a version-two performance capture");
+    if (!saved) throw new Error("Benchmark recording export is unavailable");
+    const capture = restoreRecordedCapture(saved, snapshot.capture);
+    summary = summarizePerformanceEvidence(capture, ["backend", "workbench"], endedAt);
+    await test.info().attach(`performance-${name}.json`, {
+      contentType: "application/json",
+      body: JSON.stringify(
+        {
+          operation,
+          readAt: Date.now(),
+          summary,
+          capture,
+          failure: settlingError === undefined ? undefined : String(settlingError),
+        },
+        null,
+        2,
+      ),
+    });
+  } catch (error) {
+    await test.info().attach(`performance-${name}-partial.json`, {
+      contentType: "application/json",
+      body: JSON.stringify(
+        {
+          operation,
+          readAt: Date.now(),
+          snapshot,
+          recordings: saved,
+          failure: String(settlingError ?? error),
+          exportError: String(error),
+        },
+        null,
+        2,
+      ),
+    });
+    throw settlingError ?? error;
+  }
+  if (settlingError !== undefined) throw settlingError;
   expect(summary.failures, "Required performance evidence is missing").toEqual([]);
 };
