@@ -9,7 +9,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { verifyBoardEdgeScrolling } from "./packaged-board-edge-scrolling";
 import { verifyBoardPanning } from "./packaged-board-panning";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { verifyTicketCreation } from "./packaged-ticket-creation";
@@ -41,7 +41,7 @@ test("packaged Planner board pans with a mouse and keeps ticket and column actio
       phase("project created");
       return id;
     })();
-    const openingPage = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
+    const openingPage = chromium.launch(PACKAGED_DASHBOARD_BROWSER).then((opened) => {
       browser = opened;
       return opened.newPage({
         viewport: { width: 1000, height: 720 },
