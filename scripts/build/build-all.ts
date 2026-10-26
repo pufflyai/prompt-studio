@@ -5,6 +5,7 @@ import { resolveBuildTargets } from "./build-targets";
 import { loadEmbedConfig, resolveEmbedFiles } from "./embed-manifest";
 import { buildPackageArtifacts } from "./package-artifacts";
 import { bundleExtensionSources } from "./bundle-extension-sources";
+import { assertCoreBinarySize } from "./core-binary-size";
 
 // Ensure we run from the repo root regardless of where the script is invoked
 process.chdir(join(import.meta.dirname, "..", ".."));
@@ -56,6 +57,7 @@ for (const { target, pkg, bin } of buildTargets) {
   const outfile = join(outDir, bin);
   console.log(`\nCompiling for ${target}...`);
   await $`bun build ${CLI_ENTRY} --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} --outfile ${outfile}`;
+  assertCoreBinarySize(outfile);
   console.log(`  → ${relative(".", outfile)}`);
 }
 

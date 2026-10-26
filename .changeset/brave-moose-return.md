@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Bundle catalog extension sources so core installs without Git, and guard optional system Git features.
+Bundle catalog extension sources, guard optional system Git features, and cap core binaries at 200 MB.

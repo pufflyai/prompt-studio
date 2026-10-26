@@ -3,6 +3,7 @@ import { join, relative } from "node:path";
 import { $ } from "bun";
 import { loadEmbedConfig, resolveEmbedFiles } from "./embed-manifest";
 import { bundleExtensionSources } from "./bundle-extension-sources";
+import { assertCoreBinarySize } from "./core-binary-size";
 
 // Ensure we run from the repo root regardless of where the script is invoked
 process.chdir(join(import.meta.dirname, "..", ".."));
@@ -45,6 +46,7 @@ const defines = extensionReleaseRef ? ["--define", `PSTDIO_BUILD_EXTENSION_RELEA
 
 console.log(`\nCompiling for ${target}...`);
 await $`bun build ${CLI_ENTRY} --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} --outfile ${outfile}`;
+assertCoreBinarySize(outfile);
 
 // 4. Verify the binary works
 const version = await $`${outfile} --version`.text();
