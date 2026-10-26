@@ -40,12 +40,13 @@ interface WorkbenchStatusBarItemProps {
   workbench: WorkbenchCore;
   placement: WorkbenchWidgetPlacement;
   ids: string[];
+  visible: boolean;
   activeId?: string;
   drop?: StatusDrop;
 }
 
 const WorkbenchStatusBarItem = (props: WorkbenchStatusBarItemProps) => {
-  const { workbench, placement, ids, activeId, drop } = props;
+  const { workbench, placement, ids, visible, activeId, drop } = props;
   const id = placement.widgetId;
   const order = ids.indexOf(id);
   const sortable = order >= 0 && ids.length > 1;
@@ -84,7 +85,7 @@ const WorkbenchStatusBarItem = (props: WorkbenchStatusBarItemProps) => {
         }
       }}
     >
-      <StatusItemContent workbench={workbench} placement={placement} visible={order >= 0} />
+      <StatusItemContent workbench={workbench} placement={placement} visible={visible && order >= 0} />
       {/* A drag must keep its pointer events in the host, even over an extension iframe. */}
       {activeId ? <Box position="absolute" inset="0" /> : null}
       {drop?.id === id ? (
@@ -94,8 +95,12 @@ const WorkbenchStatusBarItem = (props: WorkbenchStatusBarItemProps) => {
   );
 };
 
-export const WorkbenchStatusBarItems = (props: { workbench: WorkbenchCore; slot: WorkbenchStatusBarSlot }) => {
-  const { slot, workbench } = props;
+export const WorkbenchStatusBarItems = (props: {
+  workbench: WorkbenchCore;
+  slot: WorkbenchStatusBarSlot;
+  visible?: boolean;
+}) => {
+  const { slot, workbench, visible = true } = props;
   useWorkbenchStore(workbench.statusBar.store, (state) => state);
   const activeModeId = useWorkbenchActiveModeId(workbench);
   const items = activeModeId === workbench.modes.getActiveModeId() ? workbench.statusBar.listVisibleItems(slot) : [];
@@ -141,7 +146,7 @@ export const WorkbenchStatusBarItems = (props: { workbench: WorkbenchCore; slot:
       }}
     >
       {placements.map((placement) => (
-        <WorkbenchStatusBarItem key={placement.widgetId} {...{ workbench, placement, ids, activeId, drop }} />
+        <WorkbenchStatusBarItem key={placement.widgetId} {...{ workbench, placement, ids, visible, activeId, drop }} />
       ))}
       <Box asChild pointerEvents="none">
         <DragOverlay dropAnimation={null}>
