@@ -41,7 +41,10 @@ export const removeDiagnosticCore = async (root: string) => {
     const removing = Date.now();
     const mode = process.env.E2E_CLEANUP_MODE;
     const operation = mode === "node-sync" ? "rmSync" : "await rm";
-    await runTestCommand(
+    if (mode === "bun") {
+      console.log("Native cleanup runtime", JSON.stringify({ path: process.execPath, bun: Bun.version, arch: process.arch }));
+      await rm(root, { recursive: true, force: true });
+    } else await runTestCommand(
       "node",
       [
         "--input-type=module",
