@@ -53,10 +53,31 @@ export const runCommand = async (command: string, args: string[], options: Comma
         windowsVerbatimArguments: resolved.windowsVerbatimArguments,
       });
       const exitCode = await child.exited;
-      process.stderr.write(
-        `Installer resource probe ${JSON.stringify({ cwd: options.cwd, http: options.env?.BUN_CONFIG_MAX_HTTP_REQUESTS, elapsedMs: performance.now() - startedAt, usage: child.resourceUsage() })}\n`,
-      );
+      const childMs = performance.now() - startedAt;
+      const usage = child.resourceUsage();
       const [stdout, stderr] = await Promise.all([stdoutFile.text(), stderrFile.text()]);
+      process.stderr.write(
+        `Installer resource probe ${JSON.stringify(
+          {
+            cwd: options.cwd,
+            http: options.env?.BUN_CONFIG_MAX_HTTP_REQUESTS,
+            pid: child.pid,
+            argv: resolved.argv,
+            childMs,
+            readMs: performance.now() - startedAt - childMs,
+            exitCode,
+            usage: {
+              cpuTime: usage?.cpuTime,
+              maxRSS: usage?.maxRSS,
+              ops: usage?.ops,
+              contextSwitches: usage?.contextSwitches,
+            },
+            stdout: stdout.slice(-2000),
+            stderr: stderr.slice(-2000),
+          },
+          (_key, value) => (typeof value === "bigint" ? value.toString() : value),
+        )}\n`,
+      );
       return { exitCode, stdout, stderr };
     } finally {
       rmSync(outputRoot, { recursive: true, force: true });
