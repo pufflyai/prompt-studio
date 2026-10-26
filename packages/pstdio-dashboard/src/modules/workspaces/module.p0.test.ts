@@ -267,7 +267,7 @@ describe("createWorkspacesModule navigation", () => {
     expect(nodeIds).not.toContain("new-workspace");
     expect(workspacesNode).toMatchObject({
       commandId: dashboardCommandIds.openWorkspaces,
-      target: { kind: "page", page: workbenchPages.workspaces },
+      target: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
     });
     expect(workspacesNode?.hiddenByDefault).toBe(true);
     expect(nodeIds).toContain(dashboardViews.workspaces.id);

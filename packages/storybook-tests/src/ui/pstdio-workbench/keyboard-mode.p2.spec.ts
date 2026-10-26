@@ -1,6 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
-import { startStorybook, stopStorybook, storyUrl, waitForStoryPlayback } from "./mermaid-renderer-storybook";
+import { startStorybook, stopStorybook, storyUrl, waitForStoryPlayback } from "../storybook";
 
 let baseUrl: string;
 let storybook: ChildProcessWithoutNullStreams | undefined;
