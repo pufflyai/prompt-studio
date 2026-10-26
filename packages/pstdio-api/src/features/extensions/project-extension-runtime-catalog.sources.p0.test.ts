@@ -86,6 +86,67 @@ const createCatalog = (input: {
     },
   });
 
+test("installing an unrelated dependency preserves a running extension's state", async () => {
+  const root = createTempDir();
+  const path = join(root, "counter");
+  writeRuntimeExtension(path, "count");
+  mkdirSync(join(root, "node_modules"));
+  writeFileSync(
+    join(path, "extension.ts"),
+    `
+    let count = 0;
+    export default { commands: [{id:"count", ref:{kind:"command",id:"count"}, title:"Count", run:async()=>++count}] };
+  `,
+  );
+  const catalog = createCatalog({ sources: () => [sourceRow({ id: "counter", extensionId: "pstdio.hello", path })] });
+  const first = await catalog.get("p1");
+  expect(await first.runtime.commands[0]!.run!({} as never, {} as never)).toBe(1);
+  const unrelated = join(root, "node_modules", "unrelated");
+  mkdirSync(unrelated);
+  writeFileSync(join(unrelated, "package.json"), JSON.stringify({ name: "unrelated", version: "1.0.0" }));
+  writeFileSync(join(unrelated, "index.js"), "export default 1;");
+  catalog.invalidate({ sourcePath: path, reason: "source_changed" });
+  const second = await catalog.get("p1");
+  expect(await second.runtime.commands[0]!.run!({} as never, {} as never)).toBe(2);
+});
+
+test("updating a transitive dependency refreshes the extension runtime", async () => {
+  const root = createTempDir();
+  const path = join(root, "extension");
+  writeRuntimeExtension(path, "read");
+  const library = join(root, "node_modules", "library");
+  mkdirSync(library, { recursive: true });
+  writeFileSync(
+    join(library, "package.json"),
+    JSON.stringify({
+      name: "library",
+      version: "1.0.0",
+      main: "index.js",
+      dependencies: { leaf: "*" },
+    }),
+  );
+  writeFileSync(join(library, "index.js"), 'export { marker } from "leaf";');
+  writeFileSync(
+    join(path, "extension.ts"),
+    `
+    import { marker } from "library";
+    export default { commands: [{ id:"read", ref:{kind:"command",id:"read"}, title:marker, run:async()=>marker }] };
+  `,
+  );
+  const catalog = createCatalog({ sources: () => [sourceRow({ id: "read", extensionId: "pstdio.hello", path })] });
+  const leaf = join(library, "node_modules", "leaf");
+  mkdirSync(leaf, { recursive: true });
+  writeFileSync(join(leaf, "package.json"), JSON.stringify({ name: "leaf", version: "1.0.0", main: "index.js" }));
+  writeFileSync(join(leaf, "index.js"), 'export const marker = "original";');
+  expect(await (await catalog.get("p1")).runtime.commands[0]!.run!({} as never, {} as never)).toBe("original");
+  writeFileSync(join(leaf, "package.json"), JSON.stringify({ name: "leaf", version: "2.0.0", main: "index.js" }));
+  writeFileSync(join(leaf, "index.js"), 'export const marker = "updated";');
+  catalog.invalidate({ sourcePath: path, reason: "source_changed" });
+  const repaired = await catalog.get("p1");
+  expect(repaired.runtime.diagnostics).toEqual([]);
+  expect(await repaired.runtime.commands[0]!.run!({} as never, {} as never)).toBe("updated");
+});
+
 beforeEach(() => {
   previousPstdioHome = process.env.PSTDIO_HOME;
   process.env.PSTDIO_HOME = join(createTempDir(), "pstdio-home");

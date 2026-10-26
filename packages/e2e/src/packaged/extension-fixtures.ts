@@ -68,7 +68,7 @@ export const writeExtensionWithDependency = (root: string, apiVersions = `^${EXT
   );
   writeFileSync(
     join(extDir, "extension.ts"),
-    'import { marker } from "test-dep/feature";\nimport { templates } from "./src/contribution";\nif (typeof marker !== "string") throw new Error("dependency not loaded");\nexport default { templates };\n',
+    'import { marker } from "test-dep/feature";\nimport { templates } from "./src/contribution";\nif (typeof marker !== "string") throw new Error("dependency not loaded");\nlet count = 0;\nexport default { templates, commands: [{ id: "count", ref: { kind: "command", id: "count" }, title: "Count", run: () => ++count }] };\n',
   );
 
   return extDir;

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, realpathSync, rmSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/extensions";
@@ -11,6 +11,7 @@ import { createDiagnostic } from "./diagnostics";
 import { discoverExtensionPackages } from "./discovery";
 import { mirrorNodeModules } from "./mirror-node-modules";
 import { type ExtensionApiProvider, type PackageManifest, readPackageManifest } from "./package-manifest";
+import { runtimeDependencyState } from "./runtime-dependency-state";
 import {
   collectRuntimeModulePaths,
   hashRuntimeModulePaths,
@@ -92,61 +93,8 @@ const resolveNodeModulesPath = (packagePath: string) => {
   }
 };
 
-const collectDependencyPackageEntries = (nodeModulesPath: string) => {
-  const entries: Array<{ name: string; path: string }> = [];
-
-  for (const dirent of readdirSync(nodeModulesPath, { withFileTypes: true }).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  )) {
-    if (dirent.name.startsWith(".") || (!dirent.isDirectory() && !dirent.isSymbolicLink())) continue;
-
-    const packagePath = join(nodeModulesPath, dirent.name);
-    if (!dirent.name.startsWith("@")) {
-      entries.push({ name: dirent.name, path: packagePath });
-      continue;
-    }
-
-    if (!existsSync(packagePath)) continue;
-    for (const scoped of readdirSync(packagePath, { withFileTypes: true }).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    )) {
-      if (scoped.name.startsWith(".") || (!scoped.isDirectory() && !scoped.isSymbolicLink())) continue;
-      entries.push({ name: `${dirent.name}/${scoped.name}`, path: join(packagePath, scoped.name) });
-    }
-  }
-
-  return entries;
-};
-
-const dependencyPackageState = (nodeModulesPath: string) => {
-  const hash = createHash("sha256");
-  hash.update(realpathSync(nodeModulesPath));
-
-  for (const entry of collectDependencyPackageEntries(nodeModulesPath)) {
-    hash.update("\0");
-    hash.update(entry.name);
-    hash.update("\0");
-
-    try {
-      hash.update(realpathSync(entry.path));
-    } catch {
-      hash.update("missing");
-    }
-
-    const packageJsonPath = join(entry.path, "package.json");
-    if (existsSync(packageJsonPath)) hash.update(readFileSync(packageJsonPath));
-  }
-
-  return hash.digest("hex").slice(0, 16);
-};
-
-const dependencyCacheKey = (nodeModulesPath: string | null) => {
-  if (!nodeModulesPath) return "no-node-modules";
-  return `node-modules-${dependencyPackageState(nodeModulesPath)}`;
-};
-
 const runtimePackageKey = (packagePath: string, runtimeModulePaths: Set<string>, nodeModulesPath: string | null) =>
-  `${digest(resolve(packagePath))}-${hashRuntimeModulePaths(packagePath, runtimeModulePaths)}-${dependencyCacheKey(nodeModulesPath)}`;
+  `${digest(resolve(packagePath))}-${hashRuntimeModulePaths(packagePath, runtimeModulePaths)}-${runtimeDependencyState(packagePath, runtimeModulePaths, nodeModulesPath)}`;
 
 // Names everything a load reads: the manifest, the modules the entry imports, and the installed
 // dependencies. Loads with the same key import the same runtime copy with the same dependencies,
