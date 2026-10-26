@@ -2,6 +2,10 @@
 
 Read [MISSION.md](MISSION.md) first. Every feature, fix, and trade-off must pass its test.
 
+# Nonfunctional requirements
+
+Read [NONFUNCTIONAL_REQUIREMENTS.md](NONFUNCTIONAL_REQUIREMENTS.md) before planning or changing the product. Follow its download size, startup, memory, and resource-use requirements. Keep proposed limits distinct from approved requirements and measured results.
+
 # Repository rules
 
 - This is a **Lerna monorepo** managed with **Bun**. It uses **Nx caching**.

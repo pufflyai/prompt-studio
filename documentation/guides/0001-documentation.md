@@ -2,6 +2,8 @@
 
 Prompt Studio is a workbench where people and agents build and use tools through extensions. Core owns shared execution, workspaces, state, sync, trust, and workbench contracts. Planner, Notes, and Reports own their domain workflows. Read the [mission](../../MISSION.md) before changing product boundaries.
 
+The [design rules](../../design/DESIGN.md) and [nonfunctional requirements](../../NONFUNCTIONAL_REQUIREMENTS.md) govern interactions, download size, startup, memory, and resource use.
+
 ## Start here
 
 - [Install Prompt Studio](getting-started/0001-install.md)
@@ -37,6 +39,8 @@ The API and dashboard share an authenticated runtime. Core sync uses SSE. There 
 Use topic folders within categories. References are grouped into `architecture/`, `cli/`, `extensions/`, `sdk/`, and `workbench/`. Guides group getting started, concepts, development, extension authoring, and SDK workflows. Requirements group API, CLI, dashboard, extension, and platform topics.
 
 Every file has a four-digit number within its own folder: `NNNN-kebab-case.md`. For example, `references/architecture/0001-adapters-and-features.md` and `references/sdk/0001-overview.md` belong to separate sequences. Avoid repeating a folder's topic in the filename. Keep published numbers stable and add the next number in that folder. ADRs and lessons retain their existing folders and identifiers; do not recycle removed numbers. Keep ADR proposal dates when their status changes. Package and extension READMEs, extension-owned product docs, and Pencil/design guidance stay beside their owners.
+
+Repository-wide governing documents keep their stable names and paths: `MISSION.md`, `NONFUNCTIONAL_REQUIREMENTS.md`, `AGENTS.md`, and `design/DESIGN.md`.
 
 Treat source-linked type declarations as the signature authority. Call requirements documents PRDs, not proposals. Mark unimplemented PRDs as proposed and delete superseded PRDs. Preserve the remaining numbers when a PRD is removed; gaps do not need to be filled.
 
