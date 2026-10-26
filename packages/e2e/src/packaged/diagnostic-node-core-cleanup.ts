@@ -7,14 +7,21 @@ import { runTestCommand } from "../scripts/run-test-command";
 
 export const removeDiagnosticCore = async (root: string) => {
   const started = Date.now();
-  const counts = { files: 0, directories: 0, links: 0, internalLinks: 0, externalLinks: 0 };
+  const counts = { files: 0, directories: 0, links: 0, internalLinks: 0, externalLinks: 0, brokenLinks: 0 };
   const canonical = await realpath(root);
   const count = async (directory: string) => {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name);
       if (entry.isSymbolicLink()) {
         counts.links++;
-        const target = await realpath(path);
+        let target: string;
+        try {
+          target = await realpath(path);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+          counts.brokenLinks++;
+          continue;
+        }
         const within = relative(canonical, target);
         if (within.startsWith("..") || isAbsolute(within)) counts.externalLinks++;
         else counts.internalLinks++;

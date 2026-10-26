@@ -16,7 +16,7 @@ In [comparison run 40266908057](https://github.com/pufflyai/prompt-studio/action
 
 ## Decision
 
-Use Playwright's [supported `msedge` channel](https://playwright.dev/docs/browsers#google-chrome--microsoft-edge) for the board, chat motion, and saved view ordering functional smokes on Windows ARM. Use provisioned Chromium elsewhere. Keep this choice in one shared launch-options export. Missing Edge is a failure, with no skip or fallback.
+Use Playwright's [supported `msedge` channel](https://playwright.dev/docs/browsers#google-chrome--microsoft-edge) for the board, chat motion, saved view ordering, and core workspace selection functional smokes on Windows ARM. Use provisioned Chromium elsewhere. Keep this choice in one shared launch-options export. Missing Edge is a failure, with no skip or fallback.
 
 Keep the same headless mode, contexts, viewport, authentication, cold application navigation, ticket actions, streaming responses, history checks, reloads, and 30-second allowances. The comparison passed all four cases in 27.55, 24.81, 15.20, and 20.72 seconds. The actual launched executable's PE header and Visual Studio `dumpbin` output identify ARM64. [Engine verification run 40268369505](https://github.com/pufflyai/prompt-studio/actions/runs/40268369505) also decoded the engine matching the exact CDP product version, `156.0.4314.42`, as ARM64. Final qualification must still pass on the delivered revision.
 

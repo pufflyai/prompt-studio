@@ -24,7 +24,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Require the delivered product and removal experiment only
-        run: git diff --exit-code 1791dc113e3937a0ed7bd001cb3b6c6458353fcd -- . ':!.github/workflows/test-and-build.yml' ':!packages/e2e/src/packaged/packaged-core-extensions.fixture.ts' ':!packages/e2e/src/packaged/diagnostic-node-core-cleanup.ts' ':!documentation/adrs/0112-temporary-node-core-cleanup-experiment.md'
+        run: git diff --exit-code 400c979fe3385c8d1aedb655fd67a7f9c8bc2b67 -- . ':!.github/workflows/test-and-build.yml' ':!packages/e2e/src/packaged/packaged-core-extensions.fixture.ts' ':!packages/e2e/src/packaged/diagnostic-node-core-cleanup.ts' ':!documentation/adrs/0112-temporary-node-core-cleanup-experiment.md'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
