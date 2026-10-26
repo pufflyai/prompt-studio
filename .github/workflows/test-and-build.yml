@@ -1,20 +1,32 @@
-name: Detached readiness qualification
+name: Parallel cleanup diagnosis
 on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
-  detached:
+  native:
+    name: native fixtures (${{ matrix.platform_pkg }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, windows-11-arm]
+        include:
+          - os: windows-latest
+            platform_pkg: cli-win-x64
+          - os: windows-11-arm
+            platform_pkg: cli-win-arm64
+    env:
+      CI_PRIORITY: P2
+      PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
+      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: a11c4c9f8b8d09d9df913d5228471d4a3f3f68cd
+          fetch-depth: 0
+      - name: Require delivered source except measured cleanup
+        run: git diff --exit-code 74fee851b3fa2f36a4d75edc7993de9e4e0c9d69 -- . ':!.github/workflows/test-and-build.yml' ':!packages/e2e/src/packaged/packaged-core-extensions.fixture.ts'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -24,8 +36,35 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
-      - name: Build source host test dependencies
-        run: bun run build -- --scope pstdio-api --include-dependencies
-      - name: Prove detached lifetime after immediate and delayed readiness
-        working-directory: packages/pstdio-api
-        run: bun test ./src/features/extensions/extension-detached-process.p1.test.ts
+      - name: Build and verify the native compiled candidate
+        run: bun run --cwd scripts verify:packages --profile integrity
+      - name: Provision the compiled smoke browser
+        run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke"; preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
+      - name: Exercise native interruption, inherited output and archive cleanup
+        working-directory: packages/e2e
+        run: >-
+          bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts
+          src/local-workspace-registry.p0.test.ts
+          src/packaged/extension-smoke.p2.test.ts
+          src/packaged/packaged-independent-extensions-smoke.p2.test.ts
+          src/packaged/packaged-serve-helpers.p2.test.ts
+          src/packaged/packaged-planner-smoke.p2.test.ts
+          src/packaged/packaged-board-panning-smoke.p2.test.ts
+          src/packaged/packaged-chat-motion-smoke.p2.test.ts
+          src/packaged/packaged-collection-view-order-smoke.p2.test.ts
+          src/packaged/packaged-core-extension-features.p2.test.ts
+          src/packaged/packaged-core-extensions-smoke.p1.test.ts
+          src/packaged/packaged-queued-requests-smoke.p2.test.ts
+          --test-name-pattern 'closes owned connections|closes a published tarball|interruption stops|a packaged CLI gives|a packaged host packs|fixture shutdown|runner cancellation|dependency stacks|recovers missing|adopts a feature|board pans|retains streaming|Kanban and data table|core extension features|core defaults|editor cancellation'
+          --timeout 30000 --silent
+      - name: Preserve native evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-qualification-${{ matrix.platform_pkg }}
+          path: |
+            packages/e2e/test-results
+            test-results/ci
+            packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
+          include-hidden-files: true
+          if-no-files-found: warn

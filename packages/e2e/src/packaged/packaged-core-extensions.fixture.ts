@@ -1,7 +1,7 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { readdir, rm, rmdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -32,6 +32,18 @@ interface CoreExtensionsFixture {
   extensions: { canUpgrade: boolean; enabled: boolean; id: string; installName: string; name: string }[];
   metadata: WorkbenchExtensionMetadata;
 }
+
+const removeFixture = async (root: string, levels: number) => {
+  const entries = await readdir(root, { withFileTypes: true });
+  await Promise.all(
+    entries.map(async (entry) => {
+      const path = join(root, entry.name);
+      if (entry.isDirectory() && levels > 0) await removeFixture(path, levels - 1);
+      else await rm(path, { recursive: true, force: true });
+    }),
+  );
+  await rmdir(root);
+};
 
 export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFixture) => Promise<void>) => {
   const startedAt = Date.now();
@@ -87,13 +99,7 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("runtime stopped");
     if (closeRegistry) await closeRegistry();
     phase("registry closed");
-    if (process.platform === "win32") {
-      const removing = Bun.spawn(["cmd.exe", "/d", "/c", "rmdir", "/s", "/q", tempRoot], {
-        stdout: "ignore", stderr: "pipe",
-      });
-      const [exitCode, stderr] = await Promise.all([removing.exited, new Response(removing.stderr).text()]);
-      if (exitCode !== 0) throw new Error(`Native fixture removal failed (${exitCode}): ${stderr}`);
-    } else await rm(tempRoot, { recursive: true, force: true });
+    await removeFixture(tempRoot, 3);
     phase("files removed");
   }
 };
