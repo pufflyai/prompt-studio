@@ -178,6 +178,7 @@
     "cancel": "Annuler",
     "close": "Fermer",
     "managed": "Identifiants gérés par l’environnement",
+    "unavailable": "La configuration du compte n’est pas disponible pour cet agent.",
     "requiredDescription": "Connectez-vous pour envoyer des messages. Vous pouvez aussi saisir /login dans le chat.",
     "noHarnessTitle": "Aucun agent disponible",
     "noHarnessDescription": "Activez une extension d’agent pour commencer une conversation.",

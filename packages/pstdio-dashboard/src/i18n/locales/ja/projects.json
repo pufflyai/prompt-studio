@@ -176,6 +176,7 @@
     "cancel": "キャンセル",
     "close": "閉じる",
     "managed": "認証情報は実行環境で管理されています",
+    "unavailable": "このハーネスではアカウントを設定できません。",
     "requiredDescription": "メッセージを送信するにはログインしてください。チャットで /login も使えます。",
     "noHarnessTitle": "利用可能なエージェントがありません",
     "noHarnessDescription": "拡張機能でエージェントを有効にして、チャットを開始してください。",

@@ -176,6 +176,7 @@
     "cancel": "取消",
     "close": "關閉",
     "managed": "憑證由執行環境管理",
+    "unavailable": "此工具暫時無法設定帳戶。",
     "requiredDescription": "登入後即可傳送訊息。您也可以在聊天中使用 /login。",
     "noHarnessTitle": "沒有可用的代理",
     "noHarnessDescription": "在擴充功能中啟用代理以開始聊天。",

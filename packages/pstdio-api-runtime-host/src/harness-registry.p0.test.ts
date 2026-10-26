@@ -365,3 +365,27 @@ describe("harness skills layout", () => {
     expect(registry.get("pstdio.pstdio-other.harness.other")?.skills).toBeNull();
   });
 });
+
+it("retirement rejects account startup while its awaited context is being delivered", async () => {
+  const authenticate = mock(async () => {});
+  const source = record({ authenticate });
+  const context = Promise.withResolvers<HarnessContext>();
+  const registry = createHarnessRegistry([source], () => context.promise);
+  const handle = registry.get(source.id)!;
+  const result = handle.authenticate!(
+    { action: "login" },
+    { signal: new AbortController().signal, emit: async () => {}, request: async () => "" },
+  ).then(
+    () => "started",
+    () => "retired",
+  );
+  const closing = Promise.withResolvers<void>();
+  context.resolve(buildContext(source));
+  queueMicrotask(() => {
+    void handle.dispose().then(closing.resolve, closing.reject);
+  });
+  await closing.promise;
+  expect(await result).toBe("retired");
+  expect(authenticate).not.toHaveBeenCalled();
+  await registry.dispose();
+});

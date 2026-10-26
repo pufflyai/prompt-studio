@@ -4,7 +4,7 @@ import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
 import { getApiClient } from "@/lib/api";
 import { useBrowserHarnessAccount } from "@/shared/agents/use-browser-harness-account";
-import { harnessAccountCommand } from "../chat/harness-account-command";
+import { createHarnessAccountCommandHandler } from "../chat/harness-account-command";
 
 /** Account replies use a dedicated channel, outside commands and conversation history. */
 export const useHarnessAccount = (
@@ -28,34 +28,36 @@ export const useHarnessAccount = (
       queries.invalidateQueries({ queryKey: ["agent-models"] }),
     ]).then(() => {});
   const start = (action: "login" | "logout") => {
-    if (authentication && agent) browser.start(action, agent.name, refresh);
+    if (!authentication || !agent) {
+      const error = new Error(t("harnessAccount.unavailable"));
+      browser.reportError(error.message);
+      return error;
+    }
+    browser.start(action, agent.name, refresh);
   };
-  const commands = authentication?.providers.length
-    ? (["login", "logout"] as const).map((action) => ({
-        name: "/" + action,
-        description: t("harnessAccount." + action),
-        onSelect: () => start(action),
-      }))
-    : [];
+  const localCommands = createHarnessAccountCommandHandler({
+    start,
+    rejectArguments: (action) => {
+      const message = t("harnessAccount.noArguments", { command: `/${action}` });
+      browser.reportError(message);
+      return new Error(message);
+    },
+  });
+  const commands =
+    agent?.availability.type === "INSTALLED"
+      ? (["login", "logout"] as const).map((action) => ({
+          name: `/${action}`,
+          description: t(`harnessAccount.${action}`),
+          onSelect: () => start(action),
+        }))
+      : [];
   return {
     start,
     authentication,
-    checking: query.isFetching && !query.data,
+    checking: query.isFetching && query.data === undefined,
     progress: browser.progress,
     commands,
-    isCommand: (text: string) => Boolean(authentication && harnessAccountCommand(text)),
-    submit: (text: string, onSubmitted?: () => void) => {
-      const command = authentication && harnessAccountCommand(text);
-      if (!command) return undefined;
-      if (command.argument) {
-        const message = t("harnessAccount.noArguments", { command: "/" + command.action });
-        browser.reportError(message);
-        return Promise.reject(new Error(message));
-      }
-      start(command.action);
-      onSubmitted?.();
-      return Promise.resolve();
-    },
+    ...localCommands,
     notice: browser.error ? (
       <Stack gap="xs">
         <Text color="fg.error" textStyle="paragraph/S/regular">
