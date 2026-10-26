@@ -73,7 +73,7 @@ try {
       "powershell.exe",
       "-NoProfile",
       "-Command",
-      "$ErrorActionPreference='Stop'; New-MpPerformanceRecording -RecordTo $env.PS932_TRACE -Seconds 60",
+      "$ErrorActionPreference='Stop'; New-MpPerformanceRecording -RecordTo $env:PS932_TRACE -Seconds 60",
     ],
     {
       env: { ...process.env, PS932_TRACE: trace },
@@ -87,7 +87,7 @@ try {
     for await (const chunk of recorder.stdout) {
       stdout += new TextDecoder().decode(chunk);
       console.log(`Defender recorder: ${stdout.slice(-2000)}`);
-      if (!ready && /recording started/i.test(stdout)) {
+      if (!ready && /recording(?: has)? started/i.test(stdout)) {
         ready = true;
         resolveReady();
       }
@@ -177,7 +177,7 @@ try {
       "powershell.exe",
       "-NoProfile",
       "-Command",
-      "$ErrorActionPreference='Stop'; Get-MpPerformanceReport -Path $env.PS932_TRACE -TopFiles 30 -TopProcesses 10 -TopScans 30 -Raw | ConvertTo-Json -Depth 20",
+      "$ErrorActionPreference='Stop'; Get-MpPerformanceReport -Path $env:PS932_TRACE -TopFiles 30 -TopProcesses 10 -TopScans 30 -Raw | ConvertTo-Json -Depth 20",
     ]);
     await writeFile(join(root, "defender-report.json"), report.stdout);
     results.push({ defenderReport: report });
