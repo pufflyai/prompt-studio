@@ -16,7 +16,8 @@ export const createAccountClient = (request: RequestFn) => {
   const project = (id: string) => `/v1/account/projects/${encodeURIComponent(id)}`;
   const login = (id: string) => `/v1/account/login/${encodeURIComponent(id)}`;
   return {
-    login: (managerOrigin: string) =>
+    /** Uses the host's account service when no address is supplied. */
+    login: (managerOrigin?: string) =>
       request<AccountLogin>("/v1/account/login", { method: "POST", body: { managerOrigin } }),
     loginStatus: (id: string) => request<{ status: AccountLoginStatus }>(login(id)),
     /** Cancels a pending sign-in. A sign-in that already completed stays complete. */

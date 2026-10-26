@@ -359,10 +359,14 @@ test("account capabilities route reads and changes to the host account and valid
   });
   await capabilities["account.manage"]({ op: "renameDevice", id: "device-2", name: "Studio Mac" });
   await capabilities["account.manage"]({ op: "stopProjectSync", projectId: "project-2" });
+  await capabilities["account.manage"]({ op: "login" });
+  await capabilities["account.manage"]({ op: "login", managerOrigin: "https://accounts.example.test" });
   expect(calls).toEqual([
     ["projectSyncStatus", undefined],
     ["renameDevice", "device-2", "Studio Mac"],
     ["stopProjectSync", "project-2"],
+    ["login", undefined],
+    ["login", "https://accounts.example.test"],
   ]);
   // Reads cannot change the account, and changes need their own capability.
   await expect(Promise.resolve().then(() => capabilities["account.read"]({ op: "logout" }))).rejects.toMatchObject({
@@ -371,5 +375,5 @@ test("account capabilities route reads and changes to the host account and valid
   await expect(Promise.resolve().then(() => capabilities["account.manage"]({ op: "devices" }))).rejects.toMatchObject({
     code: "invalid_params",
   });
-  expect(calls).toHaveLength(3);
+  expect(calls).toHaveLength(5);
 });
