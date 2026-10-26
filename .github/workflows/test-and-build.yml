@@ -1,4 +1,4 @@
-name: Compare cold ARM installer resource use
+name: Observe cold ARM installer resource use
 on:
   workflow_dispatch:
 permissions:
@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        http: ["1", "4", "16"]
+        http: ["16"]
     env:
       CI_PRIORITY: P2
       PSTDIO_VERIFY_PLATFORM_PKG: cli-win-arm64
@@ -29,6 +29,8 @@ jobs:
           install-strategy: native
       - name: Build the normal compiled candidate and check integrity
         run: bun run --cwd scripts verify:packages --profile integrity
+      - name: Verify the compiled diagnostic is present
+        run: bun -e 'if (!(await Bun.file(process.env.E2E_PACKAGED_BINARY_PATH).text()).includes("Installer resource probe")) throw new Error("Compiled installer probe is missing")'
       - name: Compare both complete cold core cases once
         working-directory: packages/e2e
         env:

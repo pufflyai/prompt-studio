@@ -60,6 +60,9 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
       }),
     });
     child = started.child;
+    // Readiness stops forwarding output; keep the diagnostic installer observations visible.
+    child.stdout?.on("data", (chunk: Buffer) => process.stdout.write(`[Core runtime] ${chunk.toString()}`));
+    child.stderr?.on("data", (chunk: Buffer) => process.stderr.write(`[Core runtime] ${chunk.toString()}`));
     phase("runtime ready");
     const projectFolder = join(tempRoot, "project");
     mkdirSync(projectFolder);
