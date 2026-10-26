@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
+import { showSidenavEntry } from "../ui/helpers/sidenav-navigation";
 import {
   afterTwoFrames,
   collectRepeatSamples,
@@ -39,6 +40,8 @@ test("navigates global collections within the interaction budget", async ({ page
   await waitForTicketsView(request, project.id);
   await preparePerfPage(page, project.id);
   await page.goto(`/projects/${project.id}/tickets`);
+  // Workspaces is hidden by default; showing it is setup, outside every sample.
+  await showSidenavEntry(page, "Workspaces");
 
   for (const collection of collections) {
     const target = collectionRow(page, collection);
