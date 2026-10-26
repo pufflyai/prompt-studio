@@ -46,7 +46,7 @@ jobs:
         with:
           install-strategy: native
       - name: Compile PS-932 with the separate PS-947 readiness repair
-        run: bun run build -- --scope pstdio --include-dependencies
+        run: bun run --cwd scripts build:all
       - name: Provision the compiled smoke browser
         id: browser
         run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke"; preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
