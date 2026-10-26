@@ -22,8 +22,8 @@ type RegistryMetadata = {
   versions?: Record<string, unknown>;
 };
 
-const readPublishedMetadata = async (name: string, origin: string) => {
-  const response = await fetch(new URL(encodeURIComponent(name), `${origin}/`));
+const readPublishedMetadata = async (name: string, origin: string, signal: AbortSignal) => {
+  const response = await fetch(new URL(encodeURIComponent(name), `${origin}/`), { signal });
   if (response.status === 404) return {};
   if (!response.ok) throw new Error(`Could not read published versions of ${name}: ${response.status}`);
   return (await response.json()) as RegistryMetadata;
@@ -84,12 +84,13 @@ export const startLocalWorkspaceRegistry = async (input: {
   mkdirSync(registryRoot, { recursive: true });
   const packages = input.packagePaths.map((packagePath) => packWorkspacePackage(packagePath, registryRoot));
   const upstreamOrigin = input.upstreamOrigin ?? "https://registry.npmjs.org";
+  const upstreamLifetime = new AbortController();
   const publishedByName = new Map<string, Promise<RegistryMetadata>>();
   const publishedMetadata = (name: string) => {
     let metadata = publishedByName.get(name);
     if (!metadata) {
       // Published versions supplement local tarballs; npm availability must not block the local registry.
-      metadata = readPublishedMetadata(name, upstreamOrigin).catch(() => ({}));
+      metadata = readPublishedMetadata(name, upstreamOrigin, upstreamLifetime.signal).catch(() => ({}));
       publishedByName.set(name, metadata);
     }
     return metadata;
@@ -100,6 +101,9 @@ export const startLocalWorkspaceRegistry = async (input: {
   let origin = "";
   const server = createServer(async (request, response) => {
     const requestPath = decodeURIComponent(new URL(request.url ?? "/", origin).pathname).replace(/^\/+/, "");
+    const requestedAt = Date.now();
+    console.log(`Registry request ${requestPath} at ${requestedAt}`);
+    response.once("finish", () => console.log(`Registry response ${requestPath} after ${Date.now() - requestedAt}ms`));
     const pkg = packagesByName.get(requestPath);
     if (pkg) {
       response.setHeader("content-type", "application/json");
@@ -116,12 +120,17 @@ export const startLocalWorkspaceRegistry = async (input: {
 
     // Lockfiles resolved against npm request published tarballs from this scope registry.
     if (requestPath.includes("/-/")) {
-      const published = await fetch(new URL(requestPath, `${upstreamOrigin}/`)).catch(() => null);
-      if (published?.ok) {
-        response.setHeader("content-type", "application/octet-stream");
-        response.end(Buffer.from(await published.arrayBuffer()));
-        return;
-      }
+      try {
+        const published = await fetch(new URL(requestPath, `${upstreamOrigin}/`), {
+          signal: upstreamLifetime.signal,
+        });
+        if (published.ok) {
+          const bytes = Buffer.from(await published.arrayBuffer());
+          response.setHeader("content-type", "application/octet-stream");
+          response.end(bytes);
+          return;
+        }
+      } catch {}
     }
 
     response.statusCode = 404;
@@ -143,6 +152,8 @@ export const startLocalWorkspaceRegistry = async (input: {
     close: async () => {
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
+        upstreamLifetime.abort();
+        server.closeAllConnections();
       });
       rmSync(registryRoot, { recursive: true, force: true });
     },

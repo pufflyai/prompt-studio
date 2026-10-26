@@ -1,24 +1,10 @@
-name: Native pipe diagnosis
+name: Native install profile
 on:
   workflow_dispatch:
 permissions:
   contents: read
   actions: read
 jobs:
-  pipes:
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 5
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, windows-11-arm]
-    steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - name: Reproduce output after readiness
-        run: bun test packages/e2e/src/scripts/process-readiness.p0.test.ts --test-name-pattern 'finish writing output' --timeout 30000
   native:
     name: core diagnostic (${{ matrix.platform_pkg }})
     runs-on: ${{ matrix.os }}
@@ -62,9 +48,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: native-qualification-${{ matrix.platform_pkg }}
+          name: native-install-profile-${{ matrix.platform_pkg }}
           path: |
             packages/e2e/test-results
             test-results/ci
+            packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
           include-hidden-files: true
           if-no-files-found: warn
