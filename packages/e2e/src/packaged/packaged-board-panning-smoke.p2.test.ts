@@ -41,27 +41,26 @@ test("packaged Planner board pans with a mouse and keeps ticket and column actio
       phase("project created");
       return id;
     })();
-    const launchingBrowser = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
+    const openingPage = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
       browser = opened;
-      return opened;
+      return opened.newPage({
+        viewport: { width: 1000, height: 720 },
+        extraHTTPHeaders: runtimeAuthorization(runtime.descriptor),
+      });
     });
-    const [projectSetup, browserSetup] = await Promise.allSettled([creatingProject, launchingBrowser]);
+    const [projectSetup, browserSetup] = await Promise.allSettled([creatingProject, openingPage]);
     if (projectSetup.status === "rejected") throw projectSetup.reason;
     if (browserSetup.status === "rejected") throw browserSetup.reason;
     const id = projectSetup.value;
-    const page = await browserSetup.value.newPage({
-      viewport: { width: 1000, height: 720 },
-      extraHTTPHeaders: runtimeAuthorization(runtime.descriptor),
-    });
-    await createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Pan board ticket" });
-    await createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Edge scroll ticket" });
-    await createPlannerTicket(page.request, runtime.baseUrl, id, {
-      content: "# Completed board ticket",
-      statusId: "done",
-    });
+    const page = browserSetup.value;
+    await Promise.all([
+      createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Pan board ticket" }),
+      createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Edge scroll ticket" }),
+      createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Completed board ticket", statusId: "done" }),
+    ]);
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     phase("tickets created");
-    await signInBrowser(page, runtime.descriptor, `/projects/${id}/`);
+    await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
     phase("browser signed in");
     await page.getByRole("option", { name: "Tickets", exact: true }).click();
     phase("board opened");

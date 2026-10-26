@@ -74,13 +74,10 @@ export const expectPackagedPanelMotion = async (page: Page) => {
   await expectResizedPanelReopen(page, "Resize Side Panel", "Show Side Panel", -1);
 };
 
-// Visible messages retain their DOM as chunks arrive. Older responses may leave the viewport.
-export const expectPackagedStreamingMotion = async (
-  page: Page,
+export const createPackagedStreamingSession = async (
   baseUrl: string,
   projectId: string,
   headers: Record<string, string>,
-  projectRoot: string,
 ) => {
   const response = await fetch(`${baseUrl}/v1/sessions`, {
     method: "POST",
@@ -94,6 +91,17 @@ export const expectPackagedStreamingMotion = async (
   });
   expect(response.ok).toBe(true);
   const session = (await response.json()) as { id: string };
+  return session.id;
+};
+
+// Visible messages retain their DOM as chunks arrive. Older responses may leave the viewport.
+export const expectPackagedStreamingMotion = async (
+  page: Page,
+  baseUrl: string,
+  headers: Record<string, string>,
+  projectRoot: string,
+  sessionId: string,
+) => {
   logTestPhase("Packaged chat stream: open replay");
   await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
@@ -127,7 +135,7 @@ export const expectPackagedStreamingMotion = async (
   await expect
     .poll(
       async () => {
-        const state = await fetch(`${baseUrl}/v1/sessions/${session.id}`, { headers });
+        const state = await fetch(`${baseUrl}/v1/sessions/${sessionId}`, { headers });
         return ((await state.json()) as { status: string }).status;
       },
       { timeout: 15_000 },
@@ -151,5 +159,5 @@ export const expectPackagedStreamingMotion = async (
     )
     .toBe(0);
   await earlier?.dispose();
-  await expectPackagedChatHistory(page, session.id);
+  await expectPackagedChatHistory(page, sessionId);
 };

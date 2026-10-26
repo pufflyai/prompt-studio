@@ -87,17 +87,17 @@ test("packaged Kanban and data table view tabs save pointer and keyboard order",
       phase("project created");
       return id;
     })();
-    const launchingBrowser = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
+    const openingPage = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
       browser = opened;
-      return opened;
+      return opened.newPage({ extraHTTPHeaders: runtimeAuthorization(runtime.descriptor) });
     });
-    const [projectSetup, browserSetup] = await Promise.allSettled([creatingProject, launchingBrowser]);
+    const [projectSetup, browserSetup] = await Promise.allSettled([creatingProject, openingPage]);
     if (projectSetup.status === "rejected") throw projectSetup.reason;
     if (browserSetup.status === "rejected") throw browserSetup.reason;
     const id = projectSetup.value;
-    const page = await browserSetup.value.newPage({ extraHTTPHeaders: runtimeAuthorization(runtime.descriptor) });
+    const page = browserSetup.value;
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-    await signInBrowser(page, runtime.descriptor, `/projects/${id}/`);
+    await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
     phase("browser signed in");
     await page.getByRole("option", { name: "Tickets", exact: true }).click();
     await verifyOrder(page, id, "pstdio.pstdio-planner.view.tickets");

@@ -9,7 +9,11 @@ import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
-import { expectPackagedPanelMotion, expectPackagedStreamingMotion } from "./packaged-motion-smoke";
+import {
+  createPackagedStreamingSession,
+  expectPackagedPanelMotion,
+  expectPackagedStreamingMotion,
+} from "./packaged-motion-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -34,9 +38,9 @@ for (const kind of ["streaming", "panels"] as const) {
           child = runtime.child;
           return runtime;
         });
-        const launchingBrowser = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
+        const openingPage = chromium.launch(PROVISIONED_CHROMIUM).then((opened) => {
           browser = opened;
-          return opened;
+          return opened.newPage();
         });
         const creatingProject = startingRuntime.then(async (started) => {
           phase("runtime ready");
@@ -54,25 +58,31 @@ for (const kind of ["streaming", "panels"] as const) {
           const project = (await projectResponse.json()) as { id: string };
           phase("project created");
           // A second conversation lets history checks switch away and reopen the retained replay.
-          const idleResponse = await fetch(`${started.baseUrl}/v1/sessions`, {
-            method: "POST",
-            headers: { ...headers, "content-type": "application/json" },
-            body: JSON.stringify({
-              project_id: project.id,
-              title: "Idle connection",
-              prompt: "First idle-session message",
-              agent: "pstdio.workbench-fixture.harness.fake",
+          const [idleResponse, replaySessionId] = await Promise.all([
+            fetch(`${started.baseUrl}/v1/sessions`, {
+              method: "POST",
+              headers: { ...headers, "content-type": "application/json" },
+              body: JSON.stringify({
+                project_id: project.id,
+                title: "Idle connection",
+                prompt: "First idle-session message",
+                agent: "pstdio.workbench-fixture.harness.fake",
+              }),
             }),
-          });
+            kind === "streaming"
+              ? createPackagedStreamingSession(started.baseUrl, project.id, headers)
+              : Promise.resolve(""),
+          ]);
           expect(idleResponse.ok).toBe(true);
           phase("second conversation created");
-          return { started, headers, folder, project };
+          return { started, headers, folder, project, replaySessionId };
         });
-        const [projectSetup, browserSetup] = await Promise.allSettled([creatingProject, launchingBrowser]);
+        const [projectSetup, browserSetup] = await Promise.allSettled([creatingProject, openingPage]);
         if (projectSetup.status === "rejected") throw projectSetup.reason;
         if (browserSetup.status === "rejected") throw browserSetup.reason;
-        const { started, headers, folder, project } = projectSetup.value;
-        const page = await browserSetup.value.newPage({ extraHTTPHeaders: headers });
+        const { started, headers, folder, project, replaySessionId } = projectSetup.value;
+        const page = browserSetup.value;
+        await page.setExtraHTTPHeaders(headers);
         await page.addInitScript((projectId) => {
           localStorage.setItem("onboarding-complete", "true");
           localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
@@ -81,7 +91,7 @@ for (const kind of ["streaming", "panels"] as const) {
         phase("dashboard opened");
         await page.getByRole("option", { name: "Idle connection", exact: true }).click();
         if (kind === "streaming") {
-          await expectPackagedStreamingMotion(page, started.baseUrl, project.id, headers, folder);
+          await expectPackagedStreamingMotion(page, started.baseUrl, headers, folder, replaySessionId);
           phase("streaming and retained history checked");
         } else {
           await expectPackagedPanelMotion(page);
