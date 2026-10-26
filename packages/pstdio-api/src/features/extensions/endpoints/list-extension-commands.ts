@@ -39,6 +39,7 @@ export const listExtensionCommandsHandler = (
       return c.json(
         {
           commands: snapshot.runtime.commands.map(toCommandRecord),
+          extensionIds: snapshot.runtime.extensions.map((extension) => extension.id),
           translations: snapshot.runtime.translations,
           diagnostics: snapshot.runtime.diagnostics,
         },

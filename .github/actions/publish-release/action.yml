@@ -1,0 +1,232 @@
+name: Publish verified release
+description: Publish the immutable verified candidate; the trusted Release Packages workflow owns permissions
+inputs:
+  artifact-attempt:
+    description: Original immutable CLI build attempt
+    required: true
+  certificate-name:
+    description: Required stable certificate from the completed validation
+    required: false
+  commit:
+    description: Immutable verified candidate input
+    required: true
+  version:
+    description: Immutable verified candidate input
+    required: true
+  targets:
+    description: Immutable verified candidate input
+    required: true
+  channel:
+    description: Immutable verified candidate input
+    required: true
+  previous-tag:
+    description: Publication context supplied by Release Packages
+    required: false
+  patch:
+    description: Publication context supplied by Release Packages
+    required: false
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Confirm the patch still targets the current stable release
+      if: inputs.patch == 'true'
+      env:
+        BASE_TAG: ${{ inputs.previous-tag }}
+      shell: bash
+      run: |
+        CURRENT=$(gh release view --json tagName --jq .tagName)
+        if [ "$CURRENT" != "$BASE_TAG" ]; then
+          echo "::error::Only the current stable release can be patched. Stable is now $CURRENT."
+          exit 1
+        fi
+
+    # A newer attempt of the same unpublished version moves the tag and owns the release.
+    - name: Check that this run still owns the release tag
+      shell: bash
+      run: |
+        set -euo pipefail
+        git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+        TAGGED=$(git rev-parse "refs/tags/$TAG^{commit}")
+        if [ "$TAGGED" != "$COMMIT" ]; then
+          echo "::error::$TAG now points at $TAGGED, not $COMMIT. A newer run releases this version."
+          exit 1
+        fi
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: package.json
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: "24"
+
+    - name: Pin npm for trusted publishing
+      shell: bash
+      run: npm i -g npm@11.16.0
+
+    - name: Install publication dependencies
+      shell: bash
+      run: node scripts/ci/install-native-dependencies.ts
+
+    - name: Restore the verified publication artifacts
+      shell: bash
+      run: |
+        bun scripts/ci/production-payload.ts check
+        tar -xzf release-build.tar.gz
+
+    - name: Download the exact stable certificate
+      if: inputs.channel == 'stable'
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.certificate-name }}
+
+    - name: Bind stable publication to certified immutable artifact IDs
+      if: inputs.channel == 'stable'
+      id: certified
+      shell: bash
+      run: bun scripts/ci/production-publication.ts
+
+    - name: Download certified stable desktop artifacts by immutable ID
+      if: inputs.channel == 'stable'
+      uses: actions/download-artifact@v4
+      with:
+        artifact-ids: ${{ steps.certified.outputs.desktop_ids }}
+        path: desktop-release
+
+    - name: Download verified desktop artifacts
+      if: inputs.channel == 'nightly'
+      uses: actions/download-artifact@v4
+      with:
+        pattern: desktop-*
+        path: desktop-release
+
+    - name: Verify the desktop release set
+      env:
+        TARGETS: ${{ inputs.targets }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        bun clients/desktop/scripts/verify-release-set.ts desktop-release --targets "$(jq -r 'join(",")' <<< "$TARGETS")"
+        mkdir desktop-publish
+        find desktop-release -type f -exec cp '{}' desktop-publish/ \;
+        cd desktop-publish
+        for checksums in checksums-*.sha256; do sha256sum -c "$checksums"; done
+        cat checksums-*.sha256 | sort > "checksums-desktop-${{ inputs.version }}.sha256"
+
+    - name: Download certified stable service images by immutable ID
+      if: inputs.channel == 'stable'
+      uses: actions/download-artifact@v4
+      with:
+        artifact-ids: ${{ steps.certified.outputs.service_ids }}
+        path: service-images
+        merge-multiple: true
+
+    - name: Download verified service images
+      if: inputs.channel == 'nightly'
+      uses: actions/download-artifact@v4
+      with:
+        pattern: service-container-*
+        path: service-images
+        merge-multiple: true
+
+    # Packing errors must stop the release before the first package reaches npm.
+    - name: Dry-run the npm packages that are not published yet
+      env:
+        NPM_CONFIG_PROVENANCE: false
+      shell: bash
+      run: |
+        set -euo pipefail
+        for manifest in $(jq -r '.workspaces[] | sub("/$"; "") + "/package.json"' package.json); do
+          [ -f "$manifest" ] || continue
+          [ "$(jq -r '.private // false' "$manifest")" = "true" ] && continue
+          NAME=$(jq -r .name "$manifest")
+          VERSION=$(jq -r .version "$manifest")
+          if npm view "$NAME@$VERSION" version > /dev/null 2>&1; then continue; fi
+          PUBLISH_DIR=$(jq -r '.publishConfig.directory // "."' "$manifest")
+          (cd "$(dirname "$manifest")/$PUBLISH_DIR" && npm publish --dry-run --tag "$DIST_TAG")
+        done
+
+    - name: Publish platform packages
+      shell: bash
+      run: bun run --cwd scripts release:platforms:publish "$DIST_TAG"
+
+    # Publishes only versions npm does not have yet. Only the pstdio tag is pushed, by plan.
+    - name: Publish npm packages
+      shell: bash
+      run: bunx changeset publish --tag "$DIST_TAG" --no-git-tag
+
+    - name: Login to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+
+    - name: Publish verified service images
+      env:
+        VERSION: ${{ inputs.version }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        for service in relay account-manager; do
+          docker load --input "service-images/$service.tar"
+          docker push "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION"
+        done
+
+    # Self-hosters pull these images without logging in. GitHub creates a new package as
+    # private and has no API to change that, so an organization owner makes it public once.
+    - name: Check that anyone can pull the service images
+      env:
+        VERSION: ${{ inputs.version }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        docker logout ghcr.io
+        for service in relay account-manager; do
+          if ! docker manifest inspect "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION" > /dev/null; then
+            echo "::error::ghcr.io/$GITHUB_REPOSITORY/$service is private. In its package settings, choose Danger Zone > Change visibility > Public, then re-run this job."
+            exit 1
+          fi
+        done
+
+    - name: Create the draft GitHub release with CLI assets
+      uses: ./.github/actions/create-pstdio-release
+      with:
+        version: ${{ inputs.version }}
+        prerelease: ${{ inputs.channel == 'nightly' }}
+        github-token: ${{ github.token }}
+
+    - name: Attach desktop assets and publish the release
+      shell: bash
+      run: |
+        set -euo pipefail
+        test "$(gh release view "$TAG" --json isDraft -q .isDraft)" = "true"
+        gh release upload "$TAG" desktop-publish/* --clobber
+        if [ "$PRERELEASE" = "true" ]; then
+          gh release edit "$TAG" --draft=false --prerelease --latest=false
+        else
+          gh release edit "$TAG" --draft=false
+        fi
+
+    - name: Record the candidate that actually published
+      shell: bash
+      env:
+        ARTIFACT_RUN_ID: ${{ github.run_id }}
+        ARTIFACT_ATTEMPT: ${{ inputs.artifact-attempt }}
+        CHANNEL: ${{ inputs.channel }}
+      run: |
+        gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$ARTIFACT_RUN_ID/artifacts?per_page=100" > published-artifacts.json
+        export SOURCE_SHA=$(bun -e 'console.log((await Bun.file("production-build-identity.json").json()).sourceSha)')
+        export VERSION_SHA=$(git rev-parse HEAD)
+        bun scripts/ci/production-artifacts.ts published-artifacts.json
+        bun -e 'await Bun.write("production-published-candidate.json", JSON.stringify({...await Bun.file("production-candidate.json").json(),...await Bun.file("production-build-identity.json").json()}))'
+
+    - name: Preserve actual publication identity for daily unchanged-candidate validation
+      uses: actions/upload-artifact@v4
+      with:
+        name: published-candidate-attempt-${{ github.run_attempt }}
+        path: production-published-candidate.json
+        if-no-files-found: error

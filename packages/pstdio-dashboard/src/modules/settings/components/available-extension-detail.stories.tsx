@@ -82,7 +82,8 @@ const meta: Meta<typeof AvailableExtensionDetail> = {
         path: "extensions/pstdio-reports",
         ref: "pstdio@0.28.0",
       },
-      publisher: "pufflyai",
+      publisher: "pstdio",
+      registry: { url: "https://base.prompt.studio/psx", extensionId: "pstdio.pstdio-reports" },
     },
     metadata,
     loadingContributions: false,
@@ -97,6 +98,9 @@ export default meta;
 type Story = StoryObj<typeof AvailableExtensionDetail>;
 
 export const Contributions: Story = {};
+export const RepositorySource: Story = {
+  args: { extension: { ...meta.args!.extension!, registry: undefined } },
+};
 
 export const Installing: Story = {
   args: { installing: true },

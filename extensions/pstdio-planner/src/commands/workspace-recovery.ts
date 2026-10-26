@@ -70,7 +70,7 @@ export async function recoveryPrompt(
 ) {
   if (!recovery) return [];
   const old = recovery.previous;
-  const ticket = await findTicket(ctx.storage, old.ticketId);
+  const ticket = await findTicket(ctx, old.ticketId);
   return [
     [
       `Recover ${old.ticketShorthand}. The old workspace ${old.workspaceShorthand} (${old.workspaceId}) is unavailable: ${recovery.detail}. This is a recovery assignment, not a reason to block the ticket or ask for human permission.`,

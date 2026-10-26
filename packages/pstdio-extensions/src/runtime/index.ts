@@ -24,6 +24,7 @@ export {
   type LoadedExtensionSource,
   loadExtensionPackage,
   loadExtensionSources,
+  readRuntimeImportCount,
 } from "./loader";
 export { normalizeExtensionSources } from "./normalize";
 export { keybindingDedupeEntries } from "./normalize/keybindings";

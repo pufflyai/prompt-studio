@@ -3,10 +3,11 @@ import { putTicket, ticketsCollection } from "../data/collections";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON } from "../data/mappers";
 import { resolveDependencyIds, resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
-import { assertSingleSelectTagIds } from "../data/tag-cardinality";
+import { ticketTagsForIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
 import { withTicketOrder } from "../data/ticket-order";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
+import { withTicketTagIds } from "../data/ticket-tags";
 import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
@@ -53,7 +54,7 @@ export const createTicketCommand = defineCommand({
   async run(ctx, commandParams) {
     // Resolve before anything is written, so an unknown shorthand leaves no
     // half-created ticket and burns no shorthand.
-    const dependsOn = commandParams.dependsOn ? await resolveDependencyIds(ctx.storage, commandParams.dependsOn) : [];
+    const dependsOn = commandParams.dependsOn ? await resolveDependencyIds(ctx, commandParams.dependsOn, []) : [];
     const statuses = await seedDefaultStatuses(ctx.storage);
     if (commandParams.tags !== undefined) await seedDefaultTags(ctx.storage);
     const attributes = commandParams.attributes ?? {};
@@ -61,10 +62,10 @@ export const createTicketCommand = defineCommand({
       commandParams.tags !== undefined
         ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
         : (commandParams.tagIds ?? attributeTagIds(attributes));
-    await assertSingleSelectTagIds(ctx.storage, tagIds);
+    const tags = await ticketTagsForIds(ctx.storage, tagIds);
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
     const now = new Date().toISOString();
-    const { id, shorthand } = await allocateTicketIdentity(ctx);
+    const { id } = await allocateTicketIdentity(ctx);
 
     const attributeStatusId = typeof attributes.status === "string" ? attributes.status : undefined;
 
@@ -74,19 +75,18 @@ export const createTicketCommand = defineCommand({
         : (commandParams.statusId ?? attributeStatusId ?? defaultStatus?.id ?? null);
     const parentId =
       commandParams.parent !== undefined
-        ? await resolveTicketId(ctx.storage, commandParams.parent)
+        ? await resolveTicketId(ctx, commandParams.parent)
         : (commandParams.parentId ?? null);
 
     const { existing, ticket } = await withTicketOrder(ctx, async () => {
-      const existing = await ticketsCollection(ctx.storage).list();
+      const existing = await ticketsCollection(ctx).list();
       const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
-      const ticket = await putTicket(ctx.storage, {
+      const ticket = await putTicket(ctx, {
         id,
-        shorthand,
         title: ticketTitle(commandParams),
         content: commandParams.content ?? "",
         statusId,
-        tagIds,
+        tags,
         attachments: commandParams.attachments ?? [],
         parentId,
         dependsOn,
@@ -102,7 +102,7 @@ export const createTicketCommand = defineCommand({
     });
     await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
     return {
-      ...ticket,
+      ...withTicketTagIds(ticket),
       resource: {
         ...ticketResourceReference(ticket, createTicketParentLookup([...existing, ticket])),
         projectId: ctx.projectId,

@@ -1,0 +1,243 @@
+import { execSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
+import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
+import { uiOrigin as apiBase } from "../ui-server";
+
+const createGitRepo = () => {
+  const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-e2e-ws-diff-"));
+  execSync("git init -b main", { cwd: repoRoot, stdio: "pipe" });
+  execSync('git config user.email "test@test.com"', { cwd: repoRoot, stdio: "pipe" });
+  execSync('git config user.name "Test"', { cwd: repoRoot, stdio: "pipe" });
+  writeFileSync(join(repoRoot, "README.md"), "workspace diff e2e\n");
+  writeFileSync(join(repoRoot, ".gitignore"), ".pstdio/\n.opencode/\n.agents/\n.claude/\n");
+  execSync("git add README.md .gitignore", { cwd: repoRoot, stdio: "pipe" });
+  execSync('git commit -m "init"', { cwd: repoRoot, stdio: "pipe" });
+  return repoRoot;
+};
+
+const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
+  const res = await request.get(`${apiBase}/v1/projects`);
+  const projects = (await res.json()) as { id: string }[];
+  for (const p of projects) {
+    await request.delete(`${apiBase}/v1/projects/${p.id}`);
+  }
+};
+
+const createProjectViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  name: string,
+  folderPath?: string,
+) => {
+  const res = await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name }, folderPath) });
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as { id: string; name: string };
+};
+
+const createTicketViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  content: string,
+) => {
+  return createPlannerTicket(request, apiBase, projectId, { content });
+};
+
+type Workspace = {
+  id: string;
+  workspace_shorthand: string;
+  root_path: string;
+  branch: string | null;
+};
+
+type AttemptResponse = {
+  workspace: Workspace;
+};
+
+const createAttemptViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  ticketId: string,
+) => {
+  return createPlannerAttempt(request, apiBase, projectId, {
+    ticketId,
+  }) as Promise<AttemptResponse>;
+};
+
+const createWorkspaceViaApi = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
+  const res = await request.post(`${apiBase}/v1/workspaces`, {
+    data: { project_id: projectId, provider_id: "pstdio.worktree", params: {} },
+  });
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as Workspace;
+};
+
+type DiffResponse = {
+  workspace_id: string;
+  files: Array<{ filePath: string; change: string; additions: number; deletions: number }>;
+  totals: { additions: number; deletions: number; file_count: number };
+};
+
+test.describe("Workspace diff", () => {
+  let projectId: string;
+  const repoDirs: string[] = [];
+
+  test.beforeEach(async ({ request }) => {
+    await deleteAllProjects(request);
+  });
+
+  test.afterEach(() => {
+    for (const dir of repoDirs) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    repoDirs.length = 0;
+  });
+
+  test("current mode (default) — returns empty diff when no uncommitted changes", async ({ request }) => {
+    const repoRoot = createGitRepo();
+    repoDirs.push(repoRoot);
+    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
+
+    const ticket = await createTicketViaApi(request, projectId, "# Clean workspace test");
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id);
+    const sessionsResponse = await request.get(`${apiBase}/v1/sessions?project_id=${projectId}`);
+    expect(sessionsResponse.ok()).toBe(true);
+    expect(await sessionsResponse.json()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ agent: "pstdio.workbench-fixture.harness.fake" })]),
+    );
+
+    // Commit a change — should NOT appear in current mode (only uncommitted)
+    const wtPath = attempt.workspace.root_path;
+    writeFileSync(join(wtPath, "committed.ts"), "export const x = 1;\n");
+    execSync("git add committed.ts", { cwd: wtPath, stdio: "pipe" });
+    execSync('git commit -m "add committed"', { cwd: wtPath, stdio: "pipe" });
+
+    const res = await request.get(`${apiBase}/v1/workspaces/${attempt.workspace.id}/diff`);
+    expect(res.ok()).toBe(true);
+    const diff = (await res.json()) as DiffResponse;
+
+    expect(diff.workspace_id).toBe(attempt.workspace.id);
+    expect(diff.files).toEqual([]);
+    expect(diff.totals.file_count).toBe(0);
+  });
+
+  test("fork_point mode keeps diff after squash merge when workspace remains", async ({ request }) => {
+    const repoRoot = createGitRepo();
+    repoDirs.push(repoRoot);
+    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
+
+    const ticket = await createTicketViaApi(request, projectId, "# Merge diff retention test");
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id);
+
+    // Commit a file on the workspace branch
+    const wtPath = attempt.workspace.root_path;
+    writeFileSync(join(wtPath, "component.tsx"), "export const App = () => <div>Hello</div>;\n");
+    execSync("git add component.tsx", { cwd: wtPath, stdio: "pipe" });
+    execSync('git commit -m "add component"', { cwd: wtPath, stdio: "pipe" });
+
+    // Squash-merge workspace branch into main while keeping the workspace branch alive
+    const workspaceBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: wtPath, stdio: "pipe" })
+      .toString()
+      .trim();
+    execSync("git checkout main", { cwd: repoRoot, stdio: "pipe" });
+    rmSync(join(repoRoot, ".pstdio"), { recursive: true, force: true });
+    execSync(`git merge --squash ${workspaceBranch}`, { cwd: repoRoot, stdio: "pipe" });
+    execSync('git commit -m "squash merge workspace changes"', { cwd: repoRoot, stdio: "pipe" });
+
+    const diffRes = await request.get(`${apiBase}/v1/workspaces/${attempt.workspace.id}/diff?mode=fork_point`);
+    expect(diffRes.ok()).toBe(true);
+    const diff = (await diffRes.json()) as DiffResponse;
+
+    const componentFile = diff.files.find((file) => file.filePath === "component.tsx");
+    expect(componentFile).toBeDefined();
+    expect(componentFile!.change).toBe("added");
+  });
+
+  test("fork_point mode keeps diff after fast-forward merge when workspace remains", async ({ request }) => {
+    const repoRoot = createGitRepo();
+    repoDirs.push(repoRoot);
+    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
+
+    const ticket = await createTicketViaApi(request, projectId, "# Fast-forward merge diff retention test");
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id);
+
+    const wtPath = attempt.workspace.root_path;
+    writeFileSync(join(wtPath, "widget.tsx"), "export const Widget = () => <div>Widget</div>;\n");
+    execSync("git add widget.tsx", { cwd: wtPath, stdio: "pipe" });
+    execSync('git commit -m "add widget"', { cwd: wtPath, stdio: "pipe" });
+
+    const workspaceBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: wtPath, stdio: "pipe" })
+      .toString()
+      .trim();
+    const defaultBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: repoRoot, stdio: "pipe" })
+      .toString()
+      .trim();
+
+    rmSync(join(repoRoot, ".pstdio"), { recursive: true, force: true });
+    execSync(`git checkout ${defaultBranch}`, { cwd: repoRoot, stdio: "pipe" });
+    execSync(`git merge --ff-only ${workspaceBranch}`, { cwd: repoRoot, stdio: "pipe" });
+
+    const diffRes = await request.get(`${apiBase}/v1/workspaces/${attempt.workspace.id}/diff?mode=fork_point`);
+    expect(diffRes.ok()).toBe(true);
+    const diff = (await diffRes.json()) as DiffResponse;
+
+    const widgetFile = diff.files.find((file) => file.filePath === "widget.tsx");
+    expect(widgetFile).toBeDefined();
+    expect(widgetFile!.change).toBe("added");
+  });
+});
+
+test.describe("Workspace table", () => {
+  let projectId: string;
+  const repoDirs: string[] = [];
+
+  test.beforeEach(async ({ request }) => {
+    await deleteAllProjects(request);
+  });
+
+  test.afterEach(() => {
+    for (const dir of repoDirs) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    repoDirs.length = 0;
+  });
+
+  test("renames a workspace from the workspaces view", async ({ page, request }) => {
+    const repoRoot = createGitRepo();
+    repoDirs.push(repoRoot);
+    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
+
+    const workspace = await createWorkspaceViaApi(request, projectId);
+    const nextName = "Renamed workspace e2e";
+
+    page.on("dialog", (dialog) => {
+      throw new Error(`Unexpected browser dialog: ${dialog.type()}`);
+    });
+
+    await page.addInitScript((selectedProjectId) => {
+      window.localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
+    }, projectId);
+
+    await page.goto(`/projects/${projectId}/workspaces`);
+    const workspaceRow = page.getByRole("row").filter({ hasText: workspace.workspace_shorthand }).first();
+    await expect(workspaceRow).toBeVisible();
+    await expect(workspaceRow).toContainText(/\+0\s*-0/);
+
+    await workspaceRow.getByRole("button", { name: "Row actions" }).click();
+    await page.getByRole("menuitem", { name: "Rename workspace" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Rename workspace" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("textbox", { name: "Workspace name" }).fill(nextName);
+    await dialog.getByRole("button", { name: "Rename workspace", exact: true }).click();
+
+    await expect(page.getByRole("row").filter({ hasText: nextName }).first()).toBeVisible();
+
+    const listRes = await request.get(`${apiBase}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
+    expect(listRes.ok()).toBe(true);
+    const workspaces = (await listRes.json()) as Array<Workspace & { name: string }>;
+    expect(workspaces.find((item) => item.id === workspace.id)?.name).toBe(nextName);
+  });
+});

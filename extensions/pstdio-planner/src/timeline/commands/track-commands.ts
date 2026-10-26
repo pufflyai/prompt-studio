@@ -59,12 +59,22 @@ export const createTrackCommand = defineCommand({
       }
       const property =
         (await readTrack(ctx)) ??
-        (await createTicketTag({ storage: ctx.storage, name: "Track", type: "single_select" }));
+        (await createTicketTag({
+          storage: ctx.storage,
+          resources: ctx.resources,
+          name: "Track",
+          type: "single_select",
+        }));
       if (property.options.some((option) => option.name.toLowerCase() === label.toLowerCase())) {
         throw new Error("That track already exists.");
       }
       await ctx.storage.set("timeline.track-property-id", property.id);
-      const option = await createTagOption({ storage: ctx.storage, tagId: property.id, name: label });
+      const option = await createTagOption({
+        storage: ctx.storage,
+        resources: ctx.resources,
+        tagId: property.id,
+        name: label,
+      });
       await ctx.events.emit(plannerTicketsChanged, {});
       return option;
     });
@@ -78,7 +88,7 @@ export const assignTrackCommand = defineCommand({
   mutating: true,
   params: { ticket: params.text({ required: true }), track: params.text({ required: true }) },
   async run(ctx, { ticket, track }) {
-    const current = await findTicket(ctx.storage, ticket);
+    const current = await findTicket(ctx, ticket);
     if (!current) {
       throw new Error("Unknown ticket.");
     }
@@ -105,7 +115,13 @@ export const renameTrackCommand = defineCommand({
       if (property.options.some((option) => option.id !== track && option.name.toLowerCase() === label.toLowerCase())) {
         throw new Error("That track already exists.");
       }
-      const option = await updateTagOption({ storage: ctx.storage, tagId: property.id, optionId: track, name: label });
+      const option = await updateTagOption({
+        storage: ctx.storage,
+        resources: ctx.resources,
+        tagId: property.id,
+        optionId: track,
+        name: label,
+      });
       await ctx.events.emit(plannerTicketsChanged, {});
       return option;
     });

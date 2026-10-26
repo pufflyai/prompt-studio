@@ -12,8 +12,12 @@ export const waitForLifecyclePage = async (context: BrowserContext) => {
 export const waitForWorkbenchPage = async (lifecyclePage: Page, origin: string) => {
   const workbench = watchWorkbenchPage(lifecyclePage, origin);
   const recovery = watchLifecycleRecovery(lifecyclePage);
+  const renderedWorkbench = workbench.ready.then(async (page) => {
+    await page.locator("#root:not(:empty)").waitFor({ state: "attached" });
+    return page;
+  });
   try {
-    return await Promise.race([workbench.ready, recovery.ready]);
+    return await Promise.race([renderedWorkbench, recovery.ready]);
   } finally {
     workbench.stop();
     await recovery.stop();

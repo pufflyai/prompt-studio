@@ -1,4 +1,4 @@
-import type { PageLocation, PageParams } from "./pages";
+import type { PageLocation, PageParams, ViewLocation } from "./pages";
 import type { ResourceRef } from "./resources";
 
 export interface WebviewHostProps {
@@ -6,6 +6,7 @@ export interface WebviewHostProps {
   themePreference: string;
   locale: string;
   resource?: ResourceRef;
+  viewLocation?: ViewLocation;
   pageLocation?: PageLocation;
   pageParams: PageParams;
   translations: {

@@ -1,0 +1,137 @@
+import { describe, expect, test } from "bun:test";
+import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
+import { createMemoryResources } from "@pstdio/sdk/testing";
+import { normalizeExtensionSources } from "../normalize";
+import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
+import { makeStorage, stubEnvironment } from "./runner.test-fixture";
+
+const storage = makeStorage().api;
+
+const environment: CommandRunnerEnvironment = {
+  project: { id: "project-1", name: "Project One", shorthand: "PO" },
+  storage,
+  automation: stubEnvironment(storage).automation,
+  resources: createMemoryResources({}),
+  artifacts: { mount: () => ({}) as never },
+  packageFiles: {
+    exists: async () => false,
+    readText: async () => "",
+    readBytes: async () => new Uint8Array(),
+    list: async () => [],
+    listDirs: async () => [],
+  },
+  files: {
+    readText: async () => "",
+    writeText: async () => {},
+    createText: async () => ({ id: "" }),
+    delete: async () => {},
+  },
+  sessions: stubEnvironment(storage).sessions,
+  workspaces: {
+    addAnchors: async () => {},
+    removeAnchors: async () => {},
+    listProviders: async () => [],
+    getDefault: async () => null,
+    list: async () => [],
+    get: async () => null,
+    getByShorthand: async () => null,
+    create: async () => ({ id: "" }),
+    resolve: async () => ({}) as never,
+    cancel: async () => ({ id: "" }),
+    removeWorktree: async () => ({ removed: true }),
+    delete: async () => {},
+  },
+  activity: { record: async () => ({ id: "" }) },
+  notify: {
+    setStatus: async () => null,
+    setStatusByKey: async () => [],
+    toast: async () => {},
+    action: async () => ({}) as never,
+    resolve: async () => [],
+    dismiss: async () => [],
+  },
+  process: {
+    run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+    runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+    spawnDetached: async () => ({}),
+  },
+  net: { findFreePort: async () => 0 },
+  settings: { all: async () => ({}), get: async () => undefined, set: async () => {}, delete: async () => {} },
+  withScope: () => ({
+    ...environment,
+    sessions: environment.sessions,
+    workspaces: environment.workspaces,
+    connections: environment.connections,
+    process: environment.process,
+    terminal: environment.terminal,
+  }),
+};
+
+const makeRunner = (definition: ExtensionDefinition) => {
+  const runtime = normalizeExtensionSources([
+    {
+      packagePath: "/tmp/lab",
+      sourcePath: "/tmp/lab/extension.ts",
+      sourceKind: "local_path",
+      manifest: {
+        id: "pstdio.lab",
+        name: "lab",
+        version: "1.0.0",
+        publisher: "pstdio",
+        main: "./extension.ts",
+        enginesPstdio: "^1.0.0",
+      },
+      definition,
+    },
+  ]);
+
+  return createCommandRunner(runtime, { buildEnvironment: () => environment });
+};
+
+describe("createCommandRunner attachment context", () => {
+  test("exposes workbench attachment context to command handlers", async () => {
+    const runner = makeRunner({
+      commands: [
+        {
+          id: "inspect",
+          ref: { kind: "command", id: "inspect" },
+          title: "Inspect",
+          run: async (ctx) => ({
+            attachment: ctx.attachment,
+            invocationAttachment: ctx.invocation.attachment,
+          }),
+        },
+      ],
+    });
+
+    const outcome = await runner.execute({
+      commandId: "pstdio.lab.command.inspect",
+      projectId: "project-1",
+      attachment: {
+        target: "workbench.nav.actions",
+        mode: "workspace",
+        projectId: "project-1",
+        resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },
+      },
+    });
+
+    expect(outcome).toEqual({
+      ok: true,
+      status: "success",
+      value: {
+        attachment: {
+          target: "workbench.nav.actions",
+          mode: "workspace",
+          projectId: "project-1",
+          resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },
+        },
+        invocationAttachment: {
+          target: "workbench.nav.actions",
+          mode: "workspace",
+          projectId: "project-1",
+          resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },
+        },
+      },
+    });
+  });
+});

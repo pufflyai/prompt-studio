@@ -42,10 +42,12 @@ type DiscoverRuntimeDeps = {
   fetch: RuntimeFetcher;
   isPidAlive: (pid: number) => boolean;
   signal: AbortSignal;
+  expectedRuntime: Pick<RuntimeDescriptor, "pid" | "instanceId">;
 };
 
 export type RuntimeDiscovery =
   | { state: "missing" }
+  | { state: "starting"; descriptor: RuntimeDescriptor }
   | { state: "healthy"; descriptor: RuntimeDescriptor }
   | { state: "unsafe"; reason: "invalid_descriptor" | "ownership_uncertain" };
 
@@ -148,16 +150,22 @@ const parseReadyResponse = (value: unknown): RuntimeReadyResponse | null => {
 };
 
 const probeRuntime = async (descriptor: RuntimeDescriptor, fetcher: RuntimeFetcher, signal?: AbortSignal) => {
+  let body: string;
   try {
     const response = await fetcher(`${descriptor.origin}/runtime/ready`, {
       headers: { authorization: `Bearer ${descriptor.token}` },
       signal,
     });
-    if (!response.ok) return false;
-    const ready = parseReadyResponse(await response.json());
-    return ready?.instanceId === descriptor.instanceId;
+    if (!response.ok) return "mismatch" as const;
+    body = await response.text();
   } catch {
-    return false;
+    return "unavailable" as const;
+  }
+  try {
+    const ready = parseReadyResponse(JSON.parse(body));
+    return ready?.instanceId === descriptor.instanceId ? ("ready" as const) : ("mismatch" as const);
+  } catch {
+    return "mismatch" as const;
   }
 };
 
@@ -172,10 +180,21 @@ export const discoverRuntime = async (
   const descriptor = parseRuntimeDescriptor(raw.value);
   if (!descriptor) return { state: "unsafe", reason: "invalid_descriptor" };
 
-  const pidAlive = (overrides.isPidAlive ?? isRuntimePidAlive)(descriptor.pid);
-  const ready = await probeRuntime(descriptor, overrides.fetch ?? fetch, overrides.signal);
+  const probe = await probeRuntime(descriptor, overrides.fetch ?? fetch, overrides.signal);
   overrides.signal?.throwIfAborted();
+  const pidAlive = (overrides.isPidAlive ?? isRuntimePidAlive)(descriptor.pid);
+  const ready = probe === "ready";
   if (pidAlive && ready) return { state: "healthy", descriptor };
+  // A socket timeout cannot revoke ownership of the exact child the caller started.
+  // Other live processes still need authenticated readiness before they can be trusted.
+  if (
+    pidAlive &&
+    probe === "unavailable" &&
+    overrides.expectedRuntime &&
+    isMatchingRuntime(descriptor, overrides.expectedRuntime)
+  ) {
+    return { state: "starting", descriptor };
+  }
   if (pidAlive || ready) return { state: "unsafe", reason: "ownership_uncertain" };
 
   cleanupRuntimeDescriptor(path, descriptor);

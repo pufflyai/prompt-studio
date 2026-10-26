@@ -166,7 +166,7 @@ const codexShellInvocations: ToolPart[] = [
           "bun run --cwd packages/ui test tool-rendering && bun run --cwd packages/ui build-storybook && bun run validate",
       },
       output:
-        "26 [chromium] › src/ui/workspaces.spec.ts:192:3 › Workspace diff › fork_point resolves\n27 [chromium] › src/ui/workspaces.spec.ts:223:3 › Workspace diff › fork_point handles rebase\n28 [chromium] › src/ui/workspaces.spec.ts:273:3 › Workspace rename › renames the branch\n\n3 skipped\n25 passed (34.1s)",
+        "26 [chromium] › src/ui/workspaces.p2.spec.ts:192:3 › Workspace diff › fork_point resolves\n27 [chromium] › src/ui/workspaces.p2.spec.ts:223:3 › Workspace diff › fork_point handles rebase\n28 [chromium] › src/ui/workspaces.p2.spec.ts:273:3 › Workspace rename › renames the branch\n\n3 skipped\n25 passed (34.1s)",
     },
   },
 ];

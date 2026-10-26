@@ -8,6 +8,7 @@ export const useWorkbenchCompositionPanels = (workbench: WorkbenchCore): Workben
 
   useWorkbenchStore(workbench.layout.store, (state) => state);
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
+  useWorkbenchStore(workbench.pages.store, (state) => state);
   useWorkbenchStore(workbench.commands.store, (state) => state);
   useWorkbenchStore(workbench.context.store, (state) => state);
 

@@ -1,5 +1,10 @@
 import { extensionPanelRegions } from "@pstdio/sdk/extensions";
-import { localizableStringSchema, pageParamDefinitionsSchema, regionSettingsSchema } from "pstdio-api-contracts";
+import {
+  createPagePlaceholderBreadcrumbSchema,
+  localizableStringSchema,
+  pageParamDefinitionsSchema,
+  regionSettingsSchema,
+} from "pstdio-api-contracts";
 import { z } from "zod";
 import { localRefSchema, navigationDeclarationSchema } from "./navigation-declaration";
 
@@ -21,6 +26,15 @@ const presentation = {
     .optional(),
 };
 const resource = z.object({ kinds: z.array(localRefSchema("resource-kind")).min(1) }).strict();
+const empty = z.union([
+  localRefSchema("view"),
+  z
+    .object({
+      view: localRefSchema("view"),
+      breadcrumb: createPagePlaceholderBreadcrumbSchema(navigationDeclarationSchema).optional(),
+    })
+    .strict(),
+]);
 const binding = resource.extend({
   view: localRefSchema("view"),
   cardinality: z.enum(["one", "many"]),
@@ -39,10 +53,14 @@ const slot = z
     item,
     order: z.number().optional(),
     openOn: z.literal("page-resource").optional(),
+    addableIn: z.array(region).optional(),
+    movableTo: z.array(region).optional(),
     ...presentation,
   })
   .strict()
   .superRefine((value, ctx) => {
+    if (value.movableTo && !value.movableTo.includes(value.region))
+      ctx.addIssue({ code: "custom", path: ["movableTo"], message: "an array including the initial region" });
     if (value.openOn && value.item.kind !== "binding")
       ctx.addIssue({ code: "custom", path: ["openOn"], message: "a resource-binding item for page-resource" });
   });
@@ -54,6 +72,14 @@ export const pageDeclarationSchema = z
     icon: z.string().optional(),
     path: z.string(),
     params: pageParamDefinitionsSchema.optional(),
+    regionSettings: z
+      .object({
+        main: z.object({ showHeader: z.boolean().optional() }).strict().optional(),
+        side: z.object({ showHeader: z.boolean().optional() }).strict().optional(),
+        secondary: z.object({ showHeader: z.boolean().optional() }).strict().optional(),
+      })
+      .strict()
+      .optional(),
     mode: localRefSchema("mode"),
     parent: localRefSchema("page").optional(),
     resource: resource.optional(),
@@ -62,16 +88,26 @@ export const pageDeclarationSchema = z
       .strict()
       .optional(),
     main: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("group"), default: localRefSchema("page") }).strict(),
       z
         .object({
           kind: z.literal("view"),
           view: localRefSchema("view"),
           cardinality: z.enum(["one", "many"]),
+          presentation: z.enum(["page", "tabs"]).optional(),
+          empty: empty.optional(),
           ...presentation,
         })
         .strict(),
-      z.object({ kind: z.literal("panels"), empty: localRefSchema("view") }).strict(),
+      z
+        .object({
+          kind: z.literal("panels"),
+          empty: empty.optional(),
+          landing: z.union([z.string(), localRefSchema("placement")]).optional(),
+        })
+        .strict(),
     ]),
+    panelView: localRefSchema("placement").optional(),
     slots: z.array(slot),
     panels: z.record(z.string(), z.unknown()),
   })
@@ -84,10 +120,14 @@ export const placementDeclarationSchema = z
   .object({
     id: z.string(),
     ref: localRefSchema("placement"),
+    replaces: z
+      .array(z.object({ kind: z.literal("page-slot"), page: localRefSchema("page"), id: z.string().min(1) }).strict())
+      .optional(),
     mode: localRefSchema("mode"),
     region,
     item,
     order: z.number().optional(),
+    addableIn: z.array(region).optional(),
     movableTo: z.array(region).optional(),
     ...presentation,
   })
@@ -104,6 +144,7 @@ export const modeDeclarationSchema = z
     icon: z.string().optional(),
     regions: z.array(region),
     floatingPanels: z.enum(["visible", "hidden"]).optional(),
+    canFullscreen: z.boolean().optional(),
     defaultTheme: localRefSchema("theme").optional(),
     chrome: z
       .object(

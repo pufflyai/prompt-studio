@@ -26,7 +26,7 @@ export const editSharedPagePlacement = (
   core: WorkbenchCore,
   placement: WorkbenchWidgetPlacement,
   identity: Extract<PlacementIdentity, { kind: "page" }>,
-  action: PagePlacementEdit,
+  action: Exclude<PagePlacementEdit, { kind: "reference" }>,
 ) => {
   const state = core.pages.store.getState();
   const key = placementIdentityKey(identity);

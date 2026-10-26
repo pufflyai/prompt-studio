@@ -4,7 +4,7 @@ import { autoBuildDispatches } from "../data/auto-build-dispatches";
 import { readAutoBuildMode, saveAutoBuildMode } from "../data/auto-build-mode";
 import { linkedAutoBuildRequests } from "../data/auto-build-ownership";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
-import { waitForReviewRequestSession } from "../data/review-request-session";
+import { withReviewRequestSession } from "../data/review-request-session";
 import { reviewRequestsCollection } from "../data/review-request-storage";
 import { withQueuedWriteGuard, withWriteGuard } from "../data/write-guard";
 
@@ -51,9 +51,10 @@ async function stopLinkedSessions(ctx: CommandContext, supervisorId: string | un
       if (visited.has(request.id)) continue;
       visited.add(request.id);
       found = true;
-      await waitForReviewRequestSession(ctx, request.id);
-      const current = await reviewRequestsCollection(ctx.storage).get(request.id);
-      await stop(current?.context.sessionId);
+      await withReviewRequestSession(ctx, request.id, async () => {
+        const current = await reviewRequestsCollection(ctx.storage).get(request.id);
+        await stop(current?.context.sessionId);
+      });
     }
   }
   if (failures.length) throw new Error(failures.map(String).join("\n"));

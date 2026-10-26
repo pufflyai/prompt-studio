@@ -50,7 +50,7 @@ pst pstdio-notes notes delete --note-id <note-id>
 Each note is a folder in the project's default workspace. The title lives in the Markdown front matter of `content.md`; the editor shows the body:
 
 ```txt
-<project-folder>/.pstdio/extension-storage/pstdio-notes/documents/<note-id>/
+<project-folder>/.pstdio/extension-storage/pstdio.pstdio-notes/documents/<note-id>/
   content.md
   folder.txt    # present when the note belongs to a folder
 ```

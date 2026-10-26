@@ -82,6 +82,17 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await page.unroute("**/follow-up");
     phase("follow-up draft handed off");
 
+    for (const recalled of [next, prompt]) {
+      await editor.press("ArrowUp");
+      await expect(editor).toHaveText(recalled);
+      await expect(editor).toBeFocused();
+    }
+    await editor.press("ArrowDown");
+    await expect(editor).toHaveText(next);
+    await editor.press("ArrowDown");
+    await expect(editor).toBeEmpty();
+    phase("prompt history recalled through saved drafts");
+
     const equations =
       "Packaged equations: $x^2$\n\n$$\n\\frac{1}{2}\n$$\n\nRead src/app.ts and src/app/(dashboard)/page.ts, not src/missing.ts. Open {{link('https://example.com')}}. End equations.";
     await editor.fill(equations);
@@ -103,6 +114,14 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(webReference).toHaveAttribute("href", "https://example.com");
     await expect(webReference).toHaveAttribute("target", "_blank");
     await expect(webReference.locator('[data-scope="tooltip"]')).toHaveCount(0);
+
+    await plainPath.click();
+    await expect(page.locator(".monaco-editor .view-lines")).toContainText("export");
+    await page.reload();
+    await expect(page.locator(".monaco-editor .view-lines")).toContainText("export");
+    await page.goBack();
+    await expect(plainPath).toBeVisible();
+    phase("conversation restored through file navigation, reload and Back");
 
     await editor.fill(
       "| Task | Details |\n| --- | --- |\n| Review | Read the changes and confirm that shared tools work together for people who never read code. |",

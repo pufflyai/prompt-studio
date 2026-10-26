@@ -169,7 +169,7 @@ One card per changed file:
 ## Artifact Source Of Truth
 
 Ticket attachments are planner-owned. Agent-produced validation, review, test,
-and implementation evidence is report-owned and lives under `.pstdio/extension-storage/pstdio-reports/reports/`.
+and implementation evidence is report-owned and lives under `.pstdio/extension-storage/pstdio.pstdio-reports/reports/`.
 The dashboard loads planner ticket file metadata/content through planner
 commands and should not treat ticket folders as the source of truth for result
 artifacts.
@@ -181,10 +181,10 @@ planner file query so re-saved artifact content updates in place.
 
 `pst tickets save --id <ticket>` uploads planning/support files from:
 
-- `.pstdio/extension-storage/pstdio-planner/tickets/<ticket>/files/` as regular ticket attachments
+- `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<ticket>/files/` as regular ticket attachments
 
 `pst reports save --name <name>` uploads report evidence from
-`.pstdio/extension-storage/pstdio-reports/reports/<name>/files/` into report-owned blob storage.
+`.pstdio/extension-storage/pstdio.pstdio-reports/reports/<name>/files/` into report-owned blob storage.
 
 ## Errors and Empty States
 

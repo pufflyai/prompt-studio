@@ -7,6 +7,7 @@ import { findTicket } from "./resolve";
 import { reviewRequestsCollection } from "./review-request-storage";
 import type { ReviewRequest } from "./review-request-types";
 import { parseStoredRequest } from "./review-request-validation";
+import { withQueuedWriteGuard } from "./write-guard";
 
 type SessionRecord = { id: string; anchors_json?: ResourceAnchor[] };
 
@@ -58,7 +59,7 @@ const startReviewRequestSession = async (ctx: CommandContext, requestId: string)
     if (!session) throw new Error("The linked chat session was removed.");
     return session;
   }
-  const ticket = await findTicket(ctx.storage, request.ticketId);
+  const ticket = await findTicket(ctx, request.ticketId);
   if (!ticket) throw new Error("The ticket was removed.");
   const attempt = request.context.workspaceId ? await readAttempt(ctx.storage, request.context.workspaceId) : null;
   const requestAnchor: ResourceAnchor = {
@@ -109,30 +110,9 @@ const startReviewRequestSession = async (ctx: CommandContext, requestId: string)
   return session;
 };
 
-// Reloaded handlers share pending openers so Stop can wait for their saved links.
-const registryKey = Symbol.for("pstdio.pstdio-planner.opening-request-sessions");
-const runtime = globalThis as typeof globalThis & {
-  [registryKey]?: Map<string, ReturnType<typeof startReviewRequestSession>>;
-};
-runtime[registryKey] ??= new Map();
-const openingSessions = runtime[registryKey];
-const openingKey = (ctx: CommandContext, requestId: string) =>
-  JSON.stringify([ctx.projectId, ctx.extensionId, requestId]);
+// Opening and cancellation share ownership of the saved conversation link, including after handler reloads.
+export const withReviewRequestSession = <T>(ctx: CommandContext, requestId: string, run: () => Promise<T>) =>
+  withQueuedWriteGuard(ctx, `review-request-session:${requestId}`, run);
 
-export const getReviewRequestSession = async (ctx: CommandContext, requestId: string) => {
-  const key = openingKey(ctx, requestId);
-  const pending = openingSessions.get(key);
-  if (pending) return pending;
-  const opening = startReviewRequestSession(ctx, requestId);
-  openingSessions.set(key, opening);
-  try {
-    return await opening;
-  } finally {
-    openingSessions.delete(key);
-  }
-};
-
-// Auto Build Stop waits for a conversation already opening before reading its saved link.
-export const waitForReviewRequestSession = async (ctx: CommandContext, requestId: string) => {
-  await openingSessions.get(openingKey(ctx, requestId));
-};
+export const getReviewRequestSession = (ctx: CommandContext, requestId: string) =>
+  withReviewRequestSession(ctx, requestId, () => startReviewRequestSession(ctx, requestId));

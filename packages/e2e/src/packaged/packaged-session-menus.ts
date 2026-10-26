@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
 import { verifyExtensionModeSessionRestore, verifyModePanelState } from "./packaged-mode-panel-state";
 import { verifyPageSessionTab } from "./packaged-page-session-tab";
@@ -46,6 +46,30 @@ const verifyFloatingLauncher = async (page: Page) => {
   await floating.getByRole("button", { name: "Reattach Side Panel" }).click();
 };
 
+const revealThenCloseSessionViewer = async (page: Page, row: Locator, projectId: string) => {
+  await row.click();
+  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions/compose$`));
+  const selected = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
+    name: /Packaged session actions/,
+  });
+  await expect(selected).toHaveAttribute("aria-selected", "true");
+  await selected.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
+  await expect(selected).toHaveCount(0);
+};
+const startNewSessionInViewer = async (page: Page, preview: Locator) => {
+  await preview.focus();
+  await page.keyboard.press("ControlOrMeta+Alt+s");
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
+  await expect(page.locator('[data-workbench-panel="main"]')).toContainText("Project folder");
+  await page.goBack();
+  await expect(preview).toBeVisible();
+  await preview.focus();
+  await page.keyboard.press("Shift+F10");
+  await expect(page.getByRole("menu")).toBeVisible();
+  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
+};
+
 export const verifyPackagedSessionMenus = async (
   page: Page,
   baseUrl: string,
@@ -89,8 +113,7 @@ export const verifyPackagedSessionMenus = async (
   await leaveWorkspace();
   await reopenWorkspace();
   await verifyClosedSidePreference(page, preview, leaveWorkspace, reopenWorkspace);
-  await preview.focus();
-  await page.keyboard.press("ControlOrMeta+Alt+s");
+  await startNewSessionInViewer(page, preview);
   const sideTabs = page.locator('[data-workbench-panel-header="side"]').getByRole("tab");
   await expect(sideTabs.filter({ hasText: "New session" })).toBeVisible();
   const sidePanel = page.locator('[data-workbench-panel="side"]').filter({ visible: true });
@@ -142,7 +165,7 @@ export const verifyPackagedSessionMenus = async (
     (socket) => new URL(socket.url()).pathname === "/v1/terminal",
   );
   await bottomHeader.getByRole("button", { name: "Add panel", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
   const terminalSocket = await terminalConnection;
   const terminalWidgetId = await bottomHeader
     .locator('[data-workbench-tab]:has([role="tab"][aria-selected="true"])')
@@ -215,6 +238,7 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.getByRole("group", { name: "Sessions", exact: true })).toBeVisible();
   await expect(page.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
+  await revealThenCloseSessionViewer(page, row, projectId);
   await row.click();
   await expect(page).toHaveURL(new RegExp(session.id));
   await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
@@ -232,7 +256,7 @@ export const verifyPackagedSessionMenus = async (
     .getByRole("menuitem", { name: "Delete session", exact: true })
     .click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions/compose$`));
   const deleted = await fetch(`${baseUrl}/v1/sessions/${session.id}`, { headers: authorization });
   expect(deleted.status).toBe(404);
   await verifyExtensionModeSessionRestore(page, projectId);

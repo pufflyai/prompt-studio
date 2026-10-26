@@ -34,7 +34,7 @@ export const requirePanelOpen = (
     !existing ||
     existing.region !== destination ||
     (options.resource && resourceKey(existing.placement.resource) !== resourceKey(options.resource));
-  const policy = workbenchPanelPolicy(core, destination, options.modeId);
+  const policy = workbenchPanelPolicy(core, destination, options.modeId, options.proposed);
   if (!policy.provided) throw new Error(`Panel is not provided: ${destination}`);
   if (receivesTab && !policy.acceptsTabs) throw new Error(`Panel cannot accept tabs: ${destination}`);
   if (options.reveal !== false && !policy.open && !policy.canOpen) throw new Error(`Panel cannot open: ${destination}`);

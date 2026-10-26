@@ -13,7 +13,7 @@ export const BackendConnectionStatus = (props: BackendConnectionStatusProps) => 
   const description = t(connected ? "connection.connected" : "connection.lost");
 
   return (
-    <Tooltip content={description} openDelay={300} closeDelay={150} positioning={{ placement: "top-end" }}>
+    <Tooltip content={description} closeDelay={150} positioning={{ placement: "top-end" }}>
       <Button
         as="span"
         variant="ghost"

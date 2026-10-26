@@ -53,7 +53,7 @@ const projectWorkspace = (extensionId: string, workspace: PocketCoderWorkspace) 
     executionKind: "remote",
     executionTarget: { kind: "remote", providerId: `${extensionId}.workspace-type.remote`, providerRef },
     displayPath: `PocketCoder / ${workspace.id}`,
-    capabilities: { files: "none", diff: false, merge: false, rebase: false, archive: false, delete: true },
+    capabilities: { files: "none", diff: false, merge: false, rebase: false, delete: true },
     ...(state === "failed"
       ? {
           error: {

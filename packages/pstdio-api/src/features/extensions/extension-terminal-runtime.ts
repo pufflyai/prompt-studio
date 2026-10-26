@@ -9,6 +9,7 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import { createExtensionProcessEnvironment } from "pstdio-extensions";
 import { exitedWithin, signalProcessTree } from "./process-group";
+import { terminalExitSignal } from "./terminal-exit-signal";
 import { readTerminalForeground } from "./terminal-foreground";
 import { prepareTerminalShell } from "./terminal-shell-integration";
 import { createTerminalShellState } from "./terminal-shell-state";
@@ -171,7 +172,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
         sessions.delete(id);
         shell.dispose();
         logger.info("terminal session exited", { id, code });
-        queue.push({ kind: "exit", code, signal: child.signalCode });
+        queue.push({ kind: "exit", code, signal: terminalExitSignal(child.signalCode) });
         queue.close();
         terminal.close();
       });

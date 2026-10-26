@@ -17,6 +17,8 @@
       "!!packages/pstdio-dashboard/chakra-config.json",
       "!!packages/e2e/playwright-report",
       "!!packages/e2e/test-results",
+      "!!packages/storybook-tests/playwright-report",
+      "!!packages/storybook-tests/test-results",
       "!!packages/pstdio-extensions/src/bridge/webview-runtime/runtime.bundle.js",
       "!!packages/pstdio-agents/src/providers/opencode/mocks/full-conversation.json"
     ]
@@ -75,6 +77,26 @@
   },
   "overrides": [
     {
+      "includes": ["packages/e2e/src/packaged/**/*.spec.ts", "packages/e2e/src/packaged/**/*.bench.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@playwright/test": {
+                    "importNames": ["test"],
+                    "message": "Import test from ../scripts/playwright-test so runner cancellation cleans up owned processes."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["**/*.astro"],
       "linter": {
         "rules": {
@@ -102,6 +124,7 @@
         "**/*.bench.ts",
         "**/*.perf.ts",
         "**/*.stress.ts",
+        "**/*.diagnostic.ts",
         "**/*test-utils.ts",
         "**/test-utils/**",
         "**/mocks/**",

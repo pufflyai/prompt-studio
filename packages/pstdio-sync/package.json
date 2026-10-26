@@ -7,8 +7,8 @@
     "./relay": "./src/relay/index.ts"
   },
   "scripts": {
-    "test": "bun test src",
-    "typecheck": "tsc --noEmit",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "typecheck": "bun check",
     "lint": "bun run typecheck && biome check ."
   },
   "dependencies": {
@@ -17,7 +17,8 @@
     "yjs": "^13.6.29"
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
-    "typescript": "6.0.2"
+    "@types/bun": "1.4.4",
+    "typescript": "6.0.2",
+    "storage-scale-fixture": "workspace:*"
   }
 }

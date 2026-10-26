@@ -2,8 +2,10 @@ import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { createDocumentStorage, createMemoryDocumentStore, type StorageOwner } from "pstdio-sync";
 import { makeWorkspace } from "../workspaces/workspace-provider.test-fixture";
 import type { ExtensionsRouteDeps } from "./deps";
+import type { ExtensionStorageIndexService } from "./extension-storage-indexes";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
 export const createWorkspaceContextFixture = async () => {
@@ -71,6 +73,7 @@ export const createWorkspaceContextFixture = async () => {
     },
   });
   const values = new Map<string, unknown>();
+  const stores = new Map<string, ReturnType<typeof createMemoryDocumentStore>>();
   const source = {
     instance: { id: "instance" },
     installedSource: {
@@ -82,11 +85,26 @@ export const createWorkspaceContextFixture = async () => {
     },
   };
   const repos = [{ id: "repo-1", path: root }];
+  const open = async ({ owner }: { owner: StorageOwner }) => {
+    const key = JSON.stringify([owner.workbenchId, owner.extensionId]);
+    let store = stores.get(key);
+    if (!store) {
+      store = createMemoryDocumentStore();
+      stores.set(key, store);
+    }
+    return createDocumentStorage({ owner, store });
+  };
+  const installIndexes: ExtensionStorageIndexService["installIndexes"] = async (owners, validate) => {
+    for (const { owner, definitions } of owners) await (await open({ owner })).records.defineIndexes(definitions);
+    validate?.();
+  };
   const deps = {
     workspaceService: { get: async () => workspace, getDefault: async () => workspace },
     projectService: { get: async () => ({ id: "project-1", name: "Project", shorthand: "P" }) },
     extensionService: { listEnabledSourcesForProject: async () => [source] },
     extensionStorageService: {
+      open,
+      installIndexes,
       getKv: async () => null,
       setKv: async (input: { key: string; value_json: unknown }) => {
         values.set(input.key, input.value_json);

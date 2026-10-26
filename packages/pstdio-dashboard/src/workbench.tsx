@@ -1,4 +1,4 @@
-import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
+import { createWorkbench, type SettingsRegistry, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
 import { createWorkbenchTerminalModule, WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
@@ -12,10 +12,6 @@ import {
   createDashboardSessionDraftPersistence,
   type DashboardSessionDraftPersistence,
 } from "@/shared/app/session-draft-persistence";
-import {
-  createDashboardSessionSelectionPersistence,
-  type DashboardSessionSelectionPersistence,
-} from "@/shared/app/session-selection-persistence";
 import { createBootstrapModule } from "./modules/bootstrap";
 import { createCommandPaletteModule } from "./modules/command-palette/module";
 import { createExtensionsModule } from "./modules/extensions/module";
@@ -27,7 +23,6 @@ import { createPerformanceModule } from "./modules/performance/module";
 import type { DesktopProjectTabsController } from "./modules/projects/desktop-project-tabs-controller";
 import { createProjectsModule } from "./modules/projects/module";
 import { createResourceLinksModule } from "./modules/resource-links/module";
-import { createSessionBubbleModule } from "./modules/sessions/bubble/module";
 import { createSessionsModule } from "./modules/sessions/module";
 import { createSettingsModule } from "./modules/settings/module";
 import { createSidenavModule } from "./modules/sidenav/module";
@@ -52,10 +47,9 @@ type CreateDashboardModulesInput = {
   projectTabs?: DesktopProjectTabsController;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
   sessionDraftPersistence?: DashboardSessionDraftPersistence;
-  sessionSelectionPersistence?: DashboardSessionSelectionPersistence;
 };
 
-export const createDashboardModules = (input: CreateDashboardModulesInput = {}) => [
+export const createDashboardModules = (input: CreateDashboardModulesInput & { settings: SettingsRegistry }) => [
   createSidenavModule(),
   createWorkspacesModule(),
   createExtensionsModule(),
@@ -69,21 +63,18 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   createKeyboardShortcutsModule(),
   createHelpModule(),
   createCommandPaletteModule(),
-  createSessionBubbleModule({ sessionDraftPersistence: input.sessionDraftPersistence }),
   createSessionsModule({
     sessionDraftPersistence: input.sessionDraftPersistence,
-    sessionSelectionPersistence: input.sessionSelectionPersistence,
   }),
   createNotificationsModule(),
   createSettingsModule(),
-  createPerformanceModule(),
+  createPerformanceModule(input.settings),
   createUpdatesModule(),
   createStartModule(),
   createWorkbenchTerminalModule(),
   createTerminalModule(),
   createBootstrapModule({
     projectSelectionPersistence: input.projectSelectionPersistence,
-    sessionSelectionPersistence: input.sessionSelectionPersistence,
   }),
 ];
 
@@ -98,7 +89,6 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     storage,
     projectSelection: projectSelectionPersistence,
   };
-  const sessionSelectionPersistence = createDashboardSessionSelectionPersistence(scopedByProject);
   const sessionDraftPersistence = createDashboardSessionDraftPersistence(scopedByProject);
 
   const persistence = createLocalStorageWorkbenchPersistence({
@@ -132,11 +122,11 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     },
   });
   const modules = createDashboardModules({
+    settings: workbench.settings,
     initialProjectId: urlProjectId,
     projectTabs: input.projectTabs,
     projectSelectionPersistence,
     sessionDraftPersistence,
-    sessionSelectionPersistence,
   });
   for (const module of modules) workbench.registerModule(module);
 

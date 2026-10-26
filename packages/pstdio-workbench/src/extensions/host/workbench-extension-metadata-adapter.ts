@@ -174,6 +174,7 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
     panelRegions: mode.regions,
     regionSettings: mode.regionSettings,
     floatingPanels: mode.floatingPanels,
+    canFullscreen: mode.canFullscreen,
     ...(mode.defaultTheme ? { defaultTheme: contributionRefId(mode.defaultTheme) } : {}),
     ...(mode.chrome
       ? {
@@ -189,6 +190,7 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
 export const toInternalWorkbenchExtensionMetadata = (
   metadata: WorkbenchExtensionMetadata,
   input: {
+    projectId?: string;
     createTab?(
       metadata: WorkbenchExtensionTabMetadata,
     ): InternalWorkbenchExtensionMetadata["placements"][number]["tab"];
@@ -201,14 +203,16 @@ export const toInternalWorkbenchExtensionMetadata = (
     menuContributions: metadata.menuContributions,
     commandPaletteContributions: metadata.commandPaletteContributions,
     modes: modes(metadata),
-    pages: toInternalWorkbenchPages(metadata, input.createTab),
+    pages: toInternalWorkbenchPages(metadata, input),
     placements: metadata.placements.map((placement) => ({
       id: placement.id,
       ref: { extensionId: placement.extensionId, kind: "placement", id: placement.localId },
       modeId: contributionRefId(placement.mode),
+      replaces: placement.replaces,
       item: placement.item,
       region: placement.region,
       order: placement.order,
+      addableIn: placement.addableIn,
       movableTo: placement.movableTo,
       mountStrategy: placement.mountStrategy,
       hiddenByDefault: placement.hiddenByDefault,
@@ -224,7 +228,7 @@ export const toInternalWorkbenchExtensionMetadata = (
     })),
     panels: adaptedPanels,
     resourceKinds: metadata.resourceKinds.map((kind) => ({
-      id: kind.id,
+      id: kind.localId,
       relatedOpeningsCommand: kind.relatedOpeningsCommand,
       extensionId: kind.extensionId,
       label: kind.label,
@@ -256,7 +260,10 @@ export const toInternalWorkbenchExtensionMetadata = (
           viewId: view.id,
           extensionId: panel.extensionId,
           slotId: panel.slot.id,
-          scope: panel.slot.id.includes("global") ? ("global" as const) : ("project" as const),
+          scope: ["global.settings", "global.settingsPanels", "developer.settings"].includes(panel.slot.id)
+            ? ("global" as const)
+            : ("project" as const),
+          parentPanelId: panel.slot.id === "developer.settings" ? "developer-tools" : undefined,
           title: view.title,
           icon: view.icon,
           section: panel.section ? contributionRefId(panel.section) : undefined,

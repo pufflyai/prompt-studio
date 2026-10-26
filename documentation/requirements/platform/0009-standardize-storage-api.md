@@ -240,9 +240,9 @@ Keep `storage.scope`, `migrate` and `readLegacy`.
 
 ### Data conversion
 
-On `main`, KV and collection rows already live in records. The host imports old rows into the
-owner's journal on first access and deletes them in the same transaction
-([legacy-import.ts](../../../packages/pstdio-db/src/services/extension-storage/legacy-import.ts)).
+On `main`, KV and collection rows already live in records. Since 0.46 the host starts with a new
+database, so there are no old KV or collection rows to import
+([ADR 0103](../../adrs/0103-database-baseline-replaces-in-place-upgrades.md)).
 
 - KV needs no data conversion. A key's record ID equals `records.id(key)` in the same scope, and the
   value is unchanged. Callers switch to `records.read` and `save`.
@@ -276,9 +276,9 @@ creates a new URL while the old URL still returns the old bytes.
 
 ### Planner and Reports drafts
 
-Planner writes ticket checkouts to `.pstdio/extension-storage/pstdio-planner/tickets/` through
+Planner writes ticket checkouts to `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/` through
 `ctx.projectFiles` ([draft-storage.ts](../../../extensions/pstdio-planner/src/data/draft-storage.ts)).
-Reports does the same under `pstdio-reports/reports/`
+Reports does the same under `pstdio.pstdio-reports/reports/`
 ([draft-storage.ts](../../../extensions/pstdio-reports/src/data/draft-storage.ts)). Both skip the
 `.publishers/<publisher>/` child. A checkout and a draft are the same files: `pst tickets pull`
 writes them and `save` reads them back. They are extension working data, so they move to

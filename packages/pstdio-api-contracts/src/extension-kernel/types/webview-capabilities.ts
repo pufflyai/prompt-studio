@@ -1,6 +1,11 @@
 import type { AgentInfo, AgentModel, HarnessParamsInfo } from "../../agents";
 import type { TerminalSessionOperation, TerminalSessionResult } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
+import type {
+  PerformanceControlRequest,
+  PerformanceReadRequest,
+  PerformanceReadResult,
+} from "../../performance-control";
 import type { ExtensionAccountApi } from "./account";
 import type { CommandNotice, CommandOutcome } from "./commands";
 import type { ExtensionBlobRef } from "./context";
@@ -42,6 +47,8 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "files.delete",
   "account.read",
   "account.manage",
+  "performance.read",
+  "performance.control",
 ] as const;
 
 // Capabilities that must be declared with a scope suffix (`name:scope`). Each
@@ -196,6 +203,8 @@ export interface WebviewKeyboardEventParams {
 }
 
 export interface WebviewHostCapabilityParams {
+  "performance.read": PerformanceReadRequest;
+  "performance.control": PerformanceControlRequest;
   "harnesses.read": { harnessId?: string; model?: string };
   "resources.actions":
     | { operation: "list"; resource: ResourceRef }
@@ -233,6 +242,8 @@ export interface WebviewHostCapabilityParams {
 }
 
 export interface WebviewHostCapabilityResults {
+  "performance.read": PerformanceReadResult;
+  "performance.control": void;
   "harnesses.read": {
     harnesses: AgentInfo[];
     models: AgentModel[];

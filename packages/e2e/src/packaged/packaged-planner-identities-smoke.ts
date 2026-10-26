@@ -25,12 +25,39 @@ export const expectPlannerIdentities = async (input: {
   );
   expect(new Set(identities.map((identity) => identity.id)).size).toBe(3);
   expect(new Set(identities.map((identity) => identity.shorthand)).size).toBe(3);
+  const execute = async (command: string, params: unknown) => {
+    const response = await fetch(
+      `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+      {
+        method: "POST",
+        headers: { ...input.headers, "content-type": "application/json" },
+        body: JSON.stringify({ params }),
+      },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.outcome.ok).toBe(true);
+    return body.outcome.value;
+  };
+  for (const identity of identities) {
+    expect(await execute("get-ticket", { id: identity.shorthand })).toMatchObject({
+      id: identity.id,
+      shorthand: identity.shorthand,
+    });
+  }
+  await execute("pull-ticket", { id: identities[0]!.id });
   const workspacesResponse = await fetch(`${input.baseUrl}/v1/workspaces?project_id=${input.projectId}`, {
     headers: input.headers,
   });
   expect(workspacesResponse.status).toBe(200);
   const sharedWorkspaces = (await workspacesResponse.json()) as { id: string; is_default: boolean }[];
   expect(sharedWorkspaces).toEqual([expect.objectContaining({ is_default: true, anchors_json: [] })]);
+  expect(
+    await execute("resolve-ticket-path", {
+      path: `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/${identities[0]!.shorthand}/ticket.md`,
+      workspaceId: sharedWorkspaces[0]!.id,
+    }),
+  ).toMatchObject({ resource: { id: identities[0]!.id, shorthand: identities[0]!.shorthand } });
   const treeResponse = await fetch(
     `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.pstdio-planner.command.ticket-files.tree.body/execute`,
     {

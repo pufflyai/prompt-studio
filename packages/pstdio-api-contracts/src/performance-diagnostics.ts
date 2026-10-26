@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { PerformanceCapture } from "./performance-capture";
 
 // Local performance diagnostics are shared by the desktop host, the dashboard, and
 // the `pst performance` command. Nothing here is sent to the runtime or a server.
@@ -88,7 +89,7 @@ export interface PerformanceProcess {
   };
 }
 
-export interface PerformanceSnapshot {
+export interface PerformanceSnapshotV1 {
   version: 1;
   host: "desktop" | "browser";
   capturedAt: string;
@@ -111,3 +112,27 @@ export interface PerformanceSnapshot {
   // Extensions whose views are unloaded until the person resumes them.
   pausedExtensionIds: string[];
 }
+
+export type {
+  PerformanceCapture,
+  PerformanceCaptureSample,
+  PerformanceProcessSample,
+  PerformanceResponseSample,
+  PerformanceRuntimeReading,
+} from "./performance-capture";
+
+/** Version 1 remains readable during the additive capture API rollout. */
+export type PerformanceSnapshot =
+  | PerformanceSnapshotV1
+  | (Omit<PerformanceSnapshotV1, "version"> & { version: 2; capture: PerformanceCapture });
+
+export type {
+  PerformanceControlRequest,
+  PerformanceDiagnosticsAdapter,
+  PerformanceMonitoringState,
+  PerformanceReadRequest,
+  PerformanceReadResult,
+  PerformanceRecordingExport,
+} from "./performance-control";
+
+export { performanceRuntimeReadingSchema } from "./performance-runtime-schema";

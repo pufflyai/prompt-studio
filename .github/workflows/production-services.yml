@@ -1,0 +1,74 @@
+name: Production service artifacts
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      source_sha:
+        required: true
+        type: string
+      artifact_run_id:
+        required: true
+        type: string
+      artifact_attempt:
+        required: true
+        type: string
+      channel:
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  services:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Download the exact selected candidate identity
+        uses: actions/download-artifact@v4
+        with:
+          name: production-candidate-attempt-${{ github.run_attempt }}
+      - name: Select immutable certified service artifact IDs
+        id: inputs
+        run: |
+          bun -e 'const c=await Bun.file("production-candidate.json").json(); const a=c.artifacts.filter(a=>["service-container-relay","service-container-account-manager"].includes(a.name)); if(a.length!==2)throw new Error("Both exact service artifacts are required"); console.log("ids="+a.map(a=>a.id).join(","))' >> "$GITHUB_OUTPUT"
+      - name: Download those exact service archives
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ steps.inputs.outputs.ids }}
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: service-images
+      - name: Exercise the exact images with disposable stores and owned authentication fixtures
+        run: bun scripts/ci/production-services.ts
+      - name: Attest the consumed service bytes and runtime outcome
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
+          ARTIFACT_ATTEMPT: ${{ inputs.artifact_attempt }}
+          CHANNEL: ${{ inputs.channel }}
+          OUTCOME: ${{ job.status }}
+        run: bun scripts/ci/production-evidence.ts --check services --outcome "$OUTCOME"
+      - name: Preserve actual image and consumer identity
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-evidence-services-attempt-${{ github.run_attempt }}
+          path: production-evidence/services.json
+          if-no-files-found: error
+      - name: Preserve the exact loaded image IDs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-service-images-attempt-${{ github.run_attempt }}
+          path: production-service-images.json
+          if-no-files-found: error

@@ -1,0 +1,174 @@
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { expect } from "@playwright/test";
+import { readRuntimeActivity } from "pstdio/runtime";
+import { test } from "../testing/packaged-fixture";
+import {
+  createPackagedHome,
+  disposePackagedApp,
+  launchPackagedApp,
+  type PackagedApp,
+  readDescriptor,
+  removePackagedHome,
+} from "./packaged-app-helpers";
+import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
+
+const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
+
+test(
+  "opens and closes project tabs while preserving pages and terminals",
+  { tag: "@essential" },
+  async ({ browserName: _browserName }, testInfo) => {
+    const home = createPackagedHome();
+    let app: PackagedApp | null = null;
+    try {
+      app = await launchPackagedApp(home, {
+        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
+          defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
+        }),
+      });
+      const first = await createPackagedProject(app, "Docs");
+      const second = await createPackagedProject(app, "Agentic design");
+      await openPackagedProject(app.page, first);
+      await expect(app.page.getByTestId("start-page")).toBeVisible();
+      // Electron combines drag regions from both renderers, even when the
+      // workbench covers the lifecycle page. Chromium clicks bypass that hit test.
+      await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
+
+      const titleBar = app.page.locator("[data-window-title-bar]");
+      const maximize = titleBar.getByRole("button", { name: "Enter Main fullscreen", exact: true });
+      await expect(maximize).toBeVisible();
+      await maximize.click();
+      await expect(titleBar).toBeHidden();
+      await app.page.getByRole("button", { name: "Exit Main fullscreen", exact: true }).click();
+      await expect(maximize).toBeFocused();
+
+      const secondary = app.page.getByRole("button", { name: "Show Bottom Panel", exact: true });
+      if (await secondary.isVisible()) await secondary.click();
+      await app.page
+        .locator('[data-workbench-panel-header="secondary"]')
+        .getByRole("button", { name: "Add panel" })
+        .click();
+      await app.page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
+      const input = app.page.getByRole("textbox", { name: "Terminal input" });
+      await expect(input).toBeVisible();
+      if (process.platform !== "win32") {
+        await expect.poll(async () => (await readRuntimeActivity(app!.runtime)).terminals).toHaveLength(0);
+      }
+      await input.pressSequentially(
+        process.platform === "win32" ? 'powershell.exe -NoProfile -Command "Start-Sleep -Seconds 300"' : "sleep 300",
+      );
+      await input.press("Enter");
+      await expect.poll(async () => (await readRuntimeActivity(app!.runtime)).terminals).toHaveLength(1);
+      const terminal = (await readRuntimeActivity(app.runtime)).terminals[0];
+      await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
+      await expect(app.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+      await app.page.getByRole("button", { name: "Navigate back", exact: true }).click();
+      await expect(app.page.getByTestId("start-page")).toBeVisible();
+      await app.page.getByRole("option", { name: "Lab", exact: true }).click();
+      await expect(app.page).toHaveURL(/\/extensions\/[^/]+\/lab$/);
+      const lab = app.page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" });
+      await expect(lab).toBeVisible();
+      const firstPageUrl = app.page.url();
+
+      await openPackagedProject(app.page, second);
+      await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
+      await expect(app.page).toHaveURL(/\/sessions\/compose$/);
+      const secondPageUrl = app.page.url();
+      await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveCount(2);
+      await app.page.getByRole("tab", { name: first.name, exact: true }).click();
+      await expect(app.page.getByRole("tab", { name: first.name, exact: true })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      await expect(app.page).toHaveURL(firstPageUrl);
+      await openPackagedProject(app.page, first);
+      await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveCount(2);
+      await expect(lab).toBeVisible();
+
+      const screenshot = testInfo.outputPath("desktop-project-tabs.png");
+      await app.page.screenshot({ path: screenshot });
+      await testInfo.attach("desktop-project-tabs", { path: screenshot, contentType: "image/png" });
+      expect(app.browser.contexts()[0].pages()).toHaveLength(2);
+      expect(readDescriptor(home)).toMatchObject({ instanceId: app.runtime.instanceId, pid: app.runtime.pid });
+
+      await app.page.getByRole("button", { name: `Close ${first.name}`, exact: true }).click();
+      await expect(app.page.getByRole("tab", { name: second.name, exact: true })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      await expect(app.page).toHaveURL(secondPageUrl);
+      expect((await readRuntimeActivity(app.runtime)).terminals).toEqual([terminal]);
+
+      // Sessions is a Sidenav level. Clicking the tab of the project the user is already in leaves it
+      // for the last root-level page; clicking it again there changes nothing.
+      await app.page.getByRole("tab", { name: second.name, exact: true }).click();
+      await expect(app.page.getByTestId("start-page")).toBeVisible();
+      const secondRootUrl = app.page.url();
+      await app.page.getByRole("tab", { name: second.name, exact: true }).click();
+      await expect(app.page).toHaveURL(secondRootUrl);
+
+      await openPackagedProject(app.page, first);
+      await expect(app.page).toHaveURL(firstPageUrl);
+      await expect(lab).toBeVisible();
+      await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
+        second.name,
+        first.name,
+      ]);
+
+      await app.page.getByRole("button", { name: `Close ${first.name}`, exact: true }).click();
+      await app.page.getByRole("button", { name: `Close ${second.name}`, exact: true }).click();
+      await expect(
+        app.page.getByRole("dialog").getByRole("button", { name: "Create project", exact: true }),
+      ).toBeVisible();
+      await expect(app.page.getByRole("dialog").getByText(first.name, { exact: true })).toBeVisible();
+      await expect(app.page.getByRole("dialog").getByText(second.name, { exact: true })).toBeVisible();
+      expect((await readRuntimeActivity(app.runtime)).terminals).toEqual([terminal]);
+    } finally {
+      await disposePackagedApp(app);
+      await removePackagedHome(home);
+    }
+  },
+);
+
+test("reports a failed tab write and recovers when the next tab change can be saved", async ({
+  browserName: _browserName,
+}, testInfo) => {
+  const home = createPackagedHome();
+  let app: PackagedApp | null = null;
+  try {
+    app = await launchPackagedApp(home);
+    const first = await createPackagedProject(app, "First project");
+    const second = await createPackagedProject(app, "Second project");
+    const blockedWrite = join(home, "electron-user-data", "project-tabs.json.tmp");
+    mkdirSync(blockedWrite);
+
+    await openPackagedProject(app.page, first);
+    const systemErrors = app.page.getByRole("button", {
+      name: "System errors: Could not save project tabs",
+      exact: true,
+    });
+    await expect(systemErrors).toBeVisible();
+    await systemErrors.click();
+    const error = app.page.getByLabel("System error list").getByText("Could not save project tabs", { exact: true });
+    await expect(error).toBeVisible();
+    const screenshot = testInfo.outputPath("desktop-project-tabs-save-error.png");
+    await app.page.screenshot({ path: screenshot, animations: "disabled" });
+    await testInfo.attach("desktop-project-tabs-save-error", { path: screenshot, contentType: "image/png" });
+
+    rmSync(blockedWrite, { recursive: true });
+    await openPackagedProject(app.page, second);
+    await expect(error).not.toBeVisible();
+    await expect(systemErrors).not.toBeVisible();
+    await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
+      first.name,
+      second.name,
+    ]);
+    const saved = JSON.parse(readFileSync(join(home, "electron-user-data", "project-tabs.json"), "utf8"));
+    expect(saved).toEqual({ projectIds: [first.id, second.id] });
+  } finally {
+    await disposePackagedApp(app);
+    await removePackagedHome(home);
+  }
+});

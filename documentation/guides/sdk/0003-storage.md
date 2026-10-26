@@ -10,6 +10,51 @@ On 0.43.x, save data with `ctx.storage.get`, `set`, `delete`, and `collection`. 
 
 The outcome `state` field, optional `expectedRevision`, and the deprecation of the conflict members are on `main`. They ship in the release after 0.44.0. On 0.44.0, read `status` and pass `expectedRevision` on every edit.
 
+## Read a selected page
+
+Indexed queries are additive on `main`, planned for 0.46. Install matching host
+and SDK builds before using them. Register deterministic definitions in your
+extension definition. The host installs them locally before exposing commands:
+
+```ts
+export default defineExtension({
+  storageIndexes: [{
+    name: "ready-items",
+    fields: {
+      status: { path: ["status"], type: "string" },
+      title: { path: ["title"], type: "string" },
+      position: { path: ["position"], type: "string" },
+    },
+    equality: ["status"],
+    orderBy: [{ field: "position", direction: "asc" }],
+  }],
+});
+
+// In a query command:
+const page = await ctx.storage.records.query({
+  index: "ready-items",
+  where: { field: "status", op: "eq", value: "ready" },
+  fields: ["title", "position"],
+  limit: 100,
+});
+const count = await ctx.storage.records.aggregate({
+  index: "ready-items",
+  where: { field: "status", op: "eq", value: "ready" },
+});
+```
+
+Each page contains complete record addresses, content revisions and only the
+selected fields. Pass `page.cursor` to the same query for the next page. A changed
+owner revision invalidates the cursor; restart rather than appending a stale page.
+Compare the page and count revisions before displaying them together. Batch full
+records with `records.readMany(ids)` when an editor needs them. Keep the batch at
+100 addresses or fewer. See [Indexed queries](../../references/sdk/0004-storage.md#indexed-queries)
+for null, array, sorting and authorization rules.
+
+Local indexes do not use the synced `storage.migrate` version. Another device
+can receive that version without having local indexes. In SDK tests, pass the
+same declaration as `createMemoryStorage({ indexes: extension.storageIndexes })`.
+
 ## Stage, then save
 
 Stage any new asset before committing the group. Every edit in a group applies
@@ -42,6 +87,39 @@ exactly what a caller read. Until the deprecated conflict members are removed, a
 revision that no longer matches keeps the group aside and reports `needs-attention`
 when the edit replaces a value that changed, deletes or restores the record, changes
 an asset that changed, or sets a map key that changed. Text and list edits still merge.
+
+## Keep records small
+
+A record is for small structured data, such as names, states, settings, links,
+positions and IDs. Never put large files or large values in a record. That includes
+file bodies, images, base64 data, long logs, transcripts and generated HTML.
+
+From extension API 0.3, planned for 0.46, the host refuses a save when one record is
+over 256 KiB of JSON or one commit is over 4 MiB. The numbers are exported as
+`storageLimits` from `@pstdio/sdk/extensions`:
+
+```ts
+import { isStorageLimitError, storageLimits } from "@pstdio/sdk/extensions";
+
+const files = ctx.storage.scope({ type: "resource", resource: { type: "report", id } }).files;
+const body = await files.put({ name: "report.md", data: new TextEncoder().encode(markdown) });
+await ctx.storage.records.commit({
+  operationId: ctx.storage.ids.create(),
+  edits: [{ recordId: ctx.storage.records.id(id), replace: { title, bodyFileId: body.id } }],
+});
+
+try {
+  await ctx.storage.records.commit(group);
+} catch (error) {
+  if (!isStorageLimitError(error)) throw error;
+  // error.data names the limit, the record, its size and storageLimits.recordBytes or commitBytes.
+}
+```
+
+Use `ctx.storage.files` for attachments of an item, `ctx.extensionFiles` or an
+artifact mount for files people and agents open, and keep only the file's ID or path
+in the record. Do not split one large value across many records. Import many records
+in several smaller commits. See [Size limits](../../references/sdk/0004-storage.md#size-limits).
 
 ## Wait for sync
 
@@ -97,7 +175,7 @@ resource owner fields in references. Existing IDs remain unchanged; core extensi
 adopt compact IDs separately after their case-sensitive lookup paths are ready.
 The format alone does not add a search index or speed up record listing.
 
-When importing data, pass a stable source key to the migration callback's ID helper:
+When importing data, pass a stable source key to the migration callback's ID helper. The example reads `readLegacy`, which resolves to `undefined` since 0.46. The same pattern applies to any import source:
 
 ```ts
 await ctx.storage.migrate(1, async (_previousVersion, migration) => {

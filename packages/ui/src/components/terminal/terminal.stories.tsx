@@ -1,5 +1,6 @@
+import { Button, Input, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { expect, fireEvent, spyOn, waitFor } from "storybook/test";
 import { createScriptedTerminalBridge, type ScriptedTerminalStep } from "./scripted-bridge";
 import { Terminal } from "./terminal";
@@ -39,6 +40,66 @@ const TerminalStory = ({ bridgeFactory, theme }: { bridgeFactory: () => Terminal
       <Terminal bridge={bridge} theme={theme} />
     </TerminalFrame>
   );
+};
+
+const DeferredFocusFixture = () => {
+  const [bridge] = useState(() => createScriptedTerminalBridge({ initial: [{ data: "Focus fixture ready\r\n" }] }));
+  const [generation, setGeneration] = useState(0);
+  const next = useRef<HTMLInputElement | null>(null);
+  // Parent effects run after Terminal requests focus and before its deferred construction.
+  useEffect(() => next.current?.focus(), []);
+  return (
+    <Stack>
+      <Input ref={next} aria-label="Next control" />
+      <Button onClick={() => setGeneration(generation + 1)}>Open another terminal</Button>
+      <TerminalFrame>
+        <Terminal key={generation} bridge={bridge} />
+      </TerminalFrame>
+    </Stack>
+  );
+};
+
+export const DeferredFocusRespectsNewChoice: Story = {
+  tags: ["!manifest", "terminal-deferred-focus"],
+  render: () => <DeferredFocusFixture />,
+};
+
+const PopupRestoreFocusFixture = () => {
+  const [bridge] = useState(() => createScriptedTerminalBridge({ initial: [{ data: "Opened from a menu\r\n" }] }));
+  const [open, setOpen] = useState(false);
+  const [menuClosed, setMenuClosed] = useState(false);
+  const trigger = useRef<HTMLButtonElement | null>(null);
+  // The selected action mounts the terminal while its menu item still has focus. The closing menu then
+  // returns focus to its trigger and unmounts, as a menu does after its exit.
+  useEffect(() => {
+    if (!open) return;
+    trigger.current?.focus();
+    setMenuClosed(true);
+  }, [open]);
+  return (
+    <Stack>
+      <Button ref={trigger} aria-haspopup="menu" aria-controls="terminal-actions">
+        Row actions
+      </Button>
+      {menuClosed ? null : (
+        <div id="terminal-actions" role="menu" aria-label="Row actions">
+          <Button role="menuitem" autoFocus onClick={() => setOpen(true)}>
+            Open terminal
+          </Button>
+        </div>
+      )}
+      {open ? (
+        <TerminalFrame>
+          <Terminal bridge={bridge} />
+        </TerminalFrame>
+      ) : null}
+    </Stack>
+  );
+};
+
+export const DeferredFocusIgnoresPopupRestore: Story = {
+  tags: ["!manifest", "terminal-deferred-focus"],
+  render: () => <PopupRestoreFocusFixture />,
 };
 
 export const Default: Story = {

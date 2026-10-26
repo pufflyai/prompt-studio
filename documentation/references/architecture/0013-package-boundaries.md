@@ -39,6 +39,11 @@ layer-map change.
    dependency. That edge is confined to test fixtures; local database runtime code
    does not open PostgreSQL relay storage.
 
+   `storage-scale-fixture` is a private test utility with no workspace dependencies.
+   The scale benchmarks in `pstdio-sync`, `pstdio-db` and `e2e` declare it as a
+   development dependency. Production entry points do not import it. Its shared
+   generator keeps the same workload across layer and compiled-runtime diagnostics.
+
 2. **Public authoring SDK**
    `@pstdio/sdk` exposes extension and client authoring APIs. Runtime or host
    contracts shared with the API live below it in `pstdio-api-contracts`, not in
@@ -51,6 +56,11 @@ layer-map change.
    `pstdio-extensions` owns extension discovery, metadata normalization, bridge
    contracts, and package artifacts. It must not depend on `@pstdio/workbench`;
    workbench adapters for extension metadata belong in `@pstdio/workbench`.
+
+   The private `pstdio-psx` service consumes the runtime's distribution subpath
+   for package validation. It owns PostgreSQL release metadata and S3 package
+   storage. It does not import API host packages. E2E fixtures drive its production
+   image through HTTP to check delivery to a packaged host.
 
 4. **API host**
    `pstdio-api-runtime-host` and `pstdio-api` own runtime execution and HTTP/API
@@ -110,6 +120,17 @@ layer-map change.
    request then only lints the e2e package. The e2e jobs run in the full CI stage
    on `main`, or on a pull request labeled `ci:full`; see
    [CI scope](../../requirements/platform/0001-cross-platform-support.md#ci-scope).
+
+   The private `storybook-tests` package owns component browser interactions and
+   their Storybook servers. It declares `@pstdio/ui`, `@pstdio/workbench`, and
+   `pstdio-dashboard` as development dependencies because it loads their stories.
+   Story sources stay with those owners. It does not depend on the API, database,
+   CLI, or `e2e`. App E2E never starts or builds Storybook.
+
+   `e2e` and `@pstdio/desktop` declare the private `pstdio-scripts` workspace as a
+   development dependency. Their Playwright configs use its `./test-quarantine`
+   export to share registry selection and report metadata. Product runtime code
+   does not import this test helper.
 
 8. **Packaging glue**
    `pstdio` may include generated packaging glue for compiled runtime artifacts.

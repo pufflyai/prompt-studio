@@ -37,14 +37,6 @@ export const expectClipboardPermissions = async (electronApp: ElectronApplicatio
       document.body.append(frame);
     });
     const extensionCopy = window.frameLocator('iframe[title="Extension draft"]').getByRole("button");
-    await extensionCopy.evaluate((button) => {
-      button.onclick = async () => {
-        button.textContent = await navigator.clipboard.writeText("Extension draft").then(
-          () => "Copied extension draft",
-          () => "denied",
-        );
-      };
-    });
     await extensionCopy.click();
     await expect(extensionCopy).toHaveText("Copied extension draft");
     expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe("Extension draft");

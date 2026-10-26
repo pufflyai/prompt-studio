@@ -1,10 +1,12 @@
 {
   "requests.navigation.label": "Attention requise",
+  "navigation.files": "Fichiers",
+  "navigation.workspaces": "Espaces de travail",
+  "navigation.sessions": "Sessions",
   "timeline.page.title": "Chronologie du projet",
   "timeline.view.title": "Chronologie du projet",
   "commands.autoBuild.title": "Construire automatiquement",
   "commands.openTickets": "Ouvrir les tâches",
-  "commands.migrateTicketIdentities": "Migrer les identifiants des tickets",
   "archiveState.active": "Actif",
   "archiveState.archived": "Archivé",
   "boardView.archiveAll": "Tout archiver",

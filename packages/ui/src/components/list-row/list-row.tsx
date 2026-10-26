@@ -21,6 +21,8 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     iconColor,
     indicator,
     endContent,
+    startContent,
+    actionsVisibility,
     tooltip,
     disabled,
     isContainer,
@@ -37,6 +39,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     isSelected = false,
     isExpanded = false,
     showExpandToggle = false,
+    expandOnClick = true,
     showContextMenuTrigger = false,
     variant = "default",
     tone = "default",
@@ -67,6 +70,8 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     iconColor,
     indicator,
     endContent,
+    startContent,
+    actionsVisibility,
     tooltip,
     disabled,
     isContainer,
@@ -92,7 +97,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const handleActivate = () => {
     if (isDisabled) return;
     if (hasMenuItems) return;
-    if (showChevron) {
+    if (showChevron && expandOnClick) {
       onToggleExpand?.();
       return;
     }
@@ -111,7 +116,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     else handleActivate();
   };
 
-  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
     onKeyDown?.(event);
     if (event.defaultPrevented) return;
     if (event.target !== event.currentTarget) return;
@@ -137,6 +142,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const rowProps = createListRowRootProps({
     rootProps: { ...rootProps, id },
     labelId,
+    hasDescription,
     hasEndContent: Boolean(item.endContent),
     rowRole,
     className,
@@ -164,6 +170,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
       tone={tone}
       variant={variant}
       showContextMenuTrigger={showContextMenuTrigger}
+      onToggleExpand={!expandOnClick ? onToggleExpand : undefined}
     />
   );
 
@@ -183,7 +190,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
 
   if (asChild) {
     return wrap(
-      <chakra.div ref={ref} {...rowProps} {...dragProps} {...activationProps} onPointerMove={onPointerMove}>
+      <chakra.div ref={ref} {...rowProps} {...dragProps} {...activationProps} {...{ onKeyDown, onPointerMove }}>
         {content}
       </chakra.div>,
     );
@@ -195,15 +202,14 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
         href={item.href}
         {...(rowProps as object)}
         {...dragProps}
-        onClick={handleClick}
-        onPointerMove={onPointerMove}
+        {...{ onClick: handleClick, onKeyDown, onPointerMove }}
       >
         {content}
       </chakra.a>,
     );
   }
 
-  if (hasActions) {
+  if (hasActions || (showChevron && !expandOnClick)) {
     return wrap(
       <chakra.div
         ref={ref}
@@ -212,8 +218,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
         {...dragProps}
         {...activationProps}
         tabIndex={rootProps.tabIndex ?? 0}
-        onKeyDown={handleKeyDown}
-        onPointerMove={onPointerMove}
+        {...{ onKeyDown: handleKeyDown, onPointerMove }}
       >
         {content}
       </chakra.div>,
@@ -228,7 +233,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
       {...(rowProps as object)}
       {...dragProps}
       {...activationProps}
-      onPointerMove={onPointerMove}
+      {...{ onKeyDown, onPointerMove }}
     >
       {content}
     </chakra.button>,

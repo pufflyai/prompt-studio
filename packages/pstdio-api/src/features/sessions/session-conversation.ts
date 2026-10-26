@@ -35,6 +35,9 @@ export const createSessionConversation = (
       changed?.();
     },
     getMessages: () => [...messages],
+    get messageCount() {
+      return messages.length;
+    },
     snapshotAndSubscribe() {
       const iterator = events.subscribe()[Symbol.asyncIterator]();
       return { messages: [...messages], stream: { [Symbol.asyncIterator]: () => iterator } };

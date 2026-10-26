@@ -2,7 +2,7 @@ import { open, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join, posix, relative, resolve } from "node:path";
 import type { ArtifactFile, ArtifactMount, WorkspaceFilesMount } from "@pstdio/sdk/extensions";
 import { createReadBoundary } from "../runtime/read-boundary";
-import { ARTIFACT_MOUNT_ROOT } from "./extension-storage-path";
+import { ARTIFACT_MOUNT_ROOT, extensionStorageDirectory } from "./extension-storage-path";
 import { normalizeArtifactMountPath } from "./path-normalization";
 import { createSafeFileRoot, normalizeMountRelativePath } from "./safe-file-root";
 import { createWorkspaceFileAccess, type WorkspaceFileAccess } from "./workspace-file-access";
@@ -10,8 +10,8 @@ import { type KeptWorkspaceFile, runAfterPendingSync, syncWorkspaceDir } from ".
 
 type ArtifactMountLocation = {
   repoRoot: string;
-  /** Package name of the owning extension. */
-  name: string;
+  /** Full `<publisher>.<name>` ID of the owning extension. */
+  extensionId: string;
   mountPath: string;
 };
 
@@ -182,10 +182,11 @@ export { ARTIFACT_MOUNT_ROOT } from "./extension-storage-path";
 /** The absolute folder of a mount in one workspace root. */
 export const resolveArtifactMountRoot = (input: ArtifactMountLocation) => {
   const normalized = normalizeArtifactMountPath(input.mountPath);
+  const owner = extensionStorageDirectory(input.extensionId);
   if (!normalized) {
-    throw new Error(`Artifact mount path "${input.mountPath}" must stay under ${ARTIFACT_MOUNT_ROOT}/${input.name}/`);
+    throw new Error(`Artifact mount path "${input.mountPath}" must stay under ${ARTIFACT_MOUNT_ROOT}/${owner}/`);
   }
-  return resolve(input.repoRoot, ...ARTIFACT_MOUNT_ROOT.split("/"), input.name, ...normalized.split("/"));
+  return resolve(input.repoRoot, ...ARTIFACT_MOUNT_ROOT.split("/"), owner, ...normalized.split("/"));
 };
 
 export const createArtifactMount = (input: CreateArtifactMountInput): ArtifactMount =>

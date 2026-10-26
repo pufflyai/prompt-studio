@@ -18,6 +18,7 @@
 **/coverage
 **/playwright-report
 **/test-results
+**/__test-tmp__
 
 clients/landing-page/public
 **/*.log
@@ -26,6 +27,8 @@ clients/landing-page/public
 infra/relay/.env*
 services/relay/.env*
 services/account-manager/.env*
+services/psx/.env*
+infra/psx/.env*
 infra/terraform
 infra/relay/compose.yaml
 infra/relay/Caddyfile

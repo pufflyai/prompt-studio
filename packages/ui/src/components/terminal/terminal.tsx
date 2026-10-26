@@ -165,6 +165,7 @@ export const Terminal = (props: TerminalProps) => {
   const xtermRef = useRef<Xterm | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const sinkRef = useRef<ReturnType<typeof createTerminalSink> | null>(null);
+  const focusWhenReadyRef = useRef<(() => void) | null>(null);
   const [terminalReady, setTerminalReady] = useState(false);
   const initialSessionRequestRef = useRef<TerminalSessionRequest | null>(null);
   const onSessionOpenRef = useRef(onSessionOpen);
@@ -227,6 +228,8 @@ export const Terminal = (props: TerminalProps) => {
       measureTimeout = window.setTimeout(measure, 50);
       observer = new ResizeObserver(measure);
       observer.observe(container);
+      focusWhenReadyRef.current?.();
+      focusWhenReadyRef.current = null;
       setTerminalReady(true);
     });
 
@@ -275,8 +278,26 @@ export const Terminal = (props: TerminalProps) => {
   }, [session, terminalReady, motionRootRef]);
 
   useEffect(() => {
-    if (terminalReady && autoFocus) xtermRef.current?.focus();
-  }, [autoFocus, terminalReady]);
+    if (!autoFocus) return;
+    const previousFocus = document.activeElement;
+    const focus = () => {
+      const current = document.activeElement;
+      const container = containerRef.current;
+      // A closing popup that held focus at the request returns focus to its own control. That is not a new choice.
+      const restored = current
+        ?.getAttribute("aria-controls")
+        ?.split(" ")
+        .some((id) => previousFocus?.closest(`[id="${CSS.escape(id)}"]`));
+      // Deferred construction must respect a focus choice made after the request.
+      if (current === previousFocus || restored || (container && current?.contains(container)))
+        xtermRef.current?.focus();
+    };
+    if (xtermRef.current) focus();
+    else focusWhenReadyRef.current = focus;
+    return () => {
+      focusWhenReadyRef.current = null;
+    };
+  }, [autoFocus]);
 
   // The mount element fills its box absolutely so xterm sizes to the panel
   // rather than growing it: inside a scrollable host, a self-sized terminal

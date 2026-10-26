@@ -1,7 +1,7 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { readGithubMerge } from "./github-merges";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
-import type { StoredTicket } from "./types";
+import type { Ticket } from "./types";
 
 export interface DependencyDelivery {
   headSha: string | null;
@@ -12,8 +12,8 @@ export type DependencyDeliveryReads = Map<string, Promise<DependencyDelivery | n
 
 export async function readDependencyDeliveries(
   ctx: Pick<ExtensionContextBase, "process" | "logger">,
-  target: StoredTicket,
-  tickets: StoredTicket[],
+  target: Ticket,
+  tickets: Ticket[],
   doneStatusIds: Set<string>,
   cwd: string,
   reads: DependencyDeliveryReads = new Map(),

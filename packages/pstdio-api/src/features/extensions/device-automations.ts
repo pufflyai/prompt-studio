@@ -1,4 +1,3 @@
-import { createDocumentStorage } from "pstdio-sync";
 import { z } from "zod";
 import type { ExtensionsRouteDeps } from "./deps";
 import { instanceIdsByExtensionId, isAutomationEnabled } from "./extension-automations";
@@ -25,17 +24,16 @@ export const readDeviceAutomation = async (deps: ExtensionsRouteDeps, projectId:
   return record.exists && !record.deleted ? deviceAutomationSchema.parse(record.value) : null;
 };
 
-const changeDeviceAutomations = <T>(
+type AutomationRecords = Parameters<
+  Parameters<Awaited<ReturnType<typeof openDeviceAutomations>>["records"]["transaction"]>[0]
+>[0];
+
+// Reads and the following commit share one owner lock, so two assignments cannot both succeed.
+const changeDeviceAutomations = async <T>(
   deps: ExtensionsRouteDeps,
   projectId: string,
-  change: (records: ReturnType<typeof createDocumentStorage>["records"]) => Promise<T>,
-) => {
-  const owner = { workbenchId: projectId, extensionId: deviceAutomationsOwnerId };
-  return deps.extensionStorageService.documents.open("records").transaction(owner, async (state) => {
-    const storage = createDocumentStorage({ owner, store: { transaction: async (_owner, action) => action(state) } });
-    return change(storage.records);
-  });
-};
+  change: (records: AutomationRecords) => Promise<T>,
+) => (await openDeviceAutomations(deps, projectId)).records.transaction(change);
 
 const changes = new WeakMap<ExtensionsRouteDeps["extensionStorageService"], Map<string, Promise<unknown>>>();
 const serializeAutomationChange = <T>(deps: ExtensionsRouteDeps, projectId: string, change: () => Promise<T>) => {

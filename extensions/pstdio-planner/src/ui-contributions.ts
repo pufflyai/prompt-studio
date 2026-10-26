@@ -32,6 +32,7 @@ import { ticketActivationTarget, ticketDocumentPage, ticketRequestsPage } from "
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
+import { ticketNavigationStructure } from "./ticket-navigation-structure";
 import { timelineViewSchema } from "./timeline/commands/view-schema";
 import { planChanged } from "./timeline/contracts";
 import { queryWorkflowSettings, saveWorkflowSettings } from "./views/workflow-settings";
@@ -211,6 +212,7 @@ export const createPlannerUi = (baseUrl: string) => {
     icon: "Files",
     body: {
       kind: "tree",
+      structure: ticketNavigationStructure,
       body: listTicketFilesTree,
       refreshEvents: [plannerTicketsChanged, viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
       defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],

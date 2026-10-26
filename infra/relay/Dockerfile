@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.2 AS build
+FROM oven/bun:1.4.4 AS build
 WORKDIR /build
 COPY package.json bun.lock bunfig.toml ./
 COPY services/telemetry/package.json ./services/telemetry/package.json
@@ -6,6 +6,7 @@ COPY services/relay/package.json ./services/relay/package.json
 COPY services/account-manager/package.json ./services/account-manager/package.json
 COPY packages/pstdio-sync/package.json ./packages/pstdio-sync/package.json
 COPY packages/pstdio-sync-contracts/package.json ./packages/pstdio-sync-contracts/package.json
+COPY packages/storage-scale-fixture/package.json ./packages/storage-scale-fixture/package.json
 RUN bun install --frozen-lockfile --production --filter pstdio-relay
 COPY services/relay/src ./services/relay/src
 COPY services/relay/scripts ./services/relay/scripts
@@ -19,16 +20,16 @@ RUN bun build services/relay/src/server.ts services/relay/src/index.ts services/
 
 RUN bun build services/account-manager/src/server.ts --target bun --outfile dist/manager.js
 
-FROM oven/bun:1.4.2 AS tls-fixture
+FROM oven/bun:1.4.4 AS tls-fixture
 WORKDIR /app
 COPY --chown=bun:bun services/relay/scripts/tls.fixture.ts ./tls.fixture.ts
 COPY --chown=bun:bun services/relay/scripts/tls-validity.ts ./tls-validity.ts
-COPY --chown=bun:bun services/relay/scripts/tls-validity.test.ts ./tls-validity.test.ts
+COPY --chown=bun:bun services/relay/scripts/tls-validity.p0.test.ts ./tls-validity.p0.test.ts
 RUN mkdir /tls-private /tls-public /relay-tls-private && chown bun:bun /tls-private /tls-public /relay-tls-private
 USER bun
 CMD ["bun", "tls.fixture.ts"]
 
-FROM oven/bun:1.4.2-slim AS base
+FROM oven/bun:1.4.4-slim AS base
 WORKDIR /app
 COPY --from=build --chown=bun:bun /build/dist/src/server.js ./server.js
 COPY --from=build --chown=bun:bun /build/dist/src/index.js ./storage.js

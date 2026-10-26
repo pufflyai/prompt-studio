@@ -40,7 +40,7 @@ Commands print JSON. Use `--project-id` outside a linked folder. `pst views boar
 | Field kind | Conditions | Value |
 | --- | --- | --- |
 | `boolean` | `is`, `is-not` | `true` or `false`; the UI reads “Ticket is Archived” or “Ticket is not Archived” |
-| `string` | `contains`, `does-not-contain`, `is`, `is-not` | Text. Compares ignore case |
+| `string` | `contains`, `does-not-contain`, `is`, `is-not` | Text. Compares use locale-independent JavaScript lowercase on both values |
 | `number` | `is`, `is-not`, `gt`, `gte`, `lt`, `lte` | A number |
 | `date` | `is`, `is-before`, `is-after`, `is-on-or-before`, `is-on-or-after` | A day: `2026-10-02`, `today`, `today-7`, or `today+7` |
 | `enum`, `status`, `user` | `is-any-of`, `is-none-of` | Option values |

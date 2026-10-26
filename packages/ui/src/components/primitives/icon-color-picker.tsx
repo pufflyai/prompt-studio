@@ -1,5 +1,6 @@
-import { Box, chakra, Grid, Icon, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Box, chakra, Grid, Popover, Portal, Stack, Text } from "@chakra-ui/react";
 import { type IconColorPickerIconOption, optionColors, optionIcons } from "./icon-options";
+import { IconPickerGrid } from "./icon-picker-grid";
 import { TagSwatch } from "./tag-swatch";
 
 const SwatchTrigger = chakra("button", {
@@ -22,19 +23,6 @@ const ColorDot = chakra("button", {
     outlineOffset: "3xs",
     outlineColor: "transparent",
     _selected: { outlineColor: "fg" },
-  },
-});
-
-const IconCell = chakra("button", {
-  base: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxSize: "tag-icon-cell",
-    borderRadius: "compact",
-    color: "fg.muted",
-    cursor: "pointer",
-    _hover: { bg: "bg.hover" },
   },
 });
 
@@ -101,25 +89,12 @@ export const IconColorPicker = (props: IconColorPickerProps) => {
                   <Text textStyle="label/S/medium" color="fg.muted">
                     {iconLabel}
                   </Text>
-                  <Grid templateColumns="repeat(8, 1fr)" gap="3xs" justifyItems="center">
-                    {iconOptions.map((entry) => {
-                      const selected = entry.value === selectedIcon;
-                      return (
-                        <IconCell
-                          key={entry.value ?? "none"}
-                          type="button"
-                          color={selected ? `${color}.500` : undefined}
-                          bg={selected ? `${color}.500/15` : undefined}
-                          _hover={selected ? { bg: `${color}.500/15` } : undefined}
-                          aria-label={entry.label}
-                          aria-pressed={selected}
-                          onClick={() => onIconChange?.(entry.value)}
-                        >
-                          <Icon as={entry.icon} boxSize="icon-xs" />
-                        </IconCell>
-                      );
-                    })}
-                  </Grid>
+                  <IconPickerGrid
+                    value={selectedIcon}
+                    options={iconOptions}
+                    color={color}
+                    onChange={(icon) => onIconChange?.(icon)}
+                  />
                 </>
               ) : null}
             </Stack>
