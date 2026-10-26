@@ -35,24 +35,23 @@ export default defineExtension({
   keybindings: [
     defineKeybinding({
       id: "keyboard-open",
-      layer: "extensions",
-      key: "O",
+      layer: "go",
+      key: "S",
       sticky: true,
       action: { kind: "page", page: page.ref },
     }),
+    defineKeybinding({
+      id: "create-piece",
+      layer: "create",
+      key: "P",
+      action: { kind: "command", target: { command: commands["piece.generate"].ref } },
+    }),
     ...(
       [
-        ["piece.generate", "N"],
         ["piece.render", "R"],
         ["piece.read", "P"],
       ] as const
-    ).flatMap(([id, key]) => [
-      defineKeybinding({
-        id: `keyboard-${id}`,
-        layer: "extensions",
-        key,
-        action: { kind: "command", target: { command: commands[id].ref } },
-      }),
+    ).map(([id, key]) =>
       defineKeybinding({
         id: `current-${id}`,
         layer: "current",
@@ -61,7 +60,7 @@ export default defineExtension({
         when: { view: studio.ref },
         action: { kind: "command", target: { command: commands[id].ref } },
       }),
-    ]),
+    ),
   ],
   views: [studio],
   pages: [page],

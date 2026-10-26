@@ -51,26 +51,17 @@ export default defineExtension({
   keybindings: [
     defineKeybinding({
       id: "keyboard-open",
-      layer: "extensions",
-      key: "O",
+      layer: "go",
+      key: "S",
       sticky: true,
       action: { kind: "page", page: home.ref },
     }),
-    ...(
-      [
-        ["shaders.add", "N"],
-        ["version.rename", "R"],
-        ["version.duplicate", "D"],
-        ["compare.update", "C"],
-      ] as const
-    ).map(([id, key]) =>
-      defineKeybinding({
-        id: `keyboard-${id}`,
-        layer: "extensions",
-        key,
-        action: { kind: "command", target: { command: commands[id].ref } },
-      }),
-    ),
+    defineKeybinding({
+      id: "create-shader",
+      layer: "create",
+      key: shaderVersion.ref.id[0]!.toUpperCase(),
+      action: { kind: "command", target: { command: commands["shaders.add"].ref } },
+    }),
     ...(
       [
         ["current.rename", "R"],

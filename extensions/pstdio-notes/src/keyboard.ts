@@ -2,7 +2,6 @@ import { defineKeybinding } from "@pstdio/sdk/extensions";
 import { createNoteCommand, renameNoteCommand } from "./commands";
 import { createFolderCommand, moveNoteCommand } from "./folder-commands";
 import { note, notesPage } from "./pages";
-
 export const noteShortcuts = [
   defineKeybinding({
     id: "go-notes",
@@ -14,34 +13,17 @@ export const noteShortcuts = [
   defineKeybinding({
     id: "create-note",
     layer: "create",
-    key: "N",
-    action: { kind: "command", target: { command: createNoteCommand.ref } },
+    key: note.ref.id[0]!.toUpperCase(),
+    action: { kind: "command", target: { command: createNoteCommand.ref, params: {} } },
   }),
   defineKeybinding({
-    id: "extension-open",
-    layer: "extensions",
-    key: "O",
-    sticky: true,
-    action: { kind: "page", page: notesPage.ref },
+    id: "create-folder",
+    layer: "create",
+    key: "F",
+    action: { kind: "command", target: { command: createFolderCommand.ref } },
   }),
   ...(
     [
-      ["new", "N", createNoteCommand],
-      ["folder", "F", createFolderCommand],
-      ["rename", "R", renameNoteCommand],
-      ["move", "M", moveNoteCommand],
-    ] as const
-  ).map(([id, key, command]) =>
-    defineKeybinding({
-      id: `extension-${id}`,
-      layer: "extensions",
-      key,
-      action: { kind: "command", target: { command: command.ref } },
-    }),
-  ),
-  ...(
-    [
-      ["new", "N", createNoteCommand],
       ["rename", "R", renameNoteCommand],
       ["move", "M", moveNoteCommand],
     ] as const

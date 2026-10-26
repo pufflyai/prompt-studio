@@ -23,8 +23,8 @@ export default defineExtension({
     example.pages.slice(0, 1).map((page) =>
       defineKeybinding({
         id: `keyboard-example-${index}`,
-        layer: "extensions",
-        key: String(index + 1),
+        layer: "go",
+        key: page.ref.id[0]!.toUpperCase(),
         sticky: true,
         action: { kind: "page", page: page.ref },
       }),

@@ -58,24 +58,24 @@ const page = definePage({
 export default defineExtension({
   commands: Object.values(commands),
   keybindings: [
+    defineKeybinding({ id: "keyboard-open", layer: "go", key: "M", sticky: true, action: target("chat-turn") }),
     defineKeybinding({
-      id: "keyboard-open",
-      layer: "extensions",
-      key: "O",
-      sticky: true,
-      action: { kind: "page", page: home.ref },
+      id: "create-animation",
+      layer: "create",
+      key: animation.ref.id[0]!.toUpperCase(),
+      action: { kind: "command", target: { command: commands["study.create"].ref } },
     }),
     ...(
       [
-        ["study.create", "N"],
         ["studies.refresh", "F"],
         ["review.read", "V"],
       ] as const
     ).map(([id, key]) =>
       defineKeybinding({
-        id: `keyboard-${id}`,
-        layer: "extensions",
+        id: `current-${id}`,
+        layer: "current",
         key,
+        targetScope: "project",
         action: { kind: "command", target: { command: commands[id].ref } },
       }),
     ),
@@ -84,13 +84,7 @@ export default defineExtension({
         ["toggle", "P"],
         ["restart", "R"],
       ] as const
-    ).flatMap(([operation, key]) => [
-      defineKeybinding({
-        id: `keyboard-${operation}`,
-        layer: "extensions",
-        key,
-        action: { kind: "command", target: { command: commands["review.playback"].ref, params: { operation } } },
-      }),
+    ).map(([operation, key]) =>
       defineKeybinding({
         id: `current-${operation}`,
         layer: "current",
@@ -99,7 +93,7 @@ export default defineExtension({
         when: { resourceType: [animation.ref] },
         action: { kind: "command", target: { command: commands["review.playback"].ref, params: { operation } } },
       }),
-    ]),
+    ),
   ],
   hooks: [
     defineHook({

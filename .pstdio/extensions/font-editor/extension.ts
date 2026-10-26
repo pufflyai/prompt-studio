@@ -38,38 +38,34 @@ const extension = defineExtension({
   keybindings: [
     defineKeybinding({
       id: "keyboard-open",
-      layer: "extensions",
-      key: "O",
+      layer: "go",
+      key: "F",
       sticky: true,
       action: { kind: "page", page: fontEditorPage.ref },
     }),
+    defineKeybinding({
+      id: "create-glyph",
+      layer: "create",
+      key: "G",
+      action: { kind: "command", target: { command: fontCommands.find((command) => command.id === "glyph.add")!.ref } },
+    }),
     ...(
       [
-        ["glyph.add", "N"],
         ["glyph.rename", "R"],
         ["glyph.codepoint", "C"],
         ["build", "B"],
         ["verify", "V"],
       ] as const
-    ).flatMap(([id, key]) => {
-      const command = fontCommands.find((command) => command.id === id)!;
-      return [
-        defineKeybinding({
-          id: `keyboard-${id}`,
-          layer: "extensions",
-          key,
-          action: { kind: "command", target: { command: command.ref } },
-        }),
-        defineKeybinding({
-          id: `current-${id}`,
-          layer: "current",
-          key,
-          targetScope: "panel",
-          when: { view: fontEditor.ref },
-          action: { kind: "command", target: { command: command.ref } },
-        }),
-      ];
-    }),
+    ).map(([id, key]) =>
+      defineKeybinding({
+        id: `current-${id}`,
+        layer: "current",
+        key,
+        targetScope: "panel",
+        when: { view: fontEditor.ref },
+        action: { kind: "command", target: { command: fontCommands.find((command) => command.id === id)!.ref } },
+      }),
+    ),
   ],
   views: [fontEditor],
   pages: [fontEditorPage],
