@@ -16,4 +16,7 @@ export const terminateOwnerProcess = async (child: Bun.Subprocess) => {
     }
   }
   await child.exited;
+  await closeOwnerResources(child);
 };
+
+import { closeOwnerResources } from "./resource-observer";

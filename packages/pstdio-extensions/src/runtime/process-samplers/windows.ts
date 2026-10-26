@@ -1,5 +1,5 @@
 import { dlopen, ptr } from "bun:ffi";
-import type { ProcessReading } from "../process-sampler";
+import type { ProcessIdentity, ProcessReading } from "../process-sampler";
 
 export const createWindowsProcessSampler = () => {
   // HANDLE is an integer token, not a pointer (https://bun.sh/docs/runtime/ffi#pointers).
@@ -8,8 +8,32 @@ export const createWindowsProcessSampler = () => {
     CloseHandle: { args: ["u64"], returns: "bool" },
     GetProcessTimes: { args: ["u64", "ptr", "ptr", "ptr", "ptr"], returns: "bool" },
     K32GetProcessMemoryInfo: { args: ["u64", "ptr", "u32"], returns: "bool" },
+    CreateToolhelp32Snapshot: { args: ["u32", "u32"], returns: "u64" },
+    Process32FirstW: { args: ["u64", "ptr"], returns: "bool" },
+    Process32NextW: { args: ["u64", "ptr"], returns: "bool" },
   });
   return {
+    list: async () => {
+      const snapshot = kernel.symbols.CreateToolhelp32Snapshot(2, 0); // TH32CS_SNAPPROCESS
+      if (!snapshot || snapshot === 0xffffffffffffffffn) throw new Error("Process table is unavailable.");
+      try {
+        // PROCESSENTRY32W, 64-bit alignment: learn.microsoft.com/windows/win32/api/tlhelp32/ns-tlhelp32-processentry32w
+        const buffer = new Uint8Array(568);
+        const fields = new DataView(buffer.buffer);
+        fields.setUint32(0, buffer.length, true);
+        const identities: ProcessIdentity[] = [];
+        let found = kernel.symbols.Process32FirstW(snapshot, ptr(buffer));
+        if (!found) throw new Error("Cannot enumerate the process table.");
+        while (found) {
+          identities.push({ pid: fields.getUint32(8, true), parentPid: fields.getUint32(32, true) });
+          if (identities.length > 16_384) throw new Error("Process table exceeds the observation bound.");
+          found = kernel.symbols.Process32NextW(snapshot, ptr(buffer));
+        }
+        return identities;
+      } finally {
+        kernel.symbols.CloseHandle(snapshot);
+      }
+    },
     read: async (pid: number) => {
       const handle = kernel.symbols.OpenProcess(0x1000, false, pid); // PROCESS_QUERY_LIMITED_INFORMATION
       if (!handle) return null;

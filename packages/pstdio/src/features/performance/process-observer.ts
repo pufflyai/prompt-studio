@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline";
-import { createProcessSampler } from "./process-sampler";
+import { createProcessSampler } from "pstdio-extensions";
 
 /** The desktop owns the observer's lifetime. No work runs without a request on its private pipe. */
 export const runProcessObserver = async () => {

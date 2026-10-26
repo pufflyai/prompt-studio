@@ -10,6 +10,8 @@ test("samples a separate busy process without asking its event loop", async () =
   try {
     await new Promise<void>((resolve) => child.stdout.once("data", () => resolve()));
     const first = await sampler.read(child.pid!);
+    const identity = (await sampler.list()).find((process) => process.pid === child.pid);
+    expect(identity?.parentPid).toBe(process.pid);
     await Bun.sleep(40);
     const second = await sampler.read(child.pid!);
     expect(first).not.toBeNull();

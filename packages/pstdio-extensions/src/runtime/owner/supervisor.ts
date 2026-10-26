@@ -5,6 +5,7 @@ import type { ExtensionDiagnostic } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { type ExtensionResourceCoordinator, extensionWorkCosts, selectExtensionResources } from "../resource-policy";
 import { createOwnerEndpoint } from "./endpoint";
+import { readOwnerResources } from "./resource-observer";
 import { spawnExtensionOwner } from "./spawn-owner";
 import { createSupervisedFunctionWrapper } from "./supervised-functions";
 import { terminateOwnerProcess } from "./terminate-process";
@@ -24,6 +25,19 @@ const healthySourceMetadata = (source: LoadedExtensionSource | null, diagnostics
   if (!source || diagnostics.some((item) => item.severity === "error")) return undefined;
   const { definition: _definition, ...metadata } = source;
   return metadata;
+};
+
+const processState = (
+  stopped: boolean,
+  child: Bun.Subprocess | undefined,
+  initialized: boolean,
+  failure: ExtensionOwnerError | undefined,
+) => {
+  if (stopped) return "stopped" as const;
+  if (child && !initialized) return "starting" as const;
+  if (child) return "ready" as const;
+  if (failure) return "failed" as const;
+  return "idle" as const;
 };
 
 export const createExtensionOwner = (input: {
@@ -222,14 +236,12 @@ export const createExtensionOwner = (input: {
     get diagnostics() {
       return diagnostics;
     },
-    inspect: () => {
-      const details = { pendingCalls: endpoint?.stats().pending ?? 0, failureCode: failure?.code };
-      if (stopped || disposed) return { ...details, state: "stopped" as const };
-      if (child && !initialized) return { ...details, state: "starting" as const };
-      if (child) return { ...details, state: "ready" as const };
-      if (failure) return { ...details, state: "failed" as const };
-      return { ...details, state: "idle" as const };
-    },
+    inspect: () => ({
+      pendingCalls: endpoint?.stats().pending ?? 0,
+      failureCode: failure?.code,
+      resources: readOwnerResources(child),
+      state: processState(stopped || disposed, child, initialized, failure),
+    }),
     load,
     stop: async () => {
       stopped = true;

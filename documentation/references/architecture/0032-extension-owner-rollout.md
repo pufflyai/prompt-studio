@@ -60,6 +60,14 @@ POSIX cleanup also terminates descendants remaining in the process group after t
 
 The registry currently caps retained owners at 16 and releases them at runtime shutdown. Reference-based reclamation of adopted, candidate, invocation and session generations is not implemented. This cap is an explicit pilot bound, not the PRD's memory admission policy.
 
+## Kernel resource observations
+
+The runtime and desktop diagnostics share the existing native process sampler. Owner diagnostics sample CPU time and RSS every 250 ms while an owner exists, including after a command returns. One bounded process-table scan serves all owners. Descendant relationships and POSIX process groups attribute direct owner children; cumulative CPU deltas use process-start identities so PID reuse does not join unrelated lifetimes. One fully used core is `cpuCores: 1`. Each result records its actual measurement window. The first CPU sample and missing observations are null, with diagnostic metadata, rather than zero.
+
+`execution.get` includes the latest resource observation per live owner. RSS sums the sampled processes and can count shared pages more than once. The observer retains only previous/latest readings and accepts at most 16,384 process-table entries. Larger or inaccessible tables report unavailable observations. It records no process names, arguments, source text or environment values. The final owner exit closes its timer and native sampler. A real subprocess test observes both background JavaScript and a busy child after the command has returned, then verifies Stop reaps them; macOS development execution passes. The native Windows/Linux implementations still require their supported-platform runs.
+
+These measurements are diagnostic inputs, not hard quotas or completed adaptive admission. Children launched through host `ctx.process` capabilities have a different OS parent and still need explicit source attribution in this observer. Resident-owner charging, child cost adaptation and the effect of observations on dispatch remain rollout gates.
+
 ## Resource coordinator
 
 The internal `PSTDIO_EXTENSION_RESOURCE_ADMISSION=1` control, together with process owners, connects the shared coordinator to owner initialization, adopted callback dispatch, trusted preparation and compiler children. It replaces the independent compiler slots on that path. The default path and the fixed four-compiler measurement control retain the existing limit. Resource-policy calibration is separate from the preparation comparison; the benchmark driver explicitly disables this second control.
@@ -74,7 +82,7 @@ Current candidate policy inputs are a host reserve of up to one CPU (half a CPU 
 
 Cold estimates are one CPU/64 MiB for initialization or preparation, one CPU/16 MiB of transient memory for invocation work, and two CPUs/320 MiB for a compiler. Invocation queue estimates include 512 KiB of context allowance plus serialized arguments. These are explicit pilot values; resident owners and arbitrary extension allocations are not bounded by those transient estimates. Compiler reaping precedes release; owner failures wait for process exit before releasing their job. Scoped webview errors retain resource deadline codes in their diagnostic cause.
 
-CPU affinity and cgroup v1/v2 limits are read on Linux. The reader resolves the process's controller memberships and mount roots, then applies the tightest quota and memory headroom across the leaf and its mounted ancestors. This includes delegated groups, separate v1 controller mounts and namespace-relative roots. Fixture filesystem tests cover these layouts and exhausted parent headroom. Owned-child CPU/RSS samples, resident owner reservations, cost adaptation, I/O/stream accounting and hardware calibration remain open. Missing observations are recorded as diagnostic metadata. These values are uncalibrated pilot inputs and must not become the default resource policy without the PRD's measurements.
+CPU affinity and cgroup v1/v2 limits are read on Linux. The reader resolves the process's controller memberships and mount roots, then applies the tightest quota and memory headroom across the leaf and its mounted ancestors. This includes delegated groups, separate v1 controller mounts and namespace-relative roots. Fixture filesystem tests cover these layouts and exhausted parent headroom. Host-capability child attribution, resident owner reservations, cost adaptation, I/O/stream accounting and hardware calibration remain open. Missing observations are recorded as diagnostic metadata. These values are uncalibrated pilot inputs and must not become the default resource policy without the PRD's measurements.
 
 ## Trusted preparation and webview builds
 

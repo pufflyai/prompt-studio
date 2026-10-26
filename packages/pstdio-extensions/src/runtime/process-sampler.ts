@@ -1,4 +1,4 @@
-/** Kernel readings remain available while the observed process's event loop is blocked. */
+/** Shared kernel readings remain available while the observed process's event loop is blocked. */
 export interface ProcessReading {
   processStartId: string;
   cpuTimeMs: number;
@@ -7,6 +7,12 @@ export interface ProcessReading {
   physicalFootprintBytes: number | null;
   peakPhysicalFootprintBytes: number | null;
   privateCommittedBytes: number | null;
+}
+
+export interface ProcessIdentity {
+  pid: number;
+  parentPid: number;
+  groupId?: number;
 }
 
 export const createProcessSampler = async () => {

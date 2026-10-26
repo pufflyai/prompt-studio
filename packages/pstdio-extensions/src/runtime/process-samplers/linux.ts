@@ -1,6 +1,6 @@
 import { dlopen } from "bun:ffi";
-import { readFile } from "node:fs/promises";
-import type { ProcessReading } from "../process-sampler";
+import { readdir, readFile } from "node:fs/promises";
+import type { ProcessIdentity, ProcessReading } from "../process-sampler";
 
 export const createLinuxProcessSampler = () => {
   const library = dlopen("libc.so.6", { sysconf: { args: ["int"], returns: "i64" } });
@@ -10,6 +10,22 @@ export const createLinuxProcessSampler = () => {
     throw new Error("Cannot read the kernel CPU clock rate");
   }
   return {
+    list: async () => {
+      const pids = (await readdir("/proc")).filter((name) => /^\d+$/.test(name));
+      if (pids.length > 16_384) throw new Error("Process table exceeds the observation bound.");
+      const readings = await Promise.all(
+        pids.map(async (pid) => {
+          const stat = await readFile(`/proc/${pid}/stat`, "utf8").catch(() => undefined);
+          if (!stat) return [];
+          const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+          if (fields[0] === "Z") return [];
+          return [
+            { pid: Number(pid), parentPid: Number(fields[1]), groupId: Number(fields[2]) } satisfies ProcessIdentity,
+          ];
+        }),
+      );
+      return readings.flat();
+    },
     read: async (pid: number) => {
       try {
         const [stat, status] = await Promise.all([

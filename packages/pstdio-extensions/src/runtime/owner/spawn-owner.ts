@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { isPackagedRuntime } from "pstdio-paths";
 import { createExtensionProcessEnvironment } from "../process-environment";
 import type { OwnerMessage } from "./protocol";
+import { observeOwnerProcess } from "./resource-observer";
 
 export const spawnExtensionOwner = (
   root: string,
@@ -16,7 +17,7 @@ export const spawnExtensionOwner = (
         "--no-env-file",
         join(dirname(fileURLToPath(import.meta.resolve("pstdio-extensions"))), "runtime/owner/entry.ts"),
       ];
-  return Bun.spawn([runtime?.executable ?? process.execPath, ...args], {
+  const child = Bun.spawn([runtime?.executable ?? process.execPath, ...args], {
     env: createExtensionProcessEnvironment(process.env, { PSTDIO_HOME: root }),
     cwd: root,
     stdin: "ignore",
@@ -26,4 +27,6 @@ export const spawnExtensionOwner = (
     serialization: "json",
     ipc: receive,
   });
+  observeOwnerProcess(child);
+  return child;
 };

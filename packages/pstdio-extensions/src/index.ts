@@ -102,6 +102,7 @@ export {
 } from "./runtime/owner/loader";
 export { runExtensionOwner } from "./runtime/owner/run-owner";
 export { createExtensionOwner, ExtensionOwnerError } from "./runtime/owner/supervisor";
+export { createProcessSampler } from "./runtime/process-sampler";
 export { runExtensionPreparation } from "./runtime/preparation/run-preparation";
 export { extensionLoadKeyForHost, hashExtensionSourceForHost } from "./runtime/preparation/source-inputs";
 export {
