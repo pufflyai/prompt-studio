@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { isBuiltin } from "node:module";
 import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { mirrorPackageChild } from "./mirror-package-child";
 
@@ -84,25 +83,6 @@ export const collectRuntimeModulePaths = (packagePath: string, entryPath: string
   }
 
   return modulePaths;
-};
-
-export const collectRuntimePackageImports = (packagePath: string, modulePaths: Set<string>) => {
-  const packages = new Set<string>();
-  for (const relativePath of modulePaths) {
-    const filePath = join(packagePath, relativePath);
-    if (!executableExtensions.has(extname(filePath))) continue;
-    try {
-      for (const path of scanRuntimeImports(filePath)) {
-        if (path.startsWith(".") || path.startsWith("#") || isAbsolute(path) || path.includes(":") || isBuiltin(path))
-          continue;
-        const segments = path.split("/");
-        packages.add(segments.slice(0, path.startsWith("@") ? 2 : 1).join("/"));
-      }
-    } catch {
-      // The runtime bundle reports invalid source. Its source digest still changes on repair.
-    }
-  }
-  return packages;
 };
 
 export const hashRuntimeModulePaths = (packagePath: string, modulePaths: Set<string>) => {
