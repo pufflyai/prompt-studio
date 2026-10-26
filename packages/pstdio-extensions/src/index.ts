@@ -16,6 +16,7 @@ export {
   type ResolvedPackageAsset,
   readPackageAssetBytes,
   readPackageAssetText,
+  remapPackageAssets,
   resolveArtifactMountRoot,
   resolvePackageAsset,
   resolvePackageAssetPath,

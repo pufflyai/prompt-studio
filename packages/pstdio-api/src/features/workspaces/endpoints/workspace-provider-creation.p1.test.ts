@@ -222,7 +222,7 @@ test.each([
   const worktrees = execFileSync("git", ["worktree", "list", "--porcelain"], { cwd: folder }).toString();
   const response = await postWorkspace(project.id, "pstdio.worktree", params);
   expect(response.status).toBe(400);
-  expect((await response.json()).error).toMatch(/pstdio.worktree.*base.*main/);
+  expect((await response.json()).error).toMatch(/pstdio.worktree.*base/);
   expect(await handle.deps.workspaceService.list(project.id)).toEqual(before);
   expect(execFileSync("git", ["worktree", "list", "--porcelain"], { cwd: folder }).toString()).toBe(worktrees);
 });

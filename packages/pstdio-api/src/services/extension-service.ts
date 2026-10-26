@@ -10,7 +10,6 @@ import type {
   hashExtensionSource,
   LoadedExtensionSnapshot,
 } from "../features/extensions/extension-runtime";
-import { publishedExtensionsId } from "../features/extensions/publication/types";
 import type { EventBus } from "../features/sync/event-bus";
 import { activatePublishedExtensions } from "./activate-published-extension";
 import {
@@ -18,17 +17,11 @@ import {
   pruneProjectExtensionInstances as pruneProjectExtensionInstancesImpl,
 } from "./extension-prune";
 import {
+  createWebviewBuildReports,
   reloadInstalledSourceBySourcePath as reloadInstalledSourceBySourcePathImpl,
-  reportWebviewBuildFailure as reportWebviewBuildFailureImpl,
-  reportWebviewBuildSuccess as reportWebviewBuildSuccessImpl,
 } from "./extension-reload";
 import { createExtensionSourceMutations } from "./extension-source-mutations";
-import {
-  findInstalledSourceForRegistration,
-  hasUnchangedInstalledSourceRegistration,
-  refreshPathForRegistration,
-  registrationValues,
-} from "./extension-source-registration";
+import { createInstalledSourceRegistrar } from "./extension-source-registration";
 import { uninstallProjectExtension as uninstallProjectExtensionImpl } from "./extension-uninstall";
 import type { createProjectService } from "./project-service";
 
@@ -117,39 +110,12 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     checkExtension: deps.checkExtension,
   };
 
-  const registerInstalledSource = async (input: RegisterInstalledSourceInput) => {
-    if (input.extensionId === publishedExtensionsId) throw new Error("Reserved platform extension identity");
-    const existing = await findInstalledSourceForRegistration(deps.installedExtensionSourcesService, input);
-    const values = registrationValues(input, existing);
-
-    if (existing) {
-      if (hasUnchangedInstalledSourceRegistration(existing, values)) return existing;
-
-      const updated = await deps.installedExtensionSourcesService.updateRegistration(existing.id, values);
-      if (!updated) throw new Error(`Installed extension not found: ${input.installName}`);
-      emitInstalledSource(updated);
-      await notifyInstalledSourcesChanged(refreshPathForRegistration(existing.source_path, input));
-      return updated;
-    }
-
-    try {
-      const registered = await deps.installedExtensionSourcesService.register({
-        install_name: input.installName,
-        ...values,
-      });
-      emitInstalledSource(registered);
-      await notifyInstalledSourcesChanged(input.sourcePath);
-      return registered;
-    } catch (error) {
-      const raced = await deps.installedExtensionSourcesService.getBySourcePath(input.sourcePath);
-      if (!raced) throw error;
-      const updated = await deps.installedExtensionSourcesService.updateRegistration(raced.id, values);
-      if (!updated) throw error;
-      emitInstalledSource(updated);
-      await notifyInstalledSourcesChanged(input.sourcePath);
-      return updated;
-    }
-  };
+  const registerSource = createInstalledSourceRegistrar({
+    sources: deps.installedExtensionSourcesService,
+    emitInstalledSource,
+  });
+  const registerInstalledSource = (input: RegisterInstalledSourceInput) =>
+    registerSource(input, notifyInstalledSourcesChanged);
 
   const getInstalledSource = (installName: string) =>
     deps.installedExtensionSourcesService.getByInstallName(installName);
@@ -163,13 +129,16 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
 
   // Discovery must never adopt. A folder that changed on disk is an offer the user takes from the
   // extension panel; until then the project keeps running the source it already accepted.
-  const attachInstalledSource = async (input: RegisterInstalledSourceInput) => {
+  const attachInstalledSource = async (
+    input: RegisterInstalledSourceInput,
+    notify: Parameters<typeof registerSource>[1],
+  ) => {
     const existing = await deps.installedExtensionSourcesService.getBySourcePath(input.sourcePath);
     if (existing && input.sourceHash && existing.source_hash && input.sourceHash !== existing.source_hash) {
       return existing;
     }
 
-    return registerInstalledSource(input);
+    return registerSource(input, notify);
   };
 
   const resolveProjectInstalledSource = async (
@@ -222,16 +191,33 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return { installedSource, instance };
   };
 
+  const mutateSourceAndRefresh = async <T>(
+    sourcePath: string,
+    mutate: (notify: (changedPath?: string) => Promise<void>) => Promise<T>,
+  ) => {
+    const changedPaths: Array<string | undefined> = [];
+    try {
+      return await mutateSource(sourcePath, () =>
+        mutate(async (changedPath) => {
+          changedPaths.push(changedPath);
+        }),
+      );
+    } finally {
+      // Refresh can compile views and report their results. Release source ownership
+      // before awaiting it, so readers and result writers cannot wait on this caller.
+      for (const changedPath of changedPaths) await notifyInstalledSourcesChanged(changedPath);
+    }
+  };
+
   const syncInstalledSourceForProject = (input: SyncInstalledSourceInput) =>
-    mutateSource(input.sourcePath, async () => {
+    mutateSourceAndRefresh(input.sourcePath, async (notify) => {
       if (!(deps.sourceExists ?? existsSync)(input.sourcePath)) return null;
-      const { existing, installedSource } = await resolveProjectInstalledSource(input, attachInstalledSource);
+      const { existing, installedSource } = await resolveProjectInstalledSource(input, (source) =>
+        attachInstalledSource(source, notify),
+      );
       if (existing) return { installedSource, instance: existing };
-
       const instance = await createProjectInstance(input, installedSource);
-
       if (!instance) throw new Error(`Failed to sync extension: ${input.name}`);
-
       emitExtensionInstance(instance);
       return { installedSource, instance };
     });
@@ -339,16 +325,15 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       reloadInstalledSourceBySourcePathImpl(reloadDeps, sourcePath),
     removeProjectExtensionInstance,
     pruneProjectExtensionInstances,
-    reportWebviewBuildFailure: reportWebviewBuildFailureImpl.bind(null, reloadDeps),
-    reportWebviewBuildSuccess: reportWebviewBuildSuccessImpl.bind(null, reloadDeps),
+    ...createWebviewBuildReports(reloadDeps, mutateSource),
     registerInstalledSource,
     setProjectExtensionEnabled,
     syncInstalledSourceForProject,
     uninstallProjectExtension: async (input: { instanceId: string; projectId: string; deleteUserData?: boolean }) => {
       const record = await getProjectExtensionInstance(input.projectId, input.instanceId);
       if (!record) return null;
-      return mutateSource(record.installedSource.source_path, () =>
-        uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged }, input),
+      return mutateSourceAndRefresh(record.installedSource.source_path, (notify) =>
+        uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged: notify }, input),
       );
     },
   };

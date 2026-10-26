@@ -92,6 +92,51 @@ const reportedSource = (
   return result.source;
 };
 
+test.each(["success", "failure"])("ignores a late build %s after uninstall", async (outcome) => {
+  let refresh = async () => {};
+  const buildService = createExtensionService({
+    extensionInstancesService,
+    installedExtensionSourcesService,
+    extensionUserDataService,
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
+    projectService,
+    onInstalledSourcesChanged: () => refresh(),
+  });
+  const project = await projectService.create({ name: "Removed extension" });
+  const enabled = await buildService.enableInstalledSourceForProject({
+    projectId: project.id,
+    installName: "lab",
+    displayName: "Lab",
+    extensionId: "pstdio.lab",
+    manifest: manifestFor("pstdio.lab", "/extensions/lab"),
+    name: "lab",
+    sourcePath: "/extensions/lab",
+  });
+  const expectedSource = {
+    updatedAt: enabled.installedSource.updated_at,
+    sourcePath: enabled.installedSource.source_path,
+  };
+  const report = async () =>
+    outcome === "success"
+      ? await buildService.reportWebviewBuildSuccess(enabled.installedSource.id, "pstdio.lab.view.page", expectedSource)
+      : await buildService.reportWebviewBuildFailure(
+          enabled.installedSource.id,
+          "pstdio.lab.view.page",
+          new Error("Late failure"),
+          expectedSource,
+        );
+  refresh = async () => {
+    expect((await report()).status).toBe("obsolete");
+  };
+  await Promise.race([
+    buildService.uninstallProjectExtension({ projectId: project.id, instanceId: enabled.instance.id }),
+    Bun.sleep(1000).then(() => {
+      throw new Error("Uninstall refresh retained source ownership while reporting a build");
+    }),
+  ]);
+  expect(await installedExtensionSourcesService.get(enabled.installedSource.id)).toBeNull();
+});
+
 describe("extensionService webview build status", () => {
   test("records webview build failures and clears them after a successful rebuild", async () => {
     const eventBus = new EventBus();

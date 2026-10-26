@@ -22,6 +22,7 @@ export {
   resolvePackageAssetPath,
 } from "./package-assets";
 export { normalizeArtifactMountPath, normalizeCliPath } from "./path-normalization";
+export { remapPackageAssets } from "./remap-package-assets";
 export { normalizeMountRelativePath } from "./safe-file-root";
 export {
   WorkspaceFileAccessError,

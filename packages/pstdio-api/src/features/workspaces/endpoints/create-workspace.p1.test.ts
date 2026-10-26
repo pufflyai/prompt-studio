@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -63,6 +63,22 @@ afterAll(async () => {
   if (previousDefaultExtensionsEnv === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
   else process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensionsEnv;
   rmSync(tempRoot, { recursive: true, force: true });
+});
+
+test("creates from an explicit Git commit without loading branch choices", async () => {
+  const repoRoot = createGitRepo("explicit-base-without-branch-options");
+  const base = execFileSync("git", ["-C", repoRoot, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  await openProjectFolder(repoRoot);
+  execFileSync("git", ["-C", repoRoot, "config", "branch.sort", "invalid-sort-field"]);
+  const response = await app.request("/v1/workspaces", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ project_id: projectId, provider_id: "pstdio.worktree", params: { base } }),
+  });
+  expect(response.status).toBe(201);
+  const workspace = await response.json();
+  expect(workspace.provider_params_json.base).toBe(base);
+  expect(execFileSync("git", ["-C", workspace.root_path, "rev-parse", "HEAD"], { encoding: "utf8" }).trim()).toBe(base);
 });
 
 describe("POST /v1/workspaces", () => {
