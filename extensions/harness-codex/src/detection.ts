@@ -1,4 +1,5 @@
 import type { HarnessContext } from "@pstdio/sdk/extensions";
+import { resolveCodexCommand } from "./codex-process";
 
 // 0.157.0 is the oldest release whose app-server protocol matches every request, notification, and
 // item this harness uses. There is no upper bound: Codex ships every few days with additive protocol
@@ -13,7 +14,8 @@ const unavailable = (ctx: HarnessContext, reason: string, version?: string) => {
 export const detectCodex = async (ctx: HarnessContext) => {
   try {
     // Model listing also calls this probe without the host availability wrapper.
-    const result = await ctx.process.run({ command: ["codex", "--version"], timeoutMs: 3_000 });
+    const command = resolveCodexCommand();
+    const result = await ctx.process.run({ command: [command, "--version"], timeoutMs: 3_000 });
     if (result.exitCode !== 0)
       return unavailable(ctx, "`codex --version` failed. Check the Codex installation on the runtime PATH.");
     const version = [result.stdout, result.stderr]
