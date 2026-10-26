@@ -140,7 +140,6 @@ const assertCanCopy = (sourcePath: string, targetPath: string) => {
 };
 
 const copyExtensionSource = async (sourcePath: string, targetPath: string) => {
-  const started = Date.now();
   mkdirSync(dirname(targetPath), { recursive: true });
   const matcher = createExtensionIgnoreMatcher(sourcePath, { ignoreGit: false });
   await cp(sourcePath, targetPath, {
@@ -154,7 +153,6 @@ const copyExtensionSource = async (sourcePath: string, targetPath: string) => {
     },
     recursive: true,
   });
-  console.log("Native source copy", Date.now() - started, targetPath);
 };
 
 const removeDirectory = (path: string) => rm(path, { recursive: true, force: true });
@@ -231,7 +229,6 @@ const validatePreparedInstall = async (
   extensionsRoot: string,
   allowUnsupportedApiVersion: boolean,
 ) => {
-  const started = Date.now();
   const { check, loaded: compatibleSource } = await checkExtensionSource(installPath, extensionsRoot);
   const unsupportedApiOnly =
     check.errorCount > 0 &&
@@ -255,7 +252,6 @@ const validatePreparedInstall = async (
     });
   }
 
-  console.log("Native validation", Date.now() - started, installPath);
   return { check, loaded };
 };
 

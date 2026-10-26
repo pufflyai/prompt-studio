@@ -18,7 +18,6 @@ export const promotePreparedSource = async (
   replaceExisting: boolean,
   preserveDependencies: boolean,
 ) => {
-  const started = Date.now();
   const backupPath = join(dirname(preparedPath), ".previous");
   const relocateNodeModules = await prepareNodeModulesRelocation(preparedPath, targetPath);
 
@@ -29,13 +28,11 @@ export const promotePreparedSource = async (
 
   try {
     renameSync(preparedPath, targetPath);
-    console.log("Native promote rename", Date.now() - started, targetPath);
     relocateNodeModules();
     const previousNodeModules = join(backupPath, "node_modules");
     if (preserveDependencies && existsSync(previousNodeModules)) {
       renameSync(previousNodeModules, join(targetPath, "node_modules"));
     }
-    console.log("Native promote complete", Date.now() - started, targetPath);
   } catch (error) {
     try {
       rmSync(targetPath, { recursive: true, force: true });

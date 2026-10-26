@@ -4,7 +4,6 @@ import { join, relative } from "node:path";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
 
 export const hashExtensionSource = (sourcePath: string) => {
-  const started = Date.now();
   const hash = createHash("sha256");
   const matcher = createExtensionIgnoreMatcher(sourcePath);
 
@@ -25,6 +24,5 @@ export const hashExtensionSource = (sourcePath: string) => {
   };
 
   visit(sourcePath);
-  console.log("Native source hash", Date.now() - started, sourcePath);
   return hash.digest("hex");
 };
