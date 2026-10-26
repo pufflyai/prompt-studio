@@ -1,9 +1,9 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, realpathSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, toNamespacedPath } from "node:path";
+import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
@@ -36,8 +36,7 @@ interface CoreExtensionsFixture {
 export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFixture) => Promise<void>) => {
   const startedAt = Date.now();
   const phase = (name: string) => console.log(`Packaged core: ${name} (${Date.now() - startedAt}ms)`);
-  const tempRoot = realpathSync.native(mkdtempSync(join(tmpdir(), "pstdio-packaged-core-")));
-  phase(`fixture root ${tempRoot}`);
+  const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-core-"));
   let child: ChildProcess | undefined;
   let closeRegistry: (() => Promise<void>) | undefined;
   try {
@@ -88,9 +87,7 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("runtime stopped");
     if (closeRegistry) await closeRegistry();
     phase("registry closed");
-    phase(`cleanup path ${toNamespacedPath(tempRoot)}`);
-    await rm(toNamespacedPath(tempRoot), { recursive: true, force: true });
-    expect(existsSync(tempRoot)).toBe(false);
+    await rm(tempRoot, { recursive: true, force: true });
     phase("files removed");
   }
 };

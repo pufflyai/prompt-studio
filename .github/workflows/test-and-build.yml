@@ -1,30 +1,62 @@
-name: Decode qualified native Edge engine
+name: Locked source core qualification
 on:
   workflow_dispatch:
 permissions:
   contents: read
   actions: read
 jobs:
-  engine:
-    runs-on: windows-11-arm
+  native:
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform_pkg: cli-win-x64
+          - os: windows-11-arm
+            platform_pkg: cli-win-arm64
     env:
-      E2E_QUALIFY_BROWSER_CHANNEL: msedge
+      CI_PRIORITY: P2
+      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Require the delivered product and locked source only
+        run: git diff --exit-code fd1559f9267baa5dfe43861d379c16b4dce7fdfc -- . ':!.github/workflows/test-and-build.yml' ':!packages/e2e/src/packaged/packaged-extension-source.ts' ':!packages/e2e/src/packaged/decode-browser-architecture.ts'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Build unchanged public package inputs
+        run: bun run build -- --scope @pstdio/sdk --scope @pstdio/ui --include-dependencies
       - uses: actions/download-artifact@v4
         with:
-          name: architecture-msedge
-          run-id: 40266908057
+          name: cold-browser-${{ matrix.platform_pkg }}
+          run-id: 40262856377
           github-token: ${{ github.token }}
-      - name: Decode exact version from successful browser launches
-        run: bun packages/e2e/src/packaged/decode-browser-architecture.ts
+      - name: Provision the compiled smoke browser
+        id: browser
+        run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke"; preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
+      - name: Complete cold core features including removal
+        working-directory: packages/e2e
+        run: bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-core-extension-features.p2.test.ts --timeout 30000 --silent
+      - name: Complete cold defaults including removal
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        working-directory: packages/e2e
+        run: bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-core-extensions-smoke.p1.test.ts --timeout 30000 --silent
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: qualified-native-edge-engine
-          path: .pstdio/extension-storage/pstdio.pstdio-artifacts/browser-architecture
+          name: locked-source-core-${{ matrix.platform_pkg }}
+          path: |
+            packages/e2e/test-results
+            test-results/ci
           include-hidden-files: true
+          if-no-files-found: warn

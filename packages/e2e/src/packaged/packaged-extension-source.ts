@@ -17,7 +17,7 @@ export async function preparePackagedExtensionSource(
   // Test unpublished APIs through installed public packages, leaving release dependencies unchanged.
   cpSync(packagePath, source, {
     recursive: true,
-    filter: (path) => !["node_modules", "bun.lock"].includes(basename(path)),
+    filter: (path) => basename(path) !== "node_modules",
   });
   const path = join(source, "package.json");
   const manifest = JSON.parse(readFileSync(path, "utf8"));
