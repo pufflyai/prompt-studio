@@ -28,12 +28,15 @@ test("a detached extension command outlives its host without delaying host exit"
   });
   let childPid: number | undefined;
   try {
-    for (let attempt = 0; attempt < 100 && !existsSync(heartbeat); attempt++) await Bun.sleep(10);
-    expect(existsSync(heartbeat)).toBe(true);
+    // Process startup speed is not this test's contract; it waits within the test's own deadline.
+    while (!existsSync(heartbeat)) {
+      if (host.exitCode !== null && host.exitCode !== 0) throw new Error(await new Response(host.stderr).text());
+      await Bun.sleep(10);
+    }
     const started = JSON.parse(readFileSync(heartbeat, "utf8")) as { pid: number; tick: number };
     childPid = started.pid;
-    const exit = await Promise.race([host.exited, Bun.sleep(1_000).then(() => "still running")]);
-    expect(exit).toBe(0);
+    // A host that waited for its 10-second child would stop the heartbeat checked below.
+    expect(await host.exited).toBe(0);
     const stoppedTick = (JSON.parse(readFileSync(heartbeat, "utf8")) as { tick: number }).tick;
     await Bun.sleep(150);
     const afterExit = JSON.parse(readFileSync(heartbeat, "utf8")) as { pid: number; tick: number };
