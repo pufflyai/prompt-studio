@@ -1,4 +1,4 @@
-import { Button, HStack, Text } from "@chakra-ui/react";
+import { Button, HStack, Separator, Text } from "@chakra-ui/react";
 import { type ReactNode, useState } from "react";
 import type { WorkbenchCommandExecutionContext, WorkbenchCore } from "../../core";
 import type { ViewToolbarAction } from "../../core/registries/renderers/view-toolbar-action";
@@ -30,10 +30,11 @@ export const ViewToolbarActions = (props: ViewToolbarActionsProps) => {
   return (
     <>
       <HStack gap="xs">
+        {items.length > 0 ? <Separator orientation="vertical" height="{spacing.lg}" /> : null}
         {items.map((item) => (
           <Button
             key={item.id}
-            size="sm"
+            size="xs"
             variant={
               actions?.find((action) => action.id === item.id)?.presentation === "primary" ? "primary" : "outline"
             }
