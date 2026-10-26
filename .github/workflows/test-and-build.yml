@@ -1,46 +1,67 @@
-name: Compare cold ARM install backends
+name: Verify authorized native quarantine execution
 on:
   workflow_dispatch:
+    inputs:
+      source_sha:
+        type: string
+        required: true
+        description: Exact reviewed quarantine revision
 permissions:
   contents: read
   actions: read
 jobs:
   native:
-    runs-on: windows-11-arm
-    timeout-minutes: 30
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        order: ["default,copyfile", "copyfile,default"]
+        os: [windows-latest, macos-15]
     env:
       CI_PRIORITY: P2
-      PSTDIO_VERIFY_PLATFORM_PKG: cli-win-arm64
-      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe
+      E2E_TEST_LANE: quarantine
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: package.json
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
-      - uses: ./.github/actions/setup-ci-cache
+      - uses: oven-sh/setup-bun@v2
         with:
-          install-strategy: native
-      - name: Build the normal compiled candidate and check integrity
-        run: bun run --cwd scripts verify:packages --profile integrity
-      - name: Compare both backends with separate fresh caches and one frozen input
-        working-directory: packages/e2e
-        env:
-          PS932_BACKEND_ORDER: ${{ matrix.order }}
-        run: bun src/packaged/compare-planner-install-backends.ts
-      - name: Keep complete installer diagnostics
+          bun-version-file: package.json
+      - name: Require the affected native platform
+        run: bun -e 'if (!((process.platform === "win32" && process.arch === "x64") || (process.platform === "darwin" && process.arch === "arm64"))) throw new Error("Unexpected native quarantine platform");'
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Run the affected registered Bun owners once
+        continue-on-error: true
+        run: bun scripts/ci/run-quarantined-tests.ts bun --scope "@pstdio/desktop,pstdio-planner"
+      - name: Require complete current-attempt Bun reports
+        run: bun scripts/ci/verify-quarantine-reports.ts bun --scope "@pstdio/desktop,pstdio-planner"
+      - name: Build source UI dependencies on macOS
+        if: runner.os == 'macOS'
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - name: Install native Chromium on macOS
+        if: runner.os == 'macOS'
+        run: bunx playwright@1.60.0 install chromium
+      - name: Run registered native UI cases once
+        if: runner.os == 'macOS'
+        continue-on-error: true
+        run: bun scripts/ci/run-quarantined-tests.ts playwright-ui --scope e2e --prebuilt
+      - name: Require complete current-attempt UI reports
+        if: runner.os == 'macOS'
+        run: bun scripts/ci/verify-quarantine-reports.ts playwright-ui
+      - name: Preserve owned quarantine evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: arm-install-backends-${{ strategy.job-index }}
+          name: native-quarantine-${{ runner.os }}-${{ runner.arch }}
           path: |
-            ${{ runner.temp }}/ps-932-install-backends-*/summary.json
-            ${{ runner.temp }}/ps-932-install-backends-*/*/summary.json
-            ${{ runner.temp }}/ps-932-install-backends-*/*/installer.*.log
+            test-results/quarantine
+            packages/e2e/test-results/ui-quarantine
           if-no-files-found: error
+      - name: Require committed generated outputs to match
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
