@@ -28,6 +28,7 @@ export interface SmokeVisit {
 }
 export const checkSmokeComposition = async (input: SmokeVisit, start: number) => {
   const { page, inventory, result, signal, observation } = input;
+  process.stderr.write(`Smoke probe network start ${Date.now()}\n`);
   await waitForSmokeCondition(async () => {
     if (observation.pending.size > 0) return false;
     await page.evaluate(
@@ -35,6 +36,7 @@ export const checkSmokeComposition = async (input: SmokeVisit, start: number) =>
     );
     return observation.pending.size === 0;
   }, signal);
+  process.stderr.write(`Smoke probe network done ${Date.now()}\n`);
   if (await page.locator('[data-workbench-renderer="missing"]').count())
     throw new Error("An active view has no registered renderer.");
 
@@ -43,6 +45,7 @@ export const checkSmokeComposition = async (input: SmokeVisit, start: number) =>
     .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-workbench-view")!));
   for (const view of inventory.views.filter((view) => mounted.includes(view.id))) {
     if (view.body.kind === "webview") {
+      process.stderr.write(`Smoke probe webview ${view.id} start ${Date.now()}\n`);
       await waitForSmokeCondition(
         () =>
           observation.events
@@ -54,6 +57,7 @@ export const checkSmokeComposition = async (input: SmokeVisit, start: number) =>
             ),
         signal,
       );
+      process.stderr.write(`Smoke probe webview ${view.id} done ${Date.now()}\n`);
       const failed = hasHostFailure(
         observation.events.slice(start).filter((event) => event.contributionId === view.id),
       );

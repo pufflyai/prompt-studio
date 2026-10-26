@@ -17,6 +17,7 @@ export const exerciseSmokeDashboard = async (input: {
   signal: AbortSignal;
 }) => {
   const { context, origin, loginUrl, projectId, inventory, result, signal } = input;
+  process.stderr.write(`Smoke probe new-page ${Date.now()}\n`);
   const page = await context.newPage();
   page.setDefaultTimeout(10_000);
   const observation = observeSmokePage(page, result, input.logPath);
@@ -31,7 +32,9 @@ export const exerciseSmokeDashboard = async (input: {
     // The dashboard redeems the login code on any page, so the first page signs the browser in.
     const projectPage = new URL(loginUrl);
     projectPage.pathname = `/projects/${projectId}`;
+    process.stderr.write(`Smoke probe initial-navigation ${Date.now()}\n`);
     await page.goto(projectPage.toString());
+    process.stderr.write(`Smoke probe initial-registration ${Date.now()}\n`);
     await waitForSmokeCondition(
       () => observation.events.some((event) => event.event === "registration-ready" && event.projectId === projectId),
       signal,
@@ -63,10 +66,16 @@ export const exerciseSmokeDashboard = async (input: {
         });
       return;
     }
+    process.stderr.write(`Smoke probe main-renderer ${Date.now()}\n`);
     await page.locator('[data-workbench-panel="main"][data-workbench-page]').waitFor();
+    process.stderr.write(`Smoke probe initial-composition ${Date.now()}\n`);
     await checkSmokeComposition({ page, origin, projectId, inventory, result, signal, observation }, 0);
-    for (const item of plan.pages)
+    for (const item of plan.pages) {
+      process.stderr.write(`Smoke probe visit ${item.page.id} ${Date.now()}\n`);
       await visitSmokePage({ page, origin, projectId, inventory, result, signal, observation }, item);
+      process.stderr.write(`Smoke probe visited ${item.page.id} ${Date.now()}\n`);
+    }
+    process.stderr.write(`Smoke probe dashboard done ${Date.now()}\n`);
   } finally {
     signal.removeEventListener("abort", abort);
     if (result.evidence) await page.screenshot({ path: `${result.evidence.directory}/dashboard.png` }).catch(() => {});
