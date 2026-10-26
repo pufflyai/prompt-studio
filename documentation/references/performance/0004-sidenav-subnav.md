@@ -2,7 +2,7 @@
 
 Benchmarked: 2026-10-21.
 
-The performance contract is **structure below 100 ms**, **complete subnavigation within 500 ms of the click**, and **editable ticket content below 500 ms**. Each limit applies to every sample. A fast median does not excuse a slow tail.
+The performance contract is **structure below 375 ms**, **complete subnavigation within 1,525 ms of the click**, and **editable ticket content below 1,325 ms**. These limits were set on 2026-10-26 from the slowest of four runs on the hosted ubuntu-24.04 CI runner, plus about 20%. The earlier 100 / 500 / 500 ms limits were set on a fast developer machine; the CI runner is 2–3.3 times slower in every phase. The measurements below still use the earlier limits. Each limit applies to every sample. A fast median does not excuse a slow tail.
 
 ## Run
 

@@ -107,6 +107,7 @@ test("closes and reopens the live Side Panel within budget", async ({ page, requ
       action,
       results.map((result) => result[action]),
     );
-    expect(summary.max).toBeLessThanOrEqual(150);
+    // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 267 ms) plus about 20%.
+    expect(summary.max).toBeLessThanOrEqual(325);
   }
 });

@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
-import { buildPlaywrightEnv } from "./run-playwright";
+import { buildPlaywrightEnv, runPlaywright } from "./run-playwright";
 
 describe("buildPlaywrightEnv", () => {
   test("preserves the quarantine attempt identity through the UI launcher", () => {
@@ -56,5 +59,44 @@ test("Playwright stops only P1 after a first failure", async () => {
     expect(command.args).toContain("--max-failures=0");
     expect(command.args).not.toContain("--max-failures=2");
     expect(command.args).not.toContain("-x");
+  }
+});
+
+// Writes into the server home and Bun cache it is given, then reports them, like a Playwright run.
+const fakeRun = (exitCode: number) => ({
+  cmd: process.execPath,
+  args: [
+    "-e",
+    `const { mkdirSync, writeFileSync } = require("node:fs");
+    for (const dir of [process.env.E2E_HOME, process.env.E2E_BUN_CACHE_DIR]) {
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(dir + "/used", "1");
+    }
+    console.log(JSON.stringify([process.env.E2E_HOME, process.env.E2E_BUN_CACHE_DIR]));
+    process.exit(${exitCode});`,
+  ],
+});
+
+test("removes the run's server home and Bun cache when Playwright exits", async () => {
+  const run = await runPlaywright(fakeRun(3), { PATH: process.env.PATH }, { stdio: "pipe" });
+  const [home, cache] = JSON.parse(run.output) as [string, string];
+  expect(run.exitCode).toBe(3);
+  expect(existsSync(home)).toBe(false);
+  expect(existsSync(cache)).toBe(false);
+});
+
+test("keeps a Bun cache the caller provides", async () => {
+  const cache = mkdtempSync(join(tmpdir(), "caller-bun-cache-"));
+  try {
+    const run = await runPlaywright(
+      fakeRun(0),
+      { PATH: process.env.PATH, E2E_BUN_CACHE_DIR: cache },
+      { stdio: "pipe" },
+    );
+    const [home] = JSON.parse(run.output) as [string, string];
+    expect(existsSync(join(cache, "used"))).toBe(true);
+    expect(existsSync(home)).toBe(false);
+  } finally {
+    rmSync(cache, { recursive: true, force: true });
   }
 });
