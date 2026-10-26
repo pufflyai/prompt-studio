@@ -49,10 +49,24 @@ export const signInBrowser = async (
   if (!runtime.ok()) throw new Error(`Browser authentication failed with HTTP ${runtime.status()}`);
 };
 
-export const waitForPackagedReady = async (descriptorPath: string, child: ChildProcess) => {
+export interface PackagedRuntimeObservation {
+  pid: number;
+  descriptor: RuntimeDescriptor | null;
+}
+
+export const waitForPackagedReady = async (
+  descriptorPath: string,
+  child: ChildProcess,
+  observe?: (process: PackagedRuntimeObservation) => void,
+) => {
+  let observedInstance: string | undefined;
   const descriptor = await waitForProcessReady(child, "Packaged runtime", async (signal) => {
     if (!existsSync(descriptorPath)) return;
     const descriptor = JSON.parse(readFileSync(descriptorPath, "utf8")) as RuntimeDescriptor;
+    if (descriptor.pid === child.pid && descriptor.instanceId !== observedInstance) {
+      observedInstance = descriptor.instanceId;
+      observe?.({ pid: descriptor.pid, descriptor });
+    }
     const res = await fetch(`${descriptor.origin}/runtime/ready`, {
       headers: runtimeAuthorization(descriptor),
       signal,
@@ -101,6 +115,7 @@ export const startPackagedServe = async (
   tempRoot: string,
   env: Record<string, string> = {},
   binaryPath = PACKAGED_BINARY_PATH,
+  observe?: (process: PackagedRuntimeObservation) => void,
 ) => {
   const descriptorPath = join(tempRoot, "runtime.json");
   const {
@@ -127,7 +142,8 @@ export const startPackagedServe = async (
     },
   );
   try {
-    const descriptor = await waitForPackagedReady(descriptorPath, child);
+    if (child.pid !== undefined) observe?.({ pid: child.pid, descriptor: null });
+    const descriptor = await waitForPackagedReady(descriptorPath, child, observe);
     return { child, baseUrl: descriptor.origin, descriptor };
   } catch (error) {
     await stopProcess(child);

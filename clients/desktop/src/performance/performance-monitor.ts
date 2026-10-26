@@ -244,6 +244,7 @@ export class DesktopPerformanceMonitor {
       processes.map((process) => ({
         pid: process.pid,
         processStartId: String(raw.get(process.pid)?.creationTime),
+        startedAt: new Date(raw.get(process.pid)!.creationTime).toISOString(),
         role: process.role,
         cpuPercent: process.cpuPercent,
         cpuTimeMs:

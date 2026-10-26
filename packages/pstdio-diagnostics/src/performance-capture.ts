@@ -9,6 +9,7 @@ import { measureBackendResponse, type PerformanceBackend } from "./backend-respo
 export type KernelProcessReading = Pick<
   PerformanceProcessSample,
   | "processStartId"
+  | "startedAt"
   | "cpuTimeMs"
   | "residentBytes"
   | "peakResidentBytes"
@@ -30,7 +31,7 @@ interface CaptureOptions {
 const LIVE_SAMPLES = 150;
 const LIVE_BYTES = 512 * 1024;
 
-export class DesktopPerformanceCapture {
+export class PerformanceCaptureCollector {
   readonly #options: CaptureOptions;
   readonly #abort = new AbortController();
   readonly #id = randomUUID();
@@ -84,6 +85,12 @@ export class DesktopPerformanceCapture {
       this.#pending = null;
     });
     return this.#pending;
+  }
+
+  /** Operation boundaries need a fresh reading, even when a periodic probe is finishing. */
+  async flush(processes: PerformanceProcessSample[]) {
+    await this.#pending;
+    await this.sample(processes);
   }
 
   #record(sample: PerformanceCaptureSample) {

@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
+import { enableBenchmarkMonitoring } from "./benchmark-performance-evidence";
 import { recordBenchmark } from "./benchmark-record";
 import { allowPageClose } from "./lifecycle-actions";
 import {
@@ -48,6 +49,7 @@ const selectedProjectKey = "dashboard-wb2:selected-project:global";
 // Sessions page, the non-default theme, and an attached Side Panel.
 test("warm attach restores the workbench within budget", async () => {
   const home = createPackagedHome();
+  enableBenchmarkMonitoring(home);
   let first: PackagedApp | null = null;
   let second: PackagedApp | null = null;
   try {
@@ -94,6 +96,7 @@ test("warm attach restores the workbench within budget", async () => {
     });
 
     second = await launchPackagedApp(home);
+    const operationEndedAt = second.startedAt + second.readyInMs;
     await recordBenchmark({
       name: "warm-attach",
       scenario: "Desktop relaunch against a running persistent runtime",
@@ -105,6 +108,7 @@ test("warm attach restores the workbench within budget", async () => {
         { name: "warm-attach", unit: "ms", value: second.readyInMs, budget: warmAttachBudgetMs },
         startupWindowMetric(await attachStartupTimings(second)),
       ],
+      performance: { app: second, endedAt: operationEndedAt },
     });
     // The measured launch must have restored the prepared workload, not an empty workbench.
     expect(second.runtime.ownerType).toBe("persistent");
@@ -162,6 +166,7 @@ test("sidecar crash shows recovery within budget", async () => {
 // launches above, as the cold-start check always did; those budgets do not cover macOS first-launch checks.
 test("cold start with an empty home shows the workbench within budget", { tag: "@essential" }, async () => {
   const home = createPackagedHome();
+  enableBenchmarkMonitoring(home);
   let app: PackagedApp | null = null;
   try {
     app = await launchPackagedApp(home);
@@ -178,6 +183,7 @@ test("cold start with an empty home shows the workbench within budget", { tag: "
         { name: "cold-start", unit: "ms", value: app.readyInMs, budget: coldStartBudgetMs },
         startupWindowMetric(await attachStartupTimings(app)),
       ],
+      performance: { app, endedAt: app.startedAt + app.readyInMs },
     });
   } finally {
     await disposePackagedApp(app);

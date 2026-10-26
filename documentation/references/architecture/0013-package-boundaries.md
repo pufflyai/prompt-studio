@@ -39,6 +39,12 @@ layer-map change.
    dependency. That edge is confined to test fixtures; local database runtime code
    does not open PostgreSQL relay storage.
 
+   The private `pstdio-diagnostics` package owns the bounded performance capture,
+   recording and evidence summaries shared by desktop and benchmark drivers. It
+   depends only on payload contracts. Callers supply native process observations;
+   it imports no Electron, UI, database or client code. Desktop, CLI and E2E
+   declare their own dependency on it. Native sampling stays in the host.
+
    `storage-scale-fixture` is a private test utility with no workspace dependencies.
    The scale benchmarks in `pstdio-sync`, `pstdio-db` and `e2e` declare it as a
    development dependency. Production entry points do not import it. Its shared

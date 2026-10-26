@@ -364,6 +364,28 @@ its wall time happens to be below 1,000 ms.
 
 ## Evidence and release interpretation
 
+Each application case now explicitly starts the same bounded performance collector
+as desktop before launching its observed runtime. It writes a separate capture
+artifact for every runtime lifetime, including restart cases. The artifact retains
+raw timestamped samples and reports response p50/p95/max, missed replies, process
+CPU time, and peak and settled memory. Missing required native readings, incomplete
+history and sampling gaps fail coverage. Container runtimes remain remote to the
+host sampler; local CPU or memory never substitutes for container evidence.
+
+CPU and memory summaries state whether they cover a process born during capture
+or only observed readings. The environment row records the compiled binary's
+version and SHA-256 alongside the source revision and runner details. Collection
+does not change the existing workload, operation boundaries, budgets or case cap.
+Database and sync layer diagnostics retain their existing phase telemetry; they
+do not claim application capture coverage.
+
+The normal completion path observes memory after one existing sampling interval
+of post-workload idle time. It exports the operation end and minimum idle interval;
+this does not assert heap stability or force garbage collection. Immediate crashes
+keep their kill boundary. Their missing exit or settling readings remain explicit
+coverage failures instead of fabricated memory values. Observation and cleanup
+still fit within the existing case cap.
+
 Save commands, environment, exact commit, fixture manifests, full compressed input
 files, stored-shape verification, raw JSONL, stderr, screenshots, pause evidence,
 control calibration and coverage ledger under the change-request report's

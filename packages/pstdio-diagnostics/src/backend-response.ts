@@ -3,7 +3,7 @@ import type { PerformanceResponseSample } from "pstdio-api-contracts/performance
 import { readRuntimeDiagnostics } from "./runtime-reading";
 
 export interface PerformanceBackend {
-  id: string;
+  id: string | null;
   pid: number | null;
   origin: string | null;
   token: string | null;

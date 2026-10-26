@@ -35,6 +35,7 @@
     "@pstdio/ui": "workspace:*",
     "pstdio": "workspace:*",
     "pstdio-api-contracts": "workspace:*",
+    "pstdio-diagnostics": "workspace:*",
     "pstdio-logging": "workspace:*",
     "pstdio-paths": "workspace:*",
     "react": "19.2.4",

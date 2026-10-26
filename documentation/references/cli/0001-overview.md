@@ -38,7 +38,8 @@ The extension author must declare CLI access and connect the UI action to the co
 | `pst serve` | Start or reuse the local API runtime. |
 | `pst close` | Stop the background API runtime. |
 | `pst logs` | Read the local runtime log. |
-| `pst performance` | Print the desktop app's local performance snapshot as JSON, including the workbench frame rate (`frameRate`) and paused extensions (`pausedExtensionIds`). See [Developer tools](../../guides/0003-developer-tools.md). |
+| `pst performance [snapshot]` | Print the desktop app's local performance snapshot as JSON, including capture history, workbench frame rate (`frameRate`) and paused extensions (`pausedExtensionIds`). See [Developer tools](../../guides/0003-developer-tools.md). |
+| `pst performance recordings <directory>` | Export saved performance JSONL files without starting monitoring. |
 | `pst update-channel [stable\|nightly]` | Print or change which builds the desktop app on this computer updates to. See [Install](../../guides/getting-started/0001-install.md#choose-an-update-channel). |
 | `pst projects` | Create, link, inspect, and remove projects. |
 | `pst agents` | Discover harnesses and install skills. |
