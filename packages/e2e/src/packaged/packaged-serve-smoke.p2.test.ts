@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
+import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves and independent schema dependencies.
 // Native actions retain failed outcomes for the UI entry point to report.
@@ -31,6 +32,12 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 // extension-browser-install.p2.test.ts installs the cached Playwright package and visits a smoke page.
+
+test(
+  "installs catalog defaults and checks for upgrades without Git on PATH",
+  expectPackagedGitFreeExtensions,
+  PACKAGED_TEST_TIMEOUT,
+);
 
 test("includes extension development, smoke test, browser setup and update commands", () => {
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {

@@ -21,6 +21,7 @@
     "@hono/zod-openapi": "^1.1.5",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.34",
+    "isomorphic-git": "1.44.4",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-api-runtime-host": "workspace:*",
     "pstdio-db": "workspace:*",
@@ -29,9 +30,9 @@
     "pstdio-paths": "workspace:*",
     "pstdio-scheduler": "workspace:*",
     "pstdio-storage": "workspace:*",
-    "pstdio-wt": "workspace:*",
     "pstdio-sync": "workspace:*",
     "pstdio-sync-contracts": "workspace:*",
+    "pstdio-wt": "workspace:*",
     "zod": "^4.3.6"
   },
   "devDependencies": {

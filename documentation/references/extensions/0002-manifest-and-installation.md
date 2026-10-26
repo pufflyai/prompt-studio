@@ -87,6 +87,10 @@ for this host.
 
 Installs and updates are explicit. Source that appears in the extensions root is never adopted on its own.
 
+Extension installation and upgrade checks do not require system Git on macOS, Linux, or Windows. The host reads catalog repositories with an in-process client over HTTPS, or from a local `file://` repository. It writes only regular files from the selected folder and preserves executable file modes. Source folders containing symlinks or submodules are refused.
+
+Repository downloads do not run Git hooks, credential helpers, or system Git URL rewrites. Configure a different repository URL in the extension catalog instead of using Git's `insteadOf` setting. A remote fetch downloads one shallow revision; extensions from the same repository and ref share that download.
+
 - `pst extensions add <name>` resolves the name through the extension catalog. The catalog entry
   names the Git repository, folder, and release ref. Prompt Studio records the resolved commit with
   the install, so the installed source stays pinned even when a tag or branch moves.
