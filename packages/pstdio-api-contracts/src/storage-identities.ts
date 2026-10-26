@@ -33,12 +33,17 @@ export const createStorageId = (prefix?: string) => {
   return formatStorageId(bytes, prefix);
 };
 
-export const createStorageMigration = (namespace: readonly (string | number)[]) => ({
-  id(key: string, prefix?: string) {
-    const bytes = sha256(new TextEncoder().encode(JSON.stringify([...namespace, key]))).slice(0, 16);
-    // Name-derived SHA-256 UUIDs use the custom UUIDv8 layout, not UUIDv5's SHA-1 layout.
-    bytes[6] = (bytes[6]! & 0x0f) | 0x80;
-    bytes[8] = (bytes[8]! & 0x3f) | 0x80;
-    return formatStorageId(bytes, prefix);
-  },
-});
+export const createStorageMigration = (namespace: readonly (string | number)[]) =>
+  Object.defineProperty(
+    {
+      id(key: string, prefix?: string) {
+        const bytes = sha256(new TextEncoder().encode(JSON.stringify([...namespace, key]))).slice(0, 16);
+        // Name-derived SHA-256 UUIDs use the custom UUIDv8 layout, not UUIDv5's SHA-1 layout.
+        bytes[6] = (bytes[6]! & 0x0f) | 0x80;
+        bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+        return formatStorageId(bytes, prefix);
+      },
+    },
+    Symbol.for("pstdio.owner.local-value"),
+    { value: { kind: "storage-migration", namespace: [...namespace] } },
+  );

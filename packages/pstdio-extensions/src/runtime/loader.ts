@@ -1,16 +1,17 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, realpathSync, rmSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { dirname, join, relative, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/extensions";
 import { resolvePstdioHome } from "pstdio-paths";
-import { isPackageAssetDescriptor } from "../artifacts/asset-validation";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { bundleEntry } from "./bundle-entry";
 import { createDiagnostic } from "./diagnostics";
 import { discoverExtensionPackages } from "./discovery";
 import { mirrorNodeModules } from "./mirror-node-modules";
+import { recordPreparedExtensionEntry } from "./owner/prepared-entry";
 import { type ExtensionApiProvider, type PackageManifest, readPackageManifest } from "./package-manifest";
+import { remapRuntimePackageAssets } from "./remap-package-assets";
 import {
   collectRuntimeModulePaths,
   hashRuntimeModulePaths,
@@ -191,42 +192,6 @@ const createRuntimePackage = (packagePath: string, entryPath: string, packageNam
   };
 };
 
-const isInside = (root: string, path: string) => {
-  const rel = relative(root, path);
-  return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
-};
-
-const remapRuntimeBaseUrl = (baseUrl: string, runtimePackagePath: string, packagePath: string) => {
-  try {
-    const basePath = fileURLToPath(new URL(baseUrl));
-    const realRuntimePackagePath = realpathSync(runtimePackagePath);
-    const realBasePath = realpathSync(basePath);
-    if (!isInside(realRuntimePackagePath, realBasePath)) return baseUrl;
-    return pathToFileURL(join(packagePath, relative(realRuntimePackagePath, realBasePath))).href;
-  } catch {
-    return baseUrl;
-  }
-};
-
-const remapRuntimePackageAssets = (value: unknown, runtimePackagePath: string, packagePath: string): unknown => {
-  if (isPackageAssetDescriptor(value)) {
-    return {
-      ...value,
-      baseUrl: remapRuntimeBaseUrl(value.baseUrl, runtimePackagePath, packagePath),
-    };
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item) => remapRuntimePackageAssets(item, runtimePackagePath, packagePath));
-  }
-
-  if (!isRecord(value)) return value;
-
-  return Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [key, remapRuntimePackageAssets(item, runtimePackagePath, packagePath)]),
-  );
-};
-
 const importFresh = async (filePath: string, packagePath: string, packageName: string) => {
   const runtimePackage = createRuntimePackage(packagePath, filePath, packageName);
   // Extension dependencies use their published exports, independently of the host's development conditions.
@@ -235,6 +200,7 @@ const importFresh = async (filePath: string, packagePath: string, packageName: s
     runtimePackage.packagePath,
     dirname(runtimePackage.entryPath),
   );
+  recordPreparedExtensionEntry(packagePath, { entryPath, packagePath: runtimePackage.packagePath });
   const mod = await importWithCacheKey(entryPath);
   return remapRuntimePackageAssets(mod, runtimePackage.packagePath, packagePath);
 };

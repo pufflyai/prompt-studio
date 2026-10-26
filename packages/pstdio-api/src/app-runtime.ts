@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { projectEvents } from "pstdio-api-contracts/extension-kernel";
+import { disposeExtensionOwners } from "pstdio-extensions";
 import type { RouteDeps } from "./features/deps";
 import { createArtifactMountWatchService } from "./features/extensions/artifact-mount-watch/watch-service";
 import { fireExtensionEvent } from "./features/extensions/extension-event-runtime";
@@ -129,6 +130,7 @@ const createAppCloser = (input: {
       const hooksStopped = input.closeSessionHooks();
       try {
         input.startupAbort.abort();
+        await disposeExtensionOwners();
         const queueStopped = input.sessionQueueLifecycle.close();
         // A queued startup can need worker disposal to settle. Stop admission first,
         // then begin cleanup before waiting for those dispatches to finish.

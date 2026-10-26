@@ -3,7 +3,7 @@ import { join } from "node:path";
 import {
   extensionLoadKey,
   type LoadedExtensionSource,
-  loadExtensionSources,
+  loadExtensionSourcesForHost as loadExtensionSources,
   normalizeExtensionSources,
 } from "pstdio-extensions";
 import type { EnabledExtensionSource } from "./project-extension-runtime-snapshot";

@@ -29,10 +29,14 @@ export const runExtensionWebviewBuild = async (input: {
   entryPath: string;
   isCurrent: () => boolean;
   row: InstalledSourceWithManifest;
+  signal?: AbortSignal;
   webviewId: string;
 }) => {
   if (!input.isCurrent()) return { status: "unavailable" as const };
   const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (input.signal?.aborted) controller.abort();
+  else input.signal?.addEventListener("abort", abort, { once: true });
   input.activeBuilds.add(controller);
   try {
     const result = await input.buildWebview({
@@ -53,6 +57,7 @@ export const runExtensionWebviewBuild = async (input: {
       error: webviewBuildFailure(input.row.install_name, input.webviewId, errorMessage(error)),
     };
   } finally {
+    input.signal?.removeEventListener("abort", abort);
     input.activeBuilds.delete(controller);
   }
 };

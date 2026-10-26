@@ -91,6 +91,17 @@ export {
 export { collectConventionDiagnostics } from "./runtime/conventions";
 export { mirrorNodeModules } from "./runtime/mirror-node-modules";
 export { collectIconFontAssets } from "./runtime/normalize/icon-fonts";
+export {
+  disposeExtensionOwners,
+  extensionOwnersEnabled,
+  loadExtensionPackageForHost,
+  loadExtensionSourcesForHost,
+  restartExtensionOwners,
+  stopExtensionOwners,
+} from "./runtime/owner/loader";
+export { runExtensionOwner } from "./runtime/owner/run-owner";
+export { createExtensionOwner, ExtensionOwnerError } from "./runtime/owner/supervisor";
 export { createReadBoundary } from "./runtime/read-boundary";
+export { createResourceCoordinator, ExtensionResourceError, extensionResources } from "./runtime/resource-coordinator";
 export { workbenchIconNames } from "./runtime/workbench-icon-names";
 export type * from "./types";

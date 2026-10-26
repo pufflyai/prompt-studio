@@ -25,9 +25,21 @@ import {
 } from "./extension-webviews";
 
 interface BuildAttempt extends ManagedWebviewBuildIdentity {
+  controller: AbortController;
   users: number;
   work: Promise<ManagedWebviewBuildResult> | ManagedWebviewBuildResult;
 }
+
+const cancelBuildAttempts = (
+  attempts: Map<string, BuildAttempt>,
+  shouldCancel: (attempt: BuildAttempt, key: string) => boolean,
+) => {
+  for (const [key, attempt] of attempts) {
+    if (!shouldCancel(attempt, key)) continue;
+    attempt.controller.abort();
+    attempts.delete(key);
+  }
+};
 
 export const createExtensionWebviewBuildManager = (input: CreateExtensionWebviewBuildManagerInput) => {
   const attempts = new Map<string, BuildAttempt>();
@@ -94,10 +106,15 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       // reconcile its own state, including when Reload adopts the same hash again.
       if (!validatedSource && attempt.work instanceof Promise && attempt.row.source_hash === row.source_hash) return;
     } else {
-      if (attempt) attempts.delete(key);
+      const previous = attempt;
+      if (previous) {
+        previous.controller.abort();
+        attempts.delete(key);
+      }
       if (readWebviewBuildSignature(paths.distDir) === signature || backoff.isBlocked(key, signature)) return;
       backoff.forget(key);
       const created: BuildAttempt = {
+        controller: new AbortController(),
         row,
         webview,
         snapshot,
@@ -110,6 +127,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
               row,
               snapshot,
               webview,
+              signal: created.controller.signal,
               isCurrent: () => !disposed && attempts.get(key) === created,
             });
             created.work = result;
@@ -134,9 +152,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
 
   const retireRemovedViews = (installedExtensionId: string, webviews: CollectedExtensionWebview[]) => {
     const keys = new Set(webviews.map((view) => processKey(installedExtensionId, view.id)));
-    for (const [key, attempt] of attempts) {
-      if (attempt.row.id === installedExtensionId && !keys.has(key)) attempts.delete(key);
-    }
+    cancelBuildAttempts(attempts, (attempt, key) => attempt.row.id === installedExtensionId && !keys.has(key));
   };
 
   const refreshRow = async (installedExtensionId: string, validatedSource?: LoadedExtensionSnapshot) => {
@@ -199,6 +215,8 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
   const refreshSources = async (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => {
     if (disposed) return;
     const rows = await input.listInstalledSources();
+    const installedIds = new Set(rows.map((row) => row.id));
+    cancelBuildAttempts(attempts, (attempt) => !installedIds.has(attempt.row.id));
     if (!sourcePath)
       removeUnownedWebviewBuilds(
         webviewCacheRoot,
@@ -235,6 +253,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
 
   const dispose = () => {
     disposed = true;
+    for (const attempt of attempts.values()) attempt.controller.abort();
     for (const controller of activeBuilds) controller.abort();
     activeBuilds.clear();
     attempts.clear();

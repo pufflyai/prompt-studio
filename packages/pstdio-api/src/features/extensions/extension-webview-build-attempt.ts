@@ -80,10 +80,12 @@ interface BuildContext {
 }
 
 interface BuildInput extends ReturnType<typeof inspectWebviewBuild>, ManagedWebviewBuildIdentity {
+  signal: AbortSignal;
   isCurrent: () => boolean;
 }
 
 export const createManagedWebviewBuilder = (context: BuildContext) => async (input: BuildInput) => {
+  if (input.signal.aborted || !input.isCurrent()) return { status: "unavailable" as const };
   const { row, webview, signature, buildInputs, sourceEntryPath, snapshot, isCurrent } = input;
   const packageName = snapshot.loaded.metadata.name;
   const paths = resolveManagedWebviewPaths({
@@ -92,8 +94,10 @@ export const createManagedWebviewBuilder = (context: BuildContext) => async (inp
     webviewId: webview.id,
   });
   const stageDir = `${paths.distDir}.staging-${crypto.randomUUID()}`;
+  const sourceDir = `${paths.shellDir}.staging-${crypto.randomUUID()}`;
   prepareWebviewBuildCache(paths.distDir, context.activeStages);
   context.activeStages.add(stageDir);
+  context.activeStages.add(sourceDir);
   try {
     const source = prepareManagedWebviewBuildSource({
       buildInputs,
@@ -101,7 +105,7 @@ export const createManagedWebviewBuilder = (context: BuildContext) => async (inp
       installName: row.install_name,
       packageName,
       packagePath: row.source_path,
-      shellDir: paths.shellDir,
+      shellDir: sourceDir,
     });
     if (!source.success)
       return { status: "failure" as const, error: webviewBuildFailure(row.install_name, webview.id, source.details) };
@@ -111,6 +115,7 @@ export const createManagedWebviewBuilder = (context: BuildContext) => async (inp
       distDir: stageDir,
       entryPath: source.entryPath,
       isCurrent,
+      signal: input.signal,
       row,
       webviewId: webview.id,
     });
@@ -124,7 +129,9 @@ export const createManagedWebviewBuilder = (context: BuildContext) => async (inp
     return outcome;
   } finally {
     rmSync(stageDir, { recursive: true, force: true });
+    rmSync(sourceDir, { recursive: true, force: true });
     context.activeStages.delete(stageDir);
+    context.activeStages.delete(sourceDir);
   }
 };
 

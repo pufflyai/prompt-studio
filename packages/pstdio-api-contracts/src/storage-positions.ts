@@ -9,26 +9,30 @@ const validatePosition = (position: string | undefined) => {
 /** Finite base-16 fractions, ordered with ordinary string comparison. */
 export const createStoragePositions = (deviceId: string) => {
   const device = bytesToHex(new TextEncoder().encode(deviceId));
-  return {
-    between(before?: string, after?: string) {
-      validatePosition(before);
-      validatePosition(after);
-      if (before !== undefined && after !== undefined && before >= after)
-        throw new Error("Order positions must be strictly increasing");
-      let prefix = "";
-      let upper = after;
-      for (let index = 0; ; index++) {
-        const low = index < (before?.length ?? 0) ? digits.indexOf(before![index]!) : 0;
-        const high = upper === undefined ? 16 : digits.indexOf(upper[index] ?? "0");
-        if (high - low > 1) {
-          // Include the suffix in future midpoint calculations. Concurrent neighbours stay divisible.
-          // A final nonzero digit keeps every finite position strictly above its zero-padded prefix.
-          const suffix = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
-          return `${prefix}${digits[Math.floor((low + high) / 2)]}${device}0${suffix}1`;
+  return Object.defineProperty(
+    {
+      between(before?: string, after?: string) {
+        validatePosition(before);
+        validatePosition(after);
+        if (before !== undefined && after !== undefined && before >= after)
+          throw new Error("Order positions must be strictly increasing");
+        let prefix = "";
+        let upper = after;
+        for (let index = 0; ; index++) {
+          const low = index < (before?.length ?? 0) ? digits.indexOf(before![index]!) : 0;
+          const high = upper === undefined ? 16 : digits.indexOf(upper[index] ?? "0");
+          if (high - low > 1) {
+            // Include the suffix in future midpoint calculations. Concurrent neighbours stay divisible.
+            // A final nonzero digit keeps every finite position strictly above its zero-padded prefix.
+            const suffix = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
+            return `${prefix}${digits[Math.floor((low + high) / 2)]}${device}0${suffix}1`;
+          }
+          prefix += digits[low];
+          if (low < high) upper = undefined;
         }
-        prefix += digits[low];
-        if (low < high) upper = undefined;
-      }
+      },
     },
-  };
+    Symbol.for("pstdio.owner.local-value"),
+    { value: { kind: "storage-positions", deviceId } },
+  );
 };

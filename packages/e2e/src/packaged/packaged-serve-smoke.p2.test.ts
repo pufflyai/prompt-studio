@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { createExtensionOwner } from "pstdio-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
@@ -31,6 +32,28 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 // extension-browser-install.p2.test.ts installs the cached Playwright package and visits a smoke page.
+
+test("starts and stops an extension owner using the packaged executable and declared dependencies", async () => {
+  const root = mkdtempSync(join(tmpdir(), "packaged-extension-owner-"));
+  const owner = createExtensionOwner({
+    path: writeExtensionWithDependency(root),
+    runtime: { executable: PACKAGED_BINARY_PATH, packaged: true },
+  });
+  try {
+    const source = await owner.load();
+    expect(owner.diagnostics).toEqual([]);
+    expect(source?.manifest.id).toBe("test.dep-ext");
+    expect(source?.definition.templates?.[0]?.id).toBe("packaged-asset");
+    const pid = owner.pid;
+    await owner.stop();
+    expect(owner.pid).toBeUndefined();
+    expect(pid).toBeGreaterThan(0);
+    await expect(owner.load()).rejects.toMatchObject({ code: "extension_owner_stopped" });
+  } finally {
+    await owner.dispose();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test("includes extension development, smoke test, browser setup and update commands", () => {
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {

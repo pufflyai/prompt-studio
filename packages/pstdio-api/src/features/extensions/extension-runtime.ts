@@ -5,7 +5,7 @@ import {
   checkExtensionHostCompatibility,
   collectConventionDiagnostics,
   dashboardExtensionHostCapabilities,
-  loadExtensionPackage,
+  loadExtensionPackageForHost as loadExtensionPackage,
   normalizeExtensionSources,
   type PackageManifest,
   type ExtensionDiagnostic as RuntimeExtensionDiagnostic,
