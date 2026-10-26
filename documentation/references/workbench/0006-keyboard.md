@@ -12,6 +12,8 @@ Extensions appear under E as selectable rows with their display names. Use Up/Do
 
 ## Navigation
 
+**Alt+Shift+Up** or **Go → P** runs the Sidenav's **Back to project** action from nested ticket or session navigation. It returns to the last root-level page, with Home as the fallback. The action follows the active mode's name, appears only inside a navigation level, and keeps shortcut mode active. The direct chord respects focused editor inputs; the keyboard-mode sequence remains available there.
+
 Left and Right select the previous or next tab across the visible layout and wrap at either end. One tab has an outline for the keyboard selection, even when several panels each have a selected tab. Navigation keeps shortcut mode active, including Go actions and their aliases. Labels use Go to sessions, Go to tickets, and the same pattern for other destinations; history actions use Go back and Go forward. A completed action keeps its current group available. Enter or Escape returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
 
 Alt+Shift+1 through Alt+Shift+9 directly select global tab numbers. These chords work without opening the keyboard menu and do not open a picker. Numbers follow spatial placement, then displayed tab order within each strip. Opening, closing, moving, reordering, or changing the layout recomputes contiguous numbers. Numbers appear on tabs while keyboard mode is active. View → T opens a searchable picker for tabs beyond nine. Direct selection outside keyboard mode stays outside it.

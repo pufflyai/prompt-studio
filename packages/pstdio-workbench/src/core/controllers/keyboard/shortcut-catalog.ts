@@ -9,6 +9,7 @@ import { shortcutCommandArgs } from "./shortcut-command-args";
 import { shortcutActionLabel } from "./shortcut-label";
 
 const navigationLabel = (label: string) => {
+  if (/^back to\s+/i.test(label)) return label;
   const direction = /^(?:navigate|go) (back|forward)$/i.exec(label);
   if (direction) return `Go ${direction[1]!.toLowerCase()}`;
   const destination = label.replace(/^(?:open|go to)\s+/i, "");

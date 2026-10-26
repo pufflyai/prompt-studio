@@ -30,6 +30,7 @@ describe("workbench built-ins", () => {
       { commandId: "workbench.action.navigateBack" },
       { commandId: "workbench.action.navigateForward" },
       { commandId: "workbench.toggleSideBar" },
+      { commandId: "workbench.action.navigateToRootLevel" },
     ]);
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleCommandPalette")).toMatchObject({
       commandId: "workbench.toggleCommandPalette",

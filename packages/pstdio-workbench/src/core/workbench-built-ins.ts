@@ -102,4 +102,7 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       group: "Workbench",
     });
   }
+  registerModeNavigationShortcuts(workbench);
 };
+
+import { registerModeNavigationShortcuts } from "./controllers/page-location/mode-navigation-shortcuts";
