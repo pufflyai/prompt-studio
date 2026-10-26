@@ -6,7 +6,7 @@ Auto Build uses a supervisor to assign valid, unassigned tickets using your prom
 
 Open **Project Timeline** and click **Auto Build**. Enter the supervisor prompt at the top of the modal, choose its model and run options, set **Eligible tickets**, and click the primary **Auto Build** button. The information icon next to the title opens an explanation and a documentation link.
 
-Choose **Supervisor model**, its harness, and its run options directly in the same modal, using the controls from Run attempt. The prompt, model, options, and filters save together when you start Auto Build. Cancel leaves the saved configuration unchanged. The supervisor uses the default collaboration mode. Worker sessions still use the project default agent. Stop and start Auto Build to use a different model for an existing supervisor.
+Choose **Supervisor model**, its harness, and its run options directly in the same modal, using the controls from Run attempt. The prompt, model, options, and filters save together when you start Auto Build. Cancel leaves the saved configuration unchanged. The supervisor uses the default collaboration mode. Worker sessions still use the project default agent. Pause Auto Build, choose **Stop Auto Build**, then start it again to use a different model for an existing supervisor.
 
 Starting Auto Build immediately queues a check. The first check starts the supervisor as soon as it finds eligible work; the supervisor then queries its full scope before launching tickets. The queued startup status stays available while that check runs.
 
@@ -46,7 +46,7 @@ Implementation follows the project's Planner settings, including adversarial rev
 
 ## Inspect or stop Auto Build
 
-While Auto Build is running, its button opens an activity popover. Click outside it or press Escape to close it. The popover shows pending review requests above startup, the supervisor, running ticket sessions, and failures. Its activity body scrolls while the header and action footer remain visible. If the scope and eligible filters match no unfinished tickets, it explains that there is no matching work. Stop Auto Build to change its configuration.
+While Auto Build is running, its button opens an activity popover. Click outside it or press Escape to close it. The popover shows pending review requests above startup, the supervisor, running ticket sessions, and failures. Its activity body scrolls while the header and action footer remain visible. If the scope and eligible filters match no unfinished tickets, it explains that there is no matching work. Pause Auto Build, then choose **Stop Auto Build** to change its configuration.
 
 The header button always says **Auto Build**. It shows a Play icon when Auto Build is stopped without an error. While Auto Build is on, or after an error, it shows a colored status indicator: the session spinner while work runs, a blue moon while the supervisor sleeps, a red mark if the supervisor fails, and a green check when the run is complete. A run is complete when every ticket in the supervisor's saved scope has a completed status. Reopening one of those tickets clears the check. Click the button to open a popover with a separate supervisor row and running ticket sessions. Each row uses the normal session status icon and color. The popover shows used capacity and its limit. Click a session to inspect it.
 
