@@ -1,62 +1,26 @@
-name: Native cleanup comparison
+name: Detached readiness qualification
 on:
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
 jobs:
-  native:
-    name: cleanup probe (${{ matrix.platform_pkg }})
+  detached:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-latest
-            platform_pkg: cli-win-x64
-          - os: windows-11-arm
-            platform_pkg: cli-win-arm64
-    env:
-      CI_PRIORITY: P2
-      PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
-      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
+        os: [windows-latest, windows-11-arm]
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          ref: a11c4c9f8b8d09d9df913d5228471d4a3f3f68cd
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24"
       - uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
-      - name: Build public package inputs
-        run: bun run build -- --scope @pstdio/sdk --scope @pstdio/ui --include-dependencies
-      - name: Reuse the unchanged compiled source revision
-        uses: actions/download-artifact@v4
-        with:
-          name: native-qualification-${{ matrix.platform_pkg }}
-          run-id: 40253697702
-          github-token: ${{ github.token }}
-      - name: Provision the compiled smoke browser
-        run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke"; preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
-      - name: Exercise native interruption, inherited output and archive cleanup
-        working-directory: packages/e2e
-        run: >-
-          bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts
-          src/packaged/packaged-core-extension-features.p2.test.ts
-          --timeout 30000 --silent
-      - name: Preserve native evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-cleanup-probe-${{ matrix.platform_pkg }}
-          path: |
-            packages/e2e/test-results
-            test-results/ci
-          include-hidden-files: true
-          if-no-files-found: warn
+      - name: Prove detached lifetime after immediate and delayed readiness
+        working-directory: packages/pstdio-api
+        run: bun test ./src/features/extensions/extension-detached-process.p1.test.ts
