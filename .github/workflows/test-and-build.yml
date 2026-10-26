@@ -55,9 +55,6 @@ jobs:
         if: ${{ !cancelled() && steps.ownership.outcome == 'success' && steps.browser.outcome == 'success' }}
         working-directory: packages/e2e
         run: bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-core-extensions-smoke.p1.test.ts --timeout 30000 --silent
-      - name: Record worker resource use after the cases
-        if: always()
-        run: bun -e 'console.log(JSON.stringify({memory:process.memoryUsage(),resource:process.resourceUsage()}));'
       - uses: actions/upload-artifact@v4
         if: always()
         with:

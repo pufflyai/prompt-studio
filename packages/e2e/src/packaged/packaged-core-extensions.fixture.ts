@@ -89,5 +89,8 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("registry closed");
     await removeCoreFixture(tempRoot);
     phase("files removed");
+    console.log(
+      `Core worker resources: ${JSON.stringify({ memory: process.memoryUsage(), resource: process.resourceUsage() })}`,
+    );
   }
 };
