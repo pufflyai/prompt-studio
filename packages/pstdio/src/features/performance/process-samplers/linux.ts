@@ -2,7 +2,10 @@ import { dlopen } from "bun:ffi";
 import { readFile } from "node:fs/promises";
 import type { ProcessReading } from "../process-sampler";
 
-export const createLinuxProcessSampler = () => {
+export const createLinuxProcessSampler = async () => {
+  const boot = (await readFile("/proc/stat", "utf8")).match(/^btime (\d+)$/m);
+  if (!boot) throw new Error("Cannot read the kernel boot time");
+  const bootMs = Number(boot[1]) * 1000;
   const library = dlopen("libc.so.6", { sysconf: { args: ["int"], returns: "i64" } });
   const clockTicks = Number(library.symbols.sysconf(2)); // Linux _SC_CLK_TCK
   if (clockTicks <= 0) {
@@ -27,6 +30,7 @@ export const createLinuxProcessSampler = () => {
         if (residentBytes === null) return null;
         return {
           processStartId: fields[19]!,
+          startedAt: new Date(bootMs + (Number(fields[19]) * 1000) / clockTicks).toISOString(),
           cpuTimeMs: ((Number(fields[11]) + Number(fields[12])) * 1000) / clockTicks,
           residentBytes,
           peakResidentBytes: memory("VmHWM"),

@@ -26,6 +26,7 @@ export const createWindowsProcessSampler = () => {
         if (!kernel.symbols.K32GetProcessMemoryInfo(handle, ptr(memory), memory.length)) return null;
         return {
           processStartId: time.getBigUint64(0, true).toString(),
+          startedAt: new Date(Number(time.getBigUint64(0, true) / 10_000n) - 11_644_473_600_000).toISOString(),
           cpuTimeMs: Number(time.getBigUint64(16, true) + time.getBigUint64(24, true)) / 10_000,
           residentBytes: Number(fields.getBigUint64(16, true)),
           peakResidentBytes: Number(fields.getBigUint64(8, true)),

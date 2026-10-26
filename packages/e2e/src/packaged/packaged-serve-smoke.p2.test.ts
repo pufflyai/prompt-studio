@@ -19,6 +19,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
 // packaged-notes-page.p2.spec.ts checks Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
@@ -31,6 +32,12 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 // extension-browser-install.p2.test.ts installs the cached Playwright package and visits a smoke page.
+
+test(
+  "exports saved performance recordings with monitoring stopped",
+  expectPackagedSavedRecordings,
+  PACKAGED_TEST_TIMEOUT,
+);
 
 test("includes extension development, smoke test, browser setup and update commands", () => {
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {

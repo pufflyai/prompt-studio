@@ -121,3 +121,13 @@ Memory fields use bytes. `residentBytes` is current resident memory. macOS also 
 The host also times an authenticated backend response. `reply` records a finite response time. `timeout` records how long the host waited and leaves response time unavailable; it must not enter a successful-response percentile. A missing or disconnected backend is `unavailable`. This measurement includes transport time and does not identify the cause of a delay.
 
 While enabled, the capture writes sanitized JSONL records under the desktop user-data directory's `performance-recordings` folder. Four files of at most 1 MiB each rotate by whole record. Live history clears on disable; saved recordings survive. Capture records contain measurements and process identities, not conversation content, credentials, raw output, or private source paths. The directory uses owner-only access on Unix and a current-user ACL on Windows.
+
+Export saved files after turning monitoring off or closing the app:
+
+```bash
+pst performance recordings /absolute/path/to/performance-recordings
+```
+
+This reads the named directory without starting monitoring or contacting a runtime. The output contains the directory and each saved file's name and JSONL content. Rotation can remove early records; saved files are bounded evidence, not an unlimited archive.
+
+Native process readings include `startedAt` when the host supports it. Benchmarks use this timestamp to include CPU consumed before the first reading of a process born during the capture. For an older process, CPU totals cover only the interval between readings. Native lifetime memory peaks apply to the capture only when the process was born during it; other peaks cover observed samples. The summary labels these coverage limits and keeps process lifetimes separate across restarts.

@@ -14,6 +14,7 @@ import { measureScaleNavigation } from "./storage-scale-browser";
 import { applyContainerProfile, configuredContainer } from "./storage-scale-container";
 import { samplePublicEdit } from "./storage-scale-edits";
 import { measureScalePage } from "./storage-scale-page";
+import { createObservedScaleRuntime } from "./storage-scale-performance";
 import { queryOracles, sampleQuery } from "./storage-scale-queries";
 import { configureScaleView, type ScaleFixture, startScaleRuntime } from "./storage-scale-runtime";
 import { createScaleSyncFixture } from "./storage-scale-sync";
@@ -43,6 +44,7 @@ interface Context {
   oracles: ReturnType<typeof queryOracles>;
   begin?: (runtime: Awaited<ReturnType<typeof startScaleRuntime>>) => Promise<unknown>;
   emit: (data: object) => void;
+  startRuntime: typeof startScaleRuntime;
 }
 
 const selectScenarios = (kind: Workload, profile: Profile, options: SampleOptions) =>
@@ -67,7 +69,14 @@ const measureEdit = async (ctx: Context, scenario: Scenario) => {
   if (scenario.operation === "all-owner-edit-burst")
     return {
       ...scenario,
-      ...(await sampleWriteBurst(ctx.home, ctx.fixture, scenario.temperature, ctx.environment, ctx.begin)),
+      ...(await sampleWriteBurst(
+        ctx.home,
+        ctx.fixture,
+        scenario.temperature,
+        ctx.environment,
+        ctx.begin,
+        ctx.startRuntime,
+      )),
       status: "measured",
     };
   const measured = await samplePublicEdit(
@@ -78,11 +87,20 @@ const measureEdit = async (ctx: Context, scenario: Scenario) => {
     scenario.sample,
     ctx.environment,
     ctx.begin,
+    ctx.startRuntime,
   );
   const visible =
     scenario.operation === "direct-sdk-first-write"
       ? undefined
-      : await sampleVisibleEdit(ctx.home, ctx.fixture, ctx.profile, scenario.operation, ctx.environment, ctx.begin);
+      : await sampleVisibleEdit(
+          ctx.home,
+          ctx.fixture,
+          ctx.profile,
+          scenario.operation,
+          ctx.environment,
+          ctx.begin,
+          ctx.startRuntime,
+        );
   const screenshot = visible
     ? `${ctx.profile}-${scenario.background}-${scenario.temperature}-${scenario.operation}-${scenario.sample}.png`
     : undefined;
@@ -112,7 +130,7 @@ const measureRead = async (ctx: Context, scenario: Scenario) => {
       await prepare.stop();
     }
   }
-  const runtime = await startScaleRuntime(ctx.home, ctx.environment);
+  const runtime = await ctx.startRuntime(ctx.home, ctx.environment);
   try {
     ctx.emit({ phase: "runtime-startup", scenario, durationMs: runtime.startupMs, ...runtime.controlEvidence });
     if (scenario.temperature === "warm" && !isView)
@@ -145,7 +163,7 @@ const measureRead = async (ctx: Context, scenario: Scenario) => {
 };
 
 const measurePage = async (ctx: Context, scenario: Scenario) => {
-  const runtime = await startScaleRuntime(ctx.home, ctx.environment);
+  const runtime = await ctx.startRuntime(ctx.home, ctx.environment);
   try {
     const running = ctx.begin?.(runtime);
     const visible = await measureScalePage(runtime, ctx.fixture, ctx.profile, scenario.temperature);
@@ -166,6 +184,7 @@ export const sampleScaleScenario = async (input: ScaleSampleCase, emit: (row: ob
   if (container) emit({ phase: "runtime-control", profile, ...applyContainerProfile(container, profile) });
   emit({ phase: "case-setup", scenario, status: "started" });
   const oracles = queryOracles(kind);
+  const performance = createObservedScaleRuntime(root, (row) => emit({ ...row, scenario }));
   const sync = input.sync ? await createScaleSyncFixture(home, fixture, emit) : undefined;
   try {
     const ctx: Context = {
@@ -175,6 +194,7 @@ export const sampleScaleScenario = async (input: ScaleSampleCase, emit: (row: ob
       profile,
       emit,
       oracles,
+      startRuntime: performance.start,
       environment: sync?.environment ?? {},
       begin:
         scenario.background === "idle"
@@ -190,7 +210,8 @@ export const sampleScaleScenario = async (input: ScaleSampleCase, emit: (row: ob
     emit({
       phase: "sample",
       ...measured,
-      passed: measured.passed && scenario.background === "idle",
+      passed: measured.passed && scenario.background === "idle" && performance.failures.length === 0,
+      performanceFailures: [...new Set(performance.failures)],
       contentionCoverage: scenario.background === "idle" ? "not-requested" : "attempted-unverified",
     });
   } finally {

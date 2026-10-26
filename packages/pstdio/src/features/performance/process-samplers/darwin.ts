@@ -4,6 +4,7 @@ import type { ProcessReading } from "../process-sampler";
 export const createDarwinProcessSampler = () => {
   const library = dlopen("/usr/lib/libproc.dylib", {
     proc_pid_rusage: { args: ["int", "int", "ptr"], returns: "int" },
+    proc_pidinfo: { args: ["int", "int", "u64", "ptr", "int"], returns: "int" },
   });
   return {
     read: async (pid: number) => {
@@ -11,9 +12,23 @@ export const createDarwinProcessSampler = () => {
       const buffer = new BigUint64Array(37);
       if (library.symbols.proc_pid_rusage(pid, 4, ptr(buffer)) !== 0) return null;
       const fields = new DataView(buffer.buffer);
+      const startId = fields.getBigUint64(80, true);
       const number = (offset: number) => Number(fields.getBigUint64(offset, true));
+      // proc_bsdinfo exposes UTC creation time. Keep the opaque kernel start ID as identity.
+      const bsd = new Uint8Array(136);
+      let startedAt: string | undefined;
+      if (library.symbols.proc_pidinfo(pid, 3, 0, ptr(bsd), bsd.length) === bsd.length) {
+        const info = new DataView(bsd.buffer);
+        startedAt = new Date(
+          Number(info.getBigUint64(120, true)) * 1000 + Number(info.getBigUint64(128, true)) / 1000,
+        ).toISOString();
+      }
+      // The PID can be reused between the two kernel calls.
+      if (library.symbols.proc_pid_rusage(pid, 4, ptr(buffer)) !== 0 || fields.getBigUint64(80, true) !== startId)
+        return null;
       return {
         processStartId: fields.getBigUint64(80, true).toString(),
+        startedAt,
         cpuTimeMs: (number(16) + number(24)) / 1_000_000,
         residentBytes: number(64),
         peakResidentBytes: null,

@@ -28,6 +28,7 @@ export const sampleVisibleEdit = async (
   operation: string,
   environment: Record<string, string>,
   background?: (runtime: ScaleRuntime) => Promise<unknown>,
+  startRuntime: typeof startScaleRuntime = startScaleRuntime,
 ) => {
   const owner = owners(workload(fixture.kind))[0];
   const base = pageRows(workload(fixture.kind), 0, "focus", 0);
@@ -36,7 +37,7 @@ export const sampleVisibleEdit = async (
   const expected = base.filter((row) => row.id !== edit.recordId);
   if (edit.expected && matches(edit.expected, "focus", owner.rows)) expected.push(edit.expected);
   expected.sort(compareRows);
-  const runtime = await startScaleRuntime(home, environment);
+  const runtime = await startRuntime(home, environment);
   const { browser, page, replies, diagnostics } = await openScaleBrowser(profile);
   const changedSummary = edit.expected ? rowSummary(edit.expected) : "";
   const visibleValue = operation === "short" && edit.expected ? edit.expected.title : changedSummary;
@@ -109,7 +110,7 @@ export const sampleVisibleEdit = async (
     const screenshot = await page.screenshot();
     const backgroundResult = await running;
     await runtime.crash();
-    const reopened = await startScaleRuntime(home, environment);
+    const reopened = await startRuntime(home, environment);
     try {
       const stored = await reopened.execute<StorageRecord>(fixture.projectId, owner.id, "scale", {
         input: { action: "record", id: edit.recordId },

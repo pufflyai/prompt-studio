@@ -1,6 +1,7 @@
 /** Kernel readings remain available while the observed process's event loop is blocked. */
 export interface ProcessReading {
   processStartId: string;
+  startedAt?: string;
   cpuTimeMs: number;
   residentBytes: number;
   peakResidentBytes: number | null;

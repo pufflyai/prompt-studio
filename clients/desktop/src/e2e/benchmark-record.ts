@@ -6,6 +6,8 @@ import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { resolvePackagedLayout } from "../packaging/package-layout";
 import { type BenchmarkMetric, findBudgetFailures } from "../testing/benchmark-budget";
+import { attachBenchmarkPerformance } from "./benchmark-performance-evidence";
+import type { PackagedApp } from "./packaged-app-helpers";
 
 const desktopRoot = resolve(import.meta.dirname, "../..");
 const packageLayout = resolvePackagedLayout(desktopRoot, process.platform, process.arch);
@@ -19,17 +21,19 @@ export interface Benchmark {
   start: string;
   end: string;
   metrics: BenchmarkMetric[];
+  performance?: { app: PackagedApp; endedAt: number };
 }
 
 // Attaches every sample with the source, artifact, and runner identity before checking budgets,
 // so a failed budget still leaves comparable evidence. Every metric must be below its budget.
 export const recordBenchmark = async (benchmark: Benchmark) => {
+  const { performance, ...details } = benchmark;
   sidecarSha256 ??= createHash("sha256").update(readFileSync(packageLayout.sidecar)).digest("hex");
   await test.info().attach(`benchmark-${benchmark.name}.json`, {
     contentType: "application/json",
     body: JSON.stringify(
       {
-        ...benchmark,
+        ...details,
         revision: execFileSync("git", ["describe", "--always", "--dirty", "--abbrev=40"], {
           cwd: desktopRoot,
           encoding: "utf8",
@@ -51,5 +55,6 @@ export const recordBenchmark = async (benchmark: Benchmark) => {
       2,
     ),
   });
+  if (performance) await attachBenchmarkPerformance(performance.app, benchmark.name, performance.endedAt);
   expect(findBudgetFailures(benchmark.metrics), benchmark.name).toEqual([]);
 };

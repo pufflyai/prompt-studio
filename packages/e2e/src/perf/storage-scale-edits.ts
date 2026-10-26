@@ -12,12 +12,13 @@ export const samplePublicEdit = async (
   sample: number,
   environment: Record<string, string> = {},
   background?: (runtime: ScaleRuntime) => Promise<unknown>,
+  startRuntime: typeof startScaleRuntime = startScaleRuntime,
 ) => {
   const nonce = randomUUID();
   const edit = editOperation(fixture.kind, operation, nonce, workload(fixture.kind).rows);
   const owner = owners(workload(fixture.kind))[0];
   const input = { action: "commit", operationId: nonce, ...edit.change };
-  const writer = await startScaleRuntime(home, environment);
+  const writer = await startRuntime(home, environment);
   const committed = await (async () => {
     try {
       if (temperature === "warm")
@@ -41,7 +42,7 @@ export const samplePublicEdit = async (
       await writer.stop();
     }
   })();
-  const reopened = await startScaleRuntime(home, environment);
+  const reopened = await startRuntime(home, environment);
   try {
     const { value } = await reopened.execute<StorageRecord>(fixture.projectId, owner.id, "scale", {
       input: { action: "record", id: edit.recordId },

@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
+import type { KernelProcessReading } from "pstdio-diagnostics";
 import { bunExec } from "../bun-exec";
-import type { KernelProcessReading } from "./performance-capture";
 
 export const createProcessObserver = (input: { executable: string; args?: string[] }) => {
   const launch = bunExec(input.args ?? ["performance-observer"], process.env);

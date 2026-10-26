@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { createProcessSampler } from "./process-sampler";
 
 test("samples a separate busy process without asking its event loop", async () => {
+  const launchedAt = Date.now();
   const child = spawn(process.execPath, ["-e", "process.stdout.write('ready\\n'); while (true) {}"], {
     stdio: ["ignore", "pipe", "ignore"],
   });
@@ -16,6 +17,8 @@ test("samples a separate busy process without asking its event loop", async () =
     expect(second?.processStartId).toBe(first?.processStartId);
     expect(second!.cpuTimeMs).toBeGreaterThan(first!.cpuTimeMs);
     expect(second!.residentBytes).toBeGreaterThan(0);
+    expect(Date.parse(second!.startedAt!)).toBeGreaterThanOrEqual(launchedAt - 1000);
+    expect(Date.parse(second!.startedAt!)).toBeLessThanOrEqual(Date.now());
     if (process.platform === "darwin") {
       expect(second!.physicalFootprintBytes).toBeGreaterThan(0);
       expect(second!.peakPhysicalFootprintBytes).toBeGreaterThanOrEqual(second!.physicalFootprintBytes!);

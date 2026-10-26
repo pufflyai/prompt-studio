@@ -139,6 +139,7 @@
         "@pstdio/ui": "workspace:*",
         "pstdio": "workspace:*",
         "pstdio-api-contracts": "workspace:*",
+        "pstdio-diagnostics": "workspace:*",
         "pstdio-logging": "workspace:*",
         "pstdio-paths": "workspace:*",
         "react": "19.2.4",
@@ -416,6 +417,7 @@
         "pstdio-artifacts": "workspace:*",
         "pstdio-base-themes": "workspace:*",
         "pstdio-dashboard": "workspace:*",
+        "pstdio-diagnostics": "workspace:*",
         "pstdio-extensions": "workspace:*",
         "pstdio-notes": "workspace:*",
         "pstdio-planner": "workspace:*",
@@ -452,6 +454,7 @@
         "playwright-core": "1.60.0",
         "pstdio-api": "workspace:*",
         "pstdio-api-contracts": "workspace:*",
+        "pstdio-diagnostics": "workspace:*",
         "pstdio-extensions": "workspace:*",
         "pstdio-logging": "workspace:*",
         "pstdio-paths": "workspace:*",
@@ -583,6 +586,16 @@
         "drizzle-kit": "^0.31.9",
         "pstdio-relay": "workspace:*",
         "storage-scale-fixture": "workspace:*",
+        "typescript": "6.0.2",
+      },
+    },
+    "packages/pstdio-diagnostics": {
+      "name": "pstdio-diagnostics",
+      "dependencies": {
+        "pstdio-api-contracts": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.4",
         "typescript": "6.0.2",
       },
     },
@@ -4363,6 +4376,8 @@
     "pstdio-db": ["pstdio-db@workspace:packages/pstdio-db"],
 
     "pstdio-dev": ["pstdio-dev@workspace:.pstdio/extensions/pstdio-dev"],
+
+    "pstdio-diagnostics": ["pstdio-diagnostics@workspace:packages/pstdio-diagnostics"],
 
     "pstdio-extension-testbench": ["pstdio-extension-testbench@workspace:packages/pstdio-extension-testbench"],
 
