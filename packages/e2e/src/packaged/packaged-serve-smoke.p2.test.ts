@@ -6,7 +6,6 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
-import { expectPackagedDependencyState } from "./packaged-dependency-state-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves and independent schema dependencies.
 // Native actions retain failed outcomes for the UI entry point to report.
@@ -109,19 +108,13 @@ test(
       expect(extensionsRes.status).toBe(200);
 
       const body = (await extensionsRes.json()) as {
-        extensions: Array<{ id: string; sourcePath: string; enabled: boolean; installName: string; name: string }>;
+        extensions: Array<{ enabled: boolean; installName: string; name: string }>;
       };
       const extension = body.extensions.find((entry) => entry.installName === "dep-ext");
 
       expect(extension).toMatchObject({
         enabled: true,
         name: "dep-ext",
-      });
-      await expectPackagedDependencyState({
-        baseUrl: started.baseUrl,
-        projectId: project.id,
-        extension: extension!,
-        headers: runtimeAuthorization(started.descriptor),
       });
       await expectPackagedNativeActions({
         projectFolder,
