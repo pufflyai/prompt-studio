@@ -42,3 +42,17 @@ test("agent discovery includes an installed harness after the first API page", a
     await server.stop(true);
   }
 });
+
+test("cancelled agent discovery does not start another page request", async () => {
+  const controller = new AbortController();
+  let requests = 0;
+  const agents = {
+    query: async () => {
+      requests++;
+      if (requests === 1) controller.abort();
+      return { items: [], nextCursor: requests === 1 ? "later" : null };
+    },
+  };
+  await expect(loadAgents(agents, "project", controller.signal)).rejects.toMatchObject({ name: "AbortError" });
+  expect(requests).toBe(1);
+});
