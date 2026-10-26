@@ -53,7 +53,7 @@ runs:
     - name: Use the Windows job temp directory
       if: runner.os == 'Windows'
       shell: pwsh
-      # Keep runtime homes and cold install caches in the runner-owned directory. See ADR 0112.
+      # Keep runtime homes and cold install caches in the runner-owned directory. See ADR 0114.
       run: |
         "TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
         "TMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
