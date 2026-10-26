@@ -38,6 +38,7 @@ export const startResponsivenessHost = async (root: string, mode: MeasurementMod
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
         PSTDIO_EXTENSION_WEBVIEW_BUILDS: builds ? "1" : "0",
         PSTDIO_EXTENSION_PROCESS_OWNERS: mode === "owner" ? "1" : "0",
+        PSTDIO_EXTENSION_RESOURCE_ADMISSION: "0",
       },
       stdin: "ignore",
       stdout: Bun.file(join(root, "host.stdout.log")),

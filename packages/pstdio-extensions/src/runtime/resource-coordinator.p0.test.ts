@@ -1,5 +1,60 @@
 import { expect, test } from "bun:test";
 import { createResourceCoordinator } from "./resource-coordinator";
+import { withExtensionHostWait } from "./resource-lease";
+
+test("accepted work resumes after host I/O when resource headroom falls", async () => {
+  let memory = 256;
+  const coordinator = createResourceCoordinator({ capacity: async () => ({ cpu: 1, memory }) });
+  const waiting = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const work = coordinator.run("mutation", { cpu: 1, memory: 128 }, undefined, async () => {
+    await withExtensionHostWait(async () => {
+      waiting.resolve();
+      await release.promise;
+    });
+    return "accepted work completed";
+  });
+  await waiting.promise;
+  memory = 0;
+  await coordinator.refresh();
+  release.resolve();
+  await expect(work).resolves.toBe("accepted work completed");
+  expect(coordinator.snapshot().running).toEqual({ cpu: 0, memory: 0 });
+  coordinator.dispose();
+});
+
+test("host I/O releases CPU capacity while retaining memory and resumes before execution", async () => {
+  const coordinator = createResourceCoordinator({ capacity: async () => ({ cpu: 1, memory: 256 }) });
+  const waiting = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const parent = coordinator.run("parent", { cpu: 1, memory: 128 }, undefined, async () => {
+    await withExtensionHostWait(async () => {
+      waiting.resolve();
+      await release.promise;
+    });
+    expect(coordinator.snapshot().running.cpu).toBe(1);
+    return "parent";
+  });
+  await waiting.promise;
+  expect(coordinator.snapshot().running).toEqual({ cpu: 0, memory: 128 });
+  await expect(coordinator.run("other", { cpu: 1, memory: 128 }, undefined, async () => "other")).resolves.toBe(
+    "other",
+  );
+  release.resolve();
+  await expect(parent).resolves.toBe("parent");
+  expect(coordinator.snapshot().running).toEqual({ cpu: 0, memory: 0 });
+  coordinator.dispose();
+});
+
+test("a nested command obtains the released parent capacity during a host call", async () => {
+  const coordinator = createResourceCoordinator({ capacity: async () => ({ cpu: 1, memory: 256 }) });
+  const result = await coordinator.run("parent", { cpu: 1, memory: 64 }, undefined, async () =>
+    withExtensionHostWait(() => coordinator.run("child", { cpu: 1, memory: 64 }, undefined, async () => "child")),
+  );
+  expect(result).toBe("child");
+  expect(coordinator.snapshot().running).toEqual({ cpu: 0, memory: 0 });
+  coordinator.dispose();
+});
 
 test("shares capacity between execution, preparation and compilation and cancels queued work", async () => {
   const scheduler = createResourceCoordinator({ capacity: async () => ({ cpu: 2, memory: 512 }), maxQueued: 3 });

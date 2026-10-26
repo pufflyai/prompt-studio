@@ -4,18 +4,26 @@ import { isPackagedRuntime } from "pstdio-paths";
 import { createOwnerEndpoint } from "../owner/endpoint";
 import type { OwnerMessage } from "../owner/protocol";
 import { createExtensionProcessEnvironment } from "../process-environment";
+import { type ExtensionResourceCoordinator, extensionWorkCosts, selectExtensionResources } from "../resource-policy";
 import type { PreparationOperations } from "./operations";
 
-export const createExtensionPreparation = (runtime?: { executable: string; packaged: boolean }) => {
+export const createExtensionPreparation = (
+  runtime?: { executable: string; packaged: boolean },
+  resources?: ExtensionResourceCoordinator,
+) => {
   let child: Bun.Subprocess | undefined;
   let endpoint: ReturnType<typeof createOwnerEndpoint> | undefined;
   let reaping = Promise.resolve();
+  let admission = new AbortController();
 
   const disposeExtensionPreparation = () => {
     const previous = child;
     child = undefined;
-    endpoint?.close(new Error("Extension preparation stopped; pending preparations were cancelled."));
+    const error = new Error("Extension preparation stopped; pending preparations were cancelled.");
+    endpoint?.close(error);
     endpoint = undefined;
+    admission.abort(error);
+    admission = new AbortController();
     const exited = (async () => {
       if (previous && previous.exitCode === null) {
         previous.kill("SIGKILL");
@@ -59,26 +67,40 @@ export const createExtensionPreparation = (runtime?: { executable: string; packa
     input: Parameters<PreparationOperations[K]>[0],
     signal?: AbortSignal,
   ): Promise<Awaited<ReturnType<PreparationOperations[K]>>> => {
-    signal?.throwIfAborted();
-    await reaping;
-    signal?.throwIfAborted();
-    const active = start();
-    const abort = () => {
-      if (endpoint === active) void disposeExtensionPreparation();
-    };
-    // This opt-in preparation deadline remains a measured rollout gate, like owner initialization.
-    const deadline = setTimeout(abort, 10_000);
-    signal?.addEventListener("abort", abort, { once: true });
-    try {
-      return (await active.call(kind, [input])) as Awaited<ReturnType<PreparationOperations[K]>>;
-    } catch (error) {
-      // Callers own staging cleanup, so rejection must wait until the child stops touching it.
+    const lifetime = AbortSignal.any([admission.signal, ...(signal ? [signal] : [])]);
+    const invoke = async () => {
+      lifetime.throwIfAborted();
       await reaping;
-      throw error;
-    } finally {
-      clearTimeout(deadline);
-      signal?.removeEventListener("abort", abort);
-    }
+      lifetime.throwIfAborted();
+      const active = start();
+      const abort = () => {
+        if (endpoint === active) void disposeExtensionPreparation();
+      };
+      // This opt-in preparation deadline remains a measured rollout gate, like owner initialization.
+      const deadline = setTimeout(abort, 10_000);
+      lifetime.addEventListener("abort", abort, { once: true });
+      try {
+        return (await active.call(kind, [input])) as Awaited<ReturnType<PreparationOperations[K]>>;
+      } catch (error) {
+        // Callers own staging cleanup, so rejection must wait until the child stops touching it.
+        await reaping;
+        throw error;
+      } finally {
+        clearTimeout(deadline);
+        lifetime.removeEventListener("abort", abort);
+      }
+    };
+    const coordinator = selectExtensionResources(resources);
+    const result = await (coordinator
+      ? coordinator.run(
+          typeof input === "string" ? input : input.packagePath,
+          extensionWorkCosts.preparation,
+          lifetime,
+          invoke,
+          { priority: 1, bytes: JSON.stringify(input).length * 2 },
+        )
+      : invoke());
+    return result as Awaited<ReturnType<PreparationOperations[K]>>;
   };
   return {
     run: prepareExtensionWork,

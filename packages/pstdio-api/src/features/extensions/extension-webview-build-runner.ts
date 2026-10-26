@@ -19,8 +19,8 @@ export const expectedWebviewBuildSource = (row: InstalledSourceWithManifest) => 
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 const isSourceChanging = (sourcePath: string) => existsSync(join(sourcePath, EXTENSION_INSTALLING_MARKER));
-export const webviewBuildFailure = (installName: string, webviewId: string, details: string) =>
-  new Error(`Webview build failed for ${installName}/${webviewId}${details ? `: ${details}` : ""}`);
+export const webviewBuildFailure = (installName: string, webviewId: string, details: string, cause?: unknown) =>
+  new Error(`Webview build failed for ${installName}/${webviewId}${details ? `: ${details}` : ""}`, { cause });
 
 export const runExtensionWebviewBuild = async (input: {
   activeBuilds: Set<AbortController>;
@@ -43,6 +43,7 @@ export const runExtensionWebviewBuild = async (input: {
       entryPath: input.entryPath,
       outdir: input.distDir,
       signal: controller.signal,
+      owner: input.row.source_path,
     });
     if (result.success) return { status: "success" as const };
     if (!input.isCurrent() || isSourceChanging(input.row.source_path)) return { status: "unavailable" as const };
@@ -54,7 +55,7 @@ export const runExtensionWebviewBuild = async (input: {
     if (!input.isCurrent() || isSourceChanging(input.row.source_path)) return { status: "unavailable" as const };
     return {
       status: "failure" as const,
-      error: webviewBuildFailure(input.row.install_name, input.webviewId, errorMessage(error)),
+      error: webviewBuildFailure(input.row.install_name, input.webviewId, errorMessage(error), error),
     };
   } finally {
     input.signal?.removeEventListener("abort", abort);

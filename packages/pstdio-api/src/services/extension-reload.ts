@@ -32,10 +32,17 @@ export const buildErrorJson = (code: string, error: unknown, details: JsonRecord
     typeof error === "object" && error !== null && "diagnostics" in error
       ? (error as { diagnostics?: unknown }).diagnostics
       : undefined;
+  let cause: unknown;
+  if (error instanceof Error) cause = "code" in error ? error : error.cause;
+  const causeCode =
+    typeof cause === "object" && cause !== null && "code" in cause && typeof cause.code === "string"
+      ? cause.code
+      : undefined;
 
   return {
     code,
     message: error instanceof Error ? error.message : String(error),
+    ...(causeCode ? { cause: { code: causeCode } } : {}),
     ...(Array.isArray(diagnostics) ? { diagnostics } : {}),
     ...details,
   };

@@ -3,7 +3,31 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { inspectManagedWebviewBuildInputs } from "../../authoring/extension-webview-build-source";
-import { disposeExtensionPreparation, extensionPreparationPid, prepareExtensionWork } from "./supervisor";
+import { createResourceCoordinator } from "../resource-coordinator";
+import {
+  createExtensionPreparation,
+  disposeExtensionPreparation,
+  extensionPreparationPid,
+  prepareExtensionWork,
+} from "./supervisor";
+
+test("shutdown removes preparation still waiting for resources without spawning a child", async () => {
+  const resources = createResourceCoordinator({ capacity: async () => ({ cpu: 1, memory: 0 }) });
+  const preparation = createExtensionPreparation(undefined, resources);
+  try {
+    const loading = preparation.run("sourceHash", "unused-before-admission").catch((error) => error);
+    await Bun.sleep(0);
+    expect(resources.snapshot().queued).toBe(1);
+    expect(preparation.pid).toBeUndefined();
+    await preparation.dispose();
+    expect(await loading).toBeInstanceOf(Error);
+    expect(resources.snapshot().queued).toBe(0);
+    expect(preparation.pid).toBeUndefined();
+  } finally {
+    await preparation.dispose();
+    resources.dispose();
+  }
+});
 
 test("cancelling preparation reaps the process before rejecting and permits a later explicit request", async () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-cancel-preparation-"));

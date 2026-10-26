@@ -37,6 +37,7 @@ export const validateExtensionWebviews = async (
         entryPath: source.entryPath,
         outdir: join(root, String(index), "dist"),
         signal,
+        owner: packagePath,
       });
       if (!outcome.success) throw new Error(`Extension webview ${view.id} cannot activate: ${outcome.details}`);
     }

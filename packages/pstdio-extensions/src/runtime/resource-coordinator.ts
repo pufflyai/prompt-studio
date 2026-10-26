@@ -1,5 +1,5 @@
-import { AsyncLocalStorage } from "node:async_hooks";
 import { type ResourceCapacity, readResourceCapacity } from "./resource-capacity";
+import { holdsExtensionAdmission, runWithExtensionAdmission } from "./resource-lease";
 
 export interface ResourceCost {
   cpu: number;
@@ -36,7 +36,6 @@ export const createResourceCoordinator = (
   } = {},
 ) => {
   const queue: WaitingJob[] = [];
-  const current = new AsyncLocalStorage<{ coordinator: object }>();
   const identity = {};
   let running = { cpu: 0, memory: 0 };
   let queuedBytes = 0;
@@ -103,20 +102,18 @@ export const createResourceCoordinator = (
     }
   };
 
-  const run = async <T>(
+  const acquire = async (
     owner: string,
     cost: ResourceCost,
     signal: AbortSignal | undefined,
-    work: () => Promise<T>,
     metadata: { bytes?: number; priority?: number; onWaiting?: () => void } = {},
-  ): Promise<T> => {
+  ) => {
     signal?.throwIfAborted();
     if (!Number.isFinite(cost.cpu) || cost.cpu <= 0 || !Number.isFinite(cost.memory) || cost.memory < 0)
       throw new Error("Extension resource costs must be finite and nonnegative, with a positive CPU estimate.");
-    // Host callbacks preserve the invocation's async context. Nested commands share its
-    // reservation instead of waiting behind their own parent on a one-job machine.
-    if (current.getStore()?.coordinator === identity) return work();
     const bytes = metadata.bytes ?? 0;
+    if (!Number.isFinite(bytes) || bytes < 0)
+      throw new Error("Extension queue payload estimates must be finite and nonnegative.");
     if (
       stopped ||
       queue.length >= (options.maxQueued ?? 128) ||
@@ -160,20 +157,55 @@ export const createResourceCoordinator = (
           );
           void drain();
         }, options.waitMs ?? 30_000);
-        metadata.onWaiting?.();
+        try {
+          metadata.onWaiting?.();
+        } catch {
+          /* Progress observers do not own queue state. */
+        }
         void drain();
       });
     } finally {
       clearTimeout(timer);
       signal?.removeEventListener("abort", abort);
     }
-    try {
-      signal?.throwIfAborted();
-      return await current.run({ coordinator: identity }, work);
-    } finally {
-      running = { cpu: running.cpu - job.cost.cpu, memory: running.memory - job.cost.memory };
+    let cpuHeld = true;
+    let memoryHeld = true;
+    const releaseCpu = () => {
+      if (!cpuHeld) return;
+      cpuHeld = false;
+      running.cpu -= job.cost.cpu;
       void drain();
-    }
+    };
+    return {
+      releaseCpu,
+      resumeCpu: () => {
+        if (cpuHeld || !memoryHeld) return;
+        cpuHeld = true;
+        running.cpu += job.cost.cpu;
+      },
+      release: () => {
+        releaseCpu();
+        if (!memoryHeld) return;
+        memoryHeld = false;
+        running.memory -= job.cost.memory;
+        void drain();
+      },
+    };
+  };
+  const run = async <T>(
+    owner: string,
+    cost: ResourceCost,
+    signal: AbortSignal | undefined,
+    work: () => Promise<T>,
+    metadata: { bytes?: number; priority?: number; onWaiting?: () => void } = {},
+  ) => {
+    signal?.throwIfAborted();
+    if (holdsExtensionAdmission(identity)) return work();
+    const allocation = await acquire(owner, cost, signal, metadata);
+    return runWithExtensionAdmission(identity, allocation, async () => {
+      signal?.throwIfAborted();
+      return work();
+    });
   };
   return {
     run,

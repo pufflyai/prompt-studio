@@ -4,10 +4,66 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { runInNewContext } from "node:vm";
+import { createResourceCoordinator } from "pstdio-extensions";
+import { buildErrorJson } from "../../services/extension-reload";
 import { type CompilerObservation, subscribeExtensionCompilers } from "./extension-compiler-observations";
+import { runExtensionWebviewBuild } from "./extension-webview-build-runner";
 import { buildExtensionWebview } from "./extension-webview-builder";
 
 describe("buildExtensionWebview", () => {
+  test("retains a resource deadline code in the scoped build diagnostic", async () => {
+    const resources = createResourceCoordinator({ capacity: async () => ({ cpu: 1, memory: 0 }), waitMs: 10 });
+    const root = mkdtempSync(join(tmpdir(), "pstdio-build-deadline-"));
+    try {
+      const result = await runExtensionWebviewBuild({
+        activeBuilds: new Set(),
+        buildWebview: (input) => buildExtensionWebview({ ...input, resources }),
+        distDir: join(root, "dist"),
+        entryPath: join(root, "never-read.ts"),
+        isCurrent: () => true,
+        row: { id: "owner", install_name: "owner", source_path: root, updated_at: "1" },
+        webviewId: "view",
+      });
+      expect(result.status).toBe("failure");
+      if (result.status !== "failure") throw new Error("Expected a resource failure");
+      expect(buildErrorJson("extension_webview_build_failed", result.error)).toMatchObject({
+        cause: { code: "extension_resource_deadline" },
+      });
+    } finally {
+      resources.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("does not spawn a compiler without memory and removes its cancelled admission", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-build-admission-"));
+    const resources = createResourceCoordinator({ capacity: async () => ({ cpu: 4, memory: 0 }) });
+    const events: CompilerObservation[] = [];
+    const unsubscribe = subscribeExtensionCompilers((event) => events.push(event));
+    const controller = new AbortController();
+    try {
+      const work = buildExtensionWebview({
+        entryPath: join(root, "never-read.ts"),
+        outdir: join(root, "out"),
+        signal: controller.signal,
+        resources,
+      });
+      const failure = work.catch((error) => error);
+      await Bun.sleep(0);
+      expect(resources.snapshot().queued).toBe(1);
+      expect(events.filter((event) => event.phase === "spawned")).toHaveLength(0);
+      controller.abort();
+      expect(await failure).toBeInstanceOf(Error);
+      expect(resources.snapshot().queued).toBe(0);
+      expect(events.some((event) => event.phase === "rejected" && event.cancelled)).toBe(true);
+      expect(resources.snapshot().running).toEqual({ cpu: 0, memory: 0 });
+    } finally {
+      unsubscribe();
+      resources.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("reports actual compiler lifecycle and measured child resource use", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-compiler-observations-"));
     const events: CompilerObservation[] = [];

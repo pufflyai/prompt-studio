@@ -6,9 +6,10 @@ import { isPackagedRuntime } from "pstdio-paths";
 import type { ExtensionDiagnostic } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { createExtensionProcessEnvironment } from "../process-environment";
+import { type ExtensionResourceCoordinator, extensionWorkCosts, selectExtensionResources } from "../resource-policy";
 import { createOwnerEndpoint } from "./endpoint";
-import { prepareOwnerContext } from "./local-values";
 import type { OwnerMessage } from "./protocol";
+import { createSupervisedFunctionWrapper } from "./supervised-functions";
 
 export class ExtensionOwnerError extends Error {
   readonly code: string;
@@ -27,7 +28,9 @@ export const createExtensionOwner = (input: {
   runtime?: { executable: string; packaged: boolean };
   sourceKind?: LoadedExtensionSource["sourceKind"];
   apiProvider?: "host" | "pst";
+  resources?: ExtensionResourceCoordinator;
 }) => {
+  const resources = selectExtensionResources(input.resources);
   let child: Bun.Subprocess | undefined;
   let endpoint: ReturnType<typeof createOwnerEndpoint> | undefined;
   let loading: Promise<LoadedExtensionSource | null> | undefined;
@@ -38,10 +41,15 @@ export const createExtensionOwner = (input: {
   let prepared: { entryPath: string; packagePath: string } | undefined;
   let previous: Omit<LoadedExtensionSource, "definition"> | undefined;
   let generation = 0;
+  let admission = new AbortController();
+  let reaping = Promise.resolve();
   const listeners = new Set<() => void>();
 
   const terminate = async (error: ExtensionOwnerError) => {
     const previous = child;
+    reaping = Promise.all([reaping, previous?.exited]).then(() => {});
+    admission.abort(error);
+    admission = new AbortController();
     generation++;
     endpoint?.close(error);
     endpoint = undefined;
@@ -105,26 +113,15 @@ export const createExtensionOwner = (input: {
       );
     return replacement(...args);
   };
-  const wrapFunctions = (value: unknown, path: string[] = []): unknown => {
-    if (typeof value === "function")
-      return async (...args: unknown[]) => {
-        if (!child) return recoverHandler(path, args);
-        const context = args[0] as { signal?: AbortSignal } | undefined;
-        const cleanup = context?.signal instanceof AbortSignal ? watchSignal(context.signal) : () => {};
-        const invocation =
-          context && typeof context === "object"
-            ? [prepareOwnerContext(context as Record<string, unknown>), ...args.slice(1)]
-            : args;
-        try {
-          return await value(...invocation);
-        } finally {
-          cleanup();
-        }
-      };
-    if (Array.isArray(value)) return value.map((item, index) => wrapFunctions(item, [...path, String(index)]));
-    if (!value || typeof value !== "object") return value;
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, wrapFunctions(item, [...path, key])]));
-  };
+  const wrapFunctions = createSupervisedFunctionWrapper({
+    sourcePath: input.path,
+    resources,
+    isLive: () => Boolean(child),
+    recover: recoverHandler,
+    signal: () => admission.signal,
+    awaitExit: () => reaping,
+    watchSignal,
+  });
 
   const load = () => {
     if (stopped || disposed)
@@ -137,7 +134,8 @@ export const createExtensionOwner = (input: {
       );
     if (loading) return loading;
     const startedGeneration = generation;
-    loading = (async () => {
+    const initialize = async () => {
+      await reaping;
       const ownerRoot = root ?? (await mkdtemp(join(tmpdir(), "pstdio-extension-owner-")));
       if (stopped || disposed || generation !== startedGeneration) {
         if (ownerRoot !== root) await rm(ownerRoot, { recursive: true, force: true });
@@ -210,7 +208,17 @@ export const createExtensionOwner = (input: {
       } finally {
         clearTimeout(timer);
       }
-    })();
+    };
+    const pending = (
+      resources
+        ? resources.run(input.path, extensionWorkCosts.initialization, admission.signal, initialize, { priority: 1 })
+        : initialize()
+    ).catch(async (error) => {
+      await reaping;
+      if (loading === pending) loading = undefined;
+      throw error;
+    });
+    loading = pending;
     return loading;
   };
 

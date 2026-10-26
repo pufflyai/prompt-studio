@@ -1,5 +1,11 @@
 import { availableParallelism } from "node:os";
 import { dirname } from "node:path";
+import {
+  createExtensionProcessEnvironment,
+  type ExtensionResourceCoordinator,
+  extensionWorkCosts,
+  selectExtensionResources,
+} from "pstdio-extensions";
 import { isPackagedRuntime } from "pstdio-paths";
 import { observeExtensionCompiler } from "./extension-compiler-observations";
 import { runCommand } from "./install-extension-dependencies";
@@ -17,6 +23,8 @@ export type ExtensionWebviewBuildInput = {
   entryPath: string;
   outdir: string;
   signal: AbortSignal;
+  owner?: string;
+  resources?: ExtensionResourceCoordinator;
 };
 
 export type ExtensionWebviewBuildResult = {
@@ -29,6 +37,7 @@ export type ExtensionWebviewBuilder = (input: ExtensionWebviewBuildInput) => Pro
 const buildArguments = (input: ExtensionWebviewBuildInput) => {
   const options = extensionWebviewBuildOptions;
   return [
+    "--no-env-file",
     "build",
     input.entryPath,
     `--outdir=${input.outdir}`,
@@ -70,14 +79,58 @@ export const buildExtensionWebview: ExtensionWebviewBuilder = async (input) => {
   if (input.signal.aborted) return { success: false, details: "Build aborted." };
   const id = crypto.randomUUID();
   observeExtensionCompiler({ id, phase: "queued", at: Date.now() });
+  const resources = selectExtensionResources(input.resources);
+  const compile = () => runCompiler(input, id);
+  if (resources) return runAdmittedCompiler(input, id, resources);
   await acquireBuildSlot();
+  try {
+    return await compile();
+  } finally {
+    releaseBuildSlot();
+  }
+};
+
+const runAdmittedCompiler = async (
+  input: ExtensionWebviewBuildInput,
+  id: string,
+  resources: ExtensionResourceCoordinator,
+) => {
+  let admitted = false;
+  try {
+    return await resources.run(
+      input.owner ?? dirname(input.entryPath),
+      extensionWorkCosts.compiler,
+      input.signal,
+      () => {
+        admitted = true;
+        return runCompiler(input, id);
+      },
+      { priority: 0, bytes: 2 * (input.entryPath.length + input.outdir.length) },
+    );
+  } catch (error) {
+    if (!admitted)
+      observeExtensionCompiler({
+        id,
+        phase: "rejected",
+        at: Date.now(),
+        cancelled: input.signal.aborted,
+        failureCode: typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined,
+      });
+    throw error;
+  }
+};
+
+const runCompiler = async (input: ExtensionWebviewBuildInput, id: string) => {
   let result: Awaited<ReturnType<typeof runCommand>> | undefined;
   let child: Pick<Bun.Subprocess, "pid" | "resourceUsage"> | undefined;
   try {
     if (input.signal.aborted) return { success: false, details: "Build aborted." };
     result = await runCommand(process.execPath, buildArguments(input), {
       cwd: dirname(input.entryPath),
-      env: { ...process.env, NO_COLOR: "1", ...(isPackagedRuntime() ? { BUN_BE_BUN: "1" } : {}) },
+      env: createExtensionProcessEnvironment(process.env, {
+        NO_COLOR: "1",
+        ...(isPackagedRuntime() ? { BUN_BE_BUN: "1" } : {}),
+      }),
       signal: input.signal,
       onSpawn: (spawned) => {
         child = spawned;
@@ -96,7 +149,6 @@ export const buildExtensionWebview: ExtensionWebviewBuilder = async (input) => {
       cpuMicros: usage ? Number(usage.cpuTime.total) : undefined,
       peakRssBytes: usage?.maxRSS,
     });
-    releaseBuildSlot();
   }
 
   if (input.signal.aborted) return { success: false, details: "Build aborted." };

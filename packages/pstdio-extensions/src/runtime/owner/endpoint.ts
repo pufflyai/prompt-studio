@@ -106,7 +106,9 @@ export const createOwnerEndpoint = (sendMessage: (message: OwnerMessage) => void
         store.cleanup.add(dispose);
         void done.then(dispose, dispose);
       }
-      send({ type: "result", id: message.id, value: encode(result, handle.scope) });
+      // Factory-returned methods inherit the exporting invocation's authority and admission scope.
+      const value = handle.inContext(() => encode(result, handle.scope));
+      send({ type: "result", id: message.id, value });
     } catch (error) {
       if (!closed) send({ type: "error", id: message.id, error: remoteError(error) });
     } finally {

@@ -111,5 +111,10 @@ export {
 } from "./runtime/preparation/supervisor";
 export { createReadBoundary } from "./runtime/read-boundary";
 export { createResourceCoordinator, ExtensionResourceError, extensionResources } from "./runtime/resource-coordinator";
+export {
+  type ExtensionResourceCoordinator,
+  extensionWorkCosts,
+  selectExtensionResources,
+} from "./runtime/resource-policy";
 export { workbenchIconNames } from "./runtime/workbench-icon-names";
 export type * from "./types";

@@ -1,12 +1,13 @@
 export interface CompilerObservation {
   id: string;
-  phase: "queued" | "spawned" | "exited";
+  phase: "queued" | "spawned" | "exited" | "rejected";
   at: number;
   pid?: number;
   exitCode?: number;
   cancelled?: boolean;
   cpuMicros?: number;
   peakRssBytes?: number;
+  failureCode?: string;
 }
 
 const listeners = new Set<(event: CompilerObservation) => void>();
