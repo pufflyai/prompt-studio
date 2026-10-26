@@ -97,7 +97,7 @@ const runTrial = async (trial: number, mode: MeasurementMode) => {
       initialized: initialized.outcome.value,
       reloadHost,
       recovery,
-      recoveryControl: "Authenticated host execution endpoint, Stop/Restart and fresh persisted read through HTTP",
+      recoveryControl: "Host execution endpoint, Stop/Restart and fresh persisted read through HTTP",
     };
     await Bun.write(join(root, "result.json"), JSON.stringify(result, null, 2));
     return result;
