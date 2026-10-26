@@ -38,7 +38,13 @@ interface KeybindingRegistryDeps {
   commands: CommandRegistry;
   context: ContextKeyService;
   preferences?: () => PreferenceRegistry;
-  actions?: () => { label: string; action: NavigationTarget; ownerId: string; aliasCommandId?: string }[];
+  actions?: () => {
+    label: string;
+    action: NavigationTarget;
+    ownerId: string;
+    source?: ContributionMetadata["source"];
+    aliasCommandId?: string;
+  }[];
 }
 
 export interface KeybindingRegistryStoreState {
@@ -86,6 +92,7 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     else if (layer === "current") defaultScope = "panel";
     return {
       ...binding,
+      id: getId(binding),
       targetScope: binding.targetScope ?? defaultScope,
       keybinding: override?.keybinding ?? binding.keybinding,
       layer,
@@ -119,8 +126,9 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
       if (seen.has(key)) continue;
       seen.add(key);
       records.push({
-        ...normalizeContributionMetadata({ ownerId: action.ownerId }),
+        ...normalizeContributionMetadata({ ownerId: action.ownerId, source: action.source }),
         ...action,
+        sourceExtensionId: action.source === "extension" ? action.ownerId : undefined,
         id: `action:${key}`,
         keybinding: "",
       });

@@ -4,6 +4,7 @@ import { WorkbenchKeyboardShortcutsPanel } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react";
 
 const workbench = createWorkbench();
+workbench.resources.registerKind({ kind: "note", label: "Notes", extensionId: "pstdio.pstdio-notes" });
 workbench.commands.registerCommand({ id: "notes.create", label: "New note" }, { execute() {} });
 workbench.keybindings.registerKeybinding({
   sourceExtensionId: "pstdio.pstdio-notes",
@@ -11,6 +12,19 @@ workbench.keybindings.registerKeybinding({
   keybinding: "N",
   layer: "create",
 });
+workbench.commands.registerCommand(
+  { id: "sessions.open", label: "Go to sessions", category: "Sessions" },
+  { execute() {} },
+);
+for (const [layer, keybinding] of [
+  [undefined, "Alt+Shift+S"],
+  ["go", "S"],
+] as const)
+  workbench.keybindings.registerKeybinding({
+    layer,
+    keybinding,
+    action: { kind: "command", commandId: "sessions.open" },
+  });
 const meta = {
   title: "Help/Keyboard shortcuts",
   component: WorkbenchKeyboardShortcutsPanel,
@@ -19,7 +33,7 @@ const meta = {
     (Story) => (
       <Dialog.Root open>
         <Dialog.Positioner>
-          <Dialog.Content>
+          <Dialog.Content maxW="palette-width" w="full">
             <Story />
           </Dialog.Content>
         </Dialog.Positioner>
@@ -30,3 +44,4 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const AssignedShortcuts: Story = {};
+export const FilteredResource: Story = { args: { initialFilter: "Sessions" } };

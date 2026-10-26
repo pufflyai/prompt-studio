@@ -1,7 +1,23 @@
 import { describe, expect, test } from "bun:test";
 import { createContextKeyService } from "../../shared/context/context-key-service";
+import { createWorkbench } from "../../workbench-core";
 import { createCommandRegistry } from "../commands/command-registry";
 import { createKeybindingRegistry } from "./keybinding-registry";
+
+test("extension navigation actions retain their owner in the shortcut catalog", () => {
+  const core = createWorkbench();
+  core.navigationTrees.registerContribution({
+    id: "links",
+    owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+    sourceExtensionId: "acme.links",
+    declarationIndex: 0,
+    getSections: () => [],
+    listActions: () => [{ label: "Open tools", action: { kind: "href", href: "https://example.com" } }],
+  });
+  expect(core.keyboard.catalog().find((entry) => entry.label === "Open tools")?.binding.sourceExtensionId).toBe(
+    "acme.links",
+  );
+});
 
 describe("createKeybindingRegistry", () => {
   test("menu aliases share the source action's catalog entry", () => {

@@ -274,8 +274,8 @@ export const createWorkspacesModule = () =>
       ctx.commands.registerCommand(
         {
           id: dashboardCommandIds.openWorkspaces,
-          label: "Open workspaces",
-          category: "Dashboard",
+          label: "Go to workspaces",
+          category: "Workspaces",
           icon: dashboardViews.workspaces.icon,
         },
         {
@@ -283,7 +283,7 @@ export const createWorkspacesModule = () =>
         },
       );
       ctx.commands.registerCommand(
-        { id: dashboardCommandIds.createWorkspace, label: "New workspace", category: "Dashboard", icon: "Plus" },
+        { id: dashboardCommandIds.createWorkspace, label: "New workspace", category: "Workspaces", icon: "Plus" },
         { execute: (options: CreateWorkspaceCommandParams | undefined) => openCreateWorkspace(ctx, options) },
       );
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {

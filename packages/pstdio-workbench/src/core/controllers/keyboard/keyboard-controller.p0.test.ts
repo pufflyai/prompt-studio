@@ -27,6 +27,25 @@ const setup = () => {
   return { core, ticket };
 };
 
+test("previous tab from an unnumbered panel selects the last numbered tab", () => {
+  const { core, ticket } = setup();
+  ticket("first");
+  const last = ticket("last", "secondary");
+  core.layout.registerWidget({
+    id: "single",
+    title: "Single view",
+    region: "side",
+    rendererId: "test",
+    closable: false,
+  });
+  core.layout.setRegionVisible("side", true);
+  const single = core.layout.openWidget("single", { region: "side" });
+  core.keyboard.open();
+  core.keyboard.selectPresentation(single.widgetId);
+  core.keyboard.nextTab(-1);
+  expect(core.keyboard.store.getState().selectedId).toBe(last.widgetId);
+});
+
 test("direct shortcuts preserve the live view and resource context", () => {
   const { core } = setup();
   core.context.set("workbench.view.id", "ticket-editor");

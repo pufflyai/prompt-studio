@@ -223,7 +223,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
   const reference = page.getByRole("dialog").last();
   await reference.getByRole("textbox", { name: "Search keyboard shortcuts" }).fill("New note");
-  await expect(reference.getByRole("group", { name: "New note", exact: true }).first()).toContainText("Notes");
+  await expect(reference.getByRole("heading", { name: /^Notes?$/ }).first()).toBeVisible();
   await expect(
     reference.getByRole("group", { name: "New note", exact: true }).first().locator("kbd").first(),
   ).toBeVisible();

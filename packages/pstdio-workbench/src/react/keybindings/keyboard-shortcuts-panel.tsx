@@ -1,33 +1,37 @@
-import { Dialog, Input, Stack, Text } from "@chakra-ui/react";
-import { ListRow, ScrollArea } from "@pstdio/ui";
-import { useState } from "react";
+import { HStack, Stack, Text } from "@chakra-ui/react";
+import { ListRow, SearchModalContent } from "@pstdio/ui";
+import { Fragment, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import type { ResolvedShortcut } from "../../core/controllers/keyboard/shortcut-catalog";
 import { shortcutDisplayKeys, shortcutOpeningChord } from "../../core/controllers/keyboard/shortcut-menu";
-import { getKeybindingSteps } from "../../core/registries/keybindings/keybinding-registry";
+import { createShortcutReference } from "../../core/controllers/keyboard/shortcut-reference";
+import { WorkbenchIcon } from "../shared/icon";
 import { WorkbenchShortcutKeys } from "./shortcut-keys";
 import { useShortcutCatalog } from "./use-shortcut-catalog";
 
 const ShortcutRow = (props: {
-  shortcut: ResolvedShortcut;
-  owner: string;
+  entry: ReturnType<typeof createShortcutReference>[number];
   openingChord: string;
   catalog: ResolvedShortcut[];
 }) => {
-  const { shortcut, owner, openingChord, catalog } = props;
-  const assigned = getKeybindingSteps(shortcut.binding.keybinding).length > 0;
-  let status = "Unassigned";
-  if (assigned) status = shortcut.disabled ? "Inactive" : "Assigned";
+  const { entry, openingChord, catalog } = props;
   return (
-    <Stack role="group" aria-label={shortcut.label} gap="0">
+    <Stack role="group" aria-label={entry.label} gap="0">
       <ListRow
         variant="full-width"
-        label={shortcut.label}
-        description={`${owner} · ${shortcut.binding.layer ?? "Direct"} · ${status}`}
+        label={entry.label}
+        disabled={entry.disabled}
         endContent={
-          assigned ? (
-            <WorkbenchShortcutKeys shortcut={shortcut} openingChord={openingChord} catalog={catalog} />
-          ) : undefined
+          <HStack gap="sm">
+            {entry.shortcuts.map((shortcut) => (
+              <WorkbenchShortcutKeys
+                key={shortcut.id}
+                shortcut={shortcut}
+                openingChord={openingChord}
+                catalog={catalog}
+              />
+            ))}
+          </HStack>
         }
       />
     </Stack>
@@ -45,39 +49,38 @@ export const WorkbenchKeyboardShortcutsPanel = (props: KeyboardShortcutsPanelPro
   const [query, setQuery] = useState(initialFilter);
   const { catalog } = useShortcutCatalog(workbench);
   const openingChord = shortcutOpeningChord(catalog);
-  const owner = (shortcut: ResolvedShortcut) =>
-    ownerLabels[shortcut.binding.sourceExtensionId ?? ""] ?? shortcut.binding.sourceExtensionLabel ?? "Core";
-  const filtered = catalog.filter((shortcut) =>
-    `${shortcut.label} ${shortcut.id} ${owner(shortcut)} ${shortcutDisplayKeys(shortcut, openingChord, catalog).join(" ")}`
+  const entries = createShortcutReference(workbench, catalog, ownerLabels);
+  const filtered = entries.filter((entry) =>
+    `${entry.label} ${entry.group} ${entry.shortcuts.map((shortcut) => `${shortcut.id} ${shortcut.binding.sourceExtensionId ?? ""} ${shortcut.binding.sourceExtensionLabel ?? ""} ${shortcutDisplayKeys(shortcut, openingChord, catalog).join(" ")}`).join(" ")}`
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
   return (
-    <Stack gap="0" minW="0">
-      <Dialog.Header>
-        <Text textStyle="heading/S">Keyboard shortcuts</Text>
-      </Dialog.Header>
-      <Input
-        aria-label="Search keyboard shortcuts"
-        placeholder="Search action, extension, or keys"
-        size="sm"
-        variant="borderless"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-      />
-      <Dialog.Body p="0">
-        <ScrollArea maxH="palette-results-height" showHorizontalScrollbar={false}>
-          {filtered.map((shortcut) => (
-            <ShortcutRow
-              key={shortcut.id}
-              shortcut={shortcut}
-              owner={owner(shortcut)}
-              openingChord={openingChord}
-              catalog={catalog}
-            />
-          ))}
-        </ScrollArea>
-      </Dialog.Body>
-    </Stack>
+    <SearchModalContent
+      title="Keyboard shortcuts"
+      searchValue={query}
+      searchPlaceholder="Search keyboard shortcuts"
+      searchIcon={<WorkbenchIcon name="search" size={16} />}
+      scrollAreaProps={{ maxH: "palette-results-height" }}
+      onSearchChange={setQuery}
+    >
+      <Stack gap="0">
+        {filtered.map((entry, index) => (
+          <Fragment key={entry.id}>
+            {entry.group !== filtered[index - 1]?.group ? (
+              <Text as="h3" textStyle="label/XS/medium" color="fg.muted" px="sm" pt="xs" pb="2xs">
+                {entry.group}
+              </Text>
+            ) : null}
+            <ShortcutRow entry={entry} openingChord={openingChord} catalog={catalog} />
+          </Fragment>
+        ))}
+        {!filtered.length ? (
+          <Text textStyle="paragraph/S/regular" color="fg.muted" px="sm" py="md">
+            No matching shortcuts.
+          </Text>
+        ) : null}
+      </Stack>
+    </SearchModalContent>
   );
 };

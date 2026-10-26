@@ -10,13 +10,15 @@ On macOS, Alt is Option. Entry matches the physical Space key even when Option p
 
 Extensions contribute to these shared groups. No flow requires choosing an extension by name first.
 
+The shortcut reference uses the command palette's search layout, groups assigned actions by resource, and shows alternative key sequences on one row. Rows contain the action and keys without subtitles. Internal commands with no assigned shortcut stay in command discovery.
+
 ## Navigation
 
 **Alt+Shift+Up** or **Go → P** runs the Sidenav's **Back to project** action from nested ticket or session navigation. It returns to the last root-level page, with Home as the fallback. The action follows the active mode's name, appears only inside a navigation level, and keeps shortcut mode active. The direct chord respects focused editor inputs; the keyboard-mode sequence remains available there.
 
 Left and Right select the previous or next tab across the visible layout and wrap at either end. One tab has an outline for the keyboard selection, even when several panels each have a selected tab. Navigation keeps shortcut mode active, including Go actions and their aliases. Labels use Go to sessions, Go to tickets, and the same pattern for other destinations; history actions use Go back and Go forward. A completed action keeps its current group available. Enter or Escape returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
 
-Alt+Shift+1 through Alt+Shift+9 directly select global tab numbers. Inside keyboard mode, plain 1 through 9 do the same from any navigation group. Empty-panel cards share this numbering: their displayed number opens that card in its own panel. Cards show the direct chord outside keyboard mode and the plain number inside it. An action or target chooser owns its own numbers while open. Numbers follow spatial placement and displayed tab/card order, and recompute when the layout changes. View → T opens a searchable picker beyond nine. Direct selection outside keyboard mode stays outside it.
+Alt+Shift+1 through Alt+Shift+9 are the default chords for global tab numbers. User overrides live in the `workbench.keyboard` preference and can be set through `workbench.keyboard.setAssignment`; the reference is read-only. Inside keyboard mode, plain 1 through 9 select the same numbers from any navigation group. Empty-panel cards share this numbering: their displayed number opens that card in its own panel. Cards show the direct chord outside keyboard mode and the plain number inside it. An action or target chooser owns its own numbers while open. Numbers follow spatial placement and displayed tab/card order, and recompute when the layout changes. View → T opens a searchable picker beyond nine. Direct selection outside keyboard mode stays outside it.
 
 View → N chooses a destination and addable panel type for a persistent new tab. Current view → N starts a fresh session in an existing Session tab. View → O moves one tab while preserving its identity; View → R repositions a whole panel using its allowed positions. Canceling an unfinished flow changes nothing.
 

@@ -1,3 +1,4 @@
+import { Dialog } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "storybook/test";
 import { WorkbenchStory } from "../../examples/workbench-story";
@@ -31,5 +32,14 @@ export const TargetSelection: Story = { args: { workbench: conflict } };
 const management = createKeyboardWorkbench();
 export const ShortcutReference: Story = {
   args: { workbench: management },
-  render: () => <WorkbenchKeyboardShortcutsPanel workbench={management} />,
+  render: () => (
+    <Dialog.Root open>
+      <Dialog.Backdrop />
+      <Dialog.Positioner>
+        <Dialog.Content maxW="palette-width" w="full">
+          <WorkbenchKeyboardShortcutsPanel workbench={management} />
+        </Dialog.Content>
+      </Dialog.Positioner>
+    </Dialog.Root>
+  ),
 };

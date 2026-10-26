@@ -17,12 +17,16 @@ export const createWorkbenchKeyboard = (
 });
 
 export const workbenchShortcutActions = (core: WorkbenchCore) => [
-  ...core.navigationTrees.listActions(),
+  ...core.navigationTrees.listActions().map((action) => ({
+    ...action,
+    source: action.ownerId === "pstdio" ? ("module" as const) : ("extension" as const),
+  })),
   ...Object.values(core.layout.menuStore.getState().itemsByPath)
     .flat()
     .map((item) => ({
       label: item.label ?? core.commands.getCommand(item.commandId)?.command.label ?? item.commandId,
       ownerId: item.ownerId,
+      source: item.source,
       aliasCommandId: item.sourceCommandId && item.sourceCommandId !== item.commandId ? item.commandId : undefined,
       action: {
         kind: "command" as const,

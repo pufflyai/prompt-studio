@@ -167,7 +167,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
     },
   );
   ctx.commands.registerCommand(
-    { id: dashboardCommandIds.createSession, label: "New session", category: "Dashboard", icon: "MessageSquarePlus" },
+    { id: dashboardCommandIds.createSession, label: "New session", category: "Sessions", icon: "MessageSquarePlus" },
     {
       execute: async (args, context) => {
         const {

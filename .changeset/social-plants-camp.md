@@ -4,4 +4,4 @@
 "@pstdio/sdk": minor
 ---
 
-Add shared keyboard action groups with resource creation through existing forms, numbered conflicts, numbered tabs and placeholder cards, mode-return navigation, and a shared shortcut reference.
+Add shared keyboard action groups with existing resource creation flows, numbered tabs and choices, mode-return navigation, and a grouped palette-style shortcut reference.

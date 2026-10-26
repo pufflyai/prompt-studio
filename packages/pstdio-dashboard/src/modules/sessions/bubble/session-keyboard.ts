@@ -6,7 +6,7 @@ import { resolveSessionTabWorkspace } from "./session-tab-presentation";
 export const registerSessionKeyboard = (ctx: WorkbenchModuleContext) => {
   const id = "dashboard.newSessionInTab";
   ctx.commands.registerCommand(
-    { id, label: "New session in this tab" },
+    { id, label: "New session in this tab", category: "Sessions" },
     {
       isVisible: (_args, context) =>
         Boolean(context?.resource && ["session", "session-draft"].includes(context.resource.type)),

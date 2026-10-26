@@ -1,5 +1,5 @@
 import type { WorkbenchModuleContribution } from "@pstdio/workbench";
-import { WORKBENCH_KEYBOARD_OPEN_COMMAND_ID, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
+import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -22,7 +22,13 @@ export const createKeyboardShortcutsModule = () =>
       ctx.overlays.registerOverlay({
         id: dashboardWidgetIds.shortcutHelp,
         viewId: dashboardWidgetIds.shortcutHelp,
-        config: { size: "md", placement: "center", scrollBehavior: "inside" },
+        config: {
+          size: "md",
+          placement: "center",
+          scrollBehavior: "inside",
+          contentMaxWidth: "palette-width",
+          contentWidth: "full",
+        },
       });
 
       ctx.commands.registerCommand(
@@ -53,6 +59,5 @@ export const createKeyboardShortcutsModule = () =>
         order: 45,
       });
       ctx.layout.registerMenuItem(dashboardHelpMenuPath, { commandId: dashboardCommandIds.openShortcuts, order: 10 });
-      ctx.layout.registerMenuItem(dashboardHelpMenuPath, { commandId: WORKBENCH_KEYBOARD_OPEN_COMMAND_ID, order: 11 });
     },
   }) satisfies WorkbenchModuleContribution;

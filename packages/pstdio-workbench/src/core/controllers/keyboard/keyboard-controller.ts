@@ -210,6 +210,10 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       const at = tabs.findIndex(
         (tab) => tab.id === (store.getState().selectedId ?? getCore().layout.getLayout().activeWidgetId),
       );
+      if (at === -1) {
+        activate(direction > 0 ? tabs[0]! : tabs.at(-1)!);
+        return;
+      }
       activate(tabs[(at + direction + tabs.length) % tabs.length]!);
     },
     choose: async (key: string) => {

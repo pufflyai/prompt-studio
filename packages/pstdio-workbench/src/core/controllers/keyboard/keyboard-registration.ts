@@ -34,6 +34,7 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
     {
       id: WORKBENCH_KEYBOARD_SELECT_TAB_COMMAND_ID,
       label: "Select numbered tab",
+      category: "Panels and tabs",
       params: { number: { type: "number", required: true } },
     },
     { execute: (args: { number: number }) => core.keyboard.selectTab(args.number) },
@@ -41,6 +42,7 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
   for (let number = 1; number <= 9; number++)
     core.keybindings.registerKeybinding({
       id: `workbench.keyboard.tab.${number}`,
+      label: `Select tab ${number}`,
       action: { kind: "command", commandId: WORKBENCH_KEYBOARD_SELECT_TAB_COMMAND_ID, args: { number } },
       keybinding: `Alt+Shift+${number}`,
       allowInInputs: true,
