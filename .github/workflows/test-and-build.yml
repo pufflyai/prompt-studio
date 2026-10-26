@@ -1,32 +1,32 @@
-name: Compare native archive extraction stages
+name: Analyze the existing native scan recording
 on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   native:
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-11-arm
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-11-arm]
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - name: Observe fixed archives without dependency installation
+      - uses: actions/download-artifact@v4
+        with:
+          name: archive-extraction-windows-11-arm
+          run-id: 40325365575
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/ps-932-existing-trace
+      - name: Analyze the saved trace without repeating extraction
         env:
-          TEMP: ${{ runner.temp }}
-          TMP: ${{ runner.temp }}
-        run: bun packages/e2e/src/packaged/observe-archive-extraction.ts
-      - name: Keep component measurements
+          PS932_TRACE_ROOT: ${{ runner.temp }}/ps-932-existing-trace
+        run: bun packages/e2e/src/packaged/analyze-defender-recording.ts
+      - name: Keep trace reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: archive-extraction-${{ matrix.os }}
-          path: |
-            ${{ runner.temp }}/ps-932-archive-extraction-*/summary.json
-            ${{ runner.temp }}/ps-932-archive-extraction-*/defender*
+          name: native-scan-analysis
+          path: ${{ runner.temp }}/ps-932-existing-trace/analysis/*
           if-no-files-found: error

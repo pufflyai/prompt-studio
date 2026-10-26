@@ -31,7 +31,7 @@ async function verifyOutput(directory: string, entries: Map<string, File>) {
 
 async function command(argv: string[]) {
   const started = performance.now();
-  const child = Bun.spawn(argv, { stdout: "pipe", stderr: "pipe", stdin: "ignore" });
+  const child = Bun.spawn(argv, { env: { ...process.env }, stdout: "pipe", stderr: "pipe", stdin: "ignore" });
   const [exitCode, stdout, stderr] = await Promise.all([
     child.exited,
     new Response(child.stdout).text(),
