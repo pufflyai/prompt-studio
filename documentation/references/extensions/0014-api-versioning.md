@@ -296,6 +296,8 @@ Workspace/session read results and resource references may include `device: { ow
 
 ## Cloud account and sync status in API 0.2.1
 
+On `main`, planned for API 0.3.0, the account service address becomes optional in `ctx.account.login`, the webview account client and `/client` account login. Omitting it uses the host's environment setting or the hosted default. Explicit addresses keep their existing behavior.
+
 `ctx.account`, the `account.read` and `account.manage` webview capabilities, `client.account` on the typed webview client, and the `accountEvents.projectSyncChanged` host event are additive. They ship in the release after 0.44.0. The `/client` account methods add `cancelLogin` and `projectSyncStatus`. `AccountDevice` adds `online`, `AccountStatus` adds `cloudProjectsLoaded`, and `DeviceLogin` adds an optional `email`. `makeCommandContext` from `@pstdio/sdk/testing` provides a signed-out account whose projects are `local`. Publish the SDK and host before separately released extensions use these additions. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).
 
 ## Kanban dragging in API 0.2

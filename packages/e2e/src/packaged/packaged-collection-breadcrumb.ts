@@ -30,13 +30,14 @@ export const verifyPackagedCollectionBreadcrumb = async (
   const breadcrumbs = page.getByRole("navigation", { name: "breadcrumb", exact: true });
   await expect(breadcrumbs.getByText("Artifacts", { exact: true })).toBeVisible();
   await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();
-  expect(page.url()).toBe(libraryUrl);
+  expect(new URL(page.url()).pathname).toBe(`${new URL(libraryUrl).pathname}/view`);
   const tab = (region: string) =>
     page.locator(`[data-workbench-panel-header="${region}"]`).getByRole("tab", { name: title, exact: true });
   await tab("main").focus();
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
   await expect(tab("secondary")).toBeVisible();
+  const projectReturnUrl = page.url();
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   const home = await sidenav.getByRole("option", { name: "Home", exact: true }).boundingBox();
   const sessionsEntry = await sidenav.getByRole("option", { name: "Sessions", exact: true }).boundingBox();
@@ -85,7 +86,7 @@ export const verifyPackagedCollectionBreadcrumb = async (
   );
   await modeReturn.click();
   for (const frame of await returningRows) expect(frame).toEqual({ home: home!.y, sessions: sessionsEntry!.y });
-  await expect(page).toHaveURL(libraryUrl);
+  await expect(page).toHaveURL(projectReturnUrl);
   await expect(modeReturn).toHaveCount(0);
   await page.goBack();
   await expect(modeReturn).toBeVisible();

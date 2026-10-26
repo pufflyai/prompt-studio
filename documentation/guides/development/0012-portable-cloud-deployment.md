@@ -150,7 +150,7 @@ module "cloud" {
 ```
 
 `variables.tf` lists every input. Give clients the `manager_url` output:
-`pst login --manager <manager_url>`. The manager tells each device the relay address.
+`pst login --manager <manager_url>`, or set `PSTDIO_ACCOUNT_MANAGER_ORIGIN=<manager_url>` before starting the host and run `pst login`. Without an override, login uses `https://base.prompt.studio/accounts`. An explicit address takes precedence over the host environment setting. The manager tells each device the relay address.
 Register `<manager_url>/api/auth/callback/google` in the Google OAuth client.
 
 The relay must trust the manager's signing keys, and those exist only once the manager

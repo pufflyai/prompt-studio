@@ -25,16 +25,26 @@ describe("shipped extension composition", () => {
       ["zipline.issue", "pstdio.extension-lab"],
       ["pigeon.thread", "pstdio.extension-lab"],
       ["kiln.object", "pstdio.extension-lab"],
+      ["marmalade.document", "pstdio.extension-lab"],
       ["glass-lab-artifact", "pstdio.workbench-fixture"],
     ]);
-    expect(runtime.placements.filter((placement) => placement.extensionId === "pstdio.pstdio-planner")).toEqual([]);
+    expect(
+      runtime.placements.find(
+        (placement) => placement.extensionId === "pstdio.pstdio-planner" && placement.localId === "ticket-board",
+      )?.contribution,
+    ).toMatchObject({
+      region: "side",
+      item: { kind: "view", view: { id: "tickets" }, presence: "closed" },
+    });
     expect(runtime.pages.find((page) => page.localId === "tickets")?.contribution).toMatchObject({
       path: "tickets",
       main: {
         kind: "view",
+        presentation: "page",
         view: { id: "tickets" },
         cardinality: "one",
       },
+      panelView: { kind: "placement", id: "ticket-board" },
       slots: [],
     });
     expect(runtime.pages.find((page) => page.localId === "ticket")?.contribution).toMatchObject({
@@ -45,6 +55,7 @@ describe("shipped extension composition", () => {
       },
       main: {
         kind: "view",
+        presentation: "page",
         view: { id: "ticket-editor" },
         cardinality: "one",
       },

@@ -18,8 +18,8 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.46.0-preview.sha-a593437a7f44586600c9791575aeef776dc8010b",
-    "@pstdio/ui": "0.46.0-preview.sha-a593437a7f44586600c9791575aeef776dc8010b",
+    "@pstdio/sdk": "0.46.0-preview.sha-c241f7d0c109edf636f9e5d715a0fc05043ddc8c",
+    "@pstdio/ui": "0.46.0-preview.sha-c241f7d0c109edf636f9e5d715a0fc05043ddc8c",
     "@tanstack/react-query": "^5.90.21",
     "lucide-react": "^0.557.0",
     "react": "^19.0.0",

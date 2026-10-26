@@ -4,13 +4,15 @@ Log in once with Google on each computer. Each computer becomes a device of your
 
 ## Log in
 
-Use the HTTPS account service URL from your administrator. It may include a path, such as `https://base.example.test/accounts`. The examples use `https://accounts.example.test`.
+Prompt Studio uses the hosted account service at `https://base.prompt.studio/accounts` by default.
 
 ```sh
-pst login --manager https://accounts.example.test
+pst login
 ```
 
 Login opens Google in the system browser on the computer that runs the native host. Use `--open-browser=false` to open the printed URL yourself on that same computer. A remote host needs its own browser and loopback access; the dashboard does not forward this callback.
+
+For a self-hosted service, pass `pst login --manager https://accounts.example.test`, or set `PSTDIO_ACCOUNT_MANAGER_ORIGIN` in the host's environment before starting it. An explicit address takes precedence over the environment setting, which takes precedence over the hosted default. HTTPS addresses may include a path. The account service supplies the relay address after login.
 
 After login, the host keeps one device credential. It does not keep your Google session. Logging in again on the same computer replaces the credential.
 
@@ -73,7 +75,7 @@ The host APIs are available through `createClient(...).account` in `@pstdio/sdk/
 import { createClient } from "@pstdio/sdk/client";
 
 const client = createClient();
-const login = await client.account.login("https://accounts.example.test");
+const login = await client.account.login();
 // Open login.url on the native host's computer, then wait for "complete".
 const { status } = await client.account.loginStatus(login.id);
 const devices = await client.account.devices();
@@ -81,6 +83,8 @@ await client.account.syncProject("PROJECT_ID");
 ```
 
 See [AccountClient](../../../packages/sdk/src/client/account.ts) for the exact methods and response types.
+
+`account.login(managerOrigin?)` uses the host's account service when the address is omitted. Pass an address to override it for that login. `ctx.account.login()` and the webview account client use the same host setting.
 
 On `main`, `account.cancelLogin(id)` cancels a pending native login. `account.projectSyncStatus(projectId)` returns the project's sync `state` and whether all known content has been verified on this device. These additions use the same API 0.2.1 additive step as device login.
 

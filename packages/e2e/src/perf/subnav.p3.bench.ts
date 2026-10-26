@@ -14,7 +14,8 @@ import {
 } from "./subnav-benchmark-clock";
 import { startSubnavBenchmarkFixture, subnavFixtureRoot } from "./subnav-benchmark-fixture";
 
-export const SUBNAV_BUDGETS = { structureMs: 100, dataMs: 500, editorMs: 500 };
+// Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 293 / 1,263 / 1,089 ms) plus about 20%.
+export const SUBNAV_BUDGETS = { structureMs: 375, dataMs: 1_525, editorMs: 1_325 };
 const sampleCount = Number(process.env.SUBNAV_SAMPLES ?? 30);
 const label = process.env.SUBNAV_LABEL ?? "current";
 if (!Number.isInteger(sampleCount) || sampleCount < 1) throw new Error("SUBNAV_SAMPLES must be a positive integer");

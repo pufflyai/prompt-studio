@@ -140,6 +140,7 @@ export default defineExtension({
   commands: [...plannerCommands, ...Object.values(timelineCommands), readStatusSettings, saveStatusSettings],
   views: [...plannerUi.views, timelineView],
   pages: [...plannerUi.pages, timelinePage],
+  placements: plannerUi.placements,
   viewMenus: plannerUi.viewMenus,
   resourceKinds: [ticketResourceKind],
   navigationItems: [...plannerUi.navigationItems, timelineNavigation],
