@@ -28,24 +28,24 @@ The scenarios verify:
 - Repair publishes the repaired revision and clears its relevant diagnostic.
 - Shutdown leaves no preparation process alive. Failed cleanup makes the fixture fail, while fixture cleanup still reaps its own process.
 
-Probe policy matches the [execution fixture](0030-extension-worker-prototype.md#recreated-fixture-v1). The result includes raw request samples, operation and observed compiler lifetime windows, compiler queue/spawn/exit events, cancellation counts, child CPU microseconds and peak RSS bytes from Bun resource observations. Missing measurements remain absent. Exit timestamps reflect when the host observes exit, so they also include event-loop delivery delay. API RSS is a point observation, not a measured peak. No throughput or hard CPU-quota claim follows from these measurements.
+Probe policy matches the [execution fixture](0030-extension-worker-prototype.md#recreated-fixture-v1). The result includes raw request samples, operation and observed compiler lifetime windows, compiler queue/spawn/exit events, cancellation counts, child CPU microseconds and peak RSS bytes from Bun resource observations. Missing measurements remain absent and carry an unavailable marker; an all-zero native usage structure is not a zero-cost observation. Exit timestamps reflect when the host observes exit, so they also include event-loop delivery delay. API RSS and the latest owner CPU/RSS readings are point observations, not measured peaks. No throughput or hard CPU-quota claim follows from these measurements.
 
 Reports, source files and host logs are retained under repository-root `test-results/extension-responsiveness/builds/`. Metadata records the fixture hash, exact counts, runtime/host observations and source revision. The fixture is intentionally fixed; workload size and debounce are not reduced to meet a budget.
 
 ## Findings and release gates
 
-Three recreated pairs on Apple M5/macOS arm64, 10 available CPUs and 16 GiB RAM with Bun 1.4.4 produced these median operation times. Both modes retained the same four-compiler ceiling.
+Three recreated pairs on Apple M5/macOS arm64, 10 available CPUs and 16 GiB RAM with Bun 1.4.4 produced these median operation times. The clean measured revision is [301f27628](https://github.com/pufflyai/prompt-studio/commit/301f27628d391c4f7fc02d81883c2f506424b5cb), with the same fixture hash recorded in the [execution report](0030-extension-worker-prototype.md#native-development-observation). Both modes retained the same four-compiler ceiling. Resource admission was disabled for this preparation comparison.
 
 | Operation | Inline preparation | Subprocess preparation |
 | --- | ---: | ---: |
-| Cold six-view activation | 749 ms | 868 ms |
-| Shared same-size edit | 773 ms | 644 ms |
-| Five rapid edits | 1,123 ms | 1,219 ms |
-| Repair and matching diagnostic clearance | 831 ms | 716 ms |
+| Cold six-view activation | 1,006 ms | 911 ms |
+| Shared same-size edit | 982 ms | 729 ms |
+| Five rapid edits | 1,177 ms | 1,240 ms |
+| Repair and matching diagnostic clearance | 878 ms | 871 ms |
 
-During shared edits, pooled project-read p95 fell from 249.22 ms to 9.47 ms (14.33 ms subprocess maximum). Another command's p95 fell from 269.46 ms to 25.29 ms (39.18 ms maximum). During rapid edits, project-read p95 fell from 247.87 ms to 7.83 ms (23.01 ms maximum), and command p95 fell from 250.46 ms to 17.48 ms (36.81 ms maximum). Every probe succeeded. Raw sample counts and completion-during-work counts remain in each trial's report; pooled latency uses all retained samples, including responses after work.
+During shared edits, pooled project-read p95 fell from 257.85 ms to 9.27 ms (27.32 ms subprocess maximum). Another command's p95 fell from 277.00 ms to 18.65 ms (33.90 ms maximum). During rapid edits, project-read p95 fell from 174.56 ms to 19.97 ms (37.58 ms maximum), and command p95 fell from 218.15 ms to 37.23 ms (71.45 ms maximum). Every probe succeeded. Raw sample counts and completion-during-work counts remain in each trial's report; pooled latency uses all retained samples, including responses after work.
 
-Every unchanged save ran zero compilers. Each rapid burst recorded subsequent saves during active compilation and published revision six. The subprocess runs still spawned twelve compilers per burst, including an obsolete batch; zero active cancellations were observed in those particular runs. This is not proof that obsolete work is eliminated. Active cancellation has separate functional regressions and still needs measurement under a slower compiler/admission profile.
+Every unchanged save ran zero compilers. Each rapid burst recorded subsequent saves during active compilation and published revision six. The inline preparation trials spawned 10/11/11 compilers and canceled four per burst. The subprocess runs still spawned twelve compilers per burst, including an obsolete batch; zero active cancellations were observed in those particular runs. This is not proof that obsolete work is eliminated. Active cancellation has separate functional regressions and still needs measurement under a slower compiler/admission profile.
 
 The recreated fixture exposed watcher serialization that delayed newer revisions until old builds ended, source-cache invalidation that adopted backend edits during asset publication, and conflicting sibling status writes that repeated graph scans. Regression tests now cover those rules. Trusted source preparation uses the same scanning, hashing and staging functions in a Bun subprocess under the owner comparison control.
 
