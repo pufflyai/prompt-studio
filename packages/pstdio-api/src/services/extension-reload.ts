@@ -79,6 +79,12 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
     const loadKey = await extensionLoadKey(existing.source_path);
     const result = await check(existing.source_path, dirname(existing.source_path));
     if (!result.loaded || result.check.errorCount > 0) throw validationError(result.check.diagnostics);
+    if ((await extensionLoadKey(existing.source_path)) !== loadKey)
+      throw new ExtensionValidationError(
+        "extension_reload_source_changed",
+        "Extension source changed during validation. Reload the latest source to retry.",
+        [],
+      );
 
     const nextRevision = crypto.randomUUID();
     const updated = await deps.installedExtensionSourcesService.updateRegistration(existing.id, {

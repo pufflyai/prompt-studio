@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createDb, createInstalledExtensionSourcesDBService } from "pstdio-db";
+import { checkExtensionSource } from "../features/extensions/extension-runtime";
 import { reloadInstalledSourceBySourcePath } from "./extension-reload";
 
 const cleanup: Array<() => Promise<void> | void> = [];
@@ -29,6 +30,51 @@ const writeExtension = (root: string, enginesPstdio = `^${EXTENSION_API_VERSION}
 };
 
 describe("reloadInstalledSourceBySourcePath published state", () => {
+  test("rejects a candidate whose source changed during validation", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-reload-source-race-"));
+    cleanup.push(() => rmSync(root, { recursive: true, force: true }));
+    writeExtension(root);
+    const database = await createDb({ path: ":memory:" });
+    cleanup.push(database.close);
+    const sources = createInstalledExtensionSourcesDBService(database.db);
+    const registered = await sources.register({
+      display_name: "Reload State",
+      extension_id: "pstdio.reload-state",
+      install_name: "reload-state-race",
+      loaded_revision: "adopted-revision",
+      manifest_json: {},
+      source_hash: "adopted-hash",
+      source_kind: "local_path",
+      source_path: root,
+      source_ref: null,
+      status: "loaded",
+      version: "1.0.0",
+    });
+    let publications = 0;
+    const result = await reloadInstalledSourceBySourcePath(
+      {
+        emitInstalledSource: () => {},
+        installedExtensionSourcesService: sources,
+        notifyInstalledSourcesChanged: async () => {
+          publications++;
+        },
+        checkExtension: async (...args) => {
+          const candidate = await checkExtensionSource(...args);
+          writeFileSync(join(root, "extension.ts"), "export default { commands: [] };\n");
+          return candidate;
+        },
+      },
+      root,
+    );
+    expect(publications).toBe(0);
+    expect(result.installedSource).toMatchObject({
+      status: "error",
+      loaded_revision: registered.loaded_revision,
+      source_hash: registered.source_hash,
+      last_error_json: { code: "extension_reload_source_changed" },
+    });
+  });
+
   test("does not expose loaded state or a new revision before runtime refresh completes", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-reload-pending-test-"));
     cleanup.push(() => rmSync(root, { recursive: true, force: true }));
