@@ -27,3 +27,7 @@ Save the evidence and delete the experiment. Adopt no native helper unless both 
 ## Reparse metadata follow-up
 
 Run 40278566333 rejects both removal candidates on both architectures. In particular .NET on x64 fails on entry `2.1.0@@@1` with an invalid-parameter error after about 30 seconds. A realpath ENOENT result alone does not identify a dangling directory junction. Record Bun Dirent/lstat/readlink information and Windows attributes plus the native reparse tag for that named entry before considering different link handling. Keep standard Bun cleanup during this measurement. Do not call the generic command runner a close guarantee on failure; it deliberately reports failed parents before inherited pipes close.
+
+## Volume comparison
+
+The metadata follow-up confirms that sampled cache aliases are directory reparse points (Windows junctions, tag 0xa0000003). Both architectures still fail the whole-case limit, with about 98–100 seconds in first-project setup. Compare the OS temp directory and Actions runner temp directory with the quiet identical compiled binary, full cold caches, both full cases, and standard awaited Bun removal. This tests storage placement as a cause; it does not accept a different host volume as the product fix. No cache is shared between cases or prewarmed.
