@@ -55,6 +55,15 @@ test("keeps HTTP same-origin and opens terminals through the runtime WebSocket e
     });
 
     await prepareDashboard(page, project.id);
+    page.on("console", (message) => {
+      if (message.text().startsWith("Vite focus:")) console.log(message.text());
+    });
+    await page.addInitScript(() => {
+      document.addEventListener("focusin", (event) => {
+        const element = event.target as HTMLElement;
+        console.log("Vite focus:", element.tagName, element.getAttribute("aria-label"), element.getAttribute("role"));
+      });
+    });
     await page.goto(`/projects/${project.id}/workspaces`);
 
     await openWorkspaceTerminal(page, "Project folder");
