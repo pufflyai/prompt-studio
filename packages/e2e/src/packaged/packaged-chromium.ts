@@ -6,4 +6,5 @@ import type { LaunchOptions } from "@playwright/test";
 // channel runs the provisioned full Chromium headless, so packaged tests need no second download.
 export const PROVISIONED_CHROMIUM: LaunchOptions = {
   channel: process.env.PSTDIO_QUALIFY_BROWSER_CHANNEL ?? "chromium",
+  args: ["--enable-automation"],
 };
