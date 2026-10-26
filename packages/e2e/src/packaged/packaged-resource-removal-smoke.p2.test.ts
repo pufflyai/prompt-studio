@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { expect as browserExpect, chromium } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
@@ -38,7 +38,7 @@ setupPackagedSmokeTests();
 test("packaged related loading cannot reopen a resource deleted during resolution", async () => {
   const root = mkdtempSync(join(tmpdir(), "packaged-resource-removal-"));
   let child: ChildProcess | undefined;
-  const browser = await chromium.launch(PROVISIONED_CHROMIUM);
+  const browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
   const release = Promise.withResolvers<void>();
   try {
     writeExtension(root);
