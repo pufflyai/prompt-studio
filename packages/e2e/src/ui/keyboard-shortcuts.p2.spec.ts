@@ -308,19 +308,17 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
     await page.keyboard.press("Escape");
   }
   await page.keyboard.press("ControlOrMeta+Alt+N");
-  const noteForm = page.getByRole("dialog").last();
-  await expect(noteForm.getByRole("textbox", { name: "Title", exact: true })).toBeVisible();
-  await noteForm.getByRole("textbox", { name: "Title", exact: true }).fill("Shortcut note");
-  await noteForm.getByRole("button", { name: "Run", exact: true }).click();
-  await expect(noteForm).not.toBeVisible();
-  await expect(page.getByText("Shortcut note", { exact: true }).first()).toBeVisible();
+  await expect(page).toHaveURL(/\/notes$/);
+  await expect(page.getByRole("tab", { name: /New note/ }).first()).toBeVisible();
   await page.keyboard.press("ControlOrMeta+Alt+P");
   const ticketForm = page.getByRole("dialog").last();
   await expect(ticketForm.getByText("New ticket", { exact: true })).toBeVisible();
-  await ticketForm.getByRole("textbox", { name: "Description", exact: true }).fill("# Shortcut ticket");
-  await ticketForm.getByRole("button", { name: "Run", exact: true }).click();
+  await expect(ticketForm.getByRole("button", { name: "Attach files", exact: true })).toBeVisible();
+  await expect(ticketForm.getByText("Properties", { exact: true })).toBeVisible();
+  await ticketForm.locator('[contenteditable="true"]').first().fill("# Shortcut ticket");
+  await ticketForm.getByRole("button", { name: "Create ticket", exact: true }).click();
   await expect(ticketForm).not.toBeVisible();
-  await expect(page.getByRole("heading", { name: "Shortcut ticket", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Shortcut ticket/ }).first()).toBeVisible();
   await page.getByRole("button", { name: "Help", exact: true }).focus();
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("c");

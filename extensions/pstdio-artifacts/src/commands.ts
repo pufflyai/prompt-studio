@@ -5,7 +5,7 @@ import { serviceFor } from "./artifact-context";
 import { removeArtifact, renameArtifact } from "./artifact-mutations";
 import { HTML_LIMIT_BYTES } from "./artifacts";
 import { artifactIdFromUrl, artifactTarget, changedEvent } from "./contracts";
-import { startCreation } from "./create-artifact";
+import { openCreation, startCreation } from "./create-artifact";
 
 const publishFile = async (
   ctx: ExtensionContextBase,
@@ -110,6 +110,7 @@ export const commands = {
   rename,
   delete: remove,
   "start-creation": startCreation,
+  "open-creation": openCreation,
   "rename-resource": renameResource,
   "delete-resource": deleteResource,
   "resolve-resource": resolveResource,

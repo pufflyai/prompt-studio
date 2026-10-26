@@ -29,6 +29,7 @@ export const createTicketCommand = defineCommand({
   id: "create-ticket",
   mutating: true,
   title: "Create ticket",
+  palette: [{}],
   cli: {
     globalAliases: [
       ["tickets", "create"],
@@ -67,7 +68,8 @@ export const createTicketCommand = defineCommand({
     const now = new Date().toISOString();
     const { id } = await allocateTicketIdentity(ctx);
 
-    const attributeStatusId = typeof attributes.status === "string" ? attributes.status : undefined;
+    const attributeStatusId =
+      typeof attributes.status === "string" && attributes.status ? attributes.status : undefined;
 
     const statusId =
       commandParams.status !== undefined

@@ -33,7 +33,6 @@ import { linkReviewCommand } from "./link-review";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { listTicketTemplatesCommand } from "./list-ticket-templates";
 import { listTicketsCommand } from "./list-tickets";
-import { newTicketCommand } from "./new-ticket";
 import { nextTicketsCommand } from "./next-tickets";
 import { openTicketsCommand } from "./open-tickets";
 import { pullTicketCommand } from "./pull-ticket";
@@ -179,7 +178,6 @@ export const plannerCommands = [
   nextTicketsCommand,
   updateStackCommand,
   createTicketCommand,
-  newTicketCommand,
   attachTicketFileCommand,
   detachTicketFileCommand,
   getTicketCommand,
