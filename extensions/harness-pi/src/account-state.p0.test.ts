@@ -6,7 +6,11 @@ test("Pi stores and removes keys through its native store and scopes readiness t
   const authStorage = AuthStorage.inMemory();
   const modelRegistry = ModelRegistry.inMemory(authStorage);
   const accounts = { authStorage, modelRegistry };
-  const channel = { signal: new AbortController().signal, emit: async () => {}, request: async () => "fixture-key" };
+  const channel = {
+    signal: new AbortController().signal,
+    emit: async () => {},
+    request: async () => "  fixture-key\n",
+  };
   await authenticatePiAccount(accounts, { action: "login", provider: "anthropic", method: "api_key" }, channel);
   expect(authStorage.get("anthropic")).toEqual({ type: "api_key", key: "fixture-key" });
   expect(getPiAccountState(accounts, "anthropic/claude-sonnet-4-6").status).toBe("signed_in");

@@ -21,7 +21,7 @@ The extension is optional and is not installed by default. Choose **Pi** in a ne
 
 ```sh
 pst sessions create --prompt "Review this project" \
-  --agent pstdio.harness-pi.harness.pi --model <provider/model>
+  --agent pstdio.harness-pi.harness.pi
 ```
 
 ## Sessions

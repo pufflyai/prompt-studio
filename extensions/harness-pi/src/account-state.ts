@@ -50,9 +50,9 @@ export const authenticatePiAccount = async (
   channel.signal.throwIfAborted();
   if (input.action === "logout") authStorage.logout(choice.provider);
   else if (choice.method === "api_key") {
-    const key = await channel.request({ type: "input", title: "API key", secret: true });
+    const key = (await channel.request({ type: "input", title: "API key", secret: true })).trim();
     channel.signal.throwIfAborted();
-    if (!key.trim()) throw new Error("Enter an API key.");
+    if (!key) throw new Error("Enter an API key.");
     authStorage.set(choice.provider, { type: "api_key", key });
   } else {
     await authStorage.login(choice.provider, {
