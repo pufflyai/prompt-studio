@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Keep extension discovery stable and release source ownership before refreshing views.
+Keep extension metadata stable, relocate installed assets, and release source locks before refresh.

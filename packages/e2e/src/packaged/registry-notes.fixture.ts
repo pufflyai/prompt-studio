@@ -21,6 +21,10 @@ export const writeRegistryNotes = async (source: string, version: string) => {
     join(source, "extension.ts"),
     `export default {commands:[{
     id:"version",ref:{kind:"command",id:"version"},title:"Version",cli:true,run(){return "${version}"}
+  }],templates:[{
+    id:"note",ref:{kind:"template",id:"note"},title:"Note",type:"note",
+    source:{kind:"package-asset",path:"./note.md",baseUrl:import.meta.url}
   }]};`,
   );
+  await writeFile(join(source, "note.md"), "# Note\n");
 };
