@@ -14,6 +14,12 @@ const finiteLimit = (value: string | undefined) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 };
 
+export const reserveResourceCapacity = (cpu: number, memory: number, observations: string[]): ResourceCapacity => ({
+  cpu: cpu - Math.min(1, cpu / 2),
+  memory: Math.max(0, memory / 1024 ** 2 - 256),
+  observations,
+});
+
 export const readResourceCapacity = async (): Promise<ResourceCapacity> => {
   let cpu = availableParallelism();
   let memory = freemem();
@@ -40,9 +46,5 @@ export const readResourceCapacity = async (): Promise<ResourceCapacity> => {
     else observations.push("Container memory headroom unavailable; using system free memory.");
   }
   // These conservative rollout reserves are explicit policy, not a hard OS quota.
-  return {
-    cpu: Math.max(0.25, cpu - Math.min(1, cpu / 2)),
-    memory: Math.max(0, memory / 1024 ** 2 - 256),
-    observations,
-  };
+  return reserveResourceCapacity(cpu, memory, observations);
 };
