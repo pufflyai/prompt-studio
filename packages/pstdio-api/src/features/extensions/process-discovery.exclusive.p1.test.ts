@@ -1,5 +1,14 @@
 import { afterEach, expect, test } from "bun:test";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
@@ -57,7 +66,13 @@ for (const adjacentNode of [false, true]) {
       script,
       "#!/usr/bin/env node\nconsole.log(JSON.stringify({ args: process.argv.slice(2), executable: process.execPath }))",
     );
-    if (adjacentNode) copyFileSync(node, join(prefix, process.platform === "win32" ? "node.exe" : "node"));
+    const expectedNode = adjacentNode ? join(prefix, process.platform === "win32" ? "node.exe" : "node") : node;
+    if (adjacentNode) {
+      if (process.platform === "win32") copyFileSync(node, expectedNode);
+      // Preserve the installation’s shared-library paths on Unix.
+      else symlinkSync(node, expectedNode);
+    }
+    const pathPrefix = adjacentNode ? fixture("fallback", "node", "process.exit(99)").prefix : dirname(node);
     await cmdShim(script, command.replace(/\.cmd$/, ""));
     const args = [
       "a & b",
@@ -77,14 +92,12 @@ for (const adjacentNode of [false, true]) {
     ];
     const result = await createProcessApi().run({
       command: [command, ...args],
-      env: { PATH: `${dirname(node)}${delimiter}${process.env.PATH}`, DISCOVERY_LITERAL: "must not expand" },
+      env: { PATH: `${pathPrefix}${delimiter}${process.env.PATH}`, DISCOVERY_LITERAL: "must not expand" },
     });
     expect(result.exitCode, result.stderr).toBe(0);
     const output = JSON.parse(result.stdout);
     expect(output.args).toEqual(args);
-    expect(output.executable.toLowerCase()).toBe(
-      (adjacentNode ? join(prefix, process.platform === "win32" ? "node.exe" : "node") : node).toLowerCase(),
-    );
+    expect(output.executable.toLowerCase()).toBe(realpathSync(expectedNode).toLowerCase());
   });
 }
 

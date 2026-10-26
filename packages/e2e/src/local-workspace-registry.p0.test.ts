@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -21,6 +21,91 @@ const fixture = async () => {
   };
   return { root, name, writePackage };
 };
+
+test("closes owned connections while an upstream metadata request remains pending", async () => {
+  const { root, name, writePackage } = await fixture();
+  const entered = Promise.withResolvers<void>();
+  const aborted = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const upstream = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: async (request) => {
+      request.signal.addEventListener("abort", () => aborted.resolve(), { once: true });
+      entered.resolve();
+      await release.promise;
+      return new Response("Unavailable", { status: 503 });
+    },
+  });
+  cleanups.push(async () => upstream.stop(true));
+  const registry = await startLocalWorkspaceRegistry({
+    configPath: join(root, ".npmrc"),
+    outputRoot: join(root, "packed"),
+    packagePaths: [await writePackage("0.26.0")],
+    upstreamOrigin: upstream.url.origin,
+  });
+  const response = fetch(`${registry.origin}/${name}`).catch((error: unknown) => error);
+  let closing: Promise<void> | undefined;
+  cleanups.push(async () => {
+    release.resolve();
+    await response;
+    await (closing ?? registry.close());
+  });
+  await entered.promise;
+  closing = registry.close();
+  await closing;
+  expect(await response).toBeInstanceOf(Error);
+  await aborted.promise;
+});
+
+test("closes a published tarball while its response body remains pending", async () => {
+  const { root } = await fixture();
+  const bodyReadStarted = Promise.withResolvers<void>();
+  const upstream = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array([1, 2, 3]));
+          },
+        }),
+      ),
+  });
+  cleanups.push(async () => upstream.stop(true));
+  const registry = await startLocalWorkspaceRegistry({
+    configPath: join(root, ".npmrc"),
+    outputRoot: join(root, "packed"),
+    packagePaths: [],
+    upstreamOrigin: upstream.url.origin,
+  });
+  const path = "/@pstdio/remote/-/remote-1.tgz";
+  const realFetch = globalThis.fetch;
+  const observingFetch = spyOn(globalThis, "fetch").mockImplementation(async (...args) => {
+    const response = await realFetch(...args);
+    if (String(args[0]) === new URL(path, upstream.url).href) {
+      const readBody = response.arrayBuffer.bind(response);
+      // Observe the real body read so shutdown happens after headers, without a timed delay.
+      response.arrayBuffer = () => {
+        bodyReadStarted.resolve();
+        return readBody();
+      };
+    }
+    return response;
+  });
+  const response = fetch(`${registry.origin}${path}`).catch((error: unknown) => error);
+  let closing: Promise<void> | undefined;
+  cleanups.push(async () => {
+    await (closing ?? registry.close());
+    await response;
+    observingFetch.mockRestore();
+  });
+  await bodyReadStarted.promise;
+  closing = registry.close();
+  await closing;
+  expect(await response).toBeInstanceOf(Error);
+});
 
 describe("local workspace package registry", () => {
   test("installs an older published dependency while serving the local release", async () => {

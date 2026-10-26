@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -59,8 +60,6 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
       }),
     });
     child = started.child;
-    child.stdout?.on("data", (chunk) => process.stdout.write(`[Core stdout] ${chunk}`));
-    child.stderr?.on("data", (chunk) => process.stderr.write(`[Core stderr] ${chunk}`));
     phase("runtime ready");
     const projectFolder = join(tempRoot, "project");
     mkdirSync(projectFolder);
@@ -85,7 +84,10 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("features checked");
   } finally {
     if (child) await stopProcess(child);
+    phase("runtime stopped");
     if (closeRegistry) await closeRegistry();
-    rmSync(tempRoot, { recursive: true, force: true });
+    phase("registry closed");
+    await rm(tempRoot, { recursive: true, force: true });
+    phase("files removed");
   }
 };

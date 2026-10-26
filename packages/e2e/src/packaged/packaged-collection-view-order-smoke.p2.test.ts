@@ -96,10 +96,9 @@ test("packaged Kanban and data table view tabs save pointer and keyboard order",
     if (browserSetup.status === "rejected") throw browserSetup.reason;
     const id = projectSetup.value;
     const page = await browserSetup.value.newPage({ extraHTTPHeaders: runtimeAuthorization(runtime.descriptor) });
-    await signInBrowser(page, runtime.descriptor);
-    phase("browser signed in");
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-    await page.goto(`${runtime.baseUrl}/projects/${id}/`);
+    await signInBrowser(page, runtime.descriptor, `/projects/${id}/`);
+    phase("browser signed in");
     await page.getByRole("option", { name: "Tickets", exact: true }).click();
     await verifyOrder(page, id, "pstdio.pstdio-planner.view.tickets");
     await page.goto(`${runtime.baseUrl}/projects/${id}/workspaces`);

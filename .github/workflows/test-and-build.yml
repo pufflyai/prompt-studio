@@ -1,4 +1,4 @@
-name: Native install profile
+name: Native qualification
 on:
   workflow_dispatch:
 permissions:
@@ -6,7 +6,7 @@ permissions:
   actions: read
 jobs:
   native:
-    name: core diagnostic (${{ matrix.platform_pkg }})
+    name: native fixtures (${{ matrix.platform_pkg }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -25,6 +25,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - name: Require delivered source without profiling changes
+        run: git diff --exit-code 90bc0d99be27d6e7034b65521a92065f653c31bd -- . ':!.github/workflows/test-and-build.yml'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -42,13 +44,24 @@ jobs:
         working-directory: packages/e2e
         run: >-
           bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts
+          src/local-workspace-registry.p0.test.ts
+          src/packaged/extension-smoke.p2.test.ts
+          src/packaged/packaged-independent-extensions-smoke.p2.test.ts
+          src/packaged/packaged-serve-helpers.p2.test.ts
+          src/packaged/packaged-planner-smoke.p2.test.ts
+          src/packaged/packaged-board-panning-smoke.p2.test.ts
+          src/packaged/packaged-chat-motion-smoke.p2.test.ts
+          src/packaged/packaged-collection-view-order-smoke.p2.test.ts
           src/packaged/packaged-core-extension-features.p2.test.ts
+          src/packaged/packaged-core-extensions-smoke.p1.test.ts
+          src/packaged/packaged-queued-requests-smoke.p2.test.ts
+          --test-name-pattern 'closes owned connections|closes a published tarball|interruption stops|a packaged CLI gives|a packaged host packs|fixture shutdown|runner cancellation|dependency stacks|recovers missing|adopts a feature|board pans|retains streaming|Kanban and data table|core extension features|core defaults|editor cancellation'
           --timeout 30000 --silent
       - name: Preserve native evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: native-install-profile-${{ matrix.platform_pkg }}
+          name: native-qualification-${{ matrix.platform_pkg }}
           path: |
             packages/e2e/test-results
             test-results/ci

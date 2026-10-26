@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionInstallEnvironment } from "pstdio-extensions";
@@ -38,12 +38,6 @@ export const runCommand = async (command: string, args: string[], options: Comma
     options.signal?.throwIfAborted();
     const resolved = resolveProcessCommand([command, ...args]);
     const outputRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-command-"));
-    const startedAt = Date.now();
-    const packageCount = (path: string) => existsSync(path) ? readdirSync(path).length : 0;
-    const progress = setInterval(() => {
-      console.log(JSON.stringify({event:"install.progress",cwd:options.cwd,elapsedMs:Date.now()-startedAt,cachePackages:packageCount(options.env?.BUN_INSTALL_CACHE_DIR ?? ""),installedPackages:packageCount(join(options.cwd,"node_modules",".bun")),stderr:existsSync(join(outputRoot,"stderr"))?readFileSync(join(outputRoot,"stderr"),"utf8").slice(-1000):""}));
-    }, 2000);
-    progress.unref();
     try {
       const stdoutFile = Bun.file(join(outputRoot, "stdout"));
       const stderrFile = Bun.file(join(outputRoot, "stderr"));
@@ -59,10 +53,8 @@ export const runCommand = async (command: string, args: string[], options: Comma
       });
       const exitCode = await child.exited;
       const [stdout, stderr] = await Promise.all([stdoutFile.text(), stderrFile.text()]);
-      console.log(JSON.stringify({event:"install.output",cwd:options.cwd,elapsedMs:Date.now()-startedAt,exitCode,stdout,stderr}));
       return { exitCode, stdout, stderr };
     } finally {
-      clearInterval(progress);
       rmSync(outputRoot, { recursive: true, force: true });
     }
   } catch (error) {

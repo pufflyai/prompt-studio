@@ -28,7 +28,11 @@ const runtimeClosers = new WeakMap<ChildProcess, () => Promise<void>>();
 // Page loads never sign a browser in (ADR 0054). Sign in the way `pst` does: open a single-use
 // login link that a bearer holder created. The dashboard stores the session before checking
 // runtime readiness. Wait for that authenticated check before navigating away (ADR 0057).
-export const signInBrowser = async (page: Page, descriptor: Pick<RuntimeDescriptor, "origin" | "token">) => {
+export const signInBrowser = async (
+  page: Page,
+  descriptor: Pick<RuntimeDescriptor, "origin" | "token">,
+  path = "/",
+) => {
   const response = await fetch(`${descriptor.origin}/runtime/browser-login`, {
     method: "POST",
     headers: runtimeAuthorization(descriptor),
@@ -36,7 +40,9 @@ export const signInBrowser = async (page: Page, descriptor: Pick<RuntimeDescript
   if (!response.ok) throw new Error(`Browser login failed with HTTP ${response.status}`);
   const redeemed = page.waitForResponse((reply) => new URL(reply.url()).pathname === "/runtime/browser-session");
   const ready = page.waitForResponse((reply) => new URL(reply.url()).pathname === "/runtime/ready");
-  await page.goto(((await response.json()) as { url: string }).url);
+  const url = new URL(((await response.json()) as { url: string }).url);
+  url.pathname = path;
+  await page.goto(url.href);
   const session = await redeemed;
   if (!session.ok()) throw new Error(`Browser session redemption failed with HTTP ${session.status()}`);
   const runtime = await ready;

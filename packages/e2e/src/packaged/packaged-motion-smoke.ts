@@ -95,7 +95,7 @@ export const expectPackagedStreamingMotion = async (
   expect(response.ok).toBe(true);
   const session = (await response.json()) as { id: string };
   logTestPhase("Packaged chat stream: open replay");
-  await page.goto(`${baseUrl}/projects/${projectId}/`);
+  await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
   const side = page.locator('[data-workbench-panel="side"]');
   await side.getByRole("button", { name: "Add panel", exact: true }).click();

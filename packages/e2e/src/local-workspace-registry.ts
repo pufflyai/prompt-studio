@@ -101,9 +101,6 @@ export const startLocalWorkspaceRegistry = async (input: {
   let origin = "";
   const server = createServer(async (request, response) => {
     const requestPath = decodeURIComponent(new URL(request.url ?? "/", origin).pathname).replace(/^\/+/, "");
-    const requestedAt = Date.now();
-    console.log(`Registry request ${requestPath} at ${requestedAt}`);
-    response.once("finish", () => console.log(`Registry response ${requestPath} after ${Date.now() - requestedAt}ms`));
     const pkg = packagesByName.get(requestPath);
     if (pkg) {
       response.setHeader("content-type", "application/json");
