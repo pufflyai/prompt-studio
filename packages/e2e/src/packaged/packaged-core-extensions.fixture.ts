@@ -87,7 +87,13 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("runtime stopped");
     if (closeRegistry) await closeRegistry();
     phase("registry closed");
-    await rm(tempRoot, { recursive: true, force: true });
+    if (process.platform === "win32") {
+      const removing = Bun.spawn(["cmd.exe", "/d", "/c", "rmdir", "/s", "/q", tempRoot], {
+        stdout: "ignore", stderr: "pipe",
+      });
+      const [exitCode, stderr] = await Promise.all([removing.exited, new Response(removing.stderr).text()]);
+      if (exitCode !== 0) throw new Error(`Native fixture removal failed (${exitCode}): ${stderr}`);
+    } else await rm(tempRoot, { recursive: true, force: true });
     phase("files removed");
   }
 };
