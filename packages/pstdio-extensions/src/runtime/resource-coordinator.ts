@@ -1,4 +1,5 @@
 import { type ResourceCapacity, readResourceCapacity } from "./resource-capacity";
+import { createCpuReservations } from "./resource-cpu-reservations";
 import { holdsExtensionAdmission, runWithExtensionAdmission } from "./resource-lease";
 
 export interface ResourceCost {
@@ -16,6 +17,7 @@ export class ExtensionResourceError extends Error {
 }
 
 interface WaitingJob {
+  cpuGroup: object;
   owner: string;
   cost: ResourceCost;
   bytes: number;
@@ -37,7 +39,8 @@ export const createResourceCoordinator = (
 ) => {
   const queue: WaitingJob[] = [];
   const identity = {};
-  let running = { cpu: 0, memory: 0 };
+  const cpu = createCpuReservations();
+  let runningMemory = 0;
   let queuedBytes = 0;
   let lastOwner: string | undefined;
   let checking = false;
@@ -72,8 +75,9 @@ export const createResourceCoordinator = (
         const candidates = queue.filter(
           (job) =>
             capacity.cpu > 0 &&
-            running.cpu + Math.min(job.cost.cpu, capacity.cpu) <= capacity.cpu &&
-            running.memory + job.cost.memory <= capacity.memory,
+            cpu.idle(job.cpuGroup) &&
+            cpu.total + Math.min(job.cost.cpu, capacity.cpu) <= capacity.cpu &&
+            runningMemory + job.cost.memory <= capacity.memory,
         );
         // Aging eventually moves background work ahead of freshly queued interactive work.
         candidates.sort(
@@ -87,7 +91,8 @@ export const createResourceCoordinator = (
         remove(job);
         // A single-CPU host makes serial progress, including with internally parallel compilers.
         job.cost = { ...job.cost, cpu: Math.min(job.cost.cpu, capacity.cpu) };
-        running = { cpu: running.cpu + job.cost.cpu, memory: running.memory + job.cost.memory };
+        cpu.set(job.cpuGroup, job, job.cost.cpu);
+        runningMemory += job.cost.memory;
         lastOwner = job.owner;
         job.start();
       }
@@ -106,7 +111,7 @@ export const createResourceCoordinator = (
     owner: string,
     cost: ResourceCost,
     signal: AbortSignal | undefined,
-    metadata: { bytes?: number; priority?: number; onWaiting?: () => void } = {},
+    metadata: { bytes?: number; priority?: number; onWaiting?: () => void; cpuGroup?: object } = {},
   ) => {
     signal?.throwIfAborted();
     if (!Number.isFinite(cost.cpu) || cost.cpu <= 0 || !Number.isFinite(cost.memory) || cost.memory < 0)
@@ -136,6 +141,7 @@ export const createResourceCoordinator = (
     try {
       await new Promise<void>((resolve, reject) => {
         job = {
+          cpuGroup: metadata.cpuGroup ?? {},
           owner,
           cost: { ...cost },
           bytes,
@@ -173,7 +179,7 @@ export const createResourceCoordinator = (
     const releaseCpu = () => {
       if (!cpuHeld) return;
       cpuHeld = false;
-      running.cpu -= job.cost.cpu;
+      cpu.set(job.cpuGroup, job, 0);
       void drain();
     };
     return {
@@ -181,13 +187,13 @@ export const createResourceCoordinator = (
       resumeCpu: () => {
         if (cpuHeld || !memoryHeld) return;
         cpuHeld = true;
-        running.cpu += job.cost.cpu;
+        cpu.set(job.cpuGroup, job, job.cost.cpu);
       },
       release: () => {
         releaseCpu();
         if (!memoryHeld) return;
         memoryHeld = false;
-        running.memory -= job.cost.memory;
+        runningMemory -= job.cost.memory;
         void drain();
       },
     };
@@ -197,7 +203,7 @@ export const createResourceCoordinator = (
     cost: ResourceCost,
     signal: AbortSignal | undefined,
     work: () => Promise<T>,
-    metadata: { bytes?: number; priority?: number; onWaiting?: () => void } = {},
+    metadata: { bytes?: number; priority?: number; onWaiting?: () => void; cpuGroup?: object } = {},
   ) => {
     signal?.throwIfAborted();
     if (holdsExtensionAdmission(identity)) return work();
@@ -210,7 +216,7 @@ export const createResourceCoordinator = (
   return {
     run,
     refresh: drain,
-    snapshot: () => ({ running: { ...running }, queued: queue.length, queuedBytes }),
+    snapshot: () => ({ running: { cpu: cpu.total, memory: runningMemory }, queued: queue.length, queuedBytes }),
     dispose: () => {
       stopped = true;
       clearTimeout(wake);

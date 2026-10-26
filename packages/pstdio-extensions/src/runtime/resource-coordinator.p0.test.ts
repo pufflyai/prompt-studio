@@ -2,6 +2,53 @@ import { expect, test } from "bun:test";
 import { createResourceCoordinator } from "./resource-coordinator";
 import { withExtensionHostWait } from "./resource-lease";
 
+test("concurrent calls sharing one process do not reserve the same CPU repeatedly", async () => {
+  const coordinator = createResourceCoordinator({ capacity: async () => ({ cpu: 2, memory: 512 }) });
+  const cpuGroup = {};
+  const firstDone = Promise.withResolvers<void>();
+  const secondDone = Promise.withResolvers<void>();
+  const waiting = Promise.withResolvers<void>();
+  const resume = Promise.withResolvers<void>();
+  const resumed = Promise.withResolvers<void>();
+  const first = coordinator.run(
+    "shared",
+    { cpu: 1, memory: 64 },
+    undefined,
+    async () => {
+      await withExtensionHostWait(async () => {
+        waiting.resolve();
+        await resume.promise;
+      });
+      resumed.resolve();
+      await firstDone.promise;
+    },
+    { cpuGroup },
+  );
+  await waiting.promise;
+  const second = coordinator.run("shared", { cpu: 1, memory: 64 }, undefined, () => secondDone.promise, { cpuGroup });
+  try {
+    await Bun.sleep(0);
+    resume.resolve();
+    await resumed.promise;
+    expect(coordinator.snapshot().running).toEqual({ cpu: 1, memory: 128 });
+    await expect(coordinator.run("other", { cpu: 1, memory: 64 }, undefined, async () => "responsive")).resolves.toBe(
+      "responsive",
+    );
+    firstDone.resolve();
+    await first;
+    expect(coordinator.snapshot().running.cpu).toBe(1);
+    secondDone.resolve();
+    await second;
+    expect(coordinator.snapshot().running).toEqual({ cpu: 0, memory: 0 });
+  } finally {
+    resume.resolve();
+    firstDone.resolve();
+    secondDone.resolve();
+    await Promise.all([first, second]);
+    coordinator.dispose();
+  }
+});
+
 test("accepted work resumes after host I/O when resource headroom falls", async () => {
   let memory = 256;
   const coordinator = createResourceCoordinator({ capacity: async () => ({ cpu: 1, memory }) });

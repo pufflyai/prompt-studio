@@ -3,6 +3,7 @@ import { prepareOwnerContext } from "./local-values";
 
 export const createSupervisedFunctionWrapper = (owner: {
   sourcePath: string;
+  cpuGroup: object;
   resources?: ExtensionResourceCoordinator;
   isLive: () => boolean;
   recover: (path: string[], args: unknown[]) => Promise<unknown>;
@@ -38,7 +39,7 @@ export const createSupervisedFunctionWrapper = (owner: {
               extensionWorkCosts.invocation,
               AbortSignal.any([owner.signal(), ...(signal ? [signal] : [])]),
               invoke,
-              { priority: 2, bytes: 512 * 1024 + JSON.stringify(args.slice(1)).length * 2 },
+              { priority: 2, bytes: 512 * 1024 + JSON.stringify(args.slice(1)).length * 2, cpuGroup: owner.cpuGroup },
             )
           : invoke();
       };

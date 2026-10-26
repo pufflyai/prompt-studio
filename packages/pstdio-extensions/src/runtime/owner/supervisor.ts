@@ -32,6 +32,7 @@ export const createExtensionOwner = (input: {
   resources?: ExtensionResourceCoordinator;
 }) => {
   const resources = selectExtensionResources(input.resources);
+  const cpuGroup = {};
   let child: Bun.Subprocess | undefined;
   let endpoint: ReturnType<typeof createOwnerEndpoint> | undefined;
   let loading: Promise<LoadedExtensionSource | null> | undefined;
@@ -101,6 +102,7 @@ export const createExtensionOwner = (input: {
   };
   const wrapFunctions = createSupervisedFunctionWrapper({
     sourcePath: input.path,
+    cpuGroup,
     resources,
     isLive: () => Boolean(child),
     recover: recoverHandler,
@@ -197,7 +199,10 @@ export const createExtensionOwner = (input: {
     };
     const pending = (
       resources
-        ? resources.run(input.path, extensionWorkCosts.initialization, admission.signal, initialize, { priority: 1 })
+        ? resources.run(input.path, extensionWorkCosts.initialization, admission.signal, initialize, {
+            priority: 1,
+            cpuGroup,
+          })
         : initialize()
     ).catch(async (error) => {
       await reaping;

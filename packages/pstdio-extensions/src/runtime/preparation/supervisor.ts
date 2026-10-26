@@ -11,6 +11,7 @@ export const createExtensionPreparation = (
   runtime?: { executable: string; packaged: boolean },
   resources?: ExtensionResourceCoordinator,
 ) => {
+  const cpuGroup = {};
   let child: Bun.Subprocess | undefined;
   let endpoint: ReturnType<typeof createOwnerEndpoint> | undefined;
   let reaping = Promise.resolve();
@@ -97,7 +98,7 @@ export const createExtensionPreparation = (
           extensionWorkCosts.preparation,
           lifetime,
           invoke,
-          { priority: 1, bytes: JSON.stringify(input).length * 2 },
+          { priority: 1, bytes: JSON.stringify(input).length * 2, cpuGroup },
         )
       : invoke());
     return result as Awaited<ReturnType<PreparationOperations[K]>>;
