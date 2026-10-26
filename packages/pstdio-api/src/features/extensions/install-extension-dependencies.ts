@@ -1,7 +1,17 @@
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  type FSWatcher,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  watch,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { createExtensionInstallEnvironment } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
 import { traceSetupPhase } from "../../lib/setup-phase";
@@ -42,6 +52,8 @@ export const runCommand = async (command: string, args: string[], options: Comma
   let childPid: number | undefined;
   let actualArgv = [command, ...args];
   let artifactPath: string | undefined;
+  let usageJson: string | undefined;
+  const emissions: { stream: string; from: number; to: number; at: number }[] = [];
   const hashes = Object.fromEntries(
     ["package.json", "bun.lock"].map((name) => {
       const path = join(options.cwd, name);
@@ -59,9 +71,22 @@ export const runCommand = async (command: string, args: string[], options: Comma
     const outputRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-command-"));
     if (process.env.E2E_INSTALL_PROFILE_ROOT) artifactPath = join(process.env.E2E_INSTALL_PROFILE_ROOT, commandId);
     mark("capture-root-created");
+    let observer: FSWatcher | undefined;
+    const offsets = { stdout: 0, stderr: 0 };
+    const sample = () => {
+      for (const stream of ["stdout", "stderr"] as const) {
+        const path = join(outputRoot, stream);
+        if (!existsSync(path)) continue;
+        const size = Bun.file(path).size;
+        if (size <= offsets[stream]) continue;
+        emissions.push({ stream, from: offsets[stream], to: size, at: performance.now() });
+        offsets[stream] = size;
+      }
+    };
     try {
       const stdoutFile = Bun.file(join(outputRoot, "stdout"));
       const stderrFile = Bun.file(join(outputRoot, "stderr"));
+      observer = watch(outputRoot, sample);
       mark("spawn-start");
       const child = Bun.spawn(resolved.argv, {
         cwd: options.cwd,
@@ -77,11 +102,19 @@ export const runCommand = async (command: string, args: string[], options: Comma
       mark("spawn-returned");
       const exitCode = await child.exited;
       mark("exit-observed");
+      usageJson = JSON.stringify(child.resourceUsage(), (_key, value) =>
+        typeof value === "bigint" ? value.toString() : value,
+      );
       const [stdout, stderr] = await Promise.all([stdoutFile.text(), stderrFile.text()]);
       mark("capture-read-done");
-      console.log("Native package manager result", JSON.stringify({ commandId, exitCode, stdout, stderr }));
+      console.log(
+        "Native package manager result",
+        JSON.stringify({ commandId, exitCode, stdout: stdout.slice(0, 4000), stderr: stderr.slice(0, 4000) }),
+      );
       return { exitCode, stdout, stderr };
     } finally {
+      observer?.close();
+      sample();
       mark("capture-backup-start");
       if (artifactPath) {
         mkdirSync(artifactPath, { recursive: true });
@@ -106,6 +139,8 @@ export const runCommand = async (command: string, args: string[], options: Comma
       cacheExistedAtEntry,
       parentBun: Bun.version,
       bunBeBun: options.env?.BUN_BE_BUN,
+      usage: usageJson ? JSON.parse(usageJson) : null,
+      emissions,
     };
     console.log("Native package manager timing", JSON.stringify(record));
     if (artifactPath) writeFileSync(join(artifactPath, "timing.json"), JSON.stringify(record));
@@ -151,6 +186,7 @@ export const installDependencies = async (targetPath: string, input: DependencyI
   const packaged = (input.isPackagedRuntime ?? isPackagedRuntime)();
   const env = createExtensionInstallEnvironment(input.env ?? process.env);
   const args = ["install", "--frozen-lockfile", "--ignore-scripts", ...(input.production ? ["--production"] : [])];
+  if (basename(targetPath) === "pstdio-planner") args.push("--verbose");
   const command = packaged
     ? resolveManagedBunCommand({
         args,

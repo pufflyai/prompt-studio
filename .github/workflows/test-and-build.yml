@@ -1,4 +1,4 @@
-name: Native package manager command timing profile
+name: Native installer output and resource profile
 on:
   workflow_dispatch:
 permissions:
