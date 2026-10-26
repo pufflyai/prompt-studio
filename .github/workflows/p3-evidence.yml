@@ -1,0 +1,65 @@
+# Temporary: collects repeated P3 samples on hosted runners to set CI budgets. Not for main.
+name: P3 evidence
+on:
+  push:
+    branches: [test/p3-evidence]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  workloads:
+    name: P3 ${{ matrix.family }} sample ${{ matrix.sample }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        family: [browser]
+        sample: [1, 2, 3]
+    env:
+      SOURCE_SHA: 066cd94484d1adfa2de13a183d2ba5df82246f7d
+      VERSION_SHA: 810745e822efff7b5aaa5d4681812f226ada991d
+      ARTIFACT_RUN_ID: "40262250183"
+      ARTIFACT_ATTEMPT: "1"
+      CHANNEL: nightly
+      GH_TOKEN: ${{ github.token }}
+      PLAYWRIGHT_TRACE: "off"
+      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install native dependencies
+        run: node scripts/ci/install-native-dependencies.ts
+      - name: Download the nightly compiled candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: release-build-attempt-1
+          run-id: "40262250183"
+          github-token: ${{ github.token }}
+      - name: Restore the compiled candidate
+        shell: bash
+        run: |
+          bun scripts/ci/production-payload.ts check
+          tar -xzf release-build.tar.gz
+      - name: Install browser engines
+        run: bunx playwright@1.60.0 install --with-deps
+      - name: Collect the fixed workloads
+        continue-on-error: false
+        run: bun scripts/ci/production-performance.ts ${{ matrix.family }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p3-${{ matrix.family }}-${{ matrix.sample }}
+          path: |
+            test-results/production-performance
+            packages/e2e/test-results
+            packages/ui/test-results
+            __test-tmp__/subnav-benchmark/results
+          if-no-files-found: warn
