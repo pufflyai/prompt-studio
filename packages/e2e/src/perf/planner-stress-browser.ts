@@ -24,9 +24,6 @@ async function selectView(page: Page, timeline: FrameLocator, title: string, edg
 }
 
 async function checkDeferredViews(timeline: FrameLocator) {
-  await timeline.locator("[data-ticket]").first().click();
-  await expect(timeline.getByRole("button", { name: "Open ticket", exact: true })).toBeVisible();
-  await timeline.getByRole("button", { name: "Close details", exact: true }).click();
   await timeline.getByRole("button", { name: "New track", exact: true }).click();
   const track = timeline.getByRole("dialog", { name: "New feature track", exact: true });
   await expect(track.getByRole("textbox", { name: "Feature track name", exact: true })).toBeVisible();

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { appendFileSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ProductionCandidate } from "./production-candidate";
 import { publishedDesktopTargets } from "./production-platforms";
 
@@ -38,10 +39,16 @@ export const requireProductionBuild = (actual: BuildIdentity, expected: BuildIde
     throw new Error("Candidate build identity mismatch");
 };
 
-export const productionPolicyDigest = () => {
-  const policyFiles = [
-    ...new Bun.Glob("scripts/ci/production-*.ts").scanSync("."),
-    ...new Bun.Glob(".github/workflows/production-*.yml").scanSync("."),
+const repoRoot = join(import.meta.dir, "..", "..");
+
+// The digest hashes file names too. Glob paths use `\` on Windows, so scan each folder for
+// bare names and join them with `/`. Every platform then names the policy the same way.
+export const productionPolicyFiles = () =>
+  [
+    ...[...new Bun.Glob("production-*.ts").scanSync(join(repoRoot, "scripts/ci"))].map((name) => `scripts/ci/${name}`),
+    ...[...new Bun.Glob("production-*.yml").scanSync(join(repoRoot, ".github/workflows"))].map(
+      (name) => `.github/workflows/${name}`,
+    ),
     "scripts/ci/test-policy.ts",
     "scripts/ci/run-ci-checks.ts",
     "scripts/verify/verify-packages.ts",
@@ -58,8 +65,10 @@ export const productionPolicyDigest = () => {
   ]
     .filter((path) => !path.endsWith(".test.ts"))
     .sort();
+
+export const productionPolicyDigest = () => {
   const policy = createHash("sha256");
-  for (const path of policyFiles) policy.update(path).update(readFileSync(path));
+  for (const path of productionPolicyFiles()) policy.update(path).update(readFileSync(join(repoRoot, path)));
   return policy.digest("hex");
 };
 

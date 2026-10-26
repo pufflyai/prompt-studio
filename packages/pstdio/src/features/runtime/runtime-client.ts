@@ -11,6 +11,7 @@ const runtimeRequest = (
   path: string,
   body: Record<string, unknown>,
   fetcher: RuntimeFetcher,
+  signal?: AbortSignal,
 ) =>
   fetcher(`${descriptor.origin}${path}`, {
     method: "POST",
@@ -19,6 +20,7 @@ const runtimeRequest = (
       "content-type": "application/json",
     },
     body: JSON.stringify({ instanceId: descriptor.instanceId, ...body }),
+    signal,
   });
 
 export const promoteRuntime = async (descriptor: RuntimeDescriptor, fetcher: RuntimeFetcher = fetch) => {
@@ -119,9 +121,10 @@ export const requestRuntimeShutdown = async (
   descriptor: RuntimeDescriptor,
   force: boolean,
   fetcher: RuntimeFetcher = fetch,
+  signal?: AbortSignal,
 ): Promise<RuntimeShutdownResult> => {
   try {
-    const response = await runtimeRequest(descriptor, "/runtime/shutdown", { force }, fetcher);
+    const response = await runtimeRequest(descriptor, "/runtime/shutdown", { force }, fetcher, signal);
     if (response.status === 202) return { state: "accepted" };
     if (response.status === 409) {
       const body = (await response.json()) as { activity?: RuntimeActivitySummary; error?: string };

@@ -4,6 +4,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { finalizeBenchmarkCase, runBenchmarkCase } from "./benchmark-case";
 
+// A killed process can briefly remain as a zombie (Z) or, on macOS, while it exits (E).
+const expectStopped = (pid: number) => {
+  if (process.platform === "win32") return expect(() => process.kill(pid, 0)).toThrow();
+  const state = Bun.spawnSync(["ps", "-o", "stat=", "-p", String(pid)])
+    .stdout.toString()
+    .trim();
+  expect(state === "" || /^[ZX]/.test(state) || state.includes("E")).toBe(true);
+};
+
 const run = async (mode: string, timeoutMs = 500) => {
   const root = mkdtempSync(join(tmpdir(), "bounded-benchmark-"));
   const output = join(root, "partial.jsonl");
@@ -48,13 +57,7 @@ test("timeout terminates owned descendants including a separate process group", 
   const { result, partial } = await run("descendants", 1_000);
   expect(result.status).toBe("timed-out");
   const { pids } = JSON.parse(partial.trim());
-  for (const pid of pids) {
-    // A killed child can briefly be a zombie before the OS reaps it.
-    if (process.platform !== "win32") {
-      const ps = Bun.spawnSync(["ps", "-o", "stat=", "-p", String(pid)]);
-      expect(ps.stdout.toString().trim().replace(/^Z.*/, "")).toBe("");
-    } else expect(() => process.kill(pid, 0)).toThrow();
-  }
+  for (const pid of pids) expectStopped(pid);
 });
 
 test("normal exit and nonzero exit remain distinct from timeout", async () => {
@@ -68,12 +71,7 @@ for (const mode of ["exit-with-descendants", "fail-with-descendants"])
     const { pids } = JSON.parse(partial.trim());
     try {
       expect(result.status).toBe(mode === "exit-with-descendants" ? "completed" : "failed");
-      for (const pid of pids) {
-        if (process.platform !== "win32") {
-          const ps = Bun.spawnSync(["ps", "-o", "stat=", "-p", String(pid)]);
-          expect(ps.stdout.toString().trim().replace(/^Z.*/, "")).toBe("");
-        } else expect(() => process.kill(pid, 0)).toThrow();
-      }
+      for (const pid of pids) expectStopped(pid);
     } finally {
       for (const pid of pids) {
         try {

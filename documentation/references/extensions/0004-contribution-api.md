@@ -188,7 +188,7 @@ Set `tooltip` to show text while the pointer rests on a row or the row has keybo
 
 Set `badge: { label: "3", color: "orange" }` for a trailing count beside a tree row. It uses the notification count badge style. Omit it when there is no count to show.
 
-Kanban attributes with `display: { kind: "badge-list", itemsAttributeId: "items" }` read their badges from the named row attribute. Each item has an `id`, `label`, and optional `icon`, `color`, `tooltip`, and page `target`. A target makes that badge a direct link without activating the card. Page and resource references are scoped to the contributing extension and project.
+Kanban attributes with `display: { kind: "badge-list", itemsAttributeId: "items" }` read their badges from the named row attribute. Each item has an `id`, `label`, and optional `icon`, `color`, `tooltip`, and `action`. The action accepts any navigation target, including a page-owned panel that opens beside the collection without changing its route. Page, panel, and resource references are scoped to the contributing extension and project. Actions run without activating the card. The older page-only `target` remains supported and is deprecated in favor of `action`; when both are present, `action` wins. This addition shares the planned extension API 0.3.0 release in Prompt Studio 0.46. Publish the SDK and host before extensions adopt it.
 
 Tree rows use `resource` as their action subject and `target` as their normal-click destination. Right-clicking
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
@@ -261,6 +261,9 @@ See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes
 Both `dataTable` and `kanban` bodies accept `toolbarActions`. These actions stay
 visible when a query returns no rows. Use them for commands such as creating a
 record or starting an experiment.
+
+The host renders visible actions as `xs` buttons, with one vertical separator
+before the action group. It omits the separator when no actions are visible.
 
 ```ts
 const experiments = defineView({

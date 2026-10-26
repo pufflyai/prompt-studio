@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { scopeFixture } from "./ci-scope.test-fixture";
 import { resolveCiScope } from "./pull-request-ci-scope";
 import { plannedCiJobs } from "./required-ci-jobs";
+import { sourceCoverageArtifacts } from "./source-coverage-artifacts";
 
 test("PR selection follows affected package dependencies without test filename lists", () => {
   const scope = resolveCiScope(scopeFixture());
@@ -53,6 +54,15 @@ test("Intel Mac validation belongs to full releases while nightly keeps Windows 
   expect(nightly.toolchainMatrix.map((row) => row.platform_pkg)).not.toContain("cli-darwin-x64");
   expect(stable.toolchainMatrix.map((row) => row.platform_pkg)).toContain("cli-darwin-x64");
   expect(JSON.stringify(plannedCiJobs(nightly))).not.toContain("cli-darwin-x64");
+  expect(nightly.sourceCoverage).toBe(true);
+  expect(plannedCiJobs(nightly).find((row) => row.id === "source_coverage")?.priority).toBe("P2");
+  expect(queue.sourceCoverage).toBe(false);
+  expect(stable.sourceCoverage).toBe(false);
+  const artifacts = sourceCoverageArtifacts(nightly, 2);
+  expect(artifacts).toContain("windows_test_and_build-1-attempt-2");
+  expect(artifacts).not.toContain("windows_test_and_build-0-attempt-2");
+  expect(artifacts.filter((name) => name.startsWith("database_tests-"))).toHaveLength(nightly.databaseMatrix.length);
+  expect(sourceCoverageArtifacts(queue, 2)).toEqual([]);
 });
 
 test("shared inputs select all essential owners and prose starts no runtime suites", () => {

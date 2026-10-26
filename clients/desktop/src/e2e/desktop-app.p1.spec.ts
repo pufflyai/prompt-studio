@@ -109,7 +109,20 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     }
     if (request.url === "/v1/extensions/webviews/token/radar/digest/runtime") {
       response.setHeader("content-type", "text/html");
-      response.end("<!doctype html><button>Copy extension draft</button>");
+      response.end(`<!doctype html><body><script>
+        const button = document.createElement("button");
+        button.textContent = "Copy extension draft";
+        button.onclick = async () => {
+          button.textContent = "Copying extension draft";
+          try {
+            await navigator.clipboard.writeText("Extension draft");
+            button.textContent = "Copied extension draft";
+          } catch (error) {
+            button.textContent = String(error);
+          }
+        };
+        document.body.append(button);
+      </script>`);
       return;
     }
     response.setHeader("content-type", "text/html");

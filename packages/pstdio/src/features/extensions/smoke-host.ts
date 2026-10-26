@@ -2,14 +2,21 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { discoverRuntime } from "../runtime/runtime-descriptor";
+import { requestRuntimeShutdown } from "../runtime/runtime-client";
+import { discoverRuntime, type RuntimeDescriptor, readRuntimeDescriptor } from "../runtime/runtime-descriptor";
 
-export const stopSmokeProcess = async (child: ChildProcess) => {
+export const stopSmokeProcess = async (child: ChildProcess, descriptor?: RuntimeDescriptor | null) => {
   if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
   const stopped = new Promise<void>((resolve) => child.once("exit", () => resolve()));
-  child.kill("SIGTERM");
   const force = setTimeout(() => child.kill("SIGKILL"), 5_000);
   try {
+    // Windows terminates on SIGTERM without running host cleanup. A published
+    // runtime has an authenticated shutdown path that closes storage and its descriptor.
+    const result =
+      descriptor?.pid === child.pid
+        ? await requestRuntimeShutdown(descriptor, true, undefined, AbortSignal.timeout(1000))
+        : null;
+    if (result?.state !== "accepted" && child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");
     await stopped;
   } finally {
     clearTimeout(force);
@@ -31,6 +38,10 @@ export const startSmokeHost = async (input: {
     {
       cwd: input.project,
       env: { ...input.env, ...(!compiled ? { PSTDIO_DISABLE_EMBED_MANIFEST: "1" } : {}) },
+      // The smoke command owns interruption and awaits authenticated host cleanup.
+      // A terminal Ctrl+C must not also terminate the host's process group.
+      detached: true,
+      windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     },
   );
@@ -44,14 +55,16 @@ export const startSmokeHost = async (input: {
   };
   child.stdout?.on("data", capture);
   child.stderr?.on("data", capture);
+  let closing: Promise<void> | undefined;
+  const close = () => {
+    input.signal.removeEventListener("abort", abort);
+    closing ??= stopSmokeProcess(child, readRuntimeDescriptor(join(input.home, "runtime.json")));
+    return closing;
+  };
   const abort = () => {
-    void stopSmokeProcess(child);
+    void close();
   };
   input.signal.addEventListener("abort", abort, { once: true });
-  const close = async () => {
-    input.signal.removeEventListener("abort", abort);
-    await stopSmokeProcess(child);
-  };
   try {
     const deadline = Date.now() + 30_000;
     while (Date.now() < deadline) {

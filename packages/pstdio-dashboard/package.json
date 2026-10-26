@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "bun check -b && vite build",
     "prebuild": "bun run typegen:tokens",
-    "typecheck": "bun run typegen:tokens && bun check -b",
+    "typecheck": "bun check -b",
     "lint": "bun run typecheck && biome check . && bun scripts/check-module-isolation.ts",
     "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --silent --tsconfig-override tsconfig.app.json",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --coverage --tsconfig-override tsconfig.app.json",

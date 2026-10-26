@@ -12,11 +12,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type Browser, chromium, expect, type FrameLocator, type Page, test } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
+import { type Browser, chromium, expect, type FrameLocator, type Page, test } from "../scripts/playwright-test";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { buildBinary, runPackagedAsync } from "./packaged-helpers";
 import {

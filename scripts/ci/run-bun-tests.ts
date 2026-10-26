@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { bunRunIdentity, junitCases, registeredUnselectedScope } from "./bun-test-evidence";
 import { assertStableQuarantineExclusions, verifyQuarantineReport } from "./quarantine-reports";
@@ -6,9 +6,10 @@ import { priorityIgnorePatterns, readTestPriorities } from "./test-discovery";
 import { bunTestSelection, narrowStablePattern, quarantineDirectory } from "./test-quarantine";
 import cases from "./test-quarantine.json";
 
-const root = resolve(import.meta.dir, "../..");
+const root = realpathSync.native(resolve(import.meta.dir, "../.."));
+const cwd = realpathSync.native(process.cwd());
 const quarantine = process.env.E2E_TEST_LANE === "quarantine";
-const packageDir = relative(root, process.cwd()).replaceAll("\\", "/");
+const packageDir = relative(root, cwd).replaceAll("\\", "/");
 const runner = packageDir === "packages/e2e" ? "packaged-bun" : "bun";
 const priority = quarantine ? "P2" : (process.env.CI_PRIORITY ?? "P1");
 if (!["P0", "P1", "P2", "P3"].includes(priority)) throw new Error(`Unknown test priority: ${priority}`);
@@ -19,7 +20,7 @@ const scopedPaths = forwarded.filter(
     !arg.startsWith("-") &&
     (/\.test\.tsx?$/.test(arg) ||
       packageCases.some((entry) => {
-        const file = relative(process.cwd(), resolve(root, entry.file)).replaceAll("\\", "/");
+        const file = relative(cwd, resolve(root, entry.file)).replaceAll("\\", "/");
         const path = arg.replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/$/, "");
         return file === path || file.startsWith(`${path}/`);
       })),
@@ -86,9 +87,13 @@ if (quarantine && !selection.files.length) {
   mkdirSync(dirname(evidencePath), { recursive: true });
   rmSync(report, { force: true });
   rmSync(evidencePath, { force: true });
+  const sourceCoverage = !quarantine && priority !== "P3" && process.env.CI_SOURCE_COVERAGE === "1";
+  const coverageDirectory = resolve(dirname(evidencePath), "coverage");
+  const coverageFile = resolve(coverageDirectory, "lcov.info");
+  if (sourceCoverage) rmSync(coverageDirectory, { recursive: true, force: true });
   if (quarantine) {
     const { assertNoQuarantineRetries } = await import("./quarantine-retries");
-    for (const file of selection.files) assertNoQuarantineRetries(readFileSync(resolve(file), "utf8"), forwarded);
+    for (const file of selection.files) assertNoQuarantineRetries(readFileSync(resolve(cwd, file), "utf8"), forwarded);
   }
   const timings = process.env.BUN_TEST_TIMINGS ?? `${dirname(evidencePath)}/timings.json`;
   const timingArgs = args.some((arg) => arg.startsWith("--timings"))
@@ -107,19 +112,37 @@ if (quarantine && !selection.files.length) {
     "--reporter-outfile",
     report,
     ...timingArgs,
+    ...(sourceCoverage ? ["--coverage", "--coverage-reporter=lcov", `--coverage-dir=${coverageDirectory}`] : []),
   ];
-  const child = Bun.spawn([process.execPath, ...command], { stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+  const child = Bun.spawn([process.execPath, ...command], {
+    cwd,
+    stdin: "inherit",
+    stdout: "inherit",
+    stderr: "inherit",
+  });
   const exitCode = await child.exited;
   let reported: ReturnType<typeof junitCases> = [];
   let reportError: string | null = null;
   try {
     const xml = await Bun.file(report).text();
     reported = junitCases(xml).map((entry) => {
-      const file = relative(root, resolve(entry.file)).replaceAll("\\", "/");
+      const file = relative(root, resolve(cwd, entry.file)).replaceAll("\\", "/");
       return { ...entry, file, id: `${file}${entry.id.slice(entry.file.length)}` };
     });
+    // Bun emits no lcov file when a test imports no instrumented source. Keep
+    // that explicit in its evidence instead of inventing covered lines.
+    if (sourceCoverage && existsSync(coverageFile)) {
+      const content = readFileSync(coverageFile, "utf8")
+        .split("\n")
+        .map((line) => {
+          if (!line.startsWith("SF:")) return line;
+          return `SF:${relative(root, resolve(cwd, line.slice(3))).replaceAll("\\", "/")}`;
+        })
+        .join("\n");
+      writeFileSync(coverageFile, content);
+    }
     if (quarantine) {
-      const summary = verifyQuarantineReport(xml, selection.cases, root, process.cwd());
+      const summary = verifyQuarantineReport(xml, selection.cases, root, cwd);
       if (exitCode !== 0 && summary.failures === 0) throw new Error("Quarantine failed outside its registered cases");
     } else assertStableQuarantineExclusions(reported, selection.cases);
   } catch (error) {
@@ -129,7 +152,7 @@ if (quarantine && !selection.files.length) {
     !reportError && reported.length > 0 && !(priority === "P1" && exitCode !== 0) && child.signalCode === null;
   const unselectedReason =
     !quarantine && complete && exitCode === 0
-      ? registeredUnselectedScope(root, process.cwd(), args, cases, runner, reported)
+      ? registeredUnselectedScope(root, cwd, args, cases, runner, reported)
       : null;
   await Bun.write(
     evidencePath,
@@ -138,6 +161,14 @@ if (quarantine && !selection.files.length) {
         ...bunRunIdentity(root),
         quarantineAttempt: quarantine ? process.env.CI_QUARANTINE_ATTEMPT : undefined,
         priority,
+        coverage: sourceCoverage
+          ? {
+              file: existsSync(coverageFile)
+                ? relative(dirname(evidencePath), coverageFile).replaceAll("\\", "/")
+                : null,
+              sourceRoot: "repository",
+            }
+          : null,
         packageDir,
         lane: quarantine ? "quarantine" : "stable",
         selection: {

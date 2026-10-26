@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createPriorityPlan } from "./priority-plan";
 
 const packages: Parameters<typeof createPriorityPlan>[1] = [
-  { name: "example", dir: "packages/example", dependencies: [], scripts: { test: "bun test" } },
+  { name: "example", dir: "packages/example", dependencies: [], scripts: { test: "bun configured-runner.ts" } },
   { name: "pstdio-api", dir: "packages/pstdio-api", dependencies: [], scripts: { test: "bun runner.ts" } },
   { name: "e2e", dir: "packages/e2e", dependencies: [], scripts: {} },
   { name: "storybook-tests", dir: "packages/storybook-tests", dependencies: [], scripts: {} },

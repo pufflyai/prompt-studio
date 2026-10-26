@@ -74,12 +74,16 @@ test("keeps the real fixed group in sync and preserves extension SDK and UI rang
     mkdirSync(dirname(join(root, path)), { recursive: true });
     copyFileSync(join(repo, path), join(root, path));
   }
-  const before = new Map(manifests.map((path) => [path, read(root, path)]));
   const config = JSON.parse(readFileSync(join(root, ".changeset/config.json"), "utf8")) as { fixed: string[][] };
-  const expected = patchVersion(
-    `pstdio@${read(root, "packages/pstdio/package.json").version}`,
-    `pstdio@${read(root, "packages/pstdio/package.json").version}`,
-  );
+  // A patch is versioned from a stable release checkout. Nightly candidates carry prerelease versions.
+  const stable = read(root, "packages/pstdio/package.json").version.replace(/-.*$/, "");
+  for (const path of manifests) {
+    const manifest = read(root, path);
+    if (config.fixed.flat().includes(manifest.name))
+      writeFileSync(join(root, path), `${JSON.stringify({ ...manifest, version: stable }, null, 2)}\n`);
+  }
+  const before = new Map(manifests.map((path) => [path, read(root, path)]));
+  const expected = patchVersion(`pstdio@${stable}`, `pstdio@${stable}`);
   const version = await versionPatch(root, "Fix stable startup.");
   expect(version).toBe(expected);
   for (const path of manifests) {

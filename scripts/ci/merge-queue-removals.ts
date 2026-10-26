@@ -29,6 +29,7 @@ const reasons: Record<string, string> = {
   failed_checks: "a required check failed in its merge group",
   merge_conflict: "it conflicts with the pull requests ahead of it",
   manual: "someone removed it",
+  stack_invalidated: "a pull request it is stacked on left the queue",
 };
 
 // GitHub records a merge as a removal too. Only the newest queue event counts: a later
@@ -46,7 +47,9 @@ const removalComment = (removal: { at: string; reason: string }, run: FailedRun 
   if (run) lines.push("", `Failed merge group run: ${run.url}`, ...run.jobs.map((job) => `- ${job}`));
   lines.push(
     "",
-    "Fix the cause, then add the pull request to the queue again. If this pull request did not cause the failure, the check is not deterministic: fix or quarantine the check first.",
+    removal.reason === "stack_invalidated"
+      ? "Nothing in this pull request failed. Add it to the queue again after the pull request it is stacked on is back in the queue."
+      : "Fix the cause, then add the pull request to the queue again. If this pull request did not cause the failure, the check is not deterministic: fix or quarantine the check first.",
   );
   return lines.join("\n");
 };

@@ -36,7 +36,7 @@ test(
       expect(workspaces.items).toHaveLength(1);
       const workspace = workspaces.items[0]!;
       expect(workspace.projectId).toBe(project.id);
-      expect(workspace.rootPath).toBe(realpathSync(folder));
+      expect(workspace.rootPath).toBe(realpathSync.native(folder));
       const pages = await Promise.all([
         client.projects.query(),
         client.sessions.query(project.id),
@@ -60,7 +60,7 @@ test(
       expect(activity.items).toEqual([]);
       expect(activity.nextCursor).toBeNull();
       expect(await client.filesystem.createDirectory({ parentPath: folder, name: "notes" })).toEqual({
-        path: realpathSync(join(folder, "notes")),
+        path: realpathSync.native(join(folder, "notes")),
       });
     } finally {
       if (child) await stopProcess(child);

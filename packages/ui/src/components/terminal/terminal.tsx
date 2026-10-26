@@ -283,8 +283,14 @@ export const Terminal = (props: TerminalProps) => {
     const focus = () => {
       const current = document.activeElement;
       const container = containerRef.current;
+      // A closing popup that held focus at the request returns focus to its own control. That is not a new choice.
+      const restored = current
+        ?.getAttribute("aria-controls")
+        ?.split(" ")
+        .some((id) => previousFocus?.closest(`[id="${CSS.escape(id)}"]`));
       // Deferred construction must respect a focus choice made after the request.
-      if (current === previousFocus || (container && current?.contains(container))) xtermRef.current?.focus();
+      if (current === previousFocus || restored || (container && current?.contains(container)))
+        xtermRef.current?.focus();
     };
     if (xtermRef.current) focus();
     else focusWhenReadyRef.current = focus;

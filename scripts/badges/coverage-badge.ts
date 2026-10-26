@@ -38,33 +38,30 @@ export const coverageBadge = (summary: CoverageSummary) => {
   return { schemaVersion: 1, label: "coverage", message: `${percent}%`, color };
 };
 
-if (import.meta.main) {
-  const output = process.argv[2];
-  if (!output) throw new Error("Usage: summarize-coverage.ts <badge-json-path>");
-
-  const root = process.cwd();
-  const reports = ["packages", "extensions", "services", "clients", ".pstdio/extensions"].flatMap((group) =>
-    Array.from(new Bun.Glob(`${group}/*/coverage/**/lcov.info`).scanSync({ cwd: root })).map((file) => ({
-      packageDir: join(root, file.split("/coverage/")[0]),
-      content: readFileSync(join(root, file), "utf8"),
-    })),
-  );
-  if (reports.length === 0) throw new Error("No lcov reports found. Run `bun run test:coverage` first.");
-
+interface CoverageArtifactsInput {
+  root: string;
+  output: string;
+  reports: CoverageReport[];
+  scope: string;
+  execution?: ExecutionEvidence[];
+  workflowRunId?: number;
+}
+export const writeCoverageArtifacts = (input: CoverageArtifactsInput) => {
+  const { root, output, reports, scope, execution } = input;
   const summary = summarizeCoverage(root, reports);
   const badge = coverageBadge(summary);
   const tracked = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" });
   const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
   if (tracked.status !== 0 || revision.status !== 0) throw new Error("Cannot identify coverage source revision.");
-  const executionPath = process.env.COVERAGE_EXECUTION_REPORT;
   const report = coverageReport({
     root,
     revision: revision.stdout.trim(),
-    scope: process.env.COVERAGE_SCOPE ?? "unit-source",
+    scope,
     measuredAt: new Date().toISOString(),
     trackedFiles: tracked.stdout.split("\0").filter(Boolean),
     reports,
-    execution: executionPath ? (JSON.parse(readFileSync(executionPath, "utf8")) as ExecutionEvidence[]) : undefined,
+    execution,
+    workflowRunId: input.workflowRunId,
   });
   mkdirSync(dirname(resolve(output)), { recursive: true });
   writeFileSync(output, `${JSON.stringify(badge, null, 2)}\n`);
@@ -72,4 +69,25 @@ if (import.meta.main) {
   console.log(
     `Line coverage: ${badge.message} (${summary.coveredLines}/${summary.totalLines}) from ${reports.length} reports.`,
   );
+};
+
+if (import.meta.main) {
+  const output = process.argv[2];
+  if (!output) throw new Error("Usage: summarize-coverage.ts <badge-json-path>");
+  const root = process.cwd();
+  const reports = ["packages", "extensions", "services", "clients", ".pstdio/extensions"].flatMap((group) =>
+    Array.from(new Bun.Glob(`${group}/*/coverage/**/lcov.info`).scanSync({ cwd: root })).map((file) => ({
+      packageDir: join(root, file.split("/coverage/")[0]),
+      content: readFileSync(join(root, file), "utf8"),
+    })),
+  );
+  if (!reports.length) throw new Error("No lcov reports found. Run `bun run test:coverage` first.");
+  const executionPath = process.env.COVERAGE_EXECUTION_REPORT;
+  writeCoverageArtifacts({
+    root,
+    output,
+    reports,
+    scope: process.env.COVERAGE_SCOPE ?? "unit-source",
+    execution: executionPath ? (JSON.parse(readFileSync(executionPath, "utf8")) as ExecutionEvidence[]) : undefined,
+  });
 }

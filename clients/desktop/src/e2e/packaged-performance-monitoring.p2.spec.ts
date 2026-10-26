@@ -1,6 +1,12 @@
 import { expect, type Page } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
-import { disposePackagedApp, type PackagedApp, runPackagedCli } from "./packaged-app-helpers";
+import {
+  createPackagedHome,
+  disposePackagedApp,
+  launchPackagedApp,
+  type PackagedApp,
+  runPackagedCli,
+} from "./packaged-app-helpers";
 import {
   launchProject,
   openLabPreview,
@@ -10,6 +16,27 @@ import {
 } from "./packaged-performance-helpers";
 
 // Renderer CPU budgets are benchmarks in packaged-renderer.p3.bench.ts.
+
+test("Windows diagnostics work independently of PATH", async () => {
+  test.skip(process.platform !== "win32", "Windows permission tools");
+  const home = createPackagedHome();
+  let app: PackagedApp | null = null;
+  try {
+    app = await launchPackagedApp(home, { PATH: home, PSTDIO_DEFAULT_EXTENSIONS: "[]" });
+    await app.page.evaluate(async () => {
+      const desktop = (
+        window as unknown as {
+          promptStudioDesktop: { setPerformanceMonitoring: (enabled: boolean) => Promise<unknown> };
+        }
+      ).promptStudioDesktop;
+      await desktop.setPerformanceMonitoring(true);
+    });
+    await expect.poll(() => readSnapshot(app!.page)).not.toBeNull();
+    expect((await runPackagedCli(home, ["performance"])).exitCode).toBe(0);
+  } finally {
+    await disposePackagedApp(app);
+  }
+});
 
 // Every distinct number of popover rows named `name` seen while sampling for `ms`.
 const rowCountsWhile = (page: Page, name: string, ms: number) =>
