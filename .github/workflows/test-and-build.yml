@@ -1,4 +1,4 @@
-name: Observe cold ARM installer resource use
+name: Observe cold ARM Planner filesystem work
 on:
   workflow_dispatch:
 permissions:
@@ -31,8 +31,17 @@ jobs:
         run: bun run --cwd scripts verify:packages --profile integrity
       - name: Verify the compiled diagnostic is present
         run: bun -e 'if (!(await Bun.file(process.env.E2E_PACKAGED_BINARY_PATH).text()).includes("Installer resource probe")) throw new Error("Compiled installer probe is missing")'
-      - name: Compare both complete cold core cases once
+      - name: Observe the same frozen Planner install with verbose file capture
         working-directory: packages/e2e
         env:
           BUN_CONFIG_MAX_HTTP_REQUESTS: ${{ matrix.http }}
-        run: bun test --preload ./src/scripts/bun-process-cleanup.ts src/packaged/packaged-core-extension-features.p2.test.ts src/packaged/packaged-core-extensions-smoke.p1.test.ts
+        run: bun src/packaged/observe-planner-installer.ts
+      - name: Keep complete installer diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm-planner-installer
+          path: |
+            ${{ runner.temp }}/ps-932-planner-installer-*/summary.json
+            ${{ runner.temp }}/ps-932-planner-installer-*/installer.*.log
+          if-no-files-found: error
