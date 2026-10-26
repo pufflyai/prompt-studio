@@ -7,6 +7,7 @@ import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
+import { profileOwnedCoreTree } from "./native-core-tree-profile";
 import { preparePlannerSource } from "./packaged-planner-source";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -87,6 +88,7 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("runtime stopped");
     if (closeRegistry) await closeRegistry();
     phase("registry closed");
+    await profileOwnedCoreTree(tempRoot);
     await rm(tempRoot, { recursive: true, force: true });
     phase("files removed");
   }

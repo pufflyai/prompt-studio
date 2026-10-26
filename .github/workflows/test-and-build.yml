@@ -1,29 +1,60 @@
-name: Native removal method profile
+name: Native core tree inventory
 on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
-  profile:
+  native:
+    name: native fixtures (${{ matrix.platform_pkg }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, windows-11-arm]
+        include:
+          - os: windows-latest
+            platform_pkg: cli-win-x64
+          - os: windows-11-arm
+            platform_pkg: cli-win-arm64
+    env:
+      CI_PRIORITY: P2
+      PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
+      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Require delivered source without profiling changes
+        run: git diff --exit-code a6af3b13124d55cdb2d7a1a590946606275efbdb -- . ':!.github/workflows/test-and-build.yml' ':!packages/e2e/src/packaged/packaged-core-extensions.fixture.ts' ':!packages/e2e/src/packaged/native-core-tree-profile.ts' ':!packages/e2e/src/packaged/measure-native-removal.ts'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
-      - name: Measure complete removal of equivalent owned trees
-        run: bun packages/e2e/src/packaged/measure-native-removal.ts
-      - uses: actions/upload-artifact@v4
-        if: always()
+      - uses: ./.github/actions/setup-ci-cache
         with:
-          name: removal-methods-${{ matrix.os }}
-          path: .pstdio/extension-storage/pstdio.pstdio-artifacts/native-removal-profile/results.json
+          install-strategy: native
+      - name: Build and verify the native compiled candidate
+        run: bun run --cwd scripts verify:packages --profile integrity
+      - name: Provision the compiled smoke browser
+        run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke"; preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
+      - name: Exercise native interruption, inherited output and archive cleanup
+        working-directory: packages/e2e
+        run: >-
+          bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts
+          src/packaged/packaged-core-extension-features.p2.test.ts
+          --timeout 30000 --silent
+      - name: Preserve native evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-qualification-${{ matrix.platform_pkg }}
+          path: |
+            .pstdio/extension-storage/pstdio.pstdio-artifacts/native-core-profile
+            packages/e2e/test-results
+            test-results/ci
+            packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
+          include-hidden-files: true
           if-no-files-found: warn
