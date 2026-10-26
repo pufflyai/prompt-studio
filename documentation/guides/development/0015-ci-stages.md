@@ -134,7 +134,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
   - Windows source diagnostics
 - Source line coverage comes from the nightly's P0–P2 Bun jobs. The Coverage workflow publishes only a successful full nightly's measurement. Quarantined tests and P3 are not counted.
 
-A failed validation job does not unpublish the nightly. It makes the run red and leaves the nightly without a complete certificate, which the Coverage workflow and any stable release built from the same commit need.
+A failed validation job does not unpublish the nightly. It makes the run red, `certify` reports the failed checks, and the Coverage workflow skips that nightly's measurement.
 
 P3 budgets describe the hosted CI runners, not a developer machine. Each was set from the slowest result of several runs on the hosted ubuntu-24.04 runner, plus about 20% (see [sidenav and subnav](../../references/performance/0004-sidenav-subnav.md) and [board cold open](../../references/performance/0002-planner-board-cold-open.md)). A fast laptop passes them easily, so a P3 failure on CI is the signal to act on. To change a budget, collect several CI runs of the same candidate first and get the exact value approved (see [AGENTS.md](../../../AGENTS.md#ci-timeouts-and-performance-budgets)).
 
