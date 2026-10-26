@@ -1,4 +1,4 @@
-name: Compare owned native Bun installer binaries
+name: Compare cold ARM install backends
 on:
   workflow_dispatch:
 permissions:
@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        installer: ["1.4.3", "1.4.4"]
+        order: ["default,copyfile", "copyfile,default"]
     env:
       CI_PRIORITY: P2
       PSTDIO_VERIFY_PLATFORM_PKG: cli-win-arm64
@@ -27,24 +27,20 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
-      - name: Build the normal current candidate and check integrity
+      - name: Build the normal compiled candidate and check integrity
         run: bun run --cwd scripts verify:packages --profile integrity
-      - name: Prepare a separate verified native installer binary
-        env:
-          PS932_INSTALL_VERSION: ${{ matrix.installer }}
-        run: bun packages/e2e/src/packaged/prepare-installer-binary.ts
-      - name: Prepare with current Bun and observe the selected installer
+      - name: Compare both backends with separate fresh caches and one frozen input
         working-directory: packages/e2e
         env:
-          BUN_CONFIG_MAX_HTTP_REQUESTS: "16"
-        run: bun src/packaged/observe-planner-installer.ts
+          PS932_BACKEND_ORDER: ${{ matrix.order }}
+        run: bun src/packaged/compare-planner-install-backends.ts
       - name: Keep complete installer diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: arm-bun-installer-${{ matrix.installer }}
+          name: arm-install-backends-${{ strategy.job-index }}
           path: |
-            ${{ runner.temp }}/ps-932-installer-runtime-*/identity.json
-            ${{ runner.temp }}/ps-932-planner-installer-*/summary.json
-            ${{ runner.temp }}/ps-932-planner-installer-*/installer.*.log
+            ${{ runner.temp }}/ps-932-install-backends-*/summary.json
+            ${{ runner.temp }}/ps-932-install-backends-*/*/summary.json
+            ${{ runner.temp }}/ps-932-install-backends-*/*/installer.*.log
           if-no-files-found: error
