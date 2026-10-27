@@ -7,6 +7,7 @@ test("opaque nested content relays only negotiated entry intents and restores lo
   await page.setContent('<output aria-label="Requests">[]</output>');
   const shortcuts = [
     { id: "leader", entry: "mode", key: "Space", altKey: true, shiftKey: true },
+    { id: "nav", entry: "panel", key: "S", altKey: true, shiftKey: true },
     { id: "bottom", entry: "panel", key: "B", altKey: true, shiftKey: true },
     { id: "side", entry: "panel", key: "E", altKey: true, shiftKey: true },
     { id: "forbidden", key: "X", altKey: true, shiftKey: true },
@@ -55,6 +56,7 @@ test("opaque nested content relays only negotiated entry intents and restores lo
   await expect(page.getByLabel("Requests")).toHaveText(twoRequests);
   const panelRequests = JSON.parse(twoRequests);
   for (const [key, symbol, id] of [
+    ["S", "Í", "nav"],
     ["B", "ı", "bottom"],
     ["E", "Dead", "side"],
   ] as const) {

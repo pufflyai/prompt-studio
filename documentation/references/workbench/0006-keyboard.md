@@ -16,7 +16,7 @@ The shortcut reference uses the command palette's search layout and groups assig
 
 **Alt+Shift+Up** runs the Sidenav's **Back to project** action from nested ticket or session navigation. It returns to the last root-level page, with Home as the fallback. The action follows the active mode's name and appears only inside a navigation level. The chord works outside and inside shortcut mode and respects focused editor inputs.
 
-Destination navigation uses shortcut mode's Go group: G → S for Sessions, G → W for Workspaces, G → N for Notes, G → K for Tickets/Kanban, G → A for Artifacts, and G → T for Timeline. These destinations have no additional direct default chord. Navigation stays in shortcut mode, and shared keys use numbered action choices. History keeps Alt+Shift+Left/Right; Back to project keeps Alt+Shift+Up. The command palette keeps Mod+P, commands Alt+Shift+K, the Sidenav Mod+B, and settings Mod+,.
+Destination navigation uses shortcut mode's Go group: G → S for Sessions, G → W for Workspaces, G → N for Notes, G → K for Tickets/Kanban, G → A for Artifacts, and G → T for Timeline. These destinations have no additional direct default chord. Navigation stays in shortcut mode, and shared keys use numbered action choices. History keeps Alt+Shift+Left/Right; Back to project keeps Alt+Shift+Up. The command palette keeps Mod+P, commands Alt+Shift+K, the Sidenav Alt+Shift+S, and settings Mod+,.
 
 Ctrl+Tab selects the next tab across the visible layout; Ctrl+Shift+Tab selects the previous tab. They wrap at either end and work outside and inside shortcut mode. Outside the mode they switch and focus immediately. One tab has an outline for the keyboard selection in shortcut mode, even when several panels each have a selected tab. Enter or Escape exits and returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
 
@@ -33,6 +33,7 @@ Panel actions use direct Alt+Shift chords and tab cycling uses Ctrl+Tab/Ctrl+Shi
 | Reposition panel | R |
 | Close tab | X |
 | Pin or unpin tab | I |
+| Toggle navigation panel | S |
 | Toggle secondary panel | B |
 | Toggle side panel | E |
 
@@ -68,4 +69,4 @@ The resolved catalog supplies execution, the shortcut reference, contribution de
 
 Managed webviews negotiate explicitly global entry chords with the host. The guest consumes an owned chord synchronously and sends a typed request. The host validates the live frame and effective binding, then owns plain keys in its menu. Ordinary typing, editor keys, terminal keys, composition, and local modal controls remain local. The selected editor receives focus again when navigation finishes.
 
-Opaque nested previews can include `webviewKeyboardRelayDocument` from `@pstdio/sdk/extensions` in each frame. The managed parent supplies a bounded profile for keyboard-menu entry, tab navigation, and side/bottom panel toggles; it cannot invoke arbitrary host commands. Panel toggles also work while a dialog or menu owns focus. Option-letter chords handle macOS symbols and dead keys. Messages must come from a direct child, and requests must come from the focused child. Removed bindings no longer execute.
+Opaque nested previews can include `webviewKeyboardRelayDocument` from `@pstdio/sdk/extensions` in each frame. The managed parent supplies a bounded profile for keyboard-menu entry, tab navigation, and navigation/side/bottom panel toggles; it cannot invoke arbitrary host commands. Panel toggles also work while a dialog or menu owns focus. Option-letter chords handle macOS symbols and dead keys. Messages must come from a direct child, and requests must come from the focused child. Removed bindings no longer execute.

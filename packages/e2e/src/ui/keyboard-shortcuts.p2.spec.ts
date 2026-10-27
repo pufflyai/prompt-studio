@@ -79,9 +79,10 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
     .getByRole("button", { name: /Secondary/ })
     .click();
   await expect(secondary.getByRole("tab")).toHaveCount(before);
-  for (const [key, label] of [
-    ["B", /Bottom Panel/],
-    ["E", /Side Panel/],
+  for (const [key, symbol, label] of [
+    ["S", "Í", /Sidenav/],
+    ["B", "ı", /Bottom Panel/],
+    ["E", "Dead", /Side Panel/],
   ] as const) {
     const toggle = page
       .getByRole("group", { name: "Panel controls", exact: true, includeHidden: true })
@@ -96,7 +97,7 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
     await page.keyboard.press("Escape");
     // macOS Option emits a symbol or dead key instead of the shortcut's letter.
     const input = {
-      key: key === "B" ? "ı" : "Dead",
+      key: symbol,
       code: `Key${key}`,
       altKey: true,
       shiftKey: true,

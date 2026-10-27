@@ -95,6 +95,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
     await expect(page.locator('iframe[title="Lab"]')).toBeFocused();
     for (const [key, symbol, label] of [
+      ["S", "Í", /Sidenav/],
       ["B", "ı", /Bottom Panel/],
       ["E", "Dead", /Side Panel/],
     ] as const) {

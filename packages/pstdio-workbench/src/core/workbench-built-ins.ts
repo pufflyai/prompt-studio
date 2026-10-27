@@ -1,13 +1,6 @@
-import type { WorkbenchShellOpenRegion } from "./controllers/shell/shell-controller";
 import type { KeybindingSequence } from "./registries/keybindings/keybinding-registry";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import type { WorkbenchCore } from "./workbench-core";
-
-const SIDENAV_PANEL_ID = "sidenav";
-
-const togglePanel = (workbench: WorkbenchCore, region: WorkbenchShellOpenRegion) => {
-  workbench.shell.setRegionOpen(region, !workbench.shell.getRegionState(region).open);
-};
 
 interface BuiltinCommand {
   id: string;
@@ -65,14 +58,6 @@ const builtinCommands: BuiltinCommand[] = [
     execute: (workbench: WorkbenchCore) => {
       workbench.pageLocations.goForward();
     },
-  },
-  {
-    id: "workbench.toggleSideBar",
-    label: "Toggle Sidenav",
-    icon: "PanelLeft",
-    keybinding: "Mod+B",
-    sticky: true,
-    execute: (workbench: WorkbenchCore) => togglePanel(workbench, SIDENAV_PANEL_ID),
   },
 ];
 

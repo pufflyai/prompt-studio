@@ -4,7 +4,11 @@ export const WORKBENCH_KEYBOARD_SELECT_TAB_COMMAND_ID = "workbench.keyboard.sele
 
 export const keyboardEntryKind = (commandId: string) => {
   if (commandId === WORKBENCH_KEYBOARD_OPEN_COMMAND_ID) return "mode" as const;
-  if (commandId === "workbench.keyboard.toggle.side" || commandId === "workbench.keyboard.toggle.secondary")
+  if (
+    commandId === "workbench.toggleSideBar" ||
+    commandId === "workbench.keyboard.toggle.side" ||
+    commandId === "workbench.keyboard.toggle.secondary"
+  )
     return "panel" as const;
   if (
     commandId === WORKBENCH_KEYBOARD_SELECT_TAB_COMMAND_ID ||

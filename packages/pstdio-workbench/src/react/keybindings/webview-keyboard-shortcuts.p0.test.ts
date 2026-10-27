@@ -3,14 +3,16 @@ import { createWorkbench } from "../../core";
 import { createWebviewKeyboardShortcuts } from "./webview-keyboard-shortcuts";
 import { createWorkbenchHotkeyRegistrations } from "./workbench-hotkey-registrations";
 
-test("nested previews can toggle side and bottom panels through negotiated layout shortcuts", async () => {
+test("nested previews can toggle navigation, side and bottom panels through negotiated layout shortcuts", async () => {
   const workbench = createWorkbench();
   for (const [region, key] of [
+    ["sidenav", "S"],
     ["side", "E"],
     ["secondary", "B"],
   ] as const) {
     workbench.layout.registerWidget({ id: region, title: region, region, rendererId: "test", singleton: false });
     workbench.shell.setRegionOpen(region, false);
+    workbench.context.set("inputFocus", true);
     const bridge = createWebviewKeyboardShortcuts(workbench);
     const shortcut = bridge.shortcuts.find((shortcut) => shortcut.key === key)!;
     expect(shortcut?.entry).toBe("panel");

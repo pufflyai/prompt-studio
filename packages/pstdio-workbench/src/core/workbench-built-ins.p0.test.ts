@@ -30,12 +30,12 @@ describe("workbench built-ins", () => {
       .filter((binding) => !binding.commandId.startsWith("workbench.keyboard."));
 
     expect(keybindings).toMatchObject([
+      { commandId: "workbench.toggleSideBar" },
       { commandId: "workbench.toggleCommandPalette" },
       { commandId: "workbench.action.showCommands" },
       { commandId: "workbench.action.changeTheme" },
       { commandId: "workbench.action.navigateBack" },
       { commandId: "workbench.action.navigateForward" },
-      { commandId: "workbench.toggleSideBar" },
       { commandId: "workbench.action.navigateToRootLevel" },
     ]);
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleCommandPalette")).toMatchObject({
@@ -45,6 +45,9 @@ describe("workbench built-ins", () => {
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.showCommands")).toMatchObject({
       commandId: "workbench.action.showCommands",
       keybinding: "Alt+Shift+K",
+    });
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleSideBar")).toMatchObject({
+      keybinding: "Alt+Shift+S",
     });
     expect(
       workbench.keyboard
