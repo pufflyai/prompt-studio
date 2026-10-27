@@ -1,4 +1,5 @@
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
+import { focusWorkbench } from "./focus-workbench";
 
 export const expectNativeWindowActions = async (electronApp: ElectronApplication, window: Page, lifecycle: Page) => {
   if (process.platform === "darwin") {
@@ -23,6 +24,7 @@ export const expectNativeWindowActions = async (electronApp: ElectronApplication
       await expect(lifecycle.locator("html")).not.toHaveAttribute("data-window-full-screen");
     });
   }
+  await focusWorkbench(electronApp, window);
   await test.step("delivers native menu actions to the workbench", async () => {
     expect(
       await electronApp.evaluate(({ Menu }) => {

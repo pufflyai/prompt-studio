@@ -86,14 +86,30 @@ test("installs and checks extensions on the host despite a different CLI home", 
     writeFileSync(join(source, "vendor/demo/index.ts"), 'export default "Packaged dependency";');
     writeFileSync(
       join(source, "extension.ts"),
-      'import title from "demo"; export default {commands:[{id:"hello",ref:{kind:"command",id:"hello"},title,run(){return title;}}]};',
+      `import title from "demo"; export default {
+        commands:[{id:"hello",ref:{kind:"command",id:"hello"},title,run(){return title;}}],
+        views: ["first", "second"].map(id => ({id,ref:{kind:"view",id},title:id,
+          body:{kind:"webview",entry:{kind:"package-asset",path:"./"+id+".ts",baseUrl:import.meta.url},capabilities:[]}})),
+      };`,
     );
+    writeFileSync(join(source, "shared.ts"), 'export const text = "Shared replacement code";');
+    for (const name of ["first", "second"])
+      writeFileSync(join(source, `${name}.ts`), 'import {text} from "./shared"; document.body.textContent = text;');
     const replaced = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "add", source, "--force"], {
       cwd: repo,
       env,
       encoding: "utf8",
     });
     expect(replaced.status).toBe(0);
+    const working = readFileSync(join(target, "extension.ts"), "utf8");
+    writeFileSync(join(source, "second.ts"), 'import "./missing-second-view";');
+    const rejected = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "add", source, "--force", "--skip-install"], {
+      cwd: repo,
+      env,
+      encoding: "utf8",
+    });
+    expect(rejected.status).not.toBe(0);
+    expect(readFileSync(join(target, "extension.ts"), "utf8")).toBe(working);
     rmSync(source, { recursive: true });
     expect(readFileSync(join(target, "node_modules/demo/index.ts"), "utf8")).toContain("Packaged dependency");
     expect(existsSync(join(target, "node_modules/ignored.txt"))).toBe(false);

@@ -13,6 +13,8 @@ export interface WorkbenchPanelRenderInput {
   panel: WorkbenchPanelContribution | PlaceholderContribution | RegisteredPlaceholderContribution;
   instance: WorkbenchPanelInstance;
   refresh: () => void;
+  /** Intrinsic sizing for embedded surfaces such as status details. */
+  sizing?: "content-width" | "content-height";
 }
 
 export interface WorkbenchRendererRegistration {

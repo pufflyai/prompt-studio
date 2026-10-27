@@ -70,6 +70,14 @@ describe("createStatusBarRegistry", () => {
     expect(() => registry.registerItem({ id: "missing", viewId: "missing.view", slot: "leading" })).toThrow(
       "Status bar view is not registered: missing.view",
     );
+    expect(() =>
+      registry.registerItem({
+        id: "missing-details",
+        viewId: "acme.view.branch",
+        popoverViewId: "missing.view",
+        slot: "leading",
+      }),
+    ).toThrow("Status bar popover view is not registered: missing.view");
 
     const branch = registry.registerItem({
       id: "acme.status.branch",

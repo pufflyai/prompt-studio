@@ -114,10 +114,18 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
           <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
         </Box>
         <Box display={chrome === undefined ? "flex" : "none"} alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
+          <WorkbenchStatusBarItems
+            workbench={workbench}
+            slot="leading"
+            visible={props.visible !== false && chrome === undefined}
+          />
         </Box>
         <Box display={chrome === undefined ? "flex" : "none"} alignItems="stretch" minW="0" h="full" marginLeft="auto">
-          <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
+          <WorkbenchStatusBarItems
+            workbench={workbench}
+            slot="trailing"
+            visible={props.visible !== false && chrome === undefined}
+          />
         </Box>
       </Box>
     </WorkbenchFocusRegion>

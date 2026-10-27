@@ -133,7 +133,7 @@ const renderBridgeWebview = (
   if (!webview) return null;
 
   return renderBridgeWebviewFrame({
-    sizing: panel.region === "status" ? "content-width" : undefined,
+    sizing: input.sizing ?? (panel.region === "status" ? "content-width" : undefined),
     context: {
       workbench,
       webviewId: instance.panelId,

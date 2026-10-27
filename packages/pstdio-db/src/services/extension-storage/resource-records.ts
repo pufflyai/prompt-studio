@@ -16,6 +16,7 @@ import { lockRecordOwner, saveRecordChanges } from "./record-changes";
 import { queueRecordUpload } from "./record-outbox";
 import { createRecordQueries, listProjectedRecords, readProjectedRecords } from "./record-queries";
 import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
+import type { NumberChange } from "./resource-number-repair";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -37,6 +38,7 @@ export const createResourceRecords = (
     statistics: ReturnType<typeof createProjectionStatistics>;
     /** Notifies owner watchers after a commit. */
     changed: () => void;
+    numbersChanged?: (events: NumberChange[]) => void;
     observer?: StorageObserver;
     assets?: AssetStore;
     diagnostics?: StorageDiagnostics;
@@ -62,7 +64,7 @@ export const createResourceRecords = (
     const [previous] = await receipt(tx, group.operationId);
     if (previous) {
       if (previous.fingerprint !== identity) throw new Error("Operation identity reused with changed payload");
-      return { records: await readProjectedRecords(tx, owner, ids), projected: 0 };
+      return { records: await readProjectedRecords(tx, owner, ids), projected: 0, events: [] as NumberChange[] };
     }
     const { sources } = await loadResourceDocuments(tx, owner, ids.map(resourceDocumentId));
     const migration = dataMigrationContext.getStore();
@@ -85,12 +87,12 @@ export const createResourceRecords = (
     );
     const records = prepared.map((value) => value.record);
     assertStorageLimits(records);
-    const projected = await saveRecordChanges(tx, owner, revision, prepared);
-    await queueRecordUpload(tx, owner, prepared);
+    const saved = await saveRecordChanges(tx, owner, revision, prepared);
+    await queueRecordUpload(tx, owner, [...prepared, ...saved.repairs]);
     await tx
       .insert(storage_document_operations)
       .values({ ...address, operation_id: group.operationId, fingerprint: identity });
-    return { records, projected };
+    return saved;
   };
   const prepare = async (group: StorageGroup) => {
     if (!group.operationId || !group.edits.length) throw new Error("Empty storage commit");
@@ -105,11 +107,12 @@ export const createResourceRecords = (
     return fingerprint(group.edits.map(({ expectedRevision: _revision, ...edit }) => edit));
   };
   const published = (
-    result: { records: { recordId: string; revision: string }[]; projected: number },
+    result: { records: { recordId: string; revision: string }[]; projected: number; events: NumberChange[] },
     operationId: string,
   ) => {
     if (result.projected) deps.statistics.record(result.projected);
     deps.changed();
+    deps.numbersChanged?.(result.events);
     const saved = outcome(operationId);
     deps.observer?.committed(owner, result.records, saved);
     return saved;
@@ -142,22 +145,34 @@ export const createResourceRecords = (
     },
     /** Reads and commits inside one owner lock, for read-modify-write callers. */
     transaction: async <T>(
-      run: (records: {
-        read: (id: string) => ReturnType<typeof read>;
-        commit: (group: StorageGroup) => Promise<ReturnType<typeof outcome>>;
-      }) => Promise<T>,
+      run: (
+        records: {
+          read: (id: string) => ReturnType<typeof read>;
+          readMany: (ids: string[]) => ReturnType<typeof readProjectedRecords>;
+          commit: (group: StorageGroup) => Promise<ReturnType<typeof outcome>>;
+        },
+        connection: Transaction,
+      ) => Promise<T>,
     ) => {
       const committed: { result: Awaited<ReturnType<typeof commitIn>>; operationId: string }[] = [];
       const value = await db.transaction(async (tx) => {
         await lockRecordOwner(tx, owner);
-        return run({
-          read: (id) => read(tx, id),
-          commit: async (group) => {
-            const result = await commitIn(tx, group, await prepare(group));
-            committed.push({ result, operationId: group.operationId });
-            return outcome(group.operationId);
+        return run(
+          {
+            read: (id) => read(tx, id),
+            readMany: async (ids) => {
+              const records = await readProjectedRecords(tx, owner, ids);
+              for (const record of records) deps.observer?.read(owner, record);
+              return records;
+            },
+            commit: async (group) => {
+              const result = await commitIn(tx, group, await prepare(group));
+              committed.push({ result, operationId: group.operationId });
+              return outcome(group.operationId);
+            },
           },
-        });
+          tx,
+        );
       });
       for (const { result, operationId } of committed) published(result, operationId);
       return value;

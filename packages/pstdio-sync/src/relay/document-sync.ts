@@ -82,7 +82,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     if (after < result.lastSequence) throw new Error("Relay did not return every update");
     return true;
   };
-  const read = async () => {
+  const read = async (readOnly = false) => {
     while (true) {
       const result = await relay.read(after);
       if (result.state && result.state.stateId !== stateId) {
@@ -93,8 +93,10 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
       if (await readUpdates(result)) return;
       // A later page may introduce an incomplete state ahead of this cursor. Keep the edits we
       // already received in the local owner before replacing the relay replica with that state.
-      const local = await mergeLocal();
-      local.destroy();
+      if (!readOnly) {
+        const local = await mergeLocal();
+        local.destroy();
+      }
     }
   };
   const mergeLocal = async () => {
@@ -137,6 +139,12 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     }
   };
   return {
+    /** A format upgrade can read its old relay source once without writing that format again. */
+    async download() {
+      await read(true);
+      if (incomplete) throw new Error("Cannot import an incomplete relay document");
+      return cloneDocument(remote);
+    },
     async synchronize() {
       while (true) {
         await read();

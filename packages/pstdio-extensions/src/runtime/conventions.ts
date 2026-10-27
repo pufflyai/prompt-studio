@@ -180,8 +180,15 @@ const collectViewReferenceDiagnostics = (runtime: ExtensionRuntime) => {
   }
   for (const record of runtime.settingsPanels)
     sites.push({ record, reference: referencedContributionId(record.contribution.view), kind: "settingsPanel" });
-  for (const record of runtime.statusBarItems)
+  for (const record of runtime.statusBarItems) {
     sites.push({ record, reference: referencedContributionId(record.contribution.view), kind: "statusBarItem" });
+    if (record.contribution.popover)
+      sites.push({
+        record,
+        reference: referencedContributionId(record.contribution.popover),
+        kind: "statusBarItem.popover",
+      });
+  }
   for (const record of runtime.navigationTrees)
     sites.push({ record, reference: referencedContributionId(record.contribution.view), kind: "navigationTree" });
   for (const site of sites) {

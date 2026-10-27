@@ -23,6 +23,29 @@ const reopen = async (root: string) => {
 };
 
 describe("app database close", () => {
+  test("drains resource number maintenance before closing the database when another cleanup fails", async () => {
+    await withTempRoot(async (root) => {
+      const handle = await createTestApp({ databasePath: join(root, "pstdio.db"), storageRoot: join(root, "storage") });
+      const entered = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<void>();
+      const flush = handle.deps.extensionResourceSequencesService.flush;
+      spyOn(handle.deps.extensionResourceSequencesService, "flush").mockImplementation(async () => {
+        entered.resolve();
+        await release.promise;
+        await flush();
+      });
+      spyOn(handle.deps.automationService, "close").mockRejectedValue(new Error("automation close failed"));
+      const closing = handle.close().catch((error: unknown) => error);
+      try {
+        expect(await Promise.race([entered.promise.then(() => true), closing.then(() => false)])).toBe(true);
+      } finally {
+        release.resolve();
+        await closing;
+      }
+      await reopen(root);
+    });
+  });
+
   test("closes the database when startup fails after the database opened", async () => {
     await withTempRoot(async (root) => {
       const fileInTheWay = join(root, "not-a-folder");
