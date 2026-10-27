@@ -7,7 +7,13 @@ import { storage_resource_identities as identities } from "../../db/schemas.pg";
 import type { RecordChange } from "./record-changes";
 import { readProjectedRecords } from "./record-queries";
 import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
-import { nextIndexedNumber, numberCollisions, numberValue, projectNumberRecords } from "./resource-number-records";
+import {
+  isNumberRecord,
+  nextIndexedNumber,
+  numberCollisions,
+  numberValue,
+  projectNumberRecords,
+} from "./resource-number-records";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 export type NumberChange = ResourceRenumberedEvent & { projectId: string };
@@ -69,7 +75,7 @@ export const repairNumberRecords = async (
   const events: NumberChange[] = [];
   if (owner.extensionId === coreOwnerId)
     for (const record of final.values()) {
-      if (record.deleted || !record.exists) continue;
+      if (!isNumberRecord(record)) continue;
       const resource = numberValue(record);
       const shorthand = `${resource.prefix}-${resource.value}`;
       const previousShorthand = before.get(record.recordId);

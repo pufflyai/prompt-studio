@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { Json } from "pstdio-sync-contracts";
 import { createDb } from "../db/connection.pglite";
 import { storage_record_projections } from "../db/schemas.pg";
 import { createExtensionResourceSequencesDBService } from "./extension-resource-sequences";
@@ -311,3 +312,87 @@ test("one shorthand can resolve to several aliases and failed merges publish no 
     await f.close();
   }
 });
+
+test("core records of other shapes save and sync alongside resource numbers", async () => {
+  const first = await fixture();
+  const second = await fixture();
+  try {
+    const allocated = await first.service.allocate(first.input);
+    const records = first.documents.open({ owner: first.owner }).records;
+    const values: Json[] = [null, "note", [1, 2], { title: "Project settings" }, { id: "incomplete", value: 3 }];
+    await records.commit({
+      operationId: "generic-core-records",
+      edits: values.map((replace, index) => ({ recordId: `other-${index}`, replace })),
+    });
+    const events: unknown[] = [];
+    first.service.watch((event) => events.push(event));
+    await records.commit({
+      operationId: "replace-number-with-settings",
+      edits: [{ recordId: allocated.id, replace: { title: "No longer numbered" } }],
+    });
+    expect(events).toEqual([]);
+    expect(await first.service.identity({ ...first.input, id: allocated.id })).toBeNull();
+    const snapshot = await first.service.recordStream(first.input.projectId).snapshot();
+    const incoming = second.service.recordStream(second.input.projectId);
+    await incoming.merge(
+      new Map(snapshot.records.map((record) => [record.recordId, [record.bytes]])),
+      "adopt",
+      await incoming.open(),
+    );
+    const received = second.documents.open({ owner: second.owner }).records;
+    expect((await received.readMany(values.map((_, index) => `other-${index}`))).map((record) => record.value)).toEqual(
+      values,
+    );
+    expect((await received.read(allocated.id)).value).toEqual({ title: "No longer numbered" });
+    expect((await first.service.allocate(first.input)).shorthand).toBe("PS-2");
+  } finally {
+    for (const f of [first, second]) {
+      await f.documents.flushStatistics();
+      await f.close();
+    }
+  }
+});
+
+for (const initialValue of [1, 50]) {
+  test(`collision repair preserves the allocation floor after deleting number ${initialValue + 4}`, async () => {
+    const f = await fixture();
+    try {
+      const records = f.documents.open({ owner: f.owner }).records;
+      if (initialValue > 1) {
+        await records.commit({
+          operationId: "import",
+          edits: [
+            {
+              recordId: "imported",
+              replace: {
+                id: "imported",
+                extensionId: f.input.extensionId,
+                kind: f.input.kind,
+                prefix: "PS",
+                value: initialValue - 1,
+                aliases: [],
+              },
+            },
+          ],
+        });
+      }
+      const allocated = [];
+      for (let index = 0; index < 5; index++) allocated.push(await f.service.allocate(f.input));
+      await records.commit({
+        operationId: "delete",
+        edits: allocated.slice(1).map((resource) => ({ recordId: resource.id, deleted: true })),
+      });
+      const original = (await records.read(allocated[0]!.id)).value;
+      await records.commit({
+        operationId: "collision",
+        edits: [{ recordId: "z", replace: { ...(original as object), id: "z" } }],
+      });
+      expect((await f.service.identity({ ...f.input, id: "z" }))?.shorthand).toBe(`PS-${initialValue + 5}`);
+      await records.commit({ operationId: "delete-repair", edits: [{ recordId: "z", deleted: true }] });
+      expect((await f.service.allocate(f.input)).shorthand).toBe(`PS-${initialValue + 6}`);
+    } finally {
+      await f.documents.flushStatistics();
+      await f.close();
+    }
+  });
+}

@@ -6,16 +6,36 @@ import {
   storage_resource_aliases as aliases,
   storage_resource_identities as identities,
   storage_resource_projections as projections,
+  extension_resource_sequences as sequences,
 } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
 
 export type NumberRecord = NumberedResource & { aliases: string[] };
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
+export const isNumberRecord = (record: StorageRecord) => {
+  if (!record.exists || record.deleted) return false;
+  const value = record.value;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return (
+    value.id === record.recordId &&
+    typeof value.extensionId === "string" &&
+    typeof value.kind === "string" &&
+    typeof value.prefix === "string" &&
+    typeof value.value === "number" &&
+    Number.isSafeInteger(value.value) &&
+    value.value > 0 &&
+    Array.isArray(value.aliases) &&
+    value.aliases.every((alias) => typeof alias === "string")
+  );
+};
+
 export const numberValue = (record: StorageRecord) => record.value as unknown as NumberRecord;
 
 /** Both indexes include numeric values: a large former alias must never be allocated again. */
-export const nextIndexedNumber = async (tx: Pick<DbClient, "select">, projectId: string, prefix: string, floor = 0) => {
+export const nextIndexedNumber = async (tx: Transaction, projectId: string, prefix: string) => {
+  const where = and(eq(sequences.project_id, projectId), eq(sequences.prefix, prefix));
+  const [sequence] = await tx.select({ next: sequences.next_value }).from(sequences).where(where);
   const highest = async (table: typeof identities | typeof aliases) => {
     const [row] = await tx
       .select({ value: table.value })
@@ -25,7 +45,13 @@ export const nextIndexedNumber = async (tx: Pick<DbClient, "select">, projectId:
       .limit(1);
     return row?.value ?? 0;
   };
-  return Math.max(floor, await highest(identities), await highest(aliases)) + 1;
+  const value = Math.max((sequence?.next ?? 1) - 1, await highest(identities), await highest(aliases)) + 1;
+  // Keep the next unused number even when records disappear or allocation skips indexed history.
+  await tx
+    .update(sequences)
+    .set({ next_value: value + 1 })
+    .where(where);
+  return value;
 };
 
 /** Maintained in the same transaction as the canonical core records, for local and remote writes. */
@@ -50,7 +76,7 @@ export const projectNumberRecords = async (
       .delete(identities)
       .where(and(eq(identities.workbench_id, owner.workbenchId), inArray(identities.resource_id, selected)));
   }
-  const live = records.filter((record) => record.exists && !record.deleted).map(numberValue);
+  const live = records.filter(isNumberRecord).map(numberValue);
   for (const batch of jsonBatches(
     live.map((r) => ({
       resource_id: r.id,
@@ -91,7 +117,7 @@ export const numberCollisions = async (tx: Transaction, owner: StorageOwner, rec
   const keys = [
     ...new Map(
       records
-        .filter((record) => record.exists && !record.deleted)
+        .filter(isNumberRecord)
         .map(numberValue)
         .map((r) => [JSON.stringify([r.extensionId, r.kind, r.prefix, r.value]), r]),
     ).values(),

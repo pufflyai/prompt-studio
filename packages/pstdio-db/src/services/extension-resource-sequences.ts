@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { createStorageId } from "pstdio-api-contracts";
 import { coreOwnerId } from "pstdio-sync";
 import type * as Y from "yjs";
@@ -22,7 +22,11 @@ export const createExtensionResourceSequencesDBService = (
   documents = createDocumentStorageDBService(db),
 ) => {
   let upgrade: Promise<void> | undefined;
-  const ready = () => (upgrade ??= upgradeResourceNumbers(db, documents));
+  const ready = () =>
+    (upgrade ??= upgradeResourceNumbers(db, documents).catch((error) => {
+      upgrade = undefined;
+      throw error;
+    }));
   const { identity, identityMany, findByShorthand } = createResourceIdentityIndex(db, ready);
   const owner = (projectId: string) => ({ workbenchId: projectId, extensionId: coreOwnerId });
 
@@ -47,7 +51,7 @@ export const createExtensionResourceSequencesDBService = (
             })
             .onConflictDoUpdate({
               target: [sequences.project_id, sequences.extension_id, sequences.kind],
-              set: { next_value: sql`${sequences.next_value} + 1`, updated_at: timestamp },
+              set: { updated_at: timestamp },
             })
             .returning();
           const resource = {
@@ -55,7 +59,7 @@ export const createExtensionResourceSequencesDBService = (
             extensionId: input.extensionId,
             kind: input.kind,
             prefix: row!.prefix,
-            value: await nextIndexedNumber(tx, input.projectId, row!.prefix, row!.next_value - 1),
+            value: await nextIndexedNumber(tx, input.projectId, row!.prefix),
             aliases: [],
           };
           await records.commit({ operationId: id, edits: [{ recordId: id, replace: resource }] });
@@ -78,7 +82,7 @@ export const createExtensionResourceSequencesDBService = (
   };
   return {
     flush: async () => {
-      await upgrade;
+      await upgrade?.catch(() => {});
       await documents.flushStatistics();
     },
     allocate,

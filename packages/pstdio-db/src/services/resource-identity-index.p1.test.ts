@@ -82,7 +82,7 @@ test("existing numbers and aliases move once into records and retain their alloc
   }
 });
 
-test("a failed move rolls every batch back and a later start can retry the original source", async () => {
+test("a failed move rolls every batch back and the same service can retry the original source", async () => {
   const connection = await createDb({ path: ":memory:" });
   const documents = createDocumentStorageDBService(connection.db);
   try {
@@ -101,6 +101,7 @@ test("a failed move rolls every batch back and a later start can retry the origi
         rememberResourceNumber(document, resource);
       }
     });
+    let interrupted = false;
     const failingDocuments = {
       ...documents,
       open: (input: Parameters<typeof documents.open>[0]) => {
@@ -116,7 +117,10 @@ test("a failed move rolls every batch back and a later start can retry the origi
                   {
                     ...records,
                     commit: async (group) => {
-                      if (++batches === 2) throw new Error("Interrupted move");
+                      if (++batches === 2 && !interrupted) {
+                        interrupted = true;
+                        throw new Error("Interrupted move");
+                      }
                       return records.commit(group);
                     },
                   },
@@ -129,12 +133,14 @@ test("a failed move rolls every batch back and a later start can retry the origi
     };
     const input = { projectId: project.id, extensionId: "example.items", kind: "item", prefix: "IT" };
     const failed = createExtensionResourceSequencesDBService(connection.db, failingDocuments);
-    await expect(failed.identity({ ...input, id: "item-0" })).rejects.toThrow("Interrupted move");
+    const error = await failed.identity({ ...input, id: "item-0" }).catch((error: unknown) => error);
+    expect(error).toMatchObject({ message: "Interrupted move" });
     expect(await connection.db.select().from(storage_current_records)).toEqual([]);
     expect((await connection.db.select().from(storage_documents)).map((row) => row.document_id)).toEqual([
       resourceNumbersDocumentId,
     ]);
-    const retried = createExtensionResourceSequencesDBService(connection.db, documents);
+    await failed.flush();
+    const retried = failed;
     expect((await retried.identity({ ...input, id: "item-100" }))?.shorthand).toBe("IT-101");
     expect((await retried.allocate(input)).shorthand).toBe("IT-102");
   } finally {

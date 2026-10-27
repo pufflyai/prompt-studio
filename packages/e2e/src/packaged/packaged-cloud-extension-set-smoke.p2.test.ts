@@ -200,6 +200,13 @@ test(
           (await device.command<Identity[]>(project.id, "find", { shorthand: "NI-2" })).map((identity) => identity.id),
         ).toEqual([winner!.id, loser!.id]);
       }
+      const afterRepair = await a.command<Identity>(project.id, "allocate");
+      expect(afterRepair.shorthand).toBe("NI-4");
+      for (const device of [b, c])
+        await waitFor(
+          async () => !!(await device.command<Identity | null>(project.id, "identity", { id: afterRepair.id })),
+        );
+      expect((await b.command<Identity>(project.id, "allocate")).shorthand).toBe("NI-5");
     } finally {
       await Promise.all(devices.map((device) => stopProcess(device.host.child)));
       await peer.stop();
