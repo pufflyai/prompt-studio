@@ -1,3 +1,7 @@
+import { validateHarnessParams } from "./harness-params";
+
+export { defaultHarnessParams, validateHarnessParams } from "./harness-params";
+
 import type {
   AgentCapability,
   AgentModel,
@@ -7,7 +11,6 @@ import type {
   HarnessExit,
   HarnessMessagesInput,
   HarnessOperation,
-  HarnessParams,
   HarnessReattachInput,
   HarnessRecoveryInput,
   HarnessRecoveryResult,
@@ -19,6 +22,9 @@ import type {
 } from "pstdio-api-contracts";
 import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import type {
+  HarnessAuthentication,
+  HarnessAuthenticationChannel,
+  HarnessAuthenticationInput,
   HarnessContext,
   HarnessDetectionResult,
   HarnessParamsSchema,
@@ -27,6 +33,7 @@ import type {
   MaybePromise,
 } from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
+import { createHarnessAuthenticationLifetime } from "./harness-authentication";
 import { detectHarness } from "./harness-detection";
 import { HarnessDisposedError } from "./harness-disposed-error";
 import { createHarnessSessionResources, type HarnessSessionResources } from "./harness-session-resources";
@@ -35,6 +42,7 @@ import { createRetainedHarnessCalls } from "./harness-session-retention";
 export type HarnessCallOptions = {
   /** Project the call runs on behalf of, when there is one (session dispatch). */
   projectId?: string;
+  model?: string;
 };
 
 export type HarnessContextFactory = (
@@ -59,6 +67,12 @@ export type HarnessHandle = {
   supportsModels: boolean;
   capabilities(options?: HarnessCallOptions): Promise<AgentCapability[]>;
   detect(options?: HarnessCallOptions): Promise<HarnessDetectionResult>;
+  getAuthentication?(options?: HarnessCallOptions): Promise<HarnessAuthentication>;
+  authenticate?(
+    input: HarnessAuthenticationInput,
+    channel: HarnessAuthenticationChannel,
+    options?: HarnessCallOptions,
+  ): Promise<void>;
   listModels(options?: HarnessCallOptions): Promise<AgentModel[]>;
   start(input: HarnessStartInput, options?: HarnessCallOptions): Promise<HarnessSession>;
   resume(input: HarnessResumeInput, options?: HarnessCallOptions): Promise<HarnessSession>;
@@ -104,60 +118,6 @@ const normalizeSkills = (skills: HarnessSkillsLayout | undefined) => {
   return { dir: skills.dir, globalDir: skills.globalDir || skills.dir };
 };
 
-export const defaultHarnessParams = (schema: HarnessParamsSchema | null | undefined) => {
-  const values: HarnessParams = {};
-  if (!schema) return values;
-
-  for (const [key, descriptor] of Object.entries(schema)) {
-    if (descriptor.defaultValue !== undefined) values[key] = descriptor.defaultValue;
-  }
-
-  return values;
-};
-
-const formatValueList = (values: string[]) => values.map((value) => `"${value}"`).join(", ");
-
-export const validateHarnessParams = (
-  schema: HarnessParamsSchema | null | undefined,
-  params: HarnessParams | undefined,
-) => {
-  if (!schema) {
-    if (!params || Object.keys(params).length === 0) return;
-    throw new Error("Harness does not declare params.");
-  }
-
-  validateRequiredHarnessParams(schema, params);
-
-  if (!params || Object.keys(params).length === 0) return;
-
-  validateDeclaredHarnessParams(schema, params);
-};
-
-const validateRequiredHarnessParams = (schema: HarnessParamsSchema, params: HarnessParams | undefined) => {
-  for (const [key, descriptor] of Object.entries(schema)) {
-    if (descriptor.required && !Object.hasOwn(params ?? {}, key)) {
-      throw new Error(`Harness param "${key}" is required.`);
-    }
-  }
-};
-
-const validateDeclaredHarnessParams = (schema: HarnessParamsSchema, params: HarnessParams) => {
-  for (const [key, value] of Object.entries(params)) {
-    const descriptor = schema[key];
-    if (!descriptor) throw new Error(`Harness param "${key}" is not declared.`);
-
-    if (descriptor.type === "boolean") {
-      if (typeof value !== "boolean") throw new Error(`Harness param "${key}" must be a boolean.`);
-      continue;
-    }
-
-    const allowed = descriptor.options.map((option) => option.value);
-    if (typeof value !== "string" || !allowed.includes(value)) {
-      throw new Error(`Harness param "${key}" must be one of ${formatValueList(allowed)}.`);
-    }
-  }
-};
-
 const toHandle = (
   record: RuntimeHarnessRecord,
   buildContext: HarnessContextFactory,
@@ -182,6 +142,7 @@ const toHandle = (
     return context;
   };
   const provider = record.provider;
+  const authentication = createHarnessAuthenticationLifetime();
   const retained = createRetainedHarnessCalls(provider, ctx, resources);
   if (provider.getMessages && !provider.recoverMessages) {
     throw new Error(`Harness with native history must provide recoverMessages: ${record.id}`);
@@ -212,6 +173,27 @@ const toHandle = (
     supportsModels: typeof provider.listModels === "function",
     capabilities: async (options) => provider.capabilities(await ctx(options)),
     detect: async (options) => detectHarness(provider, await ctx(options)),
+    ...(provider.getAuthentication
+      ? {
+          getAuthentication: async (options?: HarnessCallOptions) =>
+            provider.getAuthentication!(await ctx(options), { model: options?.model }),
+        }
+      : {}),
+    ...(provider.authenticate
+      ? {
+          authenticate: async (
+            input: HarnessAuthenticationInput,
+            channel: HarnessAuthenticationChannel,
+            options?: HarnessCallOptions,
+          ) => {
+            ensureActive();
+            const context = await ctx(options);
+            await authentication.run(channel, async (channel) => {
+              await provider.authenticate!(context, input, channel);
+            });
+          },
+        }
+      : {}),
     listModels: async (options) => (provider.listModels ? provider.listModels(await ctx(options)) : []),
     start: async (input, options) => {
       await validateInputParams(input, options);
@@ -289,6 +271,7 @@ const toHandle = (
     dispose: () => {
       disposed = true;
       closing ??= (async () => {
+        await authentication.dispose();
         await retained.retire();
         const results = await Promise.allSettled(
           [...contexts.values()].map((context) =>

@@ -287,5 +287,76 @@
     "reason": "Timed out after 30 seconds filling the chat editor of a New session tab, before the held session request was sent, with no server errors; a re-run of the same job on the same commit passed. Keep the held-request and tab-switch assertions.",
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/40146393788/job/121029956537"],
     "removeWhen": "Find why the New session editor sometimes does not accept input, fix it, then pass ten independent Linux runs within the existing 30 second allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "clients/desktop/src/cli/windows-user-path.p0.test.ts",
+    "name": "Windows PATH install preserves long values and environment references",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-932 / Windows PATH PowerShell fixture",
+    "reason": "The first Windows PATH case exceeded its existing 15 second allowance during its final PowerShell registry read in full validation. The unchanged main file passes all three cases with both default and job-owned temp storage; first PowerShell startup takes 5.1 to 7.5 seconds and later reads about 0.3 seconds. The cause of the intermittent timeout remains unconfirmed. Quarantine authorized on 2026-10-26; preserve the registry value, type, Unicode, environment references and cleanup assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40347335129/job/121657790470",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40349488316"
+    ],
+    "removeWhen": "Identify and fix the shared PowerShell fixture variability, then pass all three PATH registry cases in ten independent Windows x64 runs within their existing 15 second allowances, without retries or prewarming."
+  },
+  {
+    "runner": "playwright-ui",
+    "file": "packages/e2e/src/ui/ticket-session-status.p2.spec.ts",
+    "name": "follows the latest workspace session status and opens it in the Side Panel",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-954 / ticket workspace session navigation",
+    "reason": "On macOS ARM64, both a full suite and a focused unchanged-main run opened the session Side Panel but unexpectedly replaced the ticket board. Other unchanged-main and PS-932 runs pass. The retargeted nested-control defect in PS-954 is proven separately; it has not been established as the cause of this intermittent failure. PS-954 retains main-reproduction.log and main-trace.zip. Quarantine authorized on 2026-10-26; preserve status transitions, board visibility, panel closing and keyboard navigation.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/pull/1477",
+      "https://github.com/pufflyai/prompt-studio/pull/1455"
+    ],
+    "removeWhen": "Trace and fix the navigation that replaces the board, then pass ten independent macOS ARM64 runs with all original assertions and limits, without retries."
+  },
+  {
+    "runner": "bun",
+    "file": "clients/desktop/src/cli/windows-user-path.p0.test.ts",
+    "name": "Windows PATH uninstall preserves long values and environment references",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-932 / Windows PATH PowerShell fixture",
+    "reason": "After install was quarantined, uninstall became the first stable PowerShell case and exceeded the same 15 second allowance during its registry write and environment notification. Both variants pass the unchanged-main focused comparison. The shared cold PowerShell cause is an inference; the failure is not a PATH-value assertion. Keep the complete registry fixture and cleanup.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40356507818/job/121690475871",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40349488316"
+    ],
+    "removeWhen": "Identify and fix the shared PowerShell fixture variability, then pass all three PATH registry cases in ten independent Windows x64 runs within their existing 15 second allowances, without retries or prewarming."
+  },
+  {
+    "runner": "bun",
+    "file": "clients/desktop/src/cli/windows-user-path.p0.test.ts",
+    "name": "registers a command when no user PATH exists",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-932 / Windows PATH PowerShell fixture",
+    "reason": "This case has not itself failed. It shares the same cold read, write/notification and verification PowerShell subprocess path as both timed-out variants; excluding only the first variant moved the failure to uninstall. Group the three-case fixture under the user-authorized temporary quarantine instead of moving cold startup to its next stable case. The common cold-start mechanism remains inferred. Preserve creation without an existing PATH and registry cleanup.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40347335129/job/121657790470",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40356507818/job/121690475871",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40349488316"
+    ],
+    "removeWhen": "Identify and fix the shared PowerShell fixture variability, then pass all three PATH registry cases in ten independent Windows x64 runs within their existing 15 second allowances, without retries or prewarming."
+  },
+  {
+    "runner": "bun",
+    "file": "extensions/pstdio-planner/src/commands/dependency-stacks.p0.test.ts",
+    "name": "the owner can reconcile conflicting dependencies and submit without a human request",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-932 / Planner dependency stack fixture",
+    "reason": "On macOS ARM64 this unchanged case took 5004.52 ms against its 5000 ms allowance in the full local suite at c38fbce2b. It passed at 2453.14 ms on 1cdffcaa and 1684.61 ms on 574ab5dbf; its command/data/test source did not change. The existing Windows quarantine remains separate. The slow Git or fixture phase is not established. Keep the complete conflicting-stack reconciliation and submission assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/pull/1455",
+      "https://github.com/pufflyai/prompt-studio/pull/1472"
+    ],
+    "removeWhen": "Identify and fix the slow conflicting-stack fixture phase, then pass ten independent macOS ARM64 runs within its existing 5 second allowance, without retries or prewarming."
   }
 ]

@@ -33,7 +33,7 @@ export const createTicketTag = async (input: {
   const tags = await seedDefaultTags(input.storage);
   const sortOrder = Math.max(-1, ...tags.map((tag) => tag.sortOrder)) + 1;
   return putTag(input.storage, {
-    id: crypto.randomUUID(),
+    id: input.storage.ids.create(),
     name: input.name,
     type: input.type ?? "single_select",
     sortOrder,
@@ -96,7 +96,7 @@ export const createTagOption = async (input: {
   const tag = await requireTag(input.storage, input.tagId);
   const sortOrder = Math.max(-1, ...tag.options.map((opt) => opt.sortOrder)) + 1;
   const created: StoredTagOption = {
-    id: crypto.randomUUID(),
+    id: input.storage.ids.create(),
     name: input.name,
     color: input.color ?? "gray",
     sortOrder,
@@ -208,7 +208,7 @@ export const applyTagDraft = async (input: {
   await assertSingleSelectConversion(input, { ...tag, options: kept }, input.type);
   const startingSortOrder = Math.max(-1, ...tag.options.map((option) => option.sortOrder)) + 1;
   const created: StoredTagOption[] = input.optionsToCreate.map((option, index) => ({
-    id: crypto.randomUUID(),
+    id: input.storage.ids.create(),
     name: option.name,
     color: option.color ?? "gray",
     sortOrder: startingSortOrder + index,

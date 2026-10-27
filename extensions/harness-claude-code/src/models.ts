@@ -61,8 +61,9 @@ export const parseClaudeModels = (input: unknown): AgentModel[] => {
 
 export const discoverClaudeModels = () =>
   new Promise<AgentModel[]>((resolve, reject) => {
+    const command = resolveClaudeCommand();
     const child = spawn(
-      "claude",
+      command,
       [
         "--output-format",
         "stream-json",
@@ -72,7 +73,12 @@ export const discoverClaudeModels = () =>
         "--print",
         "--no-session-persistence",
       ],
-      { env: { ...process.env, CLAUDECODE: "" }, stdio: ["pipe", "pipe", "pipe"], windowsHide: true },
+      {
+        env: { ...process.env, CLAUDECODE: "" },
+        stdio: ["pipe", "pipe", "pipe"],
+        windowsHide: true,
+        shell: process.platform === "win32" && /\.(cmd|bat)$/i.test(command),
+      },
     );
     let buffer = "";
     let settled = false;
@@ -117,3 +123,5 @@ export const discoverClaudeModels = () =>
       })}\n`,
     );
   });
+
+import { resolveClaudeCommand } from "./cli";

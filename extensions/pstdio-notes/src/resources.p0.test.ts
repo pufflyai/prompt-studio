@@ -1,11 +1,14 @@
 import { expect, test } from "bun:test";
+import { createMemoryStorage as createIdStorage } from "@pstdio/sdk/testing";
 import { createNote, renameNote, writeNote } from "./notes";
 import { noteResources } from "./resources";
 import { createNotesMount } from "./test-mount";
 
+const coreIds = createIdStorage().ids;
+
 test("searches existing notes by title and content and opens their resource panel", async () => {
   const mount = createNotesMount();
-  const note = await createNote(mount);
+  const note = await createNote(mount, coreIds.create());
   await writeNote(mount, note.id, "# Research plan\nDiscuss sidebar accessibility");
   const ctx = {
     extensionId: "pstdio.pstdio-notes",

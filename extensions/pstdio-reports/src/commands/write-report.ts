@@ -74,7 +74,7 @@ export const writeReportCommand = defineCommand({
     const blobs = reportsCollection(ctx.storage).attachments(identity.id);
     const body = await blobs.put(reportBodyFile(templateBody));
     const report = await putReport(ctx.storage, {
-      ...identity,
+      id: identity.id,
       workspaceShorthand,
       workspaceId: workspace?.id ?? null,
       name,
@@ -105,7 +105,7 @@ export const writeReportCommand = defineCommand({
 
     return {
       reportId: report.id,
-      shorthand: report.shorthand,
+      shorthand: identity.shorthand,
       workspace: workspaceShorthand,
       name,
       path: resolvePath(path),

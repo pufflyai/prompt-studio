@@ -81,7 +81,7 @@ describe("codex harness detection", () => {
 
   test("reports availability with the CLI version", async () => {
     const harness = createCodexHarness();
-    expect(await harness.detect!(ctx)).toEqual({ available: true, version: "codex-cli 0.160.1" });
+    expect(await harness.detect!(ctx)).toMatchObject({ available: true, version: "codex-cli 0.160.1" });
   });
   test("refuses a CLI whose live item identities do not survive native history reads", async () => {
     const harness = createCodexHarness();

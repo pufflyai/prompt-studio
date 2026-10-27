@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./runtime": "./src/features/runtime/index.ts"
+    "./runtime": "./src/features/runtime/index.ts",
+    "./performance": "./src/features/performance/index.ts"
   },
   "bin": {
     "pstdio": "./bin/pstdio.cjs",
@@ -64,6 +65,7 @@
     "playwright-core": "1.60.0",
     "pstdio-api": "workspace:*",
     "pstdio-api-contracts": "workspace:*",
+    "pstdio-diagnostics": "workspace:*",
     "pstdio-extensions": "workspace:*",
     "pstdio-logging": "workspace:*",
     "pstdio-paths": "workspace:*",

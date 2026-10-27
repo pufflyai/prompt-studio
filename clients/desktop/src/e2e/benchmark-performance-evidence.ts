@@ -1,0 +1,99 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { expect, test } from "@playwright/test";
+import type { PerformanceRecordingExport, PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
+import { restoreRecordedCapture, summarizePerformanceEvidence } from "pstdio-diagnostics";
+import type { PackagedApp } from "./packaged-app-helpers";
+import { readSnapshot } from "./packaged-performance-helpers";
+
+/** Opt in through the real device preference before the measured process is launched. */
+export const enableBenchmarkMonitoring = (home: string) => {
+  const directory = join(home, "electron-user-data");
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(join(directory, "performance-monitoring.json"), JSON.stringify({ enabled: true }));
+};
+
+export const attachBenchmarkPerformance = async (app: PackagedApp, name: string, endedAt: number) => {
+  let settlingError: unknown;
+  // Read settling evidence after the operation clock stops. This never changes its budget or workload.
+  await expect
+    .poll(
+      async () => {
+        const snapshot = await readSnapshot(app.page);
+        if (snapshot?.version !== 2) return false;
+        return ["backend", "workbench"].every(
+          (role) =>
+            snapshot.capture.samples.filter((sample) =>
+              sample.processes.some((process) => process.role === role && process.cpuTimeMs !== null),
+            ).length >= 2 &&
+            snapshot.capture.samples.some(
+              (sample) =>
+                Date.parse(sample.capturedAt) >= endedAt + snapshot.capture.sampleIntervalMs &&
+                sample.processes.some((process) => process.role === role),
+            ),
+        );
+      },
+      { message: "Benchmark requires backend and workbench CPU/memory capture" },
+    )
+    .toBe(true)
+    .catch((error: unknown) => {
+      settlingError = error;
+    });
+  let snapshot: PerformanceSnapshot | null = null;
+  let saved: PerformanceRecordingExport | null = null;
+  let summary: ReturnType<typeof summarizePerformanceEvidence>;
+  const operation = { startedAt: app.startedAt, endedAt };
+  try {
+    const [live, recordings] = await Promise.allSettled([
+      readSnapshot(app.page),
+      app.page.evaluate(() =>
+        (
+          window as unknown as {
+            promptStudioDesktop: { getPerformanceRecordings: () => Promise<PerformanceRecordingExport | null> };
+          }
+        ).promptStudioDesktop.getPerformanceRecordings(),
+      ),
+    ]);
+    if (live.status === "fulfilled") snapshot = live.value;
+    if (recordings.status === "fulfilled") saved = recordings.value;
+    if (live.status === "rejected") throw live.reason;
+    if (recordings.status === "rejected") throw recordings.reason;
+    if (snapshot?.version !== 2) throw new Error("Benchmark requires a version-two performance capture");
+    if (!saved) throw new Error("Benchmark recording export is unavailable");
+    const capture = restoreRecordedCapture(saved, snapshot.capture);
+    summary = summarizePerformanceEvidence(capture, ["backend", "workbench"], endedAt);
+    await test.info().attach(`performance-${name}.json`, {
+      contentType: "application/json",
+      body: JSON.stringify(
+        {
+          operation,
+          readAt: Date.now(),
+          summary,
+          capture,
+          failure: settlingError === undefined ? undefined : String(settlingError),
+        },
+        null,
+        2,
+      ),
+    });
+  } catch (error) {
+    await test.info().attach(`performance-${name}-partial.json`, {
+      contentType: "application/json",
+      body: JSON.stringify(
+        {
+          operation,
+          readAt: Date.now(),
+          snapshot,
+          recordings: saved,
+          failure: String(settlingError ?? error),
+          exportError: String(error),
+        },
+        null,
+        2,
+      ),
+    });
+    throw settlingError ?? error;
+  }
+  if (settlingError !== undefined) throw settlingError;
+  expect(summary.failures, "Required performance evidence is missing").toEqual([]);
+};

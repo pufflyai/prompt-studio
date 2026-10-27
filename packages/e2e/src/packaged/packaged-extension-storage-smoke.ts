@@ -9,7 +9,11 @@ export const expectExtensionDraftStorage = async (input: {
   headers: Record<string, string>;
 }) => {
   const projectFolder = realpathSync.native(input.projectFolder);
-  const execute = async (owner: string, command: string, params: Record<string, string>) => {
+  const execute = async <T = { path: string; filesPath?: string; shorthand: string; reportId?: string }>(
+    owner: string,
+    command: string,
+    params: Record<string, string>,
+  ) => {
     const response = await fetch(
       `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.${owner}.command.${command}/execute`,
       {
@@ -21,7 +25,7 @@ export const expectExtensionDraftStorage = async (input: {
     expect(response.status).toBe(200);
     const result = await response.json();
     expect(result.outcome.ok).toBe(true);
-    return result.outcome.value as { path: string; filesPath?: string; shorthand?: string };
+    return result.outcome.value as T;
   };
   const ticket = await execute("pstdio-planner", "write-ticket", { title: "Extension storage draft" });
   expect(ticket.path).toBe(
@@ -33,4 +37,16 @@ export const expectExtensionDraftStorage = async (input: {
   expect(report.path).toBe(join(directory, "report.md"));
   expect(report.filesPath).toBe(join(directory, "files"));
   expect(existsSync(report.path)).toBe(true);
+  expect(report.shorthand).toMatch(/^RP-\d+$/);
+  expect(report.reportId).toEqual(expect.any(String));
+  await execute("pstdio-reports", "reports.save", { name: "review" });
+  for (const id of [report.reportId!, report.shorthand]) {
+    expect(await execute<unknown>("pstdio-reports", "reports.read", { id })).toMatchObject({
+      id: report.reportId,
+      shorthand: report.shorthand,
+      aliases: [],
+      draft: false,
+      body: expect.any(String),
+    });
+  }
 };

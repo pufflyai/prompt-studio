@@ -6,11 +6,13 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
+import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves and independent schema dependencies.
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
 // Also checks native harness controls and their structured values in packaged command handlers.
+// Packaged harnesses expose scoped account state and a private interactive account channel.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // Navigation metadata preserves tabless page presentation, panel views, slot replacements, caller-relative handoff and placeholder actions through the compiled host.
@@ -18,7 +20,11 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // packaged-session-tools.p1.spec.ts checks draft/session/tool tab restoration across navigation and reload, creation, closure and New session tools.
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
 // packaged-notes-page.p2.spec.ts checks Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
+// performance-observer.p2.test.ts checks native CPU units and memory in the compiled observer.
+// packaged-core-extensions-smoke.p1.test.ts checks Notes, Planner and Reports allocate record IDs through core.
+// packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
@@ -31,6 +37,12 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 // extension-browser-install.p2.test.ts installs the cached Playwright package and visits a smoke page.
+
+test(
+  "exports saved performance recordings with monitoring stopped",
+  expectPackagedSavedRecordings,
+  PACKAGED_TEST_TIMEOUT,
+);
 
 test("includes extension development, smoke test, browser setup and update commands", () => {
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {
@@ -50,7 +62,7 @@ test("includes extension development, smoke test, browser setup and update comma
 });
 
 test(
-  "loads default extension dependencies, native actions and command-backed workspace choices",
+  "loads default extensions for concurrent projects, native actions and command-backed workspace choices",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
     let child: ChildProcess | null = null;
@@ -78,15 +90,30 @@ test(
       child = started.child;
 
       const projectFolder = join(tempRoot, "project");
+      const peerFolder = join(tempRoot, "peer-project");
       mkdirSync(projectFolder, { recursive: true });
-      const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
-        method: "POST",
-        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify(folderProjectInput({ name: "packaged-extension-project" }, projectFolder)),
-      });
+      mkdirSync(peerFolder, { recursive: true });
+      const [createRes, peerRes] = await Promise.all(
+        [projectFolder, peerFolder].map((folder) =>
+          fetch(`${started.baseUrl}/v1/projects`, {
+            method: "POST",
+            headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+            body: JSON.stringify(folderProjectInput({ name: "packaged-extension-project" }, folder)),
+          }),
+        ),
+      );
       expect(createRes.status).toBe(201);
+      expect(peerRes.status).toBe(201);
 
       const project = (await createRes.json()) as { id: string };
+      const peer = (await peerRes.json()) as { id: string };
+      const peerExtensions = await fetch(`${started.baseUrl}/v1/projects/${peer.id}/extensions`, {
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(peerExtensions.status).toBe(200);
+      expect((await peerExtensions.json()).extensions).toContainEqual(
+        expect.objectContaining({ enabled: true, installName: "dep-ext" }),
+      );
       const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
         headers: runtimeAuthorization(started.descriptor),
       });
@@ -143,3 +170,9 @@ test("packaged CLI includes automation and machine authentication", () => {
   expect(existsSync(join(home, "runtime.json"))).toBe(false);
   rmSync(home, { recursive: true, force: true });
 });
+
+test(
+  "installs bundled defaults without Git and does not offer Git workspaces",
+  expectPackagedGitFreeExtensions,
+  PACKAGED_TEST_TIMEOUT,
+);

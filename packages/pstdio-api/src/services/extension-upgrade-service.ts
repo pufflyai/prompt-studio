@@ -1,5 +1,7 @@
 import { join, resolve } from "node:path";
+import { GitUnavailableError, isGitAvailable } from "pstdio-wt";
 import type { ExtensionRelease } from "../app-config";
+import { hasBundledExtensionSource } from "../features/extensions/bundled-extension-source";
 import {
   type ExtensionCatalog,
   type ExtensionCatalogEntry,
@@ -8,7 +10,7 @@ import {
 import {
   type InstallExtensionSourceInput,
   installExtensionSource as installExtensionSourceDefault,
-  prepareGitExtensionSource,
+  prepareReleaseExtensionSource,
   resolvePstdioHome,
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
@@ -63,7 +65,7 @@ const installFromRecordedOrigin = (input: {
     force: true,
     ref: input.origin.ref,
     prepareNamedSource: (_name, tempDir, ref) =>
-      prepareGitExtensionSource(input.origin, tempDir, ref ?? input.origin.ref),
+      prepareReleaseExtensionSource(input.origin, tempDir, ref ?? input.origin.ref),
     ...(input.repoPath ? { repoPath: input.repoPath } : {}),
     reuseInstalledDependencies: true,
   });
@@ -110,6 +112,23 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (!entry || !parsed || !version || !matchesCatalogOrigin(entry, parsed)) return false;
     return registry.canUpgradeCatalog(entry, version);
   };
+  const upgradeRef = (entry: ExtensionCatalogEntry | undefined) => {
+    try {
+      return entry ? releaseRefFor(entry) : deps.release?.ref;
+    } catch {
+      return undefined;
+    }
+  };
+  const canReadSource = async (
+    entry: ExtensionCatalogEntry | undefined,
+    parsed: ReturnType<typeof parseExtensionSourceRef>,
+    ref: string,
+  ) => {
+    if (deps.release?.source === "workspace") return true;
+    const origin = parsed ?? entry?.origin;
+    if (origin && (await hasBundledExtensionSource(origin, ref))) return true;
+    return isGitAvailable();
+  };
   const canUpgrade = async (source: UpgradeSource) => {
     if (registry.matches(source)) return registry.canUpgrade(source);
     const entry = await catalogEntry(source.install_name);
@@ -117,19 +136,15 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (deps.release?.source === "registry") return canMoveToRegistry(entry, parsed, source.version);
     if (!entry && !parsed) return false;
     if (!matchesCatalogOrigin(entry, parsed)) return false;
-    let releaseRef: string | undefined;
-    try {
-      releaseRef = entry ? releaseRefFor(entry) : deps.release?.ref;
-    } catch {
-      return false;
-    }
-    if (!parsed) return compatibilityError(source) !== null;
+    const releaseRef = upgradeRef(entry);
     if (!releaseRef) return false;
+    if (!(await canReadSource(entry, parsed, releaseRef))) return false;
+    if (!parsed) return compatibilityError(source) !== null;
     try {
       return parsed.commit !== (await currentReleaseCommit(parsed.url, releaseRef));
-    } catch {
+    } catch (error) {
       // Keep the recovery action available when the release ref cannot be checked yet.
-      return true;
+      return !(error instanceof GitUnavailableError);
     }
   };
 

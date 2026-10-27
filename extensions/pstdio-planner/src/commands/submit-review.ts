@@ -69,7 +69,7 @@ const createFinding = async (
   const timestamp = new Date().toISOString();
   const actor = actorFromSource(ctx.source, ctx.invocationId);
   const thread: ReviewThread = {
-    id: crypto.randomUUID(),
+    id: ctx.storage.ids.create(),
     workspaceId: input.workspaceId,
     revision: input.revision,
     reviewId: input.reviewId,
@@ -86,7 +86,7 @@ const createFinding = async (
     resolvedBy: null,
   };
   const comment: ReviewComment = {
-    id: crypto.randomUUID(),
+    id: ctx.storage.ids.create(),
     reviewId: input.reviewId,
     threadId: thread.id,
     author: actor,

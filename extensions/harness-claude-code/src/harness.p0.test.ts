@@ -148,7 +148,7 @@ describe("claude-code harness detection", () => {
 
   test("reports availability with the CLI version", async () => {
     const harness = createClaudeCodeHarness();
-    expect(await harness.detect!(ctx)).toEqual({ available: true, version: "2.1.295 (Claude Code)" });
+    expect(await harness.detect!(ctx)).toMatchObject({ available: true, version: "2.1.295 (Claude Code)" });
   });
 
   test("lists no models when the CLI is missing", async () => {
@@ -168,4 +168,30 @@ describe("claude-code harness detection", () => {
     expect((await harness.listModels!(ctx)).map((model) => model.id)).toEqual(["sonnet-live"]);
     expect(discoveries).toBe(1);
   });
+});
+
+test("account changes refresh Claude's model catalog immediately", async () => {
+  let discoveries = 0;
+  const harness = createClaudeCodeHarness({
+    detect: async () => ({ available: true }),
+    listModels: async () => [{ id: String(++discoveries), name: "Model" }],
+  });
+  const accountCtx = {
+    ...ctx,
+    process: {
+      ...ctx.process,
+      run: async () => ({
+        exitCode: 0,
+        stdout: JSON.stringify({ loggedIn: true, authMethod: "claude.ai" }),
+        stderr: "",
+      }),
+    },
+  };
+  expect((await harness.listModels!(accountCtx))[0]?.id).toBe("1");
+  await harness.authenticate!(
+    accountCtx,
+    { action: "logout" },
+    { signal: new AbortController().signal, request: async () => "", emit: async () => {} },
+  );
+  expect((await harness.listModels!(accountCtx))[0]?.id).toBe("2");
 });

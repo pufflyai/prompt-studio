@@ -7,7 +7,6 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../core";
 import {
-  getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
   getWorkbenchPanelForMenuRegion,
   isWorkbenchPanelPlacementVisible,
@@ -19,6 +18,7 @@ import {
 } from "../../core";
 import { resolvePageContent } from "../../core/registries/pages/page-content";
 import { useOpenPlacementIds } from "../shared/use-open-placement-ids";
+import { useWorkbenchLocationPanel } from "../shared/use-workbench-location-panel";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchRegionBackground } from "../theme/workbench-theme-background";
@@ -183,7 +183,10 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
         { ignoreOwnerResourceKey: sidePanelRegionIds.has(region) },
       )
     : undefined;
-  const activeLocationPanel = getActiveWorkbenchLocationPanel(layout);
+  const activeLocationPanel = useWorkbenchLocationPanel(
+    workbench,
+    panelMenuRegionIds.has(region) ? getWorkbenchPanelForMenuRegion(region as WorkbenchPanelMenuRegion) : panelRegion,
+  );
   const regionState = {
     ...currentRegionState,
     widgets: currentRegionState.widgets.filter((placement) => {

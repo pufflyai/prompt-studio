@@ -3,7 +3,7 @@ export { commitChanges } from "./commit";
 export { copyIgnored } from "./copy-ignored";
 export type { DiffSummary, FileDiff, FileDiffSummary, WorktreeDiff, WorktreeDiffSummaryFiles } from "./diff";
 export { getWorktreeDiff, getWorktreeDiffFile, getWorktreeDiffSummary, getWorktreeDiffSummaryFiles } from "./diff";
-export { GitError, git } from "./git";
+export { GitError, GitUnavailableError, git, isGitAvailable, requireGitExecutable } from "./git";
 export { mergeWorktree } from "./merge";
 export { rebaseOntoTarget } from "./rebase";
 export { resolveLatestBase } from "./resolve-base";

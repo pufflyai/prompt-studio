@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createServer, type Server } from "node:http";
-import { bridgeTerminalWebSockets, createApiProxy } from "./vite-api-credential";
+import { bridgeApiWebSockets, createApiProxy } from "./vite-api-credential";
 
+const paths = ["/v1/terminal", "/v1/agents/authentication"];
 const cleanups: Array<() => void> = [];
 
 afterEach(() => {
@@ -31,7 +32,8 @@ const startApi = () => {
 
 const startDevServer = async (target: string) => {
   const server: Server = createServer((_request, response) => response.end("dashboard"));
-  bridgeTerminalWebSockets(server, target, "api-token");
+  bridgeApiWebSockets(server, target, "api-token");
+  server.on("connection", (socket) => cleanups.push(() => socket.destroy()));
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   cleanups.push(() => server.close());
   const address = server.address();
@@ -39,13 +41,13 @@ const startDevServer = async (target: string) => {
   return `127.0.0.1:${address.port}`;
 };
 
-const openTerminal = (host: string, origin: string) =>
-  new WebSocket(`ws://${host}/v1/terminal`, { headers: { origin } } as unknown as string[]);
+const openTerminal = (host: string, origin: string, path = "/v1/terminal") =>
+  new WebSocket(`ws://${host}${path}`, { headers: { origin } } as unknown as string[]);
 
 describe("dev server API credential", () => {
-  test("bridges the dashboard terminal to an API that requires a token", async () => {
+  test.each(paths)("bridges %s to an API that requires a token", async (path) => {
     const host = await startDevServer(startApi());
-    const socket = openTerminal(host, `http://${host}`);
+    const socket = openTerminal(host, `http://${host}`, path);
     cleanups.push(() => socket.close());
 
     const reply = await new Promise<string>((resolve, reject) => {
@@ -57,9 +59,9 @@ describe("dev server API credential", () => {
     expect(reply).toBe("echo:hello");
   });
 
-  test("refuses a terminal request from another site", async () => {
+  test.each(paths)("refuses %s from another site", async (path) => {
     const host = await startDevServer(startApi());
-    const socket = openTerminal(host, "https://attacker.example");
+    const socket = openTerminal(host, "https://attacker.example", path);
     cleanups.push(() => socket.close());
 
     const opened = await new Promise<boolean>((resolve) => {

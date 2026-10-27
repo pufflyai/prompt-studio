@@ -413,9 +413,9 @@ describe("saved report workflow", () => {
       source: "manual",
       draft: false,
     });
-    expect((await readReportCommand.run(...makeCommandArgs({ storage, params: { id: saved.id } }))).body).toContain(
-      "Body text.",
-    );
+    expect(await readReportCommand.run(...makeCommandArgs({ storage, params: { id: saved.id } }))).toMatchObject({
+      body: expect.stringContaining("Body text."),
+    });
     expect(saved.createdAt).not.toBe("1999-01-01T00:00:00.000Z");
     expect(saved.files[0]).toMatchObject({ name: "screenshot.png", size: 4, hash: expect.any(String) });
     expect(saved.files[0]?.hash).not.toBe("");
@@ -471,7 +471,7 @@ describe("saved report identity and failures", () => {
     const [stored] = await reportsCollection(storage).list();
     expect(JSON.stringify(stored).length).toBeLessThan(10_000);
     const report = await readReportCommand.run(...makeCommandArgs({ storage, params: { id: written.reportId } }));
-    expect(report.body).toBe(`# Review\n\n${log}`);
+    expect(report).toMatchObject({ body: `# Review\n\n${log}` });
   });
 
   test("a draft whose report record cannot be written removes its body file", async () => {
@@ -533,11 +533,10 @@ describe("saved report identity and failures", () => {
       ...makeCommandArgs({ storage, params: { workspace: "PS-116_A1", name: "review" }, overrides: { projectFiles } }),
     );
 
-    const report = await readReportCommand.run(
-      ...makeCommandArgs({ storage: readStaleReportOnce(storage, stale), params: { id: written.reportId } }),
-    );
+    const [ctx, params] = makeCommandArgs({ storage, params: { id: written.reportId } });
+    const report = await readReportCommand.run({ ...ctx, storage: readStaleReportOnce(storage, stale) }, params);
 
-    expect(report.body).toBe("# Review\n\nUpdated.");
+    expect(report).toMatchObject({ body: "# Review\n\nUpdated." });
   });
 
   test("save succeeds when old attachment cleanup fails after storage update", async () => {

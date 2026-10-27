@@ -7,7 +7,7 @@ import { buildPlaywrightEnv, runPlaywright } from "./run-playwright";
 
 describe("buildPlaywrightEnv", () => {
   test("preserves the quarantine attempt identity through the UI launcher", () => {
-    const env = buildPlaywrightEnv(
+    const env: NodeJS.ProcessEnv = buildPlaywrightEnv(
       { CI_QUARANTINE_ATTEMPT: "fresh-attempt", E2E_TEST_LANE: "quarantine" },
       { apiPort: 3201, dashboardPort: 5175 },
       "run-1",
@@ -16,7 +16,7 @@ describe("buildPlaywrightEnv", () => {
     try {
       process.env.CI_QUARANTINE_ATTEMPT = env.CI_QUARANTINE_ATTEMPT;
       const selection = playwrightQuarantineSelection("playwright-ui", "packages/e2e/src/ui", true);
-      expect(selection.metadata?.quarantineAttempt).toBe("fresh-attempt");
+      expect(selection).toHaveProperty("metadata.quarantineAttempt", "fresh-attempt");
       expect(env.E2E_TEST_LANE).toBe("quarantine");
     } finally {
       if (original === undefined) delete process.env.CI_QUARANTINE_ATTEMPT;
@@ -34,7 +34,7 @@ describe("buildPlaywrightEnv", () => {
       E2E_AGENTS: "claude-code",
     };
 
-    const result = buildPlaywrightEnv(env, { apiPort: 3201, dashboardPort: 5175 }, "run-1");
+    const result: NodeJS.ProcessEnv = buildPlaywrightEnv(env, { apiPort: 3201, dashboardPort: 5175 }, "run-1");
 
     expect(result).toMatchObject({
       E2E_API_PORT: "3201",
@@ -123,7 +123,8 @@ test("removes the run's folders when the launcher is stopped", async () => {
   try {
     expect(existsSync(dirname(home))).toBe(true);
     launcher.kill("SIGTERM");
-    await launcher.exited;
+    const exitCode = await launcher.exited;
+    if (process.platform !== "win32") expect(exitCode).toBe(143);
     expect(existsSync(dirname(home))).toBe(false);
   } finally {
     try {
@@ -131,4 +132,23 @@ test("removes the run's folders when the launcher is stopped", async () => {
     } catch {}
     rmSync(dirname(home), { recursive: true, force: true });
   }
+});
+
+// POSIX signal termination reports a signal instead of a numeric child exit code.
+describe.skipIf(process.platform === "win32")("POSIX child termination", () => {
+  test.each([
+    ["SIGINT", 130],
+    ["SIGTERM", 143],
+  ] as const)("preserves %s status while cleaning its owned folders", async (signal, exitCode) => {
+    const run = await runPlaywright(
+      {
+        cmd: process.execPath,
+        args: ["-e", `console.log(process.env.E2E_HOME); process.kill(process.pid, ${JSON.stringify(signal)})`],
+      },
+      { PATH: process.env.PATH },
+      { stdio: "pipe" },
+    );
+    expect(run.exitCode).toBe(exitCode);
+    expect(existsSync(dirname(run.output.trim()))).toBe(false);
+  });
 });

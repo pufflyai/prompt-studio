@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT, withPackagedCoreExtensions } from "./packaged-core-extensions.fixture";
+import { expectCoreRecordIds } from "./packaged-core-record-ids-smoke";
 import { expectExtensionDraftStorage } from "./packaged-extension-storage-smoke";
 import { expectPlannerIdentities } from "./packaged-planner-identities-smoke";
 import { runtimeAuthorization } from "./packaged-serve-helpers";
@@ -108,6 +109,11 @@ test(
         headers: runtimeAuthorization(started.descriptor),
       });
       const webview = settingsWebview(metadata);
+      await expectCoreRecordIds({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
+      });
       expect(webview?.runtimeUrl).toBeTruthy();
 
       const runtimeRes = await fetch(`${started.baseUrl}${webview!.runtimeUrl}`, {

@@ -2,6 +2,8 @@
 
 Prompt Studio is a workbench where people and agents build and use tools through extensions. Core owns shared execution, workspaces, state, sync, trust, and workbench contracts. Planner, Notes, and Reports own their domain workflows. Read the [mission](../../MISSION.md) before changing product boundaries.
 
+The [design rules](../../design/DESIGN.md) guide interactions. The [nonfunctional requirements](../../NONFUNCTIONAL_REQUIREMENTS.md) describe resource and performance targets, nightly checks, and guidance on local benchmarks.
+
 ## Start here
 
 - [Install Prompt Studio](getting-started/0001-install.md)
@@ -38,6 +40,8 @@ Use topic folders within categories. References are grouped into `architecture/`
 
 Every file has a four-digit number within its own folder: `NNNN-kebab-case.md`. For example, `references/architecture/0001-adapters-and-features.md` and `references/sdk/0001-overview.md` belong to separate sequences. Avoid repeating a folder's topic in the filename. Keep published numbers stable and add the next number in that folder. ADRs and lessons retain their existing folders and identifiers; do not recycle removed numbers. Keep ADR proposal dates when their status changes. Package and extension READMEs, extension-owned product docs, and Pencil/design guidance stay beside their owners.
 
+Repository-wide governing documents keep their stable names and paths: `MISSION.md`, `NONFUNCTIONAL_REQUIREMENTS.md`, `AGENTS.md`, and `design/DESIGN.md`.
+
 Treat source-linked type declarations as the signature authority. Call requirements documents PRDs, not proposals. Mark unimplemented PRDs as proposed and delete superseded PRDs. Preserve the remaining numbers when a PRD is removed; gaps do not need to be filled.
 
 ## Publishing to prompt.studio/docs
@@ -46,7 +50,7 @@ The website publishes some folders as the Docs tab at [prompt.studio/docs](https
 
 - Guides: `guides/getting-started/`, `guides/concepts/`, `guides/extensions/`, and `guides/sdk/`
 - References: `references/cli/`, `references/extensions/`, `references/sdk/`, and `references/workbench/`
-- Extensions: `extensions/<name>/README.md` and the numbered files in `extensions/<name>/docs/` for Planner, Notes, Reports, Artifacts, Remote Workspaces, the Claude Code, Codex, and OpenCode harnesses, and Extension Lab
+- Extensions: `extensions/<name>/README.md` and the numbered files in `extensions/<name>/docs/` for Planner, Notes, Reports, Artifacts, Remote Workspaces, the Claude Code, Codex, OpenCode, and Pi harnesses, and Extension Lab
 
 Nothing else is published. This guide, `guides/development/`, `references/architecture/`, PRDs, ADRs, lessons learned, and `extensions/pstdio-planner/docs/superseded/` stay in the repository. The allow-list of published folders and their sidebar labels lives in `clients/landing-page/src/content/docs-topics.ts`. A folder that is not on that list is never published, so a new folder stays private until someone adds it.
 

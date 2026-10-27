@@ -38,7 +38,7 @@ export const createNoteCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     if (commandParams.folderId) await requireFolder(notesMount(ctx), commandParams.folderId);
-    const note = await createNote(notesMount(ctx), commandParams.title);
+    const note = await createNote(notesMount(ctx), ctx.storage.ids.create(), commandParams.title);
     if (commandParams.folderId) await moveNote(notesMount(ctx), note.id, commandParams.folderId);
     await ctx.events.emit(notesChanged, { noteId: note.id });
 

@@ -1,5 +1,11 @@
-import { type ArtifactMount, defineCommand, type ExtensionBlobInput, params } from "@pstdio/sdk/extensions";
-import { reportsCollection } from "../data/collections";
+import {
+  type ArtifactMount,
+  defineCommand,
+  type ExtensionBlobInput,
+  type ExtensionStorageApi,
+  params,
+} from "@pstdio/sdk/extensions";
+import { putReport, reportsCollection } from "../data/collections";
 import {
   fileNameFromPath,
   readReportMarkdown,
@@ -31,7 +37,7 @@ const mimeTypeFor = (name: string) => {
   return null;
 };
 
-const readReportFiles = async (projectFiles: ArtifactMount, report: StoredReport) => {
+const readReportFiles = async (projectFiles: ArtifactMount, report: StoredReport, ids: ExtensionStorageApi["ids"]) => {
   const now = new Date().toISOString();
   const previous = new Map(report.files.map((file) => [file.name, file]));
   const entries = await projectFiles.list(reportFilesPattern(report));
@@ -45,7 +51,7 @@ const readReportFiles = async (projectFiles: ArtifactMount, report: StoredReport
       return {
         bytes,
         file: {
-          id: existing?.id ?? crypto.randomUUID(),
+          id: existing?.id ?? ids.create(),
           name,
           blobId: "",
           mimeType: mimeTypeFor(name),
@@ -91,7 +97,7 @@ export const saveReportCommand = defineCommand({
     if (raw === null) throw new Error(`No local report file for ${name}`);
     const frontmatter = parseReportFrontmatter(raw);
     const body = stripFrontmatter(raw).replace(/^\n+/, "");
-    const fileInputs = await readReportFiles(projectFiles, report);
+    const fileInputs = await readReportFiles(projectFiles, report, ctx.storage.ids);
     const blobs = reportsCollection(ctx.storage).attachments(report.id);
     const uploaded: string[] = [];
     const upload = async (input: ExtensionBlobInput) => {
@@ -107,7 +113,7 @@ export const saveReportCommand = defineCommand({
           ...file,
           blobId: await upload({ name: file.name, data: bytes, mimeType: file.mimeType ?? undefined }),
         });
-      next = {
+      next = await putReport(ctx.storage, {
         ...report,
         kind: frontmatter.kind ?? report.kind,
         source: frontmatter.source ?? report.source,
@@ -115,8 +121,7 @@ export const saveReportCommand = defineCommand({
         files: nextFiles,
         draft: false,
         updatedAt: new Date().toISOString(),
-      };
-      await reportsCollection(ctx.storage).put(report.id, next);
+      });
     } catch (error) {
       await Promise.allSettled(uploaded.map((blobId) => blobs.delete(blobId)));
       throw error;

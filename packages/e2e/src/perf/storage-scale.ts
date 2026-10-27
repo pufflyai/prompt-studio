@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
-import { appendFileSync, closeSync, existsSync, mkdirSync, openSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync } from "node:fs";
 import { arch, cpus, freemem, platform, release, totalmem } from "node:os";
 import { join, resolve } from "node:path";
 import { contract, type Profile, runBenchmarkCase, type Workload } from "storage-scale-fixture";
@@ -161,6 +162,10 @@ unsupported controls and missing phase evidence remain explicit coverage failure
       freeMemory: freemem(),
       bun: Bun.version,
       commit: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", timeout: 1_000 }).trim(),
+      artifact: {
+        version: execFileSync(PACKAGED_BINARY_PATH, ["--version"], { encoding: "utf8" }).trim(),
+        sha256: createHash("sha256").update(readFileSync(PACKAGED_BINARY_PATH)).digest("hex"),
+      },
       powerMode: "unrecorded",
       physicalLowerSpecEvidence: "unavailable",
       limits: process.resourceUsage(),

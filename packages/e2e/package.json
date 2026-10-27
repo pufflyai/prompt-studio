@@ -38,24 +38,26 @@
     "harness-claude-code": "workspace:*",
     "harness-codex": "workspace:*",
     "harness-open-code": "workspace:*",
+    "harness-pi": "workspace:*",
     "local-example": "workspace:*",
     "pstdio": "workspace:*",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-artifacts": "workspace:*",
     "pstdio-base-themes": "workspace:*",
     "pstdio-dashboard": "workspace:*",
+    "pstdio-diagnostics": "workspace:*",
     "pstdio-extensions": "workspace:*",
     "pstdio-notes": "workspace:*",
     "pstdio-planner": "workspace:*",
     "pstdio-reports": "workspace:*",
+    "pstdio-scripts": "workspace:*",
     "pstdio-skills": "workspace:*",
     "pstdio-sync": "workspace:*",
     "pstdio-wt": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "remote-workspaces": "workspace:*",
-    "workbench-fixture": "workspace:*",
     "storage-scale-fixture": "workspace:*",
-    "pstdio-scripts": "workspace:*"
+    "workbench-fixture": "workspace:*"
   }
 }

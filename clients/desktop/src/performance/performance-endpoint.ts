@@ -2,8 +2,8 @@ import { randomBytes } from "node:crypto";
 import { rmSync, writeFileSync } from "node:fs";
 import { connect, createServer, type Socket } from "node:net";
 import { dirname } from "node:path";
+import { securePerformanceDirectory } from "pstdio-diagnostics";
 import { readPerformanceEndpointDescriptor } from "pstdio-paths";
-import { securePerformanceDirectory } from "./secure-performance-directory";
 
 const isServing = (port: number) =>
   new Promise<boolean>((resolve) => {

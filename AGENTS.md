@@ -2,6 +2,10 @@
 
 Read [MISSION.md](MISSION.md) first. Every feature, fix, and trade-off must pass its test.
 
+# Nonfunctional requirements
+
+Use [NONFUNCTIONAL_REQUIREMENTS.md](NONFUNCTIONAL_REQUIREMENTS.md) as planning guidance. Its targets are advisory for now. Performance tests run in nightly CI; agents **SHOULD** run relevant benchmarks locally when they expect significant performance impact from a change. These targets add no per-change measurement requirement.
+
 # Repository rules
 
 - This is a **Lerna monorepo** managed with **Bun**. It uses **Nx caching**.

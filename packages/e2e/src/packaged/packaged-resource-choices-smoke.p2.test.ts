@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { writeResourceChoicesExtension } from "./resource-choices-fixture";
@@ -15,7 +15,7 @@ setupPackagedSmokeTests();
 test("packaged resource actions pass hidden values to dependent choices and submission", async () => {
   const root = mkdtempSync(join(tmpdir(), "packaged-resource-choices-"));
   let child: ChildProcess | null = null;
-  const browser = await chromium.launch(PROVISIONED_CHROMIUM);
+  const browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
   try {
     writeResourceChoicesExtension(root);
     const started = await startPackagedServe(root);

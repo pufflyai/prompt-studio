@@ -1,9 +1,24 @@
-import type { AgentDetails, AgentModel, HarnessParams, HarnessParamsInfo, Page, PageQuery } from "pstdio-api-contracts";
+import type {
+  AgentDetails,
+  AgentModel,
+  HarnessAuthentication,
+  HarnessAuthenticationInput,
+  HarnessParams,
+  HarnessParamsInfo,
+  Page,
+  PageQuery,
+} from "pstdio-api-contracts";
 import type { AgentInfo } from "../resources";
+import { type AgentAuthenticationOptions, authenticateAgent } from "./agent-authentication";
 import { projectPageQuery } from "./page-query";
-import type { RequestFn } from "./request";
+import type { ClientOptions, RequestFn } from "./request";
 
 export type AgentClient = {
+  authentication(
+    agentId: string,
+    options?: { projectId?: string; model?: string },
+  ): Promise<HarnessAuthentication | null>;
+  authenticate(agentId: string, input: HarnessAuthenticationInput, options?: AgentAuthenticationOptions): Promise<void>;
   getParamDefaults(
     projectId: string,
     agentId: string,
@@ -22,7 +37,14 @@ export type AgentClient = {
   models(agentId: string, projectId?: string): Promise<AgentModel[]>;
 };
 
-export const createAgentClient = (request: RequestFn): AgentClient => ({
+export const createAgentClient = (request: RequestFn, options: ClientOptions = {}): AgentClient => ({
+  authentication: (agentId, input = {}) => {
+    const q = new URLSearchParams();
+    if (input.projectId) q.set("projectId", input.projectId);
+    if (input.model) q.set("model", input.model);
+    return request(`/v1/agents/${encodeURIComponent(agentId)}/authentication?${q}`);
+  },
+  authenticate: (agentId, input, handlers) => authenticateAgent(options, agentId, input, handlers),
   query: (projectId, input) => request(`/v1/agents/query${projectPageQuery(projectId, input)}`),
   queryModels: (projectId, agentId, input) =>
     request(`/v1/agents/${encodeURIComponent(agentId)}/models/query${projectPageQuery(projectId, input)}`),

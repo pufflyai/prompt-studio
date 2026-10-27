@@ -114,10 +114,22 @@ The packaged desktop benchmarks measure the idle workbench with monitoring off a
 
 Desktop snapshots use schema version 2 and keep the version-1 fields used by the existing meter. The `capture` field adds a capture id, host version, platform, timestamps, actual sample gaps, and a rolling history of at most 150 samples and 512 KiB. `pst performance` prints this same capture.
 
-The desktop observes its local Bun runtime from a separate process. A busy runtime therefore cannot prevent its CPU and memory readings. CPU is a percentage of one logical core; a process using several cores can exceed 100%. A new process or PID reuse starts a new CPU baseline. The first CPU percentage is unavailable, not zero.
+The desktop observes its local Bun runtime from a separate process. A busy runtime therefore cannot prevent its CPU and memory readings. Native CPU counters are converted to milliseconds before calculating CPU as a percentage of one logical core; a process using several cores can exceed 100%. On macOS this conversion uses the machine's clock tick duration. A new process or PID reuse starts a new CPU baseline. The first CPU percentage is unavailable, not zero.
 
 Memory fields use bytes. `residentBytes` is current resident memory. macOS also supplies `physicalFootprintBytes`, which includes compressed memory, and `peakPhysicalFootprintBytes` for its lifetime peak. Windows supplies `privateCommittedBytes` separately from resident working set. Linux supplies resident and peak resident memory from procfs. Missing optional measurements are `null`. Shared working sets overlap, so adding process memory is not an exact application total.
 
 The host also times an authenticated backend response. `reply` records a finite response time. `timeout` records how long the host waited and leaves response time unavailable; it must not enter a successful-response percentile. A missing or disconnected backend is `unavailable`. This measurement includes transport time and does not identify the cause of a delay.
 
 While enabled, the capture writes sanitized JSONL records under the desktop user-data directory's `performance-recordings` folder. Four files of at most 1 MiB each rotate by whole record. Live history clears on disable; saved recordings survive. Capture records contain measurements and process identities, not conversation content, credentials, raw output, or private source paths. The directory uses owner-only access on Unix and a current-user ACL on Windows.
+
+Export saved files after turning monitoring off or closing the app:
+
+```bash
+pst performance recordings /absolute/path/to/performance-recordings
+```
+
+This reads the named directory without starting monitoring or contacting a runtime. The output contains the directory and each saved file's name and JSONL content. Rotation can remove early records; saved files are bounded evidence, not an unlimited archive.
+
+Native process readings include `startedAt` when the host supports it. Benchmarks use this timestamp to include CPU consumed before the first reading of a process born during the capture. For an older process, CPU totals cover only the interval between readings. Native lifetime memory peaks apply to the capture only when the process was born during it; other peaks cover observed samples. The summary labels these coverage limits and keeps process lifetimes separate across restarts.
+
+Benchmark settling memory is observed after the workload ends and at least one sampling interval passes. Its exported boundary states that interval. This is a post-workload idle observation, not a claim that the heap is stable or that garbage collection ran. Other exports label the final value `lastObserved`; they leave settling values unavailable without this observation. An immediate crash is preserved and cannot supply a post-crash memory reading.

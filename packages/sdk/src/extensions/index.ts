@@ -111,6 +111,7 @@ export {
   type WebviewFilesClient,
 } from "./define-extension-view";
 export { resolveEventReferenceId } from "./event-reference";
+export { chooseHarnessAuthentication } from "./harness-authentication";
 export { defaultPageResourceCodec } from "./page-resource-codec";
 export {
   isWorkbenchProjectUrl,

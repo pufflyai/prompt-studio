@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -33,6 +34,8 @@ interface CoreExtensionsFixture {
 }
 
 export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFixture) => Promise<void>) => {
+  const startedAt = Date.now();
+  const phase = (name: string) => console.log(`Packaged core: ${name} (${Date.now() - startedAt}ms)`);
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-core-"));
   let child: ChildProcess | undefined;
   let closeRegistry: (() => Promise<void>) | undefined;
@@ -44,7 +47,9 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
       packagePaths: [join(REPO_ROOT, "packages/sdk"), join(REPO_ROOT, "packages/ui")],
     });
     closeRegistry = registry.close;
+    phase("registry ready");
     const plannerSource = await preparePlannerSource(tempRoot);
+    phase("Planner source ready");
     const started = await startPackagedServe(tempRoot, {
       NPM_CONFIG_USERCONFIG: npmConfigPath,
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
@@ -55,6 +60,7 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
       }),
     });
     child = started.child;
+    phase("runtime ready");
     const projectFolder = join(tempRoot, "project");
     mkdirSync(projectFolder);
     const headers = runtimeAuthorization(started.descriptor);
@@ -65,16 +71,23 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     });
     expect(createRes.status).toBe(201);
     const project = (await createRes.json()) as CoreExtensionsFixture["project"];
+    phase("project created");
     const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, { headers });
     expect(extensionsRes.status).toBe(200);
     const { extensions } = (await extensionsRes.json()) as { extensions: CoreExtensionsFixture["extensions"] };
+    phase("extensions listed");
     const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, { headers });
     expect(metadataRes.status).toBe(200);
     const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
+    phase("UI metadata loaded");
     await run({ started, tempRoot, projectFolder, project, extensions, metadata });
+    phase("features checked");
   } finally {
     if (child) await stopProcess(child);
+    phase("runtime stopped");
     if (closeRegistry) await closeRegistry();
-    rmSync(tempRoot, { recursive: true, force: true });
+    phase("registry closed");
+    await rm(tempRoot, { recursive: true, force: true });
+    phase("files removed");
   }
 };
