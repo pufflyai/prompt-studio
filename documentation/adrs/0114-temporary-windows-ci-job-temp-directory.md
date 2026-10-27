@@ -25,13 +25,13 @@ Inside the packaged core cases, the Planner's dependency install took 79.7–91.
 
 ## Temporary workaround
 
-The shared CI setup action creates a dynamic 50 GB ReFS Dev Drive file in `RUNNER_TEMP`, mounts it, and writes `TEMP` and `TMP` to a folder on it for later steps. The job owns the drive; the hosted runner discards it with the job. Both Windows architectures use the same rule. Later build and test processes reach it through the existing temp API. No application path, dependency layout or cache policy changes. Every cold fixture still allocates its own home and cache; no fixture is prewarmed or reused. No timeout, budget or workload changes.
+Only the packaged-toolchain workflow opts into the shared setup action’s `windows-dev-drive` input. Other Windows jobs keep `TEMP` and `TMP` on `RUNNER_TEMP`. In that opted-in job, the action creates a dynamic 50 GB ReFS Dev Drive file in `RUNNER_TEMP`, mounts it, and writes `TEMP` and `TMP` to a folder on it for later steps. The job owns the drive; the hosted runner discards it with the job. Both Windows architectures use the same rule. Later build and test processes reach it through the existing temp API. No application path, dependency layout or cache policy changes. Every cold fixture still allocates its own home and cache; no fixture is prewarmed or reused. No timeout, budget or workload changes.
 
 This is a temporary override of the provider's storage. Keeping it in CI setup avoids Windows-only storage rules in the application or test fixtures.
 
 ## Limitations
 
-The temp directory is now on a different volume from the checkout. A test that renames files between the checkout and the temp directory would fail on Windows CI. ReFS also differs from NTFS in small ways, such as larger file IDs. The full Windows suites must pass on this configuration. The drive costs 10–15 seconds of setup per Windows job that uses the shared setup action. This does not measure ordinary-user performance, which still writes to the user's own volume, and it does not change any product performance budget.
+In the packaged-toolchain job, the temp directory is on a different volume from the checkout. A broader rehearsal failed both detached extension-process cases in Windows database tests ([40479534443](https://github.com/pufflyai/prompt-studio/actions/runs/40479534443)); their cause is unconfirmed. The opt-in keeps database and ordinary package jobs on their previous storage. A test that renames files between the checkout and the temp directory would fail on Windows CI. ReFS also differs from NTFS in small ways, such as larger file IDs. The full Windows suites must pass on this configuration. The drive costs 10–15 seconds of setup per Windows packaged-toolchain job. This does not measure ordinary-user performance, which still writes to the user's own volume, and it does not change any product performance budget.
 
 ## Removal
 

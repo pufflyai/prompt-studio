@@ -7,6 +7,9 @@ inputs:
   install-strategy:
     description: Install workspace dependencies normally or with the native Node headers.
     default: workspace
+  windows-dev-drive:
+    description: Use a job-owned ReFS Dev Drive for cold packaged toolchain installs.
+    default: "false"
 runs:
   using: composite
   steps:
@@ -50,8 +53,14 @@ runs:
     - name: Generate installed Chakra theme declarations
       shell: bash
       run: bun run --cwd packages/ui typegen:tokens
+    - name: Use the job temp directory on Windows
+      if: runner.os == 'Windows' && inputs.windows-dev-drive != 'true'
+      shell: pwsh
+      run: |
+        "TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+        "TMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
     - name: Use a job-owned Dev Drive as the Windows temp directory
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && inputs.windows-dev-drive == 'true'
       shell: pwsh
       # Keep runtime homes and cold install caches on a ReFS Dev Drive owned by this job. See ADR 0114.
       run: |
