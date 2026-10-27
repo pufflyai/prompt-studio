@@ -72,7 +72,7 @@ describe("extension upgrade service", () => {
       releaseCommit,
     );
     expect(run).toHaveBeenCalledWith(
-      "git",
+      expect.stringMatching(/git(?:\.exe)?$/),
       expect.arrayContaining(["https://example.com/extensions.git"]),
       expect.any(Object),
     );
@@ -84,7 +84,7 @@ describe("extension upgrade service", () => {
     await resolveExtensionReleaseCommit("https://example.com/extensions.git", "main", run);
 
     expect(run).toHaveBeenCalledWith(
-      "git",
+      expect.stringMatching(/git(?:\.exe)?$/),
       [
         "-c",
         "protocol.allow=never",

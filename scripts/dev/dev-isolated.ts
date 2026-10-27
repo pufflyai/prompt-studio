@@ -133,6 +133,9 @@ const composeEnv = (
   apiToken?: string,
 ) => ({
   ...process.env,
+  ...(process.env.PSTDIO_ISOLATED_AGENT_CREDENTIALS === "0"
+    ? { ANTHROPIC_API_KEY: "", CLAUDE_CODE_OAUTH_TOKEN: "" }
+    : {}),
   ...(apiToken ? { PSTDIO_ISOLATED_API_TOKEN: apiToken } : {}),
   ...resolveIsolatedUser(),
   HOME: process.env.HOME ?? process.env.USERPROFILE,
@@ -294,7 +297,10 @@ const main = async () => {
   const stackDirectory = resolveStackDirectory(repoRoot, projectName);
   const caCount = writeExtraCaContext(join(stackDirectory, "extra-ca"), process.env.NODE_EXTRA_CA_CERTS);
   if (caCount > 0) process.stdout.write(`Trusting ${caCount} certificate(s) from NODE_EXTRA_CA_CERTS in the image.\n`);
-  const credentials = resolveCredentialMounts(process.env.HOME ?? process.env.USERPROFILE ?? "");
+  const credentials = resolveCredentialMounts(
+    process.env.HOME ?? process.env.USERPROFILE ?? "",
+    process.env.PSTDIO_ISOLATED_AGENT_CREDENTIALS !== "0",
+  );
   writeCredentialComposeFile(join(stackDirectory, CREDENTIALS_COMPOSE_FILE), credentials.mounted);
   for (const missing of credentials.missing)
     process.stdout.write(`Not mounted, file is missing: ${missing}. Sign that agent in on the host or in the stack.\n`);

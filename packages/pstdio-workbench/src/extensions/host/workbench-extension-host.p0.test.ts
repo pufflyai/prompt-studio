@@ -134,6 +134,7 @@ const metadata = {
       id: `${extensionId}.status-bar-item.sync-status`,
       extensionId,
       view: { extensionId, kind: "view", id: "sync-status" },
+      popover: { extensionId, kind: "view", id: "sync-status" },
       slot: { id: "workbench.statusBar.trailing" },
       order: 20,
       when: { mode: { extensionId, kind: "mode", id: "review" } },
@@ -367,6 +368,7 @@ describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
       expect.objectContaining({
         id: `${extensionId}.status-bar-item.sync-status`,
         viewId: statusViewId,
+        popoverViewId: statusViewId,
         slot: "trailing",
       }),
     ]);

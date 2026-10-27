@@ -160,6 +160,7 @@ const registerStatusBarItems = (input: InternalRegisterWorkbenchExtensionContrib
     input.workbench.statusBar.registerItem({
       id: item.id,
       viewId: item.viewId,
+      popoverViewId: item.popoverViewId,
       slot: item.slot,
       order: item.order,
       isVisible: () =>

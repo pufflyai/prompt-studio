@@ -36,14 +36,12 @@ export {
   mergeResourceDocument,
   type ResourceMigration,
   resourceDocumentState,
+  retainedResourceValue,
 } from "./resource-document";
 export type { NumberedResource } from "./resource-numbers";
 export {
   coreOwnerId,
-  nextResourceNumber,
-  reconcileResourceNumbers,
   rememberResourceNumber,
-  resourceIdentity,
   resourceNumbers,
   resourceNumbersDocumentId,
   resourceShorthand,

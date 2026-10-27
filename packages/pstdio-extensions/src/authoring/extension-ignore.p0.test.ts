@@ -83,4 +83,22 @@ describe("createExtensionIgnoreMatcher", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+  test("keeps preview and test build output out of extension archives while preserving runtime assets", () => {
+    const root = withExtensionRoot(() => {});
+    try {
+      const matcher = createExtensionIgnoreMatcher(root);
+      for (const path of [
+        "storybook-static/index.html",
+        "storybook-static/assets/preview.js",
+        "__test-tmp__/canvas/entry.tsx",
+        "nested/storybook-static/iframe.html",
+        "nested/__test-tmp__/fixture.json",
+      ])
+        expect(matcher.ignores(path)).toBe(true);
+      expect(matcher.ignores("dist/runtime.js")).toBe(false);
+      expect(matcher.ignores("assets/preview.png")).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

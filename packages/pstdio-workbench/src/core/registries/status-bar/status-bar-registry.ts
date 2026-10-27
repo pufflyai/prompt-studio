@@ -7,6 +7,7 @@ export type WorkbenchStatusBarSlot = "leading" | "trailing";
 export interface WorkbenchStatusBarItem {
   id: string;
   viewId: string;
+  popoverViewId?: string;
   slot: WorkbenchStatusBarSlot;
   order?: number;
   isVisible?(): boolean;
@@ -67,6 +68,9 @@ export const createStatusBarRegistry = (input: CreateWorkbenchStatusBarRegistryI
       const current = store.getState();
       if (current.items[item.id]) throw new Error(`Status bar item already registered: ${item.id}`);
       if (!input.hasView(item.viewId)) throw new Error(`Status bar view is not registered: ${item.viewId}`);
+      if (item.popoverViewId && !input.hasView(item.popoverViewId)) {
+        throw new Error(`Status bar popover view is not registered: ${item.popoverViewId}`);
+      }
       if (item.order !== undefined && !Number.isFinite(item.order)) {
         throw new Error(`Status bar item order must be finite: ${item.id}`);
       }

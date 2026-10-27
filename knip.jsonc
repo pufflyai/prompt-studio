@@ -131,6 +131,7 @@
         "harness-claude-code",
         "harness-codex",
         "harness-open-code",
+        "harness-pi",
         "local-example",
         "pstdio-artifacts",
         "pstdio-base-themes",
@@ -296,7 +297,9 @@
         "src/**/*.test.tsx",
         "src/**/*.fixture.ts"
       ],
-      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+      "project": ["*.ts", "src/**/*.{ts,tsx}"],
+      // Harnesses resolve these native executables through package metadata rather than imports.
+      "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "opencode-ai"]
     },
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
     "extensions/extension-lab": {

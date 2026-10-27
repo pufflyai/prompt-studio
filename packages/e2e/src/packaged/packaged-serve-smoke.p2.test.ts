@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
+import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves and independent schema dependencies.
 // Native actions retain failed outcomes for the UI entry point to report.
@@ -14,7 +15,9 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Packaged harnesses expose scoped account state and a private interactive account channel.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
-// Navigation metadata preserves tabless page presentation, panel views, slot replacements, caller-relative handoff and placeholder actions through the compiled host.
+// packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
+// Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
+// placeholder actions and status-item popover views through the compiled host.
 // scripts/verify/public-package-consumer.ts checks legacy hidden headers and explicit page/tab presentation in the built workbench.
 // packaged-session-tools.p1.spec.ts checks draft/session/tool tab restoration across navigation and reload, creation, closure and New session tools.
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
@@ -22,6 +25,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // performance-observer.p2.test.ts checks native CPU units and memory in the compiled observer.
 // packaged-core-extensions-smoke.p1.test.ts checks Notes, Planner and Reports allocate record IDs through core.
 // packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
+// packaged-cloud-extension-set-smoke.p2.test.ts checks offline number collisions, aliases and later allocations across three compiled hosts.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -169,3 +173,9 @@ test("packaged CLI includes automation and machine authentication", () => {
   expect(existsSync(join(home, "runtime.json"))).toBe(false);
   rmSync(home, { recursive: true, force: true });
 });
+
+test(
+  "installs bundled defaults without Git and does not offer Git workspaces",
+  expectPackagedGitFreeExtensions,
+  PACKAGED_TEST_TIMEOUT,
+);

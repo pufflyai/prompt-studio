@@ -16,7 +16,7 @@ const runGit = async (
   options: { env?: Record<string, string | undefined>; signal?: AbortSignal } = {},
 ) => {
   try {
-    const git = Bun.spawn(["git", ...args], { stdout: "pipe", stderr: "pipe", ...options });
+    const git = Bun.spawn([requireGitExecutable(), ...args], { stdout: "pipe", stderr: "pipe", ...options });
     const [stdout, stderr, exitCode] = await Promise.all([
       new Response(git.stdout).text(),
       new Response(git.stderr).text(),
@@ -77,3 +77,5 @@ export const cloneGitRemote = async (remote: string, folder: string) => {
   const output = (result.stderr || result.stdout).replaceAll(remote, withoutCredentials(remote));
   throw new Error(`Could not clone ${withoutCredentials(remote)}: ${output}`);
 };
+
+import { requireGitExecutable } from "pstdio-wt";

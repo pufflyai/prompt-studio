@@ -2,6 +2,7 @@ import { and, asc, eq, lte } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { decodeRecordFrame, encodeRecordFrame, type RecordBytes } from "pstdio-sync/relay";
 import type { Asset, StorageRecord } from "pstdio-sync-contracts";
+import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_record_outbox, storage_record_sync } from "../../db/schemas.pg";
 
@@ -33,7 +34,16 @@ export const queueRecordUpload = async (
   owner: StorageOwner,
   prepared: { record: StorageRecord; update: Uint8Array | null }[],
 ) => {
-  const changed = prepared.filter((change) => change.update);
+  const combined = new Map<string, { record: StorageRecord; update: Uint8Array }>();
+  for (const change of prepared) {
+    if (!change.update) continue;
+    const previous = combined.get(change.record.recordId);
+    combined.set(change.record.recordId, {
+      record: change.record,
+      update: previous ? Y.mergeUpdates([previous.update, change.update]) : change.update,
+    });
+  }
+  const changed = [...combined.values()];
   if (!changed.length) return;
   const [synced] = await tx
     .select({ joined: storage_record_sync.joined })

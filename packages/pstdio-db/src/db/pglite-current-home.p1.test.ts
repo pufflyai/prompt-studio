@@ -29,8 +29,7 @@ test("createDb moves an old home into a JSON-exported backup and starts with a c
     expect(JSON.parse(exported)).toEqual({ id: "p1", name: "Kept" });
     expect(await readdir(join(root, "backups", backup, "database"))).toContain("PG_VERSION");
 
-    const reopened = await createDb({ path, onPhase: (phase) => phases.push(phase) });
-    await reopened.close();
+    expect(await Bun.file(join(path, ".pstdio-engine.json")).json()).toEqual(engineIdentity);
     expect(phases.filter((phase) => phase === "database_retiring")).toHaveLength(1);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -45,7 +44,9 @@ test("first creation and symlink opens share one canonical current home", async 
   await symlink(directory, parentAlias, "junction");
   const path = join(parentAlias, "database");
   try {
-    const first = await createDb({ path });
+    const phases: string[] = [];
+    const onPhase = (phase: string) => phases.push(phase);
+    const first = await createDb({ path, onPhase });
     try {
       await first.pglite.exec(
         "create collation if not exists exact_locale(provider=icu,locale='sv-SE-u-kn-true-ks-level1',deterministic=false)",
@@ -64,13 +65,14 @@ test("first creation and symlink opens share one canonical current home", async 
     }
     const homeAlias = join(root, "home-alias");
     await symlink(join(directory, "database"), homeAlias, "junction");
-    const second = await createDb({ path: homeAlias });
+    const second = await createDb({ path: homeAlias, onPhase });
     try {
       expect(second.path).toBe(first.path);
       expect(JSON.parse(await readFile(join(homeAlias, ".pstdio-engine.json"), "utf8"))).toEqual(engineIdentity);
     } finally {
       await second.close();
     }
+    expect(phases).not.toContain("database_retiring");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

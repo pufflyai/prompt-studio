@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { chromium, expect as expectPage } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -124,11 +125,14 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
   let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
 
   try {
+    const catalogPath = join(tempRoot, "catalog.json");
+    const catalog = JSON.parse(
+      readFileSync(resolve(import.meta.dirname, "../../../pstdio-api/files/extension-catalog.json"), "utf8"),
+    );
+    for (const entry of catalog.extensions) entry.origin.url = pathToFileURL(repository).href;
+    writeFileSync(catalogPath, JSON.stringify(catalog));
     const started = await startPackagedServe(tempRoot, {
-      GIT_ALLOW_PROTOCOL: "file",
-      GIT_CONFIG_COUNT: "1",
-      GIT_CONFIG_KEY_0: `url.file://${repository}.insteadOf`,
-      GIT_CONFIG_VALUE_0: "https://github.com/pufflyai/prompt-studio",
+      PSTDIO_EXTENSION_CATALOG: catalogPath,
       // A nightly binary bakes a main commit that this fixture repository cannot contain,
       // so the host release ref points at the fixture's tag for the current version.
       PSTDIO_EXTENSION_RELEASE_REF: `pstdio@${cliPackage.version}`,

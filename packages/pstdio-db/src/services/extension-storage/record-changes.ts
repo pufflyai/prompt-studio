@@ -5,6 +5,8 @@ import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records, storage_documents, storage_record_projections } from "../../db/schemas.pg";
 import { publishProjectedRecords } from "./record-projection-rows";
 import { persistResourceDocuments } from "./resource-document-persistence";
+import { projectNumberRecords } from "./resource-number-records";
+import { previousNumbers, repairNumberRecords } from "./resource-number-repair";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
@@ -48,7 +50,8 @@ export interface RecordChange {
 
 /**
  * Writes changed record documents with their query rows and advances the owner revision, inside the
- * caller's transaction after `lockRecordOwner`. Returns how many query rows changed.
+ * caller's transaction after `lockRecordOwner`, including core number repairs. The caller owns
+ * outbox framing and notifications after commit.
  */
 export const saveRecordChanges = async (
   tx: Transaction,
@@ -57,6 +60,7 @@ export const saveRecordChanges = async (
   changes: RecordChange[],
 ) => {
   const ids = changes.map((change) => change.record.recordId);
+  const previous = await previousNumbers(tx, owner, ids);
   // Only the previous live state matters for the count; values stay unread.
   const before = new Map<string, boolean>();
   for (let offset = 0; offset < ids.length; offset += 1_000) {
@@ -75,11 +79,24 @@ export const saveRecordChanges = async (
   await persistResourceDocuments(tx, owner, changes);
   const records = changes.map((change) => change.record);
   const projected = await publishProjectedRecords(tx, owner, records);
+  await projectNumberRecords(tx, owner, records, revision + 1);
+  const repaired = await repairNumberRecords(tx, owner, records, revision + 1, previous);
+  await persistResourceDocuments(tx, owner, repaired.changes);
+  const repairedCount = await publishProjectedRecords(
+    tx,
+    owner,
+    repaired.changes.map((change) => change.record),
+  );
   const live = (record: { exists: boolean; deleted: boolean }) => Number(record.exists && !record.deleted);
   const delta = records.reduce((sum, record) => sum + live(record) - Number(before.get(record.recordId) ?? false), 0);
   await tx
     .update(storage_record_projections)
     .set({ revision: revision + 1, live_count: sql`${storage_record_projections.live_count} + ${delta}` })
     .where(ownerWhere(owner));
-  return projected;
+  return {
+    projected: projected + repairedCount,
+    events: repaired.events,
+    records: repaired.records,
+    repairs: repaired.changes,
+  };
 };
