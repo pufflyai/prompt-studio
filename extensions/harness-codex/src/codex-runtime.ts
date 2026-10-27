@@ -57,9 +57,9 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
     worker,
     refreshAuthentication: async () => {
       authenticationGeneration++;
-      const owned = [...workers.entries()];
-      for (const [, value] of owned) value.stale = true;
-      await Promise.all(owned.map(([key, value]) => releaseStale(key, value)));
+      // Native login has already finished. Retire old owners at their next invocation so an
+      // unresponsive app-server cannot hold account setup open or interrupt another active goal.
+      for (const value of workers.values()) value.stale = true;
       for (const [key, transport] of servers) if (transport.isClosed()) servers.delete(key);
     },
     releaseSession: async (projectId: string | undefined, sessionId: string) => {
@@ -115,6 +115,8 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
       // Existing turns keep their transport. The next idle invocation loads the new account.
       return (async () => {
         if (current) await releaseStale(key, current);
+        if (workers.get(key)?.stale)
+          throw new Error("Codex is still running work with the previous account. Stop or finish that work first.");
         return worker(input).run(input, command);
       })();
     },

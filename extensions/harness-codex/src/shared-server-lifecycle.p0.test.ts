@@ -321,3 +321,30 @@ test("account refresh leaves active work running and starts later turns on new c
   expect(children).toHaveLength(2);
   await resumed.stop();
 });
+
+test("account refresh completes without consulting an unresponsive previous worker", async () => {
+  const { runtime, children, holdNext } = setup();
+  const a = input("a");
+  await runtime.worker(a).load(a);
+  holdNext("thread/goal/get");
+  const refreshing = runtime.refreshAuthentication();
+  try {
+    expect(await Promise.race([refreshing.then(() => "refreshed"), Bun.sleep(100).then(() => "pending")])).toBe(
+      "refreshed",
+    );
+  } finally {
+    children[0].kill();
+    await refreshing.catch(() => {});
+  }
+});
+
+test("new turns wait for an active native goal before replacing stale credentials", async () => {
+  const p = peer({ goalStatus: "active" });
+  peers.push(p);
+  const a = input("a");
+  const id = await p.runtime.worker(a).load(a);
+  await p.runtime.refreshAuthentication();
+  await expect(p.runtime.run({ ...a, agentSessionId: id })).rejects.toThrow("previous account");
+  expect(p.calls.some((call) => ["turn/start", "turn/interrupt", "thread/goal/set"].includes(call.method))).toBe(false);
+  expect(p.children).toHaveLength(1);
+});

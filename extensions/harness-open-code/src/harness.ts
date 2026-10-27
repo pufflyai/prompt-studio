@@ -189,7 +189,7 @@ export const createOpencodeHarness = (
 
     capabilities: () => ["SessionFork", "ContextUsage", "SessionReattach"],
     detect: (ctx) => deps.detect(ctx),
-    getAuthentication: async (ctx, input) => (await serviceFor(ctx)).getAuthentication(input),
+    getAuthentication: (ctx, input) => services.run(ctx, async () => (await serviceFor(ctx)).getAuthentication(input)),
     authenticate: async (ctx, input, channel) => {
       await authenticateOpencode(ctx, input, channel, serviceOverrides);
       await services.invalidateAuthentication();
@@ -197,7 +197,7 @@ export const createOpencodeHarness = (
     },
 
     listModels,
-    getCommandState: async (ctx, input) => opencodeCommandState(input, await serviceFor(ctx)),
+    getCommandState: (ctx, input) => services.run(ctx, async () => opencodeCommandState(input, await serviceFor(ctx))),
     prepareOperation: async (ctx, input, operation) => {
       const prepared = prepareOpencodeOperation(input, operation, await serviceFor(ctx));
       return {
@@ -315,11 +315,12 @@ export const createOpencodeHarness = (
         );
       }),
 
-    getMessages: async (ctx, input) => {
-      const opencode = await serviceFor(ctx);
-      const messages = await opencode.getSessionMessages(input.agentSessionId, input.cwd);
-      return messages.map(normalizeOpencodeMessage);
-    },
+    getMessages: (ctx, input) =>
+      services.run(ctx, async () => {
+        const opencode = await serviceFor(ctx);
+        const messages = await opencode.getSessionMessages(input.agentSessionId, input.cwd);
+        return messages.map(normalizeOpencodeMessage);
+      }),
     recoverMessages: (_ctx, input) => recoverOpencodeMessages(input),
   };
 };
