@@ -481,3 +481,107 @@ test("core records with malformed number aliases save without entering the numbe
     await f.close();
   }
 });
+
+test("allocation rejects exhausted number ranges without saving an unindexed resource", async () => {
+  const f = await fixture();
+  try {
+    const records = f.documents.open({ owner: f.owner }).records;
+    await records.commit({
+      operationId: "last-number",
+      edits: [
+        {
+          recordId: "last",
+          replace: {
+            id: "last",
+            extensionId: f.input.extensionId,
+            kind: f.input.kind,
+            prefix: "PS",
+            value: Number.MAX_SAFE_INTEGER,
+            aliases: [],
+          },
+        },
+      ],
+    });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const error = await f.service.allocate(f.input).catch((error: unknown) => error);
+      expect(error).toMatchObject({ message: "Resource number range exhausted for prefix PS" });
+    }
+    expect(await records.list()).toHaveLength(1);
+  } finally {
+    await f.documents.flushStatistics();
+    await f.close();
+  }
+});
+
+test("an alias raises only the allocation floor for its own prefix", async () => {
+  const f = await fixture();
+  try {
+    await f.documents.open({ owner: f.owner }).records.commit({
+      operationId: "former-prefix",
+      edits: [
+        {
+          recordId: "old",
+          replace: {
+            id: "old",
+            extensionId: f.input.extensionId,
+            kind: f.input.kind,
+            prefix: "PS",
+            value: 1,
+            aliases: ["OLD-50"],
+          },
+        },
+      ],
+    });
+    expect((await f.service.allocate(f.input)).shorthand).toBe("PS-2");
+    expect((await f.service.allocate({ ...f.input, kind: "archived", prefix: "OLD" })).shorthand).toBe("OLD-51");
+    expect(
+      (await f.service.findByShorthand({ ...f.input, shorthand: "OLD-50" })).map((resource) => resource.id),
+    ).toEqual(["old"]);
+  } finally {
+    await f.documents.flushStatistics();
+    await f.close();
+  }
+});
+
+test("a fresh device preserves number history when its first download is a tombstone", async () => {
+  const first = await fixture();
+  const second = await fixture();
+  try {
+    const records = first.documents.open({ owner: first.owner }).records;
+    await records.commit({
+      operationId: "number",
+      edits: [
+        {
+          recordId: "gone",
+          replace: {
+            id: "gone",
+            extensionId: first.input.extensionId,
+            kind: first.input.kind,
+            prefix: "PS",
+            value: 1,
+            aliases: ["PS-50", "OLD-75"],
+          },
+        },
+      ],
+    });
+    await records.commit({ operationId: "delete", edits: [{ recordId: "gone", deleted: true }] });
+    const snapshot = await first.service.recordStream(first.input.projectId).snapshot();
+    const incoming = second.service.recordStream(second.input.projectId);
+    await incoming.merge(
+      new Map(snapshot.records.map((record) => [record.recordId, [record.bytes]])),
+      "adopt",
+      await incoming.open(),
+    );
+    expect(await second.service.identity({ ...second.input, id: "gone" })).toBeNull();
+    expect((await second.service.allocate(second.input)).shorthand).toBe("PS-51");
+    expect((await second.service.allocate({ ...second.input, kind: "archived", prefix: "OLD" })).shorthand).toBe(
+      "OLD-76",
+    );
+    expect(await second.service.findByShorthand({ ...second.input, shorthand: "OLD-75" })).toEqual([]);
+  } finally {
+    for (const f of [first, second]) {
+      await f.documents.flushStatistics();
+      await f.close();
+    }
+  }
+});
