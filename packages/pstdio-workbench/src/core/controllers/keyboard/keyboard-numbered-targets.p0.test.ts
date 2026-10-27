@@ -15,6 +15,7 @@ test("an empty Secondary card shares numbering with tabs and opens in its displa
     {
       execute: (_args, context) => {
         opened.push(context!.region!);
+        core.layout.openWidget("session", { region: "secondary", role: "location", tabRetention: "persistent" });
       },
     },
   );
@@ -34,4 +35,6 @@ test("an empty Secondary card shares numbering with tabs and opens in its displa
   await core.keyboard.press("1");
   expect(opened).toEqual(["secondary"]);
   expect(core.keyboard.store.getState().message).toBe("");
+  expect(core.keyboard.store.getState().active).toBe(true);
+  expect(core.keyboard.store.getState().selectedRegion).toBe("secondary");
 });

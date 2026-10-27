@@ -12,6 +12,36 @@ test.afterAll(async () => {
   await stopStorybook(storybook);
 });
 
+test("a numbered chord starts tab navigation and Enter focuses the last plain-number selection", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, `${prefix}visible-panels`));
+  await waitForStoryPlayback(page);
+  await page.getByRole("textbox", { name: "Draft 4", exact: true }).fill("Keep Secondary draft");
+  await page.keyboard.press("Alt+Shift+1");
+  const mode = page.getByRole("region", { name: "Keyboard shortcut mode", exact: true });
+  await expect(mode).toBeVisible();
+  await expect(page.getByRole("tab", { name: "PS-1", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("2");
+  await expect(page.getByRole("tab", { name: "PS-2", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(mode).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(mode).toBeHidden();
+  await expect(page.getByRole("textbox", { name: "Draft 2", exact: true })).toBeFocused();
+  await expect(page.getByRole("textbox", { name: "Draft 4", exact: true })).toHaveValue("Keep Secondary draft");
+});
+
+test("Ctrl Tab cycles tabs and Ctrl Shift Tab goes back without entering shortcut mode", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, `${prefix}visible-panels`));
+  await waitForStoryPlayback(page);
+  await page.getByRole("tab", { name: "PS-1", exact: true }).click();
+  await page.getByRole("textbox", { name: "Draft 1", exact: true }).fill("Keep Main draft");
+  await page.keyboard.press("Control+Tab");
+  await expect(page.getByRole("textbox", { name: "Draft 2", exact: true })).toBeFocused();
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await page.keyboard.press("Control+Shift+Tab");
+  await expect(page.getByRole("textbox", { name: "Draft 1", exact: true })).toBeFocused();
+  await expect(page.getByRole("textbox", { name: "Draft 1", exact: true })).toHaveValue("Keep Main draft");
+});
+
 test("fast entry owns keys, global navigation stays active and exits into Secondary", async ({ page }) => {
   await page.goto(storyUrl(baseUrl, `${prefix}visible-panels`));
   await waitForStoryPlayback(page);
@@ -26,7 +56,7 @@ test("fast entry owns keys, global navigation stays active and exits into Second
     cancelable: true,
   });
   await page.keyboard.press("g");
-  await page.keyboard.press("Alt+Shift+PageUp");
+  await page.keyboard.press("Control+Shift+Tab");
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
   await expect(draft).toHaveValue("Unsaved Secondary");
   await page.keyboard.press("Alt+Shift+4");
@@ -81,9 +111,9 @@ test("tabs beyond nine use the direct picker and tab navigation wraps", async ({
   await expect(picker.getByText(/^10 ·/)).toBeVisible();
   await page.keyboard.press("1");
   await expect(picker).toBeHidden();
-  await page.keyboard.press("Alt+Shift+PageDown");
-  await page.keyboard.press("Alt+Shift+PageDown");
-  await page.keyboard.press("Alt+Shift+PageDown");
+  await page.keyboard.press("Control+Tab");
+  await page.keyboard.press("Control+Tab");
+  await page.keyboard.press("Control+Tab");
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(

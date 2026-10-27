@@ -1,5 +1,5 @@
 import { chakra, Icon, Kbd } from "@chakra-ui/react";
-import { ArrowLeft, ArrowRight, Command, type LucideIcon, Option, Redo } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Command, type LucideIcon, Option, Redo } from "lucide-react";
 import { Fragment } from "react";
 import { shortcutKeysRecipe } from "../../theme/recipes/shortcut-keys";
 
@@ -34,6 +34,8 @@ const macModifierLabels: Record<string, ShortcutDisplayPart> = {
 const keyLabels: Record<string, ShortcutDisplayPart> = {
   arrowleft: { label: "Arrow Left", Icon: ArrowLeft },
   arrowright: { label: "Arrow Right", Icon: ArrowRight },
+  arrowup: { label: "Arrow Up", Icon: ArrowUp },
+  arrowdown: { label: "Arrow Down", Icon: ArrowDown },
 };
 
 const getShortcutPlatform = (): ShortcutPlatform => {

@@ -2,12 +2,12 @@ import { getNavigationTargetKey } from "../../registries/navigation/navigation-t
 import { createDisposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCore } from "../../workbench-core-types";
-import { openPanelWidget } from "../composition/panel-widget-open";
 import { createKeyboardActionRunner } from "./keyboard-action-runner";
 import { pressKeyboardKey } from "./keyboard-key-handler";
 import { type KeyboardEmptyPanels, listKeyboardNumberedTargets } from "./keyboard-numbered-targets";
 import { createKeyboardPreferences } from "./keyboard-preferences";
 import { type KeyboardPresentation, type KeyboardTabStrips, visibleKeyboardTargets } from "./keyboard-presentations";
+import { selectKeyboardTab } from "./keyboard-tab-selection";
 import { createShortcutCatalogReader, createShortcutHintReader } from "./shortcut-catalog-reader";
 import { shortcutMenuEntries } from "./shortcut-menu";
 
@@ -168,34 +168,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       stop();
       if (selected) core.focus.setActiveRegion(selected.region);
     },
-    async selectTab(number: number) {
-      const target = listNumberedTargets().find((target) => target.number === number);
-      if (!target) {
-        message(`Tab ${number} is not available.`);
-        return;
-      }
-      if (target.kind === "tab") {
-        activate({ ...target.tab, number });
-        return;
-      }
-      const core = getCore();
-      const panel = core.composition
-        .panelsFor(target.region)
-        .addable.find((panel) => panel.panelId === target.panel.panelId);
-      if (!panel) {
-        message("This panel is no longer available.");
-        return;
-      }
-      stop(false);
-      await openPanelWidget({
-        workbench: core,
-        widget: panel.contribution,
-        region: target.region,
-        resource: core.getPrimaryResource(),
-        open: panel.open,
-        pinned: panel.pinned,
-      });
-    },
+    selectTab: (number: number) => selectKeyboardTab(getCore(), number),
     selectPresentation(id: string, resourceId?: string) {
       const tab = presentations().find((tab) => tab.id === id && (!resourceId || tab.resource?.id === resourceId));
       if (tab) activate(tab);

@@ -203,7 +203,7 @@ test("global numbers follow spatial placement and compact after moves and closur
   expect(core.keyboard.listTabs().map((tab) => tab.resource?.id)).toEqual(["D", "B", "C"]);
 });
 
-test("navigation stays sticky and direct selection outside mode stays outside", async () => {
+test("programmatic tab selection stays outside shortcut mode while keyboard navigation remains sticky", async () => {
   const { core, ticket } = setup();
   ticket("A");
   ticket("B", "secondary");
@@ -218,6 +218,21 @@ test("navigation stays sticky and direct selection outside mode stays outside", 
   await core.keyboard.press("Enter");
   expect(core.keyboard.store.getState().active).toBe(false);
   expect(core.focus.getActiveRegion()).toBe("secondary");
+});
+
+test("a numbered tab chord starts navigation, plain digits continue, and Enter finishes in that tab", async () => {
+  const { core, ticket } = setup();
+  const first = ticket("A");
+  const second = ticket("B");
+  await core.commands.executeCommand("workbench.keyboard.selectTab", { number: 1 });
+  expect(core.layout.getLayout().activeWidgetId).toBe(first.widgetId);
+  expect(core.keyboard.store.getState().active).toBe(true);
+  await core.keyboard.press("2");
+  expect(core.layout.getLayout().activeWidgetId).toBe(second.widgetId);
+  expect(core.keyboard.store.getState().active).toBe(true);
+  await core.keyboard.press("Enter");
+  expect(core.keyboard.store.getState().active).toBe(false);
+  expect(core.focus.getActiveRegion()).toBe("main");
 });
 
 test.each(["", "g", "v"])("plain digits select numbered tabs from any navigation prefix: %s", async (prefix) => {

@@ -37,7 +37,12 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
       category: "Panels and tabs",
       params: { number: { type: "number", required: true } },
     },
-    { execute: (args: { number: number }) => core.keyboard.selectTab(args.number) },
+    {
+      execute: (args: { number: number }) => {
+        if (!core.keyboard.store.getState().active) core.keyboard.open();
+        return core.keyboard.selectTab(args.number);
+      },
+    },
   );
   for (let number = 1; number <= 9; number++)
     core.keybindings.registerKeybinding({
@@ -49,8 +54,8 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
       sticky: true,
     });
   for (const [name, key, chord, direction] of [
-    ["Previous tab", "ArrowLeft", "PageUp", -1],
-    ["Next tab", "ArrowRight", "PageDown", 1],
+    ["Previous tab", "ArrowLeft", "Ctrl+Shift+Tab", -1],
+    ["Next tab", "ArrowRight", "Ctrl+Tab", 1],
   ] as const) {
     const id = `workbench.keyboard.${key}`;
     core.commands.registerCommand(
@@ -60,7 +65,7 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
     core.keybindings.registerKeybinding({
       id,
       action: { kind: "command", commandId: id },
-      keybinding: `Alt+Shift+${chord}`,
+      keybinding: chord,
       allowInInputs: true,
       sticky: true,
     });

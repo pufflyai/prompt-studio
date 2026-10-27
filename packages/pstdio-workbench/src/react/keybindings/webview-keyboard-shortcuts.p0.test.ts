@@ -3,6 +3,38 @@ import { createWorkbench } from "../../core";
 import { createWebviewKeyboardShortcuts } from "./webview-keyboard-shortcuts";
 import { createWorkbenchHotkeyRegistrations } from "./workbench-hotkey-registrations";
 
+test("nested previews can cycle tabs through the negotiated tab navigation chords", async () => {
+  const workbench = createWorkbench();
+  workbench.layout.registerWidget({
+    id: "editor",
+    title: "Editor",
+    region: "main",
+    rendererId: "test",
+    singleton: false,
+    reuse: "none",
+    closable: true,
+  });
+  const first = workbench.layout.openWidget("editor", { region: "main", role: "location", tabRetention: "persistent" });
+  const second = workbench.layout.openWidget("editor", {
+    region: "main",
+    role: "location",
+    tabRetention: "persistent",
+  });
+  workbench.layout.activateWidget(first.widgetId);
+  const bridge = createWebviewKeyboardShortcuts(workbench);
+  const next = bridge.shortcuts.find(
+    (shortcut) => shortcut.key.toUpperCase() === "TAB" && shortcut.ctrlKey && !shortcut.shiftKey,
+  )!;
+  await bridge.dispatch({ id: next.id, repeat: false, nested: true });
+  expect(workbench.layout.getLayout().activeWidgetId).toBe(second.widgetId);
+  expect(workbench.keyboard.store.getState().active).toBe(false);
+  const previous = bridge.shortcuts.find(
+    (shortcut) => shortcut.key.toUpperCase() === "TAB" && shortcut.ctrlKey && shortcut.shiftKey,
+  )!;
+  await bridge.dispatch({ id: previous.id, repeat: false, nested: true });
+  expect(workbench.layout.getLayout().activeWidgetId).toBe(first.widgetId);
+});
+
 test("scoped direct bindings resolve availability against every visible target", async () => {
   const workbench = createWorkbench();
   workbench.layout.registerWidget({
