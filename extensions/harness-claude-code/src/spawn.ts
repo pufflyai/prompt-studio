@@ -127,11 +127,13 @@ const defaultSpawnProcess = (
   args: string[],
   options?: { cwd?: string; env?: Record<string, string> },
 ): SpawnedChild => {
-  const child = spawn("claude", args, {
+  const command = resolveClaudeCommand();
+  const child = spawn(command, args, {
     stdio: ["pipe", "pipe", "pipe"],
     cwd: options?.cwd,
     env: { ...cleanEnv(), ...options?.env },
     windowsHide: true,
+    shell: process.platform === "win32" && /\.(cmd|bat)$/i.test(command),
   }) as ChildProcess;
 
   child.on("error", (err) => {
@@ -300,3 +302,5 @@ export const resumeClaudeCodeSession = (input: ResumeSpawnInput, deps: SpawnDeps
     pid: child.pid,
   } satisfies HarnessSession;
 };
+
+import { resolveClaudeCommand } from "./cli";

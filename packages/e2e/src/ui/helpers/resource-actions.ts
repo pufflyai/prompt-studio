@@ -8,7 +8,12 @@ export const createResourceActionsProject = async (request: APIRequestContext, f
     data: folderProjectInput({ name: "Resource Actions" }, folderPath),
   });
   expect(response.ok()).toBe(true);
-  return (await response.json()) as { id: string };
+  const project = (await response.json()) as { id: string };
+  const configured = await request.patch(`${apiBase}/v1/projects/${project.id}`, {
+    data: { default_agent_id: "pstdio.workbench-fixture.harness.fake", default_agent_model: null },
+  });
+  expect(configured.ok()).toBe(true);
+  return project;
 };
 
 export const prepareResourceActionsDashboard = async (page: Page, projectId: string) => {

@@ -6,6 +6,7 @@ import cmdShim from "cmd-shim";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
+import { installNativeProbeFixture } from "./harness-native-probe-fixture";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -28,13 +29,14 @@ const installFixtures = async (prefix: string, state: "healthy" | "broken" | "ha
       source =
         state === "broken"
           ? `require('node:fs').writeFileSync(${JSON.stringify(join(prefix, "opencode.pid"))}, String(process.pid)); setInterval(() => {}, 1000);`
-          : `console.log(process.argv[2] === '--version' ? ${JSON.stringify(harness.version)} : 'opencode/test-model');`;
+          : `console.log(process.argv.includes('--version') ? ${JSON.stringify(harness.version)} : 'opencode/test-model');`;
     if (state === "broken" && harness.command === "codex") source = "console.error('broken install'); process.exit(7);";
     if (state === "hanging")
       source = `require('node:fs').writeFileSync(${JSON.stringify(join(prefix, `${harness.command}.pid`))}, String(process.pid)); setInterval(() => {}, 1000);`;
     writeFileSync(script, `#!/usr/bin/env node\n${source}`);
     if (process.platform === "win32") {
       await cmdShim(script, join(prefix, harness.command));
+      await installNativeProbeFixture(prefix, harness.command, script);
     } else {
       writeFileSync(join(prefix, harness.command), `#!/bin/sh\nexec "${process.execPath}" "${script}" "$@"\n`, {
         mode: 0o755,

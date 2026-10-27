@@ -130,6 +130,8 @@ Versions are pinned in [`infra/local/Dockerfile`](../../../infra/local/Dockerfil
 
 The launcher mounts each host login file only when it exists, and prints a `Not mounted, file is missing` line for each file it skips. The stack starts without any login. Docker would otherwise create a missing file path as an empty folder on the host, which breaks a later `codex login` or `opencode auth login`. Add a login later by signing in on the host and running the same `bun run dev:isolated -- --name <name>` command again, or by signing in inside the running container. An agent without a login stays installed but cannot start sessions. Use real logins for agent acceptance checks; empty placeholder files do not prove that sessions work.
 
+For a fresh sign-in trial, set `PSTDIO_ISOLATED_AGENT_CREDENTIALS=0` when starting the stack. This omits host login-file mounts and clears the forwarded Anthropic API key and Claude OAuth token. It does not change your host credentials. Use a new stack name so existing container credential volumes are not reused.
+
 **Codex.** Run `codex login` on the host. The container mounts `~/.codex/auth.json` when it exists. The seeded project uses Codex but does not pick a model. Sessions start with the model Codex marks as the default for your account. A ChatGPT account can use only the models Codex lists for it.
 
 **OpenCode.** Run `opencode auth login` on the host. The container mounts `~/.local/share/opencode/auth.json` and `~/.local/share/opencode/mcp-auth.json` when they exist. The free `opencode/*` models need no provider login. An expired OpenCode Zen key in a mounted `auth.json` still breaks them: the turn fails with "This API key has expired". Run `opencode auth login` again on the host, or remove that entry.
