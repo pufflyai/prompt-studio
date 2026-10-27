@@ -72,6 +72,11 @@ export const createHelpModule = () =>
         { execute: () => undefined, isEnabled: () => false },
       );
 
+      ctx.keybindings.registerKeybinding({
+        action: { kind: "command", commandId: dashboardCommandIds.openDocs },
+        keybinding: "D",
+        layer: "help",
+      });
       ctx.layout.registerMenuItem(dashboardHelpMenuPath, {
         commandId: dashboardCommandIds.openDocs,
         order: 20,

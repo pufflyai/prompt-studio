@@ -1,4 +1,8 @@
-import type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
+import type {
+  WebviewHostProps,
+  WebviewKeyboardShortcut,
+  WebviewKeyboardShortcutRequest,
+} from "pstdio-api-contracts/extension-kernel";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { host } from "rimless";
 import type {
@@ -20,6 +24,8 @@ import { extensionIframeAllow } from "./iframe-permissions";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
 
 export interface ExtensionFrameProps {
+  keyboardShortcuts?: readonly WebviewKeyboardShortcut[];
+  onShortcut?: (request: WebviewKeyboardShortcutRequest) => void | Promise<void>;
   sizing?: "content-width" | "content-height";
   view: ExtensionViewDescriptor;
   props: Partial<WebviewHostProps> & Record<string, unknown>;
@@ -38,6 +44,8 @@ export interface ExtensionFrameProps {
 
 type GuestRemote = Pick<HostApi, "init" | "themeUpdate" | "propsUpdate"> & {
   hostEvent?: HostApi["hostEvent"];
+  keyboardUpdate?: HostApi["keyboardUpdate"];
+  restoreFocus?: HostApi["restoreFocus"];
 };
 
 const iframeStyle: CSSProperties = {
@@ -58,6 +66,7 @@ const frameShellStyle: CSSProperties = {
 };
 
 export const EXTENSION_IFRAME_SANDBOX = "allow-scripts allow-forms allow-popups";
+const NO_KEYBOARD_SHORTCUTS: WebviewKeyboardShortcut[] = [];
 
 export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const {
@@ -66,6 +75,8 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     theme,
     capabilities,
     onKeyboardEvent,
+    keyboardShortcuts = NO_KEYBOARD_SHORTCUTS,
+    onShortcut,
     hostEvents,
     onReady,
     onError,
@@ -83,6 +94,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const themeRef = useRef(theme);
   const capabilitiesRef = useRef(capabilities);
   const onKeyboardEventRef = useRef(onKeyboardEvent);
+  const keyboardRef = useRef({ shortcuts: keyboardShortcuts, onShortcut });
   const hostEventsRef = useRef(hostEvents);
   const declaredCapabilitiesRef = useRef(view.webview.capabilities);
   const onReadyRef = useRef(onReady);
@@ -99,6 +111,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   themeRef.current = theme;
   capabilitiesRef.current = capabilities;
   onKeyboardEventRef.current = onKeyboardEvent;
+  keyboardRef.current = { shortcuts: keyboardShortcuts, onShortcut };
   hostEventsRef.current = hostEvents;
   declaredCapabilitiesRef.current = view.webview.capabilities;
   onReadyRef.current = onReady;
@@ -147,6 +160,16 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     reportDiagnostics(createCapabilityGate().diagnostics);
 
     const hostApi = {
+      dispatchShortcut: async (request: WebviewKeyboardShortcutRequest) => {
+        if (!iframe.isConnected || iframeRef.current !== iframe || document.activeElement !== iframe) return;
+        if (
+          !keyboardRef.current.shortcuts.some(
+            (shortcut) => shortcut.id === request.id && (!request.nested || shortcut.entry),
+          )
+        )
+          return;
+        await keyboardRef.current.onShortcut?.(request);
+      },
       dispatchPointerEvent: (event: WebviewPointerEvent) => {
         if (iframeRef.current !== iframe || !iframe.isConnected) return;
         if (event.type !== "pointerdown" && event.type !== "click") return;
@@ -204,6 +227,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           hostEventsRef.current?.bind((message) => remote.hostEvent?.(message));
 
           await remote.init({
+            keyboardShortcuts: keyboardRef.current.shortcuts,
             sizing,
             moduleUrl: moduleUrlAtConnect,
             styles: stylesAtConnect,
@@ -214,6 +238,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           });
           if (iframeRef.current !== iframe) return;
           initializedRef.current = true;
+          await remote.keyboardUpdate?.(keyboardRef.current.shortcuts);
           onReadyRef.current?.();
         })
         .catch((error) => {
@@ -229,6 +254,19 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     // dev-only cleanup would leave the live iframe with no host listener.
     return removeLoadListener;
   }, [frameEpoch, sizing, view.extensionId, view.webview.runtimeUrl, view.webview.moduleUrl, view.webview.styles]);
+
+  useEffect(() => {
+    if (initializedRef.current) remoteRef.current?.keyboardUpdate?.(keyboardShortcuts);
+  }, [keyboardShortcuts]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: replacing the browsing context replaces the focus listener.
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const restoreFocus = () => remoteRef.current?.restoreFocus?.();
+    iframe.addEventListener("focus", restoreFocus);
+    return () => iframe.removeEventListener("focus", restoreFocus);
+  }, [frameEpoch]);
 
   // Re-renders may hand the frame a fresh publisher (renderers rebuild their
   // capability context per render); route it to the live connection.

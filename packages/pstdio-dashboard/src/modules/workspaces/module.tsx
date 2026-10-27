@@ -274,8 +274,8 @@ export const createWorkspacesModule = () =>
       ctx.commands.registerCommand(
         {
           id: dashboardCommandIds.openWorkspaces,
-          label: "Open workspaces",
-          category: "Dashboard",
+          label: "Go to workspaces",
+          category: "Workspaces",
           icon: dashboardViews.workspaces.icon,
         },
         {
@@ -283,7 +283,7 @@ export const createWorkspacesModule = () =>
         },
       );
       ctx.commands.registerCommand(
-        { id: dashboardCommandIds.createWorkspace, label: "New workspace", category: "Dashboard", icon: "Plus" },
+        { id: dashboardCommandIds.createWorkspace, label: "New workspace", category: "Workspaces", icon: "Plus" },
         { execute: (options: CreateWorkspaceCommandParams | undefined) => openCreateWorkspace(ctx, options) },
       );
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
@@ -296,11 +296,15 @@ export const createWorkspacesModule = () =>
       });
       ctx.keybindings.registerKeybinding({
         action: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
-        keybinding: "Alt+Shift+W",
+        keybinding: "W",
+        layer: "go",
+        label: "Go to workspaces",
+        sticky: true,
       });
       ctx.keybindings.registerKeybinding({
         action: { kind: "command", commandId: dashboardCommandIds.createWorkspace },
-        keybinding: "Mod+Alt+W",
+        keybinding: "W",
+        layer: "create",
       });
       const unsubscribePage = ctx.pages.store.subscribeSelector(
         (state) => state.location,

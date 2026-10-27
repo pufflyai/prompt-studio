@@ -112,6 +112,11 @@ export {
 } from "./define-extension-view";
 export { resolveEventReferenceId } from "./event-reference";
 export { chooseHarnessAuthentication } from "./harness-authentication";
+export {
+  installWebviewKeyboardRelay,
+  type WebviewKeyboardRelayHost,
+  webviewKeyboardRelayDocument,
+} from "./keyboard-relay";
 export { defaultPageResourceCodec } from "./page-resource-codec";
 export {
   isWorkbenchProjectUrl,

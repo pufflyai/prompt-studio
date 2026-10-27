@@ -204,7 +204,9 @@ describe("createWorkbenchCommandPaletteEntries", () => {
       { execute: () => undefined },
     );
     const entries = createWorkbenchCommandPaletteEntries({ workbench, onClose: () => undefined });
-    expect(entries[0]?.searchText).toContain("extension-lab.demo.try-awaken");
+    expect(entries.find((entry) => entry.commandId === "extension-lab.demo.try-awaken")?.searchText).toContain(
+      "extension-lab.demo.try-awaken",
+    );
   });
   test("requests params instead of executing parameterized commands immediately", () => {
     const workbench = createWorkbench();
@@ -223,7 +225,7 @@ describe("createWorkbenchCommandPaletteEntries", () => {
       onClose: () => undefined,
       onRequestParams: (request) => requests.push(request.record.command.id),
     });
-    entries[0]?.onActivate();
+    entries.find((entry) => entry.commandId === "tickets.create")?.onActivate();
     expect(requests).toEqual(["tickets.create"]);
     expect(executions).toBe(0);
   });

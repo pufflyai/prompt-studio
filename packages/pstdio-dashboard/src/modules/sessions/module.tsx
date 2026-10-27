@@ -56,7 +56,7 @@ const createSessionsNavigationNode = () => ({
   label: dashboardViews.sessions.label,
   icon: dashboardViews.sessions.icon,
   canHide: true,
-  target: { kind: "page" as const, page: workbenchPages.sessions },
+  target: { kind: "command" as const, commandId: dashboardCommandIds.openSessions },
 });
 const syncSessionsPageSelection = (ctx: WorkbenchModuleContext) => {
   const state = ctx.pages.store.getState();
@@ -158,15 +158,18 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       ctx.commands.registerCommand(
         {
           id: dashboardCommandIds.openSessions,
-          label: "Open sessions",
-          category: "Dashboard",
+          label: "Go to sessions",
+          category: "Sessions",
           icon: dashboardViews.sessions.icon,
         },
         { execute: () => openSessionsNavigation(ctx) },
       );
       ctx.keybindings.registerKeybinding({
         action: { kind: "command", commandId: dashboardCommandIds.openSessions },
-        keybinding: "Alt+Shift+S",
+        keybinding: "S",
+        layer: "go",
+        label: "Go to sessions",
+        sticky: true,
       });
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
         commandId: dashboardCommandIds.openSessions,

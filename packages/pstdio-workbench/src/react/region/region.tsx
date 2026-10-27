@@ -1,4 +1,5 @@
 import { Box, Flex } from "@chakra-ui/react";
+import { useLayoutEffect, useRef } from "react";
 import type {
   RegisteredPlaceholderContribution,
   WorkbenchCore,
@@ -206,6 +207,20 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   };
   const globalActiveWidgetId = useWorkbenchStore(workbench.layout.store, (state) => state.layout.activeWidgetId);
   const activePlacement = getActivePlacement(regionState.widgets, regionState.activeWidgetId, pageContent);
+  const regionRef = useRef<HTMLDivElement>(null);
+  const currentPresentation = useRef(activePlacement?.widgetId);
+  useLayoutEffect(() => {
+    currentPresentation.current = activePlacement?.widgetId;
+  }, [activePlacement?.widgetId]);
+  useLayoutEffect(() => {
+    if (!workbenchPanelRegions.includes(region as WorkbenchPanelRegion) && !panelMenuRegionIds.has(region)) return;
+    const registration = workbench.keyboard.registerVisibleRegion(region, () => {
+      const element = regionRef.current;
+      if (!element?.getClientRects().length || getComputedStyle(element).visibility === "hidden") return [];
+      return currentPresentation.current ? [currentPresentation.current] : [];
+    });
+    return () => registration.dispose();
+  }, [workbench, region]);
   const placeholder = activePlacement ? undefined : workbench.layout.getPlaceholder(region);
   const placement = activePlacement ?? (placeholder ? createPlaceholderPlacement(placeholder) : undefined);
   const renderedPlacements = activePlacement
@@ -242,6 +257,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
 
   return (
     <Flex
+      ref={regionRef}
       as="section"
       display={chrome === false ? "none" : "flex"}
       direction="column"

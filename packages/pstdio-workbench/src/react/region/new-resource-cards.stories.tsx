@@ -92,3 +92,15 @@ export const CreateFromCardAndMenu: Story = {
     await expect(main.getByRole("tab", { name: "Note 1" })).toBeVisible();
   },
 };
+
+export const CreateFromNumber: Story = {
+  render: () => <NotesCards />,
+  play: async ({ canvasElement }) => {
+    const main = within(canvasElement.querySelector('[data-workbench-panel="main"]') as HTMLElement);
+    const cards = within(await main.findByRole("group", { name: "Available tabs" }));
+    await userEvent.keyboard("{Alt>}{Shift>}[Space]{/Shift}{/Alt}");
+    await expect(within(cards.getByRole("button", { name: "New note" })).getByLabelText("1")).toBeVisible();
+    await userEvent.keyboard("1");
+    await expect(await main.findByRole("tab", { name: "Note 1" })).toBeVisible();
+  },
+};

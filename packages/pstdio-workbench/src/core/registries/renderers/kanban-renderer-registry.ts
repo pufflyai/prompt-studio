@@ -97,6 +97,8 @@ export interface KanbanRendererContribution<
   /** Manual within-column reorder. Only fires while the view has no sorts. */
   onMove?: (move: KanbanRendererMove) => Promise<void> | void;
   onReorder?: (rowId: string, beforeRowId?: string) => Promise<void> | void;
+  /** The command whose interactive input uses this renderer's creation form. */
+  createCommandId?: string;
   createRow?: KanbanRendererCreateRowConfig;
   onCreateRow?: (submission: KanbanRendererCreateSubmission) => Promise<void> | void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;

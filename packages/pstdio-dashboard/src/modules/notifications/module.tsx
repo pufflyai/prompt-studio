@@ -92,6 +92,7 @@ export const createNotificationsModule = () =>
             ctx.keybindings.registerKeybinding({
               action: { kind: "command", commandId: dashboardCommandIds.openNotifications },
               keybinding: DASHBOARD_NOTIFICATIONS_KEYBINDING,
+              label: "Open notifications",
               when: "!inputFocus",
             }),
             ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {

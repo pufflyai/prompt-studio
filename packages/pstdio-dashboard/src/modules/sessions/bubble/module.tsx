@@ -18,6 +18,7 @@ import {
   createDashboardWorkspaceOptions,
 } from "@/shared/workspaces/workspace-options";
 import { openDashboardSessionPanel, openSessionBubbleWidgets } from "./session-bubble";
+import { registerSessionKeyboard } from "./session-keyboard";
 import { registerSessionPanelPlacements } from "./session-panel-placements";
 import { registerSessionPicker } from "./session-picker";
 
@@ -43,6 +44,7 @@ const getPrimaryWorkspaceResource = (ctx: WorkbenchModuleContext) => {
 const createNewSessionDraftResource = (
   workspace: ResourceRef | undefined,
   projectId: string | undefined,
+  harnessId?: string,
 ): ResourceRef => {
   const workspaceId = workspace?.id ?? metadataString(workspace, "workspaceId");
   const workspaceShorthand = metadataString(workspace, "workspaceShorthand");
@@ -58,6 +60,7 @@ const createNewSessionDraftResource = (
     label: "New session",
     icon: "message-circle",
     metadata: {
+      ...(harnessId ? { agent: harnessId } : {}),
       ...(workspaceId ? { workspaceId } : {}),
       ...(workspaceTitle ? { workspaceTitle } : {}),
       ...(workspaceShorthand ? { workspaceShorthand } : {}),
@@ -93,10 +96,11 @@ const openNewSessionDraft = (
     replacePanel?: PlacementIdentity;
     from?: ResourceRef;
     region?: WorkbenchPanelRegion;
+    harnessId?: string;
   } = {},
 ) => {
   const workspace = input.workspace ?? getPrimaryWorkspaceResource(ctx) ?? createDefaultWorkspaceResource(ctx);
-  const draftResource = createNewSessionDraftResource(workspace, getDashboardSelectedProjectId(ctx));
+  const draftResource = createNewSessionDraftResource(workspace, getDashboardSelectedProjectId(ctx), input.harnessId);
   const identity = input.replacePanel;
   if (identity) {
     return ctx.navigation.openTarget(
@@ -163,7 +167,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
     },
   );
   ctx.commands.registerCommand(
-    { id: dashboardCommandIds.createSession, label: "New session", category: "Dashboard", icon: "MessageSquarePlus" },
+    { id: dashboardCommandIds.createSession, label: "New session", category: "Sessions", icon: "MessageSquarePlus" },
     {
       execute: async (args, context) => {
         const {
@@ -171,16 +175,19 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
           replacePanel,
           sidePanel = false,
           from = context?.resource,
+          harnessId,
         } = (args ?? {}) as {
           workspace?: ResourceRef;
           replacePanel?: PlacementIdentity;
           sidePanel?: boolean;
           from?: ResourceRef;
+          harnessId?: string;
         };
         // The tab tray's + asks for a new tab; a tab menu replaces its own placement.
         const isNewTab = context?.source === "panel-add";
         await openNewSessionDraft(ctx, {
           workspace,
+          harnessId,
           replacePanel: isNewTab ? undefined : replacePanel,
           from,
           sidePanel: sidePanel || (isNewTab && context?.region !== "main"),
@@ -201,6 +208,7 @@ export const createSessionBubbleModule = (input: CreateSessionBubbleModuleInput 
     activate(ctx) {
       registerSessionBubbleWidgets(ctx, input.sessionDraftPersistence);
       registerSessionBubbleCommands(ctx);
+      registerSessionKeyboard(ctx);
       registerSessionPicker(ctx);
       return registerSessionPanelPlacements(ctx);
     },

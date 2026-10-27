@@ -30,6 +30,14 @@ export type {
 } from "../controllers/focus/focus-controller";
 export { createWorkbenchFocusController, workbenchFocusRegions } from "../controllers/focus/focus-controller";
 export type { MainFullscreenController, MainFullscreenState } from "../controllers/fullscreen/main-fullscreen";
+export type {
+  KeyboardChoice,
+  KeyboardSelection,
+  KeyboardState,
+  WorkbenchKeyboardController,
+} from "../controllers/keyboard/keyboard-controller";
+export type { KeyboardPresentation, KeyboardTabStrip } from "../controllers/keyboard/keyboard-presentations";
+export type { ResolvedShortcut } from "../controllers/keyboard/shortcut-catalog";
 export { createLevelNavigation } from "../controllers/page-location/navigation-level-composition";
 export type {
   CreateWorkbenchPageLocationControllerInput,
@@ -84,3 +92,7 @@ export type {
   WorkbenchTerminalState,
 } from "../controllers/terminal/terminal-controller";
 export { createWorkbenchTerminalController } from "../controllers/terminal/terminal-controller";
+export {
+  WORKBENCH_KEYBOARD_OPEN_COMMAND_ID,
+  WORKBENCH_KEYBOARD_SELECT_TAB_COMMAND_ID,
+} from "../registries/keybindings/keyboard-entry-commands";

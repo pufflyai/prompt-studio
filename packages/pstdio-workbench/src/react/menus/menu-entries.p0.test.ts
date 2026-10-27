@@ -1,0 +1,18 @@
+import { expect, test } from "bun:test";
+import { createWorkbench } from "../../core";
+import { resolveMenuEntries } from "./menu-entries";
+
+test("extension wrapper menus show the original action's exact-argument shortcut", () => {
+  const workbench = createWorkbench();
+  for (const id of ["original", "wrapper"]) workbench.commands.registerCommand({ id, label: id }, { execute() {} });
+  const args = { operation: "rename" };
+  workbench.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "original", args },
+    keybinding: "Alt+R",
+  });
+  workbench.layout.registerMenuItem(["extension"], { commandId: "wrapper", sourceCommandId: "original", args });
+  expect(resolveMenuEntries({ workbench, menuPath: ["extension"] })[0]).toMatchObject({
+    binding: "Alt+R",
+    action: { commandId: "original", args },
+  });
+});

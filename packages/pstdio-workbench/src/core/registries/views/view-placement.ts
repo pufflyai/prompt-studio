@@ -6,6 +6,7 @@ import type {
   WorkbenchRegion,
   WorkbenchWidgetRole,
 } from "../layout/layout-types";
+import type { WorkbenchOwnedPlacementItem } from "../placements/owned-placement-lifecycle";
 import type { WorkbenchViewMenuRegistry } from "../view-menus/view-menu-registry";
 import type { WorkbenchViewRegistry } from "./view-registry";
 
@@ -24,6 +25,7 @@ export interface RegisterWorkbenchViewPlacementInput extends WorkbenchPlacementP
   role: WorkbenchWidgetRole;
   singleton: boolean;
   closable: boolean;
+  item?: WorkbenchOwnedPlacementItem;
 }
 
 export const registerWorkbenchViewPlacement = (
@@ -34,12 +36,13 @@ export const registerWorkbenchViewPlacement = (
 ): Disposable => {
   const view = views.getView(input.viewId);
   if (!view) throw new Error(`Workbench placement view is not registered: ${input.viewId}`);
-  const { role: _role, viewId: _viewId, ...panel } = input;
+  const { role: _role, viewId: _viewId, item, ...panel } = input;
   return layout.registerPanel({
     ...panel,
     title: view.title,
     icon: view.icon,
     rendererId: view.id,
+    resourceKinds: item?.kind === "binding" ? item.binding.kinds.map((kind) => kind.id) : undefined,
     panelMenus: viewMenus?.definitionsFor(view.id, input.id),
   });
 };

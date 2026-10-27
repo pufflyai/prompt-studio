@@ -1,5 +1,7 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { LocalizableString } from "@pstdio/sdk/api";
+import type { WorkbenchCore } from "@pstdio/workbench";
+import { useWebviewKeyboardShortcuts } from "@pstdio/workbench/react";
 import {
   createWebviewDiagnostics,
   ExtensionFrame,
@@ -77,6 +79,7 @@ export const StaticWebviewSurface = (props: {
 };
 
 export const BridgedWebviewSurface = (props: {
+  workbench?: WorkbenchCore;
   sizing?: ExtensionFrameProps["sizing"];
   capabilities: ExtensionFrameProps["capabilities"];
   extensionProps: ExtensionFrameProps["props"];
@@ -85,6 +88,7 @@ export const BridgedWebviewSurface = (props: {
   view: ExtensionFrameProps["view"];
 }) => {
   const { capabilities, extensionProps, hostEvents, theme, view } = props;
+  const keyboard = useWebviewKeyboardShortcuts(props.workbench);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const diagnostics = createWebviewDiagnostics(view);
@@ -106,6 +110,7 @@ export const BridgedWebviewSurface = (props: {
         </Center>
       ) : null}
       <ExtensionFrame
+        {...keyboard}
         sizing={props.sizing}
         view={view}
         props={extensionProps}

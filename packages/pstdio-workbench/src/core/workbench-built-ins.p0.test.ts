@@ -1,8 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { findReservedKeybindingConflict } from "pstdio-extensions";
+import { getNavigationTargetKey } from "./registries/navigation/navigation-target-key";
 import { createWorkbench } from "./workbench-core";
 
 describe("workbench built-ins", () => {
+  test("each built-in action has one default shortcut", () => {
+    const workbench = createWorkbench();
+    const actions = workbench.keybindings.listKeybindings().map((binding) => getNavigationTargetKey(binding.action));
+    expect(actions.length).toBe(new Set(actions).size);
+  });
   test("registers command-backed chrome actions and default keybindings", async () => {
     const workbench = createWorkbench();
 
@@ -19,16 +25,22 @@ describe("workbench built-ins", () => {
     await workbench.commands.executeCommand("workbench.action.showCommands");
     expect(workbench.commandPalette.getInitialQuery()).toBe("> ");
 
-    const keybindings = workbench.keybindings.listCommandKeybindings();
+    const keybindings = workbench.keybindings
+      .listCommandKeybindings()
+      .filter((binding) => !binding.commandId.startsWith("workbench.keyboard."));
 
-    expect(keybindings).toMatchObject([
-      { commandId: "workbench.toggleCommandPalette" },
-      { commandId: "workbench.action.showCommands" },
-      { commandId: "workbench.action.changeTheme" },
-      { commandId: "workbench.action.navigateBack" },
-      { commandId: "workbench.action.navigateForward" },
-      { commandId: "workbench.toggleSideBar" },
-    ]);
+    expect(keybindings.map((binding) => binding.commandId)).toEqual(
+      expect.arrayContaining([
+        "workbench.toggleSideBar",
+        "workbench.toggleCommandPalette",
+        "workbench.action.showCommands",
+        "workbench.action.changeTheme",
+        "workbench.action.navigateBack",
+        "workbench.action.navigateForward",
+        "workbench.action.navigateToRootLevel",
+        "workbench.toggleMainFullscreen",
+      ]),
+    );
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleCommandPalette")).toMatchObject({
       commandId: "workbench.toggleCommandPalette",
       keybinding: "Mod+P",
@@ -37,10 +49,19 @@ describe("workbench built-ins", () => {
       commandId: "workbench.action.showCommands",
       keybinding: "Alt+Shift+K",
     });
-    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.changeTheme")).toMatchObject({
-      commandId: "workbench.action.changeTheme",
-      keybinding: "Alt+Shift+T",
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleSideBar")).toMatchObject({
+      keybinding: "Alt+Shift+S",
     });
+    expect(
+      workbench.keyboard
+        .catalog()
+        .filter(
+          (entry) =>
+            entry.binding.action.kind === "command" &&
+            entry.binding.action.commandId === "workbench.action.changeTheme",
+        )
+        .map((entry) => entry.keys),
+    ).toEqual([["ALT+SHIFT+T"]]);
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.navigateBack")).toMatchObject({
       commandId: "workbench.action.navigateBack",
       keybinding: "Alt+Shift+ArrowLeft",
@@ -76,7 +97,9 @@ describe("workbench built-ins", () => {
 
   test("built-in keybindings are not ambiguous sequence prefixes", () => {
     const workbench = createWorkbench();
-    const keybindings = workbench.keybindings.listCommandKeybindings();
+    const keybindings = workbench.keybindings
+      .listCommandKeybindings()
+      .filter((binding) => !binding.commandId.startsWith("workbench.keyboard."));
 
     for (const keybinding of keybindings) {
       const sequence = Array.isArray(keybinding.keybinding) ? keybinding.keybinding : [keybinding.keybinding];
