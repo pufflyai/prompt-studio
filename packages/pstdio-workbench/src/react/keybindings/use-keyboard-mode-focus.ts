@@ -19,16 +19,16 @@ const focusSelectedPresentation = (selected: Pick<KeyboardState, "selectedId" | 
     '[tabindex="0"]',
     "button",
   ];
-  const focus =
-    candidates
-      .flatMap((selector) => [...(root?.querySelectorAll<HTMLElement>(selector) ?? [])])
-      .find(
-        (element) =>
-          element.getClientRects().length &&
-          getComputedStyle(element).visibility !== "hidden" &&
-          !element.matches(':disabled,[type="hidden"]'),
-      ) ?? root;
-  focus?.focus({ preventScroll: true });
+  const focus = candidates
+    .flatMap((selector) => [...(root?.querySelectorAll<HTMLElement>(selector) ?? [])])
+    .find(
+      (element) =>
+        element.getClientRects().length &&
+        getComputedStyle(element).visibility !== "hidden" &&
+        !element.matches(':disabled,[type="hidden"]'),
+    );
+  (focus ?? root)?.focus({ preventScroll: true });
+  return Boolean(focus && document.activeElement === focus);
 };
 
 export const useKeyboardModeFocus = (
@@ -38,9 +38,23 @@ export const useKeyboardModeFocus = (
   heading: RefObject<HTMLElement | null>,
 ) => {
   useEffect(() => {
-    if (!state.active && state.restoreFocus)
-      focusSelectedPresentation({ selectedId: state.selectedId, selectedRegion: state.selectedRegion });
-  }, [state.active, state.restoreFocus, state.selectedId, state.selectedRegion]);
+    if (state.active || !state.restoreFocus || !state.selectedId) return;
+    const selected = { selectedId: state.selectedId, selectedRegion: state.selectedRegion };
+    if (focusSelectedPresentation(selected)) return;
+    // A tab header can be ready before its editor mounts. Keep the focus request until the view is ready.
+    const observer = new MutationObserver(() => {
+      const current = workbench.keyboard.store.getState();
+      if (current.active || current.selectedId !== selected.selectedId || focusSelectedPresentation(selected))
+        observer.disconnect();
+    });
+    const cancel = () => observer.disconnect();
+    observer.observe(document.body, { childList: true, subtree: true });
+    document.addEventListener("pointerdown", cancel, { once: true });
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("pointerdown", cancel);
+    };
+  }, [state.active, state.restoreFocus, state.selectedId, state.selectedRegion, workbench]);
   useEffect(() => {
     const activation = workbench.layout.onDidActivatePanel((panel) => {
       const current = workbench.keyboard.store.getState();
