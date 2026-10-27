@@ -22,6 +22,7 @@ export const dashboardExtensionHostCapabilities = {
     "navigation-item.v1": { version: 1, since: "0.26.0" },
     "navigation-tree.v1": { version: 1, since: "0.28.0" },
     "status-bar-item.v1": { version: 1, since: "0.26.0" },
+    "status-bar-item.popover.v1": { version: 1, since: "0.46.0" },
     /** @deprecated Use view.kanban.v1 enum attributes, command.v1, and settings.panel.v1. */
     "settings.section.v1": { version: 1, since: "0.25.2" },
     "settings.panel.v1": { version: 1, since: "0.26.0" },
@@ -75,6 +76,9 @@ const runtimeRequirements = (runtime: ExtensionRuntime) => [
   ...runtime.navigationItems.map((record) => requirement(record, record.id, "navigationItem", "navigation-item.v1")),
   ...runtime.navigationTrees.map((record) => requirement(record, record.id, "navigationTree", "navigation-tree.v1")),
   ...runtime.statusBarItems.map((record) => requirement(record, record.id, "statusBarItem", "status-bar-item.v1")),
+  ...runtime.statusBarItems
+    .filter((record) => record.contribution.popover)
+    .map((record) => requirement(record, record.id, "statusBarItem.popover", "status-bar-item.popover.v1")),
   ...runtime.settingsSections.map((record) => requirement(record, record.id, "settingsSection", "settings.section.v1")),
   ...runtime.settingsPanels.map((record) => requirement(record, record.id, "settingsPanel", "settings.panel.v1")),
   ...runtime.settings.map((record) => requirement(record, record.id, "setting", "settings.definition.v1")),

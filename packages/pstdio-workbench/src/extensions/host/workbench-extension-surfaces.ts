@@ -48,7 +48,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
             const embedded = input.metadata.settingsPanels.some(
               (settingsPanel) => settingsPanel.id === renderInput.instance.panelId && settingsPanel.parentPanelId,
             );
-            let sizing: "content-width" | "content-height" | undefined;
+            let sizing = renderInput.sizing;
             if (renderInput.panel.region === "status") sizing = "content-width";
             if (embedded) sizing = "content-height";
             const slotKind = input.metadata.settingsPanels.some(

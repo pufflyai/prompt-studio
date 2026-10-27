@@ -1,7 +1,9 @@
 import { Box, Button, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent } from "storybook/test";
+import type { ComponentProps } from "react";
+import { expect, userEvent, waitFor } from "storybook/test";
 import { createWorkbench } from "../../core";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchStatusBar } from "./workbench-panels";
 
@@ -238,5 +240,84 @@ export const ItemRegisteredAfterMount: Story = {
     });
     await expect(await canvas.findByText("Registered after mount")).toBeVisible();
     registration.dispose();
+  },
+};
+
+const detailWorkbench = createWorkbench();
+detailWorkbench.modes.registerMode({ id: "active", activate: () => undefined });
+detailWorkbench.modes.registerMode({ id: "other", activate: () => undefined });
+detailWorkbench.modes.registerMode({ id: "replaced", chrome: { status: false }, activate: () => undefined });
+detailWorkbench.views.registerView({
+  id: "status.trigger",
+  title: "Activity",
+  body: {
+    kind: "react",
+    render: () => (
+      <Text textStyle="label/XS" px="xs">
+        Activity
+      </Text>
+    ),
+  },
+});
+detailWorkbench.views.registerView({
+  id: "status.details",
+  title: "Activity details",
+  body: { kind: "react", render: () => <Text textStyle="paragraph/S/regular">Activity details</Text> },
+});
+detailWorkbench.statusBar.registerItem({
+  id: "activity",
+  viewId: "status.trigger",
+  popoverViewId: "status.details",
+  slot: "trailing",
+  isVisible: () => detailWorkbench.modes.getActiveModeId() !== "other",
+});
+
+const StatusDetailsExample = (props: ComponentProps<typeof WorkbenchStatusBar>) => {
+  const { workbench } = props;
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
+  return <WorkbenchStatusBar {...props} visible={props.visible !== false && !fullscreen} />;
+};
+
+export const DetailPopover: Story = {
+  ...SeveralOwnersInOrder,
+  args: { workbench: detailWorkbench },
+  render: (args) => <StatusDetailsExample {...args} />,
+  decorators: [
+    (Story) => (
+      <WorkbenchThemeProvider>
+        <Box h="20rem" display="flex" alignItems="end">
+          <Story />
+        </Box>
+      </WorkbenchThemeProvider>
+    ),
+  ],
+  play: async ({ canvas }) => {
+    detailWorkbench.modes.setActiveMode("active");
+    await userEvent.click(canvas.getByRole("button", { name: "Activity" }));
+    await waitFor(() => expect(document.querySelector('[role="dialog"][aria-label="Activity details"]')).toBeVisible());
+    await waitFor(() => expect(document.querySelector('[data-workbench-view="status.details"]')).toBeVisible());
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.querySelector('[data-workbench-view="status.details"]')).toBeNull());
+    await userEvent.click(canvas.getByRole("button", { name: "Activity" }));
+    await waitFor(() => expect(document.querySelector('[data-workbench-view="status.details"]')).toBeVisible());
+    detailWorkbench.modes.setActiveMode("other");
+    await waitFor(() => expect(document.querySelector('[data-workbench-view="status.details"]')).toBeNull());
+    detailWorkbench.modes.setActiveMode(undefined);
+    await waitFor(() => expect(canvas.getByRole("button", { name: "Activity" })).toBeVisible());
+    await expect(document.querySelector('[data-workbench-view="status.details"]')).toBeNull();
+    await userEvent.click(canvas.getByRole("button", { name: "Activity" }));
+    await waitFor(() => expect(document.querySelector('[data-workbench-view="status.details"]')).toBeVisible());
+    detailWorkbench.modes.setActiveMode("replaced");
+    await waitFor(() => expect(document.querySelector('[data-workbench-view="status.details"]')).toBeNull());
+    detailWorkbench.modes.setActiveMode("active");
+    await waitFor(() => expect(canvas.getByRole("button", { name: "Activity" })).toBeVisible());
+    await expect(document.querySelector('[data-workbench-view="status.details"]')).toBeNull();
+    await userEvent.click(canvas.getByRole("button", { name: "Activity" }));
+    await waitFor(() => expect(document.querySelector('[data-workbench-view="status.details"]')).toBeVisible());
+    detailWorkbench.fullscreen.enter();
+    await waitFor(() => expect(document.querySelector('[data-workbench-view="status.details"]')).toBeNull());
+    detailWorkbench.fullscreen.exit();
+    await waitFor(() => expect(canvas.getByRole("button", { name: "Activity" })).toBeVisible());
+    await expect(document.querySelector('[data-workbench-view="status.details"]')).toBeNull();
   },
 };
