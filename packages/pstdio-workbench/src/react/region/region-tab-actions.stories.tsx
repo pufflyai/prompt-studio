@@ -82,6 +82,7 @@ export const EditableTitleAndBoundResource: StoryObj<typeof meta> = {
     const body = within(document.body);
     await userEvent.click(canvas.getByRole("button", { name: "Note actions" }));
     await body.findByRole("menuitem", { name: "Rename note" });
+    await waitFor(() => expect(body.getByRole("menu")).toHaveFocus());
     await userEvent.keyboard("{Home}{Enter}");
     const dialog = await body.findByRole("dialog", { name: "Rename note" });
     const title = within(dialog).getByRole("textbox", { name: "Title" });
@@ -97,6 +98,7 @@ export const EditableTitleAndBoundResource: StoryObj<typeof meta> = {
     await expect(body.queryByRole("dialog")).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "Note actions" }));
     await body.findByRole("menuitem", { name: "Delete" });
+    await waitFor(() => expect(body.getByRole("menu")).toHaveFocus());
     const draft = canvas.getByRole("textbox", { name: "Draft outside the menu" });
     await userEvent.click(draft);
     await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
