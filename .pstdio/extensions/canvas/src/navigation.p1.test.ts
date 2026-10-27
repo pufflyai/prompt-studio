@@ -21,6 +21,7 @@ test("the canvas navigation panel exposes each grouped resource on overview and 
       "Workbench Core",
       "Dashboard",
       "Extensions",
+      "Landing Page",
     ]);
     const resources = sections.flatMap((section) => leaves(section.nodes));
     expect(resources.map((node) => node.resource!.id).sort()).toEqual(canvases.map((canvas) => canvas.id).sort());

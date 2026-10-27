@@ -199,8 +199,8 @@
     "packages/ui/src/components/canvas/canvas-gestures.stories.tsx": "2895a70cb292842fee05f9c11b2df63cfcda66e9d1132c318c5420d11255d4b0",
     ".pstdio/extensions/canvas/src/catalog/generated/designs.json": "79c1018c57d0e5d316d56c8f5179ca167b0eb6013545f5fbd39ab32d9b9de152",
     ".pstdio/extensions/canvas/src/catalog/grouping.ts": "6aed1b515bd4dd7ade90f37b024bb6f8aea83e3434b544a0e061373444f6def6",
-    ".pstdio/extensions/canvas/src/catalog/navigation-groups.ts": "9701b3258991735d135a1d0dd2689ebac2acf13933bec717aa00d7a633561e5e",
-    ".pstdio/extensions/canvas/src/catalog/definitions.ts": "d3bb4e6e342c87b38d68871105a4ab79aef49a4ffed09ed7933be77de0348a0c",
+    ".pstdio/extensions/canvas/src/catalog/navigation-groups.ts": "2dd995a7e57eaf1d3888eac5ff6a10db06866aece745d9c50850c24649bbbae9",
+    ".pstdio/extensions/canvas/src/catalog/definitions.ts": "0f9c898f7b8c793cf54b686c2726c0a7df4a50840d577165fb2159fc78204e85",
     ".pstdio/extensions/canvas/src/canvases/definitions.ts": "a0b08b4400ef11fd14e62f5b0e0cec8ea80d8f1982ae621ab613d8b68dad517f",
     ".pstdio/extensions/canvas/src/canvases/verification-fixtures.ts": "3ef548bcffe12df57dbc21bcb9307b45bfac46f1b9184987f2e1f8f5413221a6",
     "packages/ui/dist/canvas-Da4SuJVP.js": "53ce43c3479ba9693ece68d5aa03707967a368faf22c1de0d459079c5dd5cda7",
@@ -2284,9 +2284,9 @@
     ".pstdio/extensions/canvas/scripts/native-preview-runtime.tsx": "5bd2c6b3748312f59e4189ba567c97c575f2663b960530c3a8b626e5cf162e77"
   },
   "outputs": {
-    "frame-bundle.ts": "dfee5956291c355098d39cd118e126c6f7d94444e06adcbeb6f7dbea01bf1848"
+    "frame-bundle.ts": "41a460e9e39c5a2f0594348d1e0f3efcf9189a7a31001b09026fb3e98c9fa06f"
   },
   "stories": 1584,
   "documents": 36,
-  "bytes": 81658946
+  "bytes": 81659011
 }

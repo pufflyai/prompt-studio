@@ -109,7 +109,8 @@ for (const file of designs) {
       id: `design-${file.id}-${file.roots[0].id}`,
       name: file.name,
       group:
-        ({ "design-system": "Design System", website: "Dashboard" } as Record<string, string>)[file.id] ?? "Extensions",
+        ({ "design-system": "Design System", website: "Landing Page" } as Record<string, string>)[file.id] ??
+        "Extensions",
       path: ["Design references"],
       items: [],
       aliases: [],

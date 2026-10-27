@@ -34,3 +34,15 @@ test("host extension chrome belongs to the workbench while extension-owned UI st
   expect(paused.path).toEqual(["Chrome", "Extensions"]);
   expect(catalogCanvases.find((canvas) => canvas.name === "Auto Build")!.group).toBe("Extensions");
 });
+
+test("landing-page components and website design references share their own navigation group", () => {
+  const landing = catalogCanvases.filter((canvas) =>
+    canvas.items.some((item) =>
+      item.preview?.kind === "story"
+        ? item.preview.suite === "website"
+        : item.preview?.kind === "design" && item.preview.file === "website",
+    ),
+  );
+  expect(landing.length).toBeGreaterThan(0);
+  expect(new Set(landing.map((canvas) => canvas.group))).toEqual(new Set(["Landing Page"]));
+});

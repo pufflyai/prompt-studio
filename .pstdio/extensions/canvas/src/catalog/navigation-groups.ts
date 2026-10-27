@@ -1,7 +1,8 @@
-export const canvasGroups = ["Design System", "Workbench Core", "Dashboard", "Extensions"] as const;
+export const canvasGroups = ["Design System", "Workbench Core", "Dashboard", "Extensions", "Landing Page"] as const;
 
 export const storyLocation = (suite: string, topic: string, source: string) => {
   let path = topic.split("/").slice(0, -1);
+  if (suite === "website") return { group: "Landing Page", path: path.filter((part) => part !== "Landing") };
   let group = "Dashboard";
   if (source.startsWith("packages/pstdio-dashboard/src/shared/extensions/")) {
     return { group: "Workbench Core", path: ["Chrome", "Extensions"] };
@@ -14,6 +15,5 @@ export const storyLocation = (suite: string, topic: string, source: string) => {
     group = "Extensions";
     if (path[0] === "Extensions") path = path.slice(1);
   }
-  if (suite === "website") path = ["Website", ...path];
   return { group, path };
 };
