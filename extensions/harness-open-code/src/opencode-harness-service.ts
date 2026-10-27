@@ -98,9 +98,11 @@ export const createOpencodeHarnessService = (overrides: Parameters<typeof create
         const current = await service;
         if ([...scopes.keys()].every((consumer) => retired.has(consumer))) current.cancelPendingStartup();
       }
+      // Stop existing turns before waiting for reads. Retired scopes also stop any late-created
+      // session in track(), while its pending startup keeps this connection available for abort.
+      const stopped = await Promise.allSettled([...(scope?.sessions ?? [])].map((session) => session.stop()));
       // Pending native creation still needs this connection to abort a late session.
       await Promise.allSettled([...(scope?.pending ?? [])]);
-      const stopped = await Promise.allSettled([...(scope?.sessions ?? [])].map((session) => session.stop()));
       scopes.delete(ctx);
       if (!scopes.size && service) {
         previous.add(service);
