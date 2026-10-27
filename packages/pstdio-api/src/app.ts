@@ -299,7 +299,13 @@ const buildApp = async (
     artifactMountWatch,
     automationService,
     terminalSupervisor,
-    closeDb,
+    closeDb: async () => {
+      try {
+        await deps.extensionResourceSequencesService.flush();
+      } finally {
+        await closeDb();
+      }
+    },
   });
   return account.connectAccountRelay({ app, close, deps, eventBus });
 };

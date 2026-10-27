@@ -882,7 +882,7 @@ jobs:
         if: needs.scope.outputs.production == 'true' && matrix.suite == 'cli' && matrix.shard == '1/2' && matrix.priority == 'P2' && !cancelled() && steps.packaged_cli.outcome == 'success'
         env:
           CI_PRIORITY: P2
-        run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun --scope e2e
       - name: Preserve packaged and Vite test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -970,7 +970,7 @@ jobs:
         continue-on-error: true
         run: bun scripts/ci/run-quarantined-tests.ts playwright-ui --scope e2e --prebuilt
       - name: Require first-attempt native UI quarantine execution
-        run: bun scripts/ci/verify-quarantine-reports.ts playwright-ui
+        run: bun scripts/ci/verify-quarantine-reports.ts playwright-ui --scope e2e
       - name: Preserve native UI quarantine evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -1021,14 +1021,14 @@ jobs:
           E2E_TEST_LANE: quarantine
         run: bun scripts/ci/run-quarantined-tests.ts playwright-ui --scope e2e --prebuilt
       - name: Require first-attempt UI quarantine execution
-        run: bun scripts/ci/verify-quarantine-reports.ts playwright-ui
+        run: bun scripts/ci/verify-quarantine-reports.ts playwright-ui --scope e2e
       - name: Run quarantined browser cases without retries
         continue-on-error: true
         env:
           E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
         run: E2E_PACKAGED_BINARY_PATH="$GITHUB_WORKSPACE/dist/pstdio" bun scripts/ci/run-quarantined-tests.ts playwright --scope e2e --prebuilt
       - name: Require first-attempt browser execution
-        run: bun scripts/ci/verify-quarantine-reports.ts playwright
+        run: bun scripts/ci/verify-quarantine-reports.ts playwright --scope e2e
       - name: Preserve quarantine evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -1138,7 +1138,7 @@ jobs:
         if: needs.scope.outputs.production == 'true' && matrix.platform == 'darwin' && !cancelled() && steps.install_native_dependencies.outcome == 'success'
         env:
           CI_PRIORITY: P2
-        run: bun scripts/ci/verify-quarantine-reports.ts bun
+        run: bun scripts/ci/verify-quarantine-reports.ts bun --scope @pstdio/desktop
       - name: Preserve failed native DMG cleanup log
         if: ${{ !cancelled() && (steps.dmg_cleanup.outcome == 'failure' || steps.dmg_cleanup_quarantine.outcome == 'failure') }}
         uses: actions/upload-artifact@v4
@@ -1235,7 +1235,7 @@ jobs:
         if: needs.scope.outputs.production == 'true' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
         env:
           CI_PRIORITY: P2
-        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop --scope @pstdio/desktop
       - name: Preserve desktop test reports and traces
         if: always() && (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.tests
         uses: actions/upload-artifact@v4

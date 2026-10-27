@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createMemoryRepoFiles, createMemoryStorage, createMemoryStorageDevices } from "@pstdio/sdk/testing";
 import { type ArtifactRevision, createArtifactService, HTML_LIMIT_BYTES } from "./artifacts";
 
 const directories: string[] = [];
@@ -17,6 +18,7 @@ const fixture = async (projectId = "project-1") => {
   const names = new Map<string, { title: string }>();
   const input: Parameters<typeof createArtifactService>[0] = {
     projectId,
+    ids: createMemoryStorage().ids,
     artifacts: {
       get: async (id) => artifacts.get(id),
       createIfAbsent: async (id, value) => {
@@ -58,6 +60,37 @@ const fixture = async (projectId = "project-1") => {
   const service = createArtifactService(input);
   return { service, records, names, root, input };
 };
+
+test("two offline artifact imports use core migration IDs without duplicating artifacts or revisions", async () => {
+  const pair = await createMemoryStorageDevices({ extensionId: "pstdio.pstdio-artifacts" });
+  const imported: { artifactId: string; revisionId: string }[] = [];
+  for (const storage of pair.devices) {
+    const snapshots = createMemoryRepoFiles();
+    await storage.migrate(1, async (_, migration) => {
+      const keys = ["source-page:revision", "source-page:artifact"];
+      const service = createArtifactService({
+        projectId: "project",
+        ids: { create: () => migration.id(keys.shift()!) },
+        artifacts: storage.collection("artifacts"),
+        revisions: storage.collection("revisions"),
+        names: storage.collection("names"),
+        snapshots,
+      });
+      const published = await service.publish({ file_path: "page.html", html: "<title>Imported</title>" });
+      imported.push({ artifactId: published.artifactId, revisionId: published.revisionId });
+      expect(await snapshots.readText(`${published.revisionId}.html`)).toBe("<title>Imported</title>");
+    });
+    await storage.migrate(1, async () => {
+      throw new Error("Import must not run twice");
+    });
+  }
+  expect(imported[0]).toEqual(imported[1]);
+  await pair.merge();
+  for (const storage of pair.devices) {
+    expect(await storage.collection("artifacts").list()).toHaveLength(1);
+    expect(await storage.collection("revisions").list()).toHaveLength(1);
+  }
+});
 
 describe("published artifacts", () => {
   test("publishes a titled page and reads its saved HTML through its URL", async () => {

@@ -1,4 +1,4 @@
-import { coreOwnerId, type DocumentStore, projectInfoDocumentId, resourceNumbersDocumentId } from "pstdio-sync";
+import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync";
 import {
   createDocumentRelay,
   createDocumentRelayConnection,
@@ -10,6 +10,7 @@ import type { RelayDeps } from "./deps";
 import { createNativeDocumentLive } from "./native-document-live";
 import { reconcileProjectInfo } from "./project-info-owner";
 import { createSyncQuarantine } from "./quarantine";
+import { createResourceNumberSync } from "./resource-number-sync";
 import type { RelayWorkbench } from "./runtime";
 
 /**
@@ -26,10 +27,6 @@ export const startCoreDocumentSync = (input: {
   const { config, deps } = input;
   const owner = { workbenchId: config.workbenchId, extensionId: coreOwnerId };
   // Project info first: a new device needs the project's name and git remote before its data.
-  const stores: [string, DocumentStore][] = [
-    [projectInfoDocumentId, deps.projectInfoService.documentStore],
-    [resourceNumbersDocumentId, deps.extensionResourceSequencesService.documentStore],
-  ];
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, input.signal]);
   const access = async () => {
@@ -44,6 +41,7 @@ export const startCoreDocumentSync = (input: {
     }
   };
   let syncs: ReturnType<typeof createDocumentSync>[] = [];
+  let numbers: Awaited<ReturnType<typeof createResourceNumberSync>> | undefined;
   const checkedFolders = new Set<string>();
   let attempt: AbortSignal | undefined;
   let generation: number | undefined;
@@ -52,6 +50,7 @@ export const startCoreDocumentSync = (input: {
   const close = () => {
     for (const sync of syncs) sync.close();
     syncs = [];
+    numbers = undefined;
   };
   const live = createNativeDocumentLive({
     projectId: config.workbenchId,
@@ -71,36 +70,43 @@ export const startCoreDocumentSync = (input: {
         signal: attemptSignal,
       });
       live.setSpace(space);
+      const relay = (documentId: string) =>
+        createDocumentRelay({
+          origin: config.relayOrigin,
+          space,
+          documentId,
+          signal: attemptSignal,
+          token: async () => (await access()).token,
+        });
+      const quarantine = (documentId: string) =>
+        createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
       if (!syncs.length || attempt !== attemptSignal || generation !== space.generation) {
         close();
-        syncs = await Promise.all(
-          stores.map(async ([name, store]) => {
-            const documentId = await space.documentId(JSON.stringify([coreOwnerId, name]));
-            return createDocumentSync({
-              owner,
-              space,
-              documentId,
-              store,
-              relay: createDocumentRelay({
-                origin: config.relayOrigin,
-                space,
-                documentId,
-                signal: attemptSignal,
-                token: async () => (await access()).token,
-              }),
-              quarantine: createSyncQuarantine({
-                accountId: config.accountId,
-                projectId: config.workbenchId,
-                documentId,
-              }),
-            });
+        const documentId = await space.documentId(JSON.stringify([coreOwnerId, projectInfoDocumentId]));
+        syncs = [
+          createDocumentSync({
+            owner,
+            space,
+            documentId,
+            store: deps.projectInfoService.documentStore,
+            relay: relay(documentId),
+            quarantine: quarantine(documentId),
           }),
-        );
+        ];
         attempt = attemptSignal;
         generation = space.generation;
       }
       for (const sync of syncs) await sync.synchronize();
-      if (!(await Promise.all(syncs.map((sync) => sync.status()))).every((status) => status.downloaded)) return;
+      numbers ??= await createResourceNumberSync({
+        owner,
+        space,
+        service: deps.extensionResourceSequencesService,
+        relay,
+        quarantine,
+      });
+      await numbers!.synchronize();
+      if (!(await Promise.all([...syncs, numbers!].map((sync) => sync.status()))).every((status) => status.downloaded))
+        return;
       firstDownloaded = true;
       await reconcileProjectInfo(deps, config.workbenchId, checkedFolders);
     },
@@ -133,10 +139,10 @@ export const startCoreDocumentSync = (input: {
       await live.close();
     }),
     status: async () => {
-      const statuses = await Promise.all(syncs.map((sync) => sync.status()));
+      const statuses = await Promise.all([...syncs, ...(numbers ? [numbers] : [])].map((sync) => sync.status()));
       return {
         firstDownloaded,
-        downloaded: statuses.length > 0 && statuses.every((status) => status.downloaded),
+        downloaded: !!numbers && statuses.length > 0 && statuses.every((status) => status.downloaded),
         pending: statuses.some((status) => status.pending),
         needsAttention: statuses.some((status) => status.needsAttention),
         ...connection.status(),

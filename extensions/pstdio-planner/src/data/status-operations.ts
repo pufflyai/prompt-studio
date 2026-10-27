@@ -26,7 +26,7 @@ export const createTicketStatus = async (
   const statuses = await seedDefaultStatuses(input.storage);
   const sortOrder = Math.max(-1, ...statuses.map((status) => status.sortOrder)) + 1;
   const status: StoredStatus = {
-    id: crypto.randomUUID(),
+    id: input.storage.ids.create(),
     name: input.name,
     color: input.color ?? "gray",
     icon: input.icon ?? null,

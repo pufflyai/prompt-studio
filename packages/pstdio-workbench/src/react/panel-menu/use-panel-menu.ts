@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
   isWorkbenchModePanelAvailable,
   isWorkbenchPanelPlacementVisible,
@@ -13,6 +12,7 @@ import {
   type WorkbenchRegionSize,
   workbenchPanelMenuRegions,
 } from "../../core";
+import { useWorkbenchLocationPanel } from "../shared/use-workbench-location-panel";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { resolvePanelCollapsible } from "../workbench/workbench-panel-state";
@@ -64,7 +64,7 @@ const useWorkbenchPanelMenu = (
   const activeSubPanel = getActiveWorkbenchSubPanel(layout, panel, locationResource, {
     ignoreOwnerResourceKey: panel === "side",
   });
-  const activeLocationPanel = getActiveWorkbenchLocationPanel(layout);
+  const activeLocationPanel = useWorkbenchLocationPanel(workbench, panel);
   const regionState = {
     ...currentRegionState,
     widgets: currentRegionState.widgets.filter((placement) => {

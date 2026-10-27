@@ -1,8 +1,15 @@
 import { expect, test } from "bun:test";
-import { createMemoryRepoFiles, createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
+import {
+  createMemoryStorage as createIdStorage,
+  createMemoryRepoFiles,
+  createMemoryStorage,
+  makeCommandArgs,
+} from "@pstdio/sdk/testing";
 import { createNote } from "./notes";
 import { resolveNotePathCommand } from "./resolve-note-path";
 import { note } from "./resource-kinds";
+
+const coreIds = createIdStorage().ids;
 
 const fixture = () => {
   const mount = createMemoryRepoFiles();
@@ -30,7 +37,7 @@ const fixture = () => {
 
 test("note content paths open the note editor and other files stay workspace files", async () => {
   const { mount, claim, resolve } = fixture();
-  const created = await createNote(mount, "Launch plan");
+  const created = await createNote(mount, coreIds.create(), "Launch plan");
 
   expect(claim.prefix).toBe(".pstdio/extension-storage/pstdio.pstdio-notes/documents/");
   expect(resolveNotePathCommand.id).toBe(claim.resolve.id);
@@ -47,7 +54,7 @@ test("note content paths open the note editor and other files stay workspace fil
 
 test("note paths follow the default workspace's file access", async () => {
   const { mount, workspace, resolve } = fixture();
-  const created = await createNote(mount, "Launch plan");
+  const created = await createNote(mount, coreIds.create(), "Launch plan");
 
   workspace.files = "read";
   expect(await resolve(`${created.id}/content.md`)).toMatchObject({ resource: { metadata: { writable: false } } });

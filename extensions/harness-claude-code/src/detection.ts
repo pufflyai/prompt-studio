@@ -1,4 +1,5 @@
 import type { HarnessContext } from "@pstdio/sdk/extensions";
+import { resolveClaudeCommand } from "./cli";
 
 // 2.1.203 is the first release that reports `background_tasks_changed` in stream JSON. Older releases
 // end the run at the first result and kill the agent's background tasks. There is no upper bound
@@ -14,8 +15,9 @@ export const detectClaude = async (ctx: HarnessContext) => {
   try {
     // CLAUDECODE is cleared so a nested session is not mistaken for the CLI itself.
     // Model listing also calls this probe without the host availability wrapper.
+    const command = resolveClaudeCommand();
     const result = await ctx.process.run({
-      command: ["claude", "--version"],
+      command: [command, "--version"],
       env: { CLAUDECODE: "" },
       timeoutMs: 3_000,
     });

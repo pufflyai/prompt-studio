@@ -73,7 +73,7 @@ export const createReviewRequest = async (ctx: CommandContext, input: CreateRevi
     if (existing) return existing;
   }
 
-  const requestId = crypto.randomUUID();
+  const requestId = ctx.storage.ids.create();
 
   const request: ReviewRequest = {
     id: requestId,

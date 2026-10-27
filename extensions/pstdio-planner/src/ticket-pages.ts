@@ -30,7 +30,8 @@ export const createTicketPages = (tickets: ViewRef, editor: ViewRef, requests: V
     mode: workbenchModes.project,
     parent: ticketsPage.ref,
     resource: { kinds: [ticketResourceKind.ref] },
-    main: { kind: "view", presentation: "page", view: editor, cardinality: "one" },
+    // Only the Tickets list is tabless; a ticket keeps its tabbed Main and Properties menu.
+    main: { kind: "view", view: editor, cardinality: "one" },
     slots: [],
   });
   const requestsPage = definePage({

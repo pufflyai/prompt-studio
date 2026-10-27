@@ -20,11 +20,22 @@ interface SessionQueuedChatPanelProps extends ComponentProps<typeof ChatPanel> {
   refreshQueue(): void;
   draftAttachments: ReturnType<typeof useSessionDraftAttachments>;
   modelControls: ComponentProps<typeof SessionComposerActions>;
+  messagesBlocked?: boolean;
 }
 
 export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
-  const { projectId, sessionId, draftKey, drafts, queue, refreshQueue, draftAttachments, modelControls, ...panel } =
-    props;
+  const {
+    projectId,
+    sessionId,
+    draftKey,
+    drafts,
+    queue,
+    refreshQueue,
+    draftAttachments,
+    modelControls,
+    messagesBlocked,
+    ...panel
+  } = props;
   const selection = useQueuedRequestSelection(projectId, draftKey, drafts);
   const followUp = useFollowUpSession();
   const files = selection.selection ? selection.attachments : draftAttachments;
@@ -65,6 +76,7 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
       }
       onQueuedFollowUpUpdate={sessionId ? actions.handleQueuedFollowUpUpdate : undefined}
       onQueuedFollowUpCreate={async (id, prompt) => {
+        if (messagesBlocked) throw new Error("Sign in before sending a queued message.");
         const edit = selection.edits[id];
         if (!sessionId || !edit) throw new Error("The queued edit is no longer available.");
         await followUp.mutateAsync({
@@ -91,7 +103,7 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
       onQueuedFollowUpSelect={selection.select}
       onQueuedFollowUpDiscard={selection.discard}
       onQueuedFollowUpCombine={actions.handleQueuedFollowUpCombine}
-      onQueuedFollowUpSteer={actions.handleQueuedFollowUpSteer}
+      onQueuedFollowUpSteer={messagesBlocked ? undefined : actions.handleQueuedFollowUpSteer}
       queueSteeringUnavailableReason={
         queue ? queue.steeringUnavailableReason : "Refresh the queue to check live input support."
       }

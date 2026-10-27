@@ -1,4 +1,4 @@
-import { integer, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { projects } from "./projects";
 
 export const extension_resource_sequences = pgTable(
@@ -10,7 +10,7 @@ export const extension_resource_sequences = pgTable(
     extension_id: text("extension_id").notNull(),
     kind: text("kind").notNull(),
     prefix: text("prefix").notNull(),
-    next_value: integer("next_value").notNull(),
+    next_value: bigint("next_value", { mode: "number" }).notNull(),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
   },

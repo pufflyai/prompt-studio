@@ -1,4 +1,5 @@
 import type { HarnessContext } from "@pstdio/sdk/extensions";
+import { resolveOpencodeCommand } from "./cli";
 
 // 1.0.175 is the first release that serves `/global/health` and `/question`. The harness finds its
 // server through the health check and asks the agent's questions through the question API. There
@@ -13,7 +14,8 @@ const unavailable = (ctx: HarnessContext, reason: string, version?: string) => {
 export const detectOpencode = async (ctx: HarnessContext) => {
   try {
     // Model listing also calls this probe without the host availability wrapper.
-    const result = await ctx.process.run({ command: ["opencode", "--version"], timeoutMs: 3_000 });
+    const command = resolveOpencodeCommand();
+    const result = await ctx.process.run({ command: [command, "--version"], timeoutMs: 3_000 });
     if (result.exitCode !== 0)
       return unavailable(ctx, "`opencode --version` failed. Check the OpenCode installation on the runtime PATH.");
     const version = [result.stdout, result.stderr]

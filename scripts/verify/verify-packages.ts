@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { assertCoreBinarySize } from "../build/core-binary-size";
 import { loadEmbedConfig } from "../build/embed-manifest";
 import { collectVerifications } from "./collect-verifications";
 import { getHostPlatformPackage, resolveCompiledBinaryPath, runCompiledBunSmoke } from "./compiled-bun-smoke";
@@ -55,7 +56,10 @@ if (!buildFailed && (process.env.CI_PRIORITY !== "P1" || errors.length === 0)) {
           for (const { pkg, bin } of platformBinaries) {
             const path = join("./packages/pstdio/dist/platforms", pkg, "bin", bin);
             if (!existsSync(path)) missing.push(path);
-            else console.log(`OK: ${path} (${(statSync(path).size / 1_000_000).toFixed(1)} MB)`);
+            else {
+              assertCoreBinarySize(path);
+              console.log(`OK: ${path} (${(statSync(path).size / 1_000_000).toFixed(1)} MB)`);
+            }
           }
           if (missing.length) throw new Error(`Missing binaries: ${missing.join(", ")}`);
         },

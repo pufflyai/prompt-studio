@@ -1,11 +1,14 @@
 import { expect, test } from "bun:test";
+import { createMemoryStorage as createIdStorage } from "@pstdio/sdk/testing";
 import { createNote } from "./notes";
 import { createNotesMount } from "./test-mount";
 import { notesTree } from "./tree";
 
+const coreIds = createIdStorage().ids;
+
 test("lists notes from a local project workspace without repository context", async () => {
   const mount = createNotesMount();
-  const note = await createNote(mount, "Folder notes");
+  const note = await createNote(mount, coreIds.create(), "Folder notes");
   const groups = await notesTree.body.body({
     extensionId: "pstdio.pstdio-notes",
     projectId: "notes-project",
@@ -51,7 +54,7 @@ test("unavailable files do not load a note mount", async () => {
 
 test("read-only files remain readable without offering note mutations", async () => {
   const mount = createNotesMount();
-  const note = await createNote(mount, "Read-only note");
+  const note = await createNote(mount, coreIds.create(), "Read-only note");
   const groups = await notesTree.body.body({
     artifacts: { mount: () => mount },
     workspaces: {

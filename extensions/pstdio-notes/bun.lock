@@ -5,7 +5,7 @@
     "": {
       "name": "pstdio-notes",
       "dependencies": {
-        "@pstdio/sdk": "^0.44.0",
+        "@pstdio/sdk": "^0.45.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.4",
@@ -16,7 +16,7 @@
   "packages": {
     "@noble/hashes": ["@noble/hashes@2.4.0", "", {}, "sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA=="],
 
-    "@pstdio/sdk": ["@pstdio/sdk@0.44.0", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-LwU/bo9I9XqqFXCOZZKWfn7CYEixoRsziJ/uucvbIeK5Hjdq6zL2wUCIUnzBVVKv+M883gHJpbqeqJ9GHCY3/w=="],
+    "@pstdio/sdk": ["@pstdio/sdk@0.45.0", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-sDXguoeSKmRhiWx8McyVyb3ywSnU3I7VFp3EfvbTFmnlgDYh6r/bpR63/upX4JpOq+zzA3b29P3FQb9alnS9dQ=="],
 
     "@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 

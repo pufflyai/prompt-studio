@@ -4,8 +4,9 @@ Core extensions have their own versions and changelogs. The host, SDK, UI,
 workbench and desktop keep their shared stable release policy. SDK and UI can
 also publish [packages-only previews](0014-sdk-ui-previews.md).
 
-PSX is not deployed yet. Until it is, stable hosts install core extensions from
-their own `pstdio@<version>` release tag, so users receive extension changes with
+PSX is not deployed yet. Until it is, stable hosts include their catalog extension
+sources and lockfiles as bundled packages, built from the host release checkout.
+Installing them does not require Git. Users receive extension changes with
 the next host release. PSX support is in the host but only runs when
 `PSTDIO_EXTENSION_RELEASE_REF` is set to `psx:<registry URL>`.
 

@@ -30,7 +30,7 @@ test("accepts the CLI version on stdout or stderr", async () => {
     ["\u001b[32m1.18.34\u001b[0m\n", ""],
     ["", "\u001b[32m1.18.34\u001b[0m\n"],
   ]) {
-    expect(await probe(stdout, stderr)).toEqual({ available: true, version: "1.18.34" });
+    expect(await probe(stdout, stderr)).toMatchObject({ available: true, version: "1.18.34" });
   }
 });
 
@@ -46,7 +46,7 @@ test("rejects a failed command even when it prints a version", async () => {
 
 test("accepts OpenCode 1.0.175 and every newer release", async () => {
   for (const version of ["1.0.175", "1.18.35", "1.20.0", "2.0.0"]) {
-    expect(await probe(version)).toEqual({ available: true, version });
+    expect(await probe(version)).toMatchObject({ available: true, version });
   }
 });
 

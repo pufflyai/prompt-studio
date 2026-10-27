@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { JsonObject } from "@pstdio/sdk/extensions";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { createMemoryStorage, createMemoryStorageDevices } from "@pstdio/sdk/testing";
 import { makeCommandContext } from "../commands/command-context.fixture";
 import { listReportTemplates, readReportTemplate } from "./template-store";
 
@@ -14,6 +14,25 @@ const template = (id: string, name: string, type = "report") => ({
   created_at: "2026-01-01",
   updated_at: "2026-01-01",
   deleted_at: null,
+});
+
+test("two offline report template imports converge on one record per source template", async () => {
+  const pair = await createMemoryStorageDevices({
+    extensionId: "pstdio.pstdio-reports",
+    legacyData: { templates: source([template("source-file", "custom_report")]) },
+  });
+  for (const storage of pair.devices) {
+    const ctx = makeCommandContext({ storage, params: {}, overrides: { files: { readText: async () => "Imported" } } });
+    await readReportTemplate(ctx, "custom-report");
+    await readReportTemplate(ctx, "custom-report");
+    expect(await storage.collection("templates").list()).toHaveLength(1);
+  }
+  await pair.merge();
+  const keys = await Promise.all(
+    pair.devices.map(async (storage) => (await storage.records.list()).map((record) => record.recordId).sort()),
+  );
+  expect(keys[0]).toEqual(keys[1]);
+  for (const storage of pair.devices) expect(await storage.collection("templates").list()).toHaveLength(1);
 });
 
 test("pstdio-reports imports its old content, preferences, and defaults through public storage", async () => {

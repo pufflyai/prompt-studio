@@ -24,7 +24,7 @@ export const linkReviewCommand = defineCommand({
 
     const now = new Date().toISOString();
     const reviewLink: StoredTicketReviewLink = {
-      id: crypto.randomUUID(),
+      id: ctx.storage.ids.create(),
       url: commandParams.url,
       ...inferReviewLinkTarget(commandParams.url),
       title: commandParams.title ?? null,

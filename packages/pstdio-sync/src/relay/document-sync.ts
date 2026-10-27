@@ -86,7 +86,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     if (after < result.lastSequence) throw new Error("Relay did not return every update");
     return true;
   };
-  const read = async () => {
+  const read = async (readOnly = false) => {
     while (true) {
       const result = await relay.read(after);
       if (result.state && result.state.stateId !== stateId) {
@@ -97,7 +97,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
       if (await readUpdates(result)) return;
       // A later page may introduce an incomplete state ahead of this cursor. Keep the edits we
       // already received in the local owner before replacing the relay replica with that state.
-      if (!store.initialHistory || stateId) {
+      if (!readOnly && (!store.initialHistory || stateId)) {
         const local = await mergeLocal();
         local?.destroy();
       }
@@ -210,6 +210,12 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     }
   };
   return {
+    /** Format upgrades read the old stream without publishing into it. */
+    async download() {
+      await read(true);
+      if (incomplete) throw new Error("Cannot import an incomplete relay document");
+      return cloneDocument(remote);
+    },
     synchronize: () => withSourceRecovery(synchronize, () => retainNativeSource(input, remote, quarantine)),
     // Compare against the relay replica, including delete-only edits. A durable local
     // transaction after synchronization must immediately stop reporting synced.

@@ -48,7 +48,10 @@ Hover over a tab or focus it with the keyboard to see its full title in a toolti
 The tooltip appears below the tab after 300 ms.
 
 Views in tab panels have closable tabs. A page with `main.presentation: "page"`
-owns Main content directly and has no header or tab strip. Tabbed pages keep their header.
+owns Main content directly and has no tab header or tab strip. Tabbed pages keep their header.
+When a tabless page's view has a closed view menu, a minimal Main menu header holds only
+that menu's opener. It has no bottom border, tabs, or panel drag handle, and it is not a
+tab drop or panel placement target. Tabless pages without view menus have no Main header.
 
 Tabs can be dragged onto other tab panels, including webview content. Tabless pages
 do not accept drops. During a tab drag, the workbench catches pointer events over panels
@@ -57,7 +60,8 @@ Outside tab drags, webviews receive their normal pointer events and native file 
 
 ## Panel menus
 
-Closing an attached panel menu hides it until its header opener is selected. The
+Closing an attached panel menu hides it until its header opener is selected. On a
+tabless page, the opener sits in the minimal Main menu header. The
 opener attaches the menu directly when its panel is wider than 580 px and has room
 for the menu, other attached menus, resize handles, and at least 120 px of content.
 Menu minimum widths come from their contributions. Panels 580 px wide or narrower

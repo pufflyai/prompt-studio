@@ -134,7 +134,7 @@ export const appendAttemptEvent = async (
 ) => {
   const stored: AttemptTimelineEvent = {
     ...event,
-    id: event.id ?? crypto.randomUUID(),
+    id: event.id ?? storage.ids.create(),
     createdAt: event.createdAt ?? new Date().toISOString(),
   };
   await attemptEventsCollection(storage).put(stored.id, stored);

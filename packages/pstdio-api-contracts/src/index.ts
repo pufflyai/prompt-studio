@@ -15,6 +15,7 @@ export { codeLanguageFor, type FileKind, pickFileKind } from "./file-kind";
 export { type FileRendererPresentation, resolveFileRendererPresentation } from "./file-renderer-presentation";
 export * from "./files";
 export * from "./harness";
+export * from "./harness-authentication";
 export * from "./harness-commands";
 export * from "./history-reconciliation";
 export * from "./link-icons";

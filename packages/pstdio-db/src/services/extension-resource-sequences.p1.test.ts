@@ -4,16 +4,47 @@ import { createExtensionResourceSequencesDBService } from "./extension-resource-
 import { createDocumentStorageDBService } from "./extension-storage/document-storage";
 import { createProjectsDBService } from "./projects/projects";
 
+test("allocating a number writes one core record without hydrating the identity owner document", async () => {
+  const connection = await createDb({ path: ":memory:" });
+  const phases: string[] = [];
+  const documents = createDocumentStorageDBService(connection.db, undefined, (event) => phases.push(event.phase));
+  try {
+    const project = await createProjectsDBService(connection.db).create({ name: "Incremental identities" });
+    const service = createExtensionResourceSequencesDBService(connection.db, documents);
+    const allocated = await service.allocate({
+      projectId: project.id,
+      extensionId: "example.items",
+      kind: "item",
+      prefix: "IT",
+    });
+    expect(phases).not.toContain("document-loaded");
+    const records = documents.open({ owner: { workbenchId: project.id, extensionId: "pstdio" } }).records;
+    expect(await records.read(allocated.id)).toMatchObject({
+      recordId: allocated.id,
+      value: { id: allocated.id, extensionId: "example.items", kind: "item", prefix: "IT", value: 1, aliases: [] },
+    });
+    expect(await records.list()).toHaveLength(1);
+  } finally {
+    await documents.flushStatistics();
+    await connection.close();
+  }
+});
+
 test("resource identities remain unique across concurrent allocations and service restarts", async () => {
   const connection = await createDb({ path: ":memory:" });
+  const documents = createDocumentStorageDBService(connection.db);
   try {
     const project = await createProjectsDBService(connection.db).create({ name: "Prompt Studio" });
-    const service = createExtensionResourceSequencesDBService(connection.db);
+    const service = createExtensionResourceSequencesDBService(connection.db, documents);
     const input = { projectId: project.id, extensionId: "pstdio.planner", kind: "ticket", prefix: "PS" };
-    const results = await Promise.all(Array.from({ length: 20 }, () => service.allocate(input)));
+    const settled = await Promise.allSettled(Array.from({ length: 20 }, () => service.allocate(input)));
+    const results = settled.map((result) => {
+      if (result.status === "rejected") throw result.reason;
+      return result.value;
+    });
     expect(new Set(results.map((result) => result.shorthand)).size).toBe(20);
     expect(new Set(results.map((result) => result.id)).size).toBe(20);
-    const reopened = createExtensionResourceSequencesDBService(connection.db);
+    const reopened = createExtensionResourceSequencesDBService(connection.db, documents);
     expect((await reopened.allocate(input)).shorthand).toBe("PS-21");
     await expect(service.allocate({ ...input, idPrefix: "INVALID" })).rejects.toThrow("ID prefix");
     const compact = await reopened.allocate({ ...input, idPrefix: "tk" });
@@ -27,16 +58,18 @@ test("resource identities remain unique across concurrent allocations and servic
     const other = await createProjectsDBService(connection.db).create({ name: "Other" });
     expect((await service.allocate({ ...input, projectId: other.id })).shorthand).toBe("PS-1");
   } finally {
+    await documents.flushStatistics();
     await connection.close();
   }
 });
 
 test("selected identities survive restart and batch reads never hydrate the identity document", async () => {
   const connection = await createDb({ path: ":memory:" });
+  const writer = createDocumentStorageDBService(connection.db);
   try {
     const project = await createProjectsDBService(connection.db).create({ name: "Selected identities" });
     const input = { projectId: project.id, extensionId: "example.items", kind: "item", prefix: "IT" };
-    const first = createExtensionResourceSequencesDBService(connection.db);
+    const first = createExtensionResourceSequencesDBService(connection.db, writer);
     const a = await first.allocate(input);
     const b = await first.allocate(input);
     const events: string[] = [];
@@ -50,6 +83,7 @@ test("selected identities survive restart and batch reads never hydrate the iden
     ]);
     expect(events).not.toContain("document-loaded");
   } finally {
+    await writer.flushStatistics();
     await connection.close();
   }
 });

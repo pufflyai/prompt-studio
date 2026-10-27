@@ -22,7 +22,7 @@ export const createDeadlineCommand = defineCommand({
   async run(ctx, { date, name }) {
     return withWriteGuard(ctx, "plan", async () => {
       const { plan } = await loadPlan(ctx);
-      const deadline = { id: crypto.randomUUID(), date, ...(name ? { name } : {}) };
+      const deadline = { id: ctx.storage.ids.create(), date, ...(name ? { name } : {}) };
       const next = addDeadline(plan, deadline);
       await savePlan(ctx, next, "deadline");
       return next.deadlines.find(({ id }) => id === deadline.id);

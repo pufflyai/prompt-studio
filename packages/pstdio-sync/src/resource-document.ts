@@ -1,10 +1,11 @@
 import * as Y from "yjs";
 import { deterministicAuthors, migrationAuthor } from "./document-author";
-import { applyDocumentEdit } from "./document-edits";
+import { applyDocumentEdit, recordTypeName } from "./document-edits";
 import { type DocumentHistory, documentHistory } from "./document-history";
 import { readDocumentRecord } from "./document-record";
 import { validateDocumentGroup } from "./document-validation";
 import { adoptNativeRecordSources, resetRecreatedNativeSource } from "./native-record-source";
+import { readValue } from "./document-values";
 import { adoptionEdit } from "./record-adoption";
 import type { GroupCommit } from "./types";
 
@@ -105,6 +106,16 @@ const sharesHistory = (local: Uint8Array[], remote: Y.Doc) => {
       (client) => client < deterministicAuthors && known.has(client),
     ),
   );
+};
+
+/** Reads retained value history without making a deleted record visible again. */
+export const retainedResourceValue = (recordId: string, states: Uint8Array[]) => {
+  const document = loadResourceDocument(states);
+  try {
+    return readValue(document.getMap(recordTypeName(recordId)).get("value"), document);
+  } finally {
+    document.destroy();
+  }
 };
 
 /** The full state of one saved record document, for a latest-state chunk. */

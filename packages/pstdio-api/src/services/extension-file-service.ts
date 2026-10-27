@@ -73,7 +73,7 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
       created_at: value.createdAt,
       updated_at: value.updatedAt,
       asset: record.asset,
-      nativeDocumentKey,
+      nativeContent: content,
     };
   };
   const importFile = async (
@@ -212,15 +212,7 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
   };
   const read = async (file: NonNullable<Awaited<ReturnType<typeof getOwnedFile>>>, signal?: AbortSignal) => {
     signal?.throwIfAborted();
-    if (file.nativeDocumentKey)
-      return new Blob([
-        await deps.extensionStorageService
-          .openNativeTextDocument({
-            owner: { workbenchId: file.project_id, extensionId: file.extension_id },
-            fileId: file.nativeDocumentKey,
-          })
-          .read(),
-      ]).stream();
+    if (file.nativeContent) return file.nativeContent.stream();
     return deps.assetTransferService.read(
       { workbenchId: file.project_id, extensionId: file.extension_id },
       file.asset,

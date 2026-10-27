@@ -89,7 +89,7 @@ describe("detect", () => {
       },
     };
 
-    expect(await h.detect!(versionCtx)).toEqual({ available: true, version: "1.18.35" });
+    expect(await h.detect!(versionCtx)).toMatchObject({ available: true, version: "1.18.35" });
   });
 
   test("default detection reports unavailable on non-zero exit", async () => {

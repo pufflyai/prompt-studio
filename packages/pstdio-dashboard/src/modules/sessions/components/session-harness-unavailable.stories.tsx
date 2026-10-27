@@ -27,7 +27,8 @@ const meta = {
             deletions={0}
           />
         }
-        composerFallback={<SessionHarnessUnavailable {...args} />}
+        hideComposer
+        emptyStateContent={<SessionHarnessUnavailable {...args} />}
       />
     </Box>
   ),

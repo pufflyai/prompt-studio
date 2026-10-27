@@ -10,7 +10,8 @@ const CREDENTIAL_FILES = [
   { host: [".local", "share", "opencode", "mcp-auth.json"], target: "/home/bun/.local/share/opencode/mcp-auth.json" },
 ];
 
-export const resolveCredentialMounts = (home: string) => {
+export const resolveCredentialMounts = (home: string, reuseCredentials = true) => {
+  if (!reuseCredentials) return { mounted: [], missing: [] };
   const files = CREDENTIAL_FILES.map(({ host, target }) => ({ source: join(home, ...host), target }));
   return {
     mounted: files.filter(({ source }) => existsSync(source)),

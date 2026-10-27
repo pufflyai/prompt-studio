@@ -26,6 +26,11 @@ import type {
   HarnessSession,
   HarnessStartInput,
 } from "../../harness";
+import type {
+  HarnessAuthentication,
+  HarnessAuthenticationChannel,
+  HarnessAuthenticationInput,
+} from "../../harness-authentication";
 import type { SessionMessage } from "../../session-messages";
 import type { Localizable } from "../l10n";
 import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections";
@@ -111,6 +116,13 @@ export interface HarnessDetectionResult {
   reason?: string;
 }
 
+export type {
+  HarnessAuthentication,
+  HarnessAuthenticationChannel,
+  HarnessAuthenticationInput,
+  HarnessAuthenticationPrompt,
+  HarnessAuthenticationProvider,
+} from "../../harness-authentication";
 /** Where the harness's agent discovers skills. Paths are relative to the repo (dir) and home (globalDir). */
 export interface HarnessSkillsLayout {
   dir: string;
@@ -153,6 +165,14 @@ export interface HarnessProvider extends ContributionDefinition<"harness"> {
   cwdRequirement?: "required" | "optional";
   capabilities(ctx: HarnessContext): MaybePromise<AgentCapability[]>;
   detect?(ctx: HarnessContext): MaybePromise<HarnessDetectionResult>;
+  /** Fresh account state, independent of cached CLI availability. Never returns credentials. */
+  getAuthentication?(ctx: HarnessContext, input?: { model?: string }): MaybePromise<HarnessAuthentication>;
+  /** Runs a provider-owned account flow. Sensitive replies never enter command events or chat history. */
+  authenticate?(
+    ctx: HarnessContext,
+    input: HarnessAuthenticationInput,
+    channel: HarnessAuthenticationChannel,
+  ): MaybePromise<void>;
   listModels?(ctx: HarnessContext): MaybePromise<AgentModel[]>;
   start(ctx: HarnessContext, input: HarnessStartInput): MaybePromise<HarnessSession>;
   resume(ctx: HarnessContext, input: HarnessResumeInput): MaybePromise<HarnessSession>;

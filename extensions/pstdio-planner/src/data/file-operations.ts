@@ -25,7 +25,7 @@ export const createTicketFile = async (input: {
     const now = new Date().toISOString();
     const name = validateTicketFileName(input.name?.trim() || nextUntitledName(ticket.files ?? []));
     const file: StoredTicketFile = {
-      id: crypto.randomUUID(),
+      id: input.storage.ids.create(),
       name,
       blobId: await storeTicketFileContent(input.storage, ticket.id, name, ""),
       createdAt: now,

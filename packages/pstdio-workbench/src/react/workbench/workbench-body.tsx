@@ -3,6 +3,7 @@ import { PANEL_HEADER_CONTROL_SIZE, ResizableSplitLayout } from "@pstdio/ui";
 import { headerTrailingMenuPath, type WorkbenchCore, type WorkbenchRegionSize } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchHeaderActions } from "../header/header-actions";
+import { WorkbenchPageMenuHeader } from "../panel-menu/page-menu-header";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
 import { PanelHeader } from "../region/panel-header";
@@ -133,6 +134,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
     >
       <Box display={fullscreen ? "none" : "contents"}>
         <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
+        <WorkbenchPageMenuHeader workbench={workbench} />
       </Box>
       <WorkbenchTabDropTarget region="main" />
       <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
