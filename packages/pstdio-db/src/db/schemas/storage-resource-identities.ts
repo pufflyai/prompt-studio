@@ -32,6 +32,8 @@ export const storage_resource_identities = pgTable(
     extension_id: text("extension_id").notNull(),
     kind: text("kind").notNull(),
     shorthand: text("shorthand").notNull(),
+    prefix: text("prefix").notNull().default(""),
+    value: bigint("value", { mode: "number" }).notNull().default(0),
   },
   (table) => [
     primaryKey({ columns: [table.workbench_id, table.resource_id] }),
@@ -42,6 +44,7 @@ export const storage_resource_identities = pgTable(
       table.shorthand,
       table.resource_id,
     ),
+    index("storage_resource_identity_high_water").on(table.workbench_id, table.prefix, table.value),
     foreignKey({ columns: [table.workbench_id], foreignColumns: [storage_resource_projections.workbench_id] }).onDelete(
       "cascade",
     ),
@@ -54,10 +57,13 @@ export const storage_resource_aliases = pgTable(
     workbench_id: project(),
     resource_id: text("resource_id").notNull(),
     shorthand: text("shorthand").notNull(),
+    prefix: text("prefix").notNull().default(""),
+    value: bigint("value", { mode: "number" }).notNull().default(0),
   },
   (table) => [
     primaryKey({ columns: [table.workbench_id, table.resource_id, table.shorthand] }),
     index("storage_resource_identity_alias").on(table.workbench_id, table.shorthand, table.resource_id),
+    index("storage_resource_alias_high_water").on(table.workbench_id, table.prefix, table.value),
     foreignKey({ columns: [table.workbench_id], foreignColumns: [storage_resource_projections.workbench_id] }).onDelete(
       "cascade",
     ),

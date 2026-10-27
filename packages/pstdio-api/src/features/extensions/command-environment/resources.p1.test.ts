@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { extensionResourceRefSchema } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION, resourceEvents } from "pstdio-api-contracts/extension-kernel";
+import { editResourceDocument } from "pstdio-sync";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createResourcesApi } from "./resources";
 
@@ -75,12 +76,25 @@ test("enabled extensions allocate declared prefixes and reject conflicting insta
       const data = event.data as { eventId?: string };
       if (event.table === "extension_events" && data.eventId === resourceEvents.renumbered.id) dispatched.resolve(data);
     });
-    await app.deps.extensionResourceSequencesService.documentStore.transaction(
-      { workbenchId: project.id, extensionId: "pstdio" },
-      async ({ document }) => {
-        const numbers = document.getMap<{ id: string }>("resource-numbers");
-        numbers.set("zz-offline", { ...numbers.get(first.id)!, id: "zz-offline" });
+    const incoming = await editResourceDocument(
+      [],
+      {
+        recordId: "zz-offline",
+        replace: {
+          id: "zz-offline",
+          extensionId: "example.planner",
+          kind: "planner",
+          prefix: project.shorthand,
+          value: 1,
+          aliases: [],
+        },
       },
+      true,
+    );
+    const stream = app.deps.extensionResourceSequencesService.recordStream(project.id);
+    await stream.apply(
+      [{ records: [{ recordId: "zz-offline", bytes: incoming.update! }], assets: [] }],
+      await stream.open(),
     );
     expect(await dispatched.promise).toMatchObject({ projectId: project.id, eventId: resourceEvents.renumbered.id });
     stopEvents();

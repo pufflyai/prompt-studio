@@ -75,7 +75,14 @@ const readGitignoreRules = (extensionRoot: string): IgnoreRule[] => {
 const pathContainsDirectory = (path: string, directoryPattern: RegExp) =>
   path.split("/").some((segment) => directoryPattern.test(segment));
 
-const devOnlyDirectories = new Set(["node_modules", "__tests__", "__fixtures__", "mocks"]);
+const devOnlyDirectories = new Set([
+  "node_modules",
+  "__tests__",
+  "__fixtures__",
+  "mocks",
+  "storybook-static",
+  "__test-tmp__",
+]);
 const devOnlySourcePattern = /\.(?:spec|test|fixture)\.[cm]?[jt]sx?$/;
 const testHelperPattern = /\.test-helpers\.[cm]?[jt]sx?$/;
 

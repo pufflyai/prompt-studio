@@ -25,6 +25,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // performance-observer.p2.test.ts checks native CPU units and memory in the compiled observer.
 // packaged-core-extensions-smoke.p1.test.ts checks Notes, Planner and Reports allocate record IDs through core.
 // packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
+// packaged-cloud-extension-set-smoke.p2.test.ts checks offline number collisions, aliases and later allocations across three compiled hosts.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
