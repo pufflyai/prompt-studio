@@ -28,7 +28,12 @@ export const createLayoutSession = (options: LayoutSessionOptions) => {
     pending += 1;
     version += 1;
     queue = queue.then(async () => {
-      const patch = { ...failed, ...change, positions: { ...failed?.positions, ...change.positions } };
+      const patch = {
+        ...failed,
+        ...change,
+        positions: { ...failed?.positions, ...change.positions },
+        ...(failed?.themes || change.themes ? { themes: { ...failed?.themes, ...change.themes } } : {}),
+      };
       let saved = false;
       try {
         await options.write(patch);

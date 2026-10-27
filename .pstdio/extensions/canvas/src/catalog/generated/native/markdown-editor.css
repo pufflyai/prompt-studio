@@ -1,1 +1,0 @@
-.link-editor{opacity:0;pointer-events:none;will-change:transform;width:320px;transition:opacity .2s;position:fixed;top:0;left:0}.link-editor.active{opacity:1;pointer-events:auto;background-color:var(--chakra-colors-bg);border:1px solid var(--chakra-colors-border-subtle);border-radius:8px}.link-editor-content{width:100%}.link-editor-url-field{flex:1;min-width:0}

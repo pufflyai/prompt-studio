@@ -1,6 +1,6 @@
 # UI Canvas
 
-Explore and compare live UI designs inside Prompt Studio. A source registry defines named canvases and previews; the workbench saves their camera and frame positions.
+Explore and compare live UI designs inside Prompt Studio. A source registry defines named canvases and previews; the workbench saves their camera, frame positions, and individual frame themes.
 
 Use a runtime that satisfies the extension API range declared in `package.json`.
 
@@ -14,7 +14,7 @@ Open **Canvases** in the project navigation. Select a canvas in its navigation t
 - Use Ctrl/Meta + wheel or trackpad pinch to zoom around the pointer. Ordinary wheel input scrolls nested content while it can scroll, then pans the canvas.
 - Focus the canvas for arrow-key pan, `+`/`-` zoom, `F` to fit, and `0` to reset. Camera buttons stay fixed above the canvas. Reset keeps frame positions and preview drafts.
 
-Theme follows the workbench, including native portals. Change it through the workbench's Appearance controls. The public webview API does not expose a complete installed-theme catalog or a supported global-theme setter, so Canvas does not create a separate theme preference. Physical touch and trackpad behavior depends on the browser; automation does not prove those device behaviors.
+Each frame has a **Theme** menu: Follow app, Light, Dark, Solarized Light, Solarized Dark, Dracula, or Monokai. Its choice is saved independently. Theme changes preserve mounted inputs and local state. The canvas shell follows the workbench. Physical touch and trackpad behavior depends on the browser; automation does not prove those device behaviors.
 
 ## Edit source
 
@@ -24,7 +24,7 @@ Preserve IDs and names in follow-up edits. Add a new named entry for another ver
 
 Use public production component APIs, shared styles, safe data, and local callbacks. Do not change production components to make previews work. Keep experiment code in this extension. Content is compiled with the extension; the browser never interprets stored source strings as code. Runtime content editing, resizing, drawing, connectors, and property editors are outside this extension's scope.
 
-The `src/controller/` files own geometry, cached bounds, input routing, and batched transforms. Native portals stay in their library-owned document roots. The canvas host handles links, including portal links: `#canvas-item=<item-id>` reveals an item, and other links stay in the preview.
+The `src/controller/` files own geometry, cached bounds, input routing, and batched transforms. Native portals stay in their library-owned document roots. Each preview document handles links, including portal links: `#canvas-item=<item-id>` reveals an item, and other links stay in the preview.
 
 ## Commands and saved data
 
@@ -36,7 +36,7 @@ pst canvas layout update --canvas playground --change '{"positions":{"project-fo
 pst extensions dev .pstdio/extensions/canvas
 ```
 
-The browser and CLI use the same layout commands. `list` and `open` return project-owned dashboard links for tickets. `ctx.storage.records` stores one versioned shared map per project and canvas. Each position has its own map entry, so simultaneous moves of different frames merge. Source IDs filter saved positions. The saved data cannot hide frames or replace names, dimensions, preview code, or form contents. The workbench owns the existing global theme preference.
+The browser and CLI use the same layout commands. `list` and `open` return project-owned dashboard links for tickets. `ctx.storage.records` stores one versioned shared map per project and canvas. Each position has its own map entry, so simultaneous moves of different frames merge. Source IDs filter saved positions. The saved data cannot hide frames or replace names, dimensions, preview code, or form contents. Frame themes use separate shared-map entries; the workbench owns the shell theme.
 
 Canvas saves after gestures or a bounded debounce. It renders source defaults when storage is unavailable and reports read or save failures beside the canvas. Draft input survives camera and layout changes but is intentionally not persisted across reload.
 
@@ -67,9 +67,9 @@ Run `bun run --cwd .pstdio/extensions/canvas test` and `bun run --cwd .pstdio/ex
 
 ## Native documentation catalog
 
-UI Canvas indexes every current CSF export and MDX document. Each scenario has its own source-owned canvas and keeps the original story ID. The first scenario retains the earlier group URL. Original canvases and their preview IDs remain available. Search accepts source paths, export IDs, names, and design keywords.
+UI Canvas indexes every current CSF export and MDX document. Related scenarios share one source-owned topic canvas and keep their original story IDs. Auto Build combines its status and form examples; Create folder combines folder-picker states. Earlier scenario URLs resolve to the grouped canvas. Select canvases in the navigation panel or find them through global resource search. Original canvases and their preview IDs remain available. Search accepts source paths, export IDs, names, and design keywords.
 
-Scenarios render as React components in the Canvas webview. They share React, Chakra, and the public UI theme context with the surrounding canvas. Application examples use one workbench module graph and local API fixtures. Website analytics is inert in previews. Source play functions remain in their original files for external validation; Canvas does not run them as tests. **Props and source** shows arguments, authored argument types, component references, the source hash, and complete source code.
+Scenarios render compiled original React components in individual preview documents. Each document owns its React, Chakra, theme, and application fixture state so several dialogs and store variants can be used together. This runs native source components without a standalone Storybook server or manager. Preview code is built into a compressed module archive; project storage cannot provide executable content. Application examples use local API and in-memory storage fixtures. Gallery token overrides stay local to each preview. Website analytics is inert in previews. Source play functions remain in their original files for external validation; Canvas does not run them as tests. **Props and source** shows arguments, authored argument types, component references, the source hash, and complete source code.
 
 Documentation frames have content-driven heights. Resize observations and font completion refresh measured bounds. Fit and explicit reveal include a tall panel and its title. Fullscreen application examples retain a minimum viewport inside the documentation frame; lists and editors retain their own scrolling. Long prose, source listings, and API details have no inner vertical scroll area. Open **Documentation panels**, preview **Long documentation · intrinsic height**, to check expansion and draft retention.
 

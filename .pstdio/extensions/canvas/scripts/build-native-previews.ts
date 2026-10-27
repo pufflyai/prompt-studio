@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { type NativeBuildOutput, publishNativeBuild } from "./native-build-output";
 
-import { generateStoryCatalog, repoRoot, suites } from "./story-catalog";
+import { generatedRoot, generateStoryCatalog, repoRoot, suites } from "./story-catalog";
 
 const buildPreviews = async (
   stories: Awaited<ReturnType<typeof generateStoryCatalog>>["stories"],
@@ -12,13 +12,29 @@ const buildPreviews = async (
   const packageRoot = resolve(repoRoot, suites.ui);
   const uiRequire = createRequire(resolve(repoRoot, "packages/ui/package.json"));
   const { build } = await import(uiRequire.resolve("vite"));
-  const { esmExternalRequirePlugin } = await import(uiRequire.resolve("rolldown/plugins"));
   const scriptsRequire = createRequire(resolve(repoRoot, ".pstdio/extensions/canvas/package.json"));
   const { compile } = await import(scriptsRequire.resolve("@mdx-js/mdx"));
   const scratch = resolve(packageRoot, "__test-tmp__/ui-canvas-native");
   await mkdir(scratch, { recursive: true });
   const files = [...new Set([...stories, ...documents].map((entry) => entry.source))];
   const declarations: string[] = [];
+  const { createThemePreferenceFromVsCodeTheme } = await import(resolve(repoRoot, "packages/ui/dist/theme.js"));
+  const frameThemes = await Promise.all(
+    ["solarized-light", "solarized-dark", "dracula", "monokai"].map(async (id) => ({
+      ...createThemePreferenceFromVsCodeTheme({
+        id,
+        mode: id.endsWith("light") ? "light" : "dark",
+        theme: JSON.parse(
+          await readFile(resolve(repoRoot, `extensions/pstdio-base-themes/themes/${id}-color-theme.json`), "utf8"),
+        ),
+      }),
+      title: id
+        .split("-")
+        .map((word) => word[0].toUpperCase() + word.slice(1))
+        .join(" "),
+    })),
+  );
+  await writeFile(resolve(generatedRoot, "frame-themes.json"), JSON.stringify(frameThemes));
   declarations.push(
     `const __UI_CANVAS_PROJECTS__={${Object.entries(suites)
       .map(
@@ -35,6 +51,9 @@ const buildPreviews = async (
       '"./story-canvas-theme"',
       JSON.stringify(resolve(import.meta.dir, "story-canvas-theme.tsx")),
     ),
+  );
+  declarations.push(
+    `import {mountPreviewRuntime} from ${JSON.stringify(resolve(import.meta.dir, "frame-runtime.tsx"))}; mountPreviewRuntime(loadPreview);`,
   );
   const entry = resolve(scratch, "entry.tsx");
   await writeFile(entry, declarations.join("\n"));
@@ -69,18 +88,28 @@ const buildPreviews = async (
     logLevel: "error",
     // UI Canvas's own workspace stories must not recursively embed the entire catalog.
     plugins: [
-      esmExternalRequirePlugin({
-        external: [
-          /^react(?:-dom)?(?:\/|$)/,
-          /^@chakra-ui\/react(?:\/|$)/,
-          /^@emotion\/react(?:\/|$)/,
-          /^@pstdio\/(?:ui|sdk)(?:\/|$)/,
-        ],
-      }),
       {
         name: "ui-canvas-mdx",
         enforce: "pre",
         async transform(source: string, id: string) {
+          if (id.endsWith("/foundations/component-gallery.stories.tsx")) {
+            const hook = 'import { useTokenEditorValues } from "@/components/internal/token-editor-state";';
+            const call = "useTokenEditorValues({ themePreference, themePreferences })";
+            if (!source.includes(hook) || !source.includes(call))
+              throw new Error("Gallery fixture source changed; reconcile its local token state");
+            return {
+              code: source
+                .replace(
+                  hook,
+                  `import { getDefaultTokenEditorValues } from "@/components/internal/token-editor-state"; import {useCanvasTokenEditorValues} from ${JSON.stringify(resolve(import.meta.dir, "frame-token-editor-fixture.ts"))};`,
+                )
+                .replace(
+                  call,
+                  "useCanvasTokenEditorValues({ themePreference, themePreferences }, getDefaultTokenEditorValues)",
+                ),
+              map: null,
+            };
+          }
           if (id.endsWith("/modules/workspaces/collections/workspace-list.stories.tsx")) {
             const start = source.indexOf("const useDiffSummaryResponses =");
             const end = source.indexOf("interface WorkspaceListStoryProps", start);
@@ -117,6 +146,7 @@ const buildPreviews = async (
           return this.resolve(resolve(repoRoot, path, "src", id.slice(2)), importer, { skipSelf: true });
         },
         load(id: string) {
+          if (id.endsWith("/catalog/generated/frame-bundle.ts")) return 'export default "";';
           if (id === resolve(repoRoot, suites.website, "src/components/root-provider.tsx"))
             return 'import {ChakraProvider} from "@chakra-ui/react"; import {landingTheme} from "../theme/theme"; export const RootProvider = ({children}) => <ChakraProvider value={landingTheme}>{children}</ChakraProvider>;';
           if (id === resolve(repoRoot, suites.website, "src/services/analytics.ts"))
@@ -125,11 +155,12 @@ const buildPreviews = async (
             return 'export {getInitialThemePreference, ThemePreferenceProvider, useThemePreference} from "@pstdio/ui";';
           if (id.endsWith("/catalog/generated/native-preview.ts"))
             return 'export const loadPreview = async () => {throw new Error("Recursive catalog preview")};';
+          if (id === resolve(repoRoot, suites.dashboard, "src/shared/app/dashboard-storage.ts"))
+            return `export * from ${JSON.stringify(resolve(import.meta.dir, "frame-storage-fixture.ts"))};`;
           if (id === resolve(repoRoot, suites.dashboard, "src/lib/api.ts"))
             return `export * from ${JSON.stringify(resolve(import.meta.dir, "native-api-fixture.ts"))};`;
           if (id === resolve(repoRoot, suites.ui, ".storybook/preview.tsx"))
             return 'export default {parameters:{layout:"padded"}};';
-          if (id.endsWith("/catalog/generated/design-bundles.ts")) return "export const designBundles = {};";
         },
       },
     ],

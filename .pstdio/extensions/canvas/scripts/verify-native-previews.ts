@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { extname, resolve } from "node:path";
 import type { Request as PreviewRequest, Route as PreviewRoute } from "@playwright/test";
+import { checkCanvasInteractions } from "./grouped-interaction-check";
 import { checkIntrinsicDocumentation, profilePopulatedCanvas } from "./native-documentation-check";
 import { verificationCanvases } from "./native-verification-fixtures";
 import { repoRoot } from "./story-catalog";
@@ -13,8 +14,12 @@ const { chromium } = await import(browserRequire.resolve("@playwright/test"));
 const root = resolve(repoRoot, "__test-tmp__/native-canvas-verification");
 await mkdir(root, { recursive: true });
 await writeFile(
+  resolve(root, "canvas.html"),
+  `<html><head><title>Native Canvas verification</title><style>html,body,#root{margin:0;width:100%;height:100%}</style></head><body><div id="root"></div><script type="module" src="${resolve(import.meta.dir, "native-verification-entry.tsx")}"></script></body></html>`,
+);
+await writeFile(
   resolve(root, "index.html"),
-  `<html><head><title>Native Canvas verification</title></head><body><div id="root"></div><script type="module" src="${resolve(import.meta.dir, "native-verification-entry.tsx")}"></script></body></html>`,
+  '<html><head><style>html,body,iframe{margin:0;width:100%;height:100%;border:0}</style></head><body><iframe data-verification-host title="UI Canvas" sandbox="allow-scripts allow-forms" ></iframe><script>document.querySelector("iframe").src="/canvas.html"+location.search</script></body></html>',
 );
 await build({
   configFile: false,
@@ -23,7 +28,12 @@ await build({
   logLevel: "error",
   resolve: { dedupe: ["react", "react-dom", "@chakra-ui/react", "@emotion/react", "@pstdio/ui", "@pstdio/sdk"] },
   esbuild: { jsx: "automatic" },
-  build: { outDir: resolve(root, "dist"), assetsInlineLimit: () => true, minify: true },
+  build: {
+    outDir: resolve(root, "dist"),
+    assetsInlineLimit: () => true,
+    minify: true,
+    rollupOptions: { input: { index: resolve(root, "index.html"), canvas: resolve(root, "canvas.html") } },
+  },
 });
 const server = Bun.serve({
   hostname: "127.0.0.1",
@@ -35,13 +45,18 @@ const server = Bun.serve({
     if (!file.startsWith(`${resolve(root, "dist")}/`)) return new Response(null, { status: 404 });
     const body = Bun.file(file);
     if (!(await body.exists())) return new Response(null, { status: 404 });
-    return new Response(body, { headers: { "Content-Type": extname(file) === ".js" ? "text/javascript" : body.type } });
+    return new Response(body, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": extname(file) === ".js" ? "text/javascript" : body.type,
+      },
+    });
   },
 });
 const selected = new Set(process.argv.slice(2));
 const targets = verificationCanvases.filter(
   (canvas) =>
-    canvas.items.every((item) => item.preview?.kind !== "design") &&
+    canvas.items.some((item) => item.preview?.kind !== "design") &&
     (!selected.size || selected.has(canvas.id) || selected.has(canvas.group ?? "native")),
 );
 const browser = await chromium.launch({ headless: true });
@@ -84,25 +99,30 @@ const worker = async () => {
     let details: unknown;
     try {
       await page.goto(`${server.url}?canvas=${encodeURIComponent(canvas.id)}`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => {
+      const hostFrame = await page.locator("[data-verification-host]").elementHandle();
+      const surface = (await hostFrame!.contentFrame())!;
+      await surface.waitForFunction(() => {
         const loading = document.querySelector("[data-ui-canvas-loading]");
         return document.querySelector("[data-canvas-item]") && !loading;
       });
-      await page.evaluate(() => document.fonts.ready);
-      errors.push(...(await page.locator("[data-ui-canvas-error]").allTextContents()));
+      await surface.evaluate(() => document.fonts.ready);
+      errors.push(...(await surface.locator("[data-ui-canvas-error]").allTextContents()));
       const missing =
-        (await page
+        (await surface
           .locator("[data-canvas-stage]")
           .first()
           .locator(":scope > [data-canvas-item] > [data-canvas-preview]")
           .count()) !== canvas.items.length;
       if (missing) errors.push("A source preview is missing");
-      if (canvas.id === "documentation-contract") details = await checkIntrinsicDocumentation(page);
-      if (canvas.id === "verification-populated") details = await profilePopulatedCanvas(page);
+      details = await checkCanvasInteractions(surface, page, canvas);
+      if (canvas.id === "documentation-contract") details = await checkIntrinsicDocumentation(surface);
+      if (canvas.id === "verification-populated") details = await profilePopulatedCanvas(surface);
     } catch (error) {
       errors.push(String(error));
+
       await page.screenshot({ path: resolve(root, `${canvas.id}.png`), fullPage: true }).catch(() => {});
-      await writeFile(resolve(root, `${canvas.id}.html`), await page.content()).catch(() => {});
+      const html = await page.content().catch(() => "");
+      await writeFile(resolve(root, `${canvas.id}.html`), html).catch(() => {});
     } finally {
       await page.close().catch(() => {});
     }
@@ -135,7 +155,7 @@ const worker = async () => {
   }
 };
 try {
-  await worker();
+  await Promise.all([worker(), worker()]);
 } finally {
   await browser.close().catch(() => {});
   server.stop();

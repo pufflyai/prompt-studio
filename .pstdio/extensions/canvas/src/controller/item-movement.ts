@@ -47,7 +47,8 @@ export const installItemMovement = (shell: HTMLElement, runtime: CanvasRuntime) 
     runtime.move(handle.dataset.canvasHandle!, delta);
   };
   const focus = (event: FocusEvent) => {
-    if (event.target instanceof HTMLElement) runtime.revealFocus(event.target);
+    if (event.target instanceof HTMLElement && !(event.target instanceof HTMLIFrameElement))
+      runtime.revealFocus(event.target);
   };
   shell.addEventListener("pointerdown", down);
   shell.addEventListener("pointermove", move);

@@ -52,6 +52,7 @@ test("saves only source-backed positions and bounded camera values", async () =>
   });
   expect(await commands["layout.read"].run(ctx, { canvas: "playground" })).toEqual({
     version: 1,
+    themes: {},
     camera: { x: 1000000, y: 0, zoom: 4 },
     positions: { "project-form": { x: -25, y: 30 }, controls: { x: 440, y: 0 } },
   });
@@ -75,4 +76,19 @@ test("lists project-owned links that resolve to the named canvas", async () => {
     projectId: ctx.projectId,
     extensionId: "pstdio.canvas",
   });
+});
+
+test("keeps frame themes independent through concurrent edits and ignores unsupported choices", async () => {
+  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {} });
+  await Promise.all([
+    commands["layout.update"].run(ctx, { canvas: "playground", change: { themes: { "project-form": "pstdio-dark" } } }),
+    commands["layout.update"].run(ctx, {
+      canvas: "playground",
+      change: { themes: { controls: "solarized-light", unknown: "dracula" } },
+    }),
+  ]);
+  const read = () => commands["layout.read"].run(ctx, { canvas: "playground" });
+  expect((await read()).themes).toEqual({ "project-form": "pstdio-dark", controls: "solarized-light" });
+  await commands["layout.update"].run(ctx, { canvas: "playground", change: { themes: { controls: "unsupported" } } });
+  expect((await read()).themes.controls).toBe("solarized-light");
 });

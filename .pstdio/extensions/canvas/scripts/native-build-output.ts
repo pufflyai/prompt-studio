@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { publishFrameArchive } from "./frame-archive";
 import { generatedRoot, repoRoot } from "./story-catalog";
 import { catalogMetadata, parserInputs } from "./story-catalog-cache";
 
@@ -21,29 +22,13 @@ export const publishNativeBuild = async (
   outputs: NativeBuildOutput[],
   counts: { stories: number; documents: number },
 ) => {
-  const outputRoot = resolve(generatedRoot, "native");
-  await rm(outputRoot, { recursive: true, force: true });
-  await mkdir(outputRoot, { recursive: true });
+  await rm(resolve(generatedRoot, "native"), { recursive: true, force: true });
+  await rm(resolve(generatedRoot, "native-preview.ts"), { force: true });
+  await publishFrameArchive(generatedRoot, outputs);
   const outputHashes: Record<string, string> = {};
-  for (const file of outputs) {
-    const target = file.fileName.replace(/\.js$/, ".ts");
-    const code =
-      file.type === "chunk"
-        ? "// @ts-nocheck\n// Generated from source components; regenerate with build-native-previews.ts.\n" +
-          file.code.replace(/(\.\/[^"']+)\.js(["'])/g, "$1.ts$2")
-        : file.source;
-    await writeFile(resolve(outputRoot, target), code);
-    outputHashes[target] = createHash("sha256").update(code).digest("hex");
-  }
-  const entryFile = outputs.find((file) => file.type === "chunk" && file.isEntry)!.fileName.replace(/\.js$/, ".ts");
-  const styles = outputs.filter((file) => file.type === "asset" && file.fileName.endsWith(".css"));
-  await writeFile(
-    resolve(generatedRoot, "native-preview.ts"),
-    styles.map((file) => `import "./native/${file.fileName}";`).join("\n") +
-      '\nexport {loadPreview} from "./native/' +
-      entryFile +
-      '";\n',
-  );
+  outputHashes["frame-bundle.ts"] = createHash("sha256")
+    .update(await readFile(resolve(generatedRoot, "frame-bundle.ts")))
+    .digest("hex");
   const sources = [
     ...new Set(outputs.filter((file) => file.type === "chunk").flatMap((file) => Object.keys(file.modules ?? {}))),
   ];
@@ -52,6 +37,10 @@ export const publishNativeBuild = async (
     ".pstdio/extensions/canvas/package.json",
     ".pstdio/extensions/canvas/scripts/build-native-previews.ts",
     ".pstdio/extensions/canvas/scripts/native-build-output.ts",
+    ".pstdio/extensions/canvas/scripts/frame-archive.ts",
+    ...["frame-runtime.tsx", "frame-navigation.ts", "frame-story.tsx"].map(
+      (file) => `.pstdio/extensions/canvas/scripts/${file}`,
+    ),
     ...parserInputs,
     ...catalogMetadata,
     "packages/sdk/package.json",
@@ -64,7 +53,7 @@ export const publishNativeBuild = async (
   for (const path of sources) {
     if (!path.startsWith(`${repoRoot}/`) || path.includes("/node_modules/") || path.includes("/__test-tmp__/"))
       continue;
-    if (path.includes("/catalog/generated/native")) continue;
+    if (path.includes("/catalog/generated/native") || path.endsWith("/catalog/generated/frame-bundle.ts")) continue;
     if (!(await Bun.file(path).exists())) continue;
     hashes[path.slice(repoRoot.length + 1)] = createHash("sha256")
       .update(await readFile(path))

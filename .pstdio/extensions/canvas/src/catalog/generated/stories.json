@@ -7,7 +7,7 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "59f0c4568743929760b40d2af66136bdbf6406691947e3680e2dbc44a232ceaa"
+      "sourceHash": "cc1ed1f5e46d52624f1d5385c8a7babeb056de974f9fb70ed69ea7b5463db8c5"
     },
     {
       "id": "dashboard-canvas-workspace--zoomed-out",
@@ -16,7 +16,7 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "59f0c4568743929760b40d2af66136bdbf6406691947e3680e2dbc44a232ceaa"
+      "sourceHash": "cc1ed1f5e46d52624f1d5385c8a7babeb056de974f9fb70ed69ea7b5463db8c5"
     },
     {
       "id": "dashboard-canvas-workspace--populated",
@@ -25,7 +25,7 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "59f0c4568743929760b40d2af66136bdbf6406691947e3680e2dbc44a232ceaa"
+      "sourceHash": "cc1ed1f5e46d52624f1d5385c8a7babeb056de974f9fb70ed69ea7b5463db8c5"
     },
     {
       "id": "dashboard-canvas-workspace--foundations",
@@ -34,7 +34,7 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "59f0c4568743929760b40d2af66136bdbf6406691947e3680e2dbc44a232ceaa"
+      "sourceHash": "cc1ed1f5e46d52624f1d5385c8a7babeb056de974f9fb70ed69ea7b5463db8c5"
     },
     {
       "id": "dashboard-canvas-workspace--shared-components",
@@ -43,7 +43,7 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "59f0c4568743929760b40d2af66136bdbf6406691947e3680e2dbc44a232ceaa"
+      "sourceHash": "cc1ed1f5e46d52624f1d5385c8a7babeb056de974f9fb70ed69ea7b5463db8c5"
     },
     {
       "id": "dashboard-canvas-workspace--intrinsic-documentation",
@@ -52,7 +52,25 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "59f0c4568743929760b40d2af66136bdbf6406691947e3680e2dbc44a232ceaa"
+      "sourceHash": "cc1ed1f5e46d52624f1d5385c8a7babeb056de974f9fb70ed69ea7b5463db8c5"
+    },
+    {
+      "id": "dashboard-canvas-workspace--grouped-folder-examples",
+      "name": "Grouped Folder Examples",
+      "exportName": "GroupedFolderExamples",
+      "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
+      "suite": "dashboard",
+      "title": "Canvas/Workspace",
+      "sourceHash": "cc1ed1f5e46d52624f1d5385c8a7babeb056de974f9fb70ed69ea7b5463db8c5"
+    },
+    {
+      "id": "dashboard-canvas-workspace--grouped-auto-build",
+      "name": "Grouped Auto Build",
+      "exportName": "GroupedAutoBuild",
+      "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
+      "suite": "dashboard",
+      "title": "Canvas/Workspace",
+      "sourceHash": "cc1ed1f5e46d52624f1d5385c8a7babeb056de974f9fb70ed69ea7b5463db8c5"
     },
     {
       "id": "dashboard-motion-lab-study-status--deleted",
@@ -1642,7 +1660,7 @@
       "source": "extensions/pstdio-planner/src/timeline/view/auto-build-form.stories.tsx",
       "suite": "dashboard",
       "title": "Extensions/Planner/Auto Build form",
-      "sourceHash": "adabbb0a2b5f945440b7b58fd133957c3950e50d6f4d5fbbcd780d133c5726d4",
+      "sourceHash": "77b6d2820f99547d4ff06cb3478c16a4d8af7c6689c8781883e1b5170fa2adf5",
       "component": "AutoBuildForm",
       "componentImport": "./auto-build-form"
     },
@@ -1653,7 +1671,7 @@
       "source": "extensions/pstdio-planner/src/timeline/view/auto-build-form.stories.tsx",
       "suite": "dashboard",
       "title": "Extensions/Planner/Auto Build form",
-      "sourceHash": "adabbb0a2b5f945440b7b58fd133957c3950e50d6f4d5fbbcd780d133c5726d4",
+      "sourceHash": "77b6d2820f99547d4ff06cb3478c16a4d8af7c6689c8781883e1b5170fa2adf5",
       "component": "AutoBuildForm",
       "componentImport": "./auto-build-form"
     },
@@ -1664,7 +1682,7 @@
       "source": "extensions/pstdio-planner/src/timeline/view/auto-build-form.stories.tsx",
       "suite": "dashboard",
       "title": "Extensions/Planner/Auto Build form",
-      "sourceHash": "adabbb0a2b5f945440b7b58fd133957c3950e50d6f4d5fbbcd780d133c5726d4",
+      "sourceHash": "77b6d2820f99547d4ff06cb3478c16a4d8af7c6689c8781883e1b5170fa2adf5",
       "component": "AutoBuildForm",
       "componentImport": "./auto-build-form"
     },
@@ -1675,7 +1693,7 @@
       "source": "extensions/pstdio-planner/src/timeline/view/auto-build-form.stories.tsx",
       "suite": "dashboard",
       "title": "Extensions/Planner/Auto Build form",
-      "sourceHash": "adabbb0a2b5f945440b7b58fd133957c3950e50d6f4d5fbbcd780d133c5726d4",
+      "sourceHash": "77b6d2820f99547d4ff06cb3478c16a4d8af7c6689c8781883e1b5170fa2adf5",
       "component": "AutoBuildForm",
       "componentImport": "./auto-build-form"
     },
@@ -1686,7 +1704,7 @@
       "source": "extensions/pstdio-planner/src/timeline/view/auto-build-form.stories.tsx",
       "suite": "dashboard",
       "title": "Extensions/Planner/Auto Build form",
-      "sourceHash": "adabbb0a2b5f945440b7b58fd133957c3950e50d6f4d5fbbcd780d133c5726d4",
+      "sourceHash": "77b6d2820f99547d4ff06cb3478c16a4d8af7c6689c8781883e1b5170fa2adf5",
       "component": "AutoBuildForm",
       "componentImport": "./auto-build-form"
     },
@@ -1697,7 +1715,7 @@
       "source": "extensions/pstdio-planner/src/timeline/view/auto-build-form.stories.tsx",
       "suite": "dashboard",
       "title": "Extensions/Planner/Auto Build form",
-      "sourceHash": "adabbb0a2b5f945440b7b58fd133957c3950e50d6f4d5fbbcd780d133c5726d4",
+      "sourceHash": "77b6d2820f99547d4ff06cb3478c16a4d8af7c6689c8781883e1b5170fa2adf5",
       "component": "AutoBuildForm",
       "componentImport": "./auto-build-form"
     },
@@ -1708,7 +1726,7 @@
       "source": "extensions/pstdio-planner/src/timeline/view/auto-build-form.stories.tsx",
       "suite": "dashboard",
       "title": "Extensions/Planner/Auto Build form",
-      "sourceHash": "adabbb0a2b5f945440b7b58fd133957c3950e50d6f4d5fbbcd780d133c5726d4",
+      "sourceHash": "77b6d2820f99547d4ff06cb3478c16a4d8af7c6689c8781883e1b5170fa2adf5",
       "component": "AutoBuildForm",
       "componentImport": "./auto-build-form"
     },

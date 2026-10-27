@@ -4,6 +4,7 @@ import { createLayoutSession } from "./layout-session";
 
 const initial: Layout = {
   version: 1,
+  themes: {},
   camera: { x: 0, y: 0, zoom: 1 },
   positions: { a: { x: 0, y: 0 }, b: { x: 10, y: 0 } },
 };

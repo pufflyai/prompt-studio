@@ -5,7 +5,9 @@ export const resolveCanvasCommand = defineCommand({
   id: "resolve",
   title: "Resolve canvas",
   async run(ctx) {
-    const canvas = canvases.find((entry) => entry.id === ctx.resource?.id);
+    const canvas = canvases.find(
+      (entry) => entry.id === ctx.resource?.id || entry.aliases?.includes(ctx.resource?.id ?? ""),
+    );
     if (!canvas) return null;
     return {
       ...ctx.resource,

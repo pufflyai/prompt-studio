@@ -1,6 +1,7 @@
-import type { CanvasDefinition, CanvasItem } from "../canvases/definitions";
+import type { CanvasDefinition } from "../canvases/definitions";
 import designs from "./generated/designs.json";
 import catalog from "./generated/stories.json";
+import { addGroupItem, placeGroup, storyCanvasId, storyTopic } from "./grouping";
 
 export interface StoryPreview {
   kind: "story";
@@ -28,13 +29,22 @@ export interface DesignPreview {
 export type CatalogPreview = StoryPreview | DocumentPreview | DesignPreview;
 const groups = new Map<string, CanvasDefinition>();
 for (const story of catalog.stories) {
-  const groupId = `stories-${story.suite}-${story.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-  // Each application scenario owns its fixture stores. Mounting all variants together lets source-level
-  // stores and seeded project IDs overwrite one another. Keep the original group link for its first entry.
-  const id = groups.has(groupId) ? `${groupId}-${story.id}` : groupId;
-  const canvas: CanvasDefinition = { id, name: `${story.title} · ${story.name}`, group: story.suite, items: [] };
-  groups.set(id, canvas);
-  (canvas.items as CanvasItem[]).push({
+  const topic = storyTopic(story.title);
+  const key = `${story.suite}:${topic}`;
+  const oldId = storyCanvasId(story.suite, story.title);
+  let canvas = groups.get(key);
+  if (!canvas) {
+    canvas = {
+      id: oldId,
+      name: topic.split("/").at(-1)!,
+      group: topic.split("/").slice(0, -1).join(" / ") || story.suite,
+      items: [],
+      aliases: [],
+    };
+    groups.set(key, canvas);
+  }
+  (canvas.aliases as string[]).push(oldId, `${oldId}-${story.id}`);
+  addGroupItem(canvas, {
     id: story.id,
     name: `${story.title} · ${story.name}`,
     position: { x: 0, y: 0 },
@@ -53,46 +63,52 @@ for (const story of catalog.stories) {
   });
 }
 for (const document of catalog.documents) {
-  groups.set(document.id, {
+  let section = document.suite === "ui" ? "Component guide" : "Workbench reference";
+  if (document.source.includes("/onboarding/")) section = "Workbench onboarding";
+  let canvas = groups.get(section);
+  if (!canvas) {
+    canvas = { id: document.id, name: section, group: "Documentation", items: [], aliases: [] };
+    groups.set(section, canvas);
+  }
+  (canvas.aliases as string[]).push(document.id);
+  addGroupItem(canvas, {
     id: document.id,
     name: document.name,
-    group: "Documentation",
-    items: [
-      {
-        id: document.id,
-        name: document.name,
-        width: 1040,
-        height: 1400,
-        position: { x: 0, y: 0 },
-        preview: {
-          kind: "document",
-          id: document.id,
-          suite: document.suite,
-          source: document.source,
-          content: document.content,
-        },
-      },
-    ],
+    width: 1040,
+    height: 1400,
+    position: { x: 0, y: 0 },
+    preview: {
+      kind: "document",
+      id: document.id,
+      suite: document.suite,
+      source: document.source,
+      content: document.content,
+    },
   });
 }
-export const catalogCanvases: CanvasDefinition[] = [
-  ...designs.flatMap((file) =>
-    file.roots.map((root) => ({
-      id: `design-${file.id}-${root.id}`,
+for (const file of designs) {
+  const topic = file.id === "autobuilder" ? "dashboard:Extensions/Planner/Auto Build" : `reference:${file.id}`;
+  let canvas = groups.get(topic);
+  if (!canvas) {
+    canvas = {
+      id: `design-${file.id}-${file.roots[0].id}`,
+      name: file.name,
+      group: "Design references",
+      items: [],
+      aliases: [],
+    };
+    groups.set(topic, canvas);
+  }
+  for (const root of file.roots) {
+    (canvas.aliases as string[]).push(`design-${file.id}-${root.id}`);
+    addGroupItem(canvas, {
+      id: root.id,
       name: root.name,
-      group: file.name,
-      keywords: root.keywords,
-      items: [
-        {
-          id: root.id,
-          name: root.name,
-          width: root.width,
-          height: root.height,
-          position: { x: 0, y: 0 },
-          preview: { kind: "design" as const, file: file.id, rootId: root.id, source: file.source },
-        },
-      ],
-    })),
-  ),
-  ...groups.values(),
-];
+      width: root.width,
+      height: root.height,
+      position: { x: 0, y: 0 },
+      preview: { kind: "design" as const, file: file.id, rootId: root.id, source: file.source },
+    });
+  }
+}
+export const catalogCanvases: CanvasDefinition[] = [...groups.values()].map(placeGroup);

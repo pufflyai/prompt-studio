@@ -10,13 +10,14 @@ import {
 import { canvases } from "./src/canvases/definitions";
 import { commands } from "./src/commands";
 import { canvasPage, canvasResource, canvasTarget, canvasView, homePage } from "./src/navigation";
+import { canvasResources } from "./src/resources";
 
 const tree = defineView({
   id: "canvases",
   title: "UI Canvas",
   body: {
     kind: "tree",
-    body: async () => [
+    body: async (ctx) => [
       {
         id: "canvases",
         label: "UI Canvas",
@@ -25,14 +26,20 @@ const tree = defineView({
           id: `group-${group}`,
           label: group,
           collapsible: true,
-          nodes: canvases
+          children: canvases
             .filter((canvas) => (canvas.group ?? "Designs") === group)
             .map((canvas) => ({
               id: canvas.id,
               label: canvas.name,
               icon: "layout-dashboard",
-              target: canvasTarget(canvas.id, canvas.name),
-              resource: { type: canvasResource.id, id: canvas.id, label: canvas.name },
+              target: canvasTarget(canvas.id, canvas.name, ctx.projectId),
+              resource: {
+                type: canvasResource.id,
+                id: canvas.id,
+                label: canvas.name,
+                projectId: ctx.projectId,
+                extensionId: "pstdio.canvas",
+              },
             })),
         })),
       },
@@ -42,6 +49,7 @@ const tree = defineView({
 export default defineExtension({
   commands: Object.values(commands),
   resourceKinds: [canvasResource],
+  commandPaletteResources: [canvasResources],
   views: [canvasView, tree],
   pages: [homePage, canvasPage],
   navigationItems: [
@@ -55,6 +63,13 @@ export default defineExtension({
     }),
   ],
   navigationTrees: [
+    defineNavigationTree({
+      id: "canvas-selection",
+      owner: canvasPage.ref,
+      slot: "content",
+      view: tree.ref,
+      resourceScope: "project",
+    }),
     defineNavigationTree({
       id: "canvases",
       owner: homePage.ref,

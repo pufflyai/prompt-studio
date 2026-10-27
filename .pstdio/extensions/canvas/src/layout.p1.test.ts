@@ -15,6 +15,7 @@ test("keeps source membership while reusing valid saved positions", () => {
   };
   expect(readLayout(saved, items)).toEqual({
     version: 1,
+    themes: {},
     camera: saved.camera,
     positions: { original: { x: 15, y: 20 }, "new-design": { x: 400, y: 0 } },
   });

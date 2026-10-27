@@ -1,7 +1,7 @@
 import { Box, Button, Flex, Text } from "@chakra-ui/react";
 import { createWebviewClient, type GuestHost, type PropsStore, type ResourceRef } from "@pstdio/sdk/extensions";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { type CanvasDefinition, canvases } from "../canvases/definitions";
+import { type CanvasDefinition, canvases, findCanvas } from "../canvases/definitions";
 import { CanvasThemeContext, CanvasThemeProvider, readCanvasTheme } from "../catalog/theme";
 import type { commands } from "../commands";
 import { type CanvasRuntime, createCanvasRuntime } from "../controller/runtime";
@@ -9,7 +9,6 @@ import { layoutChanged } from "../events";
 import { readLayout } from "../layout";
 import { createLayoutSession } from "../layout-session";
 import { CanvasStage } from "./canvas-stage";
-import { CanvasCatalog } from "./catalog";
 export interface CanvasProps {
   themePreference?: string;
   resource?: ResourceRef;
@@ -47,7 +46,7 @@ const ConnectedCanvas = (props: { canvas: CanvasDefinition; host: GuestHost }) =
     };
   }, [canvas, host]);
   return (
-    <Box h="full" minH="0" minW="0" display="flex" flexDirection="column">
+    <Box w="full" h="full" minH="0" minW="0" display="flex" flexDirection="column">
       {error && (
         <Flex gap="sm" align="center" p="sm">
           <Text role="alert" color="fg.error" textStyle="paragraph/S/regular">
@@ -79,8 +78,15 @@ export const CanvasRoot = (props: RootProps) => {
     return () => cancelAnimationFrame(frame);
   }, [current.themePreference]);
   const id = current.resource?.id ?? current.pageLocation?.resource?.id;
-  if (!id) return <CanvasCatalog host={host} />;
-  const canvas = canvases.find((item) => item.id === id);
+  const canvas = id
+    ? (() => {
+        try {
+          return findCanvas(id);
+        } catch {
+          return undefined;
+        }
+      })()
+    : canvases[0];
   if (!canvas)
     return (
       <Text p="md" role="alert">
@@ -90,7 +96,7 @@ export const CanvasRoot = (props: RootProps) => {
   return (
     <CanvasThemeContext value={theme}>
       <CanvasThemeProvider>
-        <ConnectedCanvas key={id} canvas={canvas} host={host} />
+        <ConnectedCanvas key={canvas.id} canvas={canvas} host={host} />
       </CanvasThemeProvider>
     </CanvasThemeContext>
   );

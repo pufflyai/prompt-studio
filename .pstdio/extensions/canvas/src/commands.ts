@@ -31,7 +31,7 @@ export const commands = {
     params: canvasParam,
     async run(ctx, input) {
       const canvas = findCanvas(input.canvas);
-      const target = canvasTarget(canvas.id, canvas.name);
+      const target = canvasTarget(canvas.id, canvas.name, ctx.projectId);
       await ctx.navigation.open(target);
       return { target, href: canvasUrl(ctx.projectId, canvas.id) };
     },
@@ -51,7 +51,7 @@ export const commands = {
     title: "Update canvas layout",
     cli: true,
     mutating: true,
-    params: { ...canvasParam, change: params.json({ required: true, label: "Camera or positions" }) },
+    params: { ...canvasParam, change: params.json({ required: true, label: "Camera, positions, or frame themes" }) },
     async run(ctx, input) {
       const canvas = findCanvas(input.canvas);
       const next = await saveLayout(ctx.storage, canvas, input.change);

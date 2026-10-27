@@ -1,7 +1,10 @@
 import { type CanvasZoomChange, zoomCanvas } from "@pstdio/ui/canvas";
 import type { CanvasDefinition } from "../canvases/definitions";
+import type { FrameTheme } from "../frame-themes";
 import type { Layout, LayoutChange } from "../layout";
+import { frameAnchor, type ItemBounds, measureItem } from "./frame-bounds";
 import { boundedCamera, boundedPoint, type Camera, fitCamera, type Point, revealCamera, zoomAt } from "./geometry";
+import { arrangeGrid, canvasBounds, defaultGridItems } from "./grid";
 
 export const createCanvasRuntime = (
   canvas: CanvasDefinition,
@@ -25,8 +28,9 @@ export const createCanvasRuntime = (
   let dirty = false;
   let changes: LayoutChange = {};
   const items = new Map<string, HTMLElement>();
-  const sizes = new Map<string, { width: number; height: number }>();
+  const sizes = new Map<string, ItemBounds>();
   const moved = new Set<string>();
+  const automatic = defaultGridItems(canvas, initial);
   const listeners = new Set<() => void>();
   let cameraDirty = true;
   let framing: { kind: "all" } | { kind: "item"; id: string } | undefined;
@@ -72,23 +76,7 @@ export const createCanvasRuntime = (
     changed();
   };
   const viewport = () => ({ width: shell?.clientWidth ?? 1, height: shell?.clientHeight ?? 1 });
-  const bounds = (id?: string) => {
-    const entries = canvas.items
-      .filter((item) => !id || item.id === id)
-      .map((item) => {
-        const position = layout.positions[item.id];
-        const size = sizes.get(item.id) ?? { width: item.width, height: item.height + 36 };
-        return { ...position, ...size };
-      });
-    const left = Math.min(...entries.map((entry) => entry.x));
-    const top = Math.min(...entries.map((entry) => entry.y));
-    return {
-      x: left,
-      y: top,
-      width: Math.max(...entries.map((entry) => entry.x + entry.width)) - left,
-      height: Math.max(...entries.map((entry) => entry.y + entry.height)) - top,
-    };
-  };
+  const bounds = (id?: string) => canvasBounds(canvas, layout, sizes, id);
   const reframe = () => {
     if (!framing) return;
     const rect = bounds(framing.kind === "item" ? framing.id : undefined);
@@ -143,16 +131,21 @@ export const createCanvasRuntime = (
       measuredViewport = view;
       for (const [id, element] of items) {
         if (element.querySelector("[data-ui-canvas-loading]")) continue;
-        const next = { width: element.offsetWidth, height: element.offsetHeight };
+        const next = measureItem(element);
         const previous = sizes.get(id);
         changed ||= next.width !== previous?.width || next.height !== previous?.height;
         sizes.set(id, next);
+      }
+      if (changed && automatic.size) {
+        arrangeGrid(canvas, layout, sizes, automatic, moved);
+        schedule();
       }
       if (changed) reframe();
     },
     elements: () => [...items.values()],
     camera,
     pan: (delta: Point) => camera({ ...layout.camera, x: layout.camera.x + delta.x, y: layout.camera.y + delta.y }),
+    frameAnchor: (id: string, point: Point) => frameAnchor(layout, sizes, id, point),
     zoomChange: (change: CanvasZoomChange) =>
       camera(zoomCanvas(layout.camera, change, { minZoom: 0.000001, maxZoom: 4 })),
     zoom: (factor: number, anchor?: Point) => {
@@ -162,6 +155,7 @@ export const createCanvasRuntime = (
     move: (id: string, delta: Point) => {
       const current = layout.positions[id];
       if (!current) return;
+      automatic.delete(id);
       framing = undefined;
       layout = {
         ...layout,
@@ -171,6 +165,12 @@ export const createCanvasRuntime = (
       moved.add(id);
       changed();
     },
+    setTheme: (id: string, theme: FrameTheme) => {
+      if (!layout.positions[id]) return;
+      layout = { ...layout, themes: { ...layout.themes, [id]: theme } };
+      changes.themes = { ...changes.themes, [id]: theme };
+      changed();
+    },
     fit: () => {
       if (!canvas.items.length) return;
       framing = { kind: "all" };
@@ -178,6 +178,10 @@ export const createCanvasRuntime = (
     },
     reset: () => camera({ x: 24, y: 24, zoom: 1 }),
     reveal,
+    revealRegion: (rect: { x: number; y: number; width: number; height: number }) => {
+      const next = revealCamera(layout.camera, rect, viewport());
+      if (next.x !== layout.camera.x || next.y !== layout.camera.y) camera(next);
+    },
     revealFocus: (target: HTMLElement) => {
       const item = target.closest<HTMLElement>("[data-canvas-item]");
       if (!item || !shell) return;
@@ -202,7 +206,12 @@ export const createCanvasRuntime = (
       framing = undefined;
       layout = next;
       cameraDirty = true;
-      for (const item of canvas.items) moved.add(item.id);
+      for (const item of canvas.items) {
+        moved.add(item.id);
+        const point = next.positions[item.id];
+        if (point.x !== item.position.x || point.y !== item.position.y) automatic.delete(item.id);
+      }
+      if (automatic.size) arrangeGrid(canvas, layout, sizes, automatic, moved);
       schedule();
     },
     flush,
@@ -210,11 +219,9 @@ export const createCanvasRuntime = (
       flush();
       cancelAnimationFrame(frame);
       cancelAnimationFrame(focusFrame);
-      frame = 0;
-      focusFrame = 0;
+      frame = focusFrame = 0;
       framing = undefined;
       cameraDirty = true;
-      foreground = undefined;
       listeners.clear();
       items.clear();
       sizes.clear();

@@ -15,6 +15,8 @@ export interface CanvasDefinition {
   name: string;
   group?: string;
   keywords?: string;
+  aliases?: readonly string[];
+  layout?: "grid";
   items: readonly CanvasItem[];
 }
 // This registry owns membership, names and dimensions. Saved layouts only own positions.
@@ -166,7 +168,7 @@ export const nativeCanvases: readonly CanvasDefinition[] = [
 ];
 export const canvases: readonly CanvasDefinition[] = [...nativeCanvases, ...catalogCanvases];
 export const findCanvas = (id: string) => {
-  const canvas = canvases.find((entry) => entry.id === id);
+  const canvas = canvases.find((entry) => entry.id === id || entry.aliases?.includes(id));
   if (!canvas) throw new Error(`Canvas "${id}" does not exist`);
   return canvas;
 };

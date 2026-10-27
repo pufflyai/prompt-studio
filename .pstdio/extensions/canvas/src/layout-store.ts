@@ -11,7 +11,12 @@ export const loadLayout = async (storage: ExtensionStorageApi, canvas: CanvasDef
       .filter(([key]) => key.startsWith("position:"))
       .map(([key, position]) => [key.slice(9), position]),
   );
-  return readLayout({ ...value, positions }, canvas.items);
+  const themes = Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => key.startsWith("theme:"))
+      .map(([key, theme]) => [key.slice(6), theme]),
+  );
+  return readLayout({ ...value, positions, themes }, canvas.items);
 };
 export const saveLayout = async (storage: ExtensionStorageApi, canvas: CanvasDefinition, change: unknown) => {
   const patch = object(change);
@@ -22,6 +27,8 @@ export const saveLayout = async (storage: ExtensionStorageApi, canvas: CanvasDef
   for (const item of canvas.items) {
     if (Object.hasOwn(positions, item.id))
       edits.push({ kind: "map.set", key: `position:${item.id}`, value: { ...next.positions[item.id] } });
+    if (Object.hasOwn(object(patch.themes), item.id) && next.themes[item.id])
+      edits.push({ kind: "map.set", key: `theme:${item.id}`, value: next.themes[item.id] });
   }
   // Each item is one map entry, so moving one frame preserves simultaneous moves of other frames.
   await storage.records.commit({

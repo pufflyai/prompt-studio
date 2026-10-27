@@ -25,11 +25,11 @@ export const checkNativeBuildFreshness = async () => {
   for (const [file, hash] of Object.entries(manifest.outputs)) {
     try {
       const actual = createHash("sha256")
-        .update(await readFile(resolve(generatedRoot, "native", file)))
+        .update(await readFile(resolve(generatedRoot, file)))
         .digest("hex");
-      if (actual !== hash) stale.push(`generated/native/${file}`);
+      if (actual !== hash) stale.push(`generated/${file}`);
     } catch {
-      stale.push(`generated/native/${file}`);
+      stale.push(`generated/${file}`);
     }
   }
   return { manifest, stale };

@@ -62,3 +62,68 @@ test("fit ignores a loading placeholder and follows the completed content", () =
     globalThis.requestAnimationFrame = original;
   }
 });
+
+test("zoom keeps the same point in a frame under the pointer including its header offset", () => {
+  const original = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = () => 1;
+  try {
+    const item = { id: "frame", name: "Frame", position: { x: 1280, y: 100 }, width: 1200, height: 960 };
+    const runtime = createCanvasRuntime(
+      { id: "group", name: "Group", items: [item] },
+      readLayout({ version: 1, camera: { x: 20, y: 30, zoom: 0.4 } }, [item]),
+      () => {},
+    );
+    runtime.register(item.id, {
+      offsetWidth: 1200,
+      offsetHeight: 1028,
+      style: {},
+      querySelector: (selector: string) => (selector.startsWith("iframe") ? { offsetLeft: 1, offsetTop: 64 } : null),
+    } as unknown as HTMLElement);
+    runtime.measure();
+    const point = { x: 560, y: 400 };
+    const anchor = runtime.frameAnchor(item.id, point);
+    expect(anchor.x).toBeCloseTo(756.4, 6);
+    expect(anchor.y).toBeCloseTo(255.6, 6);
+    runtime.zoom(1.35, anchor);
+    const after = runtime.frameAnchor(item.id, point);
+    expect(after.x).toBeCloseTo(anchor.x, 6);
+    expect(after.y).toBeCloseTo(anchor.y, 6);
+    runtime.flush();
+  } finally {
+    globalThis.requestAnimationFrame = original;
+  }
+});
+
+test("group rows follow measured height while saved manual positions and themes stay independent", () => {
+  const original = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = () => 1;
+  try {
+    const items = Array.from({ length: 5 }, (_, index) => ({
+      id: `frame-${index}`,
+      name: `Frame ${index}`,
+      width: 1200,
+      height: 240,
+      position: { x: (index % 4) * 1280, y: Math.floor(index / 4) * 1100 },
+    }));
+    const canvas = { id: "group", name: "Group", items, layout: "grid" as const };
+    const initial = readLayout(null, items);
+    const runtime = createCanvasRuntime(canvas, initial, () => {});
+    const tall = { offsetWidth: 1200, offsetHeight: 4000, style: {}, querySelector: () => null };
+    runtime.register(items[0].id, tall as unknown as HTMLElement);
+    runtime.measure();
+    expect(runtime.get().positions["frame-4"].y).toBe(4080);
+    runtime.replace({ ...readLayout(null, items), themes: { "frame-0": "pstdio-dark" } });
+    expect(runtime.get().positions["frame-4"].y).toBe(4080);
+    const moved = readLayout(
+      { version: 1, positions: { "frame-4": { x: 8000, y: 5000 } }, themes: { "frame-0": "pstdio-dark" } },
+      items,
+    );
+    runtime.replace(moved);
+    tall.offsetHeight = 6000;
+    runtime.measure();
+    expect(runtime.get().positions["frame-4"]).toEqual({ x: 8000, y: 5000 });
+    expect(runtime.get().themes["frame-0"]).toBe("pstdio-dark");
+  } finally {
+    globalThis.requestAnimationFrame = original;
+  }
+});

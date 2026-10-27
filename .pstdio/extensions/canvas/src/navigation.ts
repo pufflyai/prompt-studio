@@ -36,10 +36,10 @@ export const canvasPage = definePage({
   main: { kind: "view", view: canvasView.ref, cardinality: "many" },
   slots: [],
 });
-export const canvasTarget = (id: string, label: string) => ({
+export const canvasTarget = (id: string, label: string, projectId?: string) => ({
   kind: "page" as const,
   page: canvasPage.ref,
-  resource: { type: canvasResource.id, id, label },
+  resource: { type: canvasResource.id, id, label, ...(projectId ? { projectId, extensionId: "pstdio.canvas" } : {}) },
 });
 export const canvasUrl = (projectId: string, id: string) =>
   serializePageUrl({

@@ -1,12 +1,15 @@
 import { boundedCamera, boundedPoint, type Camera, finite, type Point } from "./controller/geometry";
+import { type FrameTheme, isFrameTheme } from "./frame-themes";
 export interface Layout {
   version: 1;
   camera: Camera;
   positions: Record<string, Point>;
+  themes: Record<string, FrameTheme>;
 }
 export interface LayoutChange {
   camera?: Camera;
   positions?: Record<string, Point>;
+  themes?: Record<string, FrameTheme>;
 }
 export interface PlacedItem {
   id: string;
@@ -23,6 +26,7 @@ export const readLayout = (input: unknown, items: readonly PlacedItem[]) => {
   const saved = document.version === 1 ? document : {};
   const camera = object(saved.camera);
   const positions = object(saved.positions);
+  const themes = object(saved.themes);
   return {
     version: 1 as const,
     camera: boundedCamera({
@@ -33,6 +37,9 @@ export const readLayout = (input: unknown, items: readonly PlacedItem[]) => {
     positions: Object.fromEntries(
       items.map((item) => [item.id, point(positions[item.id]) ?? boundedPoint(item.position)]),
     ),
+    themes: Object.fromEntries(
+      items.flatMap((item) => (isFrameTheme(themes[item.id]) ? [[item.id, themes[item.id]]] : [])),
+    ) as Record<string, FrameTheme>,
   };
 };
 export const updateLayout = (current: Layout, change: unknown, items: readonly PlacedItem[]) => {
@@ -43,6 +50,7 @@ export const updateLayout = (current: Layout, change: unknown, items: readonly P
       version: 1,
       camera: patch.camera ?? current.camera,
       positions: { ...current.positions, ...object(patch.positions) },
+      themes: { ...current.themes, ...object(patch.themes) },
     },
     items,
   );

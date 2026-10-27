@@ -1,9 +1,9 @@
 import { Box, Text } from "@chakra-ui/react";
-import { Canvas } from "@pstdio/ui/canvas";
-import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from "react";
+import { useLayoutEffect, useRef } from "react";
 import type { CanvasDefinition } from "../canvases/definitions";
 import { installItemMovement } from "../controller/item-movement";
 import type { CanvasRuntime } from "../controller/runtime";
+import { CanvasViewport } from "./canvas-viewport";
 import { ItemFrame } from "./item-frame";
 
 interface StageProps {
@@ -14,7 +14,6 @@ export const CanvasStage = (props: StageProps) => {
   const { canvas, runtime } = props;
   const shell = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
-  const zoom = useSyncExternalStore(runtime.subscribe, () => runtime.get().camera.zoom);
   useLayoutEffect(() => {
     const container = shell.current!;
     runtime.mount(container, stage.current!);
@@ -41,44 +40,8 @@ export const CanvasStage = (props: StageProps) => {
       runtime.dispose();
     };
   }, [runtime]);
-  useEffect(() => {
-    const navigate = (event: MouseEvent) => {
-      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
-      if (!link) return;
-      event.preventDefault();
-      const href = link.getAttribute("href");
-      if (href?.startsWith("#canvas-item=")) runtime.reveal(decodeURIComponent(href.slice(13)));
-    };
-    document.addEventListener("click", navigate);
-    document.addEventListener("auxclick", navigate);
-    return () => {
-      document.removeEventListener("click", navigate);
-      document.removeEventListener("auxclick", navigate);
-    };
-  }, [runtime]);
   return (
-    <Canvas
-      ref={shell}
-      h="full"
-      zoom={zoom}
-      minZoom={0.000001}
-      maxZoom={4}
-      onPan={runtime.pan}
-      onZoom={runtime.zoomChange}
-      onFit={runtime.fit}
-      onReset={runtime.reset}
-      onNavigationEnd={runtime.flush}
-      aria-label={`${canvas.name} canvas`}
-      aria-describedby="canvas-instructions"
-      tabIndex={0}
-      minH="0"
-      minW="0"
-      position="relative"
-      overflow="hidden"
-      cursor="default"
-      overscrollBehaviorX="none"
-      _focusVisible={{ outline: "2px solid", outlineColor: "border.accent", outlineOffset: "-2px" }}
-    >
+    <CanvasViewport viewportRef={shell} name={canvas.name} runtime={runtime}>
       <Text id="canvas-instructions" srOnly>
         Drag empty space to pan. Use the move handle or its arrow keys to move a preview. Click a name to copy it. Focus
         the canvas for arrow keys, plus and minus, F to fit, and 0 to reset the camera.
@@ -88,6 +51,6 @@ export const CanvasStage = (props: StageProps) => {
           <ItemFrame key={item.id} item={item} runtime={runtime} />
         ))}
       </Box>
-    </Canvas>
+    </CanvasViewport>
   );
 };

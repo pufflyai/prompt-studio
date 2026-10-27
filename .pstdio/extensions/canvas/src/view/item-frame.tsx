@@ -2,22 +2,14 @@ import { Box, Button, Flex, Text } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CanvasItem } from "../canvases/definitions";
-import { previews } from "../canvases/previews";
-import { PencilPreview } from "../catalog/pencil/preview";
-import { CatalogPreviewFrame } from "../catalog/preview";
 import type { CanvasRuntime } from "../controller/runtime";
+import { FramePreview } from "../frames/frame";
+import { FrameThemePicker } from "./frame-theme-picker";
 
 interface ItemProps {
   item: CanvasItem;
   runtime: CanvasRuntime;
 }
-const ItemPreview = (props: { item: CanvasItem }) => {
-  const { item } = props;
-  if (item.preview?.kind === "design") return <PencilPreview file={item.preview.file} rootId={item.preview.rootId} />;
-  if (item.preview) return <CatalogPreviewFrame preview={item.preview} name={item.name} />;
-  const Component = item.component ? previews[item.component] : undefined;
-  return Component ? <Component /> : null;
-};
 export const ItemFrame = (props: ItemProps) => {
   const { item, runtime } = props;
   const [feedback, setFeedback] = useState<"" | "Copied" | "Select and copy the name">("");
@@ -75,6 +67,7 @@ export const ItemFrame = (props: ItemProps) => {
             {item.name}
           </Button>
         </Tooltip>
+        <FrameThemePicker id={item.id} name={item.name} runtime={runtime} />
         <Text role="status" aria-live="polite" textStyle="label/XS" color="fg.muted">
           {feedback}
         </Text>
@@ -98,7 +91,7 @@ export const ItemFrame = (props: ItemProps) => {
         borderRadius="xs"
         data-canvas-preview={item.id}
       >
-        <ItemPreview item={item} />
+        <FramePreview item={item} runtime={runtime} />
       </Box>
     </Box>
   );

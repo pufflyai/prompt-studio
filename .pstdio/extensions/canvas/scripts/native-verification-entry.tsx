@@ -46,7 +46,7 @@ const Harness = () => {
     <ChakraProvider value={psTheme}>
       <CanvasThemeContext value={{ id: dark ? "pstdio-dark" : "pstdio-light", mode: dark ? "dark" : "light" }}>
         <CanvasThemeProvider>
-          <Box h="100vh" display="flex" flexDirection="column">
+          <Box w="full" h="100vh" display="flex" flexDirection="column">
             <Button size="xs" onClick={() => setDark(!dark)}>
               Switch verification theme
             </Button>

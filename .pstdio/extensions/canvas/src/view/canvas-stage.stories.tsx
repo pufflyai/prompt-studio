@@ -11,7 +11,7 @@ const Example = (props: { canvas: CanvasDefinition; zoom?: number }) => {
     createCanvasRuntime(canvas, readLayout({ version: 1, camera: { x: 24, y: 24, zoom } }, canvas.items), () => {}),
   );
   return (
-    <Box h="full" minH="0">
+    <Box w="full" h="full" minH="0">
       <CanvasStage canvas={canvas} runtime={runtime} />
     </Box>
   );
@@ -38,4 +38,11 @@ export const SharedComponents = {
 };
 export const IntrinsicDocumentation = {
   render: () => <Example canvas={canvases.find((canvas) => canvas.id === "documentation-contract")!} zoom={0.2} />,
+};
+
+export const GroupedFolderExamples = {
+  render: () => <Example canvas={canvases.find((canvas) => canvas.name === "Create folder")!} zoom={0.2} />,
+};
+export const GroupedAutoBuild = {
+  render: () => <Example canvas={canvases.find((canvas) => canvas.name === "Auto Build")!} zoom={0.2} />,
 };
