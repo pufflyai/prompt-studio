@@ -396,3 +396,88 @@ for (const initialValue of [1, 50]) {
     }
   });
 }
+
+test("a downloaded number and its alias keep their floor after deletion before the first allocation", async () => {
+  const first = await fixture();
+  const second = await fixture();
+  try {
+    await first.documents.open({ owner: first.owner }).records.commit({
+      operationId: "remote-number",
+      edits: [
+        {
+          recordId: "remote",
+          replace: {
+            id: "remote",
+            extensionId: first.input.extensionId,
+            kind: first.input.kind,
+            prefix: "PS",
+            value: 1,
+            aliases: ["PS-50"],
+          },
+        },
+      ],
+    });
+    const snapshot = await first.service.recordStream(first.input.projectId).snapshot();
+    const incoming = second.service.recordStream(second.input.projectId);
+    await incoming.merge(
+      new Map(snapshot.records.map((record) => [record.recordId, [record.bytes]])),
+      "adopt",
+      await incoming.open(),
+    );
+    await second.documents.open({ owner: second.owner }).records.commit({
+      operationId: "delete-remote",
+      edits: [{ recordId: "remote", deleted: true }],
+    });
+    expect((await second.service.allocate(second.input)).shorthand).toBe("PS-51");
+    await first.documents.open({ owner: first.owner }).records.commit({
+      operationId: "large-number",
+      edits: [
+        {
+          recordId: "large",
+          replace: {
+            id: "large",
+            extensionId: first.input.extensionId,
+            kind: first.input.kind,
+            prefix: "PS",
+            value: 2_147_483_648,
+            aliases: [],
+          },
+        },
+      ],
+    });
+    expect((await first.service.allocate(first.input)).shorthand).toBe("PS-2147483649");
+  } finally {
+    for (const f of [first, second]) {
+      await f.documents.flushStatistics();
+      await f.close();
+    }
+  }
+});
+
+test("core records with malformed number aliases save without entering the number index", async () => {
+  const f = await fixture();
+  try {
+    const records = f.documents.open({ owner: f.owner }).records;
+    const invalid = ["PS-NaN", "PS-Infinity", "PS-1.5", "PS-0", "PS-9007199254740992", "PS-"];
+    await records.commit({
+      operationId: "malformed-aliases",
+      edits: invalid.map((alias, index) => ({
+        recordId: `invalid-${index}`,
+        replace: {
+          id: `invalid-${index}`,
+          extensionId: f.input.extensionId,
+          kind: f.input.kind,
+          prefix: "PS",
+          value: 1,
+          aliases: [alias],
+        },
+      })),
+    });
+    expect(await records.list()).toHaveLength(invalid.length);
+    expect(await f.service.findByShorthand({ ...f.input, shorthand: "PS-1" })).toEqual([]);
+    expect((await f.service.allocate(f.input)).shorthand).toBe("PS-1");
+  } finally {
+    await f.documents.flushStatistics();
+    await f.close();
+  }
+});

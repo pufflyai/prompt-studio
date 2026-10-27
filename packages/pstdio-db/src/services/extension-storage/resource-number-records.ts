@@ -13,6 +13,14 @@ import { jsonBatches } from "./json-batches";
 export type NumberRecord = NumberedResource & { aliases: string[] };
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
+const aliasNumber = (shorthand: string) => {
+  const separator = shorthand.lastIndexOf("-");
+  const suffix = shorthand.slice(separator + 1);
+  const value = Number(suffix);
+  if (separator < 1 || !/^[1-9]\d*$/.test(suffix) || !Number.isSafeInteger(value)) return;
+  return { shorthand, prefix: shorthand.slice(0, separator), value };
+};
+
 export const isNumberRecord = (record: StorageRecord) => {
   if (!record.exists || record.deleted) return false;
   const value = record.value;
@@ -26,7 +34,7 @@ export const isNumberRecord = (record: StorageRecord) => {
     Number.isSafeInteger(value.value) &&
     value.value > 0 &&
     Array.isArray(value.aliases) &&
-    value.aliases.every((alias) => typeof alias === "string")
+    value.aliases.every((alias) => typeof alias === "string" && aliasNumber(alias) !== undefined)
   );
 };
 
@@ -45,13 +53,7 @@ export const nextIndexedNumber = async (tx: Transaction, projectId: string, pref
       .limit(1);
     return row?.value ?? 0;
   };
-  const value = Math.max((sequence?.next ?? 1) - 1, await highest(identities), await highest(aliases)) + 1;
-  // Keep the next unused number even when records disappear or allocation skips indexed history.
-  await tx
-    .update(sequences)
-    .set({ next_value: value + 1 })
-    .where(where);
-  return value;
+  return Math.max((sequence?.next ?? 1) - 1, await highest(identities), await highest(aliases)) + 1;
 };
 
 /** Maintained in the same transaction as the canonical core records, for local and remote writes. */
@@ -92,22 +94,31 @@ export const projectNumberRecords = async (
       SELECT ${owner.workbenchId}, i.resource_id, i.extension_id, i.kind, i.prefix, i.value, i.shorthand
       FROM jsonb_to_recordset(${batch}::jsonb) AS i(resource_id text, extension_id text, kind text, prefix text, value bigint, shorthand text)`);
   }
-  for (const batch of jsonBatches(
-    live.flatMap((r) =>
-      [...new Set(r.aliases)].map((shorthand) => {
-        const separator = shorthand.lastIndexOf("-");
-        return {
-          resource_id: r.id,
-          shorthand,
-          prefix: shorthand.slice(0, separator),
-          value: Number(shorthand.slice(separator + 1)),
-        };
-      }),
-    ),
-  )) {
+  const history = live.flatMap((r) =>
+    [...new Set(r.aliases)].map((shorthand) => ({ resource_id: r.id, ...aliasNumber(shorthand)! })),
+  );
+  for (const batch of jsonBatches(history)) {
     await tx.execute(sql`INSERT INTO storage_resource_aliases (workbench_id, resource_id, shorthand, prefix, value)
       SELECT ${owner.workbenchId}, i.resource_id, i.shorthand, i.prefix, i.value
       FROM jsonb_to_recordset(${batch}::jsonb) AS i(resource_id text, shorthand text, prefix text, value bigint)`);
+  }
+  // Projection owns the floor for every writer, including a device that has never allocated locally.
+  const timestamp = new Date().toISOString();
+  for (const batch of jsonBatches(
+    live.map((r) => ({
+      extension_id: r.extensionId,
+      kind: r.kind,
+      prefix: r.prefix,
+      value: r.aliases.reduce((highest, alias) => Math.max(highest, aliasNumber(alias)!.value), r.value),
+    })),
+  )) {
+    await tx.execute(sql`INSERT INTO extension_resource_sequences
+      (project_id, extension_id, kind, prefix, next_value, created_at, updated_at)
+      SELECT ${owner.workbenchId}, i.extension_id, i.kind, i.prefix, max(i.value) + 1, ${timestamp}, ${timestamp}
+      FROM jsonb_to_recordset(${batch}::jsonb) AS i(extension_id text, kind text, prefix text, value bigint)
+      GROUP BY i.extension_id, i.kind, i.prefix
+      ON CONFLICT (project_id, extension_id, kind) DO UPDATE
+      SET next_value = greatest(extension_resource_sequences.next_value, excluded.next_value), updated_at = excluded.updated_at`);
   }
 };
 

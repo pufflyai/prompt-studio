@@ -1,3 +1,4 @@
+ALTER TABLE "extension_resource_sequences" ALTER COLUMN "next_value" SET DATA TYPE bigint;--> statement-breakpoint
 ALTER TABLE "storage_resource_aliases" ADD COLUMN "prefix" text DEFAULT '' NOT NULL;--> statement-breakpoint
 ALTER TABLE "storage_resource_aliases" ADD COLUMN "value" bigint DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE "storage_resource_identities" ADD COLUMN "prefix" text DEFAULT '' NOT NULL;--> statement-breakpoint
