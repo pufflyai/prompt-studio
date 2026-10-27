@@ -64,10 +64,10 @@ export default defineExtension({
       action: { kind: "command", target: { command: command.ref } },
     }),
     defineKeybinding({ id: "page", key: "alt+shift+j", action: { kind: "page", page: page.ref } }),
-    defineKeybinding({ id: "panel", key: "alt+shift+i", action: { kind: "panel", panel: page.panels.inspector! } }),
+    defineKeybinding({ id: "panel", key: "alt+shift+q", action: { kind: "panel", panel: page.panels.inspector! } }),
     defineKeybinding({
       id: "compound",
-      key: "alt+shift+b",
+      key: "alt+shift+y",
       action: {
         kind: "compound",
         targets: [
@@ -78,7 +78,7 @@ export default defineExtension({
     }),
     defineKeybinding({
       id: "href",
-      key: "alt+shift+l",
+      key: "alt+shift+z",
       action: { kind: "href", href: "https://example.com/shortcuts" },
     }),
   ],

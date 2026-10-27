@@ -19,27 +19,6 @@ interface KeyboardKeyInput {
   message(text: string): void;
 }
 
-const navigate = async (context: KeyboardKeyInput, key: string) => {
-  if (/^[1-9]$/.test(key)) {
-    context.store.setState({ lastKey: key, message: "" });
-    await context.controller.selectTab(Number(key));
-    return true;
-  }
-  if (key !== "ArrowLeft" && key !== "ArrowRight") return false;
-  context.store.setState({ lastKey: key });
-  const navigation = context
-    .catalog(true)
-    .filter(
-      (shortcut) =>
-        !shortcut.disabled &&
-        shortcut.binding.layer === "view" &&
-        shortcut.keys.length === 2 &&
-        shortcut.keys[1] === key.toUpperCase(),
-    );
-  if (navigation.length) await runShortcutMatches(navigation, context.select, context.run);
-  return true;
-};
-
 export const pressKeyboardKey = async (context: KeyboardKeyInput, input: string) => {
   const { controller, store, catalog, select, run, message } = context;
   if (!store.getState().active) return;
@@ -56,7 +35,11 @@ export const pressKeyboardKey = async (context: KeyboardKeyInput, input: string)
     controller.finish();
     return;
   }
-  if (await navigate(context, input)) return;
+  if (/^[1-9]$/.test(input)) {
+    store.setState({ lastKey: input, message: "" });
+    await controller.selectTab(Number(input));
+    return;
+  }
   if (input === "Backspace") {
     controller.back();
     return;

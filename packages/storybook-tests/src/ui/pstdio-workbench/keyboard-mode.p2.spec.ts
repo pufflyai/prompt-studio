@@ -25,8 +25,8 @@ test("fast entry owns keys, global navigation stays active and exits into Second
     bubbles: true,
     cancelable: true,
   });
-  await page.keyboard.press("v");
-  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("g");
+  await page.keyboard.press("Alt+Shift+PageUp");
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
   await expect(draft).toHaveValue("Unsaved Secondary");
   await page.keyboard.press("Alt+Shift+4");
@@ -52,11 +52,11 @@ test("ambiguous visible resources require a choice and Enter on the heading is i
   await expect(selector).toBeHidden();
 });
 
-test("tabs beyond nine use the picker and repeated arrows wrap", async ({ page }) => {
+test("tabs beyond nine use the direct picker and tab navigation wraps", async ({ page }) => {
   await page.goto(storyUrl(baseUrl, `${prefix}crowded-tabs`));
   await waitForStoryPlayback(page);
   await page.keyboard.press("Alt+Shift+Space");
-  await page.keyboard.press("v");
+  await page.keyboard.press("g");
   await expect
     .poll(() =>
       page.locator('[role="tablist"]').evaluateAll((strips) => {
@@ -75,15 +75,15 @@ test("tabs beyond nine use the picker and repeated arrows wrap", async ({ page }
     .locator('xpath=ancestor::*[@role="tab"]')
     .getAttribute("aria-labelledby");
   const firstLabel = await page.locator(`[id="${firstLabelId}"]`).textContent();
-  await page.keyboard.press("t");
+  await page.keyboard.press("Alt+Shift+0");
   const picker = page.getByRole("dialog", { name: "Select tab", exact: true });
   await expect(picker).toBeVisible();
   await expect(picker.getByText(/^10 ·/)).toBeVisible();
   await page.keyboard.press("1");
   await expect(picker).toBeHidden();
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Alt+Shift+PageDown");
+  await page.keyboard.press("Alt+Shift+PageDown");
+  await page.keyboard.press("Alt+Shift+PageDown");
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(

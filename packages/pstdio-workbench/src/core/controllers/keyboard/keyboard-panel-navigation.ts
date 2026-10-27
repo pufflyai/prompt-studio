@@ -3,7 +3,13 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 
 export const registerKeyboardPanelNavigation = (core: WorkbenchCore) => {
   const destination = (direction: string) => {
-    const current = core.keyboard.store.getState().selectedRegion ?? "main";
+    const state = core.keyboard.store.getState();
+    const active = core.keyboard
+      .visibleTargets()
+      .find((target) => target.id === core.layout.getLayout().activeWidgetId);
+    const current = state.active
+      ? (state.selectedRegion ?? "main")
+      : (core.focus.getActiveRegion() ?? active?.region ?? "main");
     const arrangement = resolveArrangement(core.layout.getLayout().arrangement);
     const transitions: Record<string, Record<string, string>> = {
       main: { [arrangement.side]: "side", [arrangement.secondary === "top" ? "up" : "down"]: "secondary" },
@@ -21,7 +27,7 @@ export const registerKeyboardPanelNavigation = (core: WorkbenchCore) => {
   ] as const) {
     const commandId = `workbench.keyboard.focus.${direction}`;
     core.commands.registerCommand(
-      { id: commandId, label: `Focus panel ${direction}` },
+      { id: commandId, label: `Focus panel ${direction}`, category: "Panels and tabs" },
       {
         isEnabled: () => Boolean(destination(direction)),
         execute: () => {
@@ -32,8 +38,8 @@ export const registerKeyboardPanelNavigation = (core: WorkbenchCore) => {
     );
     core.keybindings.registerKeybinding({
       action: { kind: "command", commandId },
-      keybinding,
-      layer: "view",
+      keybinding: `Alt+Shift+${keybinding}`,
+      allowInInputs: true,
       sticky: true,
     });
   }

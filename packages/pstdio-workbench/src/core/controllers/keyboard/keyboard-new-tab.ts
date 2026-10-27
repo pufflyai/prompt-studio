@@ -6,7 +6,7 @@ import { regionLabel } from "./keyboard-presentations";
 const regions: WorkbenchPanelRegion[] = ["main", "secondary", "side"];
 export const registerKeyboardNewTab = (core: WorkbenchCore) => {
   core.commands.registerCommand(
-    { id: "workbench.keyboard.newTab", label: "New tab" },
+    { id: "workbench.keyboard.newTab", label: "New tab", category: "Panels and tabs" },
     {
       execute: (args?: { panelId?: string; resourceKind?: string }) => {
         core.keyboard.select(
@@ -67,7 +67,7 @@ export const registerKeyboardNewTab = (core: WorkbenchCore) => {
   core.keybindings.registerKeybinding({
     id: "workbench.keyboard.newTab",
     action: { kind: "command", commandId: "workbench.keyboard.newTab" },
-    keybinding: "N",
-    layer: "view",
+    keybinding: "Alt+Shift+Enter",
+    allowInInputs: true,
   });
 };

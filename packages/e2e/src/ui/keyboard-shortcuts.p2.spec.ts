@@ -36,7 +36,10 @@ test("base navigation chords work outside and inside shortcut mode and Shift sla
   await expect(reference.getByRole("group", { name: "Keyboard shortcuts", exact: true }).locator("kbd")).toHaveCount(2);
 });
 
-test("new-tab creation adds a Secondary tab and Close selects that instance", async ({ page, request }) => {
+test("direct panel shortcuts open, focus, move and close tabs without entering shortcut mode", async ({
+  page,
+  request,
+}) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Typed session tabs" }),
   });
@@ -47,9 +50,7 @@ test("new-tab creation adds a Secondary tab and Close selects that instance", as
   await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   const secondary = page.locator('[data-workbench-region="secondary"]');
   const before = await secondary.getByRole("tab").count();
-  await page.keyboard.press("Alt+Shift+Space");
-  await page.keyboard.press("v");
-  await page.keyboard.press("n");
+  await page.keyboard.press("Alt+Shift+Enter");
   await page
     .getByRole("dialog", { name: "New tab · destination", exact: true })
     .getByRole("button", { name: /Secondary/ })
@@ -59,14 +60,38 @@ test("new-tab creation adds a Secondary tab and Close selects that instance", as
     .getByRole("button", { name: /Session/i })
     .click();
   await expect(secondary.getByRole("tab")).toHaveCount(before + 1);
-  await page.keyboard.press("Alt+Shift+Space");
-  await page.keyboard.press("v");
-  await page.keyboard.press("x");
+  await page.keyboard.press("Alt+Shift+F");
+  await page
+    .getByRole("dialog", { name: "Focus panel", exact: true })
+    .getByRole("button", { name: /Secondary/ })
+    .click();
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+  await page.keyboard.press("Alt+Shift+M");
+  await expect(page.getByRole("dialog", { name: "Move tab", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(secondary.getByRole("tab")).toHaveCount(before + 1);
+  await page.keyboard.press("Alt+Shift+X");
   await page
     .getByRole("dialog", { name: "Close tab", exact: true })
     .getByRole("button", { name: /Secondary/ })
     .click();
   await expect(secondary.getByRole("tab")).toHaveCount(before);
+  for (const [key, label] of [
+    ["B", /Bottom Panel/],
+    ["E", /Side Panel/],
+  ] as const) {
+    const toggle = page
+      .getByRole("group", { name: "Panel controls", exact: true })
+      .getByRole("button", { name: label });
+    const wasOpen = (await toggle.getAttribute("aria-pressed")) === "true";
+    await page.keyboard.press(`Alt+Shift+${key}`);
+    await expect(toggle).toHaveAttribute("aria-pressed", String(!wasOpen));
+    await page.keyboard.press("Alt+Shift+Space");
+    await page.keyboard.press(`Alt+Shift+${key}`);
+    await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen));
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+  }
 });
 
 test("lists every registered keyboard shortcut", async ({ page, request }, testInfo) => {
@@ -99,7 +124,7 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
     "Go to notifications",
     "Keyboard shortcuts",
     "Shortcut greeting",
-    "Open shortcut destination",
+    "Go to shortcut destination",
     "Shortcut inspector",
     "Shortcut reference page + Shortcut inspector",
     "https://example.com/shortcuts",
@@ -108,10 +133,10 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   }
   const dialog = page.getByRole("dialog").last();
   await testInfo.attach("shortcut-inventory", { body: await dialog.innerText(), contentType: "text/plain" });
-  await dialog.getByRole("group", { name: "Open shortcut destination", exact: true }).scrollIntoViewIfNeeded();
+  await dialog.getByRole("group", { name: "Go to shortcut destination", exact: true }).scrollIntoViewIfNeeded();
   await testInfo.attach("shortcut-reference", { body: await page.screenshot(), contentType: "image/png" });
   await expect(dialog.getByRole("heading", { name: "Shortcut reference", exact: true })).toBeVisible();
-  await expect(dialog.getByRole("group", { name: "Open shortcut destination", exact: true })).toContainText(/J/i);
+  await expect(dialog.getByRole("group", { name: "Go to shortcut destination", exact: true })).toContainText(/J/i);
   for (const enabled of [false, true]) {
     const changed = await request.patch(`${apiBase}/v1/projects/${project.id}/extensions/${instanceId}`, {
       data: { enabled },
@@ -125,7 +150,7 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   await expect(dialog).toBeHidden();
   await page.keyboard.press("Alt+Shift+J");
   await expect(page).toHaveURL(/\/extensions\/e2e.shortcut-reference\/reference/);
-  await page.keyboard.press("Alt+Shift+I");
+  await page.keyboard.press("Alt+Shift+Q");
   await expect(page.getByText("Shortcut inspector", { exact: true }).first()).toBeVisible();
   const nextResponse = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Shortcut isolation" }),

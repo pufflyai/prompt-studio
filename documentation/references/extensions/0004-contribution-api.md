@@ -530,7 +530,7 @@ The header and footer keep the mode's sections, followed by the sections of ever
 
 Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
 
-The same action is available with **Alt+Shift+Up** or **Alt+Shift+Space → G → P**. Its shortcut hint appears on the return row in keyboard mode, and it is listed under the current mode's name in shortcut discovery and the command palette.
+The same action is available with **Alt+Shift+Up**, both outside and inside shortcut mode. Its shortcut hint appears on the return row in keyboard mode, and it is listed under the current mode's name in shortcut discovery and the command palette.
 
 Users can hide and reorder a level's labeled sections, but its rows keep the order their owner gives them.
 

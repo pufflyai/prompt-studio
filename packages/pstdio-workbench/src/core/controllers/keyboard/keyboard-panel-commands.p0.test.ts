@@ -1,6 +1,19 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "../../workbench-core";
 
+test.each(["secondary", "side"] as const)("direct %s panel toggle preserves shortcut mode", async (region) => {
+  const core = createWorkbench();
+  const id = `workbench.keyboard.toggle.${region}`;
+  const wasOpen = core.shell.getRegionState(region).open;
+  await core.commands.executeCommand(id);
+  expect(core.shell.getRegionState(region).open).toBe(!wasOpen);
+  expect(core.keyboard.store.getState().active).toBe(false);
+  core.keyboard.open();
+  await core.keyboard.invoke(id);
+  expect(core.shell.getRegionState(region).open).toBe(wasOpen);
+  expect(core.keyboard.store.getState().active).toBe(true);
+});
+
 test.each([
   "closeTab",
   "pinTab",

@@ -8,7 +8,7 @@ Press **Alt+Shift+Space** to enter shortcut mode. A small bubble appears at the 
 
 On macOS, Alt is Option. Entry matches the physical Space key even when Option produces a non-breaking space. Shortcut sequences use a small redo arrow between steps. The bubble has no Back/Exit buttons or instructional footer. Required action and target choices still use an explicit modal.
 
-Extensions contribute to these shared groups. No flow requires choosing an extension by name first.
+Extensions contribute to these shared groups. Groups with no available actions are hidden. No flow requires choosing an extension by name first.
 
 The shortcut reference uses the command palette's search layout and groups assigned actions by resource. Each action has one default shortcut. Rows contain the action and keys without subtitles. Internal commands with no assigned shortcut stay in command discovery. Shift+/ opens this view, including from shortcut mode.
 
@@ -18,11 +18,25 @@ The shortcut reference uses the command palette's search layout and groups assig
 
 Core navigation uses its direct base chords: Alt+Shift+Left/Right for history, Alt+Shift+S for Sessions, and Alt+Shift+W for Workspaces. These work from any shortcut-mode prefix and keep the mode active; they have no duplicate Go sequence. The command palette keeps Mod+P, commands Alt+Shift+K, the Sidenav Mod+B, and settings Mod+,.
 
-Inside shortcut mode, plain Left and Right select the previous or next tab across the visible layout and wrap at either end. One tab has an outline for the keyboard selection, even when several panels each have a selected tab. Enter or Escape returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
+Alt+Shift+PageUp and Alt+Shift+PageDown select the previous or next tab across the visible layout and wrap at either end. They work outside and inside shortcut mode. One tab has an outline for the keyboard selection in shortcut mode, even when several panels each have a selected tab. Enter or Escape returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
 
-Alt+Shift+1 through Alt+Shift+9 are the default chords for global tab numbers. User overrides live in the `workbench.keyboard` preference and can be set through `workbench.keyboard.setAssignment`; the reference is read-only. Inside keyboard mode, plain 1 through 9 select the same numbers from any navigation group. Empty-panel cards share this numbering: their displayed number opens that card in its own panel. Cards show the direct chord outside keyboard mode and the plain number inside it. An action or target chooser owns its own numbers while open. Numbers follow spatial placement and displayed tab/card order, and recompute when the layout changes. View → T opens a searchable picker beyond nine. Direct selection outside keyboard mode stays outside it.
+Alt+Shift+1 through Alt+Shift+9 are the default chords for global tab numbers. User overrides live in the `workbench.keyboard` preference and can be set through `workbench.keyboard.setAssignment`; the reference is read-only. Inside keyboard mode, plain 1 through 9 select the same numbers from any navigation group. Empty-panel cards share this numbering: their displayed number opens that card in its own panel. Cards show the direct chord outside keyboard mode and the plain number inside it. An action or target chooser owns its own numbers while open. Numbers follow spatial placement and displayed tab/card order, and recompute when the layout changes. Alt+Shift+0 opens a searchable picker beyond nine. Direct selection outside keyboard mode stays outside it.
 
-View → N chooses a destination and addable panel type for a persistent new tab. Current view → N starts a fresh session in an existing Session tab. View → O moves one tab while preserving its identity; View → R repositions a whole panel using its allowed positions. Canceling an unfinished flow changes nothing.
+Panel and tab actions use direct Alt+Shift chords and work from any shortcut-mode prefix. They have no second View sequence. These explicit workbench chords also work while editing, including in managed webviews.
+
+| Action | Alt+Shift key |
+| --- | --- |
+| New tab: choose a destination and panel type | Enter |
+| Focus panel: choose a visible presentation | F |
+| Focus the panel left, right, up, or down | H, L, U, D |
+| Move tab: choose a tab and destination | M |
+| Reposition panel | R |
+| Close tab | X |
+| Pin or unpin tab | I |
+| Toggle secondary panel | B |
+| Toggle side panel | E |
+
+Current view → N starts a fresh session in an existing Session tab. Moving a tab preserves its identity; repositioning a panel uses its allowed positions. Canceling an unfinished flow changes nothing. Direct focus and tab cycling use the live focused panel and active tab outside shortcut mode.
 
 ## Creation and shared settings
 
@@ -48,7 +62,7 @@ An extension adds optional `layer`, `targetScope`, and `sticky` fields to its ex
 
 Choose a shared group by the action's purpose. The old `extensions` layer is deprecated; existing bindings join Current view as project actions until their author chooses a more specific group. Extension aliases are deprecated. Internal extension IDs never appear as keys a person must type.
 
-The resolved catalog supplies execution, the shortcut reference, contribution details, navigation hints, menus, and palette hints. Hints match the typed action and its arguments. Navigation hints appear in shortcut mode, preserve existing badges, and show only remaining keys that can complete from the current prefix. After V, a Go action's G → A hint is hidden. Available direct chords can still appear because they work from any prefix. All consumers share the catalog for unchanged workbench inputs; action execution rechecks current availability.
+The resolved catalog supplies execution, the shortcut reference, contribution details, navigation hints, menus, and palette hints. Page navigation uses “Go to…” labels whether its shortcut is direct or in the Go group. Hints match the typed action and its arguments. Navigation hints appear in shortcut mode, preserve existing badges, and show only remaining keys that can complete from the current prefix. After V, a Go action's G → A hint is hidden. Available direct chords can still appear because they work from any prefix. All consumers share the catalog for unchanged workbench inputs; action execution rechecks current availability.
 
 ## Webviews
 

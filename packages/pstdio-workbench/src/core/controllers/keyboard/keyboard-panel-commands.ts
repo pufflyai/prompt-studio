@@ -1,23 +1,25 @@
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { registerKeyboardNewTab } from "./keyboard-new-tab";
 import { registerKeyboardPanelNavigation } from "./keyboard-panel-navigation";
+import { registerKeyboardPanelVisibility } from "./keyboard-panel-visibility";
 import { presentationResourceKey, regionLabel, visibleKeyboardRegions } from "./keyboard-presentations";
 
 export const registerKeyboardPanelCommands = (core: WorkbenchCore) => {
   registerKeyboardPanelNavigation(core);
+  registerKeyboardPanelVisibility(core);
   registerKeyboardNewTab(core);
   const register = (name: string, label: string, key: string, execute: () => void | Promise<void>, sticky = false) => {
     const id = `workbench.keyboard.${name}`;
-    core.commands.registerCommand({ id, label }, { execute });
+    core.commands.registerCommand({ id, label, category: "Panels and tabs" }, { execute });
     core.keybindings.registerKeybinding({
       id,
       action: { kind: "command", commandId: id },
-      keybinding: key,
-      layer: "view",
+      keybinding: `Alt+Shift+${key}`,
+      allowInInputs: true,
       sticky,
     });
   };
-  register("moveTab", "Move tab", "O", () => {
+  register("moveTab", "Move tab", "M", () => {
     const tabs = core.keyboard
       .visibleTargets()
       .filter((tab) => core.getPanelDestinations(tab.id).some((region) => region !== tab.region));
@@ -124,7 +126,7 @@ export const registerKeyboardPanelCommands = (core: WorkbenchCore) => {
         })),
     ),
   );
-  register("pinTab", "Pin or unpin tab", "P", () =>
+  register("pinTab", "Pin or unpin tab", "I", () =>
     core.keyboard.select(
       "Pin or unpin tab",
       core.keyboard

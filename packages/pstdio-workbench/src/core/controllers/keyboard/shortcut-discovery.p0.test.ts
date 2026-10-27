@@ -3,6 +3,32 @@ import { getNavigationTargetKey } from "../../registries/navigation/navigation-t
 import { createWorkbench } from "../../workbench-core";
 import { shortcutOpeningChord } from "./shortcut-menu";
 
+test("shortcut mode only lists groups with available actions", () => {
+  const core = createWorkbench();
+  core.commands.registerCommand({ id: "create-record", label: "Create record" }, { execute() {} });
+  core.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "create-record" },
+    keybinding: "R",
+    layer: "create",
+  });
+  core.keyboard.open();
+  expect(core.keyboard.entries().map((entry) => entry.key)).toEqual(["C"]);
+});
+
+test("direct page navigation has a Go to label without a second Go binding", () => {
+  const core = createWorkbench();
+  core.keybindings.registerKeybinding({
+    id: "notes",
+    label: "Notes",
+    action: { kind: "page", page: { kind: "page", id: "notes", extensionId: "acme.notes" } },
+    keybinding: "Alt+Shift+O",
+  });
+  const shortcuts = core.keyboard.catalog().filter((entry) => entry.id === "notes");
+  expect(shortcuts).toHaveLength(1);
+  expect(shortcuts[0]?.label).toBe("Go to notes");
+  expect(shortcuts[0]?.binding.sticky).toBe(true);
+});
+
 test("many shortcut hints share availability evaluation until their context changes", () => {
   const core = createWorkbench();
   let reads = 0;

@@ -56,7 +56,7 @@ export const resolveShortcutCatalog = (
       .map(({ binding }) => getNavigationTargetKey(binding.action)),
   );
   return bindings.map(({ declared, binding }) => {
-    const navigates = navigation.has(getNavigationTargetKey(binding.action));
+    const navigates = binding.action.kind === "page" || navigation.has(getNavigationTargetKey(binding.action));
     const prefix: string[] = [];
     if (binding.layer) prefix.push(shortcutLayers[sharedShortcutLayer(binding.layer)]);
     const contextual = binding.targetScope ? binding.targetScope !== "project" : binding.layer === "current";

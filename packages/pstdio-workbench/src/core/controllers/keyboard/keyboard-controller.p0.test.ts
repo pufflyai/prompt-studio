@@ -210,10 +210,10 @@ test("navigation stays sticky and direct selection outside mode stays outside", 
   await core.keyboard.selectTab(2);
   expect(core.keyboard.store.getState().active).toBe(false);
   core.keyboard.open();
-  await core.keyboard.press("ArrowRight");
+  await core.keyboard.invoke("workbench.keyboard.ArrowRight");
   expect(core.layout.getLayout().activeWidgetId).toBe(core.keyboard.listTabs()[0]?.id);
   expect(core.keyboard.store.getState().active).toBe(true);
-  await core.keyboard.press("ArrowLeft");
+  await core.keyboard.invoke("workbench.keyboard.ArrowLeft");
   expect(core.keyboard.store.getState().selectedRegion).toBe("secondary");
   await core.keyboard.press("Enter");
   expect(core.keyboard.store.getState().active).toBe(false);
@@ -331,16 +331,14 @@ test("move flow changes nothing until a destination is selected and preserves pr
   const original = ticket("A");
   ticket("B", "secondary");
   core.keyboard.open();
-  await core.keyboard.press("v");
-  await core.keyboard.press("o");
+  await core.keyboard.invoke("workbench.keyboard.moveTab");
   expect(core.keyboard.store.getState().selection?.choices).toHaveLength(2);
   await core.keyboard.choose("1");
   expect(core.keyboard.listTabs().find((tab) => tab.id === original.widgetId)?.region).toBe("main");
   core.keyboard.finish();
   expect(core.keyboard.listTabs().find((tab) => tab.id === original.widgetId)?.region).toBe("main");
   core.keyboard.open();
-  await core.keyboard.press("v");
-  await core.keyboard.press("o");
+  await core.keyboard.invoke("workbench.keyboard.moveTab");
   await core.keyboard.choose("1");
   await core.keyboard.choose("1");
   expect(core.keyboard.listTabs().find((tab) => tab.id === original.widgetId)?.region).toBe("secondary");
@@ -443,14 +441,14 @@ test("matching action contributions combine their visible targets before resolvi
   expect(core.keyboard.store.getState().selection?.choices).toHaveLength(2);
 });
 
-test("disabling an arrow shortcut stops its execution in keyboard mode", async () => {
+test("disabling a tab navigation shortcut stops its execution in keyboard mode", async () => {
   const { core, ticket } = setup();
   ticket("A");
   ticket("B");
   core.keyboard.open();
   const before = core.keyboard.store.getState().selectedId;
   await core.keyboard.setAssignment("workbench.keyboard.ArrowRight", { disabled: true });
-  await core.keyboard.press("ArrowRight");
+  await core.keyboard.invoke("workbench.keyboard.ArrowRight");
   expect(core.keyboard.store.getState().selectedId).toBe(before);
 });
 
@@ -484,19 +482,19 @@ test("Current view follows rendered visibility when a menu collapses responsivel
   registration.dispose();
 });
 
-test("panel focus remains sticky and one-shot selector commands preserve their Back layer", async () => {
+test("direct panel focus stays in shortcut mode and selectors return to the current group", async () => {
   const { core, ticket } = setup();
   ticket("A");
   ticket("B", "secondary");
   core.keyboard.open();
-  await core.keyboard.press("v");
-  await core.keyboard.press("f");
+  await core.keyboard.press("g");
+  await core.keyboard.invoke("workbench.keyboard.focus");
   await core.keyboard.choose("2");
   expect(core.keyboard.store.getState().active).toBe(true);
   expect(core.keyboard.store.getState().selectedRegion).toBe("secondary");
-  await core.keyboard.press("o");
+  await core.keyboard.invoke("workbench.keyboard.moveTab");
   core.keyboard.back();
-  expect(core.keyboard.store.getState().path).toEqual(["V"]);
+  expect(core.keyboard.store.getState().path).toEqual(["G"]);
   expect(core.keyboard.catalog().find((entry) => entry.id === "workbench.keyboard.moveTab")?.binding.sticky).toBe(
     false,
   );
@@ -561,11 +559,39 @@ test("directional panel navigation lands on Secondary's selected presentation an
   const secondary = ticket("C", "secondary");
   core.keyboard.open();
   core.keyboard.selectPresentation(main.widgetId);
-  await core.keyboard.press("v");
-  await core.keyboard.press("d");
+  const down = core.keyboard.catalog().find((entry) => entry.label === "Focus panel down")!;
+  await core.keyboard.invoke(down.id);
   expect(core.keyboard.store.getState().selectedId).toBe(secondary.widgetId);
   expect(core.keyboard.store.getState().active).toBe(true);
   expect(core.commands.isCommandEnabled("workbench.keyboard.focus.down")).toBe(false);
+});
+
+test("direct panel navigation follows live focus after leaving shortcut mode", async () => {
+  const { core, ticket } = setup();
+  const main = ticket("A");
+  ticket("B", "secondary");
+  core.keyboard.open();
+  core.keyboard.selectPresentation(main.widgetId);
+  core.keyboard.finish();
+  core.focus.setActiveRegion("secondary");
+  await core.commands.executeCommand("workbench.keyboard.focus.up");
+  expect(core.layout.getLayout().activeWidgetId).toBe(main.widgetId);
+  expect(core.focus.getActiveRegion()).toBe("main");
+  expect(core.keyboard.store.getState().active).toBe(false);
+});
+
+test("direct tab cycling starts from the active tab after leaving shortcut mode", () => {
+  const { core, ticket } = setup();
+  const first = ticket("A");
+  const second = ticket("B");
+  const third = ticket("C");
+  core.keyboard.open();
+  core.keyboard.selectPresentation(first.widgetId);
+  core.keyboard.finish();
+  core.layout.activateWidget(second.widgetId);
+  core.keyboard.nextTab(1);
+  expect(core.layout.getLayout().activeWidgetId).toBe(third.widgetId);
+  expect(core.keyboard.store.getState().active).toBe(false);
 });
 
 test("panel directions refresh when discovery selects the active Secondary tab", async () => {
@@ -574,17 +600,16 @@ test("panel directions refresh when discovery selects the active Secondary tab",
   ticket("B", "secondary");
   core.keyboard.catalog();
   core.keyboard.open();
-  await core.keyboard.press("V");
-  expect(core.keyboard.entries().some((entry) => entry.key === "U")).toBe(true);
-  expect(core.keyboard.entries().some((entry) => entry.key === "D")).toBe(false);
+  const directions = core.keyboard.catalog().filter((entry) => entry.label.startsWith("Focus panel "));
+  expect(directions.find((entry) => entry.label === "Focus panel up")?.disabled).toBe(false);
+  expect(directions.find((entry) => entry.label === "Focus panel down")?.disabled).toBe(true);
 });
 
 test("pin selector toggles retention without reordering the tab", async () => {
   const { core, ticket } = setup();
   const tab = ticket("A");
   core.keyboard.open();
-  await core.keyboard.press("v");
-  await core.keyboard.press("p");
+  await core.keyboard.invoke("workbench.keyboard.pinTab");
   await core.keyboard.choose("1");
   expect(core.keyboard.listTabs()[0]?.id).toBe(tab.widgetId);
   expect(core.keyboard.listTabs()[0]?.tabRetention).toBe("preview");

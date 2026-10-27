@@ -38,11 +38,15 @@ export const shortcutPathLabels = (_catalog: ResolvedShortcut[], path: string[])
 
 export const shortcutMenuEntries = (catalog: ResolvedShortcut[], path: string[]) => {
   if (!path.length)
-    return Object.entries(shortcutLayers).map(([name, key]) => ({
-      key,
-      label: name === "current" ? "Current view" : name[0]!.toUpperCase() + name.slice(1),
-      shortcut: undefined,
-    }));
+    return Object.entries(shortcutLayers)
+      .filter(([, key]) =>
+        catalog.some((shortcut) => shortcut.binding.layer && !shortcut.disabled && shortcut.keys[0] === key),
+      )
+      .map(([name, key]) => ({
+        key,
+        label: name === "current" ? "Current view" : name[0]!.toUpperCase() + name.slice(1),
+        shortcut: undefined,
+      }));
   const available = catalog.filter(
     (shortcut) =>
       shortcut.binding.layer &&

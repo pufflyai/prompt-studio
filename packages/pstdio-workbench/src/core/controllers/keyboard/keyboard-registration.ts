@@ -48,24 +48,27 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
       allowInInputs: true,
       sticky: true,
     });
-  for (const [name, key, direction] of [
-    ["Previous tab", "ArrowLeft", -1],
-    ["Next tab", "ArrowRight", 1],
+  for (const [name, key, chord, direction] of [
+    ["Previous tab", "ArrowLeft", "PageUp", -1],
+    ["Next tab", "ArrowRight", "PageDown", 1],
   ] as const) {
     const id = `workbench.keyboard.${key}`;
-    core.commands.registerCommand({ id, label: name }, { execute: () => core.keyboard.nextTab(direction) });
+    core.commands.registerCommand(
+      { id, label: name, category: "Panels and tabs" },
+      { execute: () => core.keyboard.nextTab(direction) },
+    );
     core.keybindings.registerKeybinding({
       id,
       action: { kind: "command", commandId: id },
-      keybinding: key,
-      layer: "view",
+      keybinding: `Alt+Shift+${chord}`,
+      allowInInputs: true,
       sticky: true,
     });
   }
   registerKeyboardPanelCommands(core);
   const id = "workbench.keyboard.tabPicker";
   core.commands.registerCommand(
-    { id, label: "Select tab beyond nine" },
+    { id, label: "Select tab beyond nine", category: "Panels and tabs" },
     {
       execute: () => {
         const tabs = core.keyboard.listNumberedTargets().filter((tab) => tab.number > 9);
@@ -87,8 +90,8 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
   core.keybindings.registerKeybinding({
     id,
     action: { kind: "command", commandId: id },
-    keybinding: "T",
-    layer: "view",
+    keybinding: "Alt+Shift+0",
+    allowInInputs: true,
     sticky: true,
   });
 };
