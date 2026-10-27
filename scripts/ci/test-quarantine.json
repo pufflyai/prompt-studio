@@ -371,5 +371,19 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/40547961144"
     ],
     "removeWhen": "Identify and fix the cold native CLI probe delay, then pass ten independent Linux runs with fresh homes and empty PATH within the existing 3000 ms process and 5000 ms test limits, without retries or prewarming."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-attached-recovery.p1.spec.ts",
+    "name": "automatically recovers a CLI-started backend and restores the open project",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-907 / desktop cold extension setup",
+    "reason": "The Linux x64 #1499 merge group exhausted the unchanged 30000 ms case while creating its first project. Runtime phase logs show the cold Claude extension dependency install entered at 17:49:45.667Z and never completed before cancellation; recovery was not reached. The complete Linux desktop suite passed on main in 40547961144 with identical Linux application/test sources; #1499 changes Windows CI storage only. Preserve cold homes, caches, extension installs and every recovery assertion; the installer delay cause is unconfirmed.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40553699230/job/122364263341",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40547961144/job/122343761978"
+    ],
+    "removeWhen": "Identify and fix the cold Claude dependency install delay, then pass this complete case in ten independent Linux x64 runs within its existing 30000 ms allowance, without retries, prewarming or fewer extensions."
   }
 ]

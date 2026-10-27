@@ -40,7 +40,7 @@ console.log(`  Generated embed manifest: ${EMBED_MANIFEST}`);
 
 // 3. Compile for local platform. This is the Bun-compiled pstdio executable used by packaged smoke tests.
 const target = `bun-${process.platform}-${process.arch}`;
-const outfile = "./dist/pstdio";
+const outfile = process.platform === "win32" ? "./dist/pstdio.exe" : "./dist/pstdio";
 const extensionReleaseRef = process.env.PSTDIO_EXTENSION_RELEASE_REF?.trim();
 const defines = extensionReleaseRef ? ["--define", `PSTDIO_BUILD_EXTENSION_RELEASE_REF=${JSON.stringify(extensionReleaseRef)}`] : [];
 

@@ -26,6 +26,8 @@ On 2026-10-26, the user authorized quarantine of the remaining intermittent PS-9
 
 On 2026-10-27, the native OpenCode empty-PATH detection case returned unavailable after 3059.73 ms in the #1329 merge group, against its unchanged 3000 ms process limit. The test and pinned native dependency are unchanged by that PR; clean-main controls passed on macOS in 380.51 ms and Linux in 1027.88 ms. The Linux case now runs once in the existing Bun quarantine lane, with its fresh home, empty PATH, native executable and all assertions preserved. Its startup cause remains unconfirmed. macOS and Windows remain blocking. The registry records the failed run and requires a cause fix plus ten independent cold Linux passes before removal.
 
+The #1499 Linux x64 merge group also exhausted the packaged attached-recovery case before reaching recovery: its cold Claude dependency install never finished before the unchanged 30-second deadline. The complete case passed on main with identical Linux application and test sources in run 40547961144; the PR changes Windows CI storage only. This Linux x64 case joins the existing packaged desktop evidence lane with all cold installs and recovery assertions retained. Its separate registry entry requires an installer cause fix and ten independent cold passes before removal.
+
 ## Limitations
 
 Quarantine temporarily removes these specific cases from merge protection on the affected platforms. It does not prove the product works there. Other platforms and the packaged released-data upgrade contract remain blocking. Every quarantined case still executes without retries or prewarming, at its existing limit, and retains first-attempt evidence. A quarantine failure must be reported separately from stable CI success.
