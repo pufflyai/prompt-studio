@@ -1,8 +1,8 @@
 import {
   type NativeRecordSources,
+  NativeSourcePendingError,
   nativeAssetBaseline,
   nativeTextAssetKey,
-  readTextDocumentSeed,
   type StorageOwner,
 } from "pstdio-sync";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
@@ -12,6 +12,25 @@ import { absentFile, type createFileProjectionIO, type FileIdentity, sameFile } 
 import { blobHash } from "./file-state";
 
 type Record = { recordId: string; nativeSources?: NativeRecordSources; asset?: { sha256: string } | null };
+
+export const createPendingNativeFiles = (ancestors: (path: string) => string[]) => {
+  const paths = new Set<string>();
+  const parents = new Set<string>();
+  return {
+    blocks: (path: string, kind: string | undefined) => paths.has(path) || (parents.has(path) && kind !== "directory"),
+    async run<T>(path: string, action: () => Promise<T>) {
+      try {
+        return await action();
+      } catch (error) {
+        if (!(error instanceof NativeSourcePendingError)) throw error;
+        paths.add(path);
+        for (const parent of ancestors(path)) parents.add(parent);
+        return undefined;
+      }
+    },
+  };
+};
+
 export const createNativeArtifactProjection = (input: {
   owner: StorageOwner;
   storageService: ExtensionsRouteDeps["extensionStorageService"];
@@ -42,7 +61,7 @@ export const createNativeArtifactProjection = (input: {
     },
     async project(path: string, record: Record, expected: FileIdentity) {
       const { text, copy } = source(path, record);
-      await text.store.transaction(input.owner, async ({ document }) => readTextDocumentSeed(document));
+      await text.read();
       const state = await text.exportUpdate();
       const content = new Blob([checkpointText(state)]);
       const hash = await blobHash(content);

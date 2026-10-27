@@ -12,14 +12,14 @@ export interface NativeDocumentSessionSnapshot {
   participants: NativeParticipant[];
   error?: string;
 }
-interface SessionInput {
+export interface NativeDocumentSessionInput {
   projectId: string;
   target: Parameters<NativeDocumentsClient["open"]>[0]["target"];
   client: NativeDocumentsClient;
 }
 type Room = Pick<NativeDocumentJoined, "roomId" | "documentKey" | "seedId" | "sourceSeedId">;
 
-export const createNativeDocumentSession = (input: SessionInput) => {
+export const createNativeDocumentSession = (input: NativeDocumentSessionInput) => {
   let replica: ReturnType<typeof createNativeDocumentReplica> | undefined;
   let stopLocal: (() => void) | undefined;
   let stopCloseGuard: (() => void) | undefined;

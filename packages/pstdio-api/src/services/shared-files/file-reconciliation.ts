@@ -8,7 +8,7 @@ import { absentFile, type createFileProjectionIO, type FileIdentity, sameFile } 
 import { createFileReconciliationScope } from "./file-reconciliation-scope";
 import type { FileProjection, fileProjection } from "./file-state";
 import { type createFileTree, type FileNode, fileRecordId } from "./file-tree";
-import { createNativeArtifactProjection } from "./native-artifact-projection";
+import { createNativeArtifactProjection, createPendingNativeFiles } from "./native-artifact-projection";
 
 type Storage = Awaited<ReturnType<ExtensionsRouteDeps["extensionStorageService"]["open"]>>;
 export const createFileReconciler = (input: {
@@ -84,22 +84,25 @@ export const createFileReconciler = (input: {
     const paths = new Set([...disk.keys(), ...Object.keys(state).filter(included)]);
     const nodes = new Map<string, FileNode>();
     const changes = new Map<string, StorageGroup["edits"][number]>();
+    const pending = createPendingNativeFiles(tree.ancestors);
     const alreadySaved = (path: string, found: Awaited<ReturnType<typeof io.source>>) => {
       const live = canonical.live.get(path);
       if (!found) return !live;
       if (live?.node.kind !== found.kind) return false;
       return found.kind === "directory" || live.record.asset?.sha256 === found.hash;
     };
+    const captureNative = async (path: string, found: Awaited<ReturnType<typeof io.source>>) => {
+      const entry = canonical.all.get(path);
+      if (!entry || !observesNative(entry.record, found, state[path])) return false;
+      await pending.run(path, () => native.observe(path, entry.record, found));
+      if (canonical.live.has(path)) nodes.set(path, entry.node);
+      return true;
+    };
     const capturePath = async (path: string) => {
       const found = disk.get(path) ?? (await io.source(path));
       disk.set(path, found);
       const previous = state[path];
-      const entry = canonical.live.get(path);
-      if (entry && observesNative(entry.record, found, previous)) {
-        await native.observe(path, entry.record, found);
-        nodes.set(path, entry.node);
-        return;
-      }
+      if (await captureNative(path, found)) return;
       const matched = sameFile(identity(previous), found ?? absentFile);
       if (found?.kind === "directory") {
         nodes.set(path, directoryNode(path, previous, nodes));
@@ -119,7 +122,7 @@ export const createFileReconciler = (input: {
       await input.assertWritable?.();
       await storage.records.commit({ operationId: crypto.randomUUID(), edits: [...changes.values()] });
     }
-    return { disk, paths, address: prepared.address };
+    return { disk, paths, pending, address: prepared.address };
   };
   const materialize = async (
     path: string,
@@ -154,8 +157,12 @@ export const createFileReconciler = (input: {
     let complete = true;
     const changes: FileProjection = {};
     for (const { path, entry } of targets) {
+      // A record pointer can arrive before its text. Leave that copy and structural
+      // replacements above it untouched so this pass can return and download the source.
+      if (captured.pending.blocks(path, entry?.node.kind)) continue;
       const expected = captured.disk.get(path) ?? absentFile;
-      const result = await projectFile(path, entry, expected);
+      const result = await captured.pending.run(path, () => projectFile(path, entry, expected));
+      if (!result) continue;
       if (!result.complete) {
         complete = false;
         continue;

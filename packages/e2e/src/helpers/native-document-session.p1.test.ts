@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
+import { createNativeDocumentSession } from "@pstdio/workbench";
 import * as Y from "yjs";
-import { createNativeDocumentSession } from "./native-document-session";
 import { createNativeDocumentSessionFixture } from "./native-document-session.fixture";
 
 const cleanup: (() => Promise<unknown>)[] = [];
@@ -62,7 +62,7 @@ test("browser sessions share transient selections and clear participants when th
   f.setOffline(false);
   await Promise.all([f.session.retry(), peer.retry()]);
   await when(peer, hasSelection);
-});
+}, 5_000);
 
 test("two browser sessions receive concurrent local edits through the host stream", async () => {
   const f = await fixture();
@@ -77,7 +77,7 @@ test("two browser sessions receive concurrent local edits through the host strea
   await Promise.all([waitFor(f.session, "LEFT first\nlast RIGHT"), waitFor(peer, "LEFT first\nlast RIGHT")]);
   expect(f.session.getSnapshot().pending).toBe(false);
   expect(peer.getSnapshot().pending).toBe(false);
-});
+}, 5_000);
 
 test("an edit arriving while its preceding acknowledgement waits is saved in the next batch", async () => {
   const f = await fixture();
@@ -94,7 +94,7 @@ test("an edit arriving while its preceding acknowledgement waits is saved in the
   await read.start();
   expect(read.getSnapshot().document!.getText("content").toString()).toBe("FIRST first\nlast LAST");
   await read.close();
-});
+}, 5_000);
 
 test("a late local frame survives a reconnect acknowledgement that adopts another root", async () => {
   const f = await fixture();
@@ -116,7 +116,7 @@ test("a late local frame survives a reconnect acknowledgement that adopts anothe
   expect(f.session.getSnapshot().pending).toBe(false);
   expect(f.session.getSnapshot().document).not.toBe(original);
   expect(f.session.getSnapshot().document!.getText("content").toString()).toBe("OFFLINE first\nlast LATE");
-});
+}, 5_000);
 
 test("a failed local-host request keeps unsaved frames and reconnect merges their original history", async () => {
   const f = await fixture();
@@ -130,7 +130,7 @@ test("a failed local-host request keeps unsaved frames and reconnect merges thei
   await f.session.retry();
   expect(f.session.getSnapshot().pending).toBe(false);
   expect(f.session.getSnapshot().document!.getText("content").toString()).toBe("OFFLINE first\nlast");
-});
+}, 5_000);
 
 test("closing during an outage retains unsaved frames and releases the session after retry", async () => {
   const f = await fixture();
@@ -145,4 +145,4 @@ test("closing during an outage retains unsaved frames and releases the session a
   cleanup.push(() => peer.close());
   await peer.start();
   expect(peer.getSnapshot().document!.getText("content").toString()).toBe("RETAIN first\nlast");
-});
+}, 5_000);

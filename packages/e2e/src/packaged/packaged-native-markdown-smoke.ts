@@ -41,7 +41,7 @@ export const expectPackagedNativeMarkdown = async (input: {
   const path = join(input.projectFolder, "native-shared.md");
   const frontmatter = "---\r\ncustom: keep  \r\n---\r\n\r\n";
   writeFileSync(path, `${frontmatter}Initial source`);
-  const target = { fileRendererId: "test.native-markdown.view.document" };
+  const target = { fileRendererId: "test.native-markdown.view.document", resource: undefined };
   const first = await client.nativeDocuments.open({ projectId: input.projectId, target });
   const second = await client.nativeDocuments.open({ projectId: input.projectId, target });
   try {

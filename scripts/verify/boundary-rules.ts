@@ -85,7 +85,9 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // so changing one marks e2e as affected.
   e2e: [
     "@pstdio/sdk",
+    "@pstdio/workbench",
     "pstdio",
+    "pstdio-api",
     "pstdio-api-contracts",
     "pstdio-diagnostics",
     "pstdio-extensions",
