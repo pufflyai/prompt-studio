@@ -10,6 +10,7 @@ import { removeTestDirectory } from "../testing/remove-test-directory";
 import { expectClipboardPermissions } from "./clipboard-permissions";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
+import { focusWorkbench } from "./focus-workbench";
 import { expectNativeWindowActions } from "./native-window-actions";
 
 const require = createRequire(import.meta.url);
@@ -181,6 +182,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     expect(await window.evaluate(() => document.cookie)).toBe("");
     expect(await window.evaluate(() => typeof process)).toBe("undefined");
     expect(authenticatedReady).toBe(true);
+    await focusWorkbench(electronApp, window);
     await expectClipboardPermissions(electronApp, window);
     await expectNativeWindowActions(electronApp, window, lifecycle);
     await test.step("keeps the workbench viewport inside the resized native content", async () => {
