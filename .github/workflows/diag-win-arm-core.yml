@@ -18,10 +18,18 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - uses: samypr100/setup-dev-drive@v3
+      - uses: samypr100/setup-dev-drive@v4
         with:
-          drive-size: 8GB
+          drive-size: 30GB
           drive-format: ReFS
+          drive-path: ${{ runner.temp }}\refs_drive.vhdx
+          env-mapping: REFS_DRIVE,{{ DEV_DRIVE }}
+      - uses: samypr100/setup-dev-drive@v4
+        with:
+          drive-size: 30GB
+          drive-format: NTFS
+          drive-path: ${{ runner.temp }}\ntfs_drive.vhdx
+          env-mapping: NTFS_DRIVE,{{ DEV_DRIVE }}
       - name: Time Planner production installs per volume
         shell: pwsh
         run: |
@@ -39,8 +47,10 @@ jobs:
             Pop-Location
             "RESULT $label cold=$([math]::Round($cold.TotalSeconds,1))s warm=$([math]::Round($warm.TotalSeconds,1))s files=$files bytes=$bytes cacheBytes=$cacheBytes"
           }
-          "RUNNER_TEMP=$env:RUNNER_TEMP DEV_DRIVE=$env:DEV_DRIVE"
-          Time-Install "$env:RUNNER_TEMP\diag-1" "runner-temp-1"
-          Time-Install "C:\diag-c" "c-drive"
-          Time-Install "$env:DEV_DRIVE\diag" "dev-drive"
-          Time-Install "$env:RUNNER_TEMP\diag-2" "runner-temp-2"
+          "RUNNER_TEMP=$env:RUNNER_TEMP REFS_DRIVE=$env:REFS_DRIVE NTFS_DRIVE=$env:NTFS_DRIVE"
+          Get-Volume | Format-Table DriveLetter,FileSystem,FileSystemLabel,Size,SizeRemaining
+          Time-Install "$env:RUNNER_TEMP\diag-1" "runner-temp"
+          Time-Install "$env:REFS_DRIVE\diag-1" "refs-1"
+          Time-Install "$env:NTFS_DRIVE\diag-1" "ntfs-1"
+          Time-Install "$env:REFS_DRIVE\diag-2" "refs-2"
+          Time-Install "$env:NTFS_DRIVE\diag-2" "ntfs-2"
