@@ -53259,7 +53259,7 @@
           }
         },
         {
-          "value": "#047AA6",
+          "value": "#073642",
           "theme": {
             "mode": "solarized-dark"
           }
@@ -53300,13 +53300,13 @@
           }
         },
         {
-          "value": "#073642",
+          "value": "#1B4852",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#EEE8D5",
+          "value": "#D7D2BF",
           "theme": {
             "mode": "solarized-light"
           }
@@ -53341,13 +53341,13 @@
           }
         },
         {
-          "value": "#FFFFFF",
+          "value": "#FDF6E3",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#657B83",
+          "value": "#2E454D",
           "theme": {
             "mode": "solarized-light"
           }
@@ -53382,13 +53382,13 @@
           }
         },
         {
-          "value": "#FFFFFF",
+          "value": "#EEE8D5",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#93A1A1",
+          "value": "#3D535A",
           "theme": {
             "mode": "solarized-light"
           }
@@ -53464,13 +53464,13 @@
           }
         },
         {
-          "value": "#2B2B4A",
+          "value": "#7A989C",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#EEE8D5",
+          "value": "#909A92",
           "theme": {
             "mode": "solarized-light"
           }
@@ -53710,13 +53710,13 @@
           }
         },
         {
-          "value": "#81B4FE",
+          "value": "#8FCBEE",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#0E6EF6",
+          "value": "#145886",
           "theme": {
             "mode": "solarized-light"
           }
@@ -53751,13 +53751,13 @@
           }
         },
         {
-          "value": "#859900",
+          "value": "#B3C95A",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#859900",
+          "value": "#3B5400",
           "theme": {
             "mode": "solarized-light"
           }
@@ -53792,13 +53792,13 @@
           }
         },
         {
-          "value": "#FFAD57",
+          "value": "#E6C46A",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#A74810",
+          "value": "#745000",
           "theme": {
             "mode": "solarized-light"
           }
@@ -53833,13 +53833,13 @@
           }
         },
         {
-          "value": "#DC322F",
+          "value": "#FFB3A8",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#DC322F",
+          "value": "#991B1B",
           "theme": {
             "mode": "solarized-light"
           }
@@ -53968,13 +53968,13 @@
           }
         },
         {
-          "value": "#274642",
+          "value": "#486E75",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#EEE8D5",
+          "value": "#CFCEBE",
           "theme": {
             "mode": "solarized-light"
           }
@@ -54009,13 +54009,13 @@
           }
         },
         {
-          "value": "#2B2B4A",
+          "value": "#46626B",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#EEE8D5",
+          "value": "#D3CFBF",
           "theme": {
             "mode": "solarized-light"
           }
@@ -62080,7 +62080,7 @@
           }
         },
         {
-          "value": "$ds-bg-subtle",
+          "value": "$ds-surface",
           "theme": {
             "mode": "solarized-dark"
           }
