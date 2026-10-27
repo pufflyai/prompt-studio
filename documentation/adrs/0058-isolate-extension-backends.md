@@ -50,6 +50,7 @@ Some limits already work. Child processes and terminals started through `ctx` ge
 
 ## Open questions
 
+- [ADR 0117](0117-explicit-extension-runtime-ownership.md) proposes explicit references, typed operations, publication ordering and a staged delivery plan. It keeps this process boundary, clarifies shared-owner Stop and defers backend environment-key delegation. It remains a proposal; neither record claims production isolation is complete.
 - Startup time and memory budget per extension process.
 - Which OS sandbox to use on each platform, and what each one can enforce.
 - How a harness extension asks for provider keys, and who approves it.
