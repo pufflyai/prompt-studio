@@ -14,7 +14,7 @@ import { note } from "./resource-kinds";
 
 export { note } from "./resource-kinds";
 
-import { noteExists, readNoteSource, readNoteTitle, writeNoteSource } from "./notes";
+import { noteExists, readNote, readNoteTitle, writeNote } from "./notes";
 
 export const notesChanged = eventRef<{ noteId?: string }>({
   extensionId: "pstdio.pstdio-notes",
@@ -50,7 +50,7 @@ export const editor = defineView({
 
       let content: string;
       try {
-        content = await readNoteSource(mount, id);
+        content = await readNote(mount, id);
       } catch (error) {
         if (await noteExists(mount, id)) throw error;
         return { emptyState: { title: "Note not found", description: "This note was deleted." } };
@@ -59,7 +59,6 @@ export const editor = defineView({
         fileName: `${id}.md`,
         mimeType: "text/markdown",
         content,
-        documentSource: { kind: "artifact" as const, mount: documents.id, path: `${id}/content.md`, identity: id },
         editable: writable,
         placeholder: "Write your notes here...",
       };
@@ -69,7 +68,7 @@ export const editor = defineView({
       const mount = notesMount(ctx);
       if (!id) throw new Error("No note open");
 
-      await writeNoteSource(mount, id, content);
+      await writeNote(mount, id, content);
       await ctx.events.emit(notesChanged, { noteId: id });
       return { revision: new Date().toISOString() };
     },
