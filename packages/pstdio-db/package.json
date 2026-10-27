@@ -23,6 +23,7 @@
     "analyze-bundle": "bun build ./src/index.ts --outdir ./dist --target bun --metafile=./dist/bundle-meta.json --metafile-md=./dist/bundle-meta.md",
     "db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
+    "diagnose:resource-numbers": "bun src/services/resource-number-scale.diagnostic.ts",
     "typecheck": "bun check -p ./tsconfig.json",
     "studio": "drizzle-kit studio --config ./drizzle.config.ts",
     "lint": "bun run typecheck && biome check .",

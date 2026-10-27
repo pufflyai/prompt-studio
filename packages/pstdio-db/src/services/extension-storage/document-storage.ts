@@ -16,6 +16,7 @@ import { runDocumentTransaction } from "./document-persistence";
 import { createProjectionStatistics } from "./projection-statistics";
 import { createRecordStreamStore } from "./record-stream-store";
 import { resourceDocumentId } from "./resource-document-persistence";
+import type { NumberChange } from "./resource-number-repair";
 import { createResourceRecords } from "./resource-records";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
@@ -26,6 +27,10 @@ export const createDocumentStorageDBService = (
 ) => {
   const cache = createDocumentCache();
   const listeners = new Set<(owner: StorageOwner) => void>();
+  const numberListeners = new Set<(event: NumberChange) => void>();
+  const numbersChanged = (events: NumberChange[]) => {
+    for (const event of events) for (const listener of numberListeners) listener(event);
+  };
   const statistics = createProjectionStatistics(db);
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
   const getEnvironment = () => (environment ??= createEnvironmentDBService(db).get());
@@ -54,11 +59,18 @@ export const createDocumentStorageDBService = (
     observer,
     getEnvironment,
     flushStatistics: statistics.flush,
+    watchNumbers(listener: (event: NumberChange) => void) {
+      numberListeners.add(listener);
+      return () => {
+        numberListeners.delete(listener);
+      };
+    },
     documents: {
       open: (documentId: string) => ({ transaction: transactionFor(documentId) }),
       recordStream: (owner: StorageOwner) =>
         createRecordStreamStore(db, owner, {
           statistics,
+          numbersChanged,
           metadata: transaction,
           changed: () => {
             for (const listener of listeners) listener(owner);
@@ -125,6 +137,7 @@ export const createDocumentStorageDBService = (
         setDataVersion: metadata.setDataVersion,
         records: createResourceRecords(db, input.owner, {
           statistics,
+          numbersChanged,
           observer,
           assets: input.assets,
           diagnostics,

@@ -6,8 +6,9 @@ import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records, storage_record_outbox, storage_record_sync } from "../../db/schemas.pg";
 import type { createProjectionStatistics } from "./projection-statistics";
 import { lockRecordOwner, saveRecordChanges } from "./record-changes";
-import { dropRecordOutbox, queueRecordBytes, readRecordOutbox } from "./record-outbox";
+import { dropRecordOutbox, queueRecordBytes, queueRecordUpload, readRecordOutbox } from "./record-outbox";
 import { acceptFrames, adoptRecords, localRecordIds, mergeRecords, recordStates } from "./record-stream-merge";
+import type { NumberChange } from "./resource-number-repair";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
@@ -29,6 +30,7 @@ export const createRecordStreamStore = (
     statistics: ReturnType<typeof createProjectionStatistics>;
     /** Notifies owner watchers after downloaded records change. */
     changed: () => void;
+    numbersChanged?: (events: NumberChange[]) => void;
     /** The owner's metadata document, which remembers where each asset's ciphertext lives. */
     metadata: DocumentStore["transaction"];
   },
@@ -52,15 +54,21 @@ export const createRecordStreamStore = (
       .where(syncWhere);
   /** Runs a record write under the owner lock and notifies watchers once it commits. */
   const write = async (
-    run: (tx: Transaction, revision: number) => Promise<{ projected: number; changed: boolean; rejected: string[] }>,
+    run: (
+      tx: Transaction,
+      revision: number,
+    ) => Promise<{ projected: number; events: NumberChange[]; changed: boolean; rejected: string[] }>,
   ) => {
     const result = await db.transaction(async (tx) => run(tx, await lockRecordOwner(tx, owner)));
     if (result.projected) deps.statistics.record(result.projected);
     if (result.changed) deps.changed();
+    deps.numbersChanged?.(result.events);
     return result.rejected;
   };
   const save = async (tx: Transaction, revision: number, changes: Parameters<typeof saveRecordChanges>[3]) =>
-    changes.length ? saveRecordChanges(tx, owner, revision, changes) : 0;
+    changes.length
+      ? saveRecordChanges(tx, owner, revision, changes)
+      : { projected: 0, events: [] as NumberChange[], repairs: [] };
   /** The current file of each live record that has one. */
   const currentAssets = async (connection: Pick<DbClient, "select">, recordIds: string[]) => {
     const assets = new Map<string, Asset>();
@@ -107,13 +115,14 @@ export const createRecordStreamStore = (
       await write(async (tx, revision) => {
         const { accepted, rejected } = await acceptFrames(tx, owner, frames);
         const { changes } = await mergeRecords(tx, owner, accepted, false);
-        const projected = await save(tx, revision, changes);
+        const saved = await save(tx, revision, changes);
+        await queueRecordUpload(tx, owner, saved.repairs);
         result = {
           rejected,
           cursor: { ...cursor, skipped: cursor.skipped || rejected.length > 0 || frames.includes(null) },
         };
         await saveCursor(tx, result.cursor);
-        return { projected, changed: changes.length > 0, rejected: [] };
+        return { ...saved, changed: changes.length > 0, rejected: [] };
       });
       return result;
     },
@@ -126,17 +135,23 @@ export const createRecordStreamStore = (
           mode === "adopt"
             ? await adoptRecords(tx, owner, remote)
             : await mergeRecords(tx, owner, remote, true).then((result) => ({ ...result, uploads: result.missing }));
-        const projected = await save(tx, revision, merged.changes);
+        const savedRecords = await save(tx, revision, merged.changes);
         const localOnly = (await localRecordIds(tx, owner)).filter((id) => !remote.has(id));
-        const uploads = [...merged.uploads, ...(await recordStates(tx, owner, localOnly))];
-        const assets = await currentAssets(
-          tx,
-          uploads.map((upload) => upload.recordId),
+        const uploads = new Map(
+          [...merged.uploads, ...(await recordStates(tx, owner, localOnly))].map((upload) => [upload.recordId, upload]),
         );
-        await queueRecordBytes(tx, owner, uploads, assets, recordFrameLimit);
+        // A repair may depend on local edits rebased during adoption, or on a new local-only
+        // identity. Publish its complete state with that join, rather than a dependent delta first.
+        for (const repair of savedRecords.repairs)
+          uploads.set(repair.record.recordId, {
+            recordId: repair.record.recordId,
+            bytes: repair.checkpoint!,
+          });
+        const assets = await currentAssets(tx, [...uploads.keys()]);
+        await queueRecordBytes(tx, owner, [...uploads.values()], assets, recordFrameLimit);
         saved = { ...cursor, skipped: cursor.skipped || merged.rejected.length > 0 };
         await saveCursor(tx, saved);
-        return { projected, changed: merged.changes.length > 0, rejected: merged.rejected };
+        return { ...savedRecords, changed: merged.changes.length > 0, rejected: merged.rejected };
       });
       return { rejected, cursor: saved };
     },

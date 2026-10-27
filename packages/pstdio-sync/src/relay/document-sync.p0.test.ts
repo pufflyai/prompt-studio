@@ -84,6 +84,35 @@ const device = (relay: ReturnType<typeof relayFixture>["relay"], limits?: { byte
   };
 };
 
+test("a one-time document download reads encrypted latest state and updates without publishing local edits", async () => {
+  const f = relayFixture();
+  const online = device(f.relay, { bytes: 1_048_576, updates: 1 });
+  const reader = device(f.relay);
+  try {
+    await online.set("first", 1);
+    await online.sync.synchronize();
+    await online.set("second", 2);
+    await online.sync.synchronize();
+    await online.set("third", 3);
+    await online.sync.synchronize();
+    await reader.set("local", "must stay local");
+    const writes = f.writes.length;
+    const states = f.states.length;
+    const downloaded = await reader.sync.download();
+    try {
+      expect(downloaded.getMap("values").toJSON()).toEqual({ first: 1, second: 2, third: 3 });
+      expect(await reader.values()).toEqual({ local: "must stay local" });
+      expect(f.writes).toHaveLength(writes);
+      expect(f.states).toHaveLength(states);
+    } finally {
+      downloaded.destroy();
+    }
+  } finally {
+    online.sync.close();
+    reader.sync.close();
+  }
+});
+
 test("a device offline across several latest states keeps its edits and catches up", async () => {
   const f = relayFixture();
   const online = device(f.relay, { bytes: 1_048_576, updates: 1 });
