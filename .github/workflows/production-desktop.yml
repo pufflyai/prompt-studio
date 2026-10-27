@@ -73,14 +73,19 @@ jobs:
           tar -xzf validation-app-${{ matrix.target }}.tar.gz -C clients/desktop
       # Nightlies publish no Windows app. Still exercise Windows each day. Stable
       # certification above always measures its signed publication artifact.
-      - name: Build the daily Windows candidate
+      # The identity names the checkout under test, so it exists before the build:
+      # a failed build must still be attested as this candidate's failure.
+      - name: Record the daily Windows candidate identity
         if: inputs.channel == 'nightly' && matrix.platform == 'win32'
         shell: bash
         run: |
-          bun run --cwd clients/desktop make -- --arch=x64
           bun -e 'await Bun.write("production-build-identity.json", JSON.stringify({ sourceSha: process.env.SOURCE_SHA, versionSha: process.env.VERSION_SHA, toolchain: "bun-" + Bun.version }))'
         env:
           VERSION_SHA: ${{ inputs.ref }}
+      - name: Build the daily Windows candidate
+        if: inputs.channel == 'nightly' && matrix.platform == 'win32'
+        shell: bash
+        run: bun run --cwd clients/desktop make -- --arch=x64
       - name: Configure Linux sandbox
         if: matrix.platform == 'linux'
         shell: bash

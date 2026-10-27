@@ -7,12 +7,7 @@ import {
   verifyQuarantineAttempt,
 } from "./quarantine-reports";
 import { quarantineGroups } from "./run-quarantined-tests";
-import {
-  browserQuarantineReportPath,
-  matchesPlatform,
-  quarantineDirectory,
-  quarantineRegistry,
-} from "./test-quarantine";
+import { browserQuarantineReportPath, quarantineDirectory, quarantineRegistry } from "./test-quarantine";
 import { readWorkspacePackages } from "./workspace-packages";
 
 const root = resolve(import.meta.dir, "../..");
@@ -63,21 +58,20 @@ if (runner === "bun" || runner === "packaged-bun") {
     );
   }
 } else if (["playwright", "playwright-ui", "packaged-desktop"].includes(runner)) {
-  const expected = quarantineRegistry.filter(
-    (entry) => entry.runner === runner && matchesPlatform(entry, process.platform, process.arch),
-  );
-  if (!expected.length) {
-    record(runner, { executed: 0, failures: 0 });
-    process.exit(0);
-  }
-  const { owner } = quarantineGroups(
+  const groups = quarantineGroups(
     quarantineRegistry,
     readWorkspacePackages(root),
     runner,
     process.platform,
     process.arch,
     scope,
-  )[0]!;
+  );
+  if (!groups.length) {
+    record(runner, { executed: 0, failures: 0 });
+    process.exit(0);
+  }
+  const { owner } = groups[0]!;
+  const expected = groups.flatMap((group) => group.entries);
   const attempt = await Bun.file(resolve(quarantineDirectory(root, runner, owner.dir), "attempt.json")).json();
   const report = await Bun.file(browserQuarantineReportPath(runner)).json();
   verifyQuarantineAttempt(attempt, bunRunIdentity(root), report.config.metadata?.quarantineAttempt);

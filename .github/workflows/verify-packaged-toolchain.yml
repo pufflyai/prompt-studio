@@ -101,7 +101,7 @@ jobs:
         run: bun scripts/ci/run-quarantined-tests.ts packaged-bun --scope e2e --prebuilt
       - name: Require every compiled CLI quarantine case to have executed
         if: inputs.profile == 'full' && runner.os == 'Windows' && !cancelled() && steps.toolchain.outcome == 'success'
-        run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun --scope e2e
       - name: Preserve packaged toolchain evidence
         if: always()
         uses: actions/upload-artifact@v4
