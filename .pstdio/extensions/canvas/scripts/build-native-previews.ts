@@ -92,6 +92,12 @@ const buildPreviews = async (
         name: "ui-canvas-mdx",
         enforce: "pre",
         async transform(source: string, id: string) {
+          if (id === resolve(repoRoot, "packages/ui/dist-monaco/monaco.js")) {
+            return {
+              code: `${source}\nimport {installCanvasMonacoWorkers} from ${JSON.stringify(resolve(import.meta.dir, "frame-monaco-workers.ts"))}; installCanvasMonacoWorkers(self.MonacoEnvironment);`,
+              map: null,
+            };
+          }
           if (id.endsWith("/foundations/component-gallery.stories.tsx")) {
             const hook = 'import { useTokenEditorValues } from "@/components/internal/token-editor-state";';
             const call = "useTokenEditorValues({ themePreference, themePreferences })";

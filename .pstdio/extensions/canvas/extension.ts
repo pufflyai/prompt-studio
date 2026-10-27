@@ -8,7 +8,7 @@ import {
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { commands } from "./src/commands";
-import { canvasPage, canvasResource, canvasView, homePage } from "./src/navigation";
+import { canvasPage, canvasPanel, canvasResource, canvasView, homePage } from "./src/navigation";
 import { canvasTree } from "./src/navigation-tree";
 import { canvasResources } from "./src/resources";
 
@@ -32,6 +32,7 @@ export default defineExtension({
   resourceKinds: [canvasResource],
   commandPaletteResources: [canvasResources],
   views: [canvasView, tree],
+  placements: [canvasPanel],
   pages: [homePage, canvasPage],
   navigationItems: [
     defineNavigationItem({

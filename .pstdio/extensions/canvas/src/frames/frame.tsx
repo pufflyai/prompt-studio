@@ -6,6 +6,7 @@ import themes from "../catalog/generated/frame-themes.json";
 import { PreviewSource } from "../catalog/source-information";
 import type { CanvasRuntime } from "../controller/runtime";
 import { type FrameBootstrap, frameBootstrap, frameDocument } from "./assets";
+import { FrameLoading } from "./frame-loading";
 import { navigateFrame } from "./navigation";
 import { type FrameMessage, type FrameRequest, frameProtocol } from "./protocol";
 
@@ -85,7 +86,7 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
           {error}
         </Text>
       )}
-      {!ready && !error && <Text data-ui-canvas-loading>Loading {item.name}…</Text>}
+      {!ready && !error && <FrameLoading name={item.name} />}
       {bootstrap && (
         <iframe
           key={revision}

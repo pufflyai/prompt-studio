@@ -27,3 +27,10 @@ test("folder picker states remain together on one canvas", () => {
     groups[0].items.length,
   );
 });
+
+test("host extension chrome belongs to the workbench while extension-owned UI stays in Extensions", () => {
+  const paused = catalogCanvases.find((canvas) => canvas.name === "Paused extension view")!;
+  expect(paused.group).toBe("Workbench Core");
+  expect(paused.path).toEqual(["Chrome", "Extensions"]);
+  expect(catalogCanvases.find((canvas) => canvas.name === "Auto Build")!.group).toBe("Extensions");
+});

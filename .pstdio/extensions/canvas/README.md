@@ -4,7 +4,7 @@ Explore and compare live UI designs inside Prompt Studio. A source registry defi
 
 Use a runtime that satisfies the extension API range declared in `package.json`.
 
-Open **Canvases** in the project navigation. Browse **Design System**, **Workbench Core**, **Dashboard**, and **Extensions**, with expandable subgroups. Selecting a canvas opens a retained workbench tab; switching tabs preserves preview inputs and the camera. **Foundations** contains three previews of the Pencil file's colors, typography, spacing, and radii. **Shared components** contains nine previews of controls, feedback, identity, surfaces, keyboard hints, empty states, and overlays. All previews use synthetic data and local state. Creating a project in the preview never creates a real project.
+Open **Canvases** in the project navigation. Browse **Design System**, **Workbench Core**, **Dashboard**, and **Extensions**, with expandable subgroups. All canvases use one shared, project-owned tab viewer. Selecting a canvas opens a retained workbench tab; switching canvases keeps the same tab list, preview inputs, and camera. Host UI such as Paused extension view belongs under Workbench Core → Chrome; actual extension-owned examples belong under Extensions. **Foundations** contains three previews of the Pencil file's colors, typography, spacing, and radii. **Shared components** contains nine previews of controls, feedback, identity, surfaces, keyboard hints, empty states, and overlays. All previews use synthetic data and local state. Creating a project in the preview never creates a real project.
 
 ## Work with a design
 
@@ -13,6 +13,8 @@ Open **Canvases** in the project navigation. Browse **Design System**, **Workben
 - Drag empty space, hold Space while dragging, or use the middle mouse button to pan. Space-to-pan stays off while a control or editable region has focus.
 - Use Ctrl/Meta + wheel or trackpad pinch to zoom around the pointer. Ordinary wheel input scrolls nested content while it can scroll, then pans the canvas.
 - Focus the canvas for arrow-key pan, `+`/`-` zoom, `F` to fit, and `0` to reset. Camera buttons stay fixed above the canvas. Reset keeps frame positions and preview drafts.
+
+Frames show a shared loading panel and spinner while their compiled preview starts.
 
 Each frame has a **Theme** menu: Follow app, Light, Dark, Solarized Light, Solarized Dark, Dracula, or Monokai. Its choice is saved independently. Theme changes preserve mounted inputs and local state. The canvas shell follows the workbench. Physical touch and trackpad behavior depends on the browser; automation does not prove those device behaviors.
 
@@ -71,7 +73,7 @@ UI Canvas indexes every current CSF export and MDX document. Related scenarios s
 
 Each component has one frame. Its **Variant** menu, beside **Theme**, selects an original story’s predefined parameters. Selecting a variant resets that example’s local fixture state and keeps its frame theme and position. Every original story ID remains in the migration ledger and resource search.
 
-Scenarios render compiled original React components in individual preview documents. Each document owns its React, Chakra, theme, and application fixture state so several dialogs and store variants can be used together. This runs native source components without a standalone Storybook server or manager. Preview code is built into a compressed module archive; project storage cannot provide executable content. Application examples use local API and in-memory storage fixtures. Gallery token overrides stay local to each preview. Website analytics is inert in previews. Source play functions remain in their original files for external validation; Canvas does not run them as tests. **Props and source** shows arguments, authored argument types, component references, the source hash, and complete source code.
+Scenarios render compiled original React components in individual preview documents. Each document owns its React, Chakra, theme, and application fixture state so several dialogs and store variants can be used together. This runs native source components without a standalone Storybook server or manager. Preview code is built into a compressed module archive; project storage cannot provide executable content. Application examples use local API and in-memory storage fixtures. Gallery token overrides stay local to each preview. Monaco uses its public worker factory to load the prebuilt classic workers from document-owned URLs, preserving TypeScript diagnostics inside the opaque sandbox. Website analytics is inert in previews. Source play functions remain in their original files for external validation; Canvas does not run them as tests. **Props and source** shows arguments, authored argument types, component references, the source hash, and complete source code.
 
 Documentation frames have content-driven heights. Resize observations and font completion refresh measured bounds. Fit and explicit reveal include a tall panel and its title. Fullscreen application examples retain a minimum viewport inside the documentation frame; lists and editors retain their own scrolling. Long prose, source listings, and API details have no inner vertical scroll area. The **IntrinsicDocumentation** verification story checks expansion and draft retention outside the canvas resource registry.
 

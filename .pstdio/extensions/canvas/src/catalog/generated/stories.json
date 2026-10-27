@@ -1,6 +1,15 @@
 {
   "stories": [
     {
+      "id": "dashboard-canvas-frame-loading--loading",
+      "name": "Loading",
+      "exportName": "Loading",
+      "source": ".pstdio/extensions/canvas/src/frames/frame-loading.stories.tsx",
+      "suite": "dashboard",
+      "title": "Canvas/Frame loading",
+      "sourceHash": "7568a3fa3bb2d57600f3ea2a5ba19aa88410c4d43d43cb7f914b6c58bef8cfef"
+    },
+    {
       "id": "dashboard-canvas-workspace--interactive",
       "name": "Interactive",
       "exportName": "Interactive",
@@ -6478,7 +6487,7 @@
       "source": "packages/pstdio-workbench/src/react/region/region-tab-actions.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Guides/Tab actions",
-      "sourceHash": "83d8afba9ac3600cf14a4bb02db178791f43b04c1a5331bdea6f64bc53e8c7a3",
+      "sourceHash": "0c80055cb1a514be9ea82464f66fad85159eccccdca7bb78456e18740e6461fb",
       "component": "NoteTabActions"
     },
     {

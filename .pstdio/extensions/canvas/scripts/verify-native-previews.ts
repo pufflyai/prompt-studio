@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { extname, resolve } from "node:path";
-import type { Request as PreviewRequest, Route as PreviewRoute } from "@playwright/test";
+import type { ConsoleMessage, Request as PreviewRequest, Route as PreviewRoute } from "@playwright/test";
 import { checkCanvasInteractions } from "./grouped-interaction-check";
 import { checkIntrinsicDocumentation, profilePopulatedCanvas } from "./native-documentation-check";
 import { checkCanvasVariants } from "./native-variant-check";
@@ -91,7 +91,14 @@ const worker = async () => {
       return route.continue();
     });
     const errors: string[] = [];
-    page.on("pageerror", (error: Error) => errors.push(error.message));
+    const diagnostics: string[] = [];
+    page.on("console", (message: ConsoleMessage) => {
+      if (["warning", "error"].includes(message.type())) diagnostics.push(message.text());
+    });
+    page.on("requestfailed", (request: PreviewRequest) =>
+      diagnostics.push(`${request.url()}: ${request.failure()?.errorText}`),
+    );
+    page.on("pageerror", (error: Error) => errors.push(error.stack || error.message));
     page.on("request", (request: PreviewRequest) => {
       if (!["GET", "HEAD"].includes(request.method()) && !request.url().startsWith(server.url.origin)) {
         errors.push(`Unexpected preview mutation: ${request.method()} ${request.url()}`);
@@ -136,6 +143,7 @@ const worker = async () => {
       variants,
       status: errors.length ? "error" : "ready",
       errors,
+      ...(errors.length ? { diagnostics } : {}),
       durationMs: performance.now() - start,
       details,
     };

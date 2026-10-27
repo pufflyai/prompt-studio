@@ -1,5 +1,6 @@
 import {
   definePage,
+  definePlacement,
   defineView,
   packageAsset,
   qualifyRef,
@@ -18,6 +19,13 @@ export const canvasView = defineView({
     capabilities: ["commands.execute", "clipboard.write", "navigation.open"],
   },
 });
+export const canvasPanel = definePlacement({
+  id: "canvas-tabs",
+  mode: workbenchModes.project,
+  region: "main",
+  mountStrategy: "keep-mounted",
+  item: { kind: "binding", binding: { kinds: [canvasResource.ref], view: canvasView.ref, cardinality: "many" } },
+});
 export const homePage = definePage({
   id: "canvases",
   title: "UI Canvas",
@@ -33,7 +41,7 @@ export const canvasPage = definePage({
   mode: workbenchModes.project,
   resource: { kinds: [canvasResource.ref] },
   parent: homePage.ref,
-  main: { kind: "view", view: canvasView.ref, cardinality: "many" },
+  main: { kind: "panels", landing: canvasPanel.ref },
   slots: [],
 });
 export const canvasTarget = (id: string, label: string, projectId?: string) => ({

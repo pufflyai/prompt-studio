@@ -38,7 +38,7 @@ for (const story of catalog.stories) {
     canvas = {
       id: oldId,
       name: topic.split("/").at(-1)!,
-      ...storyLocation(story.suite, topic),
+      ...storyLocation(story.suite, topic, story.source),
       items: [],
       aliases: [],
     };
