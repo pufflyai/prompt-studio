@@ -82,7 +82,7 @@ From the repository root:
 ```sh
 bun run --cwd scripts canvas:build
 bun run --cwd scripts canvas:inventory /path/to/ui-canvas-migration-inventory.json
-bun test scripts/design/story-catalog.p0.test.ts scripts/design/native-preview-freshness.p0.test.ts scripts/design/migration-ledger.p0.test.ts scripts/design/native-api-fixture.p0.test.ts
+bun run --cwd .pstdio/extensions/canvas test
 bun run --cwd .pstdio/extensions/canvas test
 bun run --cwd .pstdio/extensions/canvas typecheck
 bun run --cwd scripts canvas:coverage

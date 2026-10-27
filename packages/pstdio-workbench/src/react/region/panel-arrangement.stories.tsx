@@ -128,6 +128,7 @@ export const createArrangementWorkbench = (
 
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Panel arrangement",
+  excludeStories: ["createArrangementWorkbench"],
   component: WorkbenchStory,
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof WorkbenchStory>;

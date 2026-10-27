@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { getCollection, getWriter } from "@/lib/sync/collections";
 import { createNotificationsModule } from "@/modules/notifications/module";
+import { ProjectStoryFixture } from "@/modules/projects/data/project-story-fixture";
 import { createProjectsModule } from "@/modules/projects/module";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -50,6 +51,13 @@ const SearchOverlayStory = (props: SearchOverlayStoryProps) => {
 const meta = {
   title: "Dashboard/Search overlays",
   component: SearchOverlayStory,
+  decorators: [
+    (Story) => (
+      <ProjectStoryFixture>
+        <Story />
+      </ProjectStoryFixture>
+    ),
+  ],
   parameters: {
     layout: "fullscreen",
     docs: {

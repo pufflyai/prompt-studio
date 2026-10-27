@@ -11,5 +11,5 @@
     "allowImportingTsExtensions": true,
     "types": ["bun"]
   },
-  "include": ["extension.ts", "src"]
+  "include": ["extension.ts", "src", "scripts"]
 }

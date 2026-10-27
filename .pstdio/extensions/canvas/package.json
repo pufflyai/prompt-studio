@@ -14,8 +14,12 @@
     "scope": "repo"
   },
   "scripts": {
-    "test": "bun test src",
-    "typecheck": "tsc --noEmit"
+    "test": "bun test src scripts",
+    "typecheck": "tsc --noEmit",
+    "catalog:build": "bun scripts/build-native-previews.ts",
+    "catalog:inventory": "bun scripts/migration-ledger.ts",
+    "catalog:coverage": "bun scripts/verify-migration-coverage.ts",
+    "catalog:verify": "bun scripts/verify-native-previews.ts"
   },
   "dependencies": {
     "@chakra-ui/react": "3.32.0",
@@ -26,6 +30,10 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@mdx-js/mdx": "3.1.1",
+    "@playwright/test": "1.60.0",
+    "@storybook/react": "10.6.0",
     "@types/bun": "1.4.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

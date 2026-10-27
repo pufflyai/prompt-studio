@@ -2719,7 +2719,7 @@
       "source": "packages/pstdio-dashboard/src/modules/projects/components/project-selection.stories.tsx",
       "suite": "dashboard",
       "title": "Dashboard/Project selection",
-      "sourceHash": "c0f7ee29800f88daf86cc4ede48a1bc075d78db88c1134f0b8223ee7d3b4eb52",
+      "sourceHash": "acf9324b9d160ce1951c15a83d6e6c7a8ad4e1194617a593686d7028f2bd0255",
       "component": "ProjectSelectionStory"
     },
     {
@@ -2729,7 +2729,7 @@
       "source": "packages/pstdio-dashboard/src/modules/projects/components/project-selection.stories.tsx",
       "suite": "dashboard",
       "title": "Dashboard/Project selection",
-      "sourceHash": "c0f7ee29800f88daf86cc4ede48a1bc075d78db88c1134f0b8223ee7d3b4eb52",
+      "sourceHash": "acf9324b9d160ce1951c15a83d6e6c7a8ad4e1194617a593686d7028f2bd0255",
       "component": "ProjectSelectionStory"
     },
     {
@@ -2739,7 +2739,7 @@
       "source": "packages/pstdio-dashboard/src/modules/projects/components/project-selection.stories.tsx",
       "suite": "dashboard",
       "title": "Dashboard/Project selection",
-      "sourceHash": "c0f7ee29800f88daf86cc4ede48a1bc075d78db88c1134f0b8223ee7d3b4eb52",
+      "sourceHash": "acf9324b9d160ce1951c15a83d6e6c7a8ad4e1194617a593686d7028f2bd0255",
       "component": "ProjectSelectionStory"
     },
     {
@@ -4648,7 +4648,7 @@
       "source": "packages/pstdio-dashboard/src/shared/workbench/search-overlays.stories.tsx",
       "suite": "dashboard",
       "title": "Dashboard/Search overlays",
-      "sourceHash": "98ff09bd07024aa9b884e44faf8b4e957623cecbd810ef9d6da666b6b7d09954",
+      "sourceHash": "7f4c3eb6cbdb40247e086f21c717f3bfd3990ea1f53278f66594f4f44e8962f1",
       "component": "SearchOverlayStory"
     },
     {
@@ -4658,7 +4658,7 @@
       "source": "packages/pstdio-dashboard/src/shared/workbench/search-overlays.stories.tsx",
       "suite": "dashboard",
       "title": "Dashboard/Search overlays",
-      "sourceHash": "98ff09bd07024aa9b884e44faf8b4e957623cecbd810ef9d6da666b6b7d09954",
+      "sourceHash": "7f4c3eb6cbdb40247e086f21c717f3bfd3990ea1f53278f66594f4f44e8962f1",
       "component": "SearchOverlayStory"
     },
     {
@@ -4668,7 +4668,7 @@
       "source": "packages/pstdio-dashboard/src/shared/workbench/search-overlays.stories.tsx",
       "suite": "dashboard",
       "title": "Dashboard/Search overlays",
-      "sourceHash": "98ff09bd07024aa9b884e44faf8b4e957623cecbd810ef9d6da666b6b7d09954",
+      "sourceHash": "7f4c3eb6cbdb40247e086f21c717f3bfd3990ea1f53278f66594f4f44e8962f1",
       "component": "SearchOverlayStory"
     },
     {
@@ -4678,7 +4678,7 @@
       "source": "packages/pstdio-dashboard/src/shared/workbench/search-overlays.stories.tsx",
       "suite": "dashboard",
       "title": "Dashboard/Search overlays",
-      "sourceHash": "98ff09bd07024aa9b884e44faf8b4e957623cecbd810ef9d6da666b6b7d09954",
+      "sourceHash": "7f4c3eb6cbdb40247e086f21c717f3bfd3990ea1f53278f66594f4f44e8962f1",
       "component": "SearchOverlayStory"
     },
     {
@@ -4688,7 +4688,7 @@
       "source": "packages/pstdio-dashboard/src/shared/workbench/search-overlays.stories.tsx",
       "suite": "dashboard",
       "title": "Dashboard/Search overlays",
-      "sourceHash": "98ff09bd07024aa9b884e44faf8b4e957623cecbd810ef9d6da666b6b7d09954",
+      "sourceHash": "7f4c3eb6cbdb40247e086f21c717f3bfd3990ea1f53278f66594f4f44e8962f1",
       "component": "SearchOverlayStory"
     },
     {
@@ -4698,7 +4698,7 @@
       "source": "packages/pstdio-dashboard/src/shared/workbench/search-overlays.stories.tsx",
       "suite": "dashboard",
       "title": "Dashboard/Search overlays",
-      "sourceHash": "98ff09bd07024aa9b884e44faf8b4e957623cecbd810ef9d6da666b6b7d09954",
+      "sourceHash": "7f4c3eb6cbdb40247e086f21c717f3bfd3990ea1f53278f66594f4f44e8962f1",
       "component": "SearchOverlayStory"
     },
     {
@@ -6091,24 +6091,13 @@
       "componentImport": "../../examples/workbench-story"
     },
     {
-      "id": "workbench-pstdio-workbench-reference-core-api-panel-arrangement--create-arrangement-workbench",
-      "name": "Create Arrangement Workbench",
-      "exportName": "createArrangementWorkbench",
-      "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
-      "suite": "workbench",
-      "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
-      "component": "WorkbenchStory",
-      "componentImport": "../../examples/workbench-story"
-    },
-    {
       "id": "workbench-pstdio-workbench-reference-core-api-panel-arrangement--headerless-main",
       "name": "Headerless Main",
       "exportName": "HeaderlessMain",
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6119,7 +6108,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6130,7 +6119,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6141,7 +6130,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6152,7 +6141,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6163,7 +6152,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6174,7 +6163,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6185,7 +6174,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6196,7 +6185,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6207,7 +6196,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6218,7 +6207,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6229,7 +6218,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6240,7 +6229,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6251,7 +6240,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6262,7 +6251,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6273,7 +6262,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6284,7 +6273,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6295,7 +6284,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6306,7 +6295,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6317,7 +6306,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6328,7 +6317,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6339,7 +6328,7 @@
       "source": "packages/pstdio-workbench/src/react/region/panel-arrangement.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Panel arrangement",
-      "sourceHash": "45f5190d431b5adb4fa43e519f269074db34a9dbaddfb6322bdc7ec2f21a456a",
+      "sourceHash": "85f98325a0aa39470d04c7ad558f5286bf5e440d4ae2bfb8ed0fbf965a1b8b14",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
