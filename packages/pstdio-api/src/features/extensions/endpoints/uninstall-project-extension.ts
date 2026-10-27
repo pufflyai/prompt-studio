@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { AlwaysEnabledExtensionError } from "../always-on-extensions";
 import { ExtensionProviderInUseError, type ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
 const errorSchema = z.object({ error: z.string() });
@@ -50,7 +51,8 @@ export const uninstallProjectExtensionHandler = (
     try {
       removed = await deps.projectExtensionLifecycle.uninstall({ projectId, instanceId, deleteUserData });
     } catch (error) {
-      if (error instanceof ExtensionProviderInUseError) return c.json({ error: error.message }, 409);
+      if (error instanceof ExtensionProviderInUseError || error instanceof AlwaysEnabledExtensionError)
+        return c.json({ error: error.message }, 409);
       throw error;
     }
     if (!removed) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);

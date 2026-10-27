@@ -1,0 +1,73 @@
+# Keyboard shortcuts
+
+Navigate visible panels, choose an action's target, and discover available keyboard shortcuts.
+
+## Enter shortcut mode
+
+Press **Alt+Shift+Space** to enter shortcut mode. A small bubble appears at the bottom center, using the planner zoom control's surface. It shows the opening chord and current sequence while choosing an action. Hover to reveal choices that continue from the current prefix. Up/Down also reveals choices for keyboard selection; `/` opens search. Choose View (V), Go (G), Create (C), Current view (A), Settings (S), or Help (H). A completed action exits shortcut mode. Tab selection stays active until Enter or Escape; Backspace returns one level. Keyboard Shortcuts under Help is a searchable reference. Shortcut editing controls are deferred.
+
+On macOS, Alt is Option. Entry matches the physical Space key even when Option produces a non-breaking space. Shortcut sequences use a small redo arrow between steps. The bubble has no Back/Exit buttons or instructional footer. Required action and target choices still use an explicit modal.
+
+Extensions contribute to these shared groups. Groups with no available actions are hidden. No flow requires choosing an extension by name first.
+
+The shortcut reference uses the command palette's search layout and groups assigned actions by resource. Each action has one default shortcut. Rows contain the action and keys without subtitles. Internal commands with no assigned shortcut stay in command discovery. Shift+/ opens this view, including from shortcut mode.
+
+## Navigation
+
+**Alt+Shift+Up** runs the Sidenav's **Back to project** action from nested ticket or session navigation. It returns to the last root-level page, with Home as the fallback. The action follows the active mode's name and appears only inside a navigation level. The chord works outside and inside shortcut mode and respects focused editor inputs.
+
+Destination navigation uses shortcut mode's Go group: G → S for Sessions, G → W for Workspaces, G → N for Notes, G → K for Tickets/Kanban, G → A for Artifacts, and G → T for Timeline. These destinations have no additional direct default chord. Choosing a destination completes the action and exits shortcut mode. Shared keys use numbered action choices. History keeps Alt+Shift+Left/Right; Back to project keeps Alt+Shift+Up. The command palette keeps Mod+P, commands Alt+Shift+K, the Sidenav Alt+Shift+S, and settings Mod+,.
+
+Ctrl+Tab selects the next tab across the visible layout; Ctrl+Shift+Tab selects the previous tab. They wrap at either end and work outside and inside shortcut mode. Outside the mode they switch and focus immediately. One tab has an outline for the keyboard selection in shortcut mode, even when several panels each have a selected tab. Enter or Escape exits and returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
+
+Alt+Shift+1 through Alt+Shift+9 enter shortcut mode and select the matching global tab number. Plain 1 through 9 can then continue selecting tabs from any navigation group; Enter exits into the final selected tab. User overrides live in the `workbench.keyboard` preference and can be set through `workbench.keyboard.setAssignment`; the reference is read-only. Empty-panel cards share this numbering: their displayed number opens that card in its own panel, and a newly opened tab remains selected in shortcut mode. Cards show the full chord outside keyboard mode and the plain number inside it. An action or target chooser owns its own numbers while open. Numbers follow spatial placement and displayed tab/card order, and recompute when the layout changes. Alt+Shift+0 opens a searchable picker beyond nine.
+
+Panel actions use direct Alt+Shift chords and tab cycling uses Ctrl+Tab/Ctrl+Shift+Tab. They work from any shortcut-mode prefix and have no second View sequence. These explicit workbench chords also work while editing, including in managed webviews.
+
+| Action | Alt+Shift key |
+| --- | --- |
+| New tab: choose a destination and panel type | Enter |
+| Focus panel: choose a visible presentation | F |
+| Focus the panel left, right, up, or down | H, L, U, D |
+| Move tab: choose a tab and destination | M |
+| Reposition panel | R |
+| Close tab | X |
+| Pin or unpin tab | I |
+| Toggle Main fullscreen | Z |
+| Toggle navigation panel | S |
+| Toggle secondary panel | B |
+| Toggle side panel | E |
+
+Current view → N starts a fresh session in an existing Session tab. Moving a tab preserves its identity; repositioning a panel uses its allowed positions. Canceling an unfinished flow changes nothing. Direct focus and tab cycling use the live focused panel and active tab outside shortcut mode. The direct focus chooser finishes in the chosen editor and exits shortcut mode. Alt+Shift+Z toggles Main fullscreen from editors and previews; its tooltip and the shortcut reference show the same binding.
+
+## Creation and shared settings
+
+Create actions use C followed by the first letter of the canonical resource-kind ID: N for note, T for ticket, A for artifact, S for session, and W for workspace. Extensions bind their public creation command in the `create` layer and derive that letter from the resource kind. They do not add an extension-name step.
+
+When actions share an initial, the host sorts the available actions by name, with action identity as the tie-breaker, and offers numbered choices. For example, C → A → 1 can select Analysis and C → A → 2 Artifact. The numbers stay fixed while the chooser is open, even when contributions change. Session providers share C → S; type the displayed number to choose Codex, Claude Code, or another provider. The shortcut reference includes the numbered continuation.
+
+Alt+Shift+T is the single default shortcut for choosing a color theme. Theme providers contribute themes to that shared picker rather than registering another shortcut. Creation keeps C → N, C → T, and C → A without additional direct creation chords.
+
+Settings → E opens extension settings, I appearance and file icon themes, and S contributed skills. Mod+, opens agent runtime and skill setup. These destinations are registered once, regardless of the number of providers.
+
+Creation uses the same UI as the resource's existing entry point. Notes create and open directly, with bound empty parameters instead of an optional-parameter dialog. Ticket shortcuts and the palette invoke the board's `createRow.command`, so the shared creation dialog supplies markdown, attachments, editable properties, and the same submission handler. Artifact creation opens the library's existing creation choices.
+
+## Current view and conflicts
+
+Current view considers the selected presentation in every visible panel, including attached menus. Hidden tabs and collapsed panels do not contribute. An action that has several targets opens a modal with resource names and panel locations. Different actions sharing a key first require an action choice. Nothing is selected initially, and Enter on the heading executes nothing. Search, digits, arrows and Enter, or pointer selection choose an explicit row.
+
+Choices retain their identities while the selector is open. A missing or unavailable target never redirects to another target. The same resource mutation is invoked once when the same resource is shown twice; panel actions retain separate presentation targets. Required parameters use the existing command form after closing the selector.
+
+## Extension contributions
+
+An extension adds optional `layer` and `targetScope` fields to its existing `defineKeybinding` contributions. Layer keys are relative to their group. Shared layer keys are allowed because the host resolves action and target ambiguity. `targetScope` is `project`, `resource`, or `panel`. Completed actions exit shortcut mode, including navigation and commands from older extensions. The deprecated `sticky` field is still accepted but no longer keeps a completed action open. Only tab navigation retains mode until Enter or Escape.
+
+Choose a shared group by the action's purpose. The old `extensions` layer is deprecated; existing bindings join Current view as project actions until their author chooses a more specific group. Extension aliases are deprecated. Internal extension IDs never appear as keys a person must type.
+
+The resolved catalog supplies execution, the shortcut reference, contribution details, navigation hints, menus, and palette hints. Page navigation uses “Go to…” labels whether its shortcut is direct or in the Go group. Hints match the typed action and its arguments. Navigation hints appear in shortcut mode, preserve existing badges, and show only remaining keys that can complete from the current prefix. After V, a Go action's G → A hint is hidden. Available direct chords can still appear because they work from any prefix. All consumers share the catalog for unchanged workbench inputs; action execution rechecks current availability.
+
+## Webviews
+
+Managed webviews negotiate explicitly global entry chords with the host. The guest consumes an owned chord synchronously and sends a typed request. The host validates the live frame and effective binding, then owns plain keys in its menu. Ordinary typing, editor keys, terminal keys, composition, and local modal controls remain local. The selected editor receives focus again when navigation finishes.
+
+Opaque nested previews can include `webviewKeyboardRelayDocument` from `@pstdio/sdk/extensions` in each frame. The managed parent supplies a bounded profile for keyboard-menu entry, tab navigation, panel visibility, and Main fullscreen; it cannot invoke arbitrary host commands. Panel and fullscreen toggles also work while a dialog or menu owns focus. Option-letter chords handle macOS symbols and dead keys. Messages must come from a direct child, and requests must come from the focused child. Removed bindings no longer execute.

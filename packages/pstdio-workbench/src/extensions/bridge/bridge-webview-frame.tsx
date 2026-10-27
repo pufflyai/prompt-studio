@@ -3,6 +3,7 @@ import { resolvePageParams } from "pstdio-api-contracts";
 import { createWebviewDiagnostics, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore } from "../../core";
+import { useWebviewKeyboardShortcuts } from "../../react/keybindings/use-webview-keyboard-shortcuts";
 
 type BridgeWebviewFrameProps = Omit<ExtensionFrameProps, "onDiagnostics" | "onError" | "onReady"> & {
   workbench: WorkbenchCore;
@@ -11,6 +12,7 @@ type BridgeWebviewFrameProps = Omit<ExtensionFrameProps, "onDiagnostics" | "onEr
 /** A bridged webview that shows one failure message, in theme colors, when it cannot load. */
 export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
   const { view, workbench, ...frameProps } = props;
+  const keyboard = useWebviewKeyboardShortcuts(workbench);
   const [pageState, setPageState] = useState(workbench.pages.store.getState);
   useEffect(() => workbench.pages.store.subscribe((state) => setPageState(state)), [workbench]);
   const page = pageState.activePageId ? workbench.pages.getPage(pageState.activePageId) : undefined;
@@ -45,6 +47,7 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
       <ExtensionFrame
         view={view}
         {...frameProps}
+        {...keyboard}
         props={{ ...frameProps.props, ...pageProps }}
         onReady={() => {
           diagnostics.onReady();

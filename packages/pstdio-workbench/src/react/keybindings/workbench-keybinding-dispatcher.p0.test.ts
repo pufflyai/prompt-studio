@@ -2,6 +2,56 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "../../core";
 import { createWorkbenchHotkeyRegistrations, normalizeWorkbenchKeybinding } from "./workbench-keybinding-dispatcher";
 
+test("rebinding a generated layer shortcut to a direct chord retains its identity and executes", async () => {
+  const workbench = createWorkbench();
+  let calls = 0;
+  workbench.commands.registerCommand(
+    { id: "test.rebound", label: "Rebound action" },
+    {
+      execute: () => {
+        calls++;
+      },
+    },
+  );
+  workbench.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "test.rebound" },
+    layer: "help",
+    keybinding: "Q",
+  });
+  const declared = workbench.keybindings
+    .listKeybindings()
+    .find((binding) => binding.layer === "help" && binding.keybinding === "Q")!;
+  const id = workbench.keybindings.getId(declared);
+  await workbench.keyboard.setAssignment(id, { layer: "direct", keybinding: "Alt+J" });
+  const registration = createWorkbenchHotkeyRegistrations({ workbench }).find((entry) => entry.id === "test.rebound")!;
+  expect(registration.enabled).toBe(true);
+  await registration.execute();
+  expect(calls).toBe(1);
+});
+
+test("direct shortcuts recheck live visibility when matched and executed", async () => {
+  const workbench = createWorkbench();
+  let visible = false;
+  let executed = 0;
+  workbench.commands.registerCommand(
+    { id: "live", label: "Live" },
+    {
+      isVisible: () => visible,
+      execute: () => {
+        executed++;
+      },
+    },
+  );
+  workbench.keybindings.registerKeybinding({ action: { kind: "command", commandId: "live" }, keybinding: "Alt+J" });
+  expect(createWorkbenchHotkeyRegistrations({ workbench }).find((entry) => entry.id === "live")?.enabled).toBe(false);
+  visible = true;
+  const match = createWorkbenchHotkeyRegistrations({ workbench }).find((entry) => entry.id === "live")!;
+  expect(match.enabled).toBe(true);
+  visible = false;
+  await match.execute();
+  expect(executed).toBe(0);
+});
+
 describe("createWorkbenchHotkeyRegistrations", () => {
   test("asks for command parameters before a shortcut executes a creation action", async () => {
     const workbench = createWorkbench();

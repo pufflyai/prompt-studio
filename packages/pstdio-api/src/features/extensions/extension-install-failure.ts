@@ -3,6 +3,7 @@ import { ExtensionRegistryError } from "pstdio-extensions/distribution";
 import { GitUnavailableError } from "pstdio-wt";
 import { ExtensionNameConflictError, ProjectNotFoundError } from "../../services/extension-service";
 import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-unavailable-error";
+import { AlwaysEnabledExtensionError } from "./always-on-extensions";
 import { ExtensionNotInCatalogError } from "./extension-catalog";
 import { checkExtensionSource, hashExtensionSource } from "./extension-runtime";
 import {
@@ -55,7 +56,11 @@ export const extensionInstallFailure = async (error: unknown) => {
       body: { error: error.firstError, code: "extension_invalid", diagnostics: error.diagnostics },
       status: 422 as const,
     };
-  if (error instanceof ExtensionNameConflictError || error instanceof ExtensionUpgradeUnavailableError)
+  if (
+    error instanceof ExtensionNameConflictError ||
+    error instanceof ExtensionUpgradeUnavailableError ||
+    error instanceof AlwaysEnabledExtensionError
+  )
     return {
       body: { error: error.message },
       status: 409 as const,

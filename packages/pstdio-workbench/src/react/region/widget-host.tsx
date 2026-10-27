@@ -102,6 +102,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
     // `flex: 1 0 auto` lets the host fill its region when the widget is short and
     // grow past it when the widget is tall, so the region's ScrollArea can scroll.
     <Box
+      data-workbench-presentation={placement.widgetId}
       data-workbench-view={view?.id ?? placement.contributionId}
       data-workbench-renderer={renderer ? "mounted" : "missing"}
       display="flex"

@@ -1,3 +1,4 @@
+import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { NavigationTarget as ExtensionNavigationTarget } from "@pstdio/sdk/extensions";
 import { commandRefId } from "@pstdio/sdk/extensions";
 import type { ExtensionKeybindingRecord } from "pstdio-api-contracts";
@@ -20,12 +21,21 @@ export const resolveExtensionKeybindingChord = (binding: ExtensionKeybindingReco
 
 export const registerWorkbenchExtensionKeybindings = (input: {
   bindings: ExtensionKeybindingRecord[];
+  extensions?: WorkbenchExtensionMetadata["extensions"];
   createWhenExpression?: (when: ExtensionKeybindingRecord["when"]) => string | undefined;
   workbench: WorkbenchModuleContext;
 }) =>
   input.bindings.map((binding) =>
     input.workbench.keybindings.registerKeybinding({
+      id: binding.id,
+      layer: binding.layer,
+      targetScope: binding.targetScope,
+      sticky: binding.sticky,
       sourceExtensionId: binding.extensionId,
+      sourceExtensionLabel:
+        input.extensions?.find((extension) => extension.id === binding.extensionId)?.displayName ||
+        input.extensions?.find((extension) => extension.id === binding.extensionId)?.name,
+      allowInInputs: binding.allowInInputs,
       action: toWorkbenchNavigationTarget(binding.action as ExtensionNavigationTarget, {
         commandIdOf: (command) =>
           command.extensionId ? commandRefId({ extensionId: command.extensionId, id: command.id }) : undefined,

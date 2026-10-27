@@ -1,4 +1,4 @@
-import type { CommandTarget } from "./commands";
+import type { CommandRef } from "./commands";
 import type { PageRef } from "./contribution-identity";
 import type { FileRendererSectionTarget } from "./file-renderer";
 import type { JsonObject } from "./json";
@@ -38,7 +38,10 @@ export interface NavigationTargetPanel {
 
 export interface NavigationTargetCommand {
   kind: "command";
-  target: CommandTarget<JsonObject>;
+  target: {
+    command: CommandRef;
+    params?: JsonObject;
+  };
 }
 
 export interface NavigationTargetHref {

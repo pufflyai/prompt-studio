@@ -9,7 +9,7 @@ export const serializableJsonObjectSchema: z.ZodType<JsonObject> = z.record(z.st
 export const localizedStringSchema = z.object({ $l10n: z.string(), default: z.string().optional() });
 export const localizableStringSchema = z.union([z.string(), localizedStringSchema]);
 
-export const extensionSettingScopeSchema = z.enum(["global", "project"]);
+export const extensionSettingScopeSchema = z.enum(["global", "project", "device"]);
 export const extensionSettingValueTypeSchema = z.enum(["boolean", "number", "string", "array", "object"]);
 export const extensionSettingSourceSchema = z.enum(["stored", "default"]);
 

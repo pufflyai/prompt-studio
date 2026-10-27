@@ -30,7 +30,7 @@ export const resolveDefaultExtensionsConfig = async (env: Record<string, string 
     const catalog = await loadExtensionCatalog({ env });
     return {
       defaultExtensions: catalog.extensions
-        .filter((extension) => extension.default)
+        .filter((extension) => extension.default || extension.alwaysEnabled)
         .map((extension) => extension.installName),
     };
   }

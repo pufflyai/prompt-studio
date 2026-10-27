@@ -1,10 +1,7 @@
 import { Box, Stack } from "@chakra-ui/react";
 import type { ResourceContextAction } from "@pstdio/ui";
 import {
-  type AttributeDescriptor,
-  type AttributesSource,
   applyKanbanMove,
-  isAttributesSource,
   KanbanRenderer,
   KanbanRendererSkeleton,
   useKanbanRendererStore,
@@ -31,6 +28,7 @@ import { ViewToolbarActions } from "../view-toolbar-actions";
 import { prepareKanbanMove } from "./kanban-move";
 import { bindReactKanbanPresentation } from "./kanban-presentation";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
+import { useKanbanAttributes } from "./use-kanban-attributes";
 
 interface WorkbenchKanbanViewProps {
   workbench: WorkbenchCore;
@@ -69,14 +67,6 @@ export const isKanbanRowResource = (resource: unknown): resource is ResourceRef 
       typeof resource.id === "string",
   );
 
-const useResolvedContributionAttributes = (attributes: AttributeDescriptor[] | AttributesSource) => {
-  const source = isAttributesSource(attributes) ? attributes : undefined;
-  const fallback = source ? undefined : (attributes as AttributeDescriptor[]);
-  const subscribe = source ? source.subscribe : noopSubscribe;
-  const getSnapshot = source ? source.getSnapshot : () => fallback!;
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-};
-
 export const mergeKanbanViewRowActions = (
   resourceActions: ResourceContextAction[],
   contributionActions: ResourceContextAction[],
@@ -97,7 +87,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const pageParams = usePageParams(workbench, placement);
   const contribution = bindReactKanbanPresentation(props.contribution);
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
-  const attributes = useResolvedContributionAttributes(contribution.attributes);
+  const attributes = useKanbanAttributes(contribution.attributes);
   const storageKey = resolveKanbanRendererStorageKey(contribution.id, placement, contribution.storageScope);
   const provider = contribution.viewsProvider;
   const viewsSource = useSyncExternalStore(

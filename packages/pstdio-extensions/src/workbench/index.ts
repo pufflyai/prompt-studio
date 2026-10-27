@@ -1,3 +1,4 @@
+export { findReservedKeybindingConflicts } from "../runtime/normalize/reserved-keybindings";
 export {
   type CreateWorkbenchExtensionMetadataInput,
   createWorkbenchExtensionMetadata,

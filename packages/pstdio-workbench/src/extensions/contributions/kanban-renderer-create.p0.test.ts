@@ -145,6 +145,7 @@ describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
       ],
       labels: { cancel: "Cancel", properties: "Properties", removeFile: "Remove file" },
     });
+    expect(renderer?.createCommandId).toBe("pstdio-planner.create-ticket");
 
     await renderer?.onCreateRow?.({
       columnId: "ready",

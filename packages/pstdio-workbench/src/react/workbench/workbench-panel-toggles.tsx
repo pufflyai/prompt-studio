@@ -2,6 +2,7 @@ import { HStack, IconButton } from "@chakra-ui/react";
 import { PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchShellOpenRegion } from "../../core";
 import { resolveArrangement } from "../../core/registries/layout/panel-positions";
+import { WorkbenchShortcutHint } from "../keybindings/shortcut-hint";
 import { WorkbenchIcon } from "../shared/icon";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
@@ -57,8 +58,16 @@ export const WorkbenchPanelToggles = (props: {
     >
       {panels.map(({ region, label, icon, policy, position }) => {
         const action = `${policy.open ? "Hide" : "Show"} ${label}`;
+        const commandId = region === "sidenav" ? "workbench.toggleSideBar" : `workbench.keyboard.toggle.${region}`;
         return (
-          <Tooltip key={region} content={action}>
+          <Tooltip
+            key={region}
+            content={
+              <WorkbenchShortcutHint workbench={workbench} action={{ kind: "command", commandId }}>
+                {action}
+              </WorkbenchShortcutHint>
+            }
+          >
             <IconButton
               size={PANEL_HEADER_CONTROL_SIZE}
               variant="ghost"

@@ -8,6 +8,149 @@ import { changeThemeThroughCommandPalette } from "./helpers/theme-picker";
 
 test.use({ notificationsEnabled: true });
 
+test("the fullscreen shortcut toggles from editing and completes shortcut mode", async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Fullscreen shortcut" }),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+  await page.goto(`/projects/${project.id}/sessions/compose`);
+  const draft = page.locator('[data-workbench-region="main"]').getByRole("textbox").last();
+  await draft.fill("Keep fullscreen draft");
+  await page.keyboard.press("Alt+Shift+Z");
+  await expect(page.getByRole("button", { name: "Exit Main fullscreen", exact: true })).toBeVisible();
+  await expect(draft).toContainText("Keep fullscreen draft");
+  await page.keyboard.press("Alt+Shift+Space");
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+  await page.keyboard.press("Alt+Shift+Z");
+  await expect(page.getByRole("button", { name: "Enter Main fullscreen", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await expect(draft).toContainText("Keep fullscreen draft");
+  await page.keyboard.press("Shift+/");
+  const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
+  await reference.getByRole("textbox", { name: "Search keyboard shortcuts" }).fill("fullscreen");
+  const action = reference.getByRole("group", { name: "Toggle Main fullscreen", exact: true });
+  await expect(action).toHaveCount(1);
+  await expect(action.locator("kbd").last()).toHaveText("Z");
+});
+
+test("Go destinations use shortcut mode while history chords and Shift slash remain available", async ({
+  page,
+  request,
+}) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Direct core shortcuts" }),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await page.goto(`/projects/${project.id}`);
+  await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
+  await page.keyboard.press("Alt+Shift+Space");
+  await page.keyboard.press("g");
+  await page.keyboard.press("s");
+  await expect(page).toHaveURL(/\/sessions\/compose$/);
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await page.keyboard.press("Alt+Shift+ArrowLeft");
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await page.keyboard.press("Alt+Shift+ArrowRight");
+  await expect(page).toHaveURL(/\/sessions\/compose$/);
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await page.keyboard.press("Shift+/");
+  const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
+  await expect(reference).toBeVisible();
+  await reference.getByRole("textbox", { name: "Search keyboard shortcuts" }).fill("Keyboard shortcuts");
+  await expect(reference.getByRole("group", { name: "Keyboard shortcuts", exact: true })).toHaveCount(1);
+  await expect(reference.getByRole("group", { name: "Keyboard shortcuts", exact: true }).locator("kbd")).toHaveCount(2);
+});
+
+test("direct panel shortcuts open, focus, move and close tabs without entering shortcut mode", async ({
+  page,
+  request,
+}) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Typed session tabs" }),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+  await page.goto(`/projects/${project.id}/sessions`);
+  await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
+  const secondary = page.locator('[data-workbench-region="secondary"]');
+  const before = await secondary.getByRole("tab").count();
+  await page.keyboard.press("Alt+Shift+Enter");
+  await page
+    .getByRole("dialog", { name: "New tab · destination", exact: true })
+    .getByRole("button", { name: /Secondary/ })
+    .click();
+  await page
+    .getByRole("dialog", { name: "New tab · panel type", exact: true })
+    .getByRole("button", { name: /Session/i })
+    .click();
+  await expect(secondary.getByRole("tab")).toHaveCount(before + 1);
+  await page.keyboard.press("Alt+Shift+F");
+  await page
+    .getByRole("dialog", { name: "Focus panel", exact: true })
+    .getByRole("button", { name: /Secondary/ })
+    .click();
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await expect(secondary.getByRole("textbox").last()).toBeFocused();
+  await page.keyboard.press("Alt+Shift+Space");
+  await page.keyboard.press("Alt+Shift+M");
+  await expect(page.getByRole("dialog", { name: "Move tab", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(secondary.getByRole("tab")).toHaveCount(before + 1);
+  await page.keyboard.press("Alt+Shift+X");
+  await page
+    .getByRole("dialog", { name: "Close tab", exact: true })
+    .getByRole("button", { name: /Secondary/ })
+    .click();
+  await expect(secondary.getByRole("tab")).toHaveCount(before);
+  for (const [key, symbol, label] of [
+    ["S", "Í", /Sidenav/],
+    ["B", "ı", /Bottom Panel/],
+    ["E", "Dead", /Side Panel/],
+  ] as const) {
+    const toggle = page
+      .getByRole("group", { name: "Panel controls", exact: true, includeHidden: true })
+      .getByRole("button", { name: label, includeHidden: true });
+    const wasOpen = (await toggle.getAttribute("aria-pressed")) === "true";
+    await page.keyboard.press(`Alt+Shift+${key}`);
+    await expect(toggle).toHaveAttribute("aria-pressed", String(!wasOpen));
+    await page.keyboard.press("Alt+Shift+Space");
+    await page.keyboard.press(`Alt+Shift+${key}`);
+    await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen));
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+    // macOS Option emits a symbol or dead key instead of the shortcut's letter.
+    const input = {
+      key: symbol,
+      code: `Key${key}`,
+      altKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    };
+    await page.locator("body").dispatchEvent("keydown", input);
+    await expect(toggle).toHaveAttribute("aria-pressed", String(!wasOpen));
+    await page.keyboard.press("Alt+Shift+Space");
+    await page.locator("body").dispatchEvent("keydown", input);
+    await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen));
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+    await page.keyboard.press("Shift+/");
+    const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
+    const search = reference.getByRole("textbox", { name: "Search keyboard shortcuts" });
+    await search.fill("Keep this search");
+    await search.dispatchEvent("keydown", input);
+    await expect(toggle).toHaveAttribute("aria-pressed", String(!wasOpen));
+    await page.keyboard.press(`Alt+Shift+${key}`);
+    await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen));
+    await expect(search).toBeFocused();
+    await expect(search).toHaveValue("Keep this search");
+    await page.keyboard.press("Escape");
+  }
+});
+
 test("lists every registered keyboard shortcut", async ({ page, request }, testInfo) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "PS-299 Keyboard Shortcuts" }),
@@ -31,14 +174,14 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   for (const label of [
     "Toggle Command Palette",
     "Run Command",
-    "Change Theme",
-    "Navigate Back",
-    "Navigate Forward",
+    "Choose color theme",
+    "Go back",
+    "Go forward",
     "Toggle Sidenav",
     "Open notifications",
     "Keyboard shortcuts",
     "Shortcut greeting",
-    "Open shortcut destination",
+    "Go to shortcut destination",
     "Shortcut inspector",
     "Shortcut reference page + Shortcut inspector",
     "https://example.com/shortcuts",
@@ -47,24 +190,24 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   }
   const dialog = page.getByRole("dialog").last();
   await testInfo.attach("shortcut-inventory", { body: await dialog.innerText(), contentType: "text/plain" });
-  await dialog.getByRole("menuitem", { name: /Open shortcut destination/ }).focus();
-  await page.keyboard.press("ArrowDown");
+  await dialog.getByRole("group", { name: "Go to shortcut destination", exact: true }).scrollIntoViewIfNeeded();
   await testInfo.attach("shortcut-reference", { body: await page.screenshot(), contentType: "image/png" });
-  await expect(dialog.getByRole("group", { name: "Shortcut reference", exact: true })).toBeVisible();
-  await expect(dialog.getByRole("menuitem", { name: /Open shortcut destination/ })).toContainText(/J/i);
+  await expect(dialog.getByRole("heading", { name: "Shortcut reference", exact: true })).toBeVisible();
+  await expect(dialog.getByRole("group", { name: "Go to shortcut destination", exact: true })).toContainText(/J/i);
   for (const enabled of [false, true]) {
     const changed = await request.patch(`${apiBase}/v1/projects/${project.id}/extensions/${instanceId}`, {
       data: { enabled },
     });
     expect(changed.ok()).toBe(true);
-    const greeting = dialog.getByText("Shortcut greeting", { exact: true });
+    const greeting = dialog.getByRole("group", { name: "Shortcut greeting", exact: true });
     if (enabled) await expect(greeting).toHaveCount(1);
     else await expect(greeting).toHaveCount(0);
   }
   await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
   await page.keyboard.press("Alt+Shift+J");
   await expect(page).toHaveURL(/\/extensions\/e2e.shortcut-reference\/reference/);
-  await page.keyboard.press("Alt+Shift+I");
+  await page.keyboard.press("Alt+Shift+Q");
   await expect(page.getByText("Shortcut inspector", { exact: true }).first()).toBeVisible();
   const nextResponse = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Shortcut isolation" }),
@@ -74,7 +217,9 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   await page.goto(`/projects/${nextProject.id}/tickets`);
   await page.getByRole("button", { name: "Help", exact: true }).click();
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
-  await expect(page.getByRole("dialog").last().getByText("Shortcut greeting", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("dialog").last().getByRole("group", { name: "Shortcut greeting", exact: true }),
+  ).toHaveCount(0);
 });
 
 test("the theme picker opens on the current theme and Escape keeps it", { tag: "@smoke" }, async ({
@@ -147,18 +292,20 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   const project = (await response.json()) as { id: string };
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByRole("option", { name: /^Notes/ }).first()).toBeVisible({ timeout: 30_000 });
-  for (const [key, label, destination] of [
-    ["S", "Sessions", /\/sessions\/compose$/],
-    ["W", "Workspaces", /\/workspaces$/],
-    ["O", "Notes", /\/notes$/],
-    ["P", "Tickets", /\/tickets$/],
+  for (const [keys, label, destination] of [
+    [["G", "S"], "Sessions", /\/sessions\/compose$/],
+    [["G", "W"], "Workspaces", /\/workspaces$/],
+    [["Alt+Shift+O"], "Notes", /\/notes$/],
+    [["Alt+Shift+P"], "Tickets", /\/tickets$/],
   ] as const) {
     await page.goto(`/projects/${project.id}/tickets`);
     await showSidenavEntry(page, label);
     const row = page.getByRole("option", { name: new RegExp(`^${label}`) }).first();
     await row.focus();
-    await page.keyboard.press(`Alt+Shift+${key}`);
+    if (keys.length > 1) await page.keyboard.press("Alt+Shift+Space");
+    for (const key of keys) await page.keyboard.press(key);
     await expect(page).toHaveURL(destination);
+    await page.keyboard.press("Escape");
   }
   await page.keyboard.press("ControlOrMeta+Alt+N");
   const noteForm = page.getByRole("dialog").last();
@@ -175,7 +322,9 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await expect(ticketForm).not.toBeVisible();
   await expect(page.getByRole("heading", { name: "Shortcut ticket", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Help", exact: true }).focus();
-  await page.keyboard.press("ControlOrMeta+Alt+W");
+  await page.keyboard.press("Alt+Shift+Space");
+  await page.keyboard.press("c");
+  await page.keyboard.press("w");
   const workspaceForm = page.getByRole("dialog").last();
   await expect(workspaceForm.getByRole("heading", { name: "Create workspace", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
@@ -183,8 +332,9 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.getByRole("button", { name: "Help", exact: true }).click();
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
   const reference = page.getByRole("dialog").last();
-  await expect(reference.getByRole("group", { name: "Notes", exact: true })).toBeVisible();
-  for (const row of await reference.getByRole("menuitem").all()) {
-    await expect(row.locator("kbd").first()).toBeVisible();
-  }
+  await reference.getByRole("textbox", { name: "Search keyboard shortcuts" }).fill("New note");
+  await expect(reference.getByRole("heading", { name: /^Notes?$/ }).first()).toBeVisible();
+  await expect(
+    reference.getByRole("group", { name: "New note", exact: true }).first().locator("kbd").first(),
+  ).toBeVisible();
 });

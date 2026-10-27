@@ -4,7 +4,7 @@ import { extension_settings } from "../../db/schemas.pg";
 
 const nowTimestamp = () => new Date().toISOString();
 
-export type ExtensionSettingOwnerType = "installed_extension" | "extension_instance";
+export type ExtensionSettingOwnerType = "installed_extension" | "extension_instance" | "device_extension";
 
 export type ExtensionSettingOwner = {
   owner_type: ExtensionSettingOwnerType;

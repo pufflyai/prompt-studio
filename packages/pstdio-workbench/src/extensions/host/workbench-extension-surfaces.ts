@@ -16,7 +16,8 @@ const extensionSettingsOrderBase = 1_000;
 const asPreferenceValue = (value: unknown): PreferenceValue | undefined =>
   value === undefined ? undefined : (value as PreferenceValue);
 
-const preferenceScope = (scope: "global" | "project"): PreferenceScope => (scope === "global" ? "user" : "project");
+const preferenceScope = (scope: "global" | "project" | "device"): PreferenceScope =>
+  scope === "project" ? "project" : "user";
 
 const createExtensionHostAdapters = (
   input: InternalRegisterWorkbenchExtensionContributionsInput,

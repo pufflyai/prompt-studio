@@ -65,6 +65,53 @@ afterEach(async () => {
 });
 
 describe("syncRepoExtensionsForProject", () => {
+  test("leaves a repo copy off when a host-required copy provides its extension id", async () => {
+    const previous = { home: process.env.PSTDIO_HOME, catalog: process.env.PSTDIO_EXTENSION_CATALOG };
+    process.env.PSTDIO_HOME = join(tempRoot, "home");
+    process.env.PSTDIO_EXTENSION_CATALOG = join(tempRoot, "catalog.json");
+    try {
+      const origin = {
+        kind: "git",
+        url: "https://github.com/pufflyai/prompt-studio",
+        path: "extensions/x",
+        ref: "main",
+      };
+      const entry = { installName: "worktree-bootstrap", displayName: "Bootstrap", description: "", default: false };
+      writeFileSync(
+        process.env.PSTDIO_EXTENSION_CATALOG,
+        JSON.stringify({ version: 1, extensions: [{ ...entry, alwaysEnabled: true, origin }] }),
+      );
+      const requiredPath = join(process.env.PSTDIO_HOME, "extensions", "worktree-bootstrap");
+      writeExtension(requiredPath, "worktree-bootstrap");
+      await extensionService.registerInstalledSource({
+        displayName: "worktree-bootstrap",
+        extensionId: "pstdio.worktree-bootstrap",
+        installName: "worktree-bootstrap",
+        manifest: {},
+        name: "worktree-bootstrap",
+        sourcePath: requiredPath,
+      });
+      const project = await projectService.create({ name: "Required copy" });
+      const repoPath = join(tempRoot, "repo");
+      writeExtension(join(repoPath, ".pstdio", "extensions", "worktree-bootstrap"), "worktree-bootstrap");
+
+      const result = await syncRepoExtensionsForProject({
+        extensionService,
+        installedExtensionSourcesService,
+        projectId: project.id,
+        repoPath,
+      });
+
+      expect(result).toEqual({ conflicting: ["worktree-bootstrap"], enabled: [], missing: [], skipped: [] });
+      expect(await extensionService.listEnabledSourcesForProject(project.id)).toEqual([]);
+    } finally {
+      if (previous.home === undefined) delete process.env.PSTDIO_HOME;
+      else process.env.PSTDIO_HOME = previous.home;
+      if (previous.catalog === undefined) delete process.env.PSTDIO_EXTENSION_CATALOG;
+      else process.env.PSTDIO_EXTENSION_CATALOG = previous.catalog;
+    }
+  });
+
   test("discovers repo-local extensions and enables them for a project", async () => {
     const project = await projectService.create({ name: "Repo Extensions" });
     const repoPath = join(tempRoot, "repo");

@@ -55,7 +55,7 @@ describe("createSessionsModule", () => {
       .flatMap((section) => section.nodes)
       .find((node) => node.id === dashboardViews.sessions.id);
     expect(sessionsNode).toMatchObject({
-      target: { kind: "page", page: workbenchPages.sessions },
+      target: { kind: "command", commandId: dashboardCommandIds.openSessions },
     });
   });
   test("keeps the sessions root in the breadcrumb when a session opens", async () => {
