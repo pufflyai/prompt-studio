@@ -249,9 +249,7 @@ test("the theme picker opens on the current theme and Escape keeps it", { tag: "
   // Keep a parked pointer from selecting a row when the keyboard opens the picker.
   await page.mouse.move(0, 0);
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    await page.keyboard.press("Alt+Shift+Space");
-    await page.keyboard.press("s");
-    await page.keyboard.press("t");
+    await page.keyboard.press("Alt+Shift+T");
     const picker = page.getByRole("dialog");
     await expect(picker.getByRole("option", { selected: true })).toHaveText(/pstdio-dark/);
     await expect(html).toHaveAttribute("data-theme", "pstdio-dark");
