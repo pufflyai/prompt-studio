@@ -54,7 +54,7 @@ export const updateTicketFile = async (input: {
     const blobId =
       input.content === undefined
         ? previous.blobId
-        : await storeTicketFileContent(input.storage, ticket.id, name, input.content);
+        : await storeTicketFileContent(input.storage, ticket.id, name, input.content, previous.blobId);
     const updated = { ...previous, name, blobId, updatedAt: now };
     const files = (ticket.files ?? []).map((file) => (file.id === input.fileId ? updated : file));
     return { ...ticket, files, updatedAt: now };
