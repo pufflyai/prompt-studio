@@ -1,7 +1,6 @@
 import { Avatar, Link, Span } from "@chakra-ui/react";
 import type { MouseEvent } from "react";
 import { DiffBubble } from "@/components/diff-viewer/diff-bubble";
-import { Tooltip } from "@/components/primitives/tooltip";
 import { ChatLinkAnchor } from "../links/chat-link-anchor";
 import { useChatLinkHandler } from "../links/chat-link-context";
 import type { TitleSegment } from "./timeline";
@@ -114,7 +113,7 @@ function TextTitleSegment({
   seg: Extract<TitleSegment, { kind: "text" }>;
   isClickable?: boolean;
 }) {
-  const segment = (
+  return (
     <Span
       fontWeight={seg.bold ? "medium" : undefined}
       textStyle={seg.monospace ? "mono/XS" : undefined}
@@ -130,10 +129,6 @@ function TextTitleSegment({
       {seg.text}
     </Span>
   );
-
-  if (!seg.truncate) return segment;
-
-  return <Tooltip content={seg.text}>{segment}</Tooltip>;
 }
 
 export function TitleInline({

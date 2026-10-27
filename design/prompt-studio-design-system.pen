@@ -2943,7 +2943,7 @@
                           "width": "fill_container",
                           "fill": "#002B36",
                           "cornerRadius": 12,
-                          "stroke": "#2B2B4A",
+                          "stroke": "#7A989C",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "layout": "vertical",
@@ -2962,7 +2962,7 @@
                                   "type": "text",
                                   "id": "wnS57",
                                   "name": "Aa",
-                                  "fill": "#FFFFFF",
+                                  "fill": "#FDF6E3",
                                   "content": "Aa",
                                   "fontFamily": "$font-display",
                                   "fontSize": 20,
@@ -3048,7 +3048,7 @@
                               "type": "text",
                               "id": "O2VMCc",
                               "name": "M",
-                              "fill": "#93A1A1",
+                              "fill": "#EEE8D5",
                               "content": "muted text",
                               "fontFamily": "$font-body",
                               "fontSize": 11,
@@ -3103,7 +3103,7 @@
                           "width": "fill_container",
                           "fill": "#FDF6E3",
                           "cornerRadius": 12,
-                          "stroke": "#EEE8D5",
+                          "stroke": "#909A92",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "layout": "vertical",
@@ -27365,7 +27365,7 @@
                       "type": "frame",
                       "id": "yA7dV",
                       "name": "cmp/ChatToolRow",
-                      "context": "One collapsed tool call in an assistant turn. Rows stack flush — the row is exactly its content height and the group adds no gap between rows — so a run of calls reads as one quiet block instead of a list of separate entries. Separation belongs to the group boundary: the stack takes extra space above (8) to detach it from whatever precedes it; never reintroduce per-row spacing.\n\nThe icon is bare: no ring, no plate. A 20px outlined disc around every glyph turned a quiet list of calls into a column of buttons competing with the assistant's text; the glyph alone is enough to type the row.\n\ncall axis: rest | hover. The chevron exists only while the row is hovered (call: hover) or while the call is expanded — at rest the row is glyph + label + argument and nothing else. A column of permanent chevrons repeats the same affordance once per row; showing it on the row under the pointer says the same thing exactly when it is needed. When it does appear, it sits immediately after the label, not flushed right — it is the affordance for THIS row's disclosure, so it belongs with the thing it opens.\n\nThe trailing slot is the ONE thing worth reading without expanding: Lk (the file, info-coloured) OR St (a bare status) OR Diff (+/− counts). Enable exactly one; two competing arguments defeat the point of collapsing.\n\ntool axis: ok | error. Error recolours the glyph only ($ds-error) and swaps it for triangle-alert — the label stays fg.muted so a failed call does not shout louder than the prose around it.",
+                      "context": "One collapsed tool call in an assistant turn. Rows stack flush — the row is exactly its content height and the group adds no gap between rows — so a run of calls reads as one quiet block instead of a list of separate entries. Separation belongs to the group boundary: the stack takes extra space above (8) to detach it from whatever precedes it; never reintroduce per-row spacing.\n\nThe icon is bare: no ring, no plate. A 20px outlined disc around every glyph turned a quiet list of calls into a column of buttons competing with the assistant's text; the glyph alone is enough to type the row.\n\ncall axis: rest | hover. The chevron exists only while the row is hovered (call: hover) or while the call is expanded — at rest the row is glyph + label + argument and nothing else. A column of permanent chevrons repeats the same affordance once per row; showing it on the row under the pointer says the same thing exactly when it is needed. When it does appear, it sits immediately after the label, not flushed right — it is the affordance for THIS row's disclosure, so it belongs with the thing it opens.\n\nThe trailing slot is the ONE thing worth reading without expanding: Lk (the file, info-coloured) OR St (a bare status) OR Diff (+/− counts). Enable exactly one; two competing arguments defeat the point of collapsing.\n\ntool axis: ok | error. Error recolours the glyph only ($ds-error) and swaps it for triangle-alert — the label stays fg.muted so a failed call does not shout louder than the prose around it. Tool call content has no hover tooltip; expanding the row shows its content.",
                       "theme": {
                         "tool": "ok"
                       },
@@ -28246,10 +28246,17 @@
                       "type": "frame",
                       "id": "X7Yj6",
                       "name": "cmp/ChatAssistantMessage",
+                      "context": "Leave 8px after each assistant message, including consecutive assistant messages. Tool rows inside one message remain flush.",
                       "reusable": true,
                       "width": "fill_container",
                       "layout": "vertical",
                       "gap": 8,
+                      "padding": [
+                        0,
+                        0,
+                        8,
+                        0
+                      ],
                       "children": [
                         {
                           "type": "frame",
@@ -28726,7 +28733,7 @@
                       "type": "frame",
                       "id": "JGKK1",
                       "name": "cmp/ChatWorkspaceHub",
-                      "context": "Workspace container around the chat input. The shell stays borderless and uses ds-surface, matching the selected tab background. The input is borderless at rest and shows a 1px inner ds-focus outline while focus is inside it. Keep the workspace identity, diff counts or setup status, and open action above the input. Shell padding is 4px, with no gap between header and input. The open action has a tooltip and accessible name.",
+                      "context": "Borderless workspace shell using ds-surface. Header places the open workspace action first at the left, then identity and diff or setup status. The compact spinner and elapsed time sit at the right inside the header. No gap between header and input. Open action retains its tooltip and accessible name.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "$ds-surface",
@@ -28757,6 +28764,26 @@
                               "gap": 10,
                               "alignItems": "center",
                               "children": [
+                                {
+                                  "id": "o51iMN",
+                                  "type": "ref",
+                                  "ref": "nvvgg",
+                                  "name": "Open",
+                                  "width": 24,
+                                  "height": 24,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "descendants": {
+                                    "k7mgm": {
+                                      "icon": "arrow-up-right",
+                                      "width": 12,
+                                      "height": 12,
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  }
+                                },
                                 {
                                   "type": "frame",
                                   "id": "KD1W1",
@@ -28850,24 +28877,33 @@
                               ]
                             },
                             {
-                              "id": "o51iMN",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Open",
-                              "width": 24,
-                              "height": 24,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "arrow-up-right",
+                              "type": "frame",
+                              "id": "GS4G1",
+                              "name": "Working time",
+                              "gap": 4,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "m6TJD",
+                                  "name": "Working spinner",
                                   "width": 12,
                                   "height": 12,
-                                  "fill": "$ds-fg-muted"
+                                  "icon": "loader-circle",
+                                  "library": "lucide",
+                                  "fill": "$ds-info"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ZKYLM",
+                                  "name": "Elapsed time",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "1m 05s",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
                                 }
-                              }
+                              ]
                             }
                           ]
                         },
@@ -44272,11 +44308,6 @@
                           "name": "WorkspaceHub",
                           "width": "fill_container",
                           "descendants": {
-                            "o51iMN": {
-                              "theme": {
-                                "btn": "ghost"
-                              }
-                            },
                             "J3u0Q/scrOP": {
                               "theme": {
                                 "res": "ok"
@@ -44858,11 +44889,6 @@
                               "name": "Hub",
                               "width": "fill_container",
                               "descendants": {
-                                "o51iMN": {
-                                  "theme": {
-                                    "btn": "ghost"
-                                  }
-                                },
                                 "J3u0Q/scrOP": {
                                   "theme": {
                                     "res": "ok"
@@ -44930,11 +44956,6 @@
                               "descendants": {
                                 "XHWWg": {
                                   "enabled": false
-                                },
-                                "o51iMN": {
-                                  "theme": {
-                                    "btn": "ghost"
-                                  }
                                 },
                                 "J3u0Q/scrOP": {
                                   "theme": {
@@ -45006,14 +45027,6 @@
                                 },
                                 "PqUOk": {
                                   "enabled": true
-                                },
-                                "o51iMN": {
-                                  "theme": {
-                                    "btn": "ghost"
-                                  }
-                                },
-                                "o51iMN/k7mgm": {
-                                  "fill": "$ds-fg-subtle"
                                 },
                                 "J3u0Q/scrOP": {
                                   "theme": {
@@ -45093,14 +45106,6 @@
                                 "v3ytj": {
                                   "content": "Workspace setup failed",
                                   "fill": "$ds-error"
-                                },
-                                "o51iMN": {
-                                  "theme": {
-                                    "btn": "ghost"
-                                  }
-                                },
-                                "o51iMN/k7mgm": {
-                                  "fill": "$ds-fg-subtle"
                                 },
                                 "J3u0Q/scrOP": {
                                   "theme": {
@@ -47832,12 +47837,6 @@
                   "ref": "JGKK1",
                   "name": "WorkspaceHub",
                   "descendants": {
-                    "o51iMN": {
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "2xs"
-                      }
-                    },
                     "J3u0Q/scrOP": {
                       "theme": {
                         "res": "ok"
@@ -227191,7 +227190,7 @@
           }
         },
         {
-          "value": "#047AA6",
+          "value": "#073642",
           "theme": {
             "mode": "solarized-dark"
           }
@@ -227238,13 +227237,13 @@
           }
         },
         {
-          "value": "#073642",
+          "value": "#1B4852",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#EEE8D5",
+          "value": "#D7D2BF",
           "theme": {
             "mode": "solarized-light"
           }
@@ -227279,7 +227278,7 @@
           }
         },
         {
-          "value": "#FFFFFF",
+          "value": "#FDF6E3",
           "theme": {
             "mode": "solarized-dark"
           }
@@ -227326,7 +227325,7 @@
           }
         },
         {
-          "value": "#FFFFFF",
+          "value": "#EEE8D5",
           "theme": {
             "mode": "solarized-dark"
           }
@@ -227420,13 +227419,13 @@
           }
         },
         {
-          "value": "#2B2B4A",
+          "value": "#7A989C",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#EEE8D5",
+          "value": "#909A92",
           "theme": {
             "mode": "solarized-light"
           }
@@ -227684,13 +227683,13 @@
           }
         },
         {
-          "value": "#81B4FE",
+          "value": "#8FCBEE",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#0E6EF6",
+          "value": "#145886",
           "theme": {
             "mode": "solarized-light"
           }
@@ -227725,13 +227724,13 @@
           }
         },
         {
-          "value": "#859900",
+          "value": "#B3C95A",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#859900",
+          "value": "#3B5400",
           "theme": {
             "mode": "solarized-light"
           }
@@ -227766,13 +227765,13 @@
           }
         },
         {
-          "value": "#FFAD57",
+          "value": "#E6C46A",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#A74810",
+          "value": "#745000",
           "theme": {
             "mode": "solarized-light"
           }
@@ -227807,13 +227806,13 @@
           }
         },
         {
-          "value": "#DC322F",
+          "value": "#FFB3A8",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#DC322F",
+          "value": "#991B1B",
           "theme": {
             "mode": "solarized-light"
           }
@@ -227942,13 +227941,13 @@
           }
         },
         {
-          "value": "#274642",
+          "value": "#486E75",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#EEE8D5",
+          "value": "#CFCEBE",
           "theme": {
             "mode": "solarized-light"
           }
@@ -227989,13 +227988,13 @@
           }
         },
         {
-          "value": "#2B2B4A",
+          "value": "#46626B",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#EEE8D5",
+          "value": "#D3CFBF",
           "theme": {
             "mode": "solarized-light"
           }
@@ -236052,7 +236051,7 @@
           }
         },
         {
-          "value": "$ds-bg-subtle",
+          "value": "$ds-surface",
           "theme": {
             "mode": "solarized-dark"
           }

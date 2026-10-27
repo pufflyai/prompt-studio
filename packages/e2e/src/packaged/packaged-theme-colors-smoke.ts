@@ -20,5 +20,12 @@ export const expectPackagedThemeColors = async (
     expect(tokens["colors.border.accent-light"]).toBe(tokens["colors.border.accent"]);
     expect(tokens["colors.border.subtle"]).not.toBe(tokens["colors.border"]);
     expect(theme!.monacoTheme.colors).not.toHaveProperty("bg.button.primary.pressed");
+    if (id.startsWith("solarized-")) {
+      expect(tokens["colors.bg.tag"]).toBe(tokens["colors.bg.muted"]);
+      expect(tokens["colors.bg.active"]).toBe(tokens["colors.bg.menu-item.selected"]);
+      for (const tone of ["info", "warning", "success", "error"]) {
+        expect(tokens[`colors.fg.${tone}`]).toBe(tokens[`colors.border.${tone}`]);
+      }
+    }
   }
 };

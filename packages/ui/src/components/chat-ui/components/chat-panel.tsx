@@ -234,13 +234,6 @@ export const ChatPanel = (props: ChatPanelProps) => {
             {!hideComposer && (
               <Box layerStyle="chatContent" flexShrink="0">
                 {approvalPrompt}
-                {streaming ? (
-                  <WorkingIndicator
-                    key={messageListKey}
-                    startedAt={streamingStartedAt}
-                    hidden={!showThinkingIndicator}
-                  />
-                ) : null}
                 <ChatPanelComposer
                   conversationKey={conversationKey ?? messages[0]?.id}
                   recentUserMessages={getRecentUserPrompts(messages)}
@@ -273,6 +266,15 @@ export const ChatPanel = (props: ChatPanelProps) => {
                   queuedFollowUps={queuedFollowUps}
                   streaming={streaming}
                   workspaceHub={workspaceHub}
+                  activity={
+                    streaming ? (
+                      <WorkingIndicator
+                        key={messageListKey}
+                        startedAt={streamingStartedAt}
+                        hidden={!showThinkingIndicator}
+                      />
+                    ) : null
+                  }
                 />
               </Box>
             )}

@@ -36,9 +36,9 @@ export const WorkingIndicator = (props: { startedAt?: number; hidden?: boolean }
   if (hidden) return null;
 
   return (
-    <HStack gap="2xs" px="sm" py="xs">
-      <Spinner size="xs" color="fg.muted" />
-      <Text fontFamily="mono" fontSize="xs" color="fg.muted" letterSpacing="-0.2px">
+    <HStack gap="2xs" px="xs" py="2xs" flexShrink="0">
+      <Spinner size="xs" color="fg.info" />
+      <Text fontFamily="mono" textStyle="mono/XS" color="fg.muted" letterSpacing="-0.2px">
         {formatElapsed((now - (startedAt ?? mountedAt)) / 1000)}
       </Text>
     </HStack>

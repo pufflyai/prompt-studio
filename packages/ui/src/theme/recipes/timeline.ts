@@ -72,6 +72,7 @@ export const timelineSlotRecipe = defineSlotRecipe({
   variants: {
     variant: {
       tool: {
+        indicator: { bg: "transparent", outline: "none", border: "none" },
         content: {
           minWidth: "0",
         },

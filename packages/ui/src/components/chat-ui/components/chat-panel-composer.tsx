@@ -1,4 +1,4 @@
-import { Box, Stack, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Flex, Stack, useSlotRecipe } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { chatComposerRecipe } from "@/theme/recipes/chat-composer";
 import { queuedFollowUpRecipe } from "@/theme/recipes/queued-follow-up";
@@ -52,6 +52,7 @@ export interface ChatPanelComposerProps {
   queuedFollowUps: QueuedFollowUp[];
   streaming: boolean;
   workspaceHub?: ReactNode;
+  activity?: ReactNode;
 }
 
 export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
@@ -71,6 +72,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
     queuedComposer,
     queuedFollowUps,
     workspaceHub,
+    activity,
   } = props;
   const styles = useSlotRecipe({ recipe: queuedFollowUpRecipe })();
   const composerStyles = useSlotRecipe({ recipe: chatComposerRecipe })({ workspace: hasWorkspaceHub });
@@ -82,7 +84,14 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
   return (
     <Stack p="xs" gap="0">
       <Box className="ps-chat-composer__workspace" css={composerStyles.workspace}>
-        {workspaceHub}
+        {(workspaceHub || activity) && (
+          <Flex align="center" minW="0">
+            <Box flex="1" minW="0">
+              {workspaceHub}
+            </Box>
+            {activity}
+          </Flex>
+        )}
         {composerHeader}
         {composerFallback}
         {!composerFallback && (

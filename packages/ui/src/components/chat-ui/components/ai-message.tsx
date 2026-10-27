@@ -11,9 +11,6 @@ const recipe = defineSlotRecipe({
       alignItems: "end",
       justifyContent: "end",
       gap: "sm",
-      "&:has(+ [data-scope='ai-message'][data-part='root'])": {
-        mb: 0,
-      },
     },
     content: {
       display: "flex",
@@ -42,7 +39,7 @@ const recipe = defineSlotRecipe({
       },
       assistant: {
         root: {
-          mb: "md",
+          mb: "xs",
           flexDirection: "row",
           justifyContent: "start",
         },
