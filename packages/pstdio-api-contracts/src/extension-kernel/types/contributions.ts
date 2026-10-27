@@ -170,7 +170,7 @@ export interface CommandPaletteResourceContribution extends ContributionDefiniti
   refreshEvents?: readonly RendererEventReference[];
 }
 
-export type ExtensionSettingScope = "global" | "project";
+export type ExtensionSettingScope = "global" | "project" | "device";
 export type ExtensionSettingValueType = "boolean" | "number" | "string" | "array" | "object";
 
 export type ExtensionSettingValueForType<TType extends ExtensionSettingValueType> = TType extends "boolean"

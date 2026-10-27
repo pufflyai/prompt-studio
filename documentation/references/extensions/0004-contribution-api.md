@@ -69,6 +69,36 @@ Only `string` settings accept `options`; on other types the host ignores `option
 
 Extensions declare metadata and handlers; the host owns installation, project enablement, command routing, workbench chrome, trusted context keys, and layout primitives.
 
+## App-wide settings
+
+On `main` (planned extension API 0.3.0, after 0.45.0), a settings panel can target
+`workbenchSlots.globalSettings`. The host registers it with global scope in every
+project where the extension is enabled. Use `workbenchSlots.projectSettings` for
+project settings and `workbenchSlots.extensionSettings` for the owner's extension
+detail Settings tab. Panel placement does not change a setting's storage scope.
+
+```ts
+const panel = defineSettingsPanel({
+  id: "device",
+  view: deviceView.ref,
+  slot: workbenchSlots.globalSettings,
+});
+```
+
+Each property in `settings.properties` declares `scope: "project"`, `"global"`, or
+`"device"`. Project values belong to the project extension instance. Global values
+belong to the installed extension. Device values belong to the extension identity
+on this host, so they are shared across its projects and installed copies, persist
+across restarts, and never enter synced project data. Another device starts with
+the declared default. A remote host stores values on that host, not in the browser.
+Every installed copy with the same extension ID reads the same device values, so
+store only values that any copy of the extension may read.
+
+Commands use `ctx.settings.all()`, `get(key)`, `set(key, value)`, and `delete(key)`.
+Webviews use the same methods on `client.settings` and declare the matching
+`extension.settings.*` capabilities. The host selects storage from the property's
+declared scope. Deleting an override restores its default.
+
 Extension code should not:
 
 - define package identity inside `defineExtension()`

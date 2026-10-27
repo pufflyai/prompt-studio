@@ -2,6 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import type { createExtensionService, SyncInstalledSourceInput } from "../../services/extension-service";
+import { AlwaysEnabledExtensionError } from "./always-on-extensions";
 import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
 
 type ExtensionService = Pick<
@@ -66,6 +67,17 @@ const markMissingSources = async (
   return missing;
 };
 
+// A host-required copy can provide the extension id even when it was enabled after the snapshot.
+const enableUnlessRequiredElsewhere = async (extensionService: ExtensionService, instanceId: string) => {
+  try {
+    await extensionService.setProjectExtensionEnabled(instanceId, true);
+    return true;
+  } catch (error) {
+    if (error instanceof AlwaysEnabledExtensionError) return false;
+    throw error;
+  }
+};
+
 export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForProjectInput) => {
   const root = repoExtensionsRoot(input.repoPath);
   const load = input.loadExtension ?? loadExtensionSource;
@@ -120,7 +132,10 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
       continue;
     }
 
-    await input.extensionService.setProjectExtensionEnabled(synced.instance.id, true);
+    if (!(await enableUnlessRequiredElsewhere(input.extensionService, synced.instance.id))) {
+      conflicting.push(name);
+      continue;
+    }
     providedExtensionIds.add(loaded.metadata.id);
     enabled.push(name);
   }

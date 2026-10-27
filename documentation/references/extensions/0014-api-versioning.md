@@ -25,7 +25,7 @@ The host decides what loads. It compares its own extension API version with `eng
 | 0.43.1 | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
 | 0.44.0 | 0.2.0 | A breaking step. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
 | 0.45.0 | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
-| `main`, planned for 0.46.0 | 0.3.0 | A breaking step. See [Storage size limits in API 0.3](#storage-size-limits-in-api-03). Manifests need `^0.3.0`. It also has the additions listed for API 0.2.2, which no release shipped: account feature grants, full project-scoped `ctx.sessions` operations, indexed record queries and batches, optional paged collection views, device performance capture and Developer settings contributions, project recovery methods on `/client`, and Kanban dragging in every column. |
+| `main`, planned for 0.46.0 | 0.3.0 | A breaking step. See [Storage size limits in API 0.3](#storage-size-limits-in-api-03). Manifests need `^0.3.0`. It also has the additions listed for API 0.2.2, which no release shipped: account feature grants, full project-scoped `ctx.sessions` operations, indexed record queries and batches, optional paged collection views, device performance capture and Developer settings contributions, project recovery methods on `/client`, app-wide and device settings, and Kanban dragging in every column. |
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
@@ -324,3 +324,12 @@ The `/client` project methods add `recoveryPoints(projectId)` and `restore(proje
 The `/api` entry exports `ProjectRecoveryPoint`, `RestoreProjectInput` and `RestoreProjectResult`.
 Agents use them to list and restore the same recovery points as project settings. These
 additions ship in the release after 0.45.0. See [Restore project data](../../guides/concepts/0006-restore-project-data.md).
+
+## App-wide and device settings in API 0.3.0
+
+`workbenchSlots.globalSettings` and the `"device"` extension setting scope are
+additive. They join the planned API 0.3.0 release after 0.45.0. Existing
+project/global settings, extension detail panels, and published custom global
+slots keep working. Device settings use `ctx.settings` and the existing typed
+webview settings capabilities. Publish the SDK and host before extensions adopt
+them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).
