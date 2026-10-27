@@ -1,81 +1,46 @@
-name: Diagnose Windows packaged core setup
+name: Diagnose Windows Planner dependency install
 on:
   push:
     branches: [test/diag-win-arm-core]
 permissions:
   contents: read
 jobs:
-  diag:
-    name: diag (${{ matrix.pkg }})
+  install:
+    name: install (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { os: windows-11-arm, pkg: cli-win-arm64 }
-          - { os: windows-latest, pkg: cli-win-x64 }
+        os: [windows-11-arm, windows-latest]
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - uses: actions/setup-node@v5
+      - uses: samypr100/setup-dev-drive@v3
         with:
-          node-version: "24"
-      - uses: ./.github/actions/setup-ci-cache
-        with:
-          install-strategy: native
-      - name: Describe the host
+          drive-size: 8GB
+          drive-format: ReFS
+      - name: Time Planner production installs per volume
         shell: pwsh
         run: |
-          Get-MpComputerStatus | Format-List AMRunningMode,AMServiceEnabled,RealTimeProtectionEnabled,OnAccessProtectionEnabled,IoavProtectionEnabled,BehaviorMonitorEnabled
-          "ExclusionPath: $((Get-MpPreference).ExclusionPath -join '; ')"
-          "ExclusionProcess: $((Get-MpPreference).ExclusionProcess -join '; ')"
-          Get-Volume | Format-Table DriveLetter,FileSystem,FileSystemLabel,Size,SizeRemaining
-          "RUNNER_TEMP=$env:RUNNER_TEMP TEMP=$env:TEMP"
-          Get-CimInstance Win32_Processor | Format-List Name,NumberOfCores,NumberOfLogicalProcessors
-          function Machine($path) {
-            $bytes = [System.IO.File]::ReadAllBytes($path)
-            $pe = [BitConverter]::ToInt32($bytes, 0x3c)
-            '{0} 0x{1:x4}' -f $path, [BitConverter]::ToUInt16($bytes, $pe + 4)
+          function Time-Install($root, $label) {
+            New-Item -ItemType Directory -Force "$root\app" | Out-Null
+            Copy-Item extensions\pstdio-planner\package.json, extensions\pstdio-planner\bun.lock, extensions\pstdio-planner\bunfig.toml "$root\app"
+            $env:BUN_INSTALL_CACHE_DIR = "$root\cache"
+            Push-Location "$root\app"
+            $cold = Measure-Command { bun install --frozen-lockfile --ignore-scripts --production | Out-Host }
+            $files = (Get-ChildItem node_modules -Recurse -File -Force).Count
+            $bytes = (Get-ChildItem node_modules -Recurse -File -Force | Measure-Object Length -Sum).Sum
+            $cacheBytes = (Get-ChildItem "$root\cache" -Recurse -File -Force | Measure-Object Length -Sum).Sum
+            Remove-Item node_modules -Recurse -Force
+            $warm = Measure-Command { bun install --frozen-lockfile --ignore-scripts --production | Out-Host }
+            Pop-Location
+            "RESULT $label cold=$([math]::Round($cold.TotalSeconds,1))s warm=$([math]::Round($warm.TotalSeconds,1))s files=$files bytes=$bytes cacheBytes=$cacheBytes"
           }
-          foreach ($name in 'git','bun','node') { Machine (Get-Command $name).Source }
-      - name: Build the compiled CLI for this host
-        shell: bash
-        env:
-          PSTDIO_BUILD_PLATFORM_PKG: ${{ matrix.pkg }}
-        run: bun run --cwd scripts build:all
-      - name: Install the packaged smoke browser
-        shell: bash
-        run: >-
-          bun -e 'import { preparePackagedSmokeBrowser } from "./scripts/verify/packaged-runtime-smoke";
-          preparePackagedSmokeBrowser(Bun.argv.at(-1)!);'
-          "$GITHUB_WORKSPACE/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe"
-      - name: Run the core cases with the image defaults
-        continue-on-error: true
-        shell: bash
-        working-directory: packages/e2e
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
-          PSTDIO_LOG_LEVEL: info
-        run: >-
-          bun test --preload ./src/scripts/bun-process-cleanup.ts --timeout 600000
-          src/packaged/packaged-core-extensions-smoke.p1.test.ts src/packaged/packaged-core-extension-features.p2.test.ts
-      - name: Exclude the job temp directory from Defender scanning
-        shell: pwsh
-        run: |
-          Add-MpPreference -ExclusionPath $env:RUNNER_TEMP
-          "ExclusionPath: $((Get-MpPreference).ExclusionPath -join '; ')"
-      - name: Run the core cases with the job temp directory excluded
-        continue-on-error: true
-        shell: bash
-        working-directory: packages/e2e
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
-          PSTDIO_LOG_LEVEL: info
-        run: >-
-          bun test --preload ./src/scripts/bun-process-cleanup.ts --timeout 600000
-          src/packaged/packaged-core-extensions-smoke.p1.test.ts src/packaged/packaged-core-extension-features.p2.test.ts
+          "RUNNER_TEMP=$env:RUNNER_TEMP DEV_DRIVE=$env:DEV_DRIVE"
+          Time-Install "$env:RUNNER_TEMP\diag-1" "runner-temp-1"
+          Time-Install "C:\diag-c" "c-drive"
+          Time-Install "$env:DEV_DRIVE\diag" "dev-drive"
+          Time-Install "$env:RUNNER_TEMP\diag-2" "runner-temp-2"
