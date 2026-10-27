@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -28,32 +29,48 @@ export interface CatalogStory {
   componentImport?: string;
 }
 export const sourceFiles = async () => {
-  const files: string[] = [];
-  for (const root of ["packages", "extensions", "clients", ".pstdio/extensions"]) {
-    for (const suffix of ["stories.ts", "stories.tsx", "mdx"]) {
-      for await (const local of new Bun.Glob(`**/*.${suffix}`).scan({
-        cwd: resolve(repoRoot, root),
-        onlyFiles: true,
-      })) {
-        const file = `${root}/${local}`;
-        if (!/(^|\/)(node_modules|dist|\.publish|__test-tmp__|storybook-static)\//.test(file)) files.push(file);
-      }
-    }
-  }
-  return files.sort();
+  // Git includes new source files without traversing every installed dependency and build output.
+  const files = execFileSync(
+    "git",
+    [
+      "ls-files",
+      "--cached",
+      "--others",
+      "--exclude-standard",
+      "-z",
+      "--",
+      "packages",
+      "extensions",
+      "clients",
+      ".pstdio/extensions",
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  ).split("\0");
+  return [...new Set(files)]
+    .filter(
+      (file) =>
+        /\.(stories\.tsx?|mdx)$/.test(file) &&
+        !/(^|\/)(node_modules|dist|\.publish|__test-tmp__|storybook-static)\//.test(file),
+    )
+    .sort();
 };
 export const suiteForSource = (source: string): Suite => {
   const suite = Object.entries(suites).find(([, path]) => source.startsWith(`${path}/`));
   return (suite?.[0] as Suite | undefined) ?? "dashboard";
 };
 export const collectStoryCatalog = async () => {
-  const { readCsf } = await import(uiRequire.resolve("storybook/internal/csf-tools"));
+  const { loadCsf } = await import(uiRequire.resolve("storybook/internal/csf-tools"));
   const stories: CatalogStory[] = [];
   const documents: { id: string; name: string; source: string; suite: Suite; content: string; sourceHash: string }[] =
     [];
   const sources: Record<string, { code: string; hash: string; component?: string; componentImport?: string }> = {};
-  for (const source of await sourceFiles()) {
-    const text = await readFile(resolve(repoRoot, source), "utf8");
+  const files = await Promise.all(
+    (await sourceFiles()).map(async (source) => ({
+      source,
+      text: await readFile(resolve(repoRoot, source), "utf8"),
+    })),
+  );
+  for (const { source, text } of files) {
     const hash = createHash("sha256").update(text).digest("hex");
     sources[source] = { code: text, hash };
     if (source.endsWith(".mdx")) {
@@ -68,11 +85,10 @@ export const collectStoryCatalog = async () => {
       continue;
     }
     const suite = suiteForSource(source);
-    const csf = (
-      await readCsf(resolve(repoRoot, source), {
-        makeTitle: (title?: string) => title ?? source.replace(/\.stories\.tsx?$/, ""),
-      })
-    ).parse();
+    const csf = loadCsf(text, {
+      fileName: resolve(repoRoot, source),
+      makeTitle: (title?: string) => title ?? source.replace(/\.stories\.tsx?$/, ""),
+    }).parse();
     sources[source].component = csf.meta.component;
     sources[source].componentImport = csf._rawComponentPath;
     for (const [exportName, story] of Object.entries(csf._stories) as [string, { id: string; name: string }][]) {
