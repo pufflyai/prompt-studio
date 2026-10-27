@@ -24,7 +24,7 @@ export default defineExtension({
       defineKeybinding({
         id: `keyboard-example-${index}`,
         layer: "go",
-        key: page.ref.id[0]!.toUpperCase(),
+        key: example === scribble ? "R" : page.ref.id[0]!.toUpperCase(),
         sticky: true,
         action: { kind: "page", page: page.ref },
       }),
