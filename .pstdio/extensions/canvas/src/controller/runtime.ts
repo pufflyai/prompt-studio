@@ -3,8 +3,27 @@ import type { CanvasDefinition } from "../canvases/definitions";
 import type { FrameTheme } from "../frame-themes";
 import type { Layout, LayoutChange } from "../layout";
 import { frameAnchor, type ItemBounds, measureItem } from "./frame-bounds";
+import { createFrameSelection } from "./frame-selection";
 import { boundedCamera, boundedPoint, type Camera, fitCamera, type Point, revealCamera, zoomAt } from "./geometry";
 import { arrangeGrid, canvasBounds, defaultGridItems } from "./grid";
+
+const createFrameForeground = (items: ReadonlyMap<string, HTMLElement>) => {
+  let foreground: HTMLElement | undefined;
+  return (id: string) => {
+    const next = items.get(id);
+    if (!next || foreground === next) return;
+    foreground?.style.removeProperty("z-index");
+    next.style.zIndex = "1";
+    foreground = next;
+  };
+};
+
+const subscribeToRuntime = (listeners: Set<() => void>, listener: () => void) => {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+};
 
 export const createCanvasRuntime = (
   canvas: CanvasDefinition,
@@ -12,22 +31,16 @@ export const createCanvasRuntime = (
   save: (change: LayoutChange) => void,
 ) => {
   let layout = initial;
+  const selection = createFrameSelection(canvas.items.map((item) => item.id));
   let shell: HTMLElement | undefined;
   let stage: HTMLElement | undefined;
   let frame = 0;
   let focusFrame = 0;
-  let foreground: HTMLElement | undefined;
-  const raise = (id: string) => {
-    const next = items.get(id);
-    if (!next || foreground === next) return;
-    foreground?.style.removeProperty("z-index");
-    next.style.zIndex = "1";
-    foreground = next;
-  };
   let timer: ReturnType<typeof setTimeout> | undefined;
   let dirty = false;
   let changes: LayoutChange = {};
   const items = new Map<string, HTMLElement>();
+  const raise = createFrameForeground(items);
   const sizes = new Map<string, ItemBounds>();
   const moved = new Set<string>();
   const automatic = defaultGridItems(canvas, initial);
@@ -97,18 +110,19 @@ export const createCanvasRuntime = (
   };
   const reveal = (id: string) => {
     if (!items.has(id)) return;
+    selection.select(id);
     raise(id);
     framing = { kind: "item", id };
     reframe();
   };
   return {
-    get: () => layout,
-    subscribe: (listener: () => void) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
+    selection,
+    select: (id?: string) => {
+      selection.select(id);
+      if (id) raise(id);
     },
+    get: () => layout,
+    subscribe: (listener: () => void) => subscribeToRuntime(listeners, listener),
     mount: (element: HTMLElement, content: HTMLElement) => {
       shell = element;
       stage = content;
@@ -216,6 +230,7 @@ export const createCanvasRuntime = (
     },
     flush,
     dispose: () => {
+      selection.dispose();
       flush();
       cancelAnimationFrame(frame);
       cancelAnimationFrame(focusFrame);

@@ -6,11 +6,17 @@ import { createCanvasRuntime } from "../controller/runtime";
 import { readLayout } from "../layout";
 import { CanvasStage } from "./canvas-stage";
 
-const Example = (props: { canvas: CanvasDefinition; zoom?: number }) => {
-  const { canvas, zoom = 1 } = props;
-  const [runtime] = useState(() =>
-    createCanvasRuntime(canvas, readLayout({ version: 1, camera: { x: 24, y: 24, zoom } }, canvas.items), () => {}),
-  );
+const Example = (props: { canvas: CanvasDefinition; zoom?: number; selected?: string }) => {
+  const { canvas, zoom = 1, selected } = props;
+  const [runtime] = useState(() => {
+    const runtime = createCanvasRuntime(
+      canvas,
+      readLayout({ version: 1, camera: { x: 24, y: 24, zoom } }, canvas.items),
+      () => {},
+    );
+    runtime.select(selected);
+    return runtime;
+  });
   return (
     <Box w="full" h="full" minH="0">
       <CanvasStage canvas={canvas} runtime={runtime} />
@@ -20,6 +26,7 @@ const Example = (props: { canvas: CanvasDefinition; zoom?: number }) => {
 export default { title: "Canvas/Workspace", parameters: { layout: "fullscreen" } };
 export const Interactive = { render: () => <Example canvas={interactionFixture} /> };
 export const ZoomedOut = { render: () => <Example canvas={interactionFixture} zoom={0.5} /> };
+export const SelectedFrame = { render: () => <Example canvas={interactionFixture} selected="project-form" /> };
 const populated: CanvasDefinition = {
   id: "populated-story",
   name: "Populated canvas",

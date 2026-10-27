@@ -15,6 +15,7 @@ export const installItemMovement = (shell: HTMLElement, runtime: CanvasRuntime) 
     event.preventDefault();
     event.stopPropagation();
     handle.focus({ preventScroll: true });
+    runtime.select(handle.dataset.canvasHandle!);
     drag = { pointer: event.pointerId, id: handle.dataset.canvasHandle!, x: event.clientX, y: event.clientY, handle };
     handle.setPointerCapture(event.pointerId);
   };
@@ -42,6 +43,7 @@ export const installItemMovement = (shell: HTMLElement, runtime: CanvasRuntime) 
       ArrowDown: { x: 0, y: step },
     }[event.key];
     if (!delta) return;
+    runtime.select(handle.dataset.canvasHandle!);
     event.preventDefault();
     event.stopPropagation();
     runtime.move(handle.dataset.canvasHandle!, delta);

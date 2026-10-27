@@ -2,6 +2,7 @@ import type { CanvasRuntime } from "../controller/runtime";
 import type { FrameMessage } from "./protocol";
 
 export const navigateFrame = (message: FrameMessage, id: string, runtime: CanvasRuntime) => {
+  if (runtime.selection.get() !== id) return;
   const delta = { x: message.deltaX ?? 0, y: message.deltaY ?? 0 };
   if (message.type === "pan") runtime.pan(delta);
   if (message.type === "reveal" && message.id) runtime.reveal(message.id);

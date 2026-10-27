@@ -22,6 +22,6 @@ export const resolveCanvasCommand = defineCommand({
 export const canvasResource = defineResourceKind({
   id: "canvas",
   label: "Canvas",
-  icon: "layout-dashboard",
+  icon: "diamond",
   resolve: resolveCanvasCommand.ref,
 });

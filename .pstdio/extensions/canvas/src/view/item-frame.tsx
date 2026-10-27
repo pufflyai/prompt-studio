@@ -1,11 +1,13 @@
-import { Box, Button, Flex, Text } from "@chakra-ui/react";
-import { Tooltip } from "@pstdio/ui";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Box, Button, Flex, Icon, Text } from "@chakra-ui/react";
+import { resolveIconComponent, Tooltip } from "@pstdio/ui";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CanvasItem } from "../canvases/definitions";
 import type { CanvasRuntime } from "../controller/runtime";
 import { FramePreview } from "../frames/frame";
 import { FrameThemePicker } from "./frame-theme-picker";
 import { FrameVariantPicker } from "./frame-variant-picker";
+
+const Grip = resolveIconComponent("grip-vertical")!;
 
 interface ItemProps {
   item: CanvasItem;
@@ -13,6 +15,7 @@ interface ItemProps {
 }
 export const ItemFrame = (props: ItemProps) => {
   const { item, runtime } = props;
+  const selected = useSyncExternalStore(runtime.selection.subscribe, () => runtime.selection.get() === item.id);
   const [variantId, setVariantId] = useState(item.variants?.[0]?.id);
   const variant = item.variants?.find((entry) => entry.id === variantId);
   const selectedItem = variant ? { ...item, preview: variant.preview } : item;
@@ -45,25 +48,31 @@ export const ItemFrame = (props: ItemProps) => {
   return (
     <Box
       data-canvas-item={item.id}
+      data-canvas-selected={selected}
       data-canvas-control
+      onClickCapture={() => runtime.select(item.id)}
       ref={wrapper}
       position="absolute"
       top="0"
       left="0"
       w={`${item.width}px`}
+      borderRadius="xs"
+      outline={selected ? "2px solid" : "none"}
+      outlineColor="border.accent"
+      outlineOffset="2px"
     >
       <Flex align="center" gap="xs" wrap="wrap" pb="xs" cursor="default">
         <Tooltip content="Move with the arrow keys. Hold Shift for larger steps." openDelay={300}>
           <Button
             variant="ghost-static"
-            size="xs"
+            size="sm"
             cursor="default"
             data-canvas-handle={item.id}
             aria-label={`Move ${item.name}`}
             touchAction="none"
             aria-describedby="canvas-instructions"
           >
-            ⠿
+            <Icon as={Grip} boxSize="icon-md" />
           </Button>
         </Tooltip>
         <Tooltip content="Copy this name to reference the design" openDelay={300}>
@@ -89,6 +98,7 @@ export const ItemFrame = (props: ItemProps) => {
       </Flex>
       <Box
         minH={`${item.height}px`}
+        position="relative"
         display="flow-root"
         borderWidth="1px"
         borderColor="border.subtle"
@@ -96,7 +106,26 @@ export const ItemFrame = (props: ItemProps) => {
         borderRadius="xs"
         data-canvas-preview={item.id}
       >
-        <FramePreview key={variantId} item={selectedItem} runtime={runtime} />
+        <Box inert={!selected} pointerEvents={selected ? "auto" : "none"}>
+          <FramePreview key={variantId} item={selectedItem} runtime={runtime} />
+        </Box>
+        {!selected && (
+          <Button
+            position="absolute"
+            inset="0"
+            w="full"
+            h="full"
+            p="0"
+            variant="ghost-static"
+            cursor="default"
+            aria-label={`Select ${item.name}`}
+            aria-describedby="canvas-instructions"
+            data-canvas-select
+            onClick={() => runtime.select(item.id)}
+          >
+            <Text srOnly>Select {item.name} to interact</Text>
+          </Button>
+        )}
       </Box>
     </Box>
   );

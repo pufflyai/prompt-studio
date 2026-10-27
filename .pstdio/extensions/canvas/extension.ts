@@ -15,6 +15,7 @@ import { canvasResources } from "./src/resources";
 const tree = defineView({
   id: "canvases",
   title: "UI Canvas",
+  icon: canvasResource.icon,
   body: {
     kind: "tree",
     body: async (ctx) => [
@@ -38,7 +39,7 @@ export default defineExtension({
     defineNavigationItem({
       id: "canvases",
       label: "UI Canvas",
-      icon: "layout-dashboard",
+      icon: canvasResource.icon,
       owner: workbenchModes.project,
       slot: "content",
       action: { kind: "page", page: homePage.ref },

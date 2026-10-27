@@ -6,12 +6,24 @@ export interface ItemBounds {
   height: number;
   frame?: Point;
 }
+const relativePosition = (frame: HTMLElement, item: HTMLElement) => {
+  let x = 0;
+  let y = 0;
+  for (let node: HTMLElement | null = frame; node && node !== item; node = node.offsetParent as HTMLElement | null) {
+    x += node.offsetLeft;
+    y += node.offsetTop;
+    const parent = node.offsetParent as HTMLElement | null;
+    x += parent?.clientLeft ?? 0;
+    y += parent?.clientTop ?? 0;
+  }
+  return { x, y };
+};
 export const measureItem = (element: HTMLElement): ItemBounds => {
   const frame = element.querySelector<HTMLIFrameElement>("iframe[data-ui-canvas-component]");
   return {
     width: element.offsetWidth,
     height: element.offsetHeight,
-    frame: frame ? { x: frame.offsetLeft, y: frame.offsetTop } : undefined,
+    frame: frame ? relativePosition(frame, element) : undefined,
   };
 };
 export const frameAnchor = (layout: Layout, sizes: Map<string, ItemBounds>, id: string, point: Point) => {

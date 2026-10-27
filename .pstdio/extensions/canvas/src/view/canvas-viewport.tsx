@@ -33,6 +33,17 @@ export const CanvasViewport = (props: {
       onFit={runtime.fit}
       onReset={runtime.reset}
       onNavigationEnd={runtime.flush}
+      onClick={(event) => {
+        if (
+          event.target instanceof Element &&
+          event.currentTarget.contains(event.target) &&
+          !event.target.closest("[data-canvas-item]")
+        )
+          runtime.select();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && event.target === event.currentTarget) runtime.select();
+      }}
       data-canvas-viewport
       aria-label={`${name} canvas`}
       aria-describedby="canvas-instructions"

@@ -43,8 +43,9 @@ export const CanvasStage = (props: StageProps) => {
   return (
     <CanvasViewport viewportRef={shell} name={canvas.name} runtime={runtime}>
       <Text id="canvas-instructions" srOnly>
-        Drag empty space to pan. Use the move handle or its arrow keys to move a preview. Click a name to copy it. Focus
-        the canvas for arrow keys, plus and minus, F to fit, and 0 to reset the camera.
+        Select a frame before interacting with its contents. Click empty space or press Escape on the canvas to clear
+        selection. Drag empty space to pan. Use the move handle or its arrow keys to move a preview. Click a name to
+        copy it. Focus the canvas for arrow keys, plus and minus, F to fit, and 0 to reset the camera.
       </Text>
       <Box ref={stage} position="absolute" top="0" left="0" transformOrigin="0 0" data-canvas-stage>
         {canvas.items.map((item) => (

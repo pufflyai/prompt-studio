@@ -8,6 +8,8 @@ Open **Canvases** in the project navigation. Browse **Design System**, **Workben
 
 ## Work with a design
 
+Canvases use the diamond icon in navigation, resource search, breadcrumbs, and tabs. Select a frame before using its contents: the first click selects it without activating a control. The selected frame has an outline. Clicking another frame or empty canvas space changes or clears selection; Escape clears it when the canvas has focus. The larger grip selects and moves its frame. Selection is local to the open canvas and is not saved; changing selection preserves mounted previews and draft input.
+
 - Click a preview name to copy its exact name. Enter, Space, and touch also work. If clipboard access fails, select and copy the displayed name.
 - Drag its move handle or focus the handle and use arrow keys. Shift moves farther. Preview content remains interactive.
 - Drag empty space, hold Space while dragging, or use the middle mouse button to pan. Space-to-pan stays off while a control or editable region has focus.

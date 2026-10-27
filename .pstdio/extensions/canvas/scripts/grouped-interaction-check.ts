@@ -1,7 +1,9 @@
 import { expect, type Frame, type Page } from "@playwright/test";
+import { checkFrameSelection } from "./frame-selection-check";
 
 export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
   const item = page.locator('[data-canvas-item="ui-overlays-folderpickerdialog--folders"]');
+  await item.getByRole("button", { name: "Select FolderPickerDialog", exact: true }).click();
   const preview = item.frameLocator("iframe");
   await preview.getByRole("button", { name: "New folder", exact: true }).click();
   await preview.getByRole("textbox", { name: "New folder name" }).fill("canvas-interactive");
@@ -90,6 +92,7 @@ export const checkGroupedAutoBuild = async (page: Frame) => {
   const first = page.locator(
     '[data-canvas-item="dashboard-extensions-planner-auto-build-form--supervisor-and-eligible-tickets"]',
   );
+  await first.getByRole("button", { name: "Select Auto Build form", exact: true }).click();
   await expect(first.frameLocator("iframe").getByRole("dialog")).toBeVisible();
   const editor = first.frameLocator("iframe").locator('[contenteditable="true"]').first();
   await editor.fill("Build the interactive Canvas examples.");
@@ -110,6 +113,7 @@ export const checkGroupedAutoBuild = async (page: Frame) => {
 };
 
 export const checkCanvasInteractions = async (page: Frame, browserPage: Page, canvas: { id: string; name: string }) => {
+  if (canvas.id === "playground") return checkFrameSelection(page, browserPage);
   if (canvas.name === "Create folder") return checkGroupedFolders(page, browserPage);
   if (canvas.name === "Auto Build") return checkGroupedAutoBuild(page);
 };

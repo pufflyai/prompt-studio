@@ -16,7 +16,7 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "72a15e8488be4498fd6c9e0e910063aac260267004ad418536561c9ec4bf73df"
+      "sourceHash": "e358a1757c32f96cb66e929d91067e4086e50c702bdedd251e5b3da6661006f8"
     },
     {
       "id": "dashboard-canvas-workspace--zoomed-out",
@@ -25,7 +25,16 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "72a15e8488be4498fd6c9e0e910063aac260267004ad418536561c9ec4bf73df"
+      "sourceHash": "e358a1757c32f96cb66e929d91067e4086e50c702bdedd251e5b3da6661006f8"
+    },
+    {
+      "id": "dashboard-canvas-workspace--selected-frame",
+      "name": "Selected Frame",
+      "exportName": "SelectedFrame",
+      "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
+      "suite": "dashboard",
+      "title": "Canvas/Workspace",
+      "sourceHash": "e358a1757c32f96cb66e929d91067e4086e50c702bdedd251e5b3da6661006f8"
     },
     {
       "id": "dashboard-canvas-workspace--populated",
@@ -34,7 +43,7 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "72a15e8488be4498fd6c9e0e910063aac260267004ad418536561c9ec4bf73df"
+      "sourceHash": "e358a1757c32f96cb66e929d91067e4086e50c702bdedd251e5b3da6661006f8"
     },
     {
       "id": "dashboard-canvas-workspace--foundations",
@@ -43,7 +52,7 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "72a15e8488be4498fd6c9e0e910063aac260267004ad418536561c9ec4bf73df"
+      "sourceHash": "e358a1757c32f96cb66e929d91067e4086e50c702bdedd251e5b3da6661006f8"
     },
     {
       "id": "dashboard-canvas-workspace--shared-components",
@@ -52,7 +61,7 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "72a15e8488be4498fd6c9e0e910063aac260267004ad418536561c9ec4bf73df"
+      "sourceHash": "e358a1757c32f96cb66e929d91067e4086e50c702bdedd251e5b3da6661006f8"
     },
     {
       "id": "dashboard-canvas-workspace--intrinsic-documentation",
@@ -61,7 +70,7 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "72a15e8488be4498fd6c9e0e910063aac260267004ad418536561c9ec4bf73df"
+      "sourceHash": "e358a1757c32f96cb66e929d91067e4086e50c702bdedd251e5b3da6661006f8"
     },
     {
       "id": "dashboard-canvas-workspace--grouped-folder-examples",
@@ -70,7 +79,7 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "72a15e8488be4498fd6c9e0e910063aac260267004ad418536561c9ec4bf73df"
+      "sourceHash": "e358a1757c32f96cb66e929d91067e4086e50c702bdedd251e5b3da6661006f8"
     },
     {
       "id": "dashboard-canvas-workspace--grouped-auto-build",
@@ -79,7 +88,7 @@
       "source": ".pstdio/extensions/canvas/src/view/canvas-stage.stories.tsx",
       "suite": "dashboard",
       "title": "Canvas/Workspace",
-      "sourceHash": "72a15e8488be4498fd6c9e0e910063aac260267004ad418536561c9ec4bf73df"
+      "sourceHash": "e358a1757c32f96cb66e929d91067e4086e50c702bdedd251e5b3da6661006f8"
     },
     {
       "id": "dashboard-motion-lab-study-status--deleted",

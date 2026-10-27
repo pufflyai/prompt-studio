@@ -24,7 +24,7 @@ export const canvasResources = defineCommandPaletteResource({
         .map((canvas) => ({
           id: canvas.id,
           label: canvas.name,
-          icon: "layout-dashboard",
+          icon: canvasResource.icon,
           target: canvasTarget(canvas.id, canvas.name, ctx.projectId),
         })),
     };

@@ -1,6 +1,7 @@
 import type { Frame } from "@playwright/test";
 
 export const checkIntrinsicDocumentation = async (page: Frame) => {
+  await page.getByRole("button", { name: "Select Long documentation · intrinsic height", exact: true }).click();
   const panel = page.locator('[data-canvas-preview="long-documentation"]');
   const content = panel.frameLocator("iframe");
   const initialHeight = await panel.evaluate((element) => element.clientHeight);

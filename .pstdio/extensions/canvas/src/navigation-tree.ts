@@ -23,7 +23,7 @@ export const canvasTree = (projectId: string) => {
     parent.children!.push({
       id: canvas.id,
       label: canvas.name,
-      icon: "layout-dashboard",
+      icon: canvasResource.icon,
       target: canvasTarget(canvas.id, canvas.name, projectId),
       resource: { type: canvasResource.id, id: canvas.id, label: canvas.name, projectId, extensionId: "pstdio.canvas" },
     });
