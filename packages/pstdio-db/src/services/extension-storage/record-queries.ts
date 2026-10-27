@@ -55,7 +55,7 @@ const asRecord = (row: Current) =>
     asset: decodeProjectionValue(row.asset) as StorageRecord["asset"],
     shared: decodeProjectionValue(row.shared) as StorageRecord["shared"],
     revision: row.revision,
-    ...{ recordLifetime: row.record_lifetime },
+    ...(row.record_lifetime ? { recordLifetime: row.record_lifetime } : {}),
     ...(Object.keys(row.native_sources).length
       ? { nativeSources: row.native_sources, nativeVersions: row.native_versions }
       : {}),
