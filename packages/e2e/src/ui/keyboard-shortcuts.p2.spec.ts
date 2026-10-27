@@ -8,7 +8,7 @@ import { changeThemeThroughCommandPalette } from "./helpers/theme-picker";
 
 test.use({ notificationsEnabled: true });
 
-test("base navigation chords work outside and inside shortcut mode and Shift slash opens the reference", async ({
+test("Go destinations use shortcut mode while history chords and Shift slash remain available", async ({
   page,
   request,
 }) => {
@@ -19,9 +19,10 @@ test("base navigation chords work outside and inside shortcut mode and Shift sla
   const project = (await response.json()) as { id: string };
   await page.goto(`/projects/${project.id}`);
   await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
-  await page.keyboard.press("Alt+Shift+S");
-  await expect(page).toHaveURL(/\/sessions\/compose$/);
   await page.keyboard.press("Alt+Shift+Space");
+  await page.keyboard.press("g");
+  await page.keyboard.press("s");
+  await expect(page).toHaveURL(/\/sessions\/compose$/);
   await page.keyboard.press("Alt+Shift+ArrowLeft");
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
@@ -123,7 +124,7 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
     "Go back",
     "Go forward",
     "Toggle Sidenav",
-    "Go to notifications",
+    "Open notifications",
     "Keyboard shortcuts",
     "Shortcut greeting",
     "Go to shortcut destination",
@@ -237,18 +238,20 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   const project = (await response.json()) as { id: string };
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByRole("option", { name: /^Notes/ }).first()).toBeVisible({ timeout: 30_000 });
-  for (const [key, label, destination] of [
-    ["S", "Sessions", /\/sessions\/compose$/],
-    ["W", "Workspaces", /\/workspaces$/],
-    ["O", "Notes", /\/notes$/],
-    ["P", "Tickets", /\/tickets$/],
+  for (const [keys, label, destination] of [
+    [["G", "S"], "Sessions", /\/sessions\/compose$/],
+    [["G", "W"], "Workspaces", /\/workspaces$/],
+    [["Alt+Shift+O"], "Notes", /\/notes$/],
+    [["Alt+Shift+P"], "Tickets", /\/tickets$/],
   ] as const) {
     await page.goto(`/projects/${project.id}/tickets`);
     await showSidenavEntry(page, label);
     const row = page.getByRole("option", { name: new RegExp(`^${label}`) }).first();
     await row.focus();
-    await page.keyboard.press(`Alt+Shift+${key}`);
+    if (keys.length > 1) await page.keyboard.press("Alt+Shift+Space");
+    for (const key of keys) await page.keyboard.press(key);
     await expect(page).toHaveURL(destination);
+    await page.keyboard.press("Escape");
   }
   await page.keyboard.press("ControlOrMeta+Alt+N");
   const noteForm = page.getByRole("dialog").last();

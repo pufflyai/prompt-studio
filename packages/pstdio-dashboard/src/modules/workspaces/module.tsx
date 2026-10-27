@@ -296,7 +296,8 @@ export const createWorkspacesModule = () =>
       });
       ctx.keybindings.registerKeybinding({
         action: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
-        keybinding: "Alt+Shift+W",
+        keybinding: "W",
+        layer: "go",
         label: "Go to workspaces",
         sticky: true,
       });

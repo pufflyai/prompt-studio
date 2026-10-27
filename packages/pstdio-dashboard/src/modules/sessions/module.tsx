@@ -166,7 +166,8 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       );
       ctx.keybindings.registerKeybinding({
         action: { kind: "command", commandId: dashboardCommandIds.openSessions },
-        keybinding: "Alt+Shift+S",
+        keybinding: "S",
+        layer: "go",
         label: "Go to sessions",
         sticky: true,
       });

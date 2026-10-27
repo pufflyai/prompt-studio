@@ -16,7 +16,7 @@ The shortcut reference uses the command palette's search layout and groups assig
 
 **Alt+Shift+Up** runs the Sidenav's **Back to project** action from nested ticket or session navigation. It returns to the last root-level page, with Home as the fallback. The action follows the active mode's name and appears only inside a navigation level. The chord works outside and inside shortcut mode and respects focused editor inputs.
 
-Core navigation uses its direct base chords: Alt+Shift+Left/Right for history, Alt+Shift+S for Sessions, and Alt+Shift+W for Workspaces. These work from any shortcut-mode prefix and keep the mode active; they have no duplicate Go sequence. The command palette keeps Mod+P, commands Alt+Shift+K, the Sidenav Mod+B, and settings Mod+,.
+Destination navigation uses shortcut mode's Go group: G → S for Sessions, G → W for Workspaces, G → N for Notes, G → K for Tickets/Kanban, G → A for Artifacts, and G → T for Timeline. These destinations have no additional direct default chord. Navigation stays in shortcut mode, and shared keys use numbered action choices. History keeps Alt+Shift+Left/Right; Back to project keeps Alt+Shift+Up. The command palette keeps Mod+P, commands Alt+Shift+K, the Sidenav Mod+B, and settings Mod+,.
 
 Alt+Shift+PageUp and Alt+Shift+PageDown select the previous or next tab across the visible layout and wrap at either end. They work outside and inside shortcut mode. One tab has an outline for the keyboard selection in shortcut mode, even when several panels each have a selected tab. Enter or Escape returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
 
@@ -44,7 +44,7 @@ Create actions use C followed by the first letter of the canonical resource-kind
 
 When actions share an initial, the host sorts the available actions by name, with action identity as the tie-breaker, and offers numbered choices. For example, C → A → 1 can select Analysis and C → A → 2 Artifact. The numbers stay fixed while the chooser is open, even when contributions change. Session providers share C → S; type the displayed number to choose Codex, Claude Code, or another provider. The shortcut reference includes the numbered continuation.
 
-Alt+Shift+T is the single default shortcut for choosing a color theme. Theme providers contribute themes to that shared picker rather than registering another shortcut. Notes keeps Alt+Shift+O, Planner Kanban Alt+Shift+P, and Artifacts Alt+Shift+A for navigation. Timeline uses Go → T. Creation keeps C → N, C → T, and C → A without additional direct creation chords.
+Alt+Shift+T is the single default shortcut for choosing a color theme. Theme providers contribute themes to that shared picker rather than registering another shortcut. Creation keeps C → N, C → T, and C → A without additional direct creation chords.
 
 Settings → E opens extension settings, I appearance and file icon themes, and S contributed skills. Mod+, opens agent runtime and skill setup. These destinations are registered once, regardless of the number of providers.
 
