@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parseStorySources } from "./parse-story-sources";
+import { readStoryParserCache } from "./story-catalog-cache";
 
 export const repoRoot = resolve(import.meta.dir, "../../../..");
 export const extensionRoot = resolve(repoRoot, ".pstdio/extensions/canvas");
@@ -63,17 +64,17 @@ export const collectStoryCatalog = async () => {
     [];
   const sources: Record<string, { code: string; hash: string; component?: string; componentImport?: string }> = {};
   const files = await Promise.all(
-    (await sourceFiles()).map(async (source) => ({
-      source,
-      text: await readFile(resolve(repoRoot, source), "utf8"),
-    })),
+    (await sourceFiles()).map(async (source) => {
+      const text = await readFile(resolve(repoRoot, source), "utf8");
+      return { source, text, hash: createHash("sha256").update(text).digest("hex") };
+    }),
   );
+  const cache = await readStoryParserCache(repoRoot);
   const parsed = await parseStorySources(
-    files.filter((file) => !file.source.endsWith(".mdx")),
+    files.filter((file) => !file.source.endsWith(".mdx") && cache.get(file.source)?.hash !== file.hash),
     resolve(repoRoot, "packages/ui/package.json"),
   );
-  for (const { source, text } of files) {
-    const hash = createHash("sha256").update(text).digest("hex");
+  for (const { source, text, hash } of files) {
     sources[source] = { code: text, hash };
     if (source.endsWith(".mdx")) {
       documents.push({
@@ -87,7 +88,7 @@ export const collectStoryCatalog = async () => {
       continue;
     }
     const suite = suiteForSource(source);
-    const csf = parsed.get(source)!;
+    const csf = parsed.get(source) ?? cache.get(source)!.parsed;
     sources[source].component = csf.component;
     sources[source].componentImport = csf.componentImport;
     for (const story of csf.stories) {

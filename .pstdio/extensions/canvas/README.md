@@ -90,6 +90,8 @@ bun run --cwd scripts canvas:coverage
 
 `canvas:build` composes the original sources and records hashes for components, fixtures, dependency versions, and emitted files. Generated modules are build output; edit their sources and rebuild. `canvas:inventory` reads the RP-1 JSON and its adjacent `migration-assets` directory. It never opens or edits a Pencil file. It preserves the evidence snapshot separately from current verification.
 
+Catalog scans read and hash every current source. They reuse the existing parser output only when the compiler, dependency lock, and generated metadata hashes still match. Changed and new sources use the original Storybook parser.
+
 `canvas:coverage` fails if the native build is stale, a design node lacks a real-component destination, or current design freshness is unverified. Ledger integrity tests can pass while this acceptance gate remains incomplete.
 
 Run `canvas:verify` inside the isolated Docker tooling container with Chromium installed. It checks native initial renders, documentation expansion, draft retention across a theme change, measured fit, and a populated 24-preview canvas. Failed cases retain screenshots and HTML under `__test-tmp__/native-canvas-verification/`. Original Storybook interaction checks remain required for their scenarios. Physical touch, trackpad behavior, full visual fidelity, packaged verification, full tests, and CI remain separate acceptance work.

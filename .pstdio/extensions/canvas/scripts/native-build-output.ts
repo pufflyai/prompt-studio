@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { generatedRoot, repoRoot } from "./story-catalog";
+import { catalogMetadata, parserInputs } from "./story-catalog-cache";
 
 interface Chunk {
   type: "chunk";
@@ -48,14 +49,11 @@ export const publishNativeBuild = async (
   ];
   const hashes: Record<string, string> = {};
   for (const source of [
-    "bun.lock",
     ".pstdio/extensions/canvas/package.json",
     ".pstdio/extensions/canvas/scripts/build-native-previews.ts",
     ".pstdio/extensions/canvas/scripts/native-build-output.ts",
-    ".pstdio/extensions/canvas/scripts/story-catalog.ts",
-    ".pstdio/extensions/canvas/scripts/parse-story-sources.ts",
-    ".pstdio/extensions/canvas/scripts/story-parser-worker.ts",
-    "packages/ui/package.json",
+    ...parserInputs,
+    ...catalogMetadata,
     "packages/sdk/package.json",
     "packages/pstdio-workbench/build-entries.ts",
   ]) {
