@@ -60,6 +60,8 @@ const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<s
     await page.context().setOffline(false);
     await page.reload();
     await expect(connected).toBeVisible();
+    // The first FPS sample widens its neighbor and moves the connection dot.
+    await expect(page.getByTestId("performance-status-fps")).toHaveText(/^\d+ fps$/);
     await connected.hover();
     await expect(
       page.getByRole("tooltip", { name: (await connected.getAttribute("aria-label")) ?? "", exact: true }),
