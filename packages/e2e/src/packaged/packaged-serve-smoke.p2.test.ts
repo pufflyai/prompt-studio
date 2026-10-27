@@ -33,12 +33,6 @@ beforeAll(() => {
 
 // extension-browser-install.p2.test.ts installs the cached Playwright package and visits a smoke page.
 
-test(
-  "installs bundled defaults without Git and does not offer Git workspaces",
-  expectPackagedGitFreeExtensions,
-  PACKAGED_TEST_TIMEOUT,
-);
-
 test("includes extension development, smoke test, browser setup and update commands", () => {
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {
     encoding: "utf8",
@@ -150,3 +144,9 @@ test("packaged CLI includes automation and machine authentication", () => {
   expect(existsSync(join(home, "runtime.json"))).toBe(false);
   rmSync(home, { recursive: true, force: true });
 });
+
+test(
+  "installs bundled defaults without Git and does not offer Git workspaces",
+  expectPackagedGitFreeExtensions,
+  PACKAGED_TEST_TIMEOUT,
+);
