@@ -27,7 +27,7 @@ test("the canvas navigation panel exposes each grouped resource on overview and 
     for (const node of resources)
       expect(node.target).toMatchObject({
         kind: "page",
-        open: "pin",
+        open: "preview",
         resource: { type: "canvas", id: node.resource!.id, projectId: ctx.projectId, extensionId: "pstdio.canvas" },
       });
   }

@@ -47,7 +47,7 @@ export const canvasPage = definePage({
 export const canvasTarget = (id: string, label: string, projectId?: string) => ({
   kind: "page" as const,
   page: canvasPage.ref,
-  open: "pin" as const,
+  open: "preview" as const,
   resource: { type: canvasResource.id, id, label, ...(projectId ? { projectId, extensionId: "pstdio.canvas" } : {}) },
 });
 export const canvasUrl = (projectId: string, id: string) =>
