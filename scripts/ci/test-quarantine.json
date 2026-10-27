@@ -358,5 +358,18 @@
       "https://github.com/pufflyai/prompt-studio/pull/1472"
     ],
     "removeWhen": "Identify and fix the slow conflicting-stack fixture phase, then pass ten independent macOS ARM64 runs within its existing 5 second allowance, without retries or prewarming."
+  },
+  {
+    "runner": "bun",
+    "file": "extensions/harness-open-code/src/managed-cli.p0.test.ts",
+    "name": "detects the installed private CLI without PATH tools",
+    "platforms": ["linux"],
+    "owner": "PS-907 / OpenCode native CLI discovery",
+    "reason": "The unchanged native OpenCode version probe returned unavailable after 3059.73 ms in merge group #1329 at its existing 3000 ms process limit. The same test and installed dependency pass on main locally (380.51 ms on macOS and 1027.88 ms on Linux). Keep the real empty-PATH, fresh-home execution and its limits in the separate evidence lane; the cold native startup cause is unconfirmed.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40548023397/job/122344131482",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40547961144"
+    ],
+    "removeWhen": "Identify and fix the cold native CLI probe delay, then pass ten independent Linux runs with fresh homes and empty PATH within the existing 3000 ms process and 5000 ms test limits, without retries or prewarming."
   }
 ]
