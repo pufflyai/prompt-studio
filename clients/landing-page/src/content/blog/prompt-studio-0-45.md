@@ -66,7 +66,8 @@ Extension data is ready for several devices. Give records IDs and order position
 ```ts
 // IDs and positions stay unique even
 // when devices create items offline.
-const id = ctx.storage.ids.create("item");
+const id =
+  ctx.storage.ids.create("item");
 const position =
   ctx.storage.positions.between(
     previous.position,
