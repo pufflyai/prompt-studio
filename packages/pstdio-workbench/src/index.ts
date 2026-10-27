@@ -230,7 +230,6 @@ export type {
   WorkflowStatus,
   WorkflowStatusAction,
 } from "./core";
-
 export {
   batchWorkbenchChanges,
   createLevelNavigation,
@@ -277,3 +276,9 @@ export {
   workbenchTopHeaderTrailingMenuPath,
   workbenchViewIdContextKey,
 } from "./core";
+export {
+  createNativeDocumentSession,
+  type NativeDocumentSession,
+  type NativeDocumentSessionInput,
+  type NativeDocumentSessionSnapshot,
+} from "./core/native-documents/native-document-session";

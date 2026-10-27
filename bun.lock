@@ -419,6 +419,7 @@
       "devDependencies": {
         "@playwright/test": "^1.60.0",
         "@pstdio/sdk": "workspace:*",
+        "@pstdio/workbench": "workspace:*",
         "@tanstack/react-query": "^5.90.21",
         "@types/cmd-shim": "5.0.2",
         "@types/react": "19.2.3",
@@ -431,6 +432,7 @@
         "harness-pi": "workspace:*",
         "local-example": "workspace:*",
         "pstdio": "workspace:*",
+        "pstdio-api": "workspace:*",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-artifacts": "workspace:*",
         "pstdio-base-themes": "workspace:*",
@@ -449,6 +451,7 @@
         "remote-workspaces": "workspace:*",
         "storage-scale-fixture": "workspace:*",
         "workbench-fixture": "workspace:*",
+        "yjs": "^13.6.29",
       },
     },
     "packages/pstdio": {
@@ -767,7 +770,6 @@
         "@vitejs/plugin-react": "^5.2.0",
         "babel-plugin-react-compiler": "^1.0.0",
         "cross-env": "10.1.0",
-        "pstdio-api": "workspace:*",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-extensions": "workspace:*",
         "pstdio-sync-contracts": "workspace:*",

@@ -6,6 +6,10 @@ app, runtime, or packaging concerns. The source of truth for mechanical rules is
 `scripts/verify/boundary-rules.ts`; update this document with any intentional
 layer-map change.
 
+Cross-package native editor integration tests live in `packages/e2e`. They may
+start the real `pstdio-api/app` host and use the public `@pstdio/workbench` session
+API. The workbench package itself does not depend on the API host.
+
 ## Layers
 
 1. **Contracts and utilities**

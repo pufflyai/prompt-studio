@@ -9,6 +9,10 @@ import * as Y from "yjs";
 
 export const createNativeDocumentSessionFixture = async () => {
   const root = await mkdtemp(join(tmpdir(), "native-editor-session-"));
+  const previousHome = process.env.PSTDIO_HOME;
+  const previousExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  process.env.PSTDIO_HOME = join(root, "home");
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   const manifest = {
     publisher: "example",
     name: "native-session",
@@ -150,6 +154,10 @@ export const createNativeDocumentSessionFixture = async () => {
     },
     close: async () => {
       await handle.close();
+      if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+      else process.env.PSTDIO_HOME = previousHome;
+      if (previousExtensions === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+      else process.env.PSTDIO_DEFAULT_EXTENSIONS = previousExtensions;
       await rm(root, { recursive: true, force: true });
     },
   };
