@@ -29,7 +29,7 @@ The host derives setup actions from public metadata:
 
 - C S lists new session drafts with the exact harness provider. Select its numbered choice directly; no arrow navigation is required. Creating a draft does not start an agent.
 - S E opens extension settings; Mod+, opens agent defaults; S S opens skill setup; S I opens appearance and icon settings.
-- S T is the single color-theme action, regardless of the number of theme providers.
+- Alt+Shift+T is the single color-theme action, regardless of the number of theme providers.
 
 These actions do not depend on provider names. Disabled extensions contribute no active shortcuts. Existing direct navigation shortcuts stay available, including inside shortcut mode. Creation uses its C sequence without duplicate direct chords. Installed external extensions, including Pencil, keep their public actions available for search and personal assignment; their source is outside this repository, so this change does not add provider-specific defaults to them.
 
