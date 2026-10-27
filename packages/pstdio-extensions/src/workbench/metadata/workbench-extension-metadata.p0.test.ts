@@ -9,10 +9,12 @@ import {
   definePage,
   definePlacement,
   defineResourceKind,
+  defineStatusBarItem,
   defineView,
   packageAsset,
   resourceMenuSlotRef,
   workbenchModes,
+  workbenchSlots,
 } from "@pstdio/sdk/extensions";
 import type { LoadedExtensionSource } from "../../runtime/loader";
 import { normalizeExtensionSources } from "../../runtime/normalize";
@@ -31,6 +33,31 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
     enginesPstdio: "^0.1.0",
   },
   definition,
+});
+test("keeps status detail views qualified through runtime normalization and public metadata", () => {
+  const view = defineView({
+    id: "details",
+    title: "Details",
+    body: { kind: "webview", entry: packageAsset("./details.tsx", "file:///fake/lab/") },
+  });
+  const item = defineStatusBarItem({
+    id: "activity",
+    view: view.ref,
+    popover: view.ref,
+    slot: workbenchSlots.statusBarTrailing,
+  });
+  const runtime = normalizeExtensionSources([source(defineExtension({ views: [view], statusBarItems: [item] }))]);
+  const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
+  expect(runtime.statusBarItems[0]?.contribution.popover).toEqual({
+    extensionId: "pstdio.lab",
+    kind: "view",
+    id: "details",
+  });
+  expect(metadata.statusBarItems[0]?.popover).toEqual({
+    extensionId: "pstdio.lab",
+    kind: "view",
+    id: "details",
+  });
 });
 test("publishes explicit page slot replacements as qualified placement references", () => {
   const view = defineView({
