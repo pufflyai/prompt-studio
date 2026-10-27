@@ -28,6 +28,8 @@ Version 2 extends the existing version-1 snapshot fields with `capture`. A captu
 
 Process identity is PID plus process start identity. CPU is measured as a percentage of one core, and cumulative CPU time uses milliseconds. All new memory fields use bytes. Resident memory, macOS physical footprint (including compressed memory), Windows private commitment, JavaScript heap, and external memory have distinct meanings. Unsupported readings are `null`; shared resident memory must not be summed into an exact app total.
 
+New hosts also supply an optional UTC process creation timestamp, `startedAt`. Older hosts omit it. The opaque `processStartId` remains the identity; do not replace it with a timestamp. A verified creation time within the capture allows cumulative CPU and native lifetime memory peaks to include startup before the first reading. Without that coverage, report CPU between readings and observed memory peaks explicitly.
+
 The host measures backend response time outside the backend. A `reply` has a finite response time. A `timeout` reports its observed waiting interval and a null response time. Disconnected and unsupported readings are `unavailable`. Local process measurements describe only the local runtime. These fields report symptoms and do not infer their cause.
 
 See the [Developer tools guide](../../guides/0003-developer-tools.md) for recording bounds and lifecycle behavior.

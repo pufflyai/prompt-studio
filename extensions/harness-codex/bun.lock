@@ -6,7 +6,7 @@
       "name": "harness-codex",
       "dependencies": {
         "@openai/codex": "0.162.0",
-        "@pstdio/sdk": "^0.45.0",
+        "@pstdio/sdk": "0.46.0-preview.sha-714def5a655f68a3dbc195afeea06ea134c88924",
       },
       "devDependencies": {
         "@types/bun": "1.4.4",
@@ -31,7 +31,7 @@
 
     "@openai/codex-win32-x64": ["@openai/codex@0.162.0-win32-x64", "", { "os": "win32", "cpu": "x64" }, "sha512-W8kqHaqpW0qPz71E0rRT5dq+socGz1BbJyYN7o3SP1TWQt8Zl6ML74R9Hvt/xn1NNLVlDTRfXqNmaMkte6yEMQ=="],
 
-    "@pstdio/sdk": ["@pstdio/sdk@0.45.0", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-sDXguoeSKmRhiWx8McyVyb3ywSnU3I7VFp3EfvbTFmnlgDYh6r/bpR63/upX4JpOq+zzA3b29P3FQb9alnS9dQ=="],
+    "@pstdio/sdk": ["@pstdio/sdk@0.46.0-preview.sha-714def5a655f68a3dbc195afeea06ea134c88924", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-J3TT7JfsyI576D/21HO/mvwiteTLwBOjh97Vd2m2xLb/k4QUXJzmngkOIZ2s6JvdZEJAvk/FI1LeWDBG23t2+A=="],
 
     "@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 

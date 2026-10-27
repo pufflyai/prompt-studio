@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { ctx } from "./harness.test-helpers";
+import { createOpencodeHarness } from "./harness";
+import { ctx, harnessDefaults, serviceOverrides } from "./harness.test-helpers";
 import { createOpencodeHarnessService } from "./opencode-harness-service";
 
 test("account refresh uses a new provider snapshot without stopping active sessions", async () => {
@@ -68,4 +69,89 @@ test("account refresh uses a new provider snapshot without stopping active sessi
     await services.dispose(ctx);
   }
   expect(stops).toBe(2);
+});
+
+test("an owned server cleanup failure does not prevent reconnecting", async () => {
+  let stored: string | null = null;
+  let starts = 0;
+  const errors: string[] = [];
+  const context = { ...ctx, logger: { ...ctx.logger, error: (message: string) => errors.push(message) } };
+  const services = createOpencodeHarnessService({
+    ...serviceOverrides(),
+    fetcher: async () => Response.json([]),
+    isPortOpen: async () => false,
+    serverStore: {
+      read: async () => stored,
+      write: async (url) => {
+        stored = url;
+      },
+      clear: async () => {
+        stored = null;
+      },
+    },
+    startServer: async () => {
+      const generation = ++starts;
+      return {
+        url: `http://localhost:${4095 + generation}`,
+        dispose: async () => {
+          if (generation === 1) throw new Error("transient cleanup failure");
+        },
+      };
+    },
+  });
+  try {
+    const first = await services.get(context);
+    await first.getSessionMessages("existing");
+    await expect(services.invalidateAuthentication()).rejects.toThrow("transient cleanup failure");
+    const second = await services.get(context);
+    await second.getSessionMessages("existing");
+    expect(starts).toBe(2);
+    expect(errors).toHaveLength(1);
+  } finally {
+    await services.dispose(context).catch(() => {});
+  }
+});
+
+test.each(["authentication", "history"])("cleanup preserves an in-flight %s read", async (kind) => {
+  const requested = Promise.withResolvers<void>();
+  const reply = Promise.withResolvers<void>();
+  let stops = 0;
+  const server = Bun.serve({
+    port: 0,
+    fetch: async (req) => {
+      const path = new URL(req.url).pathname;
+      if (path === "/provider/auth") return Response.json({});
+      requested.resolve();
+      await reply.promise;
+      return Response.json(path === "/provider" ? { all: [], connected: [] } : []);
+    },
+  });
+  const harness = createOpencodeHarness(harnessDefaults(), {
+    ...serviceOverrides(),
+    isPortOpen: async () => false,
+    startServer: async () => ({
+      url: server.url.origin,
+      dispose: async () => {
+        stops++;
+      },
+    }),
+  });
+  const reading =
+    kind === "authentication"
+      ? harness.getAuthentication!(ctx, {})
+      : harness.getMessages!(ctx, { agentSessionId: "existing" });
+  await requested.promise;
+  const disposing = harness.dispose!(ctx);
+  try {
+    await Bun.sleep(0);
+    expect(stops).toBe(0);
+    reply.resolve();
+    await reading;
+    await disposing;
+    expect(stops).toBe(1);
+  } finally {
+    reply.resolve();
+    await Promise.allSettled([reading, disposing]);
+    await server.stop(true);
+  }
 });

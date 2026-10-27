@@ -9,7 +9,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { verifyBoardEdgeScrolling } from "./packaged-board-edge-scrolling";
 import { verifyBoardPanning } from "./packaged-board-panning";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { verifyTicketCreation } from "./packaged-ticket-creation";
@@ -30,30 +30,38 @@ test("packaged Planner board pans with a mouse and keeps ticket and column actio
     phase("runtime ready");
     const folder = join(root, "project");
     mkdirSync(folder);
-    const response = await fetch(`${runtime.baseUrl}/v1/projects`, {
-      method: "POST",
-      headers: { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "Board panning" }, folder)),
+    const creatingProject = (async () => {
+      const response = await fetch(`${runtime.baseUrl}/v1/projects`, {
+        method: "POST",
+        headers: { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" },
+        body: JSON.stringify(folderProjectInput({ name: "Board panning" }, folder)),
+      });
+      expect(response.status).toBe(201);
+      const { id } = (await response.json()) as { id: string };
+      phase("project created");
+      return id;
+    })();
+    const openingPage = chromium.launch(PACKAGED_DASHBOARD_BROWSER).then((opened) => {
+      browser = opened;
+      return opened.newPage({
+        viewport: { width: 1000, height: 720 },
+        extraHTTPHeaders: runtimeAuthorization(runtime.descriptor),
+      });
     });
-    expect(response.status).toBe(201);
-    const { id } = (await response.json()) as { id: string };
-    phase("project created");
-    browser = await chromium.launch(PROVISIONED_CHROMIUM);
-    const page = await browser.newPage({
-      viewport: { width: 1000, height: 720 },
-      extraHTTPHeaders: runtimeAuthorization(runtime.descriptor),
-    });
-    await signInBrowser(page, runtime.descriptor);
-    phase("browser signed in");
-    await createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Pan board ticket" });
-    await createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Edge scroll ticket" });
-    await createPlannerTicket(page.request, runtime.baseUrl, id, {
-      content: "# Completed board ticket",
-      statusId: "done",
-    });
+    const [projectSetup, browserSetup] = await Promise.allSettled([creatingProject, openingPage]);
+    if (projectSetup.status === "rejected") throw projectSetup.reason;
+    if (browserSetup.status === "rejected") throw browserSetup.reason;
+    const id = projectSetup.value;
+    const page = browserSetup.value;
+    await Promise.all([
+      createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Pan board ticket" }),
+      createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Edge scroll ticket" }),
+      createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Completed board ticket", statusId: "done" }),
+    ]);
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     phase("tickets created");
-    await page.goto(`${runtime.baseUrl}/projects/${id}/`);
+    await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
+    phase("browser signed in");
     await page.getByRole("option", { name: "Tickets", exact: true }).click();
     phase("board opened");
     await verifyBoardPanning(page);

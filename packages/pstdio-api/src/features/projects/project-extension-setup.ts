@@ -36,32 +36,39 @@ const logExtensionWarning = (warning: ExtensionSetupWarning) => {
   );
 };
 
-export const setupProjectExtensions = async (
-  deps: ProjectsRouteDeps,
-  projectId: string,
-  installDefaults: boolean,
-  preservedInstanceIds = new Set<string>(),
-) => {
+export const prepareDefaultProjectExtensions = async (deps: ProjectsRouteDeps) => {
   const warnings: ExtensionSetupWarning[] = [];
   const addWarning = (warning: ExtensionSetupWarning) => {
     warnings.push(warning);
     logExtensionWarning(warning);
   };
 
-  if (installDefaults) {
-    try {
-      const installed = await installMissingDefaultExtensions({
-        forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
-        onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
-        releaseRef: deps.extensionUpgradeService?.releaseRef,
-      });
-      await traceSetupPhase("project.extension_register", { project_id: projectId }, () =>
-        registerInstalledExtensionSources(deps.extensionService, installed),
-      );
-    } catch (error) {
-      addWarning(createExtensionWarning("default extensions", error));
-    }
+  try {
+    const installed = await installMissingDefaultExtensions({
+      forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
+      onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
+      releaseRef: deps.extensionUpgradeService?.releaseRef,
+    });
+    await traceSetupPhase("project.extension_register", {}, () =>
+      registerInstalledExtensionSources(deps.extensionService, installed),
+    );
+  } catch (error) {
+    addWarning(createExtensionWarning("default extensions", error));
   }
+  return warnings;
+};
+
+export const setupProjectExtensions = async (
+  deps: ProjectsRouteDeps,
+  projectId: string,
+  installDefaults: boolean,
+  preservedInstanceIds = new Set<string>(),
+) => {
+  const warnings = installDefaults ? await prepareDefaultProjectExtensions(deps) : [];
+  const addWarning = (warning: ExtensionSetupWarning) => {
+    warnings.push(warning);
+    logExtensionWarning(warning);
+  };
 
   await traceSetupPhase("project.extension_sync", { project_id: projectId }, () =>
     syncInstalledExtensionsForProject({

@@ -28,7 +28,11 @@ const runtimeClosers = new WeakMap<ChildProcess, () => Promise<void>>();
 // Page loads never sign a browser in (ADR 0054). Sign in the way `pst` does: open a single-use
 // login link that a bearer holder created. The dashboard stores the session before checking
 // runtime readiness. Wait for that authenticated check before navigating away (ADR 0057).
-export const signInBrowser = async (page: Page, descriptor: Pick<RuntimeDescriptor, "origin" | "token">) => {
+export const signInBrowser = async (
+  page: Page,
+  descriptor: Pick<RuntimeDescriptor, "origin" | "token">,
+  path = "/",
+) => {
   const response = await fetch(`${descriptor.origin}/runtime/browser-login`, {
     method: "POST",
     headers: runtimeAuthorization(descriptor),
@@ -36,17 +40,33 @@ export const signInBrowser = async (page: Page, descriptor: Pick<RuntimeDescript
   if (!response.ok) throw new Error(`Browser login failed with HTTP ${response.status}`);
   const redeemed = page.waitForResponse((reply) => new URL(reply.url()).pathname === "/runtime/browser-session");
   const ready = page.waitForResponse((reply) => new URL(reply.url()).pathname === "/runtime/ready");
-  await page.goto(((await response.json()) as { url: string }).url);
+  const url = new URL(((await response.json()) as { url: string }).url);
+  url.pathname = path;
+  await page.goto(url.href);
   const session = await redeemed;
   if (!session.ok()) throw new Error(`Browser session redemption failed with HTTP ${session.status()}`);
   const runtime = await ready;
   if (!runtime.ok()) throw new Error(`Browser authentication failed with HTTP ${runtime.status()}`);
 };
 
-export const waitForPackagedReady = async (descriptorPath: string, child: ChildProcess) => {
+export interface PackagedRuntimeObservation {
+  pid: number;
+  descriptor: RuntimeDescriptor | null;
+}
+
+export const waitForPackagedReady = async (
+  descriptorPath: string,
+  child: ChildProcess,
+  observe?: (process: PackagedRuntimeObservation) => void,
+) => {
+  let observedInstance: string | undefined;
   const descriptor = await waitForProcessReady(child, "Packaged runtime", async (signal) => {
     if (!existsSync(descriptorPath)) return;
     const descriptor = JSON.parse(readFileSync(descriptorPath, "utf8")) as RuntimeDescriptor;
+    if (descriptor.pid === child.pid && descriptor.instanceId !== observedInstance) {
+      observedInstance = descriptor.instanceId;
+      observe?.({ pid: descriptor.pid, descriptor });
+    }
     const res = await fetch(`${descriptor.origin}/runtime/ready`, {
       headers: runtimeAuthorization(descriptor),
       signal,
@@ -95,6 +115,7 @@ export const startPackagedServe = async (
   tempRoot: string,
   env: Record<string, string> = {},
   binaryPath = PACKAGED_BINARY_PATH,
+  observe?: (process: PackagedRuntimeObservation) => void,
 ) => {
   const descriptorPath = join(tempRoot, "runtime.json");
   const {
@@ -121,7 +142,8 @@ export const startPackagedServe = async (
     },
   );
   try {
-    const descriptor = await waitForPackagedReady(descriptorPath, child);
+    if (child.pid !== undefined) observe?.({ pid: child.pid, descriptor: null });
+    const descriptor = await waitForPackagedReady(descriptorPath, child, observe);
     return { child, baseUrl: descriptor.origin, descriptor };
   } catch (error) {
     await stopProcess(child);

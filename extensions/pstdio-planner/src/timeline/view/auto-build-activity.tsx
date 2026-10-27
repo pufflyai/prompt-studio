@@ -1,7 +1,18 @@
-import { Button, CloseButton, HStack, Popover, Portal, Separator, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import {
+  Button,
+  CloseButton,
+  HStack,
+  Popover,
+  Portal,
+  Separator,
+  Stack,
+  Text,
+  useRecipe,
+  useSlotRecipe,
+} from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import { psTheme } from "@pstdio/ui/theme";
-import { Pause, Play } from "lucide-react";
+import { Pause, Play, Square } from "lucide-react";
 import { type RefObject, useRef } from "react";
 import type { AutoBuildButtonProps } from "./auto-build-button";
 import { AutoBuildHelp } from "./auto-build-help";
@@ -38,6 +49,7 @@ interface AutoBuildActivityProps
   failed: boolean;
   anchor: RefObject<HTMLButtonElement | null>;
   onClose: () => void;
+  onStop: () => void;
   onConfigure: () => void;
 }
 
@@ -49,6 +61,7 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
     enabled,
     paused,
     onClose,
+    onStop,
     onConfigure,
     onPause,
     onResume,
@@ -60,6 +73,7 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
     ...sessions
   } = props;
   const content = useRef<HTMLDivElement>(null);
+  const danger = useRecipe({ recipe: psTheme.getRecipe("button") })({ variant: "destructive" });
   const styles = useSlotRecipe({ recipe: psTheme.getSlotRecipe("popover") })({ variant: "panel" });
   return (
     <Popover.Root
@@ -122,6 +136,10 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
                     <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onResume?.()}>
                       <Play />
                       {t("timeline.autoBuild.resume", "Resume")}
+                    </Button>
+                    <Button size="sm" css={danger} disabled={disabled} onClick={onStop}>
+                      <Square />
+                      {t("timeline.autoBuild.stop", "Stop Auto Build")}
                     </Button>
                   </HStack>
                 ) : null}

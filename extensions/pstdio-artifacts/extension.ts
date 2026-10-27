@@ -10,7 +10,7 @@ import {
 import { commands } from "./src/commands";
 import { libraryTarget } from "./src/contracts";
 import { sites } from "./src/mounts";
-import { artifact, detail, library, openView, view } from "./src/pages";
+import { artifact, artifactPanel, detail, library, libraryPanel, view } from "./src/pages";
 import { artifactResources } from "./src/resources";
 
 export default defineExtension({
@@ -20,7 +20,8 @@ export default defineExtension({
   artifactMounts: [sites],
   resourceKinds: [artifact],
   commandPaletteResources: [artifactResources],
-  views: [view, openView],
+  views: [view],
+  placements: [libraryPanel, artifactPanel],
   pages: [library, detail],
   keybindings: [defineKeybinding({ id: "open-artifacts", key: "Alt+Shift+A", action: libraryTarget })],
   navigationItems: [

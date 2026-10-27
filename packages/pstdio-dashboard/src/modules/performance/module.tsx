@@ -8,7 +8,6 @@ import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { registerPerformanceDiagnostics } from "@/shared/app/performance-diagnostics";
-import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { DeveloperToolsPanel } from "./components/developer-tools-panel";
 import { PerformanceStatusItem } from "./components/performance-status-item";
@@ -46,9 +45,7 @@ export const createPerformanceModule = (settings: SettingsRegistry) =>
             title: "Performance",
             body: {
               kind: "react",
-              render: () => (
-                <PerformanceStatusItem controller={controller} projectId={getDashboardSelectedProjectId(ctx)} />
-              ),
+              render: (input) => <PerformanceStatusItem controller={controller} workbench={input.workbench} />,
             },
           });
           const item = ctx.statusBar.registerItem({

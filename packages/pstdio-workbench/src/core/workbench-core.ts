@@ -54,6 +54,7 @@ import type { createNavigationTreeRegistry } from "./registries/navigation/navig
 import { actionErrorTarget } from "./registries/notifications/action-error-target";
 import { createNotificationRegistry } from "./registries/notifications/notification-registry";
 import { createWorkbenchOverlayRegistry } from "./registries/overlays/overlay-registry";
+import { pageContentOwners } from "./registries/pages/page-content";
 import { createWorkbenchPlaceholderRegistry } from "./registries/placeholders/placeholder-registry";
 import { createWorkbenchShellPlacementRegistry } from "./registries/placements/shell-placement-registry";
 import { createPreferenceRegistry } from "./registries/preferences/preference-registry";
@@ -139,6 +140,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     },
     ...layoutPanelGuards(() => core),
     normalizeLayout: (layout) => restorePanelPolicy(core, layout),
+    getDetachedOwners: () => (core ? pageContentOwners(core.pages) : []),
     persistence: layoutCache.layout,
   });
 

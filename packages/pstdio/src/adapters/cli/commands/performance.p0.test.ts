@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createPerformanceRecording } from "pstdio-diagnostics";
 import { createHandler } from "./performance";
 
 const cleanups: Array<() => void> = [];
@@ -72,4 +73,25 @@ test("prints the shared version-two capture without stripping its history", asyn
   const log = mock();
   await createHandler({ log, resolveEndpoint: () => path })();
   expect(JSON.parse(log.mock.calls[0]?.[0])).toEqual(snapshot);
+});
+
+test("reads saved recordings after the live endpoint is gone", async () => {
+  const path = endpointPath();
+  const directory = join(path, "..", "saved");
+  const writer = createPerformanceRecording(directory);
+  writer.write({ kind: "sample", captureId: "saved-capture", sample: { sequence: 1 } });
+  writer.close();
+  const log = mock();
+  await createHandler({ log, resolveEndpoint: () => path })({ action: "recordings", directory });
+  const exported = JSON.parse(log.mock.calls[0]![0]);
+  expect(exported.directory).toBe(directory);
+  expect(JSON.parse(exported.files[0].content).captureId).toBe("saved-capture");
+});
+
+test("requires the saved recording directory without starting monitoring", async () => {
+  const log = mock();
+  await expect(createHandler({ log, resolveEndpoint: endpointPath })({ action: "recordings" })).rejects.toThrow(
+    "directory",
+  );
+  expect(log).not.toHaveBeenCalled();
 });

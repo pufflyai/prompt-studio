@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
-import { buildPlaywrightEnv } from "./run-playwright";
+import { buildPlaywrightEnv, runPlaywright } from "./run-playwright";
 
 describe("buildPlaywrightEnv", () => {
   test("preserves the quarantine attempt identity through the UI launcher", () => {
-    const env = buildPlaywrightEnv(
+    const env: NodeJS.ProcessEnv = buildPlaywrightEnv(
       { CI_QUARANTINE_ATTEMPT: "fresh-attempt", E2E_TEST_LANE: "quarantine" },
       { apiPort: 3201, dashboardPort: 5175 },
       "run-1",
@@ -13,7 +16,7 @@ describe("buildPlaywrightEnv", () => {
     try {
       process.env.CI_QUARANTINE_ATTEMPT = env.CI_QUARANTINE_ATTEMPT;
       const selection = playwrightQuarantineSelection("playwright-ui", "packages/e2e/src/ui", true);
-      expect(selection.metadata?.quarantineAttempt).toBe("fresh-attempt");
+      expect(selection).toHaveProperty("metadata.quarantineAttempt", "fresh-attempt");
       expect(env.E2E_TEST_LANE).toBe("quarantine");
     } finally {
       if (original === undefined) delete process.env.CI_QUARANTINE_ATTEMPT;
@@ -31,7 +34,7 @@ describe("buildPlaywrightEnv", () => {
       E2E_AGENTS: "claude-code",
     };
 
-    const result = buildPlaywrightEnv(env, { apiPort: 3201, dashboardPort: 5175 }, "run-1");
+    const result: NodeJS.ProcessEnv = buildPlaywrightEnv(env, { apiPort: 3201, dashboardPort: 5175 }, "run-1");
 
     expect(result).toMatchObject({
       E2E_API_PORT: "3201",
@@ -57,4 +60,95 @@ test("Playwright stops only P1 after a first failure", async () => {
     expect(command.args).not.toContain("--max-failures=2");
     expect(command.args).not.toContain("-x");
   }
+});
+
+// Writes into the server home and Bun cache it is given, then reports them, like a Playwright run.
+const fakeRun = (exitCode: number) => ({
+  cmd: process.execPath,
+  args: [
+    "-e",
+    `const { mkdirSync, writeFileSync } = require("node:fs");
+    for (const dir of [process.env.E2E_HOME, process.env.E2E_BUN_CACHE_DIR]) {
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(dir + "/used", "1");
+    }
+    console.log(JSON.stringify([process.env.E2E_HOME, process.env.E2E_BUN_CACHE_DIR]));
+    process.exit(${exitCode});`,
+  ],
+});
+
+test("removes the run's server home and Bun cache when Playwright exits", async () => {
+  const run = await runPlaywright(fakeRun(3), { PATH: process.env.PATH }, { stdio: "pipe" });
+  const [home, cache] = JSON.parse(run.output) as [string, string];
+  expect(run.exitCode).toBe(3);
+  expect(existsSync(home)).toBe(false);
+  expect(existsSync(cache)).toBe(false);
+});
+
+test("keeps a Bun cache the caller provides", async () => {
+  const cache = mkdtempSync(join(tmpdir(), "caller-bun-cache-"));
+  try {
+    const run = await runPlaywright(
+      fakeRun(0),
+      { PATH: process.env.PATH, E2E_BUN_CACHE_DIR: cache },
+      { stdio: "pipe" },
+    );
+    const [home] = JSON.parse(run.output) as [string, string];
+    expect(existsSync(join(cache, "used"))).toBe(true);
+    expect(existsSync(home)).toBe(false);
+  } finally {
+    rmSync(cache, { recursive: true, force: true });
+  }
+});
+
+test("removes the run's folders when the launcher is stopped", async () => {
+  const launcher = Bun.spawn(
+    [
+      process.execPath,
+      "-e",
+      `const { runPlaywright } = await import(${JSON.stringify(new URL("./run-playwright.ts", import.meta.url).href)});
+      const run = await runPlaywright(
+        {
+          cmd: process.execPath,
+          args: ["-e", "console.log(process.pid + ' ' + process.env.E2E_HOME); setInterval(() => {}, 1000)"],
+        },
+        { PATH: process.env.PATH },
+      );
+      process.exit(run.exitCode);`,
+    ],
+    { stdout: "pipe" },
+  );
+  const { value } = await launcher.stdout.getReader().read();
+  const [pid, home] = new TextDecoder().decode(value).trim().split(" ") as [string, string];
+  try {
+    expect(existsSync(dirname(home))).toBe(true);
+    launcher.kill("SIGTERM");
+    const exitCode = await launcher.exited;
+    if (process.platform !== "win32") expect(exitCode).toBe(143);
+    expect(existsSync(dirname(home))).toBe(false);
+  } finally {
+    try {
+      process.kill(Number(pid), "SIGKILL");
+    } catch {}
+    rmSync(dirname(home), { recursive: true, force: true });
+  }
+});
+
+// POSIX signal termination reports a signal instead of a numeric child exit code.
+describe.skipIf(process.platform === "win32")("POSIX child termination", () => {
+  test.each([
+    ["SIGINT", 130],
+    ["SIGTERM", 143],
+  ] as const)("preserves %s status while cleaning its owned folders", async (signal, exitCode) => {
+    const run = await runPlaywright(
+      {
+        cmd: process.execPath,
+        args: ["-e", `console.log(process.env.E2E_HOME); process.kill(process.pid, ${JSON.stringify(signal)})`],
+      },
+      { PATH: process.env.PATH },
+      { stdio: "pipe" },
+    );
+    expect(run.exitCode).toBe(exitCode);
+    expect(existsSync(dirname(run.output.trim()))).toBe(false);
+  });
 });

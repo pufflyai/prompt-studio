@@ -86,16 +86,19 @@ test("Artifact actions keep rename defaults, target inactive tabs, and refresh t
     writeFileSync(join(root, "a.html"), "<title>Artifact A</title><p>A</p>");
     writeFileSync(join(root, "b.html"), "<title>Artifact B</title><p>B</p>");
     const project = await createProject(request, root);
-    const a = await execute(request, project.id, "artifacts", "publish", { file_path: "a.html" });
+    await execute(request, project.id, "artifacts", "publish", { file_path: "a.html" });
     const b = await execute(request, project.id, "artifacts", "publish", { file_path: "b.html" });
     await prepareResourceActionsDashboard(page, project.id);
-    await page.goto(a.url);
-    await expect(page.getByRole("tab", { name: "Artifact A", exact: true })).toBeVisible();
-    await page.goto(b.url);
-    // Published URLs open their viewer after the page has loaded.
+    // Library cards pin their viewers; a bare URL load opens a preview that the next preview replaces.
+    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-artifacts/artifacts`);
+    const library = page.frameLocator('iframe[title="Artifacts"]:visible').last();
+    await library.getByRole("button", { name: "Artifact A", exact: true }).click();
+    const firstTab = page.getByRole("tab", { name: "Artifact A", exact: true });
+    await expect(firstTab).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("tab", { name: "Artifacts", exact: true }).click();
+    await library.getByRole("button", { name: "Artifact B", exact: true }).click();
     const secondTab = page.getByRole("tab", { name: "Artifact B", exact: true });
     await expect(secondTab).toHaveAttribute("aria-selected", "true");
-    const firstTab = page.getByRole("tab", { name: "Artifact A", exact: true });
     await firstTab.click();
     await expect(firstTab).toHaveAttribute("aria-selected", "true");
     const route = page.url();

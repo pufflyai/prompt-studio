@@ -1,5 +1,8 @@
-import { spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 export const sanitizeForwardedArgs = (argv: string[]) => argv.filter((arg) => arg !== "--silent");
 
@@ -41,6 +44,51 @@ export const getPlaywrightCommand = (args: string[], priority = process.env.CI_P
     cmd: process.execPath,
     args: ["x", "--no-install", "playwright", "test", ...selected, `--max-failures=${priority === "P1" ? 1 : 0}`],
   };
+};
+
+// A run owns one temporary folder for its server home and Bun cache. A per-run cache keeps an
+// interrupted run's partial package extraction away from later runs; removing the folder when
+// Playwright exits keeps finished runs from filling the disk. Paths a caller provides stay theirs.
+export const runPlaywright = async (
+  command: { cmd: string; args: string[] },
+  env: NodeJS.ProcessEnv,
+  options: { stdio: "inherit" | "pipe" } = { stdio: "inherit" },
+) => {
+  const runFolder = mkdtempSync(join(tmpdir(), "pstdio-e2e-run-"));
+  let child: ChildProcess | undefined;
+  // A child can announce readiness before spawn returns. Own interruption before starting it.
+  const forward = (signal: NodeJS.Signals) => child?.kill(signal);
+  process.on("SIGINT", forward);
+  process.on("SIGTERM", forward);
+  try {
+    const runningChild = spawn(command.cmd, command.args, {
+      env: {
+        ...env,
+        E2E_HOME: env.E2E_HOME ?? join(runFolder, "home"),
+        E2E_BUN_CACHE_DIR: env.E2E_BUN_CACHE_DIR ?? join(runFolder, "bun-cache"),
+      },
+      stdio: options.stdio,
+    });
+    child = runningChild;
+    let output = "";
+    runningChild.stdout?.on("data", (chunk) => {
+      output += chunk;
+    });
+    // "close" waits for the child's output streams as well as its exit.
+    const exitCode = await new Promise<number>((resolve, reject) => {
+      runningChild.on("error", reject);
+      runningChild.on("close", (code, signal) => {
+        if (code !== null) return resolve(code);
+        if (signal === "SIGINT") return resolve(130);
+        resolve(signal === "SIGTERM" ? 143 : 1);
+      });
+    });
+    return { exitCode, output };
+  } finally {
+    process.off("SIGINT", forward);
+    process.off("SIGTERM", forward);
+    rmSync(runFolder, { recursive: true, force: true });
+  }
 };
 
 const forwardedArgs = sanitizeForwardedArgs(process.argv.slice(2));
@@ -88,19 +136,8 @@ const run = async () => {
   const runId = process.env.E2E_RUN_ID ?? createRunId();
   const command = getPlaywrightCommand(forwardedArgs);
 
-  const child = spawn(command.cmd, command.args, {
-    env: buildPlaywrightEnv(process.env, { apiPort, dashboardPort }, runId),
-    stdio: "inherit",
-  });
-
-  child.on("error", (error) => {
-    console.error(error);
-    process.exit(1);
-  });
-
-  child.on("exit", (code) => {
-    process.exit(code ?? 1);
-  });
+  const { exitCode } = await runPlaywright(command, buildPlaywrightEnv(process.env, { apiPort, dashboardPort }, runId));
+  process.exit(exitCode);
 };
 
 if (import.meta.main) {

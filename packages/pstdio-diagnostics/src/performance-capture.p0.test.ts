@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { DesktopPerformanceCapture } from "./performance-capture";
+import { PerformanceCaptureCollector } from "./performance-capture";
 
 const reading = {
   processStartId: "start",
@@ -12,11 +12,30 @@ const reading = {
 };
 const backend = { id: "runtime", pid: 12, origin: null, token: null, scope: "local" as const };
 
+test("samples an explicit operation boundary after an outstanding periodic sample", async () => {
+  const pending = Promise.withResolvers<typeof reading>();
+  let reads = 0;
+  const capture = new PerformanceCaptureCollector({
+    hostVersion: "test",
+    platform: "darwin",
+    intervalMs: 2000,
+    backend: () => backend,
+    readProcess: async () => (++reads === 1 ? pending.promise : { ...reading, cpuTimeMs: 120 }),
+  });
+  const periodic = capture.sample([]);
+  const boundary = capture.flush([]);
+  pending.resolve(reading);
+  await Promise.all([periodic, boundary]);
+  expect(reads).toBe(2);
+  expect(capture.snapshot().samples.at(-1)?.processes[0]?.cpuTimeMs).toBe(120);
+  capture.stop();
+});
+
 test("preserves process identity and bounded history without readers", async () => {
   let cpu = 0;
   let startId = "first";
   let time = 0;
-  const capture = new DesktopPerformanceCapture({
+  const capture = new PerformanceCaptureCollector({
     hostVersion: "test",
     platform: "darwin",
     intervalMs: 2000,
@@ -47,7 +66,7 @@ test("preserves process identity and bounded history without readers", async () 
 
 test("cancels in-flight collection and cannot repopulate disabled history", async () => {
   let finish: (value: typeof reading) => void = () => {};
-  const capture = new DesktopPerformanceCapture({
+  const capture = new PerformanceCaptureCollector({
     hostVersion: "test",
     platform: "darwin",
     intervalMs: 2000,
@@ -66,7 +85,7 @@ test("cancels in-flight collection and cannot repopulate disabled history", asyn
 
 test("does not sample local processes for a remote connection or multiply concurrent requests", async () => {
   let reads = 0;
-  const capture = new DesktopPerformanceCapture({
+  const capture = new PerformanceCaptureCollector({
     hostVersion: "test",
     platform: "darwin",
     intervalMs: 2000,
@@ -84,7 +103,7 @@ test("does not sample local processes for a remote connection or multiply concur
 });
 
 test("bounds live history by encoded bytes so the supported local reader remains usable", async () => {
-  const capture = new DesktopPerformanceCapture({
+  const capture = new PerformanceCaptureCollector({
     backend: () => null,
     readProcess: async () => null,
     intervalMs: 2000,

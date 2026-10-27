@@ -216,8 +216,10 @@ export const createNativeAccount = (input: {
     },
     refresh,
     watch: changes.watch,
-    async login(managerOrigin: string) {
-      const parsed = managerOriginSchema.safeParse(managerOrigin);
+    async login(managerOrigin?: string) {
+      const parsed = managerOriginSchema.safeParse(
+        managerOrigin ?? process.env.PSTDIO_ACCOUNT_MANAGER_ORIGIN ?? "https://base.prompt.studio/accounts",
+      );
       if (!parsed.success)
         throw new AccountRequestError(
           "Use the https address of an account service, such as https://accounts.example.test.",

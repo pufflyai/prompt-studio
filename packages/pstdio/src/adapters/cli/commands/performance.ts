@@ -1,8 +1,25 @@
+import { resolve } from "node:path";
+import { readPerformanceRecordings } from "pstdio-diagnostics";
 import { resolvePstdioPerformanceEndpoint } from "pstdio-paths";
+import type { Argv } from "yargs";
 import { readPerformanceEndpoint } from "@/features/performance";
 
-export const command = "performance";
-export const describe = "Print the local performance snapshot from Prompt Studio desktop";
+export const command = "performance [action] [directory]";
+export const describe = "Read the local performance snapshot or export saved recordings";
+
+export const builder = (yargs: Argv) =>
+  yargs
+    .positional("action", {
+      choices: ["snapshot", "recordings"] as const,
+      default: "snapshot",
+      describe: "Evidence to read",
+    })
+    .positional("directory", { type: "string", describe: "Saved recording directory shown by the Performance export" });
+
+interface PerformanceArgs {
+  action?: string;
+  directory?: string;
+}
 
 type Deps = {
   log: (message: string) => void;
@@ -36,8 +53,13 @@ const isDesktopSnapshot = (value: unknown) =>
 // desktop app on this device directly and never sends measurements to a runtime.
 export const createHandler =
   (deps: Partial<Deps> = {}) =>
-  async () => {
+  async (args: PerformanceArgs = {}) => {
     const resolvedDeps = { ...defaultDeps, ...deps };
+    if (args.action === "recordings") {
+      if (!args.directory) throw new Error("Pass the saved performance recording directory.");
+      resolvedDeps.log(JSON.stringify(readPerformanceRecordings(resolve(args.directory)), null, 2));
+      return;
+    }
     const snapshot = await readPerformanceEndpoint(resolvedDeps.resolveEndpoint());
     if (!snapshot) {
       throw new Error(

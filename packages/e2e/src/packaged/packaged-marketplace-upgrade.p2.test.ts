@@ -7,7 +7,7 @@ import { join, resolve } from "node:path";
 import { chromium, expect as expectPage } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -186,7 +186,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
       ]),
     );
 
-    browser = await chromium.launch(PROVISIONED_CHROMIUM);
+    browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
     const page = await browser.newPage();
     await page.addInitScript((projectId: string) => {
       localStorage.setItem("onboarding-complete", "true");

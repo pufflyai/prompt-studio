@@ -60,7 +60,7 @@ An auxiliary resource binding with `cardinality: "one"` keeps one placement when
 
 The host exposes `getPanelDestinations(instanceId)`, `movePanel(instanceId, region, position?)`, and `resetLayout()`. A position is `"start"`, `"end"`, `{ beforeWidgetId }`, or `{ afterWidgetId }`. Moves preserve the current page route and the primary resource anchor. The `workbench.movePanel` and `workbench.resetLayout` commands expose the same operations to commands and agents. `onDidResetLayout` lets host UI clear its active layout preferences after the reset.
 
-Retention is local to the current project and workbench. Removing a view contribution, switching projects, or closing the workbench releases its retained views. A full application reload starts new views. Views are not mounted merely because they are registered; `mountStrategy: "keep-mounted"` can mount inactive placements before their first selection.
+Retention is local to the current project and workbench. Removing a view contribution, switching projects, or closing the workbench releases its retained views. A project switch releases only those views: the panels, navigation header, Sidenav and status bar stay mounted. A full application reload starts new views. Views are not mounted merely because they are registered; `mountStrategy: "keep-mounted"` can mount inactive placements before their first selection.
 
 Resource removal uses the shared registry cleanup for page, mode and shell placements. It matches the full resource identity, including project and extension, and invalidates pending related openings. Session deletion and archive use this same cleanup; closing a Session view alone does not delete or stop the Session. Resource cleanup does not save a manual panel closure. A retained dirty editor may stay visible while its pending related lookup is cancelled.
 
@@ -119,7 +119,7 @@ Global panel controls render in the web navigation header: closed Sidenav recove
 | `workbench.resizePanel` | `region: sidenav, secondary, side`, `size: number` in pixels |
 | `workbench.setSidePanelPresentation` | `presentation: attached, floating, closed` |
 
-The matching shell methods enforce the same permissions. Main headers follow page presentation: tabless pages have no header, while tabbed pages keep theirs. Header menus offer placement actions without a visibility toggle. `setPanelHeaderVisible` and `shell.setHeaderVisible` remain for legacy auxiliary integrations and cannot override a page's Main header policy. Optional panels collapse after their last tab closes, including panels previously opened empty.
+The matching shell methods enforce the same permissions. Main headers follow page presentation: tabless pages have no tab header, while tabbed pages keep theirs. A tabless page whose view has a closed view menu shows a minimal, borderless menu header that holds only that menu's opener and accepts no tab drops or panel placement. Header menus offer placement actions without a visibility toggle. `setPanelHeaderVisible` and `shell.setHeaderVisible` remain for legacy auxiliary integrations and cannot override a page's Main header policy. Optional panels collapse after their last tab closes, including panels previously opened empty.
 
 ## Panel placement and closed-edge drops
 

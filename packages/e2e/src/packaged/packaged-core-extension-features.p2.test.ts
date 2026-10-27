@@ -15,6 +15,7 @@ setupPackagedSmokeTests();
 test(
   "packaged core extension features preserve their settings, resources and templates",
   async () => {
+    const phase = (name: string) => console.log(`Packaged core features: ${name} (${Date.now()})`);
     await withPackagedCoreExtensions(async ({ started, tempRoot, project, extensions, metadata }) => {
       const planner = extensions.find((extension) => extension.installName === "pstdio-planner");
       expect(planner).toBeDefined();
@@ -25,8 +26,10 @@ test(
         runtimeAuthorization(started.descriptor),
         tempRoot,
       );
+      phase("Planner workflow checked");
 
       await expectPackagedThemeColors(started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
+      phase("theme colors checked");
 
       expect(metadata.pages).toContainEqual(
         expect.objectContaining({
@@ -75,12 +78,14 @@ test(
         }),
       );
       await expectPlannerCommands(started.baseUrl, project.id, runtimeAuthorization(started.descriptor), metadata);
+      phase("Planner commands checked");
       await expectNotesResources({
         baseUrl: started.baseUrl,
         projectId: project.id,
         headers: runtimeAuthorization(started.descriptor),
         metadata,
       });
+      phase("Notes resources checked");
       const tagsRes = await fetch(
         `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.ticket-tag.read/execute`,
         {
@@ -108,7 +113,9 @@ test(
         },
       });
       await expectPlannerProperties(started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
+      phase("Planner properties checked");
       await expectPackagedWorkspaceSelection(started.descriptor, project.id);
+      phase("workspace selection checked");
       await expectTemplateStorage(metadata, started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
     });
   },

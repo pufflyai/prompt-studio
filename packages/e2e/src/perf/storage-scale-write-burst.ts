@@ -10,6 +10,7 @@ export const sampleWriteBurst = async (
   temperature: string,
   environment: Record<string, string>,
   background?: (runtime: ScaleRuntime) => Promise<unknown>,
+  startRuntime: typeof startScaleRuntime = startScaleRuntime,
 ) => {
   const changes = owners(workload(fixture.kind)).map((owner) => {
     const base = createRow(fixture.kind, owner.index, 37, 3);
@@ -22,7 +23,7 @@ export const sampleWriteBurst = async (
       input: { action: "commit", operationId, rows: [expected], planner: owner.index === 9, count: owner.rows },
     };
   });
-  const runtime = await startScaleRuntime(home, environment);
+  const runtime = await startRuntime(home, environment);
   const measured = await (async () => {
     try {
       if (temperature === "warm")
@@ -52,7 +53,7 @@ export const sampleWriteBurst = async (
       await runtime.stop();
     }
   })();
-  const reopened = await startScaleRuntime(home, environment);
+  const reopened = await startRuntime(home, environment);
   try {
     for (const { owner, base, expected, input } of changes) {
       const saved = await reopened.execute(fixture.projectId, owner.id, "scale", {

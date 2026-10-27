@@ -255,10 +255,11 @@ describe("terminal supervisor", () => {
       await Bun.sleep(100);
       expect(await supervisor.activity()).toEqual([]);
       handle.write(line("sleep 0.5"));
-      for (let attempt = 0; attempt < 30 && (await supervisor.activity()).length === 0; attempt += 1)
-        await Bun.sleep(10);
+      // Activity follows the shell's busy and prompt markers. Wait for each within the test's deadline;
+      // a loaded runner can read a marker late, which is not what this test checks.
+      while ((await supervisor.activity()).length === 0) await Bun.sleep(10);
       expect(await supervisor.activity()).toEqual([{ id: handle.id, label: "bash" }]);
-      await Bun.sleep(600);
+      while ((await supervisor.activity()).length > 0) await Bun.sleep(10);
       expect(await supervisor.activity()).toEqual([]);
     } finally {
       await handle.kill("SIGKILL");

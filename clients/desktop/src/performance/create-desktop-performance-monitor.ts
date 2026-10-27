@@ -1,13 +1,12 @@
 import { cpus } from "node:os";
 import { join } from "node:path";
 import { app } from "electron";
+import { type PerformanceBackend, readPerformanceRecordings } from "pstdio-diagnostics";
 import { resolvePstdioPerformanceEndpoint } from "pstdio-paths";
-import type { PerformanceBackend } from "./backend-response";
 import { createDesktopCapture } from "./create-performance-capture";
 import { openPerformanceEndpoint } from "./performance-endpoint";
 import { DesktopPerformanceMonitor } from "./performance-monitor";
 import { PerformanceMonitoringPreference } from "./performance-preference";
-import { readPerformanceRecordings } from "./performance-recording";
 import type { OwnedFrame } from "./process-attribution";
 
 interface DesktopPerformanceMonitorInput {

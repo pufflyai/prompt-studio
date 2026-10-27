@@ -3,6 +3,9 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { PackageAssetDescriptor } from "@pstdio/sdk/extensions";
+import type { InstallExtensionResponse } from "pstdio-api-contracts";
+import { resolvePackageAssetPath } from "pstdio-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runPackagedAsync } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -67,6 +70,15 @@ test("a packaged host packs, installs and upgrades an independently published ex
     const project = (await response.json()) as { id: string };
     const env = { PSTDIO_HOME: home, PSTDIO_API_URL: host.baseUrl, PSTDIO_API_TOKEN: host.descriptor.token };
     await runPackagedAsync(["extensions", "add", "pstdio.pstdio-notes"], repo, env);
+    const reinstalled = await fetch(`${host.baseUrl}/v1/projects/${project.id}/extensions/install`, {
+      method: "POST",
+      headers: { ...runtimeAuthorization(host.descriptor), "content-type": "application/json" },
+      body: JSON.stringify({ source: { kind: "catalog", name: "pstdio.pstdio-notes" }, force: true }),
+    });
+    expect(reinstalled.status).toBe(201);
+    const installed = (await reinstalled.json()) as InstallExtensionResponse;
+    const templates = installed.source.manifest.templates as Array<{ source: PackageAssetDescriptor }>;
+    expect(resolvePackageAssetPath(templates[0]!.source)).toBe(join(installed.source.targetPath, "note.md"));
     expect(await runPackagedAsync(["pstdio.pstdio-notes", "version", "--project-id", project.id], repo, env)).toContain(
       "0.45.1",
     );

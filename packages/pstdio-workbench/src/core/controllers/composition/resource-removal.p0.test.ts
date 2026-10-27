@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "../../workbench-core";
+import { pageRef as collectionPageRef, modePanelFixture } from "../page-runtime/mode-panel-state.fixture";
 
 const owner = "acme.notes";
 const pageRef = (id: string) => ({ kind: "page" as const, extensionId: owner, id });
@@ -182,3 +183,67 @@ test("removal reconciles mode and shell bindings including inactive cached shell
   core.pageLocations.navigate({ kind: "page", page: pageRef("one") });
   expect(core.layout.getLayout().regions.secondary.widgets).toHaveLength(0);
 });
+
+for (const scoped of [true, false])
+  test(`removing the routed resource closes its tab in a panel collection, scoped=${scoped}`, () => {
+    const s = modePanelFixture(undefined, scoped, [], "");
+    const library = { kind: "placement", extensionId: "test", id: "library" } as const;
+    const viewer = { kind: "placement", extensionId: "test", id: "viewer" } as const;
+    s.w.modePlacements.registerPlacement({
+      id: "library",
+      ref: library,
+      modeId: "alpha",
+      region: "main",
+      item: { kind: "view", view: { kind: "view", id: "document" }, presence: "closed" },
+    });
+    s.w.modePlacements.registerPlacement({
+      id: "viewer",
+      ref: viewer,
+      modeId: "alpha",
+      region: "main",
+      item: {
+        kind: "binding",
+        binding: {
+          kinds: [{ kind: "resource-kind", id: "document" }],
+          view: { kind: "view", id: "document" },
+          cardinality: "many",
+        },
+      },
+    });
+    s.w.pages.registerPage({
+      id: "library",
+      ref: collectionPageRef("library"),
+      path: "library",
+      modeId: "alpha",
+      main: { kind: "panels", landing: library },
+      panelView: library,
+      slots: [],
+    });
+    s.w.pages.registerPage({
+      id: "library-detail",
+      ref: collectionPageRef("library-detail"),
+      path: "library/view",
+      modeId: "alpha",
+      parentId: "library",
+      resource: { kinds: [{ kind: "resource-kind", id: "document" }] },
+      main: { kind: "panels", landing: viewer },
+      slots: [],
+    });
+    const open = (id: string) =>
+      s.w.pageLocations.navigate({
+        kind: "page",
+        page: collectionPageRef("library-detail"),
+        resource: { type: "document", id },
+        open: "pin",
+      });
+    s.navigate("library");
+    open("a");
+    open("b");
+    expect(s.ids("main")).toEqual(["a", "b"]);
+    s.w.resources.removed({ type: "document", id: "b" });
+    expect(s.w.pages.store.getState().activePageId).toBe("library");
+    expect(s.ids("main")).toEqual(["a"]);
+    open("a");
+    s.navigate("library");
+    expect(s.ids("main")).toEqual(["a"]);
+  });

@@ -21,9 +21,11 @@ export const createOpencodeHarnessService = (overrides: Parameters<typeof create
     if ([...scopes.values()].some((scope) => scope.pending.size || scope.sessions.size)) return;
     const owned = [...previous];
     previous.clear();
-    closing = closing.then(async () => {
-      await Promise.all(owned.map(async (pending) => (await pending).dispose()));
-    });
+    closing = closing
+      .catch(() => {})
+      .then(async () => {
+        await Promise.all(owned.map(async (pending) => (await pending).dispose()));
+      });
     // Keep cleanup failures available to the next caller and provider disposal.
     void closing.catch(() => {});
   };
@@ -69,13 +71,15 @@ export const createOpencodeHarnessService = (overrides: Parameters<typeof create
     },
     get: async (ctx: HarnessContext) => {
       scopeFor(ctx);
-      service ??= closing.then(() =>
-        createOpencodeService({
-          ...overrides,
-          reuseExisting,
-          serverStore: overrides.serverStore ?? createHarnessServerStore(ctx.state),
-        }),
-      );
+      service ??= closing
+        .catch((error) => ctx.logger.error(`OpenCode server cleanup failed: ${String(error)}`))
+        .then(() =>
+          createOpencodeService({
+            ...overrides,
+            reuseExisting,
+            serverStore: overrides.serverStore ?? createHarnessServerStore(ctx.state),
+          }),
+        );
       return service;
     },
     invalidateAuthentication: async () => {

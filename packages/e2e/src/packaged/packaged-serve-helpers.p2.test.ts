@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium } from "@playwright/test";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { buildBinary } from "./packaged-helpers";
 import { signInBrowser, startPackagedServe, stopProcess, waitForPackagedReady } from "./packaged-serve-helpers";
 
@@ -99,7 +99,7 @@ test("browser sign-in completes authentication before the caller navigates", asy
   const runtime = await startPackagedServe(root);
   let browser: Browser | undefined;
   try {
-    browser = await chromium.launch(PROVISIONED_CHROMIUM);
+    browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
     const page = await browser.newPage();
     await page.addInitScript(() => {
       const readJson = Response.prototype.json;

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { type Browser, chromium } from "@playwright/test";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { expectPackagedQueuedEditRecovery } from "./packaged-queued-edit-recovery-smoke";
 import { expectPackagedQueuedEditorCancellation } from "./packaged-queued-editor-smoke";
 import { createPackagedQueueFixture, logQueuedPhase } from "./packaged-queued-fixture";
@@ -16,7 +16,7 @@ describe("packaged queued requests", () => {
   beforeAll(async () => {
     fixture = await createPackagedQueueFixture();
     logQueuedPhase("setup", "launch shared Chromium browser");
-    browser = await chromium.launch(PROVISIONED_CHROMIUM);
+    browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
   }, PACKAGED_TEST_TIMEOUT);
   afterAll(async () => {
     try {

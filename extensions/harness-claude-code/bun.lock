@@ -6,7 +6,7 @@
       "name": "harness-claude-code",
       "dependencies": {
         "@anthropic-ai/claude-code": "2.1.203",
-        "@pstdio/sdk": "^0.41.0",
+        "@pstdio/sdk": "0.46.0-preview.sha-714def5a655f68a3dbc195afeea06ea134c88924",
       },
       "devDependencies": {
         "@types/bun": "1.4.4",
@@ -33,7 +33,9 @@
 
     "@anthropic-ai/claude-code-win32-x64": ["@anthropic-ai/claude-code-win32-x64@2.1.203", "", { "os": "win32", "cpu": "x64" }, "sha512-avJDp23I0BfY/dVeBFKBbuX3xHUcaWg5VCXaIL4IIm2WKqfFDXeCdDGTfV6dxPqM9f0sQ+kd1JDkbOzwnRLTQw=="],
 
-    "@pstdio/sdk": ["@pstdio/sdk@0.41.0", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-Z8+ZQzs0k31JILTmBaJP/cT/1G606Fln4LL1vzybD6Bvnr3MwU6CUwD0gw1LH5wFOhaqDBx7HhTWjWF1TPnzng=="],
+    "@noble/hashes": ["@noble/hashes@2.4.0", "", {}, "sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA=="],
+
+    "@pstdio/sdk": ["@pstdio/sdk@0.46.0-preview.sha-714def5a655f68a3dbc195afeea06ea134c88924", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-J3TT7JfsyI576D/21HO/mvwiteTLwBOjh97Vd2m2xLb/k4QUXJzmngkOIZ2s6JvdZEJAvk/FI1LeWDBG23t2+A=="],
 
     "@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 

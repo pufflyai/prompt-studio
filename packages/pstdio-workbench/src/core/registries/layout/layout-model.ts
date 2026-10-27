@@ -189,6 +189,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
   const ownedMenus = createOwnedMenuMethods({
     getLayout,
     getWidget: (id) => getWidgets()[id],
+    getDetachedOwners: input.getDetachedOwners,
     openWidget: widgetOpeners.openWidget,
     persistLayout,
     setLayout,

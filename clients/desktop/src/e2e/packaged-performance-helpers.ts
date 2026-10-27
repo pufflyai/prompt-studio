@@ -1,21 +1,14 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, type Page } from "@playwright/test";
+import type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
 import { createPackagedHome, launchPackagedApp } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
 
-export type PerformanceSnapshot = {
-  processes: Array<{
-    pid: number;
-    role: string;
-    cpuPercent: number;
-    extensionFrames: Array<{ installedExtensionId: string }>;
-  }>;
-  frames: unknown[];
-  pausedExtensionIds: string[];
-};
+export type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
+
 type MonitoringBridge = {
   promptStudioDesktop: { getPerformanceSnapshot: () => Promise<PerformanceSnapshot | null> };
 };

@@ -2,6 +2,8 @@
 export interface PerformanceProcessSample {
   pid: number;
   processStartId: string;
+  /** Native process creation time, when available. Older hosts omit it. */
+  startedAt?: string;
   role: "backend" | "main" | "gpu" | "utility" | "workbench" | "startup" | "extension-frames" | "renderer" | "other";
   cpuPercent: number | null;
   cpuTimeMs: number | null;
