@@ -1,13 +1,12 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { resolve } from "node:path";
+import { parseStorySources } from "./parse-story-sources";
 
 export const repoRoot = resolve(import.meta.dir, "../../../..");
 export const extensionRoot = resolve(repoRoot, ".pstdio/extensions/canvas");
 export const generatedRoot = resolve(extensionRoot, "src/catalog/generated");
-const uiRequire = createRequire(resolve(repoRoot, "packages/ui/package.json"));
 export const suites = {
   ui: "packages/ui",
   workbench: "packages/pstdio-workbench",
@@ -59,7 +58,6 @@ export const suiteForSource = (source: string): Suite => {
   return (suite?.[0] as Suite | undefined) ?? "dashboard";
 };
 export const collectStoryCatalog = async () => {
-  const { loadCsf } = await import(uiRequire.resolve("storybook/internal/csf-tools"));
   const stories: CatalogStory[] = [];
   const documents: { id: string; name: string; source: string; suite: Suite; content: string; sourceHash: string }[] =
     [];
@@ -69,6 +67,10 @@ export const collectStoryCatalog = async () => {
       source,
       text: await readFile(resolve(repoRoot, source), "utf8"),
     })),
+  );
+  const parsed = await parseStorySources(
+    files.filter((file) => !file.source.endsWith(".mdx")),
+    resolve(repoRoot, "packages/ui/package.json"),
   );
   for (const { source, text } of files) {
     const hash = createHash("sha256").update(text).digest("hex");
@@ -85,23 +87,20 @@ export const collectStoryCatalog = async () => {
       continue;
     }
     const suite = suiteForSource(source);
-    const csf = loadCsf(text, {
-      fileName: resolve(repoRoot, source),
-      makeTitle: (title?: string) => title ?? source.replace(/\.stories\.tsx?$/, ""),
-    }).parse();
-    sources[source].component = csf.meta.component;
-    sources[source].componentImport = csf._rawComponentPath;
-    for (const [exportName, story] of Object.entries(csf._stories) as [string, { id: string; name: string }][]) {
+    const csf = parsed.get(source)!;
+    sources[source].component = csf.component;
+    sources[source].componentImport = csf.componentImport;
+    for (const story of csf.stories) {
       stories.push({
         id: `${suite}-${story.id}`,
         name: story.name,
-        exportName,
+        exportName: story.exportName,
         source,
         suite,
-        title: csf.meta.title,
+        title: csf.title,
         sourceHash: hash,
-        component: csf.meta.component,
-        componentImport: csf._rawComponentPath,
+        component: csf.component,
+        componentImport: csf.componentImport,
       });
     }
   }

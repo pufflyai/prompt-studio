@@ -53,6 +53,8 @@ export const publishNativeBuild = async (
     ".pstdio/extensions/canvas/scripts/build-native-previews.ts",
     ".pstdio/extensions/canvas/scripts/native-build-output.ts",
     ".pstdio/extensions/canvas/scripts/story-catalog.ts",
+    ".pstdio/extensions/canvas/scripts/parse-story-sources.ts",
+    ".pstdio/extensions/canvas/scripts/story-parser-worker.ts",
     "packages/ui/package.json",
     "packages/sdk/package.json",
     "packages/pstdio-workbench/build-entries.ts",
