@@ -106,6 +106,47 @@ test("native edits project through the file save handler and retain a non-overla
   }
 });
 
+test("a racing file projection retains its pending write and acknowledges durable editor frames", async () => {
+  const deps = { ...extension.deps, extensionStorageService: storage.svc };
+  let outsideWrite = false;
+  const service = createService({
+    storage: storage.svc,
+    load: (input) => loadNativeMarkdownFile(deps, input),
+    save: async (input) => {
+      if (!outsideWrite) {
+        outsideWrite = true;
+        await writeFile(join(extension.root, "notes.txt"), "selected folder OUTSIDE");
+      }
+      return saveNativeMarkdownFile(deps, input);
+    },
+  });
+  const room = await open(service);
+  const author = new Y.Doc();
+  try {
+    Y.applyUpdate(author, room.state);
+    const vector = Y.encodeStateVector(author);
+    author.getText("content").insert(0, "LOCAL ");
+    const accepted = await service.submit({
+      projectId: storage.projectAId,
+      roomId: room.roomId,
+      update: Y.encodeStateAsUpdate(author, vector),
+    });
+    const received = new Y.Doc();
+    try {
+      Y.applyUpdate(received, accepted.state);
+      expect(received.getText("content").toString()).toBe("LOCAL selected folder");
+    } finally {
+      received.destroy();
+    }
+    expect((await storage.svc.nativeFileProjections.read(room))?.pending).toBeInstanceOf(Uint8Array);
+    await service.snapshot({ projectId: storage.projectAId, roomId: room.roomId });
+    expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("LOCAL selected folder OUTSIDE");
+    expect((await storage.svc.nativeFileProjections.read(room))?.pending).toBeNull();
+  } finally {
+    author.destroy();
+  }
+});
+
 test("restart retries an unfinished file save without losing its durable editor text", async () => {
   const { deps, service } = setup();
   const room = await open(service);

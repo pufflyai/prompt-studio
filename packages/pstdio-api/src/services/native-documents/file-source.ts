@@ -5,6 +5,7 @@ import {
   resolveFileRendererPresentation,
 } from "pstdio-api-contracts";
 import { createReadBoundary } from "pstdio-extensions";
+import { StorageRevisionChangedError } from "pstdio-sync";
 import { z } from "zod";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { executeProjectExtensionCommand } from "../../features/extensions/execute-project-extension-command";
@@ -134,8 +135,10 @@ export const saveNativeMarkdownFile = async (
   const result = input.projection
     ? await withNativeFileWrite({ ...input.projection, storage: deps.extensionStorageService }, execute)
     : await execute();
-  if (!result.outcome.ok)
+  if (!result.outcome.ok) {
+    if (result.outcome.error?.name === "StorageRevisionChangedError") throw new StorageRevisionChangedError();
     throw new NativeDocumentSourceError(502, "native_document_save_failed", result.outcome.reason);
+  }
   return {
     fileStorageVersions: z.record(z.string(), z.string()).parse(result.outcome.data?.fileStorageVersions ?? {}),
   };
