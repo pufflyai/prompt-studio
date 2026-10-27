@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
+import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves and independent schema dependencies.
 // Native actions retain failed outcomes for the UI entry point to report.
@@ -169,3 +170,9 @@ test("packaged CLI includes automation and machine authentication", () => {
   expect(existsSync(join(home, "runtime.json"))).toBe(false);
   rmSync(home, { recursive: true, force: true });
 });
+
+test(
+  "installs bundled defaults without Git and does not offer Git workspaces",
+  expectPackagedGitFreeExtensions,
+  PACKAGED_TEST_TIMEOUT,
+);

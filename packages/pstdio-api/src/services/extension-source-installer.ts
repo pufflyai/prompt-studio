@@ -5,6 +5,7 @@ import { type ExtensionCatalogEntry, ExtensionNotInCatalogError } from "../featu
 import {
   type InstallExtensionSourceInput,
   prepareGitExtensionSource,
+  prepareReleaseExtensionSource,
 } from "../features/extensions/install-extension-source";
 import {
   InvalidExtensionFolderError,
@@ -65,7 +66,12 @@ export const createExtensionSourceInstaller = (input: ExtensionSourceInstallerDe
         ? { skipInstall: true }
         : {
             prepareNamedSource: (_name, tempDir, explicitRef, signal) =>
-              prepareGitExtensionSource(entry.origin, tempDir, explicitRef ?? ref, signal),
+              (source.ref ? prepareGitExtensionSource : prepareReleaseExtensionSource)(
+                entry.origin,
+                tempDir,
+                explicitRef ?? ref,
+                signal,
+              ),
           }),
     });
   };

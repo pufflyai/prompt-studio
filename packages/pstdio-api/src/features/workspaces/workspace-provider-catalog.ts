@@ -1,11 +1,12 @@
 import type { ExtensionWorkspaceProvider } from "pstdio-api-contracts/extension-kernel";
-import { git, listBranches } from "pstdio-wt";
+import { git, isGitAvailable, listBranches } from "pstdio-wt";
 import { apiLogger } from "../../lib/logger";
 import type { WorkspacesRouteDeps } from "./deps";
 import { worktreeProviderId } from "./workspace-provider-identity";
 import { hasUsableGitBase } from "./worktree-setup";
 
 const discoverGitProvider = async (path: string) => {
+  if (!(await isGitAvailable())) return null;
   try {
     if (!(await hasUsableGitBase(path))) return null;
     const branches = await listBranches(path);

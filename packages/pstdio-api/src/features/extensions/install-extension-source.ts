@@ -33,6 +33,7 @@ export {
   createSharedNamedSourceCheckout,
   namedSourceRef,
   prepareGitExtensionSource,
+  prepareReleaseExtensionSource,
 } from "./extension-source-checkout";
 export type {
   ExtensionEnableInput,

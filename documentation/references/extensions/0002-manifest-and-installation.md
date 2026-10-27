@@ -87,6 +87,10 @@ for this host.
 
 Installs and updates are explicit. Source that appears in the extensions root is never adopted on its own.
 
+Packaged builds include their host catalog extension sources and lockfiles. These install from the app's bundled packages and retain the build's source commit. Registry packages and local folder installs also work without Git.
+
+Explicit Git refs and other repository sources use the system Git executable. When Git is missing or cannot run, Git workspaces are unavailable and explicit Git operations report that Git is required. On macOS, the host checks the selected developer tools before invoking Apple's Git stub, so normal startup does not open the developer-tools installer.
+
 - `pst extensions add <name>` resolves the name through the extension catalog. The catalog entry
   names the Git repository, folder, and release ref. Prompt Studio records the resolved commit with
   the install, so the installed source stays pinned even when a tag or branch moves.
