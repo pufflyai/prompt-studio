@@ -55,6 +55,8 @@ export interface CreateLayoutModelInput {
   ): void;
   /** Region policy for the active context; the layout asks on every query. */
   getRegionSettings?(regionId: WorkbenchRegion, modeId?: string): WorkbenchRegionSettings | undefined;
+  /** Main owners rendered outside the tab layout, such as tabless page content. Their menus are not orphans. */
+  getDetachedOwners?(): readonly WorkbenchWidgetPlacement[];
 }
 
 export interface LayoutModel {
