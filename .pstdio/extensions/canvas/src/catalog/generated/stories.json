@@ -7702,7 +7702,7 @@
       "source": "packages/pstdio-workbench/src/react/workbench/workbench-status-bar.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Status bar",
-      "sourceHash": "902e923ee384c6412825e9157d28ba8da9db1b8aaff485320fedb1249230c2ed",
+      "sourceHash": "32d12c51ade448641d038e994b428fdcc09603c9a76ed2cf2da7ae592dba2eb7",
       "component": "WorkbenchStatusBar",
       "componentImport": "./workbench-panels"
     },
@@ -7713,7 +7713,7 @@
       "source": "packages/pstdio-workbench/src/react/workbench/workbench-status-bar.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Status bar",
-      "sourceHash": "902e923ee384c6412825e9157d28ba8da9db1b8aaff485320fedb1249230c2ed",
+      "sourceHash": "32d12c51ade448641d038e994b428fdcc09603c9a76ed2cf2da7ae592dba2eb7",
       "component": "WorkbenchStatusBar",
       "componentImport": "./workbench-panels"
     },
@@ -7724,7 +7724,7 @@
       "source": "packages/pstdio-workbench/src/react/workbench/workbench-status-bar.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Status bar",
-      "sourceHash": "902e923ee384c6412825e9157d28ba8da9db1b8aaff485320fedb1249230c2ed",
+      "sourceHash": "32d12c51ade448641d038e994b428fdcc09603c9a76ed2cf2da7ae592dba2eb7",
       "component": "WorkbenchStatusBar",
       "componentImport": "./workbench-panels"
     },
@@ -7735,7 +7735,18 @@
       "source": "packages/pstdio-workbench/src/react/workbench/workbench-status-bar.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Status bar",
-      "sourceHash": "902e923ee384c6412825e9157d28ba8da9db1b8aaff485320fedb1249230c2ed",
+      "sourceHash": "32d12c51ade448641d038e994b428fdcc09603c9a76ed2cf2da7ae592dba2eb7",
+      "component": "WorkbenchStatusBar",
+      "componentImport": "./workbench-panels"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-core-api-status-bar--detail-popover",
+      "name": "Detail Popover",
+      "exportName": "DetailPopover",
+      "source": "packages/pstdio-workbench/src/react/workbench/workbench-status-bar.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Core API/Status bar",
+      "sourceHash": "32d12c51ade448641d038e994b428fdcc09603c9a76ed2cf2da7ae592dba2eb7",
       "component": "WorkbenchStatusBar",
       "componentImport": "./workbench-panels"
     },
