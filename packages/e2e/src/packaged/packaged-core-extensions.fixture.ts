@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -87,6 +87,16 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("runtime stopped");
     if (closeRegistry) await closeRegistry();
     phase("registry closed");
+    const logPath = join(tempRoot, "logs.jsonl");
+    if (existsSync(logPath))
+      for (const line of readFileSync(logPath, "utf8").split("\n")) {
+        try {
+          const entry = JSON.parse(line);
+          if (entry.event === "runtime.setup.phase")
+            console.log(`DIAG ${entry.time} ${entry.state} ${entry.phase} ${entry.extension ?? ""} ${entry.duration_ms ?? ""}`);
+          else if (process.env.DIAG_ALL_LOGS) console.log(`DIAGLOG ${line.slice(0, 400)}`);
+        } catch {}
+      }
     await rm(tempRoot, { recursive: true, force: true });
     phase("files removed");
   }

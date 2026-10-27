@@ -1,0 +1,75 @@
+name: Diagnose Windows packaged core setup
+on:
+  push:
+    branches: [test/diag-win-arm-core]
+permissions:
+  contents: read
+jobs:
+  diag:
+    name: diag (${{ matrix.pkg }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-11-arm, pkg: cli-win-arm64 }
+          - { os: windows-latest, pkg: cli-win-x64 }
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Describe the host
+        shell: pwsh
+        run: |
+          Get-MpComputerStatus | Format-List AMRunningMode,AMServiceEnabled,RealTimeProtectionEnabled,OnAccessProtectionEnabled,IoavProtectionEnabled,BehaviorMonitorEnabled
+          "ExclusionPath: $((Get-MpPreference).ExclusionPath -join '; ')"
+          "ExclusionProcess: $((Get-MpPreference).ExclusionProcess -join '; ')"
+          Get-Volume | Format-Table DriveLetter,FileSystem,FileSystemLabel,Size,SizeRemaining
+          "RUNNER_TEMP=$env:RUNNER_TEMP TEMP=$env:TEMP"
+          Get-CimInstance Win32_Processor | Format-List Name,NumberOfCores,NumberOfLogicalProcessors
+          function Machine($path) {
+            $bytes = [System.IO.File]::ReadAllBytes($path)
+            $pe = [BitConverter]::ToInt32($bytes, 0x3c)
+            '{0} 0x{1:x4}' -f $path, [BitConverter]::ToUInt16($bytes, $pe + 4)
+          }
+          foreach ($name in 'git','bun','node') { Machine (Get-Command $name).Source }
+      - name: Build the compiled CLI for this host
+        shell: bash
+        env:
+          PSTDIO_BUILD_PLATFORM_PKG: ${{ matrix.pkg }}
+        run: bun run --cwd scripts build:all
+      - name: Run the core cases with the image defaults
+        continue-on-error: true
+        shell: bash
+        working-directory: packages/e2e
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
+          PSTDIO_LOG_LEVEL: info
+        run: >-
+          bun test --preload ./src/scripts/bun-process-cleanup.ts --timeout 600000
+          src/packaged/packaged-core-extensions-smoke.p1.test.ts src/packaged/packaged-core-extension-features.p2.test.ts
+      - name: Exclude the job temp directory from Defender scanning
+        shell: pwsh
+        run: |
+          Add-MpPreference -ExclusionPath $env:RUNNER_TEMP
+          "ExclusionPath: $((Get-MpPreference).ExclusionPath -join '; ')"
+      - name: Run the core cases with the job temp directory excluded
+        continue-on-error: true
+        shell: bash
+        working-directory: packages/e2e
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
+          PSTDIO_LOG_LEVEL: info
+        run: >-
+          bun test --preload ./src/scripts/bun-process-cleanup.ts --timeout 600000
+          src/packaged/packaged-core-extensions-smoke.p1.test.ts src/packaged/packaged-core-extension-features.p2.test.ts
