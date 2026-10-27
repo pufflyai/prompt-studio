@@ -174,8 +174,9 @@ test("switches projects once and within budget", async ({ page, request }) => {
     const bToA = samples.filter((sample) => sample.direction === "b-to-a").map((sample) => sample.duration);
     expect(aToB).toHaveLength(10);
     expect(bToA).toHaveLength(10);
-    // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 1,533 ms, long task 304 ms) plus about 20%.
-    expect(samples.filter((sample) => Math.max(0, ...sample.longTasks) > 375)).toEqual([]);
+    // Set from hosted ubuntu-24.04 runs (slowest 1,533 ms; slowest long task 419 ms, on the first switch after load)
+    // plus about 20%. The long-task cap was corrected on 2026-10-27: the first value missed samples.
+    expect(samples.filter((sample) => Math.max(0, ...sample.longTasks) > 525)).toEqual([]);
     expect(samples.filter((sample) => !Object.values(sample.stableInstances).every(Boolean))).toEqual([]);
     const requestCount = (sample: ProjectSwitchSample, path: string) => {
       const targetId = sample.direction === "a-to-b" ? projectB.id : projectA.id;
