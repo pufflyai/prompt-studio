@@ -1,29 +1,240 @@
 import { expect, test } from "bun:test";
-import * as Y from "yjs";
 import { createDb } from "../db/connection.pglite";
+import { storage_record_projections } from "../db/schemas.pg";
 import { createExtensionResourceSequencesDBService } from "./extension-resource-sequences";
+import { createDocumentStorageDBService } from "./extension-storage/document-storage";
 import { createProjectsDBService } from "./projects/projects";
 
 const fixture = async () => {
   const connection = await createDb({ path: ":memory:" });
   const project = await createProjectsDBService(connection.db).create({ name: "Prompt Studio" });
-  const service = createExtensionResourceSequencesDBService(connection.db);
+  const documents = createDocumentStorageDBService(connection.db);
+  const service = createExtensionResourceSequencesDBService(connection.db, documents);
   const owner = { workbenchId: project.id, extensionId: "pstdio" };
   const input = { projectId: project.id, extensionId: "pstdio.planner", kind: "ticket", prefix: "PS" };
-  return { ...connection, service, owner, input };
+  return { ...connection, service, documents, owner, input };
 };
+
+test("joining a stream uploads a complete new local identity when the join renumbers it", async () => {
+  const first = await fixture();
+  const joining = await fixture();
+  try {
+    for (const [f, id] of [
+      [first, "a"],
+      [joining, "z"],
+    ] as const) {
+      await f.documents.open({ owner: f.owner }).records.commit({
+        operationId: id,
+        edits: [
+          {
+            recordId: id,
+            replace: { id, extensionId: f.input.extensionId, kind: "ticket", prefix: "PS", value: 1, aliases: [] },
+          },
+        ],
+      });
+    }
+    const firstStream = first.service.recordStream(first.input.projectId);
+    const state = new Map((await firstStream.snapshot()).records.map((record) => [record.recordId, [record.bytes]]));
+    const joiningStream = joining.service.recordStream(joining.input.projectId);
+    await joiningStream.merge(state, "adopt", await joiningStream.open());
+    const [entry] = await joiningStream.outbox(1);
+    await firstStream.apply([{ records: entry!.records, assets: [] }], await firstStream.open());
+    expect(await first.service.identity({ ...first.input, id: "z" })).toMatchObject({
+      shorthand: "PS-2",
+      aliases: ["PS-1"],
+    });
+    expect((await first.db.select().from(storage_record_projections))[0]!.live_count).toBe(2);
+    expect(await joiningStream.outbox(1_048_576)).toHaveLength(1);
+  } finally {
+    for (const f of [first, joining]) {
+      await f.documents.flushStatistics();
+      await f.close();
+    }
+  }
+});
+
+test("the first outbox frame carries a complete local save including its number repairs", async () => {
+  const first = await fixture();
+  const second = await fixture();
+  try {
+    const outgoing = first.service.recordStream(first.input.projectId);
+    await outgoing.open();
+    await first.documents.open({ owner: first.owner }).records.commit({
+      operationId: "duplicates",
+      edits: ["a", "z"].map((id) => ({
+        recordId: id,
+        replace: { id, extensionId: first.input.extensionId, kind: "ticket", prefix: "PS", value: 1, aliases: [] },
+      })),
+    });
+    const entries = await outgoing.outbox(1_048_576);
+    const incoming = second.service.recordStream(second.input.projectId);
+    const cursor = await incoming.open();
+    await incoming.apply([{ records: entries[0]!.records, assets: [] }], { ...cursor, after: 1 });
+    expect((await second.service.identityMany({ ...second.input, ids: ["a", "z"] })).map((r) => r?.shorthand)).toEqual([
+      "PS-1",
+      "PS-2",
+    ]);
+    expect((await second.db.select().from(storage_record_projections))[0]!.live_count).toBe(2);
+    expect(entries).toHaveLength(1);
+    expect(await incoming.outbox(1_048_576)).toHaveLength(0);
+  } finally {
+    for (const f of [first, second]) {
+      await f.documents.flushStatistics();
+      await f.close();
+    }
+  }
+});
+
+test("repair skips occupied numbers and leaves another kind's prefix alone", async () => {
+  const f = await fixture();
+  try {
+    const resources = [
+      { id: "a", value: 31 },
+      { id: "b", value: 31 },
+      { id: "c", value: 32 },
+    ].map((r) => ({ ...r, extensionId: f.input.extensionId, kind: "ticket", prefix: "PS", aliases: [] }));
+    resources.push({
+      id: "report",
+      value: 31,
+      extensionId: f.input.extensionId,
+      kind: "report",
+      prefix: "RP",
+      aliases: [],
+    });
+    await f.documents
+      .open({ owner: f.owner })
+      .records.commit({ operationId: "mixed", edits: resources.map((r) => ({ recordId: r.id, replace: r })) });
+    expect((await f.service.identityMany({ ...f.input, ids: ["a", "b", "c"] })).map((r) => r!.shorthand)).toEqual([
+      "PS-31",
+      "PS-33",
+      "PS-32",
+    ]);
+    expect((await f.service.identity({ ...f.input, kind: "report", id: "report" }))?.shorthand).toBe("RP-31");
+  } finally {
+    await f.documents.flushStatistics();
+    await f.close();
+  }
+});
+
+test("three offline repairs converge and retain aliases from each repair", async () => {
+  const devices = [await fixture(), await fixture(), await fixture()];
+  const snapshot = async (f: (typeof devices)[number]) =>
+    new Map(
+      (await f.service.recordStream(f.input.projectId).snapshot()).records.map((record) => [
+        record.recordId,
+        [record.bytes],
+      ]),
+    );
+  const receive = async (f: (typeof devices)[number], state: Map<string, Uint8Array[]>) => {
+    const store = f.service.recordStream(f.input.projectId);
+    await store.merge(state, "repair", await store.open());
+  };
+  const identity = (f: (typeof devices)[number]) => f.service.identityMany({ ...f.input, ids: ["a", "b", "c"] });
+  try {
+    for (const [index, f] of devices.entries()) {
+      const id = ["c", "b", "a"][index]!;
+      await f.documents.open({ owner: f.owner }).records.commit({
+        operationId: id,
+        edits: [
+          {
+            recordId: id,
+            replace: { id, extensionId: f.input.extensionId, kind: "ticket", prefix: "PS", value: 31, aliases: [] },
+          },
+        ],
+      });
+    }
+    const offline = await Promise.all(devices.map(snapshot));
+    for (const [index, f] of devices.entries()) await receive(f, offline[(index + 1) % 3]!);
+    for (let round = 0; round < 3; round++) {
+      const states = await Promise.all(devices.map(snapshot));
+      for (const f of devices) for (const state of states) await receive(f, state);
+    }
+    const expected = await identity(devices[0]!);
+    for (const f of devices) {
+      expect(await identity(f)).toEqual(expected);
+      expect(new Set(expected.map((value) => value!.shorthand)).size).toBe(3);
+    }
+    expect(expected[0]!.shorthand).toBe("PS-31");
+    expect(expected[1]!.aliases).toContain("PS-31");
+    expect(expected[2]!.aliases).toContain("PS-32");
+  } finally {
+    for (const f of devices) {
+      await f.documents.flushStatistics();
+      await f.close();
+    }
+  }
+});
+
+test("crossed repairs keep every number shown on either device as an alias", async () => {
+  const first = await fixture();
+  const second = await fixture();
+  const winner = await fixture();
+  const snapshot = async (f: typeof first) =>
+    new Map(
+      (await f.service.recordStream(f.input.projectId).snapshot()).records.map((record) => [
+        record.recordId,
+        [record.bytes],
+      ]),
+    );
+  const receive = async (f: typeof first, state: Map<string, Uint8Array[]>) => {
+    const stream = f.service.recordStream(f.input.projectId);
+    await stream.merge(state, "repair", await stream.open());
+  };
+  const write = (f: typeof first, id: string, value: number) =>
+    f.documents.open({ owner: f.owner }).records.commit({
+      operationId: id,
+      edits: [
+        {
+          recordId: id,
+          replace: { id, extensionId: f.input.extensionId, kind: f.input.kind, prefix: "PS", value, aliases: [] },
+        },
+      ],
+    });
+  try {
+    await write(first, "z", 1);
+    await receive(second, await snapshot(first));
+    await write(first, "higher", 10);
+    await write(winner, "a", 1);
+    const incoming = await snapshot(winner);
+    await receive(first, incoming);
+    await receive(second, incoming);
+    expect((await first.service.identity({ ...first.input, id: "z" }))?.shorthand).toBe("PS-11");
+    expect((await second.service.identity({ ...second.input, id: "z" }))?.shorthand).toBe("PS-2");
+    const states = await Promise.all([snapshot(first), snapshot(second)]);
+    await receive(first, states[1]!);
+    await receive(second, states[0]!);
+    for (const f of [first, second]) {
+      const identity = await f.service.identity({ ...f.input, id: "z" });
+      expect([identity?.shorthand, ...identity!.aliases].sort()).toEqual(["PS-1", "PS-11", "PS-2"]);
+      expect((await f.service.findByShorthand({ ...f.input, shorthand: "PS-11" })).some((r) => r.id === "z")).toBe(
+        true,
+      );
+      expect((await f.service.allocate(f.input)).shorthand).toBe("PS-12");
+    }
+  } finally {
+    for (const f of [first, second, winner]) {
+      await f.documents.flushStatistics();
+      await f.close();
+    }
+  }
+});
 
 test("offline number collisions merge durably with aliases and notify after commit", async () => {
   const first = await fixture();
   const second = await fixture();
   try {
     for (let i = 0; i < 30; i++) await first.service.allocate(first.input);
-    const exportState = (f: typeof first) =>
-      f.service.documentStore.transaction(f.owner, async ({ document }) => Y.encodeStateAsUpdate(document));
-    const receive = (f: typeof first, update: Uint8Array) =>
-      f.service.documentStore.transaction(f.owner, async ({ document }) => {
-        Y.applyUpdate(document, update);
-      });
+    const exportState = async (f: typeof first) =>
+      new Map(
+        (await f.service.recordStream(f.input.projectId).snapshot()).records.map((record) => [
+          record.recordId,
+          [record.bytes],
+        ]),
+      );
+    const receive = async (f: typeof first, state: Map<string, Uint8Array[]>) => {
+      const stream = f.service.recordStream(f.input.projectId);
+      await stream.merge(state, "repair", await stream.open());
+    };
     await receive(second, await exportState(first));
     const a = await first.service.allocate(first.input);
     const b = await second.service.allocate(second.input);
@@ -74,9 +285,11 @@ test("one shorthand can resolve to several aliases and failed merges publish no 
   const f = await fixture();
   try {
     const first = await f.service.allocate(f.input);
-    await f.service.documentStore.transaction(f.owner, async ({ document }) => {
-      const numbers = document.getMap<import("pstdio-sync").NumberedResource>("resource-numbers");
-      for (const id of ["x", "y"]) numbers.set(id, { ...numbers.get(first.id)!, id });
+    const records = f.documents.open({ owner: f.owner }).records;
+    const value = (await records.read(first.id)).value!;
+    await records.commit({
+      operationId: "duplicates",
+      edits: ["x", "y"].map((id) => ({ recordId: id, replace: { ...(value as object), id } })),
     });
     const matches = await f.service.findByShorthand({ ...f.input, shorthand: "PS-1" });
     expect(matches.map((resource) => resource.id)).toEqual([first.id, "x", "y"]);
@@ -84,8 +297,11 @@ test("one shorthand can resolve to several aliases and failed merges publish no 
     const events: unknown[] = [];
     f.service.watch((event) => events.push(event));
     await expect(
-      f.service.documentStore.transaction(f.owner, async ({ document }) => {
-        document.getMap("resource-numbers").clear();
+      records.transaction(async (transaction) => {
+        await transaction.commit({
+          operationId: "aborted",
+          edits: [{ recordId: "x", replace: { ...(value as object), id: "x", value: 99 } }],
+        });
         throw new Error("aborted merge");
       }),
     ).rejects.toThrow("aborted merge");

@@ -43,11 +43,30 @@ directory, and syncs as its own relay document. Records sync through the record 
 Projection rows and record documents are removed with their workbench and cleared with an owner
 purge.
 
-Resource identity and alias indexes also record their source document revision.
-If an older host saves the source without updating these indexes, reads and
-incremental writes reject the stale projection. Resource service startup rebuilds
-missing or stale projections before serving identities. A later allocation must
-not mark an incomplete index current merely because its own new row was indexed.
+Core resource numbers use one record each under the `pstdio` owner. Each record holds
+the resource ID, extension, kind, prefix, current number and number history. Allocation
+locks that owner and reads the highest numeric value from the prefix's identity and
+alias indexes. It loads and writes only the new record. History includes every assigned
+number, including the current one after repair; public identity reads filter the current
+number out of `aliases`.
+
+The same record transaction maintains the identity and alias indexes for local saves
+and incoming record-stream changes. It examines only collision keys touched by the save.
+The lower resource ID keeps a colliding number. Other resources receive the next free
+number, and retain both the old and newly assigned numbers in their history. This also
+preserves numbers shown during concurrent repairs with different allocation floors.
+Events are delivered after the transaction commits. The projection revision follows
+the core record owner revision; reads reject an incomplete projection.
+
+The first number operation moves an existing `resource-identities` document into records
+in one transaction. It rebuilds the old derived indexes and removes the old source only
+with the final record save. Failure leaves the source available for a later start.
+Before founding a new core record stream, a device also reads and imports the old relay
+document. This recovers remote-only numbers when older devices are offline. Once the
+records join a stream, the old source is no longer read. An empty project has no stream
+yet and rechecks the empty source on reconnect. An existing stream is authoritative;
+normal synchronization uses the record stream from
+[ADR 0102](../../adrs/0102-record-stream-sync.md).
 
 ## Scheduled automations
 

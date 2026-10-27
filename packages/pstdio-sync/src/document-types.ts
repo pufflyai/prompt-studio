@@ -9,8 +9,6 @@ export interface DocumentState {
   migrationHistory?: DocumentHistory;
   operation(id: string): Promise<string | undefined>;
   remember(id: string, fingerprint: string): void;
-  /** Explicit install/upgrade work. Never called by a query or a cache miss. */
-  rebuildProjection?: () => Promise<void>;
 }
 export interface DocumentStore {
   queries?: (owner: StorageOwner) => StorageRecordQueries;

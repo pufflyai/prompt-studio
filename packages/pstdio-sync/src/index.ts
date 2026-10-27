@@ -40,10 +40,7 @@ export {
 export type { NumberedResource } from "./resource-numbers";
 export {
   coreOwnerId,
-  nextResourceNumber,
-  reconcileResourceNumbers,
   rememberResourceNumber,
-  resourceIdentity,
   resourceNumbers,
   resourceNumbersDocumentId,
   resourceShorthand,

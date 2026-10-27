@@ -1,17 +1,10 @@
 import { and, eq } from "drizzle-orm";
-import {
-  coreOwnerId,
-  type DocumentState,
-  documentHistory,
-  resourceNumbersDocumentId,
-  type StorageOwner,
-} from "pstdio-sync";
+import { type DocumentState, documentHistory, type StorageOwner } from "pstdio-sync";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_operations, storage_document_updates, storage_documents } from "../../db/schemas.pg";
 import { dataMigrationContext } from "./data-migration-context";
 import type { LoadedDocument } from "./document-cache";
-import { trackResourceIdentityProjection } from "./resource-identity-projection";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -133,11 +126,7 @@ export const runDocumentTransaction = async <T>(
   action: (state: DocumentState) => Promise<T>,
 ) => {
   const { address } = input;
-  const { document, row, initialize } = await loadDocument(tx, address, input.owner, input.cached, input.diagnostics);
-  const identities =
-    address.document_id === resourceNumbersDocumentId && address.extension_id === coreOwnerId
-      ? await trackResourceIdentityProjection(tx, address, document, !!initialize, row.revision)
-      : undefined;
+  const { document, row } = await loadDocument(tx, address, input.owner, input.cached, input.diagnostics);
   const operations = localOperations(tx, address);
   const key = JSON.stringify(address);
   const migration = dataMigrationContext.getStore();
@@ -152,18 +141,14 @@ export const runDocumentTransaction = async <T>(
       migrationHistory: migration?.histories.get(key),
       operation: operations.operation,
       remember: operations.remember,
-      rebuildProjection: identities?.rebuild,
     });
-    identities?.prepare();
     await operations.persist();
     const revision = await appendUpdates(tx, address, row, document, updates);
-    await identities?.persist(revision);
     return { value, revision, document, changed: updates.length > 0 };
   } catch (error) {
     if (document !== input.cached?.document) document.destroy();
     throw error;
   } finally {
     document.off("update", capture);
-    identities?.stop();
   }
 };

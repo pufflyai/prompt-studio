@@ -20,6 +20,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // packaged-notes-page.p2.spec.ts checks Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
 // performance-observer.p2.test.ts checks native CPU units and memory in the compiled observer.
 // packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
+// packaged-cloud-extension-set-smoke.p2.test.ts checks offline number collisions and aliases across three compiled hosts.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";

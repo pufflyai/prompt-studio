@@ -39,7 +39,13 @@ const writeExtension = async (root: string) => {
   );
   await Bun.write(
     join(source, "extension.ts"),
-    `export default { commands: [
+    `export default { resourceKinds: [{ id: "item", ref: { kind: "resource-kind", id: "item" }, prefix: "NI" }], commands: [
+      { id: "allocate", ref: { kind: "command", id: "allocate" }, title: "Allocate", mutating: true,
+        run(ctx) { return ctx.resources.allocate({ kind: "item" }); } },
+      { id: "identity", ref: { kind: "command", id: "identity" }, title: "Identity", params: { id: { type: "string", required: true } },
+        run(ctx, params) { return ctx.resources.identity({ kind: "item", id: params.id }); } },
+      { id: "find", ref: { kind: "command", id: "find" }, title: "Find", params: { shorthand: { type: "string", required: true } },
+        run(ctx, params) { return ctx.resources.findByShorthand({ kind: "item", shorthand: params.shorthand }); } },
       { id: "write", ref: { kind: "command", id: "write" }, title: "Write", mutating: true,
         async run(ctx) { await ctx.storage.set("note", "written by the local override"); return true; } },
       { id: "read", ref: { kind: "command", id: "read" }, title: "Read",
@@ -60,10 +66,10 @@ const startDevice = async (root: string, env: Record<string, string>) => {
   const host = await startPackagedServe(root, env);
   const client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
   const headers = { authorization: `Bearer ${host.descriptor.token}`, "content-type": "application/json" };
-  const command = async <T>(projectId: string, id: string) => {
+  const command = async <T>(projectId: string, id: string, params: Record<string, string> = {}) => {
     const response = await fetch(
       `${host.baseUrl}/v1/projects/${projectId}/extensions/commands/example.unrelated.command.${id}/execute`,
-      { method: "POST", headers, body: JSON.stringify({ params: {} }) },
+      { method: "POST", headers, body: JSON.stringify({ params }) },
     );
     expect(response.status).toBe(200);
     const body = (await response.json()) as { outcome: { ok: boolean; value: T } };
@@ -167,6 +173,33 @@ test(
       await b.command(project.id, "migrate");
       for (const device of [a, c])
         await waitFor(async () => (await device.command<{ migrations: number }>(project.id, "read")).migrations === 1);
+
+      type Identity = { id: string; shorthand: string; aliases: string[] };
+      const seed = await a.command<Identity>(project.id, "allocate");
+      for (const device of [b, c])
+        await waitFor(async () => !!(await device.command<Identity | null>(project.id, "identity", { id: seed.id })));
+      await peer.stop();
+      const allocated = await Promise.all([a, b].map((device) => device.command<Identity>(project.id, "allocate")));
+      expect(allocated.map((identity) => identity.shorthand)).toEqual(["NI-2", "NI-2"]);
+      peer.restart();
+      const [winner, loser] = allocated.sort((x, y) => (x.id < y.id ? -1 : 1));
+      for (const device of [a, b, c]) {
+        await waitFor(
+          async () =>
+            (await device.command<Identity | null>(project.id, "identity", { id: loser!.id }))?.shorthand === "NI-3",
+        );
+        expect(await device.command(project.id, "identity", { id: winner!.id })).toMatchObject({
+          shorthand: "NI-2",
+          aliases: [],
+        });
+        expect(await device.command(project.id, "identity", { id: loser!.id })).toMatchObject({
+          shorthand: "NI-3",
+          aliases: ["NI-2"],
+        });
+        expect(
+          (await device.command<Identity[]>(project.id, "find", { shorthand: "NI-2" })).map((identity) => identity.id),
+        ).toEqual([winner!.id, loser!.id]);
+      }
     } finally {
       await Promise.all(devices.map((device) => stopProcess(device.host.child)));
       await peer.stop();

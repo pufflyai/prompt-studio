@@ -15,6 +15,13 @@
       "when": 1792841304511,
       "tag": "0001_recovery_points",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793057714934,
+      "tag": "0002_boring_shaman",
+      "breakpoints": true
     }
   ]
 }
