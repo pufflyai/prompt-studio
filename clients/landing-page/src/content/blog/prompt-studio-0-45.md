@@ -64,38 +64,62 @@ Codex links a note by its file path. Click the link to open the note.
 Extension data is ready for several devices. Give records IDs and order positions that never collide, and check whether a save has synced.
 
 ```ts
-// IDs and positions stay unique even when two offline devices create items.
+// IDs and positions stay unique even
+// when two offline devices create items.
 const id = ctx.storage.ids.create("item");
-const position = ctx.storage.positions.between(previous.position, next.position);
+const position =
+  ctx.storage.positions.between(
+    previous.position,
+    next.position,
+  );
 
-const outcome = await ctx.storage.records.commit({
-  operationId: crypto.randomUUID(),
-  edits: [{ recordId: id, replace: { title: "Vote on the November book", position } }],
-});
+const outcome =
+  await ctx.storage.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [{
+      recordId: id,
+      replace: {
+        title: "November book vote",
+        position,
+      },
+    }],
+  });
 
-// "saved-locally", "waiting-to-sync", "synced", "offline" or "needs-attention"
+// saved-locally, waiting-to-sync,
+// synced, offline or needs-attention
 console.log(outcome.state);
 ```
 
 Test what happens when two people edit the same data offline, without running a sync server.
 
 ```ts
-import { createMemoryStorageDevices } from "@pstdio/sdk/testing";
+import {
+  createMemoryStorageDevices,
+} from "@pstdio/sdk/testing";
 
-const { devices, merge } = await createMemoryStorageDevices();
+const { devices, merge } =
+  await createMemoryStorageDevices();
 const [laptop, desktop] = devices;
 
-// Both devices rename the same note while offline.
+// Both devices rename the same note
+// while offline.
 await laptop.records.commit({
   operationId: "a",
-  edits: [{ recordId: "note", replace: { title: "Laptop" } }],
+  edits: [{
+    recordId: "note",
+    replace: { title: "Laptop" },
+  }],
 });
 await desktop.records.commit({
   operationId: "b",
-  edits: [{ recordId: "note", replace: { title: "Desktop" } }],
+  edits: [{
+    recordId: "note",
+    replace: { title: "Desktop" },
+  }],
 });
 
-// Both devices now hold the same record. Each entry names a value the merge replaced.
+// Both devices now hold the same record.
+// Each entry names a replaced value.
 const replaced = await merge();
 ```
 
