@@ -135,7 +135,7 @@ const worker = async () => {
   }
 };
 try {
-  await Promise.all([worker(), worker()]);
+  await worker();
 } finally {
   await browser.close().catch(() => {});
   server.stop();

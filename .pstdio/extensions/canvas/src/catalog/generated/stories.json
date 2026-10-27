@@ -2719,7 +2719,7 @@
       "source": "packages/pstdio-dashboard/src/modules/projects/components/project-selection.stories.tsx",
       "suite": "dashboard",
       "title": "Dashboard/Project selection",
-      "sourceHash": "269f680073f6ed3cc191b4ef221fd9ed80b2c67b0287541fea32ae56ad931532",
+      "sourceHash": "c0f7ee29800f88daf86cc4ede48a1bc075d78db88c1134f0b8223ee7d3b4eb52",
       "component": "ProjectSelectionStory"
     },
     {
@@ -2729,7 +2729,7 @@
       "source": "packages/pstdio-dashboard/src/modules/projects/components/project-selection.stories.tsx",
       "suite": "dashboard",
       "title": "Dashboard/Project selection",
-      "sourceHash": "269f680073f6ed3cc191b4ef221fd9ed80b2c67b0287541fea32ae56ad931532",
+      "sourceHash": "c0f7ee29800f88daf86cc4ede48a1bc075d78db88c1134f0b8223ee7d3b4eb52",
       "component": "ProjectSelectionStory"
     },
     {
@@ -2739,7 +2739,7 @@
       "source": "packages/pstdio-dashboard/src/modules/projects/components/project-selection.stories.tsx",
       "suite": "dashboard",
       "title": "Dashboard/Project selection",
-      "sourceHash": "269f680073f6ed3cc191b4ef221fd9ed80b2c67b0287541fea32ae56ad931532",
+      "sourceHash": "c0f7ee29800f88daf86cc4ede48a1bc075d78db88c1134f0b8223ee7d3b4eb52",
       "component": "ProjectSelectionStory"
     },
     {
@@ -2971,13 +2971,53 @@
       "componentImport": "./session-chat-notices"
     },
     {
+      "id": "dashboard-sessions-harness-access--signed-out",
+      "name": "Signed Out",
+      "exportName": "SignedOut",
+      "source": "packages/pstdio-dashboard/src/modules/sessions/components/session-harness-access.stories.tsx",
+      "suite": "dashboard",
+      "title": "Sessions/Harness access",
+      "sourceHash": "8d06cc3013676040285ccd95ffc20646a4a9d473aa0c858ba729d4be0f933484",
+      "component": "AccessStory"
+    },
+    {
+      "id": "dashboard-sessions-harness-access--no-harness",
+      "name": "No Harness",
+      "exportName": "NoHarness",
+      "source": "packages/pstdio-dashboard/src/modules/sessions/components/session-harness-access.stories.tsx",
+      "suite": "dashboard",
+      "title": "Sessions/Harness access",
+      "sourceHash": "8d06cc3013676040285ccd95ffc20646a4a9d473aa0c858ba729d4be0f933484",
+      "component": "AccessStory"
+    },
+    {
+      "id": "dashboard-sessions-harness-access--signed-in",
+      "name": "Signed In",
+      "exportName": "SignedIn",
+      "source": "packages/pstdio-dashboard/src/modules/sessions/components/session-harness-access.stories.tsx",
+      "suite": "dashboard",
+      "title": "Sessions/Harness access",
+      "sourceHash": "8d06cc3013676040285ccd95ffc20646a4a9d473aa0c858ba729d4be0f933484",
+      "component": "AccessStory"
+    },
+    {
+      "id": "dashboard-sessions-harness-access--narrow",
+      "name": "Narrow",
+      "exportName": "Narrow",
+      "source": "packages/pstdio-dashboard/src/modules/sessions/components/session-harness-access.stories.tsx",
+      "suite": "dashboard",
+      "title": "Sessions/Harness access",
+      "sourceHash": "8d06cc3013676040285ccd95ffc20646a4a9d473aa0c858ba729d4be0f933484",
+      "component": "AccessStory"
+    },
+    {
       "id": "dashboard-modules-sessions-harness-unavailable--no-harness-available",
       "name": "No Harness Available",
       "exportName": "NoHarnessAvailable",
       "source": "packages/pstdio-dashboard/src/modules/sessions/components/session-harness-unavailable.stories.tsx",
       "suite": "dashboard",
       "title": "Modules/Sessions/Harness Unavailable",
-      "sourceHash": "d64b26eede8ac0b37e3dbadd97f21934f4b4d90e81e6d72cc0a5f73f86fb29db",
+      "sourceHash": "81a50e5b82c3a96eac39216cf22ee41d3abc1cb1eb431d53626fcd756c1b8ce2",
       "component": "SessionHarnessUnavailable",
       "componentImport": "./session-harness-unavailable"
     },
@@ -2988,7 +3028,7 @@
       "source": "packages/pstdio-dashboard/src/modules/sessions/components/session-harness-unavailable.stories.tsx",
       "suite": "dashboard",
       "title": "Modules/Sessions/Harness Unavailable",
-      "sourceHash": "d64b26eede8ac0b37e3dbadd97f21934f4b4d90e81e6d72cc0a5f73f86fb29db",
+      "sourceHash": "81a50e5b82c3a96eac39216cf22ee41d3abc1cb1eb431d53626fcd756c1b8ce2",
       "component": "SessionHarnessUnavailable",
       "componentImport": "./session-harness-unavailable"
     },
@@ -2999,7 +3039,7 @@
       "source": "packages/pstdio-dashboard/src/modules/sessions/components/session-harness-unavailable.stories.tsx",
       "suite": "dashboard",
       "title": "Modules/Sessions/Harness Unavailable",
-      "sourceHash": "d64b26eede8ac0b37e3dbadd97f21934f4b4d90e81e6d72cc0a5f73f86fb29db",
+      "sourceHash": "81a50e5b82c3a96eac39216cf22ee41d3abc1cb1eb431d53626fcd756c1b8ce2",
       "component": "SessionHarnessUnavailable",
       "componentImport": "./session-harness-unavailable"
     },
@@ -3010,7 +3050,7 @@
       "source": "packages/pstdio-dashboard/src/modules/sessions/components/session-harness-unavailable.stories.tsx",
       "suite": "dashboard",
       "title": "Modules/Sessions/Harness Unavailable",
-      "sourceHash": "d64b26eede8ac0b37e3dbadd97f21934f4b4d90e81e6d72cc0a5f73f86fb29db",
+      "sourceHash": "81a50e5b82c3a96eac39216cf22ee41d3abc1cb1eb431d53626fcd756c1b8ce2",
       "component": "SessionHarnessUnavailable",
       "componentImport": "./session-harness-unavailable"
     },
@@ -4274,6 +4314,72 @@
       "title": "Dashboard/Workspace navigation",
       "sourceHash": "e622e5e55da8ccfd9f6f650d210e93470a7530c1efd3aae79107f2fe428dbba4",
       "component": "WorkspaceNavigationStory"
+    },
+    {
+      "id": "dashboard-agents-browser-sign-in--starting",
+      "name": "Starting",
+      "exportName": "Starting",
+      "source": "packages/pstdio-dashboard/src/shared/agents/harness-browser-progress.stories.tsx",
+      "suite": "dashboard",
+      "title": "Agents/Browser sign-in",
+      "sourceHash": "940ba5f78bf356a06a0d092514e53372b3a14ac7008f5bf7d32e6aeb7824423d",
+      "component": "HarnessBrowserProgress",
+      "componentImport": "./harness-browser-progress"
+    },
+    {
+      "id": "dashboard-agents-browser-sign-in--device-code",
+      "name": "Device Code",
+      "exportName": "DeviceCode",
+      "source": "packages/pstdio-dashboard/src/shared/agents/harness-browser-progress.stories.tsx",
+      "suite": "dashboard",
+      "title": "Agents/Browser sign-in",
+      "sourceHash": "940ba5f78bf356a06a0d092514e53372b3a14ac7008f5bf7d32e6aeb7824423d",
+      "component": "HarnessBrowserProgress",
+      "componentImport": "./harness-browser-progress"
+    },
+    {
+      "id": "dashboard-agents-browser-sign-in--browser-link",
+      "name": "Browser Link",
+      "exportName": "BrowserLink",
+      "source": "packages/pstdio-dashboard/src/shared/agents/harness-browser-progress.stories.tsx",
+      "suite": "dashboard",
+      "title": "Agents/Browser sign-in",
+      "sourceHash": "940ba5f78bf356a06a0d092514e53372b3a14ac7008f5bf7d32e6aeb7824423d",
+      "component": "HarnessBrowserProgress",
+      "componentImport": "./harness-browser-progress"
+    },
+    {
+      "id": "dashboard-agents-browser-sign-in--signing-out",
+      "name": "Signing Out",
+      "exportName": "SigningOut",
+      "source": "packages/pstdio-dashboard/src/shared/agents/harness-browser-progress.stories.tsx",
+      "suite": "dashboard",
+      "title": "Agents/Browser sign-in",
+      "sourceHash": "940ba5f78bf356a06a0d092514e53372b3a14ac7008f5bf7d32e6aeb7824423d",
+      "component": "HarnessBrowserProgress",
+      "componentImport": "./harness-browser-progress"
+    },
+    {
+      "id": "dashboard-agents-browser-sign-in--provider-choice",
+      "name": "Provider Choice",
+      "exportName": "ProviderChoice",
+      "source": "packages/pstdio-dashboard/src/shared/agents/harness-browser-progress.stories.tsx",
+      "suite": "dashboard",
+      "title": "Agents/Browser sign-in",
+      "sourceHash": "940ba5f78bf356a06a0d092514e53372b3a14ac7008f5bf7d32e6aeb7824423d",
+      "component": "HarnessBrowserProgress",
+      "componentImport": "./harness-browser-progress"
+    },
+    {
+      "id": "dashboard-agents-browser-sign-in--api-key",
+      "name": "Api Key",
+      "exportName": "ApiKey",
+      "source": "packages/pstdio-dashboard/src/shared/agents/harness-browser-progress.stories.tsx",
+      "suite": "dashboard",
+      "title": "Agents/Browser sign-in",
+      "sourceHash": "940ba5f78bf356a06a0d092514e53372b3a14ac7008f5bf7d32e6aeb7824423d",
+      "component": "HarnessBrowserProgress",
+      "componentImport": "./harness-browser-progress"
     },
     {
       "id": "dashboard-commandparams-dashboardparamfields--template-and-resource-dropdowns",
@@ -5622,6 +5728,26 @@
       "title": "pstdio-workbench/Reference/Core API/Error feedback",
       "sourceHash": "de9f6c2cc48fc2d4329dd907d61f05afc73f360066a3717edae96aef4e2a90f2",
       "component": "ErrorFeedback"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-core-api-page-menu-header--with-closed-view-menu",
+      "name": "With Closed View Menu",
+      "exportName": "WithClosedViewMenu",
+      "source": "packages/pstdio-workbench/src/react/panel-menu/page-menu-header.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Core API/Page menu header",
+      "sourceHash": "3511a6b2b08263945c8fdcc6dd60974db58c07138bc9462d9353140b0b96266d",
+      "component": "PageMenuHeaderStory"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-core-api-page-menu-header--without-view-menus",
+      "name": "Without View Menus",
+      "exportName": "WithoutViewMenus",
+      "source": "packages/pstdio-workbench/src/react/panel-menu/page-menu-header.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Core API/Page menu header",
+      "sourceHash": "3511a6b2b08263945c8fdcc6dd60974db58c07138bc9462d9353140b0b96266d",
+      "component": "PageMenuHeaderStory"
     },
     {
       "id": "workbench-pstdio-workbench-reference-core-api-panel-menus--reopen-attached",

@@ -7,6 +7,7 @@ import {
   WorkbenchThemeProvider,
 } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { DesktopProjectTabsController } from "../desktop-project-tabs-controller";
@@ -15,6 +16,11 @@ import { DesktopProjectTabs } from "./desktop-project-tabs";
 
 const ProjectSelectionStory = (props: { platform?: string }) => {
   const { platform } = props;
+  const [queryClient] = useState(() => {
+    const client = new QueryClient({ defaultOptions: { queries: { enabled: false } } });
+    client.setQueryData(["account-status"], { cloudProjects: [] });
+    return client;
+  });
   const [controller] = useState(() => new DesktopProjectTabsController([], async () => {}));
   const [workbench] = useState(() => {
     const workbench = createWorkbench();
@@ -43,17 +49,19 @@ const ProjectSelectionStory = (props: { platform?: string }) => {
     return workbench;
   });
   return (
-    <WorkbenchThemeProvider>
-      <Box h="100dvh">
-        <Workbench
-          workbench={workbench}
-          panelControlsPlacement={platform ? "host" : "nav"}
-          titleBar={
-            platform && <DesktopProjectTabs workbench={workbench} controller={controller} platform={platform} />
-          }
-        />
-      </Box>
-    </WorkbenchThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <WorkbenchThemeProvider>
+        <Box h="100dvh">
+          <Workbench
+            workbench={workbench}
+            panelControlsPlacement={platform ? "host" : "nav"}
+            titleBar={
+              platform && <DesktopProjectTabs workbench={workbench} controller={controller} platform={platform} />
+            }
+          />
+        </Box>
+      </WorkbenchThemeProvider>
+    </QueryClientProvider>
   );
 };
 
