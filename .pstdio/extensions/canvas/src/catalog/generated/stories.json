@@ -2460,9 +2460,20 @@
       "source": "packages/pstdio-dashboard/src/modules/keyboard-shortcuts/components/keyboard-shortcuts-widget.stories.tsx",
       "suite": "dashboard",
       "title": "Help/Keyboard shortcuts",
-      "sourceHash": "555ceef840ec470928c94db7e749f341d31b5283927fcb87a5ec1804aef9f81d",
-      "component": "ShortcutReference",
-      "componentImport": "./keyboard-shortcuts-widget"
+      "sourceHash": "78b340d0807f455a4b3e7cc40f995c7fc2473c285b76dbbcc5de85b48e8104fb",
+      "component": "WorkbenchKeyboardShortcutsPanel",
+      "componentImport": "@pstdio/workbench/react"
+    },
+    {
+      "id": "dashboard-help-keyboard-shortcuts--filtered-resource",
+      "name": "Filtered Resource",
+      "exportName": "FilteredResource",
+      "source": "packages/pstdio-dashboard/src/modules/keyboard-shortcuts/components/keyboard-shortcuts-widget.stories.tsx",
+      "suite": "dashboard",
+      "title": "Help/Keyboard shortcuts",
+      "sourceHash": "78b340d0807f455a4b3e7cc40f995c7fc2473c285b76dbbcc5de85b48e8104fb",
+      "component": "WorkbenchKeyboardShortcutsPanel",
+      "componentImport": "@pstdio/workbench/react"
     },
     {
       "id": "dashboard-settings-developer-tools--off",
@@ -5585,6 +5596,17 @@
       "component": "ResourceOptionsExample"
     },
     {
+      "id": "workbench-pstdio-workbench-reference-command-creation--shared-creation-form",
+      "name": "Shared Creation Form",
+      "exportName": "SharedCreationForm",
+      "source": "packages/pstdio-workbench/src/react/command-palette/renderer-create-dialog.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Command creation",
+      "sourceHash": "ccd7230586d017661c6d71ea8a25853b641611624081185c7ca3f66dc0cf255c",
+      "component": "WorkbenchStory",
+      "componentImport": "../../examples/workbench-story"
+    },
+    {
       "id": "workbench-pstdio-workbench-components-resource-search--full-history",
       "name": "Full History",
       "exportName": "FullHistory",
@@ -5702,6 +5724,72 @@
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Browser panel controls",
       "sourceHash": "8bf84bde5e0bda869c28c08c3d984527ffc26432ce46f2de8f575e35ad8ec8a2",
+      "component": "WorkbenchStory",
+      "componentImport": "../../examples/workbench-story"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-keyboard--visible-panels",
+      "name": "Visible Panels",
+      "exportName": "VisiblePanels",
+      "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Keyboard",
+      "sourceHash": "c3a9cd3eedfb0b2a95bf3f679bb4011d46018888bbf722b5211cef71634e0c01",
+      "component": "WorkbenchStory",
+      "componentImport": "../../examples/workbench-story"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-keyboard--crowded-tabs",
+      "name": "Crowded Tabs",
+      "exportName": "CrowdedTabs",
+      "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Keyboard",
+      "sourceHash": "c3a9cd3eedfb0b2a95bf3f679bb4011d46018888bbf722b5211cef71634e0c01",
+      "component": "WorkbenchStory",
+      "componentImport": "../../examples/workbench-story"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-keyboard--keyboard-bubble",
+      "name": "Keyboard Bubble",
+      "exportName": "KeyboardBubble",
+      "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Keyboard",
+      "sourceHash": "c3a9cd3eedfb0b2a95bf3f679bb4011d46018888bbf722b5211cef71634e0c01",
+      "component": "WorkbenchStory",
+      "componentImport": "../../examples/workbench-story"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-keyboard--expanded-bubble",
+      "name": "Expanded Bubble",
+      "exportName": "ExpandedBubble",
+      "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Keyboard",
+      "sourceHash": "c3a9cd3eedfb0b2a95bf3f679bb4011d46018888bbf722b5211cef71634e0c01",
+      "component": "WorkbenchStory",
+      "componentImport": "../../examples/workbench-story"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-keyboard--target-selection",
+      "name": "Target Selection",
+      "exportName": "TargetSelection",
+      "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Keyboard",
+      "sourceHash": "c3a9cd3eedfb0b2a95bf3f679bb4011d46018888bbf722b5211cef71634e0c01",
+      "component": "WorkbenchStory",
+      "componentImport": "../../examples/workbench-story"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-keyboard--shortcut-reference",
+      "name": "Shortcut Reference",
+      "exportName": "ShortcutReference",
+      "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Keyboard",
+      "sourceHash": "c3a9cd3eedfb0b2a95bf3f679bb4011d46018888bbf722b5211cef71634e0c01",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6035,7 +6123,17 @@
       "source": "packages/pstdio-workbench/src/react/region/new-resource-cards.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/New resource cards",
-      "sourceHash": "1c1c4e1eeaec85c310972b508a2562310091b74b0fe532ccaba4419c6c4dd6ff",
+      "sourceHash": "e1a5e6b9b8ae1894e3234262ba4206437410da248bc897693cc7e3b0b5fed769",
+      "component": "NotesCards"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-core-api-new-resource-cards--create-from-number",
+      "name": "Create From Number",
+      "exportName": "CreateFromNumber",
+      "source": "packages/pstdio-workbench/src/react/region/new-resource-cards.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Core API/New resource cards",
+      "sourceHash": "e1a5e6b9b8ae1894e3234262ba4206437410da248bc897693cc7e3b0b5fed769",
       "component": "NotesCards"
     },
     {
@@ -7158,7 +7256,7 @@
       "source": "packages/pstdio-workbench/src/react/renderers/tree/tree-mode-return.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Guides/Fixed mode return",
-      "sourceHash": "b5a87f519036ffc33d71ee387ea8ac83543983deb87dcaae077a083d9d8e2448",
+      "sourceHash": "dfdfea7cfc70ecade4de6b01bff07a3e3d8fc5ef8302bcdbcf95f8d1e86a3a4e",
       "component": "ModeReturnStory"
     },
     {
@@ -7168,7 +7266,7 @@
       "source": "packages/pstdio-workbench/src/react/renderers/tree/tree-mode-return.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Guides/Fixed mode return",
-      "sourceHash": "b5a87f519036ffc33d71ee387ea8ac83543983deb87dcaae077a083d9d8e2448",
+      "sourceHash": "dfdfea7cfc70ecade4de6b01bff07a3e3d8fc5ef8302bcdbcf95f8d1e86a3a4e",
       "component": "ModeReturnStory"
     },
     {
@@ -7178,7 +7276,27 @@
       "source": "packages/pstdio-workbench/src/react/renderers/tree/tree-mode-return.stories.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Guides/Fixed mode return",
-      "sourceHash": "b5a87f519036ffc33d71ee387ea8ac83543983deb87dcaae077a083d9d8e2448",
+      "sourceHash": "dfdfea7cfc70ecade4de6b01bff07a3e3d8fc5ef8302bcdbcf95f8d1e86a3a4e",
+      "component": "ModeReturnStory"
+    },
+    {
+      "id": "workbench-pstdio-workbench-guides-fixed-mode-return--keyboard-return",
+      "name": "Keyboard Return",
+      "exportName": "KeyboardReturn",
+      "source": "packages/pstdio-workbench/src/react/renderers/tree/tree-mode-return.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Guides/Fixed mode return",
+      "sourceHash": "dfdfea7cfc70ecade4de6b01bff07a3e3d8fc5ef8302bcdbcf95f8d1e86a3a4e",
+      "component": "ModeReturnStory"
+    },
+    {
+      "id": "workbench-pstdio-workbench-guides-fixed-mode-return--go-to-project",
+      "name": "Go To Project",
+      "exportName": "GoToProject",
+      "source": "packages/pstdio-workbench/src/react/renderers/tree/tree-mode-return.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Guides/Fixed mode return",
+      "sourceHash": "dfdfea7cfc70ecade4de6b01bff07a3e3d8fc5ef8302bcdbcf95f8d1e86a3a4e",
       "component": "ModeReturnStory"
     },
     {
@@ -7489,6 +7607,26 @@
       "sourceHash": "38f289985ffaaffacdf2534045dbcc44777c8f04c25f603d9d0510eaedadbc70",
       "component": "ResourceLinkPicker",
       "componentImport": "./resource-link-picker"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-core-api-app-wide-extension-settings--first-project",
+      "name": "First Project",
+      "exportName": "FirstProject",
+      "source": "packages/pstdio-workbench/src/react/settings/app-wide-extension-settings.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Core API/App-wide extension settings",
+      "sourceHash": "451db6fe2e3ac4b1ded76b0a8f4e33e69d2213d3fc75054f4d6527fcb16cc77f",
+      "component": "AppWideSettings"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-core-api-app-wide-extension-settings--second-project",
+      "name": "Second Project",
+      "exportName": "SecondProject",
+      "source": "packages/pstdio-workbench/src/react/settings/app-wide-extension-settings.stories.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Core API/App-wide extension settings",
+      "sourceHash": "451db6fe2e3ac4b1ded76b0a8f4e33e69d2213d3fc75054f4d6527fcb16cc77f",
+      "component": "AppWideSettings"
     },
     {
       "id": "workbench-pstdio-workbench-reference-core-api-embedded-settings--independent-events-and-disposal",
@@ -10276,7 +10414,7 @@
       "source": "packages/ui/src/components/command-palette/palette-shortcut.stories.tsx",
       "suite": "ui",
       "title": "Components/PaletteShortcut",
-      "sourceHash": "667d6634448daa1d43780e41831c3c468e39953c606b12b8853528e5552c6769",
+      "sourceHash": "84270aa76cb3b15c23230aff2b3008ecdbba7045b679766ef0c91d33b83245c0",
       "component": "PaletteShortcut",
       "componentImport": "./palette-shortcut"
     },
@@ -10287,7 +10425,18 @@
       "source": "packages/ui/src/components/command-palette/palette-shortcut.stories.tsx",
       "suite": "ui",
       "title": "Components/PaletteShortcut",
-      "sourceHash": "667d6634448daa1d43780e41831c3c468e39953c606b12b8853528e5552c6769",
+      "sourceHash": "84270aa76cb3b15c23230aff2b3008ecdbba7045b679766ef0c91d33b83245c0",
+      "component": "PaletteShortcut",
+      "componentImport": "./palette-shortcut"
+    },
+    {
+      "id": "ui-components-paletteshortcut--arrow-keys",
+      "name": "Arrow Keys",
+      "exportName": "ArrowKeys",
+      "source": "packages/ui/src/components/command-palette/palette-shortcut.stories.tsx",
+      "suite": "ui",
+      "title": "Components/PaletteShortcut",
+      "sourceHash": "84270aa76cb3b15c23230aff2b3008ecdbba7045b679766ef0c91d33b83245c0",
       "component": "PaletteShortcut",
       "componentImport": "./palette-shortcut"
     },
@@ -10298,7 +10447,7 @@
       "source": "packages/ui/src/components/command-palette/palette-shortcut.stories.tsx",
       "suite": "ui",
       "title": "Components/PaletteShortcut",
-      "sourceHash": "667d6634448daa1d43780e41831c3c468e39953c606b12b8853528e5552c6769",
+      "sourceHash": "84270aa76cb3b15c23230aff2b3008ecdbba7045b679766ef0c91d33b83245c0",
       "component": "PaletteShortcut",
       "componentImport": "./palette-shortcut"
     },
@@ -10309,7 +10458,7 @@
       "source": "packages/ui/src/components/command-palette/palette-shortcut.stories.tsx",
       "suite": "ui",
       "title": "Components/PaletteShortcut",
-      "sourceHash": "667d6634448daa1d43780e41831c3c468e39953c606b12b8853528e5552c6769",
+      "sourceHash": "84270aa76cb3b15c23230aff2b3008ecdbba7045b679766ef0c91d33b83245c0",
       "component": "PaletteShortcut",
       "componentImport": "./palette-shortcut"
     },
