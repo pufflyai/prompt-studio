@@ -5,8 +5,9 @@ import {
   createDocumentSync,
   fetchSyncSpaces,
 } from "pstdio-sync/relay";
-import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
+import type { RelayDeps } from "./deps";
+import { createNativeDocumentLive } from "./native-document-live";
 import { reconcileProjectInfo } from "./project-info-owner";
 import { createSyncQuarantine } from "./quarantine";
 import { createResourceNumberSync } from "./resource-number-sync";
@@ -18,7 +19,7 @@ import type { RelayWorkbench } from "./runtime";
  */
 export const startCoreDocumentSync = (input: {
   config: RelayWorkbench;
-  deps: ExtensionsRouteDeps;
+  deps: RelayDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
   signal: AbortSignal;
   statusChanged?: () => void;
@@ -51,6 +52,12 @@ export const startCoreDocumentSync = (input: {
     syncs = [];
     numbers = undefined;
   };
+  const live = createNativeDocumentLive({
+    projectId: config.workbenchId,
+    deviceId: config.environmentId,
+    live: deps.nativeDocuments.live,
+    send: (message) => connection.send(message),
+  });
   const connection = createDocumentRelayConnection({
     origin: config.relayOrigin,
     projectId: config.workbenchId,
@@ -62,6 +69,7 @@ export const startCoreDocumentSync = (input: {
         credential: config.renewalGrant,
         signal: attemptSignal,
       });
+      live.setSpace(space);
       const relay = (documentId: string) =>
         createDocumentRelay({
           origin: config.relayOrigin,
@@ -107,7 +115,13 @@ export const startCoreDocumentSync = (input: {
         { event: "relay.core-documents.reconnecting", workbenchId: config.workbenchId },
         "Core document sync will retry",
       ),
-    onStatusChange: input.statusChanged,
+    onLive: (message) => {
+      void live.receive(message).catch(() => {});
+    },
+    onStatusChange: () => {
+      if (!connection.status().connected) live.clearSpace();
+      input.statusChanged?.();
+    },
   });
   const changed = (changed: { workbenchId: string }) => {
     if (changed.workbenchId !== owner.workbenchId) return;
@@ -119,9 +133,10 @@ export const startCoreDocumentSync = (input: {
     deps.projectInfoService.watchChanges(changed),
   ];
   return {
-    done: connection.done.finally(() => {
+    done: connection.done.finally(async () => {
       for (const stop of stops) stop();
       close();
+      await live.close();
     }),
     status: async () => {
       const statuses = await Promise.all([...syncs, ...(numbers ? [numbers] : [])].map((sync) => sync.status()));

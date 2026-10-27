@@ -5,20 +5,70 @@ import {
   createTextDocumentStorage,
   type DocumentStore,
   hasDocumentUserData,
+  isEmptyDocument,
+  mergeTextDocuments,
+  NativeSourcePendingError,
+  prepareTextDocumentAdoption,
+  readTextDocumentSeed,
   type StorageObserver,
   type StorageOwner,
+  saveTextDocument,
+  seedTextDocument,
 } from "pstdio-sync";
+import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records, storage_documents } from "../../db/schemas.pg";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { runDocumentTransaction } from "./document-persistence";
+import { lockStorageProject, refreshNativeRecordText } from "./native-record-projection";
+
 import { createProjectionStatistics } from "./projection-statistics";
 import { createRecordStreamStore } from "./record-stream-store";
 import { resourceDocumentId } from "./resource-document-persistence";
 import type { NumberChange } from "./resource-number-repair";
 import { createResourceRecords } from "./resource-records";
 import type { StorageDiagnostics } from "./storage-diagnostics";
+
+const readNativeText = async (document: Y.Doc) => {
+  if (isEmptyDocument(document)) throw new NativeSourcePendingError();
+  await readTextDocumentSeed(document);
+  return document.getText("content").toString();
+};
+
+const notifyNativeRecords = (listeners: Map<string, Set<() => void>>, owner: StorageOwner, keys: string[]) => {
+  for (const documentKey of keys) {
+    const key = JSON.stringify({
+      workbench_id: owner.workbenchId,
+      extension_id: owner.extensionId,
+      document_id: JSON.stringify(["native-markdown", documentKey]),
+    });
+    for (const listener of listeners.get(key) ?? []) listener();
+  }
+};
+
+const addressFor = (owner: StorageOwner, documentId: string) => ({
+  workbench_id: owner.workbenchId,
+  extension_id: owner.extensionId,
+  document_id: documentId,
+});
+const notifyNumbers = (listeners: Set<(event: NumberChange) => void>, events: NumberChange[]) => {
+  for (const event of events) for (const listener of listeners) listener(event);
+};
+
+const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
+  const [record] = await db
+    .select({ id: storage_current_records.record_id })
+    .from(storage_current_records)
+    .where(
+      and(
+        eq(storage_current_records.workbench_id, owner.workbenchId),
+        eq(storage_current_records.extension_id, owner.extensionId),
+      ),
+    )
+    .limit(1);
+  return !!record;
+};
 
 export const createDocumentStorageDBService = (
   db: DbClient,
@@ -27,23 +77,36 @@ export const createDocumentStorageDBService = (
 ) => {
   const cache = createDocumentCache();
   const listeners = new Set<(owner: StorageOwner) => void>();
+  const documentListeners = new Map<string, Set<() => void>>();
   const numberListeners = new Set<(event: NumberChange) => void>();
-  const numbersChanged = (events: NumberChange[]) => {
-    for (const event of events) for (const listener of numberListeners) listener(event);
-  };
+  const numbersChanged = (events: NumberChange[]) => notifyNumbers(numberListeners, events);
   const statistics = createProjectionStatistics(db);
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
   const getEnvironment = () => (environment ??= createEnvironmentDBService(db).get());
-  const transactionFor = (documentId: string) => {
+  const transactionFor = (documentId: string, prepare?: (document: Y.Doc) => Promise<Y.Doc>) => {
     const transaction: DocumentStore["transaction"] = async (owner, action) => {
-      const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: documentId };
+      const address = addressFor(owner, documentId);
       const key = JSON.stringify(address);
       try {
-        const result = await db.transaction((tx) =>
-          runDocumentTransaction(tx, { address, owner, cached: cache.get(key), diagnostics }, action),
-        );
+        const nativeKey = documentId.startsWith('["native-markdown",')
+          ? (JSON.parse(documentId) as string[])[1]
+          : undefined;
+        const result = await db.transaction(async (tx) => {
+          if (nativeKey) await lockStorageProject(tx, owner.workbenchId);
+          const result = await runDocumentTransaction(
+            tx,
+            { address, owner, cached: cache.get(key), diagnostics, prepare },
+            action,
+          );
+          if (nativeKey && result.changed)
+            await refreshNativeRecordText(tx, owner, nativeKey, result.document.getText("content").toString());
+          return result;
+        });
         cache.publish(key, result);
-        if (result.changed) for (const listener of listeners) listener(owner);
+        if (result.changed) {
+          for (const listener of listeners) listener(owner);
+          for (const listener of documentListeners.get(key) ?? []) listener();
+        }
         return result.value;
       } catch (error) {
         cache.discard(key);
@@ -53,6 +116,38 @@ export const createDocumentStorageDBService = (
     return transaction;
   };
   const transaction = transactionFor("records");
+  const nativeStore = (documentId: string) => ({
+    transaction: transactionFor(documentId),
+    initialHistory: {
+      validate: readTextDocumentSeed,
+      prepare: (owner: StorageOwner, remote: Y.Doc) =>
+        transactionFor(documentId)(owner, async ({ document }) => prepareTextDocumentAdoption(document, remote)),
+      merge: (owner: StorageOwner, remote: Y.Doc) => {
+        let waiting = false;
+        return transactionFor(documentId, async (local) => {
+          if (isEmptyDocument(local)) return mergeTextDocuments(local, remote);
+          const candidate = await prepareTextDocumentAdoption(local, remote);
+          if (candidate) {
+            candidate.destroy();
+            waiting = true;
+            return local;
+          }
+          const localSeed = await readTextDocumentSeed(local);
+          const remoteSeed = await readTextDocumentSeed(remote);
+          if (localSeed.id !== remoteSeed.id) {
+            return mergeTextDocuments(local, remote);
+          }
+          Y.applyUpdate(local, Y.encodeStateAsUpdate(remote));
+          return local;
+        })(owner, async ({ document }) => {
+          if (waiting) return null;
+          const snapshot = new Y.Doc();
+          Y.applyUpdate(snapshot, Y.encodeStateAsUpdate(document));
+          return snapshot;
+        });
+      },
+    },
+  });
   const isResourceDocument = (id: string) => id.startsWith(resourceDocumentId("").slice(0, -2));
   return {
     transaction,
@@ -66,7 +161,10 @@ export const createDocumentStorageDBService = (
       };
     },
     documents: {
-      open: (documentId: string) => ({ transaction: transactionFor(documentId) }),
+      open: (documentId: string) =>
+        documentId.startsWith('["native-markdown",')
+          ? nativeStore(documentId)
+          : { transaction: transactionFor(documentId) },
       recordStream: (owner: StorageOwner) =>
         createRecordStreamStore(db, owner, {
           statistics,
@@ -97,17 +195,7 @@ export const createDocumentStorageDBService = (
       },
     },
     async hasData(owner: StorageOwner) {
-      const [record] = await db
-        .select({ id: storage_current_records.record_id })
-        .from(storage_current_records)
-        .where(
-          and(
-            eq(storage_current_records.workbench_id, owner.workbenchId),
-            eq(storage_current_records.extension_id, owner.extensionId),
-          ),
-        )
-        .limit(1);
-      if (record) return true;
+      if (await hasProjectedRecords(db, owner)) return true;
       const documents = await db
         .select({ id: storage_documents.document_id })
         .from(storage_documents)
@@ -141,6 +229,7 @@ export const createDocumentStorageDBService = (
           observer,
           assets: input.assets,
           diagnostics,
+          nativeChanged: (keys) => notifyNativeRecords(documentListeners, input.owner, keys),
           changed: () => {
             for (const listener of listeners) listener(input.owner);
           },
@@ -152,6 +241,56 @@ export const createDocumentStorageDBService = (
         owner: input.owner,
         store: { transaction: transactionFor(JSON.stringify(["text-file", input.fileId])) },
       });
+    },
+    openNativeTextDocument(input: { owner: StorageOwner; fileId: string }) {
+      const documentId = JSON.stringify(["native-markdown", input.fileId]);
+      const store = nativeStore(documentId);
+      const text = createTextDocumentStorage({ owner: input.owner, store });
+      return {
+        read: () => store.transaction(input.owner, ({ document }) => readNativeText(document)),
+        exportUpdate: text.exportUpdate,
+        store,
+        save: (source: string) =>
+          store.transaction(input.owner, async ({ document }) => saveTextDocument(document, source)),
+        seed: (source: string) =>
+          store.transaction(input.owner, async ({ document }) => seedTextDocument(document, source)),
+        async applySource(source: Y.Doc) {
+          const snapshot = new Y.Doc();
+          try {
+            Y.applyUpdate(snapshot, Y.encodeStateAsUpdate(source));
+            if (snapshot.store.pendingStructs || snapshot.store.pendingDs)
+              throw new Error("The editor source is missing causal history");
+            await readTextDocumentSeed(snapshot);
+            await transactionFor(documentId, async (canonical) => {
+              if (isEmptyDocument(canonical)) return mergeTextDocuments(canonical, snapshot);
+              // The host accepts this room's edits into its current root. Relay publication
+              // still uses initialHistory's CAS to serialize adoption across hosts.
+              const candidate = await prepareTextDocumentAdoption(snapshot, canonical);
+              if (candidate) return candidate;
+              const sourceSeed = await readTextDocumentSeed(snapshot);
+              const canonicalSeed = await readTextDocumentSeed(canonical);
+              if (sourceSeed.id === canonicalSeed.id)
+                Y.applyUpdate(canonical, Y.encodeStateAsUpdate(snapshot, Y.encodeStateVector(canonical)));
+              return canonical;
+            })(input.owner, async () => {});
+          } finally {
+            snapshot.destroy();
+          }
+        },
+        watch(listener: () => void) {
+          const key = JSON.stringify(addressFor(input.owner, documentId));
+          let callbacks = documentListeners.get(key);
+          if (!callbacks) {
+            callbacks = new Set();
+            documentListeners.set(key, callbacks);
+          }
+          callbacks.add(listener);
+          return () => {
+            callbacks.delete(listener);
+            if (!callbacks.size) documentListeners.delete(key);
+          };
+        },
+      };
     },
   };
 };

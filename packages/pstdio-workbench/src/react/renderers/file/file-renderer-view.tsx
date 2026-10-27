@@ -25,6 +25,7 @@ import {
   storeCachedFileContent,
 } from "./file-renderer-load-state";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
+import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 
 interface WorkbenchFileRendererViewProps {
   workbench: WorkbenchCore;
@@ -263,7 +264,15 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   // The key must carry the document identity, not just the contribution: two
   // documents from the same renderer both start at revision 1, so keying on the
   // contribution alone reuses the editor and keeps showing the previous file.
-  const editorKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
+  let editorKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
+  let nativeMarkdown = false;
+  if (currentLoaded?.documentSource && contribution.connectDocument) {
+    const presentation = resolveFileRendererPresentation(currentLoaded, hasSave);
+    if (presentation.kind === "markdown" && presentation.isEditable) {
+      editorKey = currentLoaded.loadKey;
+      nativeMarkdown = true;
+    }
+  }
   let errorNotice: ReactNode = null;
   if (editState.removed) {
     errorNotice = (
@@ -278,7 +287,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   }
   return (
     <Flex direction="column" h="full" minH="0" bg="bg">
-      {currentLoaded && <FileRendererHeader file={currentLoaded} />}
+      {currentLoaded && !nativeMarkdown && <FileRendererHeader file={currentLoaded} />}
       <Box flex="1" minH="0">
         <FileRendererContentView
           content={currentLoaded}
@@ -295,6 +304,9 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           rendererRef={rendererRef}
           sectionNavigation={editorSectionNavigation}
           title={contribution.title}
+          connectDocument={
+            contribution.connectDocument ? () => contribution.connectDocument!(resource, pageParams) : undefined
+          }
         />
       </Box>
     </Flex>

@@ -1,6 +1,8 @@
 import { fingerprint, type StorageRecord } from "pstdio-sync-contracts";
 import type * as Y from "yjs";
 import { readValue } from "./document-values";
+import { readNativeRecordSources } from "./native-record-source";
+import { recordLifetime } from "./record-lifetime";
 
 export const readDocumentRecord = async (document: Y.Doc, recordId: string) => {
   const name = document.getMap<string>("records").get(recordId);
@@ -12,6 +14,7 @@ export const readDocumentRecord = async (document: Y.Doc, recordId: string) => {
   const sharedValue = shared
     ? ({ kind: shared, value: readValue(record?.get("shared"), document) } as StorageRecord["shared"])
     : null;
+  const nativeSources = record ? readNativeRecordSources(document, recordId) : {};
   return {
     recordId,
     exists: !!record || deleted,
@@ -19,7 +22,15 @@ export const readDocumentRecord = async (document: Y.Doc, recordId: string) => {
     value,
     asset,
     shared: sharedValue,
-    revision: await fingerprint({ value, asset, shared: sharedValue, deleted }),
+    ...(record ? { recordLifetime: recordLifetime(document, recordId) } : {}),
+    ...(Object.keys(nativeSources).length ? { nativeSources } : {}),
+    revision: await fingerprint({
+      value,
+      asset,
+      shared: sharedValue,
+      deleted,
+      ...(Object.keys(nativeSources).length ? { nativeSources } : {}),
+    }),
   } satisfies StorageRecord;
 };
 

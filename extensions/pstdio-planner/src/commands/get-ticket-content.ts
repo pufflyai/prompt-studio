@@ -24,6 +24,7 @@ export const getTicketContent = async (
       return {
         fileName: file.name,
         content: await readTicketFileContent(ctx.storage, ticket.id, file),
+        documentSource: { kind: "blob" as const, id: file.blobId, identity: file.id },
         placeholder: FILE_PLACEHOLDER,
         revision: file.updatedAt,
       };
@@ -37,7 +38,12 @@ export const getTicketContent = async (
     throw new Error(`Document unavailable: ${documentId}`);
   }
 
-  return { content: ticket.content ?? "", placeholder: BODY_PLACEHOLDER, revision: ticket.updatedAt };
+  return {
+    content: ticket.content ?? "",
+    documentSource: { kind: "collection" as const, collection: "tickets", id: ticket.id, field: "/content" },
+    placeholder: BODY_PLACEHOLDER,
+    revision: ticket.updatedAt,
+  };
 };
 
 // Load command for the ticket editor. The editor is bound to the ticket; the

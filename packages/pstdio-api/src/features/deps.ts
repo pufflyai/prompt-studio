@@ -19,6 +19,7 @@ import type { createExtensionFileService } from "../services/extension-file-serv
 import type { createExtensionService } from "../services/extension-service";
 import type { createExtensionUpgradeService } from "../services/extension-upgrade-service";
 import type { createFileService } from "../services/file-service";
+import type { createNativeDocumentService } from "../services/native-documents/documents";
 import type { createNotificationService } from "../services/notification-service";
 import type { createPersonalHistoryService } from "../services/personal-history/service";
 import type { createProjectService } from "../services/project-service";
@@ -70,6 +71,7 @@ export interface RouteDeps {
   skillService: ReturnType<typeof createSkillService>;
   fileService: ReturnType<typeof createFileService>;
   notificationService: ReturnType<typeof createNotificationService>;
+  nativeDocuments: ReturnType<typeof createNativeDocumentService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionAutomationPreferencesService: ReturnType<typeof createExtensionAutomationPreferencesService>;
   resourceLinksService: ReturnType<typeof createResourceLinksDBService>;

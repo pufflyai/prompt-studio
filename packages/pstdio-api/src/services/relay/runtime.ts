@@ -1,10 +1,10 @@
 import { createRelayAccess } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
-import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
 import { startAutomationSync } from "./automations";
 import { startCoreDocumentSync } from "./core-documents";
+import type { RelayDeps } from "./deps";
 import { startRelayExtension } from "./extension-owner";
 import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
@@ -23,7 +23,7 @@ export type RelayWorkbench = {
 // `denied` runs when the manager rejects a device credential, for example after another device removed this one.
 // `statusChanged` runs when a project's sync status may have changed. Read `status` to get the new value.
 export const startRelayRuntime = async (input: {
-  deps: ExtensionsRouteDeps;
+  deps: RelayDeps;
   denied?: () => void;
   statusChanged?: (workbenchId: string) => void;
 }) => {
@@ -211,7 +211,7 @@ export const startRelayRuntime = async (input: {
     },
   };
 };
-export const connectAppRelay = async <T extends { deps: ExtensionsRouteDeps; close: () => Promise<void> }>(
+export const connectAppRelay = async <T extends { deps: RelayDeps; close: () => Promise<void> }>(
   app: T,
   account: {
     denied: () => void;

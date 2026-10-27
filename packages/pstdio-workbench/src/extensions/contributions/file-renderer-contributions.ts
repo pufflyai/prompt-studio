@@ -1,4 +1,5 @@
 import type { CommandExecuteRequest, CommandExecutionResult } from "@pstdio/sdk/api";
+import type { NativeDocumentsClient } from "@pstdio/sdk/client";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type {
@@ -9,6 +10,7 @@ import type {
   ResourceRef,
   WorkbenchModuleContext,
 } from "../../core";
+import { createNativeDocumentSession } from "../../core/native-documents/native-document-session";
 import { unwrapCommandValue } from "../host/command-response";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import { executeWorkbenchExtensionCommandResponse } from "../host/workbench-extension-command";
@@ -20,6 +22,7 @@ export interface RegisterWorkbenchExtensionFileRenderersInput {
   metadata: WorkbenchExtensionMetadata;
   projectId: string;
   workbench: WorkbenchModuleContext;
+  nativeDocuments?: NativeDocumentsClient;
 }
 
 const slotContext = (input: { projectId: string; rendererId: string; resource?: ResourceRef }) => ({
@@ -94,14 +97,24 @@ export const fileRendererRefreshEnvelopeFromCommand = (
     ...(revision ? { revision } : {}),
   };
 };
-const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInput, record: FileRendererRecord) =>
-  input.workbench.views.registerView({
+const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInput, record: FileRendererRecord) => {
+  const client = input.nativeDocuments;
+  return input.workbench.views.registerView({
     id: record.id,
     title: text(record.title, record.id),
     icon: record.icon,
     body: {
       kind: "file",
       resourceKind: record.resourceKind,
+      connectDocument:
+        client && record.saveHandlerId
+          ? (resource, pageParams) =>
+              createNativeDocumentSession({
+                client,
+                projectId: input.projectId,
+                target: { fileRendererId: record.id, resource, pageParams },
+              })
+          : undefined,
       load: async (resource, signal, pageParams) => {
         const result = await executeFileCommand(
           input,
@@ -135,6 +148,7 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
         : undefined,
     },
   });
+};
 export const registerWorkbenchExtensionFileRenderers = (input: RegisterWorkbenchExtensionFileRenderersInput) => {
   const disposables: Disposable[] = [];
   for (const record of input.metadata.fileRenderers ?? []) {

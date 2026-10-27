@@ -1,3 +1,5 @@
+import type { NativeDocumentSource } from "pstdio-api-contracts";
+import type { NativeDocumentSession } from "../../native-documents/native-document-session";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
@@ -9,6 +11,7 @@ import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./ren
 // markdown editor, a code editor, or an image preview based on `fileName` /
 // `mimeType`; text-ish files carry `content`, images carry `dataUrl`.
 export interface FileRendererContent {
+  documentSource?: NativeDocumentSource;
   fileName?: string;
   /** Workspace-relative path shown above the file preview. */
   filePath?: string;
@@ -50,6 +53,11 @@ export interface FileRendererContribution {
   id: string;
   title: string;
   resourceKind?: string;
+  /** The host supplies this for native shared Markdown views. */
+  connectDocument?(
+    resource: ResourceRef | undefined,
+    pageParams?: import("@pstdio/sdk/extensions").PageParams,
+  ): NativeDocumentSession;
 
   /** Resolve the file's content (and identity) for the bound resource. */
   load(

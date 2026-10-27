@@ -63,6 +63,8 @@ export interface GroupedState {
 }
 
 export interface StorageObserver {
+  /** A native save's captured read version, checked while holding the record write lock. */
+  expected?(owner: StorageOwner, recordId: string): string | undefined;
   read(owner: StorageOwner, record: { recordId: string; revision: string }): void;
   group(owner: StorageOwner, group: StorageGroup): StorageGroup;
   committed(owner: StorageOwner, records: { recordId: string; revision: string }[], outcome: { status: string }): void;

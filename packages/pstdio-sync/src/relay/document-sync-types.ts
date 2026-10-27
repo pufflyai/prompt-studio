@@ -16,6 +16,7 @@ export interface DocumentRelay {
   };
 }
 export interface SyncFailure {
+  reason?: "source-history";
   kind: "update" | "state";
   id: string;
   envelope: unknown;

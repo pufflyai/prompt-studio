@@ -14,6 +14,25 @@ The local fixture uses its own account and operator enrollment. It needs no real
 
 The manager and relay use separate PostgreSQL roles. Native connections use HTTPS with fresh fixture certificates and separate server private keys. The relay receives public signing trust; it receives no manager database role, signing secret or device token. Dashboard and API ports bind to host loopback. The fixture's Docker network defaults to 10.254.239.0/24. Inspect existing networks before choosing another `RELAY_TEST_SUBNET`.
 
+## Native Markdown checks
+
+Open the same Notes document in both dashboards. Type different text in separate
+paragraphs, then place a selection in each editor. Both text changes must converge;
+the other connection's caret and selection should appear and follow scrolling.
+Close one tab and confirm its presence disappears.
+
+Check the complete artifact Markdown in each isolated project folder. Front matter
+must keep its original bytes when the body changes. Make an outside edit in a
+different paragraph while one dashboard has an editor change waiting; both changes
+must survive. Repeat with one relay connection offline and after restarting that
+app. Check the saved text independently of presence: no participant, caret or
+selection data belongs in its database journal or source files.
+
+Native collaboration requires an explicit full-source `documentSource` declaration
+from the view. Notes declares its artifact; Planner declares its body field and
+stable file blobs. Other views retain their ordinary load/save behavior. See
+[shared Markdown sources](../../references/extensions/0012-renderer-edit-refresh-lifecycle.md#shared-markdown-sources).
+
 ## Offline and restart checks
 
 With the default name:

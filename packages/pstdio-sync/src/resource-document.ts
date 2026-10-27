@@ -5,6 +5,7 @@ import { type DocumentHistory, documentHistory } from "./document-history";
 import { readDocumentRecord } from "./document-record";
 import { validateDocumentGroup } from "./document-validation";
 import { readValue } from "./document-values";
+import { adoptNativeRecordSources, resetRecreatedNativeSource } from "./native-record-source";
 import { adoptionEdit } from "./record-adoption";
 import type { GroupCommit } from "./types";
 
@@ -40,7 +41,10 @@ export const editResourceDocument = async (
     const author = migration && migrationAuthor(document, migration.key, migration.histories.get(migration.document));
     const updates: Uint8Array[] = [];
     document.on("update", (update: Uint8Array) => updates.push(update));
-    document.transact(() => applyDocumentEdit(document, edit, author));
+    document.transact(() => {
+      resetRecreatedNativeSource(document, edit);
+      applyDocumentEdit(document, edit, author);
+    });
     return {
       checkpoint: checkpoint && updates.length ? Y.encodeStateAsUpdate(document) : null,
       update: updates.length ? Y.mergeUpdates(updates) : null,
@@ -152,20 +156,24 @@ export const adoptResourceDocument = async (
     }
   };
   try {
+    const localSource = loadResourceDocument(local);
+    try {
+      await adoptNativeRecordSources(localSource, document, recordId);
+    } finally {
+      localSource.destroy();
+    }
     const edit = adoptionEdit(
       base && (await read([base])),
       await read(local),
       await readDocumentRecord(document, recordId),
     );
-    const updates: Uint8Array[] = [];
     if (edit) {
       validateDocumentGroup(document, { operationId: "adopt", edits: [edit] });
-      document.on("update", (update: Uint8Array) => updates.push(update));
       document.transact(() => applyDocumentEdit(document, edit));
     }
     return {
       state: Y.encodeStateAsUpdate(document),
-      update: updates.length ? Y.mergeUpdates(updates) : null,
+      update: missingFrom(document, remote),
       record: await readDocumentRecord(document, recordId),
     };
   } finally {
