@@ -26,7 +26,7 @@ export default defineExtension({
   pages: [library, detail],
   keybindings: [
     ...artifactShortcuts,
-    defineKeybinding({ id: "open-artifacts", key: "Alt+Shift+A", sticky: true, action: libraryTarget }),
+    defineKeybinding({ id: "go-artifacts", layer: "go", key: "A", sticky: true, action: libraryTarget }),
   ],
   navigationItems: [
     defineNavigationItem({

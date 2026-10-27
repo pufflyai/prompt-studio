@@ -28,8 +28,9 @@ export default defineExtension({
   keybindings: [
     ...noteShortcuts,
     defineKeybinding({
-      id: "open-notes",
-      key: "Alt+Shift+O",
+      id: "go-notes",
+      layer: "go",
+      key: "N",
       sticky: true,
       action: { kind: "page", page: notesPage.ref },
     }),

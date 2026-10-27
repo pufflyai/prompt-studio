@@ -292,18 +292,20 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   const project = (await response.json()) as { id: string };
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByRole("option", { name: /^Notes/ }).first()).toBeVisible({ timeout: 30_000 });
-  for (const [keys, label, destination] of [
-    [["G", "S"], "Sessions", /\/sessions\/compose$/],
-    [["G", "W"], "Workspaces", /\/workspaces$/],
-    [["Alt+Shift+O"], "Notes", /\/notes$/],
-    [["Alt+Shift+P"], "Tickets", /\/tickets$/],
+  for (const [key, label, destination] of [
+    ["S", "Sessions", /\/sessions\/compose$/],
+    ["W", "Workspaces", /\/workspaces$/],
+    ["N", "Notes", /\/notes$/],
+    ["K", "Tickets", /\/tickets$/],
+    ["A", "Artifacts", /\/artifacts$/],
   ] as const) {
     await page.goto(`/projects/${project.id}/tickets`);
     await showSidenavEntry(page, label);
     const row = page.getByRole("option", { name: new RegExp(`^${label}`) }).first();
     await row.focus();
-    if (keys.length > 1) await page.keyboard.press("Alt+Shift+Space");
-    for (const key of keys) await page.keyboard.press(key);
+    await page.keyboard.press("Alt+Shift+Space");
+    await page.keyboard.press("g");
+    await page.keyboard.press(key);
     await expect(page).toHaveURL(destination);
     await page.keyboard.press("Escape");
   }

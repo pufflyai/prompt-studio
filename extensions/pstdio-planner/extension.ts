@@ -152,7 +152,7 @@ export default defineExtension({
   navigationItems: [...plannerUi.navigationItems, timelineNavigation],
   keybindings: [
     ...plannerShortcuts,
-    defineKeybinding({ id: "open-tickets", key: "Alt+Shift+P", sticky: true, action: ticketsPageTarget }),
+    defineKeybinding({ id: "go-tickets", layer: "go", key: "K", sticky: true, action: ticketsPageTarget }),
   ],
   navigationTrees: plannerUi.navigationTrees,
   settingsPanels: plannerUi.settingsPanels,
