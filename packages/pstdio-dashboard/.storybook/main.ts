@@ -1,7 +1,7 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { StorybookConfig } from "@storybook/react-vite";
-import { mergeConfig } from "vite";
+import { mergeConfig, withFilter } from "vite";
 
 function getAbsolutePath(value: string) {
   return dirname(fileURLToPath(import.meta.resolve(`${value}/package.json`)));
@@ -24,8 +24,14 @@ const config: StorybookConfig = {
   // This Storybook has no docs pages. Docgen would parse the linked @pstdio/ui and @pstdio/workbench bundles,
   // which made up most of the cold start time.
   typescript: { reactDocgen: false },
-  viteFinal: async (config) =>
+  viteFinal: async ({ plugins = [], ...config }) =>
     mergeConfig(config, {
+      // Canvas previews are emitted JavaScript. Reapplying Babel to their minified dependency chunks
+      // can mistake generated bindings for TypeScript declarations.
+      plugins: withFilter(plugins, {
+        pluginNamePattern: ["vite:react-babel"],
+        transform: { id: { exclude: "**/.pstdio/extensions/canvas/src/catalog/generated/native/**" } },
+      }),
       resolve: {
         // Extension stories also import released UI and SDK versions. The dashboard owns this preview's UI
         // contract, and @pstdio/ui reads runtime values from the SDK, so both must be the workspace copies.
