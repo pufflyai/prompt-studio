@@ -52,7 +52,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     workspaces: createWorkspaceClient(request),
     sessions: createSessionClient(request, options, streams),
     skills: createSkillClient(request),
-    agents: createAgentClient(request),
+    agents: createAgentClient(request, options),
     automation: createAutomationClient(request),
     notifications: createNotificationsClient(request),
     extensions: createExtensionClient(request, streams),

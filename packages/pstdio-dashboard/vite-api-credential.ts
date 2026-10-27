@@ -6,11 +6,12 @@ import { type RawData, WebSocketServer } from "ws";
 
 // An API that requires a token refuses browser origins, so the browser cannot call it directly.
 // The dev server then acts as the API client: it adds the token to proxied requests and bridges
-// the terminal WebSocket, which the Vite proxy cannot carry (ADR 0007). The token never reaches
+// interactive WebSockets, which the Vite proxy cannot carry (ADR 0007). The token never reaches
 // the browser.
 
 const API_PATHS = ["/v1", "/healthz"];
 const TERMINAL_PATH = "/v1/terminal";
+const INTERACTIVE_PATHS = new Set([TERMINAL_PATH, "/v1/agents/authentication"]);
 
 const isApiPath = (url: string | undefined) =>
   API_PATHS.some((path) => url === path || url?.startsWith(`${path}/`) || url?.startsWith(`${path}?`));
@@ -50,11 +51,11 @@ const sendableCloseCode = (code: number) =>
 type UpstreamSocket = WebSocket;
 type UpstreamSocketConstructor = new (url: string, init: { headers: Record<string, string> }) => UpstreamSocket;
 
-export const bridgeTerminalWebSockets = (httpServer: Server, target: string, token: string) => {
+export const bridgeApiWebSockets = (httpServer: Server, target: string, token: string) => {
   const sockets = new WebSocketServer({ noServer: true });
 
   httpServer.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-    if (request.url?.split("?", 1)[0] !== TERMINAL_PATH) return;
+    if (!INTERACTIVE_PATHS.has(request.url?.split("?", 1)[0] ?? "")) return;
     if (!isSameOrigin(request)) {
       socket.end("HTTP/1.1 403 Forbidden\r\n\r\n");
       return;
@@ -78,7 +79,7 @@ export const bridgeTerminalWebSockets = (httpServer: Server, target: string, tok
       });
       upstream.addEventListener("message", (event) => client.send(String(event.data)));
       upstream.addEventListener("close", (event) => client.close(sendableCloseCode(event.code), event.reason));
-      upstream.addEventListener("error", () => client.close(1011, "Terminal upstream failed"));
+      upstream.addEventListener("error", () => client.close(1011, "API upstream failed"));
       client.on("message", forward);
       client.on("close", () => upstream.close());
     });
@@ -97,6 +98,6 @@ export const createApiCredentialPlugin = (input: { target: string; token: string
       response.statusCode = 403;
       response.end("Forbidden");
     });
-    if (server.httpServer) bridgeTerminalWebSockets(server.httpServer as Server, input.target, input.token);
+    if (server.httpServer) bridgeApiWebSockets(server.httpServer as Server, input.target, input.token);
   },
 });

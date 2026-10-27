@@ -85,7 +85,8 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     if (!projectId) throw new Error("Packaged project creation did not return an id");
     await openPackagedProject(first.page, { id: projectId, name: "Relaunch persistence project" });
     await first.page.getByRole("option", { name: "Sessions", exact: true }).click();
-    await expect(first.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+    // Account setup varies with installed harnesses; the transcript surface must still restore.
+    await expect(first.page.getByLabel("Main").getByRole("log")).toBeVisible();
     await expect(first.page.getByRole("button", { name: "Show Side Panel", exact: true })).toBeVisible();
     const selectedProjectKey = "dashboard-wb2:selected-project:global";
     const pageLocationKey = `dashboard-wb2:page-location:${projectId}`;
@@ -169,7 +170,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
           ).json()) as Array<{ name: string }>,
       ),
     ).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Relaunch persistence project" })]));
-    await expect(second.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+    await expect(second.page.getByLabel("Main").getByRole("log")).toBeVisible();
     await expect(second.page.getByTestId("workbench-side-panel-attached")).toBeVisible();
     await test.step("Restore the chosen theme on every desktop screen", async () => {
       const servedLifecycle = await second!.lifecyclePage.evaluate(() =>

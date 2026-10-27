@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 
 export const writeNativeActionsExtension = (root: string, publisher = "test") => {
@@ -24,6 +25,13 @@ const choices = {kind:"command",id:"choices"};
 const run = {kind:"command",id:"run"};
 const input = {value:{type:"select",options:{command:choices,valueField:"id",labelField:"name"}}};
 export default {
+  harnesses:[{id:"worker",ref:{kind:"harness",id:"worker"},label:"Research agent",capabilities:()=>[],
+    detect:()=>({available:true}),
+    getAuthentication:()=>({status:"signed_out",providers:[{id:"native",label:"Native",status:"signed_out",canLogout:false,methods:[{id:"oauth",label:"Browser",kind:"oauth"}]}]}),
+    authenticate:async(_ctx,_input,channel)=>{await channel.emit({type:"browser",url:"https://example.test/sign-in",code:"TEST-1234"});const key=await channel.request({type:"input",title:"Code",secret:true});if(key!=="private-code")throw new Error("Invalid code");},
+    start:()=>({done:Promise.resolve({status:"completed"}),stop(){}}),
+    resume:()=>({done:Promise.resolve({status:"completed"}),stop(){}}),getMessages:()=>[],
+    recoverMessages:(_ctx,input)=>({kind:"recovered",messages:input.nativeMessages})}],
   commands:[
     {id:"store",ref:{kind:"command",id:"store"},title:"Store",params:{},run:async(ctx)=>{await ctx.extensionFiles.writeText("draft.txt",${JSON.stringify(`Stored draft for ${publisher}`)});return await ctx.extensionFiles.readText("draft.txt");}},
     {id:"fail",ref:{kind:"command",id:"fail"},title:"Fail",params:{},run:()=>{throw new Error("Native action failed");}},
@@ -55,6 +63,36 @@ export const expectPackagedNativeActions = async (input: {
   headers: Record<string, string>;
 }) => {
   const root = `${input.baseUrl}/v1/projects/${input.projectId}/extensions`;
+  const agents = await fetch(`${input.baseUrl}/v1/agents/query?projectId=${input.projectId}`, {
+    headers: input.headers,
+  });
+  const agentBody = await agents.json();
+  expect(agents.status, JSON.stringify(agentBody)).toBe(200);
+  expect(agentBody.items).toContainEqual(
+    expect.objectContaining({
+      id: "test.native-actions.harness.worker",
+      availability: { type: "INSTALLED" },
+    }),
+  );
+  const token = (input.headers.authorization ?? input.headers.Authorization)?.replace(/^Bearer\s+/i, "");
+  const client = createClient({ baseUrl: input.baseUrl, token });
+  expect(
+    await client.agents.authentication("test.native-actions.harness.worker", { projectId: input.projectId }),
+  ).toMatchObject({ status: "signed_out" });
+  const prompts: unknown[] = [];
+  await client.agents.authenticate(
+    "test.native-actions.harness.worker",
+    { action: "login" },
+    {
+      projectId: input.projectId,
+      onPrompt: (prompt) => {
+        prompts.push(prompt);
+      },
+      onRequest: async () => "private-code",
+    },
+  );
+  expect(prompts).toContainEqual({ type: "browser", url: "https://example.test/sign-in", code: "TEST-1234" });
+  expect(JSON.stringify(prompts)).not.toContain("private-code");
   const metadata = await fetch(`${root}/ui`, { headers: input.headers });
   expect(metadata.status).toBe(200);
   const body = await metadata.json();

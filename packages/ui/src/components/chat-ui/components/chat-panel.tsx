@@ -55,6 +55,8 @@ export interface ChatPanelProps extends ChatLinkProps {
   composerHeader?: ReactNode;
   /** Replaces message entry and queue controls, retaining the workspace header, drafts, and pending responses. */
   composerFallback?: ReactNode;
+  /** Hide the entire composer while keeping conversation history and empty-state guidance visible. */
+  hideComposer?: boolean;
   attachedResources?: string[];
   onClearAttachments?: () => void;
   attachmentList?: ReactNode;
@@ -118,6 +120,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     attachmentActions,
     composerHeader,
     composerFallback,
+    hideComposer = false,
     attachedResources,
     onClearAttachments,
     attachmentList,
@@ -228,45 +231,51 @@ export const ChatPanel = (props: ChatPanelProps) => {
               </ChatPrimitives.Viewport>
               {isMessageViewportReady ? <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" /> : null}
             </ChatPrimitives.Root>
-            <Box layerStyle="chatContent" flexShrink="0">
-              {approvalPrompt}
-              {streaming ? (
-                <WorkingIndicator key={messageListKey} startedAt={streamingStartedAt} hidden={!showThinkingIndicator} />
-              ) : null}
-              <ChatPanelComposer
-                conversationKey={conversationKey ?? messages[0]?.id}
-                recentUserMessages={getRecentUserPrompts(messages)}
-                actions={actions}
-                attachmentActions={attachmentActions}
-                composerHeader={composerHeader}
-                composerFallback={composerFallback}
-                attachedResources={attachedResources}
-                attachmentList={attachmentList}
-                chatInputAutoFocus={chatInputAutoFocus}
-                chatInputPlaceholder={chatInputPlaceholder}
-                chatInputQuestionPrompt={activeQuestionPrompt}
-                composerDecision={questionNavigation.prompt ? undefined : composerDecision}
-                chatInputCommands={chatInputCommands}
-                hasWorkspaceHub={hasWorkspaceHub}
-                inputDisabled={inputDisabled}
-                submitDisabled={submitDisabled}
-                onAttachFiles={onAttachFiles}
-                onAttachText={onAttachText}
-                onClearAttachments={onClearAttachments}
-                onInterrupt={onInterrupt}
-                onQueuedFollowUpMove={onQueuedFollowUpMove}
-                onQueuedFollowUpRemove={onQueuedFollowUpRemove}
-                onQueuedFollowUpUpdate={onQueuedFollowUpUpdate}
-                onQueuedFollowUpSteer={onQueuedFollowUpSteer}
-                onQueuedFollowUpCombine={onQueuedFollowUpCombine}
-                queueSteeringUnavailableReason={queueSteeringUnavailableReason}
-                unsavedQueueItemIds={unsavedQueueItemIds}
-                queuedComposer={queuedComposer}
-                queuedFollowUps={queuedFollowUps}
-                streaming={streaming}
-                workspaceHub={workspaceHub}
-              />
-            </Box>
+            {!hideComposer && (
+              <Box layerStyle="chatContent" flexShrink="0">
+                {approvalPrompt}
+                {streaming ? (
+                  <WorkingIndicator
+                    key={messageListKey}
+                    startedAt={streamingStartedAt}
+                    hidden={!showThinkingIndicator}
+                  />
+                ) : null}
+                <ChatPanelComposer
+                  conversationKey={conversationKey ?? messages[0]?.id}
+                  recentUserMessages={getRecentUserPrompts(messages)}
+                  actions={actions}
+                  attachmentActions={attachmentActions}
+                  composerHeader={composerHeader}
+                  composerFallback={composerFallback}
+                  attachedResources={attachedResources}
+                  attachmentList={attachmentList}
+                  chatInputAutoFocus={chatInputAutoFocus}
+                  chatInputPlaceholder={chatInputPlaceholder}
+                  chatInputQuestionPrompt={activeQuestionPrompt}
+                  composerDecision={questionNavigation.prompt ? undefined : composerDecision}
+                  chatInputCommands={chatInputCommands}
+                  hasWorkspaceHub={hasWorkspaceHub}
+                  inputDisabled={inputDisabled}
+                  submitDisabled={submitDisabled}
+                  onAttachFiles={onAttachFiles}
+                  onAttachText={onAttachText}
+                  onClearAttachments={onClearAttachments}
+                  onInterrupt={onInterrupt}
+                  onQueuedFollowUpMove={onQueuedFollowUpMove}
+                  onQueuedFollowUpRemove={onQueuedFollowUpRemove}
+                  onQueuedFollowUpUpdate={onQueuedFollowUpUpdate}
+                  onQueuedFollowUpSteer={onQueuedFollowUpSteer}
+                  onQueuedFollowUpCombine={onQueuedFollowUpCombine}
+                  queueSteeringUnavailableReason={queueSteeringUnavailableReason}
+                  unsavedQueueItemIds={unsavedQueueItemIds}
+                  queuedComposer={queuedComposer}
+                  queuedFollowUps={queuedFollowUps}
+                  streaming={streaming}
+                  workspaceHub={workspaceHub}
+                />
+              </Box>
+            )}
           </Flex>
         </ChatQuestionNavigationContext>
       </ChatLinkProvider>
