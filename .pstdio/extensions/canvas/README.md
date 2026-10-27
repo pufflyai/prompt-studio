@@ -4,7 +4,7 @@ Explore and compare live UI designs inside Prompt Studio. A source registry defi
 
 Use a runtime that satisfies the extension API range declared in `package.json`.
 
-Open **Canvases** in the project navigation. Select a canvas in its navigation tree. **Foundations** contains three previews of the Pencil file's colors, typography, spacing, and radii. **Shared components** contains nine previews of controls, feedback, identity, surfaces, keyboard hints, empty states, and overlays. The starter **Design playground** contains **Project form · default** and **Shared controls · interactive**. All previews use synthetic data and local state. Creating a project in the preview never creates a real project.
+Open **Canvases** in the project navigation. Browse **Design System**, **Workbench Core**, **Dashboard**, and **Extensions**, with expandable subgroups. Selecting a canvas opens a retained workbench tab; switching tabs preserves preview inputs and the camera. **Foundations** contains three previews of the Pencil file's colors, typography, spacing, and radii. **Shared components** contains nine previews of controls, feedback, identity, surfaces, keyboard hints, empty states, and overlays. All previews use synthetic data and local state. Creating a project in the preview never creates a real project.
 
 ## Work with a design
 
@@ -30,9 +30,9 @@ The `src/controller/` files own geometry, cached bounds, input routing, and batc
 
 ```bash
 pst canvas list
-pst canvas open --canvas playground
-pst canvas layout read --canvas playground
-pst canvas layout update --canvas playground --change '{"positions":{"project-form":{"x":80,"y":40}}}'
+pst canvas open --canvas foundations
+pst canvas layout read --canvas foundations
+pst canvas layout update --canvas foundations --change '{"positions":{"colors":{"x":80,"y":40}}}'
 pst extensions dev .pstdio/extensions/canvas
 ```
 
@@ -67,11 +67,13 @@ Run `bun run --cwd .pstdio/extensions/canvas test` and `bun run --cwd .pstdio/ex
 
 ## Native documentation catalog
 
-UI Canvas indexes every current CSF export and MDX document. Related scenarios share one source-owned topic canvas and keep their original story IDs. Auto Build combines its status and form examples; Create folder combines folder-picker states. Earlier scenario URLs resolve to the grouped canvas. Select canvases in the navigation panel or find them through global resource search. Original canvases and their preview IDs remain available. Search accepts source paths, export IDs, names, and design keywords.
+UI Canvas indexes every current CSF export and MDX document. Related scenarios share one source-owned topic canvas and keep their original story IDs. Auto Build combines its status and form examples; Create folder combines folder-picker states. Earlier scenario URLs resolve to the grouped canvas. Select canvases in the navigation panel or find them through global resource search. The Design playground and Documentation panels demo canvases have been removed from navigation. Their interaction fixtures remain in verification stories. Search accepts source paths, export IDs, names, and design keywords.
+
+Each component has one frame. Its **Variant** menu, beside **Theme**, selects an original story’s predefined parameters. Selecting a variant resets that example’s local fixture state and keeps its frame theme and position. Every original story ID remains in the migration ledger and resource search.
 
 Scenarios render compiled original React components in individual preview documents. Each document owns its React, Chakra, theme, and application fixture state so several dialogs and store variants can be used together. This runs native source components without a standalone Storybook server or manager. Preview code is built into a compressed module archive; project storage cannot provide executable content. Application examples use local API and in-memory storage fixtures. Gallery token overrides stay local to each preview. Website analytics is inert in previews. Source play functions remain in their original files for external validation; Canvas does not run them as tests. **Props and source** shows arguments, authored argument types, component references, the source hash, and complete source code.
 
-Documentation frames have content-driven heights. Resize observations and font completion refresh measured bounds. Fit and explicit reveal include a tall panel and its title. Fullscreen application examples retain a minimum viewport inside the documentation frame; lists and editors retain their own scrolling. Long prose, source listings, and API details have no inner vertical scroll area. Open **Documentation panels**, preview **Long documentation · intrinsic height**, to check expansion and draft retention.
+Documentation frames have content-driven heights. Resize observations and font completion refresh measured bounds. Fit and explicit reveal include a tall panel and its title. Fullscreen application examples retain a minimum viewport inside the documentation frame; lists and editors retain their own scrolling. Long prose, source listings, and API details have no inner vertical scroll area. The **IntrinsicDocumentation** verification story checks expansion and draft retention outside the canvas resource registry.
 
 The 159 Pencil canvases are labeled **Design reference**. Their DOM renderer is reference evidence. The ledger retains all 24,496 source node identities, 292 reusable definitions, reference overrides, and ten owned asset hashes from RP-1. These entries do not claim completed component migration or transferred design authority. Current Pencil verification is blocked by the account's design-tool usage limit.
 
@@ -94,4 +96,4 @@ Catalog scans read and hash every current source. They reuse the existing parser
 
 `canvas:coverage` fails if the native build is stale, a design node lacks a real-component destination, or current design freshness is unverified. Ledger integrity tests can pass while this acceptance gate remains incomplete.
 
-Run `canvas:verify` inside the isolated Docker tooling container with Chromium installed. It checks native initial renders, documentation expansion, draft retention across a theme change, measured fit, and a populated 24-preview canvas. Failed cases retain screenshots and HTML under `__test-tmp__/native-canvas-verification/`. Original Storybook interaction checks remain required for their scenarios. Physical touch, trackpad behavior, full visual fidelity, packaged verification, full tests, and CI remain separate acceptance work.
+Run `canvas:verify` inside the isolated Docker tooling container with Chromium installed. It checks every switchable native variant, documentation expansion, draft retention across a theme change, measured fit, and a populated 24-preview canvas. Failed cases retain screenshots and HTML under `__test-tmp__/native-canvas-verification/`. Original Storybook interaction checks remain required for their scenarios. Physical touch, trackpad behavior, full visual fidelity, packaged verification, full tests, and CI remain separate acceptance work.

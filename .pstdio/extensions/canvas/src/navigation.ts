@@ -23,7 +23,7 @@ export const homePage = definePage({
   title: "UI Canvas",
   path: "canvases",
   mode: workbenchModes.project,
-  main: { kind: "view", view: canvasView.ref, cardinality: "one" },
+  main: { kind: "panels" },
   slots: [],
 });
 export const canvasPage = definePage({
@@ -39,6 +39,7 @@ export const canvasPage = definePage({
 export const canvasTarget = (id: string, label: string, projectId?: string) => ({
   kind: "page" as const,
   page: canvasPage.ref,
+  open: "pin" as const,
   resource: { type: canvasResource.id, id, label, ...(projectId ? { projectId, extensionId: "pstdio.canvas" } : {}) },
 });
 export const canvasUrl = (projectId: string, id: string) =>

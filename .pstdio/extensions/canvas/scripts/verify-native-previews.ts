@@ -4,6 +4,7 @@ import { extname, resolve } from "node:path";
 import type { Request as PreviewRequest, Route as PreviewRoute } from "@playwright/test";
 import { checkCanvasInteractions } from "./grouped-interaction-check";
 import { checkIntrinsicDocumentation, profilePopulatedCanvas } from "./native-documentation-check";
+import { checkCanvasVariants } from "./native-variant-check";
 import { verificationCanvases } from "./native-verification-fixtures";
 import { repoRoot } from "./story-catalog";
 
@@ -74,6 +75,7 @@ interface Result {
   errors: string[];
   durationMs: number;
   details?: unknown;
+  variants: number;
 }
 const results: Result[] = [];
 const reportPath = resolve(root, "results.json");
@@ -97,6 +99,7 @@ const worker = async () => {
     });
     const start = performance.now();
     let details: unknown;
+    let variants = 0;
     try {
       await page.goto(`${server.url}?canvas=${encodeURIComponent(canvas.id)}`, { waitUntil: "domcontentloaded" });
       const hostFrame = await page.locator("[data-verification-host]").elementHandle();
@@ -117,6 +120,7 @@ const worker = async () => {
       details = await checkCanvasInteractions(surface, page, canvas);
       if (canvas.id === "documentation-contract") details = await checkIntrinsicDocumentation(surface);
       if (canvas.id === "verification-populated") details = await profilePopulatedCanvas(surface);
+      variants = await checkCanvasVariants(surface, canvas);
     } catch (error) {
       errors.push(String(error));
 
@@ -129,6 +133,7 @@ const worker = async () => {
     const result = {
       id: canvas.id,
       previews: canvas.items.length,
+      variants,
       status: errors.length ? "error" : "ready",
       errors,
       durationMs: performance.now() - start,

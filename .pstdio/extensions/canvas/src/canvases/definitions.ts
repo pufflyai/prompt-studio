@@ -1,11 +1,17 @@
-import { type CatalogPreview, catalogCanvases } from "../catalog/definitions";
+import { type CatalogPreview, catalogCanvases, type StoryPreview } from "../catalog/definitions";
 import type { Point } from "../controller/geometry";
 import type { previews } from "./previews";
+export interface CanvasVariant {
+  id: string;
+  name: string;
+  preview: StoryPreview;
+}
 export interface CanvasItem {
   id: string;
   name: string;
   component?: keyof typeof previews;
   preview?: CatalogPreview;
+  variants?: readonly CanvasVariant[];
   position: Point;
   width: number;
   height: number;
@@ -14,6 +20,7 @@ export interface CanvasDefinition {
   id: string;
   name: string;
   group?: string;
+  path?: readonly string[];
   keywords?: string;
   aliases?: readonly string[];
   layout?: "grid";
@@ -22,30 +29,9 @@ export interface CanvasDefinition {
 // This registry owns membership, names and dimensions. Saved layouts only own positions.
 export const nativeCanvases: readonly CanvasDefinition[] = [
   {
-    id: "playground",
-    name: "Design playground",
-    items: [
-      {
-        id: "project-form",
-        name: "Project form · default",
-        component: "project-form",
-        position: { x: 0, y: 0 },
-        width: 360,
-        height: 320,
-      },
-      {
-        id: "controls",
-        name: "Shared controls · interactive",
-        component: "controls",
-        position: { x: 440, y: 0 },
-        width: 360,
-        height: 400,
-      },
-    ],
-  },
-  {
     id: "foundations",
     name: "Foundations",
+    group: "Design System",
     items: [
       {
         id: "colors",
@@ -76,6 +62,7 @@ export const nativeCanvases: readonly CanvasDefinition[] = [
   {
     id: "shared-components",
     name: "Shared components",
+    group: "Design System",
     items: [
       {
         id: "buttons",
@@ -148,20 +135,6 @@ export const nativeCanvases: readonly CanvasDefinition[] = [
         position: { x: 1120, y: 1400 },
         width: 480,
         height: 320,
-      },
-    ],
-  },
-  {
-    id: "documentation-contract",
-    name: "Documentation panels",
-    items: [
-      {
-        id: "long-documentation",
-        name: "Long documentation · intrinsic height",
-        component: "long-documentation",
-        position: { x: 0, y: 0 },
-        width: 640,
-        height: 240,
       },
     ],
   },

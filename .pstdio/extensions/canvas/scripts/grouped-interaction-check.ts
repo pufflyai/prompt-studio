@@ -3,7 +3,6 @@ import { expect, type Frame, type Page } from "@playwright/test";
 export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
   const item = page.locator('[data-canvas-item="ui-overlays-folderpickerdialog--folders"]');
   const preview = item.frameLocator("iframe");
-  const sibling = page.locator('[data-canvas-item="ui-overlays-folderpickerdialog--empty"]').frameLocator("iframe");
   await preview.getByRole("button", { name: "New folder", exact: true }).click();
   await preview.getByRole("textbox", { name: "New folder name" }).fill("canvas-interactive");
   await item.getByRole("button", { name: "Theme for" }).click();
@@ -11,11 +10,8 @@ export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
   await expect(preview.getByRole("textbox", { name: "New folder name" })).toHaveValue("canvas-interactive");
   await expect(item.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
   await expect.poll(() => preview.locator("html").evaluate((element) => element.classList.contains("dark"))).toBe(true);
-  const siblingTheme = await sibling.locator("html").evaluate((element) => element.classList.contains("dark"));
-  expect(siblingTheme).toBe(false);
   await preview.getByRole("button", { name: "Create folder", exact: true }).click();
   await expect(preview.getByRole("option", { name: "canvas-interactive" })).toBeVisible();
-  await expect(sibling.getByRole("option", { name: "canvas-interactive" })).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const viewport = page.locator("[data-canvas-viewport]");
   await viewport.press("0");
@@ -65,10 +61,22 @@ export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
   await expect(preview.getByRole("dialog")).toBeVisible();
   await expect(preview.getByRole("option", { name: "canvas-interactive" })).toHaveCount(0);
   await expect.poll(() => preview.locator("html").evaluate((element) => element.classList.contains("dark"))).toBe(true);
+  await item.getByRole("button", { name: "Variant for" }).click();
+  await page.getByRole("menuitem", { name: "Empty", exact: true }).click();
+  await expect(item.locator("iframe")).toHaveAttribute("data-frame-story", "ui-overlays-folderpickerdialog--empty");
+  await expect(item.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
+  await expect(preview.getByRole("option", { name: "canvas-interactive" })).toHaveCount(0);
+  await expect.poll(() => preview.locator("html").evaluate((element) => element.classList.contains("dark"))).toBe(true);
+  await item.getByRole("button", { name: "Variant for" }).click();
+  await page.getByRole("menuitem", { name: "Folders", exact: true }).click();
+  await expect(item.locator("iframe")).toHaveAttribute("data-frame-story", "ui-overlays-folderpickerdialog--folders");
+  await expect(item.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
+  expect(await preview.getByRole("option").count()).toBeGreaterThan(0);
   return {
     frames: await page.locator("[data-canvas-stage] > [data-canvas-item]").count(),
     folderCreated: true,
-    siblingIsolated: true,
+    variantFixtureIsolated: true,
+    variantRetainedTheme: true,
     themeRetainedDraft: true,
     zoomFactorFor100Pixels: zoom,
     emptyCanvasZoomFactor: after.zoom,

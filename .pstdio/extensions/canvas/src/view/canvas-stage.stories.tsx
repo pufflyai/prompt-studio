@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import { useState } from "react";
 import { type CanvasDefinition, canvases } from "../canvases/definitions";
+import { documentationFixture, interactionFixture } from "../canvases/verification-fixtures";
 import { createCanvasRuntime } from "../controller/runtime";
 import { readLayout } from "../layout";
 import { CanvasStage } from "./canvas-stage";
@@ -17,13 +18,13 @@ const Example = (props: { canvas: CanvasDefinition; zoom?: number }) => {
   );
 };
 export default { title: "Canvas/Workspace", parameters: { layout: "fullscreen" } };
-export const Interactive = { render: () => <Example canvas={canvases[0]} /> };
-export const ZoomedOut = { render: () => <Example canvas={canvases[0]} zoom={0.5} /> };
+export const Interactive = { render: () => <Example canvas={interactionFixture} /> };
+export const ZoomedOut = { render: () => <Example canvas={interactionFixture} zoom={0.5} /> };
 const populated: CanvasDefinition = {
   id: "populated-story",
   name: "Populated canvas",
   items: Array.from({ length: 24 }, (_, index) => ({
-    ...canvases[0].items[index % 2],
+    ...interactionFixture.items[index % 2],
     id: `preview-${index}`,
     name: `Interactive preview ${index + 1}`,
     position: { x: (index % 6) * 440, y: Math.floor(index / 6) * 500 },
@@ -37,7 +38,7 @@ export const SharedComponents = {
   render: () => <Example canvas={canvases.find((canvas) => canvas.id === "shared-components")!} zoom={0.4} />,
 };
 export const IntrinsicDocumentation = {
-  render: () => <Example canvas={canvases.find((canvas) => canvas.id === "documentation-contract")!} zoom={0.2} />,
+  render: () => <Example canvas={documentationFixture} zoom={0.2} />,
 };
 
 export const GroupedFolderExamples = {

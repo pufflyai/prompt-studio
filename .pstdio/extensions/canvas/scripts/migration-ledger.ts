@@ -73,16 +73,13 @@ export const generateMigrationLedger = async (inventoryPath: string) => {
   }));
   const stories = canvases.flatMap((canvas) =>
     canvas.items.flatMap((item) =>
-      item.preview?.kind === "story"
-        ? [
-            {
-              source: item.preview.source,
-              exportName: item.preview.exportName,
-              canvas: canvas.id,
-              item: item.id,
-            },
-          ]
-        : [],
+      (item.variants ?? []).map((variant) => ({
+        source: variant.preview.source,
+        exportName: variant.preview.exportName,
+        canvas: canvas.id,
+        item: item.id,
+        variant: variant.id,
+      })),
     ),
   );
   const documents = canvases.flatMap((canvas) =>
@@ -92,10 +89,14 @@ export const generateMigrationLedger = async (inventoryPath: string) => {
   );
   const native = inventory.nativeCanvases.flatMap((canvas) =>
     canvas.items.map((item) => {
+      const binding = { canvas: canvas.id, item: item.id };
+      if (canvas.id === "playground") {
+        return { ...binding, removed: "Removed Design playground at the user's request on 2026-10-27." };
+      }
       if (!canvases.find((current) => current.id === canvas.id)?.items.some((current) => current.id === item.id)) {
         throw new Error(`Original native preview was removed: ${canvas.id}#${item.id}`);
       }
-      return { canvas: canvas.id, item: item.id };
+      return binding;
     }),
   );
   const fixtureFactories: Record<string, string> = {

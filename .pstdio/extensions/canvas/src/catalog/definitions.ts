@@ -1,7 +1,8 @@
-import type { CanvasDefinition } from "../canvases/definitions";
+import type { CanvasDefinition, CanvasVariant } from "../canvases/definitions";
 import designs from "./generated/designs.json";
 import catalog from "./generated/stories.json";
 import { addGroupItem, placeGroup, storyCanvasId, storyTopic } from "./grouping";
+import { storyLocation } from "./navigation-groups";
 
 export interface StoryPreview {
   kind: "story";
@@ -37,37 +38,51 @@ for (const story of catalog.stories) {
     canvas = {
       id: oldId,
       name: topic.split("/").at(-1)!,
-      group: topic.split("/").slice(0, -1).join(" / ") || story.suite,
+      ...storyLocation(story.suite, topic),
       items: [],
       aliases: [],
     };
     groups.set(key, canvas);
   }
   (canvas.aliases as string[]).push(oldId, `${oldId}-${story.id}`);
-  addGroupItem(canvas, {
+  const preview: StoryPreview = {
+    kind: "story",
     id: story.id,
-    name: `${story.title} · ${story.name}`,
-    position: { x: 0, y: 0 },
-    width: 1200,
-    height: 240,
-    preview: {
-      kind: "story",
+    suite: story.suite,
+    source: story.source,
+    exportName: story.exportName,
+    component: story.component,
+    componentImport: story.componentImport,
+    viewportHeight: 960,
+  };
+  let item = canvas.items.find((item) => item.preview?.source === story.source);
+  if (!item) {
+    item = {
       id: story.id,
-      suite: story.suite,
-      source: story.source,
-      exportName: story.exportName,
-      component: story.component,
-      componentImport: story.componentImport,
-      viewportHeight: 960,
-    },
-  });
+      name: story.title.split("/").at(-1)!,
+      position: { x: 0, y: 0 },
+      width: 1200,
+      height: 240,
+      preview,
+      variants: [],
+    };
+    addGroupItem(canvas, item);
+  }
+  (item.variants as CanvasVariant[]).push({ id: story.id, name: story.name, preview });
 }
 for (const document of catalog.documents) {
   let section = document.suite === "ui" ? "Component guide" : "Workbench reference";
   if (document.source.includes("/onboarding/")) section = "Workbench onboarding";
   let canvas = groups.get(section);
   if (!canvas) {
-    canvas = { id: document.id, name: section, group: "Documentation", items: [], aliases: [] };
+    canvas = {
+      id: document.id,
+      name: section,
+      group: document.suite === "ui" ? "Design System" : "Workbench Core",
+      path: ["Documentation"],
+      items: [],
+      aliases: [],
+    };
     groups.set(section, canvas);
   }
   (canvas.aliases as string[]).push(document.id);
@@ -93,7 +108,9 @@ for (const file of designs) {
     canvas = {
       id: `design-${file.id}-${file.roots[0].id}`,
       name: file.name,
-      group: "Design references",
+      group:
+        ({ "design-system": "Design System", website: "Dashboard" } as Record<string, string>)[file.id] ?? "Extensions",
+      path: ["Design references"],
       items: [],
       aliases: [],
     };

@@ -11,9 +11,13 @@ export const canvasResources = defineCommandPaletteResource({
     return {
       items: canvases
         .filter((canvas) => {
-          const text = `${canvas.name} ${canvas.group ?? ""} ${canvas.keywords ?? ""} ${canvas.items
-            .map((item) => `${item.id} ${item.name} ${item.preview?.source ?? ""}`)
-            .join(" ")}`.toLowerCase();
+          const text =
+            `${canvas.name} ${canvas.group ?? ""} ${canvas.path?.join(" ") ?? ""} ${canvas.keywords ?? ""} ${canvas.items
+              .map(
+                (item) =>
+                  `${item.id} ${item.name} ${item.preview?.source ?? ""} ${item.variants?.map((variant) => `${variant.id} ${variant.name} ${variant.preview.exportName}`).join(" ") ?? ""}`,
+              )
+              .join(" ")}`.toLowerCase();
           return words.every((word) => text.includes(word));
         })
         .slice(0, input.limit)

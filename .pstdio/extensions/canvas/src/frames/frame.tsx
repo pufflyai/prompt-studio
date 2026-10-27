@@ -93,6 +93,7 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
           title={item.name}
           srcDoc={frameDocument()}
           sandbox="allow-scripts allow-forms"
+          data-frame-story={item.preview?.kind === "story" ? item.preview.id : undefined}
           data-ui-canvas-component
           data-frame-ready={ready || undefined}
           style={{ display: "block", width: "100%", height, border: 0 }}

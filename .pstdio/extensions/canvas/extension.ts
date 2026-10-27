@@ -7,9 +7,9 @@ import {
   packageAsset,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
-import { canvases } from "./src/canvases/definitions";
 import { commands } from "./src/commands";
-import { canvasPage, canvasResource, canvasTarget, canvasView, homePage } from "./src/navigation";
+import { canvasPage, canvasResource, canvasView, homePage } from "./src/navigation";
+import { canvasTree } from "./src/navigation-tree";
 import { canvasResources } from "./src/resources";
 
 const tree = defineView({
@@ -22,26 +22,7 @@ const tree = defineView({
         id: "canvases",
         label: "UI Canvas",
         collapsible: false,
-        nodes: [...new Set(canvases.map((canvas) => canvas.group ?? "Designs"))].map((group) => ({
-          id: `group-${group}`,
-          label: group,
-          collapsible: true,
-          children: canvases
-            .filter((canvas) => (canvas.group ?? "Designs") === group)
-            .map((canvas) => ({
-              id: canvas.id,
-              label: canvas.name,
-              icon: "layout-dashboard",
-              target: canvasTarget(canvas.id, canvas.name, ctx.projectId),
-              resource: {
-                type: canvasResource.id,
-                id: canvas.id,
-                label: canvas.name,
-                projectId: ctx.projectId,
-                extensionId: "pstdio.canvas",
-              },
-            })),
-        })),
+        nodes: canvasTree(ctx.projectId),
       },
     ],
   },

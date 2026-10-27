@@ -8,7 +8,9 @@ test("related Auto Build scenarios share one canvas without losing source items"
     ),
   );
   expect(groups).toHaveLength(1);
-  expect(groups[0].items.filter((item) => item.preview?.kind === "story")).toHaveLength(26);
+  const components = groups[0].items.filter((item) => item.preview?.kind === "story");
+  expect(components).toHaveLength(2);
+  expect(components.flatMap((item) => item.variants ?? [])).toHaveLength(26);
   expect(new Set(groups[0].items.map((item) => item.id)).size).toBe(groups[0].items.length);
 });
 
@@ -19,7 +21,8 @@ test("folder picker states remain together on one canvas", () => {
     ),
   );
   expect(groups).toHaveLength(1);
-  expect(groups[0].items.length).toBeGreaterThan(10);
+  expect(groups[0].items).toHaveLength(1);
+  expect(groups[0].items[0].variants).toHaveLength(12);
   expect(new Set(groups[0].items.map((item) => `${item.position.x},${item.position.y}`)).size).toBe(
     groups[0].items.length,
   );

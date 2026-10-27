@@ -5,6 +5,7 @@ import type { CanvasItem } from "../canvases/definitions";
 import type { CanvasRuntime } from "../controller/runtime";
 import { FramePreview } from "../frames/frame";
 import { FrameThemePicker } from "./frame-theme-picker";
+import { FrameVariantPicker } from "./frame-variant-picker";
 
 interface ItemProps {
   item: CanvasItem;
@@ -12,6 +13,9 @@ interface ItemProps {
 }
 export const ItemFrame = (props: ItemProps) => {
   const { item, runtime } = props;
+  const [variantId, setVariantId] = useState(item.variants?.[0]?.id);
+  const variant = item.variants?.find((entry) => entry.id === variantId);
+  const selectedItem = variant ? { ...item, preview: variant.preview } : item;
   const [feedback, setFeedback] = useState<"" | "Copied" | "Select and copy the name">("");
   const wrapper = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -68,6 +72,7 @@ export const ItemFrame = (props: ItemProps) => {
           </Button>
         </Tooltip>
         <FrameThemePicker id={item.id} name={item.name} runtime={runtime} />
+        {variant && <FrameVariantPicker item={item} selected={variant} onSelect={setVariantId} />}
         <Text role="status" aria-live="polite" textStyle="label/XS" color="fg.muted">
           {feedback}
         </Text>
@@ -91,7 +96,7 @@ export const ItemFrame = (props: ItemProps) => {
         borderRadius="xs"
         data-canvas-preview={item.id}
       >
-        <FramePreview item={item} runtime={runtime} />
+        <FramePreview key={variantId} item={selectedItem} runtime={runtime} />
       </Box>
     </Box>
   );
