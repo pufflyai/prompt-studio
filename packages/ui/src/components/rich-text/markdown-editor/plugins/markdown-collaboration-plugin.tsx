@@ -20,7 +20,7 @@ import type { MarkdownSourceDocument } from "../../shared/markdown-source-docume
 import { createMarkdownSourcePoints } from "../../shared/markdown-source-points";
 import { captureMarkdownTables, type MarkdownTableProjection } from "../../shared/markdown-source-tables";
 import { createMarkdownTextDocument } from "../../shared/markdown-text-document";
-import { splitFrontmatter } from "../../utils/markdown";
+import { joinFrontmatter, splitFrontmatter } from "../../utils/markdown";
 
 export interface MarkdownDocumentSelection {
   anchor: Uint8Array;
@@ -116,7 +116,9 @@ export const MarkdownCollaborationPlugin = (props: CollaborationPluginProps) => 
           callbacks.current.editable &&
           (dirtyElements.size || dirtyLeaves.size)
         ) {
-          const value = frontmatter + source.exportFromLexical($getRoot());
+          const body = source.exportFromLexical($getRoot());
+          const value = joinFrontmatter(frontmatter, body);
+          frontmatter = value.slice(0, value.length - body.length);
           if (binding.write(value)) callbacks.current.onChange?.(value);
         }
         if (dirtyElements.size || dirtyLeaves.size) {

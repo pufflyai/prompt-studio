@@ -28,7 +28,7 @@ import { LinkEditorPlugin, LinkPlugin } from "../shared/plugins/LinkEditorPlugin
 import { ListMarkerWidthPlugin } from "../shared/plugins/list-marker-width-plugin";
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
-import { splitFrontmatter } from "../utils/markdown";
+import { joinFrontmatter, splitFrontmatter } from "../utils/markdown";
 import { MarkdownSectionNavigationPlugin } from "./plugins/MarkdownSectionNavigationPlugin";
 import { MarkdownSlashCommandPlugin } from "./plugins/MarkdownSlashCommandPlugin";
 import { type MarkdownCollaboration, MarkdownCollaborationPlugin } from "./plugins/markdown-collaboration-plugin";
@@ -192,7 +192,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
                   editorState.read(() => {
                     const root = $getRoot();
                     const markdownBody = sourceDocument.exportFromLexical(root);
-                    onChange?.(frontmatter + markdownBody);
+                    onChange?.(joinFrontmatter(frontmatter, markdownBody));
                   });
                 }}
               />

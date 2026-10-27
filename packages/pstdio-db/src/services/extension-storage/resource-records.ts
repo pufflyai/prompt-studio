@@ -117,7 +117,21 @@ export const createResourceRecords = (
     await tx
       .insert(storage_document_operations)
       .values({ ...address, operation_id: group.operationId, fingerprint: identity });
-    return { ...saved, records: await readProjectedRecords(tx, owner, saved.records.map(record => record.recordId)), nativeKeys: prepared.flatMap(record => record.nativeKeys) };
+    const bound = saved.records.filter((record) => "nativeSources" in record);
+    const materialized = new Map(
+      (
+        await readProjectedRecords(
+          tx,
+          owner,
+          bound.map((record) => record.recordId),
+        )
+      ).map((record) => [record.recordId, record]),
+    );
+    return {
+      ...saved,
+      records: saved.records.map((record) => materialized.get(record.recordId) ?? record),
+      nativeKeys: prepared.flatMap((record) => record.nativeKeys),
+    };
   };
   const prepare = async (group: StorageGroup) => {
     if (!group.operationId || !group.edits.length) throw new Error("Empty storage commit");
@@ -132,7 +146,12 @@ export const createResourceRecords = (
     return fingerprint(group.edits.map(({ expectedRevision: _revision, ...edit }) => edit));
   };
   const published = (
-    result: { records: { recordId: string; revision: string }[]; projected: number; nativeKeys: string[]; events: NumberChange[] },
+    result: {
+      records: { recordId: string; revision: string }[];
+      projected: number;
+      nativeKeys: string[];
+      events: NumberChange[];
+    },
     operationId: string,
   ) => {
     if (result.projected) deps.statistics.record(result.projected);

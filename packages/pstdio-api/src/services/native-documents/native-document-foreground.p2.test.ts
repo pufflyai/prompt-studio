@@ -72,14 +72,24 @@ beforeAll(async () => {
   await mount.writeText("selected.md", "Selected source");
   const records = (await handle.deps.extensionStorageService.open({ owner: { workbenchId: projectId, extensionId } }))
     .records;
-  for (let start = 0; start < 99_999; start += 1_000) {
+  const seedStarted = performance.now();
+  // This is an editor read-scope regression. Keep all real records while reducing fixture transaction overhead.
+  for (let start = 0; start < 99_999; start += 5_000) {
     await records.commit({
       operationId: `seed-${start}`,
-      edits: Array.from({ length: Math.min(1_000, 99_999 - start) }, (_, offset) => ({
+      edits: Array.from({ length: Math.min(5_000, 99_999 - start) }, (_, offset) => ({
         recordId: `resource-${start + offset}`,
         replace: { title: `Resource ${start + offset}`, description: "An unrelated resource", status: "active" },
       })),
     });
+    if ((start + 5_000) % 25_000 === 0)
+      console.log(
+        JSON.stringify({
+          phase: "foreground-fixture",
+          resources: Math.min(start + 5_000, 99_999) + 1,
+          elapsedMs: performance.now() - seedStarted,
+        }),
+      );
   }
   expect(await records.list()).toHaveLength(100_000);
   storageObserver.read = (owner, record) => {

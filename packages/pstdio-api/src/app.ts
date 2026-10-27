@@ -33,6 +33,7 @@ import { createExtensionAutomationPreferencesService } from "./services/extensio
 import { createNativeDocumentService } from "./services/native-documents/documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/native-documents/file-source";
 import { initializeNativeSource } from "./services/native-documents/source-binding";
+import { upgradeNativeSources } from "./services/native-documents/source-upgrade";
 import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
@@ -119,7 +120,7 @@ const buildApp = async (
     settingsDBService,
     skillsDBService,
   } = dbs;
-  await extensionStorageDBService.upgradeNativeSources();
+  await upgradeNativeSources(extensionStorageDBService);
   await upgradeArtifactFileProjections({
     projections: extensionStorageDBService.fileProjections,
     contexts: await extensionStorageDBService.fileProjections.legacyContexts(),

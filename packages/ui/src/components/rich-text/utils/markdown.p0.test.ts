@@ -5,7 +5,7 @@ import { $isListNode, ListItemNode, ListNode } from "@lexical/list";
 import { $convertFromMarkdownString, CHECK_LIST, TRANSFORMERS } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { $getRoot, createEditor } from "lexical";
-import { normalizeMarkdownListIndentation, splitFrontmatter } from "./markdown";
+import { joinFrontmatter, normalizeMarkdownListIndentation, splitFrontmatter } from "./markdown";
 
 const transformers = [CHECK_LIST, ...TRANSFORMERS];
 
@@ -33,6 +33,22 @@ describe("splitFrontmatter", () => {
       frontmatter: "---\r\ntitle: Test\r\n---\r\n",
       body: "Body",
     });
+  });
+});
+
+describe("editing a frontmatter-only document", () => {
+  test.each(["\n", "\r\n"])("separates the first body from the closing delimiter using %j", (newline) => {
+    const frontmatter = ["---", "title: Test", "---"].join(newline);
+    const edited = joinFrontmatter(frontmatter, "First paragraph");
+
+    expect(edited).toBe(`${frontmatter}${newline}First paragraph`);
+    expect(splitFrontmatter(edited).body).toBe("First paragraph");
+    expect(joinFrontmatter(frontmatter, "")).toBe(frontmatter);
+  });
+
+  test("preserves the existing separator and a document without frontmatter", () => {
+    expect(joinFrontmatter("---\ntitle: Test\n---\n\n", "Body")).toBe("---\ntitle: Test\n---\n\nBody");
+    expect(joinFrontmatter("", "Body")).toBe("Body");
   });
 });
 

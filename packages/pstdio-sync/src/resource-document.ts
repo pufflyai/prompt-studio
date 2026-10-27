@@ -4,8 +4,8 @@ import { applyDocumentEdit, recordTypeName } from "./document-edits";
 import { type DocumentHistory, documentHistory } from "./document-history";
 import { readDocumentRecord } from "./document-record";
 import { validateDocumentGroup } from "./document-validation";
-import { adoptNativeRecordSources, resetRecreatedNativeSource } from "./native-record-source";
 import { readValue } from "./document-values";
+import { adoptNativeRecordSources, resetRecreatedNativeSource } from "./native-record-source";
 import { adoptionEdit } from "./record-adoption";
 import type { GroupCommit } from "./types";
 

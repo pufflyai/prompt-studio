@@ -29,6 +29,7 @@ const CollaborationScene = (props: { source?: string }) => {
   const [connected, setConnected] = useState(true);
   const [sources, setSources] = useState([source, source]);
   const [lastChanges, setLastChanges] = useState(["", ""]);
+  const [selections, setSelections] = useState<(number | null)[]>([null, null]);
   useEffect(() => {
     const render = () => setSources(documents.map((document) => document.getText("content").toString()));
     for (const document of documents) document.on("update", render);
@@ -112,7 +113,20 @@ const CollaborationScene = (props: { source?: string }) => {
               <MarkdownEditor
                 defaultState={source}
                 isEditable
-                collaboration={{ document }}
+                collaboration={{
+                  document,
+                  onSelectionChange: (selection) => {
+                    const position = selection
+                      ? Y.createAbsolutePositionFromRelativePosition(
+                          Y.decodeRelativePosition(selection.focus),
+                          document,
+                        )
+                      : null;
+                    setSelections((current) =>
+                      current.map((value, item) => (item === index ? (position?.index ?? null) : value)),
+                    );
+                  },
+                }}
                 onChange={(value) =>
                   setLastChanges((current) => current.map((text, item) => (item === index ? value : text)))
                 }
@@ -123,6 +137,9 @@ const CollaborationScene = (props: { source?: string }) => {
             </Box>
             <Box as="pre" textStyle="mono/XS" whiteSpace="pre-wrap" data-testid="last-local-change">
               {lastChanges[index]}
+            </Box>
+            <Box as="output" data-testid="selection-offset">
+              {selections[index]}
             </Box>
           </Stack>
         ))}
@@ -157,6 +174,22 @@ export const SharedEditing: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Reconnect" }));
     await waitFor(() => expect(laptop.getByTestId("source").textContent).toBe(`${initial}!?`));
     await expect(desktop.getByRole("textbox")).toHaveTextContent("this spelling");
+  },
+};
+
+export const EmptyNote: Story = {
+  render: () => <CollaborationScene source={'---\ntitle: "New note"\n---'} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const laptop = within(canvas.getByTestId("device-0"));
+    const desktop = within(canvas.getByTestId("device-1"));
+    await userEvent.click(laptop.getByRole("textbox"));
+    await userEvent.keyboard("{Enter}{Enter}First paragraph");
+    await waitFor(() => expect(desktop.getByRole("textbox")).toHaveTextContent("First paragraph"));
+    await expect(desktop.getByRole("textbox")).not.toHaveTextContent("title:");
+    const source = '---\ntitle: "New note"\n---\n\n\n\n\nFirst paragraph';
+    await expect(desktop.getByTestId("source").textContent).toBe(source);
+    await expect(laptop.getByTestId("selection-offset").textContent).toBe(String(source.length));
   },
 };
 

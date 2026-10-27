@@ -23,6 +23,13 @@ import { createDocumentCache } from "./document-cache";
 import { runDocumentTransaction } from "./document-persistence";
 import { lockStorageProject, refreshNativeRecordText } from "./native-record-projection";
 
+import { createProjectionStatistics } from "./projection-statistics";
+import { createRecordStreamStore } from "./record-stream-store";
+import { resourceDocumentId } from "./resource-document-persistence";
+import type { NumberChange } from "./resource-number-repair";
+import { createResourceRecords } from "./resource-records";
+import type { StorageDiagnostics } from "./storage-diagnostics";
+
 const readNativeText = async (document: Y.Doc) => {
   if (isEmptyDocument(document)) throw new NativeSourcePendingError();
   await readTextDocumentSeed(document);
@@ -40,12 +47,28 @@ const notifyNativeRecords = (listeners: Map<string, Set<() => void>>, owner: Sto
   }
 };
 
-import { createProjectionStatistics } from "./projection-statistics";
-import { createRecordStreamStore } from "./record-stream-store";
-import { resourceDocumentId } from "./resource-document-persistence";
-import type { NumberChange } from "./resource-number-repair";
-import { createResourceRecords } from "./resource-records";
-import type { StorageDiagnostics } from "./storage-diagnostics";
+const addressFor = (owner: StorageOwner, documentId: string) => ({
+  workbench_id: owner.workbenchId,
+  extension_id: owner.extensionId,
+  document_id: documentId,
+});
+const notifyNumbers = (listeners: Set<(event: NumberChange) => void>, events: NumberChange[]) => {
+  for (const event of events) for (const listener of listeners) listener(event);
+};
+
+const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
+  const [record] = await db
+    .select({ id: storage_current_records.record_id })
+    .from(storage_current_records)
+    .where(
+      and(
+        eq(storage_current_records.workbench_id, owner.workbenchId),
+        eq(storage_current_records.extension_id, owner.extensionId),
+      ),
+    )
+    .limit(1);
+  return !!record;
+};
 
 export const createDocumentStorageDBService = (
   db: DbClient,
@@ -55,15 +78,8 @@ export const createDocumentStorageDBService = (
   const cache = createDocumentCache();
   const listeners = new Set<(owner: StorageOwner) => void>();
   const documentListeners = new Map<string, Set<() => void>>();
-  const addressFor = (owner: StorageOwner, documentId: string) => ({
-    workbench_id: owner.workbenchId,
-    extension_id: owner.extensionId,
-    document_id: documentId,
-  });
   const numberListeners = new Set<(event: NumberChange) => void>();
-  const numbersChanged = (events: NumberChange[]) => {
-    for (const event of events) for (const listener of numberListeners) listener(event);
-  };
+  const numbersChanged = (events: NumberChange[]) => notifyNumbers(numberListeners, events);
   const statistics = createProjectionStatistics(db);
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
   const getEnvironment = () => (environment ??= createEnvironmentDBService(db).get());
@@ -179,17 +195,7 @@ export const createDocumentStorageDBService = (
       },
     },
     async hasData(owner: StorageOwner) {
-      const [record] = await db
-        .select({ id: storage_current_records.record_id })
-        .from(storage_current_records)
-        .where(
-          and(
-            eq(storage_current_records.workbench_id, owner.workbenchId),
-            eq(storage_current_records.extension_id, owner.extensionId),
-          ),
-        )
-        .limit(1);
-      if (record) return true;
+      if (await hasProjectedRecords(db, owner)) return true;
       const documents = await db
         .select({ id: storage_documents.document_id })
         .from(storage_documents)

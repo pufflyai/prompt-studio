@@ -50,7 +50,8 @@ export const createExtensionStorageDBService = (
     return item ? { ...scope, item_id: item.id, value_json: item.value, sort_order: item.sortOrder } : null;
   };
   return {
-    upgradeNativeSources: () => upgradeNativeSourceLifetimes(db),
+    upgradeNativeSources: (options: Parameters<typeof upgradeNativeSourceLifetimes>[1]) =>
+      upgradeNativeSourceLifetimes(db, options),
     installIndexes: (owners: Parameters<typeof installRecordIndexes>[1], validate: () => void = () => {}) =>
       installRecordIndexes(db, owners, validate),
     recovery: createRecoveryPoints(db, documents, options),
