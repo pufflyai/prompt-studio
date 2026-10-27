@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryStorage as createIdStorage } from "@pstdio/sdk/testing";
 import { createNote, deleteNote, listNotes, renameNote } from "./notes";
 import { editor, notesPage } from "./pages";
 import { createNotesMount } from "./test-mount";
+
+const coreIds = createIdStorage().ids;
 
 const createContext = (files = "write") => {
   const mount = createNotesMount();
@@ -37,7 +40,7 @@ const save = (ctx: unknown, id: string, content: string) =>
 describe("note editor", () => {
   test("loads read-only note content without allowing edits", async () => {
     const { ctx, mount } = createContext("read");
-    const note = await createNote(mount, "Read-only note");
+    const note = await createNote(mount, coreIds.create(), "Read-only note");
     expect(await load(ctx, note.id)).toMatchObject({ content: "", editable: false });
   });
 
@@ -50,7 +53,7 @@ describe("note editor", () => {
   });
   test("opens a new note with an empty body", async () => {
     const { ctx, mount } = createContext();
-    const note = await createNote(mount, "Release checklist");
+    const note = await createNote(mount, coreIds.create(), "Release checklist");
     expect(await load(ctx, note.id)).toMatchObject({ mimeType: "text/markdown", content: "" });
   });
 
@@ -61,7 +64,7 @@ describe("note editor", () => {
 
   test("keeps Markdown source intact across saves and reloads without changing the title", async () => {
     const { ctx, mount } = createContext();
-    const note = await createNote(mount, "My title");
+    const note = await createNote(mount, coreIds.create(), "My title");
     const content = "# A different heading\n\n- [ ] Try **bold** and `code`\n";
     await save(ctx, note.id, content);
     expect(await load(ctx, note.id)).toMatchObject({ content });
@@ -70,7 +73,7 @@ describe("note editor", () => {
 
   test("loads the current title for an open tab after a rename", async () => {
     const { ctx, mount } = createContext();
-    const note = await createNote(mount, "Original");
+    const note = await createNote(mount, coreIds.create(), "Original");
     await renameNote(mount, note.id, "Renamed");
     const query = notesPage.slots[0].tab.query;
     expect(
@@ -84,7 +87,7 @@ describe("note editor", () => {
 
   test("handles a note removed between the existence check and editor read", async () => {
     const { ctx, mount } = createContext();
-    const note = await createNote(mount, "Removing");
+    const note = await createNote(mount, coreIds.create(), "Removing");
     const readText = mount.readText;
     mount.readText = async (path) => {
       await deleteNote(mount, note.id);
@@ -95,7 +98,7 @@ describe("note editor", () => {
 
   test("does not bring back a note that was deleted while its tab stayed open", async () => {
     const { ctx, mount } = createContext();
-    const note = await createNote(mount, "Dropped");
+    const note = await createNote(mount, coreIds.create(), "Dropped");
     await deleteNote(mount, note.id);
     await expect(save(ctx, note.id, "# Dropped\n\nrestored?\n")).rejects.toThrow();
     expect(await listNotes(mount)).toEqual([]);

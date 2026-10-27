@@ -1,7 +1,14 @@
 import { expect, test } from "bun:test";
-import { createMemoryRepoFiles, createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
+import {
+  createMemoryStorage as createIdStorage,
+  createMemoryRepoFiles,
+  createMemoryStorage,
+  makeCommandArgs,
+} from "@pstdio/sdk/testing";
 import { deleteNoteCommand, renameNoteCommand } from "./commands";
 import { createNote, readNoteTitle } from "./notes";
+
+const coreIds = createIdStorage().ids;
 
 const fixture = async () => {
   const mount = createMemoryRepoFiles();
@@ -21,7 +28,7 @@ const fixture = async () => {
       } as never,
     },
   });
-  const note = await createNote(mount, "Original");
+  const note = await createNote(mount, coreIds.create(), "Original");
   return {
     ctx,
     mount,

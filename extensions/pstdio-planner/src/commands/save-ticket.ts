@@ -50,7 +50,7 @@ const readTicketFiles = async (
     files.push(
       existing
         ? { ...existing, blobId, updatedAt: now }
-        : { id: crypto.randomUUID(), name, blobId, createdAt: now, updatedAt: now },
+        : { id: storage.ids.create(), name, blobId, createdAt: now, updatedAt: now },
     );
   }
   return files;

@@ -1,9 +1,61 @@
 import { expect, test } from "bun:test";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { createMemoryStorage, createMemoryStorageDevices } from "@pstdio/sdk/testing";
 import { attemptEventsCollection, readAttempt } from "./attempt-storage";
 import { upgradeAttemptStorage } from "./attempt-upgrade";
 
 const timestamp = "2026-10-13T08:00:00.000Z";
+
+test("an already-migrated device and an offline source copy keep one retirement event", async () => {
+  const owner = { workbenchId: "shared-project", extensionId: "pstdio.pstdio-planner" };
+  const pair = await createMemoryStorageDevices({
+    ...owner,
+    collections: {
+      "planner-attempts": {
+        retired: {
+          schemaVersion: 1,
+          workspaceId: "retired",
+          workspaceShorthand: "WS-1",
+          ticketId: "ticket",
+          ticketShorthand: "PS-1",
+          implementationSessionId: "owner",
+          state: "abandoned",
+          base: { workspaceId: null, headSha: "base" },
+          revisions: [],
+          implementationDisconnectRetries: 0,
+          reviewDisconnectRetries: 0,
+          blocker: null,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        },
+      },
+    },
+  });
+  const expected = "legacy-retirement:retired";
+  await pair.devices[0]
+    .scope({ type: "planner-storage-upgrade", id: "agent-owned-progress-v2" })
+    .migrate(1, async () => {
+      await pair.devices[0].collection("planner-attempt-events").put(expected, {
+        id: expected,
+        workspaceId: "retired",
+        type: "attempt_abandoned",
+        createdAt: timestamp,
+      });
+      const legacy = await pair.devices[0].collection<Record<string, unknown>>("planner-attempts").get("retired");
+      const { state: _state, ...record } = legacy!;
+      await pair.devices[0].collection("planner-attempts").put("retired", { ...record, schemaVersion: 2 });
+    });
+  for (const storage of pair.devices) {
+    await upgradeAttemptStorage(storage);
+    await upgradeAttemptStorage(storage);
+    expect(await attemptEventsCollection(storage).list()).toMatchObject([{ id: expected, workspaceId: "retired" }]);
+  }
+  await pair.merge();
+  for (const storage of pair.devices) {
+    expect(await attemptEventsCollection(storage).list()).toHaveLength(1);
+    expect(await storage.collection("planner-attempts").get("retired")).toMatchObject({ schemaVersion: 2 });
+  }
+});
+
 test("concurrent upgrades preserve all variant history, requests, selections, and retirement", async () => {
   const storage = createMemoryStorage();
   const states = ["implementing", "review_ready", "reviewing", "approved", "changes_requested", "blocked", "abandoned"];

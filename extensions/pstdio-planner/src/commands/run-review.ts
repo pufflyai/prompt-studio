@@ -52,7 +52,7 @@ export const runReviewCommand = defineCommand({
       if (commandParams.expectedRevision !== undefined && revision.revision !== commandParams.expectedRevision)
         throw new Error("Attempt revision changed before review launch.");
 
-      const reviewId = crypto.randomUUID();
+      const reviewId = ctx.storage.ids.create();
       const timestamp = new Date().toISOString();
       const claimId = `${workspaceId}:${revision.revision}`;
       const claims = reviewLaunchClaimsCollection(ctx.storage);
