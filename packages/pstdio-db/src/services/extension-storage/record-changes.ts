@@ -1,8 +1,8 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import type { StorageRecord } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records, storage_documents, storage_record_projections } from "../../db/schemas.pg";
+import { lockStorageProject, type NativeProjectedRecord } from "./native-record-projection";
 import { publishProjectedRecords } from "./record-projection-rows";
 import { persistResourceDocuments } from "./resource-document-persistence";
 
@@ -16,6 +16,7 @@ const ownerWhere = (owner: StorageOwner) =>
 
 /** Locks the owner's projection row, which serializes its record writes, and returns its revision. */
 export const lockRecordOwner = async (tx: Transaction, owner: StorageOwner) => {
+  await lockStorageProject(tx, owner.workbenchId);
   await tx
     .insert(storage_documents)
     .values({
@@ -43,7 +44,7 @@ export interface RecordChange {
   foldedRevision: number;
   checkpoint: Uint8Array | null;
   update: Uint8Array | null;
-  record: StorageRecord;
+  record: NativeProjectedRecord;
 }
 
 /**

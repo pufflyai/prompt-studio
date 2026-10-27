@@ -14,6 +14,19 @@ export * from "./encryption";
 export { createLegacyRecordStorage } from "./legacy";
 export { createMemoryDocumentStore } from "./memory-document-store";
 export { initialRecordRevision, scopeRecordStorage, storageRecordId } from "./namespaces";
+export { nativeAssetBaseline, nativeAssetBindingBaseline } from "./native-asset-source";
+export {
+  bindRecordText,
+  bindRecordTextAsset,
+  type NativeRecordSources,
+  nativeFieldValue,
+  nativeTextAssetKey,
+  prepareRecordTextEdit,
+  readNativeRecordSources,
+  recordTextBindingUpdate,
+  setNativeFieldValue,
+} from "./native-record-source";
+export { NativeSourcePendingError, NativeSourceRecoveryError } from "./native-source-recovery";
 export {
   type ProjectInfo,
   projectInfoDocumentId,
@@ -23,6 +36,7 @@ export {
 } from "./project-info";
 export { appendGroups, projectGroups, type RecordProjection } from "./projection";
 export { adoptionEdit, mergeJson } from "./record-adoption";
+export { recordLifetime } from "./record-lifetime";
 export {
   compareQueryValues,
   encodeQueryCursor,
@@ -59,8 +73,9 @@ export { StorageRevisionChangedError } from "./storage-revision-error";
 export { createTextDocumentStorage } from "./text-document";
 export { mergeTextDocuments, prepareTextDocumentAdoption } from "./text-document-adoption";
 export { applyTextEditorUpdate, editTextDocument, saveTextDocument } from "./text-document-edits";
-export { readTextDocumentSeed, seedTextDocument } from "./text-document-seed";
+export { initialTextDocumentState, readTextDocumentSeed, seedTextDocument } from "./text-document-seed";
 export { editProjectedText } from "./text-file-projection";
+export { hasTextSourceImport, importTextSource } from "./text-source-import";
 export type {
   Acceptance,
   AssetStore,

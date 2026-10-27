@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import type { AssetReference } from "pstdio-api-contracts";
-import { initialRecordRevision } from "pstdio-sync";
+import { initialRecordRevision, nativeTextAssetKey } from "pstdio-sync";
 import type { StorageGroup } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import type { createSharedArtifactMount } from "./artifact-mount";
@@ -8,6 +8,7 @@ import { absentFile, type createFileProjectionIO, type FileIdentity, sameFile } 
 import { createFileReconciliationScope } from "./file-reconciliation-scope";
 import type { FileProjection, fileProjection } from "./file-state";
 import { type createFileTree, type FileNode, fileRecordId } from "./file-tree";
+import { createNativeArtifactProjection } from "./native-artifact-projection";
 
 type Storage = Awaited<ReturnType<ExtensionsRouteDeps["extensionStorageService"]["open"]>>;
 export const createFileReconciler = (input: {
@@ -21,8 +22,10 @@ export const createFileReconciler = (input: {
   open: () => Promise<Storage>;
   signal?: AbortSignal;
   assertWritable?: () => Promise<void>;
+  storageService: ExtensionsRouteDeps["extensionStorageService"];
 }) => {
   const { tree, io } = input;
+  const native = createNativeArtifactProjection(input);
   const scope = createFileReconciliationScope(input);
   const { included } = scope;
   const identity = (entry: FileProjection[string] | undefined) => ({
@@ -71,6 +74,11 @@ export const createFileReconciler = (input: {
       deleted: !found,
     };
   };
+  const observesNative = (
+    record: Awaited<ReturnType<Storage["records"]["read"]>> | undefined,
+    found: Awaited<ReturnType<typeof io.source>>,
+    previous: FileProjection[string] | undefined,
+  ) => record && nativeTextAssetKey(record) && (found?.kind === "file" || (!found && !previous?.node));
   const capture = async (storage: Storage, prepared: Awaited<ReturnType<typeof scope.read>>) => {
     const { canonical, disk, state } = prepared;
     const paths = new Set([...disk.keys(), ...Object.keys(state).filter(included)]);
@@ -86,6 +94,12 @@ export const createFileReconciler = (input: {
       const found = disk.get(path) ?? (await io.source(path));
       disk.set(path, found);
       const previous = state[path];
+      const entry = canonical.live.get(path);
+      if (entry && observesNative(entry.record, found, previous)) {
+        await native.observe(path, entry.record, found);
+        nodes.set(path, entry.node);
+        return;
+      }
       const matched = sameFile(identity(previous), found ?? absentFile);
       if (found?.kind === "directory") {
         nodes.set(path, directoryNode(path, previous, nodes));
@@ -116,6 +130,16 @@ export const createFileReconciler = (input: {
     if (sameFile(expected, target)) return sameFile((await io.source(path)) ?? absentFile, expected);
     return io.install(path, target, asset, expected);
   };
+  const projectFile = async (
+    path: string,
+    entry: { record: Awaited<ReturnType<Storage["records"]["read"]>>; node: FileNode } | undefined,
+    expected: FileIdentity,
+  ) => {
+    if (entry && nativeTextAssetKey(entry.record)) return native.project(path, entry.record, expected);
+    const hash = entry?.node.kind === "file" ? (entry.record.asset?.sha256 ?? null) : null;
+    const target = { kind: entry?.node.kind ?? null, hash };
+    return { hash, complete: await materialize(path, target, entry?.record.asset, expected) };
+  };
   const project = async (storage: Storage, state: FileProjection, captured: Awaited<ReturnType<typeof capture>>) => {
     const treeView = tree.active(await scope.records(storage, captured.address));
     const paths = new Set([...captured.paths, ...[...treeView.all.keys()].filter(included)]);
@@ -131,14 +155,13 @@ export const createFileReconciler = (input: {
     const changes: FileProjection = {};
     for (const { path, entry } of targets) {
       const expected = captured.disk.get(path) ?? absentFile;
-      const hash = entry?.node.kind === "file" ? (entry.record.asset?.sha256 ?? null) : null;
-      const target = { kind: entry?.node.kind ?? null, hash };
-      if (!(await materialize(path, target, entry?.record.asset, expected))) {
+      const result = await projectFile(path, entry, expected);
+      if (!result.complete) {
         complete = false;
         continue;
       }
       const record = entry?.record ?? (await storage.records.read(fileRecordId(path)));
-      const next = { node: entry?.node ?? null, hash, revision: record.revision };
+      const next = { node: entry?.node ?? null, hash: result.hash, revision: record.revision };
       if (!isDeepStrictEqual(state[path], next)) {
         state[path] = next;
         changes[path] = next;

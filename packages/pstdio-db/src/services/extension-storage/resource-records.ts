@@ -16,7 +16,9 @@ import {
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_operations } from "../../db/schemas.pg";
+import { bindNativeRecordSource } from "./bind-native-source";
 import { dataMigrationContext } from "./data-migration-context";
+import { prepareNativeRecordWrite } from "./native-record-write";
 import type { createProjectionStatistics } from "./projection-statistics";
 import { lockRecordOwner, saveRecordChanges } from "./record-changes";
 import { queueRecordUpload } from "./record-outbox";
@@ -43,6 +45,7 @@ export const createResourceRecords = (
     statistics: ReturnType<typeof createProjectionStatistics>;
     /** Notifies owner watchers after a commit. */
     changed: () => void;
+    nativeChanged?: (keys: string[]) => void;
     observer?: StorageObserver;
     assets?: AssetStore;
     diagnostics?: StorageDiagnostics;
@@ -67,6 +70,7 @@ export const createResourceRecords = (
     group: StorageGroup,
     identity: string,
     ownRevisions?: Map<string, string>,
+    options: { content?: string } = {},
   ) => {
     const revision = await lockRecordOwner(tx, owner);
     const ids = group.edits.map(({ recordId }) => recordId);
@@ -74,7 +78,7 @@ export const createResourceRecords = (
     if (previous) {
       if (previous.fingerprint !== identity) throw new Error("Operation identity reused with changed payload");
       // A receipt acknowledges the earlier operation, not another writer's current state.
-      return { records: [], projected: 0 };
+      return { records: [], projected: 0, nativeKeys: [] as string[] };
     }
     const expected = new Map(
       ids.flatMap((id) => {
@@ -94,13 +98,14 @@ export const createResourceRecords = (
         const next = (saved?.revision ?? 0) + 1;
         const foldedRevision = saved?.folded_revision ?? 0;
         const checkpoint = !saved || next - foldedRevision >= resourceFoldEvery;
+        const native = await prepareNativeRecordWrite(tx, { owner, states: saved?.states ?? [], edit, ...options });
         const result = await editResourceDocument(
           saved?.states ?? [],
-          edit,
+          native.edit,
           checkpoint,
           migration && { ...migration, document: JSON.stringify([owner.workbenchId, owner.extensionId, id]) },
         );
-        return { id, revision: next, foldedRevision, ...result };
+        return { id, revision: next, foldedRevision, ...result, nativeKeys: native.changed };
       }),
     );
     const records = prepared.map((value) => value.record);
@@ -110,7 +115,11 @@ export const createResourceRecords = (
     await tx
       .insert(storage_document_operations)
       .values({ ...address, operation_id: group.operationId, fingerprint: identity });
-    return { records, projected };
+    return {
+      records: await readProjectedRecords(tx, owner, ids),
+      projected,
+      nativeKeys: prepared.flatMap((record) => record.nativeKeys),
+    };
   };
   const prepare = async (group: StorageGroup) => {
     if (!group.operationId || !group.edits.length) throw new Error("Empty storage commit");
@@ -125,11 +134,12 @@ export const createResourceRecords = (
     return fingerprint(group.edits.map(({ expectedRevision: _revision, ...edit }) => edit));
   };
   const published = (
-    result: { records: { recordId: string; revision: string }[]; projected: number },
+    result: { records: { recordId: string; revision: string }[]; projected: number; nativeKeys: string[] },
     operationId: string,
   ) => {
     if (result.projected) deps.statistics.record(result.projected);
     deps.changed();
+    deps.nativeChanged?.(result.nativeKeys);
     const saved = outcome(operationId);
     if (result.records.length) deps.observer?.committed(owner, result.records, saved);
     return saved;
@@ -141,6 +151,27 @@ export const createResourceRecords = (
   };
   return {
     ...queries,
+    async bindText(input: { recordId: string; field?: string; documentKey: string; content?: string }) {
+      const result = await bindNativeRecordSource(db, owner, input, deps.observer);
+      if (result.changed) {
+        deps.changed();
+        deps.nativeChanged?.([input.documentKey]);
+        deps.observer?.committed(owner, [result.record], { status: "saved-locally" });
+      }
+      return { documentKey: input.documentKey, changed: result.changed };
+    },
+    async writeTextAsset(input: {
+      recordId: string;
+      content: string;
+      replace: StorageGroup["edits"][number]["replace"];
+    }) {
+      const identity = await fingerprint({ ...input, replace: input.replace ?? null });
+      const group = { operationId: crypto.randomUUID(), edits: [{ recordId: input.recordId, replace: input.replace }] };
+      return published(
+        await db.transaction((tx) => commitIn(tx, group, identity, undefined, { content: input.content })),
+        group.operationId,
+      );
+    },
     readMany: async (ids: string[]) => {
       return queries.readMany(ids);
     },

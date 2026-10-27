@@ -1,6 +1,22 @@
 import { afterEach, expect, test } from "bun:test";
-import { createSyncSpace, editResourceDocument, sealUpdate } from "pstdio-sync";
-import { createRecordStreamSync, encodeRecordFrame, type RecordStreamStore } from "pstdio-sync/relay";
+import {
+  createSyncSpace,
+  editResourceDocument,
+  NativeSourceRecoveryError,
+  openUpdate,
+  readDocumentRecord,
+  recordTextBindingUpdate,
+  sealUpdate,
+} from "pstdio-sync";
+import {
+  createRecordStreamSync,
+  decodeRecordFrame,
+  encodeRecordFrame,
+  type RecordStreamStore,
+  type SyncFailure,
+} from "pstdio-sync/relay";
+import type { UpdateEnvelope } from "pstdio-sync-contracts";
+import * as Y from "yjs";
 import { createDb } from "../../db/connection.pglite";
 import { projects, storage_record_sync } from "../../db/schemas.pg";
 import { dataMigrationContext } from "./data-migration-context";
@@ -46,8 +62,54 @@ const device = async (
   const records = service.open({ owner, assets: assets.store }).records;
   const value = async (recordId: string) => (await records.read(recordId)).value;
   // `restart` starts a new sync over the same database, as after an app restart or a reconnect.
-  return { db, records, sync: start(), restart: start, assets, failures, value };
+  return { db, records, service, sync: start(), restart: start, assets, failures, value };
 };
+
+test("a saved pre-binding record keeps its outbox and a recoverable remote copy when adoption needs a decision", async () => {
+  const { relay } = createRelay();
+  const initial = await editResourceDocument(
+    [],
+    { recordId: "ticket", replace: { content: "Saved remotely before binding" } },
+    true,
+  );
+  const bytes = Y.mergeUpdates([
+    initial.checkpoint!,
+    recordTextBindingUpdate("ticket", "a".repeat(64), {
+      field: "/content",
+      original: "Saved remotely before binding",
+      lifetime: initial.record.recordLifetime!,
+    }),
+  ]);
+  await relay.update(
+    await sealUpdate(
+      space,
+      documentId,
+      encodeRecordFrame({ records: [{ recordId: "ticket", bytes }], assets: [] }),
+      [],
+    ),
+  );
+  const second = await device(relay);
+  const stream = second.service.documents.recordStream(owner);
+  await stream.open();
+  await second.records.commit({
+    operationId: "second",
+    edits: [{ recordId: "ticket", replace: { content: "Saved locally before binding" } }],
+  });
+  await expect(second.sync.synchronize()).rejects.toBeInstanceOf(NativeSourceRecoveryError);
+  expect(await second.value("ticket")).toEqual({ content: "Saved locally before binding" });
+  expect(await stream.pending()).toBe(true);
+  expect(await stream.open()).toMatchObject({ joined: false, after: 0 });
+  expect(await second.sync.status()).toMatchObject({ pending: true, needsAttention: true });
+  const failure = second.failures[0] as SyncFailure;
+  expect(JSON.stringify(failure)).not.toContain("Saved remotely before binding");
+  const frame = decodeRecordFrame(
+    await openUpdate(space, documentId, (failure.envelope as { update: UpdateEnvelope }).update),
+  );
+  const document = new Y.Doc();
+  for (const record of frame.records) if (record.recordId === "ticket") Y.applyUpdate(document, record.bytes);
+  expect((await readDocumentRecord(document, "ticket")).value).toEqual({ content: "Saved remotely before binding" });
+  document.destroy();
+});
 
 test("records saved offline on two devices reach both, and a multi-record save arrives whole", async () => {
   const { relay, updates } = createRelay();

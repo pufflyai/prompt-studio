@@ -38,7 +38,7 @@ beforeAll(async () => {
     `export default {
     artifactMounts: [{ id: "documents", ref: { kind: "artifact-mount", id: "documents" }, path: "documents", label: "Documents", watch: false }],
     views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: { kind: "file",
-      load: async (ctx) => ({ content: await ctx.artifacts.mount("documents").readText("selected.md"), fileName: "selected.md" }),
+      load: async (ctx) => ({ documentSource: { kind: "artifact", mount: "documents", path: "selected.md", identity: "selected-file" }, content: await ctx.artifacts.mount("documents").readText("selected.md"), fileName: "selected.md" }),
       save: async (ctx, params) => ctx.artifacts.mount("documents").writeText("selected.md", params.content),
     } }],
   };`,

@@ -6,11 +6,13 @@ import { native_document_file_projections as projections } from "../../db/schema
 interface Address {
   owner: StorageOwner;
   documentKey: string;
+  projectionKey?: string;
 }
-const columns = ({ owner, documentKey }: Address) => ({
+const columns = ({ owner, documentKey, projectionKey = "handler" }: Address) => ({
   workbench_id: owner.workbenchId,
   extension_id: owner.extensionId,
   document_key: documentKey,
+  projection_key: projectionKey,
 });
 const where = (input: Address) => {
   const address = columns(input);
@@ -18,11 +20,12 @@ const where = (input: Address) => {
     eq(projections.workbench_id, address.workbench_id),
     eq(projections.extension_id, address.extension_id),
     eq(projections.document_key, address.document_key),
+    eq(projections.projection_key, address.projection_key),
   );
 };
 
 export const createNativeFileProjectionsDBService = (db: DbClient) => ({
-  async initialize(input: Address & { state: Uint8Array }) {
+  async initialize(input: Address & { state: Uint8Array | null }) {
     await db
       .insert(projections)
       .values({ ...columns(input), baseline: input.state })
@@ -49,6 +52,12 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
       .returning({ key: projections.document_key });
     return rows.length > 0;
   },
+  async cancel(input: Address & { state: Uint8Array }) {
+    await db
+      .update(projections)
+      .set({ pending: null })
+      .where(and(where(input), eq(projections.pending, input.state)));
+  },
   async *pending() {
     let cursor: string[] | undefined;
     while (true) {
@@ -62,6 +71,7 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
         .where(
           and(
             isNotNull(projections.pending),
+            eq(projections.projection_key, "handler"),
             cursor
               ? sql`(${projections.workbench_id}, ${projections.extension_id}, ${projections.document_key}) > (${cursor[0]}, ${cursor[1]}, ${cursor[2]})`
               : undefined,

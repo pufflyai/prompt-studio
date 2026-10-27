@@ -11,6 +11,7 @@ import {
 } from "./document-blobs";
 import { checkSummary, cloneDocument, missingUpdate } from "./document-merge";
 import { type DocumentSyncInput, DocumentUpdateTooLarge, type SyncFailure } from "./document-sync-types";
+import { retainNativeSource, withSourceRecovery } from "./source-recovery";
 
 export const latestStateLimits = { bytes: 1_048_576, updates: 1_000 };
 
@@ -184,31 +185,32 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     if (await publishAdoption()) return "retry";
     return "ready";
   };
-  return {
-    async synchronize() {
-      while (true) {
-        await read();
-        const initialHistory = await prepareLocalHistory();
-        if (initialHistory === "waiting") return;
-        if (initialHistory === "retry") continue;
-        const local = await mergeLocal();
-        if (!local) continue;
-        try {
-          await prepareDocumentBlobs(input, local);
-          const update = missingUpdate(local, remote);
-          if (update) {
-            await sendUpdate(local, update);
-            // Do not jump to our receipt's sequence: another device may have written just before it.
-            continue;
-          }
-          if (!(await compact())) continue;
-          downloaded = !incomplete;
-          return;
-        } finally {
-          local.destroy();
+  const synchronize = async () => {
+    while (true) {
+      await read();
+      const initialHistory = await prepareLocalHistory();
+      if (initialHistory === "waiting") return;
+      if (initialHistory === "retry") continue;
+      const local = await mergeLocal();
+      if (!local) continue;
+      try {
+        await prepareDocumentBlobs(input, local);
+        const update = missingUpdate(local, remote);
+        if (update) {
+          await sendUpdate(local, update);
+          // Do not jump to our receipt's sequence: another device may have written just before it.
+          continue;
         }
+        if (!(await compact())) continue;
+        downloaded = !incomplete;
+        return;
+      } finally {
+        local.destroy();
       }
-    },
+    }
+  };
+  return {
+    synchronize: () => withSourceRecovery(synchronize, () => retainNativeSource(input, remote, quarantine)),
     // Compare against the relay replica, including delete-only edits. A durable local
     // transaction after synchronization must immediately stop reporting synced.
     status: () =>

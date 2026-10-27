@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import { normalizeMountRelativePath } from "pstdio-extensions";
+import { prepareNativeFileWrite } from "../native-documents/file-write-context";
 import { serializeFiles } from "./file-state";
 import {
   assertStorageVersion,
@@ -11,6 +12,8 @@ import {
 } from "./storage-observation";
 
 const bytesRevision = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
+export const workspaceFileObservationKey = (root: string, path: string) =>
+  JSON.stringify(["workspace-file", resolve(root), normalizeMountRelativePath(path)]);
 const absentRevision = (error: unknown) => {
   const code = (error as NodeJS.ErrnoException).code;
   if (code === "ENOENT" || code === "ENOTDIR") return "missing";
@@ -28,7 +31,7 @@ const fileRevision = async (mount: ArtifactMount, path: string) => {
 
 /** The native loader and saver observe the same bytes even when the source is a workspace file. */
 export const createObservedFileMount = (root: string, mount: ArtifactMount): ArtifactMount => {
-  const keyFor = (path: string) => JSON.stringify(["workspace-file", resolve(root), normalizeMountRelativePath(path)]);
+  const keyFor = (path: string) => workspaceFileObservationKey(root, path);
   const readBytes = async (path: string) => {
     try {
       const bytes = await mount.readBytes(path);
@@ -40,11 +43,21 @@ export const createObservedFileMount = (root: string, mount: ArtifactMount): Art
       throw error;
     }
   };
-  const write = <T>(path: string, action: () => Promise<T>, revision: () => string) => {
+  const write = <T>(path: string, action: () => Promise<T>, revision: () => string, bytes?: Uint8Array) => {
     const key = keyFor(path);
     return serializeFiles(key, async () => {
       if (isObservingStorage()) assertStorageVersion(key, await fileRevision(mount, path));
+      const confirm = bytes ? await prepareNativeFileWrite(key, bytes) : undefined;
+      if (confirm && isObservingStorage()) {
+        try {
+          assertStorageVersion(key, await fileRevision(mount, path));
+        } catch (error) {
+          await confirm.cancel();
+          throw error;
+        }
+      }
       const value = await action();
+      await confirm?.written();
       if (isObservingStorage()) commitStorageVersion(key, revision());
       return value;
     });
@@ -65,12 +78,14 @@ export const createObservedFileMount = (root: string, mount: ArtifactMount): Art
         path,
         () => mount.writeText(path, value),
         () => bytesRevision(new TextEncoder().encode(value)),
+        new TextEncoder().encode(value),
       ),
     updateText: (path, value) =>
       write(
         path,
         () => mount.updateText(path, value),
         () => bytesRevision(new TextEncoder().encode(value)),
+        new TextEncoder().encode(value),
       ),
     writeBytes: (path, value) => {
       const bytes = new Uint8Array(value);
@@ -78,6 +93,7 @@ export const createObservedFileMount = (root: string, mount: ArtifactMount): Art
         path,
         () => mount.writeBytes(path, bytes),
         () => bytesRevision(bytes),
+        bytes,
       );
     },
     delete: (path) =>

@@ -1,10 +1,17 @@
 import type { NativeDocumentSelection, NativeDocumentTarget } from "pstdio-api-contracts";
 import { NativeDocumentRoomError } from "pstdio-db";
-import { readTextDocumentSeed, type StorageOwner } from "pstdio-sync";
+import {
+  NativeSourcePendingError,
+  NativeSourceRecoveryError,
+  readTextDocumentSeed,
+  type StorageOwner,
+  StorageRevisionChangedError,
+} from "pstdio-sync";
 import * as Y from "yjs";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
+import { apiLogger } from "../../lib/logger";
 import { createNativeFileProjector } from "./file-projection";
-import type { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
+import { type loadNativeMarkdownFile, NativeDocumentSourceError, type saveNativeMarkdownFile } from "./file-source";
 import { createNativeSessionPresence } from "./session-presence";
 
 interface Room {
@@ -19,11 +26,32 @@ interface RoomRequest {
   documentKey?: string;
 }
 
+const recoverSource = async (documentKey: string, action: () => Promise<unknown>) => {
+  try {
+    await action();
+  } catch (error) {
+    if (
+      !(
+        error instanceof NativeDocumentSourceError ||
+        error instanceof NativeSourcePendingError ||
+        error instanceof NativeSourceRecoveryError ||
+        error instanceof StorageRevisionChangedError
+      )
+    )
+      throw error;
+    apiLogger.warn(
+      { event: "native_document.recovery.pending", documentKey },
+      "Shared text recovery is pending. Saved edits and file copies were retained.",
+    );
+  }
+};
+
 /** Acknowledgements follow both room persistence and canonical integration. */
 export const createNativeDocumentService = (deps: {
   storage: ExtensionsRouteDeps["extensionStorageService"];
   load: (input: Parameters<typeof loadNativeMarkdownFile>[1]) => ReturnType<typeof loadNativeMarkdownFile>;
   save: (input: Parameters<typeof saveNativeMarkdownFile>[1]) => ReturnType<typeof saveNativeMarkdownFile>;
+  initialize: (loaded: Awaited<ReturnType<typeof loadNativeMarkdownFile>>) => Promise<void>;
   deviceId: string;
   presenceIdentity: () => Promise<{ label: string; deviceName: string }>;
 }) => {
@@ -124,8 +152,8 @@ export const createNativeDocumentService = (deps: {
         if (input.pendingUpdate && !input.sourceState)
           throw new NativeDocumentRoomError("invalid_frame", "Pending editor frames need their original history");
         const loaded = await deps.load(input);
+        await deps.initialize(loaded);
         const text = canonical(loaded);
-        await text.seed(loaded.content.content ?? "");
         const { id: roomId } = await storage.nativeRooms.create({
           owner: loaded.owner,
           documentKey: loaded.documentKey,
@@ -142,7 +170,7 @@ export const createNativeDocumentService = (deps: {
           queue: Promise.resolve(),
           closeWatchers: new Set(),
         };
-        await projection.initialize(room, loaded.content.content ?? "");
+        await projection.initialize(room, loaded);
         if (input.pendingUpdate)
           await storage.nativeRooms.apply({ owner: room.owner, roomId, update: input.pendingUpdate });
         // A reconnect can carry edits from a retired source history. Preserve that history
@@ -202,11 +230,14 @@ export const createNativeDocumentService = (deps: {
       return track(async () => {
         if (rooms.size) throw new Error("Editor room recovery must run before opening editors");
         for await (const { id, owner, documentKey } of storage.nativeRooms.pending()) {
-          await integrate(owner, id);
-          await projection.reconcile({ owner, documentKey });
-          await storage.nativeRooms.remove({ owner, roomId: id });
+          await recoverSource(documentKey, async () => {
+            await integrate(owner, id);
+            await projection.reconcile({ owner, documentKey });
+            await storage.nativeRooms.remove({ owner, roomId: id });
+          });
         }
-        for await (const address of storage.nativeFileProjections.pending()) await projection.reconcile(address);
+        for await (const address of storage.nativeFileProjections.pending())
+          await recoverSource(address.documentKey, () => projection.reconcile(address));
       });
     },
     async dispose() {

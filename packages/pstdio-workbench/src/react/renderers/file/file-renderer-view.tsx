@@ -266,7 +266,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   // contribution alone reuses the editor and keeps showing the previous file.
   let editorKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
   let nativeMarkdown = false;
-  if (currentLoaded && contribution.connectDocument) {
+  if (currentLoaded?.documentSource && contribution.connectDocument) {
     const presentation = resolveFileRendererPresentation(currentLoaded, hasSave);
     if (presentation.kind === "markdown" && presentation.isEditable) {
       editorKey = currentLoaded.loadKey;

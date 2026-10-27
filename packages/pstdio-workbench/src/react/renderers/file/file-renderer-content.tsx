@@ -125,7 +125,7 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
     );
   }
 
-  if (presentation.isEditable && connectDocument) {
+  if (presentation.isEditable && connectDocument && content.documentSource) {
     return (
       <Flex ref={rendererRef} direction="column" h="full" minH="0" bg="bg">
         {positionNotice}

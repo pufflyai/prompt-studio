@@ -1,22 +1,15 @@
 import type { NativeDocumentTarget } from "pstdio-api-contracts";
-import { editProjectedText, type StorageOwner, seedTextDocument } from "pstdio-sync";
-import * as Y from "yjs";
+import type { StorageOwner } from "pstdio-sync";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
+import { createNativeFileCopy } from "./file-copy";
 import type { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
+import { checkpointInitialState, checkpointText } from "./text-checkpoint";
 
 interface Address {
   owner: StorageOwner;
   documentKey: string;
 }
-const sourceText = (state: Uint8Array) => {
-  const document = new Y.Doc();
-  try {
-    Y.applyUpdate(document, state);
-    return document.getText("content").toString();
-  } finally {
-    document.destroy();
-  }
-};
+type Loaded = Awaited<ReturnType<typeof loadNativeMarkdownFile>>;
 
 export const createNativeFileProjector = (deps: {
   storage: ExtensionsRouteDeps["extensionStorageService"];
@@ -27,20 +20,14 @@ export const createNativeFileProjector = (deps: {
   const jobs = new Map<string, Promise<unknown>>();
   const canonical = (address: Address) =>
     deps.storage.openNativeTextDocument({ owner: address.owner, fileId: address.documentKey });
-  const initialize = async (address: Address, source: string) => {
+  const initialize = async (address: Address, loaded: Loaded) => {
+    if (loaded.copy)
+      await createNativeFileCopy(deps.storage, { ...address, projectionKey: loaded.copy.projectionKey }).observe(
+        loaded.copy.content,
+      );
     if (await projections.read(address)) return;
-    let state = await canonical(address).exportUpdate();
-    if (sourceText(state) !== source) {
-      // An unchanged local file is a baseline, not an edit that reverts a downloaded peer document.
-      const baseline = new Y.Doc();
-      try {
-        await seedTextDocument(baseline, source);
-        state = Y.encodeStateAsUpdate(baseline);
-      } finally {
-        baseline.destroy();
-      }
-    }
-    await projections.initialize({ ...address, state });
+    const state = await canonical(address).exportUpdate();
+    await projections.initialize({ ...address, state: await checkpointInitialState(state) });
   };
   const serialize = <T>(address: Address, action: () => Promise<T>) => {
     const key = JSON.stringify([address.owner, address.documentKey]);
@@ -52,31 +39,8 @@ export const createNativeFileProjector = (deps: {
     void result.then(forget, forget);
     return result;
   };
-  const mergeOutside = async (
-    address: Address,
-    source: string,
-    saved: { baseline: Uint8Array; pending: Uint8Array | null },
-  ) => {
-    const text = canonical(address);
-    const current = await text.exportUpdate();
-    // A process may have written the file and stopped before recording completion.
-    // Retain that save intent so replay also finishes any later steps in its handler.
-    if (sourceText(current) === source) {
-      await projections.baseline({ ...address, state: current });
-    } else if (saved.pending && sourceText(saved.pending) === source) {
-      await projections.baseline({ ...address, state: saved.pending });
-    } else if (sourceText(saved.baseline) !== source) {
-      const outside = await editProjectedText(saved.baseline, source);
-      try {
-        await text.applySource(outside);
-        await projections.baseline({ ...address, state: Y.encodeStateAsUpdate(outside) });
-      } finally {
-        outside.destroy();
-      }
-    }
-  };
   return {
-    initialize: (address: Address, source: string) => serialize(address, () => initialize(address, source)),
+    initialize: (address: Address, loaded: Loaded) => serialize(address, () => initialize(address, loaded)),
     reconcile(address: Address) {
       return serialize(address, async () => {
         const target = await deps.storage.nativeRooms.source(address);
@@ -85,19 +49,19 @@ export const createNativeFileProjector = (deps: {
         const loaded = await deps.load(input);
         if (loaded.documentKey !== address.documentKey || loaded.owner.extensionId !== address.owner.extensionId)
           throw new Error("Native document source changed its owner");
-        const source = loaded.content.content ?? "";
-        await initialize(address, source);
+        await initialize(address, loaded);
         const saved = (await projections.read(address))!;
-        const text = canonical(address);
-        await mergeOutside(address, source, saved);
-        const state = await text.exportUpdate();
-        const content = sourceText(state);
-        if (content === source && !saved.pending) {
-          await projections.baseline({ ...address, state });
-          return;
-        }
+        const state = await canonical(address).exportUpdate();
+        const content = checkpointText(state);
+        // Only physical copies are outside-write evidence. A downloaded record or asset is not an edit.
+        if (saved.baseline && content === checkpointText(saved.baseline) && !saved.pending) return;
         await projections.begin({ ...address, state });
-        await deps.save({ ...input, content, fileStorageVersions: loaded.fileStorageVersions });
+        await deps.save({
+          ...input,
+          content,
+          fileStorageVersions: loaded.fileStorageVersions,
+          ...(loaded.copy ? { projection: { ...address, projectionKey: loaded.copy.projectionKey, state } } : {}),
+        });
         await projections.complete({ ...address, state });
       });
     },

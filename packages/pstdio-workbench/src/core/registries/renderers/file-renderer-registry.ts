@@ -1,3 +1,4 @@
+import type { NativeDocumentSource } from "pstdio-api-contracts";
 import type { NativeDocumentSession } from "../../native-documents/native-document-session";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
@@ -10,6 +11,7 @@ import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./ren
 // markdown editor, a code editor, or an image preview based on `fileName` /
 // `mimeType`; text-ish files carry `content`, images carry `dataUrl`.
 export interface FileRendererContent {
+  documentSource?: NativeDocumentSource;
   fileName?: string;
   /** Workspace-relative path shown above the file preview. */
   filePath?: string;

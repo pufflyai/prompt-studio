@@ -6,6 +6,7 @@ import {
   normalizeMountRelativePath,
   resolveArtifactMountRoot,
 } from "pstdio-extensions";
+import { nativeTextAssetKey } from "pstdio-sync";
 import type { StorageGroup } from "pstdio-sync-contracts";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
@@ -70,6 +71,7 @@ export const createSharedArtifactMount = (
   });
   const reconcile = createFileReconciler({
     owner,
+    storageService: deps.extensionStorageService,
     roots,
     tree,
     local: createFileMount(packageRoot, input.signal),
@@ -124,6 +126,16 @@ export const createSharedArtifactMount = (
           ...(!existing && { deleted: false }),
         });
       }
+      if (nativeTextAssetKey(before)) {
+        await input.assertWritable?.();
+        await storage.records.writeTextAsset({
+          recordId: before.recordId,
+          content: await value.text(),
+          replace: before.value,
+        });
+        await withoutStorageObservation(() => reconcile(target));
+        return;
+      }
       const asset = await assets.stage(owner, crypto.randomUUID(), value, input.signal);
       edits.push({
         recordId: before.recordId,
@@ -146,6 +158,9 @@ export const createSharedArtifactMount = (
       await assertBoundary(path);
       const entry = (await pointTree(storage, fullPath(path))).live.get(fullPath(path));
       if (entry?.node.kind !== "file" || !entry.record.asset) throw missing(path);
+      const key = nativeTextAssetKey(entry.record);
+      if (key)
+        return new Blob([await deps.extensionStorageService.openNativeTextDocument({ owner, fileId: key }).read()]);
       return assets.read(owner, entry.record.asset, input.signal);
     }, fullPath(path));
   const api: ArtifactMount = {
@@ -155,7 +170,10 @@ export const createSharedArtifactMount = (
           fullPath(path) === prefix || (await pointTree(storage, fullPath(path))).live.has(fullPath(path)),
         fullPath(path),
       ),
-    readText: async (path) => new Response(await read(path)).text(),
+    readText: async (path) =>
+      new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
+        await new Response(await read(path)).arrayBuffer(),
+      ),
     readBytes: async (path) => new Uint8Array(await new Response(await read(path)).arrayBuffer()),
     writeText: (path, value) => write(path, new Blob([value], { type: "text/plain" }), false),
     updateText: (path, value) => write(path, new Blob([value], { type: "text/plain" }), true),

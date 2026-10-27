@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
 import { createApp } from "pstdio-api/app";
-import { createNativeDocumentKey } from "pstdio-api-contracts";
+import { createNativeSourceKey } from "pstdio-api-contracts";
 import * as Y from "yjs";
 
 export const createNativeDocumentSessionFixture = async () => {
@@ -21,7 +21,7 @@ export const createNativeDocumentSessionFixture = async () => {
     join(root, "extension.ts"),
     `export default { views: [{
     id: "document", ref: { kind: "view", id: "document" }, title: "Document",
-    body: { kind: "file", load: async (ctx) => ({ fileName: "notes.md", content: await ctx.workspaceFiles.readText("notes.md") }),
+    body: { kind: "file", load: async (ctx) => ({ documentSource: { kind: "workspace", path: "notes.md" }, fileName: "notes.md", content: await ctx.workspaceFiles.readText("notes.md") }),
       save: async (ctx, params) => ctx.workspaceFiles.writeText("notes.md", params.content) },
   }] };`,
   );
@@ -135,10 +135,7 @@ export const createNativeDocumentSessionFixture = async () => {
     },
     async adopt(state: Uint8Array) {
       const owner = { workbenchId: project.id, extensionId: "example.native-session" };
-      const fileId = createNativeDocumentKey({
-        fileRendererId: "example.native-session.view.document",
-        resource: undefined,
-      });
+      const fileId = createNativeSourceKey(["workspace", "notes.md"]);
       const text = handle.deps.extensionStorageService.openNativeTextDocument({ owner, fileId });
       const remote = new Y.Doc();
       Y.applyUpdate(remote, state);

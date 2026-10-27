@@ -4,17 +4,16 @@ Proposed: 2026-10-17
 
 ## Status
 
-Proposed implementation for PS-776. This moves its original ticket attachment into
-the repository and updates the replaced checkpoint design to PRD 0014.
+Accepted design for PS-776. Implementation and release validation are tracked by the ticket.
 
 ## Decision
 
-Each editable native Markdown file view has a standalone document containing one
+Each declared editable native Markdown file view has a standalone document containing one
 `Y.Text` of the text returned by its extension's load handler. Markdown is the
 authority; a Lexical tree is only its editable view. The document key covers the
-renderer, full resource identity, metadata and page parameters. Key ordering does
-not depend on the device's locale. The host never accepts a source path from the
-browser or derives one from a resource ID.
+extension's declared logical source within the workbench. Views and labels do not
+change it. The host resolves the declaration from the registered load handler;
+browsers supply view identities and never choose source paths.
 
 Native views use their existing default-workspace context. An explicit workspace
 selector is not part of this identity and is rejected at the native transport
@@ -30,43 +29,39 @@ or records. The host compares outside writes with the last projected source and
 applies their character changes to the current shared text. In particular, Notes
 keeps its load/save transformation and byte-exact front matter.
 
-## Open source ownership decision
+## Source ownership
 
-The callback-only file projection is not ready to ship. Review reproduced two
-failures: a downloaded artifact is applied as another outside edit, duplicating a
-peer insertion; and an outside deletion after a completed file write is undone
-when a later save-handler step fails. Text equality, hashes and state vectors do
-not identify the source history of a particular file version.
+The user authorized explicit source declarations for PS-776 on 2026-10-27.
+Opaque callbacks remain supported; collaboration requires a declared source.
+Views of one source share a standalone text authority and full-source save semantics.
+Notes binds its complete artifact Markdown, including hidden front matter. Planner
+binds its body field and stable file identities. Extensions contain no sync code.
 
-The proposed correction is an explicit source binding owned by core. It names a
-stable logical source: a record field, or an artifact file with its body
-projection. Views of the same source share one standalone text authority. Notes
-needs its existing frontmatter/body parsing; Planner body binds its content field;
-a Planner file uses ticket and file identity rather than the replaceable blob ID.
-Extensions still contain no sync, merge or encryption code. Existing load/save
-handlers retain presentation and business behavior.
+A merged named map records source ownership. Original record fields and assets
+remain immutable bootstrap and late-writer recovery evidence. Ordinary record
+writes route bound strings into the standalone text in the same local transaction;
+SQL projections expose current strings and revisions. First binding appends only
+ownership metadata and does not load a record document. Blob updates retain their
+physical identity. Deletion detaches the old binding before a new file lifetime.
 
-Bind a replaceable current source witness atomically to the exact source payload.
-An artifact asset and its witness can occupy one atomic map value. A record field
-needs internal bound-text storage with ordinary string reads; a sibling stamp
-cannot describe a separately merged record-local text. Ordinary edits to a bound
-source must enter the standalone text authority before acknowledgement. A native
-projection is a cache write, not a new independent text edit.
+Each physical file copy records a pending write before mutation and confirms that
+exact history immediately after bytes are written. Whole-handler completion uses
+a separate checkpoint, so a failed later step cannot make the host undo an outside
+deletion. Recheck observed bytes after awaited preparation. Downloaded assets are
+bootstrap data, never independent outside edits. An interrupted write with unknown
+bytes is preserved and surfaced for recovery instead of guessed.
 
-Transition must retain the actual existing source checkpoint and its known
-baseline under the source lock. Preserve pre-binding offline edits and bridge
-their original operation identities once. Where no causal baseline is available,
-preserve the original and surface the ambiguity. Do not call potentially edited
-local bytes unchanged genesis. Keep per-write provenance separate from completion
-of the entire save handler. An ambiguous raw-file crash state must be preserved
-rather than guessed.
+Imported sources retain immutable original-baseline facts across adoption. Valid
+pre-binding differences stop adoption, preserve pending local edits and cursors,
+and retain encrypted incoming records, assets or text for recovery. A pointer
+without its text is pending data, including when the eventual document is empty.
+Known file or source recovery failures retain their durable work and do not prevent
+startup from recovering other documents. Corrupt database failures still propagate.
 
-This changes the unconditional promise of automatic collaboration for opaque file
-callbacks. Such callbacks remain supported, but the proposed contract enables live
-collaboration only after a source binding is declared. PS-776 decision request
-`6c4e517f-f95e-4603-9983-8471fdaeb0c7` records this choice. The reviewed design
-assessment and the two failing semantic probes are retained in RP-45. This section
-records a proposal; it does not claim the binding or transition is implemented.
+The original two causal failures and subsequent independent reviews are in RP-45.
+Planner request `6c4e517f-f95e-4603-9983-8471fdaeb0c7` records the earlier pause;
+the later user instruction authorized this implementation without answering that
+request on the user’s behalf.
 
 ## Initial history and offline edits
 

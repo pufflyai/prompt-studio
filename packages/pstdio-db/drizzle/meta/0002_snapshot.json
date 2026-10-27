@@ -1,5 +1,5 @@
 {
-  "id": "dc80ccf7-ab0e-4884-9c9e-84cacc97ae8b",
+  "id": "4e596587-eabe-4efd-813f-e65e5ffe3b9a",
   "prevId": "407d45a5-ccf3-434c-b567-865f8785d11e",
   "version": "7",
   "dialect": "postgresql",
@@ -2281,11 +2281,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "projection_key": {
+          "name": "projection_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'handler'"
+        },
         "baseline": {
           "name": "baseline",
           "type": "bytea",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "pending": {
           "name": "pending",
@@ -2296,19 +2303,15 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "native_document_file_projections_source_fk": {
-          "name": "native_document_file_projections_source_fk",
+        "native_document_file_projections_workbench_id_projects_id_fk": {
+          "name": "native_document_file_projections_workbench_id_projects_id_fk",
           "tableFrom": "native_document_file_projections",
-          "tableTo": "native_document_sources",
+          "tableTo": "projects",
           "columnsFrom": [
-            "workbench_id",
-            "extension_id",
-            "document_key"
+            "workbench_id"
           ],
           "columnsTo": [
-            "workbench_id",
-            "extension_id",
-            "document_key"
+            "id"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -2320,7 +2323,8 @@
           "columns": [
             "workbench_id",
             "extension_id",
-            "document_key"
+            "document_key",
+            "projection_key"
           ]
         }
       },
@@ -4140,6 +4144,27 @@
           "primaryKey": false,
           "notNull": false
         },
+        "native_sources": {
+          "name": "native_sources",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "native_versions": {
+          "name": "native_versions",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "record_lifetime": {
+          "name": "record_lifetime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
         "revision": {
           "name": "revision",
           "type": "text",
@@ -4147,7 +4172,23 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "storage_current_records_native_sources_idx": {
+          "name": "storage_current_records_native_sources_idx",
+          "columns": [
+            {
+              "expression": "native_sources",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "storage_current_records_workbench_id_projects_id_fk": {
           "name": "storage_current_records_workbench_id_projects_id_fk",

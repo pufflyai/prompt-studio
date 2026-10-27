@@ -14,6 +14,7 @@ import { createDocumentStorageDBService } from "./document-storage";
 import type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
 import { createNativeDocumentRoomsDBService } from "./native-document-rooms";
 import { createNativeFileProjectionsDBService } from "./native-file-projections";
+import { upgradeNativeSourceLifetimes } from "./native-source-upgrade";
 import { installRecordIndexes } from "./record-index-installation";
 import { createRecoveryPoints } from "./recovery-points";
 import { getExtensionStorageOwner } from "./storage-owner";
@@ -49,6 +50,7 @@ export const createExtensionStorageDBService = (
     return item ? { ...scope, item_id: item.id, value_json: item.value, sort_order: item.sortOrder } : null;
   };
   return {
+    upgradeNativeSources: () => upgradeNativeSourceLifetimes(db),
     installIndexes: (owners: Parameters<typeof installRecordIndexes>[1], validate: () => void = () => {}) =>
       installRecordIndexes(db, owners, validate),
     recovery: createRecoveryPoints(db, documents, options),

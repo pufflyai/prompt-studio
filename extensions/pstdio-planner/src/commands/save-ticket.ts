@@ -28,7 +28,7 @@ import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
 
 // Reads the local text files back into stored ticket files, preserving a file's id across
-// saves when its name is unchanged. An unchanged body keeps its blob; the others get new ones.
+// saves when its name is unchanged. Existing files keep their blob identities.
 const readTicketFiles = async (
   storage: ExtensionStorageApi,
   projectFiles: ArtifactMount,
@@ -46,7 +46,7 @@ const readTicketFiles = async (
       files.push(existing);
       continue;
     }
-    const blobId = await storeTicketFileContent(storage, ticket.id, name, content);
+    const blobId = await storeTicketFileContent(storage, ticket.id, name, content, existing?.blobId);
     files.push(
       existing
         ? { ...existing, blobId, updatedAt: now }

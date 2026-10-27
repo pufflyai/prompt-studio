@@ -1,5 +1,5 @@
 import { and, eq, gt } from "drizzle-orm";
-import { createNativeDocumentKey, type NativeDocumentTarget, nativeDocumentTargetSchema } from "pstdio-api-contracts";
+import { type NativeDocumentTarget, nativeDocumentTargetSchema } from "pstdio-api-contracts";
 import { applyTextEditorUpdate, readTextDocumentSeed, type StorageOwner } from "pstdio-sync";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
@@ -129,8 +129,8 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
     async create(input: { owner: StorageOwner; documentKey: string; target: NativeDocumentTarget; state: Uint8Array }) {
       const parsed = nativeDocumentTargetSchema.parse(input.target);
       const target = { ...parsed, resource: parsed.resource };
-      if (createNativeDocumentKey(target) !== input.documentKey)
-        throw new Error("Editor target has another document key");
+      if (!/^[a-f0-9]{64}$/.test(input.documentKey))
+        throw new Error("The resolved text source has an invalid document key");
       const document = new Y.Doc();
       try {
         try {

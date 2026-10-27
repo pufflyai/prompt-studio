@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createNote, deleteNote, listNotes, renameNote } from "./notes";
+import { createNote, deleteNote, listNotes, readNoteSource, renameNote } from "./notes";
 import { editor, notesPage } from "./pages";
 import { createNotesMount } from "./test-mount";
 
@@ -38,7 +38,7 @@ describe("note editor", () => {
   test("loads read-only note content without allowing edits", async () => {
     const { ctx, mount } = createContext("read");
     const note = await createNote(mount, "Read-only note");
-    expect(await load(ctx, note.id)).toMatchObject({ content: "", editable: false });
+    expect(await load(ctx, note.id)).toMatchObject({ content: await readNoteSource(mount, note.id), editable: false });
   });
 
   test("does not read unavailable note files", async () => {
@@ -51,7 +51,11 @@ describe("note editor", () => {
   test("opens a new note with an empty body", async () => {
     const { ctx, mount } = createContext();
     const note = await createNote(mount, "Release checklist");
-    expect(await load(ctx, note.id)).toMatchObject({ mimeType: "text/markdown", content: "" });
+    expect(await load(ctx, note.id)).toMatchObject({
+      mimeType: "text/markdown",
+      content: await readNoteSource(mount, note.id),
+      documentSource: { kind: "artifact", identity: note.id },
+    });
   });
 
   test("asks for a note when the page has none open", async () => {
@@ -63,8 +67,9 @@ describe("note editor", () => {
     const { ctx, mount } = createContext();
     const note = await createNote(mount, "My title");
     const content = "# A different heading\n\n- [ ] Try **bold** and `code`\n";
-    await save(ctx, note.id, content);
-    expect(await load(ctx, note.id)).toMatchObject({ content });
+    const source = `${await readNoteSource(mount, note.id)}\n\n${content}`;
+    await save(ctx, note.id, source);
+    expect(await load(ctx, note.id)).toMatchObject({ content: source });
     expect(await listNotes(mount)).toMatchObject([{ id: note.id, title: "My title" }]);
   });
 

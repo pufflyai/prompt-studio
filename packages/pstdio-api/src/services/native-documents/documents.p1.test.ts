@@ -10,14 +10,17 @@ import { createWorkspaceContextFixture } from "../../features/extensions/workspa
 import { createNativeDocumentRoutes } from "../../features/native-documents/routes";
 import { createNativeDocumentService } from "./documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
+import { initializeNativeSource } from "./source-binding";
 
 let extension: Awaited<ReturnType<typeof createWorkspaceContextFixture>>;
 const services: ReturnType<typeof createNativeDocumentService>[] = [];
 const createService = (
-  options: Omit<Parameters<typeof createNativeDocumentService>[0], "deviceId" | "presenceIdentity">,
+  options: Omit<Parameters<typeof createNativeDocumentService>[0], "deviceId" | "presenceIdentity" | "initialize">,
 ) => {
   const service = createNativeDocumentService({
     ...options,
+    initialize: (loaded) =>
+      initializeNativeSource({ ...extension.deps, extensionStorageService: options.storage }, loaded),
     deviceId: "fixture-device",
     presenceIdentity: async () => ({ label: "Fixture user", deviceName: "Fixture device" }),
   });
@@ -49,10 +52,11 @@ beforeEach(async () => {
     join(extension.root, "extension.ts"),
     `export default { views: [{
     id: "document", ref: { kind: "view", id: "document" }, title: "Document",
-    body: { kind: "file", load: async (ctx) => ({ content: await ctx.workspaceFiles.readText("notes.txt"), fileName: "notes.md" }),
+    body: { kind: "file", load: async (ctx) => ({ documentSource: { kind: "workspace", path: "notes.txt" }, content: await ctx.workspaceFiles.readText("notes.txt"), fileName: "notes.md" }),
       save: async (ctx, params) => {
         if (await ctx.workspaceFiles.exists("pause-save")) throw new Error("File save paused");
         await ctx.workspaceFiles.writeText("notes.txt", params.content);
+        if (await ctx.workspaceFiles.exists("pause-after-write")) throw new Error("Save failed after writing bytes");
       } },
   }] };`,
   );
@@ -120,16 +124,48 @@ test("restart retries an unfinished file save without losing its durable editor 
     ).rejects.toThrow("File save paused");
     expect((await storage.svc.nativeFileProjections.read(room))?.pending).toBeInstanceOf(Uint8Array);
     await service.dispose();
-    await rm(join(extension.root, "pause-save"));
     const restarted = createService({
       storage: storage.svc,
       load: (input) => loadNativeMarkdownFile(deps, input),
       save: (input) => saveNativeMarkdownFile(deps, input),
     });
     await restarted.recover();
+    expect((await storage.svc.nativeFileProjections.read(room))?.pending).toBeInstanceOf(Uint8Array);
+    await rm(join(extension.root, "pause-save"));
+    await restarted.recover();
     expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("RETRY selected folder");
     expect((await storage.svc.nativeFileProjections.read(room))?.pending).toBeNull();
     await restarted.dispose();
+  } finally {
+    author.destroy();
+  }
+});
+
+test("an outside deletion after bytes were written survives a later save-handler failure", async () => {
+  const { service } = setup();
+  const room = await open(service);
+  const author = new Y.Doc();
+  try {
+    Y.applyUpdate(author, room.state);
+    const vector = Y.encodeStateVector(author);
+    author.getText("content").insert(0, "EDITOR ");
+    await writeFile(join(extension.root, "pause-after-write"), "pause");
+    await expect(
+      service.submit({
+        projectId: storage.projectAId,
+        roomId: room.roomId,
+        update: Y.encodeStateAsUpdate(author, vector),
+      }),
+    ).rejects.toThrow("after writing bytes");
+    expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("EDITOR selected folder");
+    await writeFile(join(extension.root, "notes.txt"), "selected folder OUTSIDE");
+    await rm(join(extension.root, "pause-after-write"));
+    const snapshot = await service.snapshot({ projectId: storage.projectAId, roomId: room.roomId });
+    const received = new Y.Doc();
+    Y.applyUpdate(received, snapshot.state);
+    expect(received.getText("content").toString()).toBe("selected folder OUTSIDE");
+    expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("selected folder OUTSIDE");
+    received.destroy();
   } finally {
     author.destroy();
   }

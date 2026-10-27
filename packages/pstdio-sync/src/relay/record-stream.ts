@@ -6,6 +6,7 @@ import { createRecordAssets } from "./record-assets";
 import { encodeRecordFrame, type RecordFrame, recordFrameCost } from "./record-frames";
 import { createRecordStreamReader } from "./record-stream-reader";
 import type { RecordBytes, RecordStreamCursor, RecordStreamInput } from "./record-stream-types";
+import { retainRecordSourceFrames, retainRecordSourceMap, withSourceRecovery } from "./source-recovery";
 
 // Room for the frame header and encryption under the relay's 1 MiB update limit.
 export const recordFrameLimit = 768 * 1024;
@@ -42,6 +43,13 @@ const checkPage = (result: Extract<ReadResult, { status: "updates" }>, after: nu
   if (!result.more && expected < result.lastSequence) throw new Error("Relay did not return every update");
   return result.updates.filter((update) => update.sequence > after);
 };
+const updateBytes = (cursor: RecordStreamCursor, updates: StoredUpdate[]) =>
+  updates
+    .filter((update) => update.sequence > cursor.through)
+    .reduce((sum, update) => sum + decodeBytes(update.payload).length, 0);
+// A founding state can hold records that no update carries; every device loads it once.
+const founding = (cursor: RecordStreamCursor, state: StateInfo | null) =>
+  !!state && state.baseStateId === null && state.stateId !== cursor.stateId;
 
 /**
  * Syncs every record of one owner through one encrypted relay document (ADR 0102). Each relay
@@ -77,10 +85,6 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
           stateBytes: (await reader.summary(state)).bytes,
         }
       : cursor;
-  const updateBytes = (cursor: RecordStreamCursor, updates: StoredUpdate[]) =>
-    updates
-      .filter((update) => update.sequence > cursor.through)
-      .reduce((sum, update) => sum + decodeBytes(update.payload).length, 0);
 
   /**
    * Merges a latest state this device must load: a founding state, or one that replaced removed
@@ -91,24 +95,29 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     if (!frames) return null;
     // The state covers every sequence this device skipped, or it founds a new stream.
     const next = { ...(await withState(cursor, state)), after: state.through, skipped: false };
-    const { rejected, cursor: saved } = await store.merge(addFrames(new Map(), frames), "repair", next);
+    const remote = addFrames(new Map(), frames);
+    const { rejected, cursor: saved } = await withSourceRecovery(
+      () => store.merge(remote, "repair", next),
+      (error) => retainRecordSourceMap(input, remote, error, quarantine),
+    );
     await skippedRecords(rejected);
     return saved;
   };
-  // A founding state can hold records that no update carries; every device loads it once.
-  const founding = (cursor: RecordStreamCursor, state: StateInfo | null) =>
-    !!state && state.baseStateId === null && state.stateId !== cursor.stateId;
 
   const applyPage = async (cursor: RecordStreamCursor, result: Extract<ReadResult, { status: "updates" }>) => {
     const updates = checkPage(result, cursor.after);
     const next = await withState(cursor, result.state);
     if (!updates.length && next === cursor) return cursor;
     const frames = await reader.openFrames(updates);
-    const { rejected, cursor: applied } = await store.apply(frames, {
-      ...next,
-      after: updates.at(-1)?.sequence ?? cursor.after,
-      pendingBytes: next.pendingBytes + updateBytes(next, updates),
-    });
+    const { rejected, cursor: applied } = await withSourceRecovery(
+      () =>
+        store.apply(frames, {
+          ...next,
+          after: updates.at(-1)?.sequence ?? cursor.after,
+          pendingBytes: next.pendingBytes + updateBytes(next, updates),
+        }),
+      (error) => retainRecordSourceFrames(input, frames, error, quarantine),
+    );
     for (const index of rejected)
       await quarantine({ kind: "update", id: updates[index]!.updateId, envelope: updates[index] });
     return applied;
@@ -250,7 +259,10 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
       pendingBytes: 0,
       skipped: cursor.skipped || skipped,
     };
-    const { rejected, cursor: saved } = await store.merge(remote, "adopt", joined);
+    const { rejected, cursor: saved } = await withSourceRecovery(
+      () => store.merge(remote, "adopt", joined),
+      (error) => retainRecordSourceMap(input, remote, error, quarantine),
+    );
     await skippedRecords(rejected);
     return saved;
   };

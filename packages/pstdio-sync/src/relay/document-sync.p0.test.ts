@@ -3,11 +3,13 @@ import type { ReadResult, StateEnvelope, StateInfo, StoredUpdate, UpdateEnvelope
 import * as Y from "yjs";
 import { type DocumentStore, memoryDocumentState } from "../document-types";
 import { decodeBytes } from "../encoding";
-import { createSyncId, createSyncSpace, openState, sealState, sealUpdate } from "../encryption";
+import { createSyncId, createSyncSpace, openState, openUpdate, sealState, sealUpdate } from "../encryption";
 import { createMemoryDocumentStore } from "../memory-document-store";
 import { mergeTextDocuments, prepareTextDocumentAdoption } from "../text-document-adoption";
 import { readTextDocumentSeed, seedTextDocument } from "../text-document-seed";
+import { importTextSource } from "../text-source-import";
 import { createDocumentSync } from "./document-sync";
+import type { SyncFailure } from "./document-sync-types";
 
 const owner = { workbenchId: "project", extensionId: "notes" };
 const space = await createSyncSpace({
@@ -131,6 +133,36 @@ const textDevice = async (relay: ReturnType<typeof relayFixture>["relay"], sourc
     },
   };
 };
+
+test("different imported histories retain an encrypted recovery copy and keep local text pending", async () => {
+  const f = relayFixture();
+  const first = await textDevice(f.relay);
+  const second = await textDevice(f.relay);
+  const remote = new Y.Doc();
+  const local = new Y.Doc();
+  await importTextSource(remote, "a".repeat(64), "Saved remotely before binding");
+  await importTextSource(local, "a".repeat(64), "Saved locally before binding");
+  first.importState(Y.encodeStateAsUpdate(remote));
+  second.importState(Y.encodeStateAsUpdate(local));
+  try {
+    await first.sync.synchronize();
+    await expect(second.sync.synchronize()).rejects.toThrow("pre-binding");
+    expect(second.text().toString()).toBe("Saved locally before binding");
+    expect(await second.sync.status()).toMatchObject({ pending: true, needsAttention: true, downloaded: false });
+    const failure = second.rejected[0] as SyncFailure;
+    expect(JSON.stringify(failure)).not.toContain("Saved remotely before binding");
+    const envelope = failure.envelope as { update: UpdateEnvelope };
+    const saved = new Y.Doc();
+    Y.applyUpdate(saved, await openUpdate(space, documentId, envelope.update));
+    expect(saved.getText("content").toString()).toBe("Saved remotely before binding");
+    saved.destroy();
+  } finally {
+    first.close();
+    second.close();
+    remote.destroy();
+    local.destroy();
+  }
+});
 
 test("two hosts with the same retired history serialize its adoption without duplicating shared edits", async () => {
   const f = relayFixture();

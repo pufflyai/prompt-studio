@@ -7,6 +7,7 @@ import {
   hasDocumentUserData,
   isEmptyDocument,
   mergeTextDocuments,
+  NativeSourcePendingError,
   prepareTextDocumentAdoption,
   readTextDocumentSeed,
   type StorageObserver,
@@ -20,6 +21,25 @@ import { storage_current_records, storage_documents } from "../../db/schemas.pg"
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { runDocumentTransaction } from "./document-persistence";
+import { lockStorageProject, refreshNativeRecordText } from "./native-record-projection";
+
+const readNativeText = async (document: Y.Doc) => {
+  if (isEmptyDocument(document)) throw new NativeSourcePendingError();
+  await readTextDocumentSeed(document);
+  return document.getText("content").toString();
+};
+
+const notifyNativeRecords = (listeners: Map<string, Set<() => void>>, owner: StorageOwner, keys: string[]) => {
+  for (const documentKey of keys) {
+    const key = JSON.stringify({
+      workbench_id: owner.workbenchId,
+      extension_id: owner.extensionId,
+      document_id: JSON.stringify(["native-markdown", documentKey]),
+    });
+    for (const listener of listeners.get(key) ?? []) listener();
+  }
+};
+
 import { createProjectionStatistics } from "./projection-statistics";
 import { createRecordStreamStore } from "./record-stream-store";
 import { resourceDocumentId } from "./resource-document-persistence";
@@ -47,9 +67,20 @@ export const createDocumentStorageDBService = (
       const address = addressFor(owner, documentId);
       const key = JSON.stringify(address);
       try {
-        const result = await db.transaction((tx) =>
-          runDocumentTransaction(tx, { address, owner, cached: cache.get(key), diagnostics, prepare }, action),
-        );
+        const nativeKey = documentId.startsWith('["native-markdown",')
+          ? (JSON.parse(documentId) as string[])[1]
+          : undefined;
+        const result = await db.transaction(async (tx) => {
+          if (nativeKey) await lockStorageProject(tx, owner.workbenchId);
+          const result = await runDocumentTransaction(
+            tx,
+            { address, owner, cached: cache.get(key), diagnostics, prepare },
+            action,
+          );
+          if (nativeKey && result.changed)
+            await refreshNativeRecordText(tx, owner, nativeKey, result.document.getText("content").toString());
+          return result;
+        });
         cache.publish(key, result);
         if (result.changed) {
           for (const listener of listeners) listener(owner);
@@ -179,6 +210,7 @@ export const createDocumentStorageDBService = (
           observer,
           assets: input.assets,
           diagnostics,
+          nativeChanged: (keys) => notifyNativeRecords(documentListeners, input.owner, keys),
           changed: () => {
             for (const listener of listeners) listener(input.owner);
           },
@@ -196,7 +228,7 @@ export const createDocumentStorageDBService = (
       const store = nativeStore(documentId);
       const text = createTextDocumentStorage({ owner: input.owner, store });
       return {
-        read: text.read,
+        read: () => store.transaction(input.owner, ({ document }) => readNativeText(document)),
         exportUpdate: text.exportUpdate,
         store,
         save: (source: string) =>

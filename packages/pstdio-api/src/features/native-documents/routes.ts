@@ -7,6 +7,7 @@ import {
   nativePresenceUpdateSchema,
 } from "pstdio-api-contracts";
 import { NativeDocumentRoomError } from "pstdio-db";
+import { NativeSourcePendingError, NativeSourceRecoveryError, StorageRevisionChangedError } from "pstdio-sync";
 import type { createNativeDocumentService } from "../../services/native-documents/documents";
 import { NativeDocumentSourceError } from "../../services/native-documents/file-source";
 import { NativePresenceError } from "../../services/native-documents/presence";
@@ -18,6 +19,11 @@ const documentParams = projectParams.extend({ documentKey: z.string().regex(/^[a
 const roomQuery = z.object({ roomId: z.uuid() });
 const json = <T extends z.ZodType>(schema: T) => ({ "application/json": { schema } });
 const base = "/projects/{projectId}/native-documents";
+const sourceFailure = (error: Error) => {
+  if (error instanceof NativeSourcePendingError) return { status: 503 as const, code: error.code };
+  if (error instanceof NativeSourceRecoveryError) return { status: 409 as const, code: error.code };
+  if (error instanceof StorageRevisionChangedError) return { status: 409 as const, code: "storage_revision_changed" };
+};
 const wireSnapshot = <T extends { state: Uint8Array; seedId: string; sourceSeedId: string; sourceState?: Uint8Array }>(
   value: T,
 ) => ({
@@ -29,6 +35,8 @@ const wireSnapshot = <T extends { state: Uint8Array; seedId: string; sourceSeedI
 export const createNativeDocumentRoutes = (service: ReturnType<typeof createNativeDocumentService>) => {
   const routes = new OpenAPIHono<AppBindings>();
   routes.onError((error, c) => {
+    const source = sourceFailure(error);
+    if (source) return c.json({ error: error.message, code: source.code }, source.status);
     if (error instanceof NativePresenceError)
       return c.json(
         { error: error.message, code: `native_presence_${error.code}` },

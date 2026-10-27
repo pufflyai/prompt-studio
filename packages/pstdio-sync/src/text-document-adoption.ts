@@ -24,6 +24,7 @@ import {
   textCheckpoint,
 } from "./text-document-receipts";
 import { readTextDocumentSeed } from "./text-document-seed";
+import { assertCompatibleTextImports, carryTextSourceImports } from "./text-source-import";
 
 export { seedTextDocument } from "./text-document-seed";
 
@@ -190,7 +191,9 @@ export const mergeTextDocuments = async (local: Y.Doc, remote: Y.Doc) => {
   const remoteSeed = await readTextDocumentSeed(remote);
   if (isEmptyDocument(local)) return cloneTextDocument(remote);
   const localSeed = await readTextDocumentSeed(local);
+  await assertCompatibleTextImports(local, remote, localSeed.source, remoteSeed.source);
   const merged = cloneTextDocument(remote);
+  carryTextSourceImports(local, merged);
   if (localSeed.id === remoteSeed.id) {
     try {
       return await mergeSharedHistory(local, remote, merged, remoteSeed.id);

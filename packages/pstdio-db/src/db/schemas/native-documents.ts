@@ -21,26 +21,20 @@ export const native_document_sources = pgTable(
 export const native_document_file_projections = pgTable(
   "native_document_file_projections",
   {
-    workbench_id: text("workbench_id").notNull(),
+    workbench_id: text("workbench_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
     extension_id: text("extension_id").notNull(),
     document_key: text("document_key").notNull(),
-    baseline: bytea("baseline").notNull(),
+    projection_key: text("projection_key").notNull().default("handler"),
+    baseline: bytea("baseline"),
     pending: bytea("pending"),
   },
   (table) => [
     primaryKey({
       name: "native_document_file_projections_pk",
-      columns: [table.workbench_id, table.extension_id, table.document_key],
+      columns: [table.workbench_id, table.extension_id, table.document_key, table.projection_key],
     }),
-    foreignKey({
-      name: "native_document_file_projections_source_fk",
-      columns: [table.workbench_id, table.extension_id, table.document_key],
-      foreignColumns: [
-        native_document_sources.workbench_id,
-        native_document_sources.extension_id,
-        native_document_sources.document_key,
-      ],
-    }).onDelete("cascade"),
   ],
 );
 

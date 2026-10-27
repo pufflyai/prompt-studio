@@ -79,3 +79,16 @@ export const seedTextDocument = async (document: Y.Doc, source: string) => {
     genesis.destroy();
   }
 };
+
+/** The original characters of this exact history, with their validated seed metadata. */
+export const initialTextDocumentState = async (document: Y.Doc) => {
+  const seed = await readTextDocumentSeed(document);
+  const initial = new Y.Doc();
+  try {
+    Y.applyUpdate(initial, seed.state);
+    initial.getMap<string>(seedMap).set(seed.id, encodeBytes(seed.state));
+    return Y.encodeStateAsUpdate(initial);
+  } finally {
+    initial.destroy();
+  }
+};

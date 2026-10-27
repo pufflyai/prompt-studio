@@ -161,3 +161,10 @@ test("an editor frame missing causal history is not acknowledged or persisted", 
   source.destroy();
   author.destroy();
 });
+
+test("a missing native document is pending data while a seeded empty file is readable", async () => {
+  const f = await fixture();
+  await expect(f.text.read()).rejects.toMatchObject({ code: "native_source_pending" });
+  await f.text.seed("");
+  expect(await f.text.read()).toBe("");
+});
