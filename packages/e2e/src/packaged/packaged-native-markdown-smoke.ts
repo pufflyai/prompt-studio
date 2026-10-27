@@ -1,8 +1,9 @@
 import { expect } from "bun:test";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import * as Y from "yjs";
 
 export const writeNativeMarkdownExtension = (root: string) => {
   const source = join(root, "extension-sources", "native-markdown");
@@ -23,7 +24,14 @@ export const writeNativeMarkdownExtension = (root: string) => {
     views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: {
       kind: "file",
       load: async ctx => ({ fileName: "native-shared.md", content: await ctx.workspaceFiles.readText("native-shared.md"), documentSource: {kind: "workspace", path: "native-shared.md"} }),
-      save: async (ctx, input) => { await ctx.workspaceFiles.writeText("native-shared.md", input.content); await ctx.extensionFiles.writeText("saved.txt", input.content); },
+      save: async (ctx, input) => {
+        if (await ctx.extensionFiles.exists("race")) {
+          await ctx.extensionFiles.writeText("race-entered", "ready");
+          while (!(await ctx.extensionFiles.exists("race-release"))) await Bun.sleep(10);
+        }
+        await ctx.workspaceFiles.writeText("native-shared.md", input.content);
+        await ctx.extensionFiles.writeText("saved.txt", input.content);
+      },
     }}],
   };`,
   );
@@ -57,6 +65,28 @@ export const expectPackagedNativeMarkdown = async (input: {
     expect(
       readFileSync(join(input.projectFolder, ".pstdio/extension-storage/test.native-markdown/saved.txt"), "utf8"),
     ).toBe(expected);
+    const directory = join(input.projectFolder, ".pstdio/extension-storage/test.native-markdown");
+    const author = new Y.Doc();
+    try {
+      Y.applyUpdate(author, snapshot.state);
+      const vector = Y.encodeStateVector(author);
+      author.getText("content").insert(frontmatter.length, "LOCAL ");
+      writeFileSync(join(directory, "race"), "pause");
+      const saving = client.nativeDocuments.submit({ ...address, update: Y.encodeStateAsUpdate(author, vector) });
+      while (!existsSync(join(directory, "race-entered"))) await Bun.sleep(10);
+      writeFileSync(path, `${expected} OUTSIDE`);
+      writeFileSync(join(directory, "race-release"), "continue");
+      const accepted = await saving;
+      Y.applyUpdate(author, accepted.state);
+      expect(author.getText("content").toString()).toBe(`${frontmatter}LOCAL Outside edit`);
+      expect(readFileSync(path, "utf8")).toBe(`${expected} OUTSIDE`);
+      rmSync(join(directory, "race"));
+      await client.nativeDocuments.snapshot(address);
+      expect(readFileSync(path, "utf8")).toBe(`${frontmatter}LOCAL Outside edit OUTSIDE`);
+    } finally {
+      author.destroy();
+      for (const name of ["race", "race-entered", "race-release"]) rmSync(join(directory, name), { force: true });
+    }
   } finally {
     await client.nativeDocuments.close({
       projectId: input.projectId,

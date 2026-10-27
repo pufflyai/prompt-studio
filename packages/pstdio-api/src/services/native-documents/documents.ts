@@ -79,7 +79,13 @@ export const createNativeDocumentService = (deps: {
     }
   };
   const snapshot = async (room: Room, roomId: string) => {
-    await projection.reconcile(room);
+    try {
+      await projection.reconcile(room);
+    } catch (error) {
+      if (!(error instanceof StorageRevisionChangedError)) throw error;
+      // Text is already durable. Keep the pending projection for the next snapshot
+      // or restart instead of disconnecting an editor because another writer won.
+    }
     const state = await canonical(room).exportUpdate();
     const document = new Y.Doc();
     try {
