@@ -307,10 +307,14 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
     await expect(page).toHaveURL(destination);
     await page.keyboard.press("Escape");
   }
-  await page.keyboard.press("ControlOrMeta+Alt+N");
+  await page.keyboard.press("Alt+Shift+Space");
+  await page.keyboard.press("c");
+  await page.keyboard.press("n");
   await expect(page).toHaveURL(/\/notes$/);
   await expect(page.getByRole("tab", { name: /New note/ }).first()).toBeVisible();
-  await page.keyboard.press("ControlOrMeta+Alt+P");
+  await page.keyboard.press("Alt+Shift+Space");
+  await page.keyboard.press("c");
+  await page.keyboard.press("t");
   const ticketForm = page.getByRole("dialog").last();
   await expect(ticketForm.getByText("New ticket", { exact: true })).toBeVisible();
   await expect(ticketForm.getByRole("button", { name: "Attach files", exact: true })).toBeVisible();

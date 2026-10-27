@@ -4,4 +4,4 @@
 "pstdio-artifacts": minor
 ---
 
-Add resource creation through existing UI flows and shared Go shortcuts for Notes, Kanban, Timeline, and Artifacts.
+Add one default shortcut per resource creation and navigation action through existing UI flows.

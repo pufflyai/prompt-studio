@@ -12,7 +12,6 @@ import {
 import { plannerTemplates } from "./extension-assets";
 import { plannerCommands } from "./src/commands";
 import { mergedPullRequestsSchedule } from "./src/commands/check-merged-pull-requests";
-import { createTicketCommand } from "./src/commands/create-ticket";
 import { implementationTargetsCommand } from "./src/commands/implementation-targets";
 import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
@@ -153,12 +152,7 @@ export default defineExtension({
   navigationItems: [...plannerUi.navigationItems, timelineNavigation],
   keybindings: [
     ...plannerShortcuts,
-    defineKeybinding({ id: "open-tickets", key: "Alt+Shift+P", action: ticketsPageTarget }),
-    defineKeybinding({
-      id: "new-ticket",
-      key: "Mod+Alt+P",
-      action: { kind: "command", target: { command: createTicketCommand.ref } },
-    }),
+    defineKeybinding({ id: "open-tickets", key: "Alt+Shift+P", sticky: true, action: ticketsPageTarget }),
   ],
   navigationTrees: plannerUi.navigationTrees,
   settingsPanels: plannerUi.settingsPanels,
