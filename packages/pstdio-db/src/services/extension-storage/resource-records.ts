@@ -1,5 +1,11 @@
 import { and, eq } from "drizzle-orm";
-import { type AssetStore, editResourceDocument, type StorageObserver, type StorageOwner } from "pstdio-sync";
+import {
+  type AssetStore,
+  editResourceDocument,
+  type StorageObserver,
+  type StorageOwner,
+  StorageRevisionChangedError,
+} from "pstdio-sync";
 import {
   assertStorageLimits,
   fingerprint,
@@ -56,14 +62,28 @@ export const createResourceRecords = (
           eq(storage_document_operations.operation_id, operationId),
         ),
       );
-  const commitIn = async (tx: Transaction, group: StorageGroup, identity: string) => {
+  const commitIn = async (
+    tx: Transaction,
+    group: StorageGroup,
+    identity: string,
+    ownRevisions?: Map<string, string>,
+  ) => {
     const revision = await lockRecordOwner(tx, owner);
     const ids = group.edits.map(({ recordId }) => recordId);
     const [previous] = await receipt(tx, group.operationId);
     if (previous) {
       if (previous.fingerprint !== identity) throw new Error("Operation identity reused with changed payload");
-      return { records: await readProjectedRecords(tx, owner, ids), projected: 0 };
+      // A receipt acknowledges the earlier operation, not another writer's current state.
+      return { records: [], projected: 0 };
     }
+    const expected = new Map(
+      ids.flatMap((id) => {
+        const revision = deps.observer?.expected?.(owner, id);
+        return revision === undefined ? [] : [[id, ownRevisions?.get(id) ?? revision] as const];
+      }),
+    );
+    for (const record of await readProjectedRecords(tx, owner, [...expected.keys()]))
+      if (expected.get(record.recordId) !== record.revision) throw new StorageRevisionChangedError();
     const { sources } = await loadResourceDocuments(tx, owner, ids.map(resourceDocumentId));
     const migration = dataMigrationContext.getStore();
     // Every edit is validated and prepared before anything is written; a failure aborts the whole group.
@@ -111,7 +131,7 @@ export const createResourceRecords = (
     if (result.projected) deps.statistics.record(result.projected);
     deps.changed();
     const saved = outcome(operationId);
-    deps.observer?.committed(owner, result.records, saved);
+    if (result.records.length) deps.observer?.committed(owner, result.records, saved);
     return saved;
   };
   const read = async (connection: Pick<DbClient, "select">, id: string) => {
@@ -148,12 +168,14 @@ export const createResourceRecords = (
       }) => Promise<T>,
     ) => {
       const committed: { result: Awaited<ReturnType<typeof commitIn>>; operationId: string }[] = [];
+      const ownRevisions = new Map<string, string>();
       const value = await db.transaction(async (tx) => {
         await lockRecordOwner(tx, owner);
         return run({
           read: (id) => read(tx, id),
           commit: async (group) => {
-            const result = await commitIn(tx, group, await prepare(group));
+            const result = await commitIn(tx, group, await prepare(group), ownRevisions);
+            for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
             committed.push({ result, operationId: group.operationId });
             return outcome(group.operationId);
           },

@@ -5,7 +5,7 @@ import {
   toWorkbenchWhenExpression,
 } from "@pstdio/workbench/extensions";
 import { createElement } from "react";
-import { buildAbsoluteApiUrl } from "@/lib/api";
+import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
@@ -144,6 +144,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
           return response;
         },
         kanbanAdapter: kanban,
+        nativeDocuments: getApiClient().nativeDocuments,
         dataTableAdapter: {
           resolveRowResource: (_record, row) =>
             toDashboardExtensionResource(row.resource, input.projectId, input.metadata.resourceKinds),

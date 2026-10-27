@@ -1,3 +1,4 @@
+import { hostname } from "node:os";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
 import { createStoragePositions } from "pstdio-api-contracts";
@@ -29,10 +30,13 @@ import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createAppAccount } from "./services/account/app-account";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
+import { createNativeDocumentService } from "./services/native-documents/documents";
+import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/native-documents/file-source";
 import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
+import { upgradeArtifactFileProjections } from "./services/shared-files/artifact-projection-upgrade";
 import { createSkillService } from "./services/skill-service";
 import type { AppBindings } from "./types";
 
@@ -114,6 +118,10 @@ const buildApp = async (
     settingsDBService,
     skillsDBService,
   } = dbs;
+  await upgradeArtifactFileProjections({
+    projections: extensionStorageDBService.fileProjections,
+    contexts: await extensionStorageDBService.fileProjections.legacyContexts(),
+  });
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const artifactMountWrites = createArtifactMountWriteLedger();
@@ -234,6 +242,16 @@ const buildApp = async (
     fileService,
     boardViewsService: boardViewsDBService,
     notificationService,
+    nativeDocuments: createNativeDocumentService({
+      deviceId: environmentId,
+      presenceIdentity: async () => {
+        const { login } = await account.accountService.status();
+        return { label: (login?.email ?? "Local editor").slice(0, 64), deviceName: hostname().slice(0, 64) };
+      },
+      storage: extensionStorageDBService,
+      load: (input) => loadNativeMarkdownFile(deps, input),
+      save: (input) => saveNativeMarkdownFile(deps, input),
+    }),
     installedExtensionSourcesService: installedExtensionSourcesDBService,
     extensionAutomationPreferencesService,
     extensionConnectionService,
@@ -251,6 +269,7 @@ const buildApp = async (
     terminal: terminalSupervisor.api,
   };
 
+  await deps.nativeDocuments.recover();
   await automationService.recoverInterruptedRuns();
 
   const extensionScheduler = startAppExtensionScheduler(deps, projectService, storageRoot);

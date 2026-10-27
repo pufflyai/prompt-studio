@@ -4,10 +4,13 @@ import { AlertMessage, EmptyState } from "@pstdio/ui";
 import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
 import { lazy, type ReactNode, type RefObject, Suspense, useLayoutEffect } from "react";
 import type { FileRendererContent } from "../../../core";
+import type { NativeDocumentSession } from "../../../core/native-documents/native-document-session";
 import { FileRendererLoading } from "./file-renderer-loading";
 import { resolveFileRendererPresentation } from "./file-renderer-presentation";
+import { NativeMarkdownFileEditor } from "./native-markdown-file-editor";
 
 const CodeEditor = lazy(() => import("@pstdio/ui/diff").then((module) => ({ default: module.CodeEditor })));
+const fileTitle = (content: FileRendererContent, fallback: string) => content.fileName ?? content.filePath ?? fallback;
 
 interface FileRendererContentViewProps {
   content: FileRendererContent | null;
@@ -23,6 +26,7 @@ interface FileRendererContentViewProps {
     targetId: string;
   };
   title: string;
+  connectDocument?: () => NativeDocumentSession;
 }
 
 export const FileRendererContentView = (props: FileRendererContentViewProps) => {
@@ -37,6 +41,7 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
     rendererRef,
     sectionNavigation,
     title,
+    connectDocument,
   } = props;
   useLayoutEffect(() => {
     if (!editorKey || sectionNavigation) return;
@@ -120,6 +125,22 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
     );
   }
 
+  if (presentation.isEditable && connectDocument) {
+    return (
+      <Flex ref={rendererRef} direction="column" h="full" minH="0" bg="bg">
+        {positionNotice}
+        <NativeMarkdownFileEditor
+          key={editorKey}
+          connect={connectDocument}
+          title={fileTitle(content, title)}
+          placeholder={content.placeholder ?? "Write…"}
+          sectionNavigation={sectionNavigation}
+          onActiveSectionChange={onActiveSectionChange}
+          errorNotice={errorNotice}
+        />
+      </Flex>
+    );
+  }
   return (
     <Flex ref={rendererRef} direction="column" h="full" minH="0" overflow="hidden" bg="bg">
       {errorNotice}

@@ -122,6 +122,16 @@ const appendUpdates = async (
   return revision;
 };
 
+const replaceDocument = async (tx: Transaction, address: DocumentAddress, revision: number, document: Y.Doc) => {
+  const next = revision + 1;
+  await tx
+    .update(storage_documents)
+    .set({ state: Y.encodeStateAsUpdate(document), revision: next, folded_revision: next })
+    .where(documentWhere(address));
+  await tx.delete(storage_document_updates).where(updatesWhere(address));
+  return next;
+};
+
 export const runDocumentTransaction = async <T>(
   tx: Transaction,
   input: {
@@ -129,11 +139,17 @@ export const runDocumentTransaction = async <T>(
     owner: StorageOwner;
     cached?: LoadedDocument;
     diagnostics?: StorageDiagnostics;
+    prepare?: (document: Y.Doc) => Promise<Y.Doc>;
   },
   action: (state: DocumentState) => Promise<T>,
 ) => {
   const { address } = input;
-  const { document, row, initialize } = await loadDocument(tx, address, input.owner, input.cached, input.diagnostics);
+  const {
+    document: previous,
+    row,
+    initialize,
+  } = await loadDocument(tx, address, input.owner, input.cached, input.diagnostics);
+  let document = previous;
   const identities =
     address.document_id === resourceNumbersDocumentId && address.extension_id === coreOwnerId
       ? await trackResourceIdentityProjection(tx, address, document, !!initialize, row.revision)
@@ -146,6 +162,14 @@ export const runDocumentTransaction = async <T>(
   const capture = (update: Uint8Array) => updates.push(update);
   document.on("update", capture);
   try {
+    if (input.prepare) {
+      const prepared = await input.prepare(document);
+      if (prepared !== document) {
+        document.off("update", capture);
+        document = prepared;
+        document.on("update", capture);
+      }
+    }
     const value = await action({
       document,
       migrationSeed: migration?.key,
@@ -156,14 +180,18 @@ export const runDocumentTransaction = async <T>(
     });
     identities?.prepare();
     await operations.persist();
-    const revision = await appendUpdates(tx, address, row, document, updates);
+    const replaced = document !== previous;
+    const revision = replaced
+      ? await replaceDocument(tx, address, row.revision, document)
+      : await appendUpdates(tx, address, row, document, updates);
     await identities?.persist(revision);
-    return { value, revision, document, changed: updates.length > 0 };
+    return { value, revision, document, changed: replaced || updates.length > 0 };
   } catch (error) {
     if (document !== input.cached?.document) document.destroy();
     throw error;
   } finally {
     document.off("update", capture);
     identities?.stop();
+    if (document !== previous && previous !== input.cached?.document) previous.destroy();
   }
 };

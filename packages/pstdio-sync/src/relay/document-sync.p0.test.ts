@@ -1,9 +1,12 @@
 import { expect, test } from "bun:test";
 import type { ReadResult, StateEnvelope, StateInfo, StoredUpdate, UpdateEnvelope } from "pstdio-sync-contracts";
 import * as Y from "yjs";
+import { type DocumentStore, memoryDocumentState } from "../document-types";
 import { decodeBytes } from "../encoding";
 import { createSyncId, createSyncSpace, openState, sealState, sealUpdate } from "../encryption";
 import { createMemoryDocumentStore } from "../memory-document-store";
+import { mergeTextDocuments, prepareTextDocumentAdoption } from "../text-document-adoption";
+import { readTextDocumentSeed, seedTextDocument } from "../text-document-seed";
 import { createDocumentSync } from "./document-sync";
 
 const owner = { workbenchId: "project", extensionId: "notes" };
@@ -83,6 +86,227 @@ const device = (relay: ReturnType<typeof relayFixture>["relay"], limits?: { byte
     values: () => store.transaction(owner, async ({ document }) => document.getMap("values").toJSON()),
   };
 };
+
+const textDevice = async (relay: ReturnType<typeof relayFixture>["relay"], source?: string) => {
+  const state = memoryDocumentState(new Y.Doc());
+  const store: DocumentStore = { transaction: async (_owner, action) => action(state) };
+  Object.assign(store, {
+    initialHistory: {
+      validate: readTextDocumentSeed,
+      prepare: (_owner: unknown, remote: Y.Doc) => prepareTextDocumentAdoption(state.document, remote),
+      merge: async (_owner: unknown, remote: Y.Doc) => {
+        const pending = await prepareTextDocumentAdoption(state.document, remote);
+        if (pending) {
+          pending.destroy();
+          return null;
+        }
+        const merged = await mergeTextDocuments(state.document, remote);
+        state.document.destroy();
+        state.document = merged;
+        const snapshot = new Y.Doc();
+        Y.applyUpdate(snapshot, Y.encodeStateAsUpdate(merged));
+        return snapshot;
+      },
+    },
+  });
+  if (source !== undefined) await seedTextDocument(state.document, source);
+  const rejected: unknown[] = [];
+  const sync = createDocumentSync({
+    owner,
+    store,
+    space,
+    documentId,
+    relay,
+    quarantine: async (f) => void rejected.push(f),
+  });
+  return {
+    sync,
+    rejected,
+    text: () => state.document.getText("content"),
+    exportState: () => Y.encodeStateAsUpdate(state.document),
+    importState: (update: Uint8Array) => Y.applyUpdate(state.document, update),
+    close: () => {
+      sync.close();
+      state.document.destroy();
+    },
+  };
+};
+
+test("two hosts with the same retired history serialize its adoption without duplicating shared edits", async () => {
+  const f = relayFixture();
+  const canonical = await textDevice(f.relay, "abc");
+  await canonical.sync.synchronize();
+  const first = await textDevice(f.relay, "abc");
+  first.text().insert(0, "X");
+  const second = await textDevice(f.relay);
+  second.importState(first.exportState());
+  await Promise.all([first.sync.synchronize(), second.sync.synchronize()]);
+  await canonical.sync.synchronize();
+  expect(canonical.text().toString()).toBe("Xabc");
+  expect(first.text().toString()).toBe("Xabc");
+  expect(second.text().toString()).toBe("Xabc");
+  canonical.close();
+  first.close();
+  second.close();
+});
+
+test("shared-root recovery serializes provenance repairs before ordinary updates resume", async () => {
+  const root = new Y.Doc();
+  await seedTextDocument(root, "abc");
+  const source = new Y.Doc();
+  await seedTextDocument(source, "abc");
+  source.getText("content").insert(0, "X");
+  const beforeLoss = await mergeTextDocuments(source, root);
+  const afterLoss = await mergeTextDocuments(source, root);
+  const f = relayFixture();
+  const canonical = await textDevice(f.relay);
+  canonical.importState(Y.encodeStateAsUpdate(afterLoss));
+  await canonical.sync.synchronize();
+  const returning = await textDevice(f.relay);
+  returning.importState(Y.encodeStateAsUpdate(beforeLoss));
+  await returning.sync.synchronize();
+  await canonical.sync.synchronize();
+  expect(returning.text().toString()).toBe("Xabc");
+  expect(canonical.text().toString()).toBe("Xabc");
+  const writes = f.writes.length;
+  const states = f.states.length;
+  await returning.sync.synchronize();
+  await canonical.sync.synchronize();
+  expect(f.writes).toHaveLength(writes);
+  expect(f.states).toHaveLength(states);
+  canonical.close();
+  returning.close();
+  for (const doc of [root, source, beforeLoss, afterLoss]) doc.destroy();
+});
+
+test("a canonical edit appended while another history is adopted remains in the uncovered tail", async () => {
+  const f = relayFixture();
+  const canonical = await textDevice(f.relay, "abc");
+  await canonical.sync.synchronize();
+  const source = await textDevice(f.relay, "abc");
+  source.text().insert(0, "X");
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const replace = f.relay.replace;
+  f.relay.replace = async (state) => {
+    entered.resolve();
+    await release.promise;
+    return replace(state);
+  };
+  const joining = source.sync.synchronize();
+  await entered.promise;
+  canonical.text().insert(3, "Y");
+  await canonical.sync.synchronize();
+  source.text().insert(source.text().length, "Z");
+  release.resolve();
+  await joining;
+  await canonical.sync.synchronize();
+  expect(source.text().toString()).toBe("XabcYZ");
+  expect(canonical.text().toString()).toBe("XabcYZ");
+  canonical.close();
+  source.close();
+});
+
+test("a discovered text document waits for its source instead of founding an empty unseeded history", async () => {
+  const f = relayFixture();
+  const waiting = await textDevice(f.relay);
+  await waiting.sync.synchronize();
+  expect(f.states).toHaveLength(0);
+  expect(f.writes).toHaveLength(0);
+  expect(await waiting.sync.status()).toEqual({ downloaded: false, pending: false, needsAttention: false });
+  const source = await textDevice(f.relay, "source arrived");
+  await source.sync.synchronize();
+  await waiting.sync.synchronize();
+  expect(waiting.text().toString()).toBe("source arrived");
+  waiting.close();
+  source.close();
+});
+
+test("independent text histories found one state before sending their offline edits", async () => {
+  const f = relayFixture();
+  const first = await textDevice(f.relay, "first\nlast");
+  const second = await textDevice(f.relay, "first\nlast");
+  first.text().insert(0, "A ");
+  second.text().insert(second.text().length, " B");
+  await Promise.all([first.sync.synchronize(), second.sync.synchronize()]);
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect(first.text().toString()).toBe("A first\nlast B");
+  expect(second.text().toString()).toBe(first.text().toString());
+  expect(f.states[0]?.through).toBe(0);
+  const active = new Y.Doc();
+  Y.applyUpdate(active, first.exportState());
+  const canonicalSeed = await readTextDocumentSeed(active);
+  active.destroy();
+  for (const state of f.states) {
+    const snapshot = new Y.Doc();
+    Y.applyUpdate(snapshot, await openState(space, documentId, state, decodeBytes(state.payload)));
+    expect((await readTextDocumentSeed(snapshot)).id).toBe(canonicalSeed.id);
+    snapshot.destroy();
+  }
+  expect(first.rejected).toEqual([]);
+  expect(second.rejected).toEqual([]);
+  first.close();
+  second.close();
+});
+
+test("typing while the initial state is being published survives the following merge", async () => {
+  const f = relayFixture();
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const original = f.relay.replace;
+  f.relay.replace = async (state) => {
+    entered.resolve();
+    await release.promise;
+    return original(state);
+  };
+  const first = await textDevice(f.relay, "start");
+  const running = first.sync.synchronize();
+  await entered.promise;
+  first.text().insert(first.text().length, " typed during publish");
+  release.resolve();
+  await running;
+  const second = await textDevice(f.relay, "start");
+  await second.sync.synchronize();
+  expect(second.text().toString()).toBe("start typed during publish");
+  first.close();
+  second.close();
+});
+
+test("a complete seeded update tail is founded before an unrelated local seed is adopted", async () => {
+  const f = relayFixture();
+  const original = new Y.Doc();
+  await seedTextDocument(original, "canonical source");
+  await f.relay.update(await sealUpdate(space, documentId, Y.encodeStateAsUpdate(original), []));
+  const next = await textDevice(f.relay, "older source");
+  await next.sync.synchronize();
+  expect(next.text().toString()).toBe("canonical source");
+  expect(f.states[0]?.through).toBe(1);
+  expect(f.states.every((state) => state.through >= 1)).toBe(true);
+  expect(next.rejected).toEqual([]);
+  next.close();
+  original.destroy();
+});
+
+test("ambiguous initial histories are quarantined without overwriting the tail or local edits", async () => {
+  const f = relayFixture();
+  const first = new Y.Doc();
+  const second = new Y.Doc();
+  await seedTextDocument(first, "one");
+  await seedTextDocument(second, "two");
+  Y.applyUpdate(first, Y.encodeStateAsUpdate(second));
+  await f.relay.update(await sealUpdate(space, documentId, Y.encodeStateAsUpdate(first), []));
+  const local = await textDevice(f.relay, "local draft");
+  await local.sync.synchronize();
+  expect(local.text().toString()).toBe("local draft");
+  expect(f.states).toHaveLength(0);
+  expect(f.writes).toHaveLength(1);
+  expect(local.rejected).toHaveLength(1);
+  expect(await local.sync.status()).toEqual({ downloaded: false, pending: true, needsAttention: true });
+  local.close();
+  first.destroy();
+  second.destroy();
+});
 
 test("a device offline across several latest states keeps its edits and catches up", async () => {
   const f = relayFixture();

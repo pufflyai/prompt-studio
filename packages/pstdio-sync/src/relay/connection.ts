@@ -1,4 +1,7 @@
 import {
+  type LiveClientMessage,
+  type LiveServerMessage,
+  liveClientMessageSchema,
   liveServerMessageSchema,
   relayEventSchema,
   relayPath,
@@ -139,6 +142,11 @@ const createRelaySocket = (input: RelaySocketInput) => {
     wake,
     done,
     status: () => ({ connected, busy: dirty || !!running }),
+    send: (data: string) => {
+      if (!connected || input.signal.aborted || socket?.readyState !== WebSocket.OPEN) return false;
+      socket.send(data);
+      return true;
+    },
   };
 };
 
@@ -155,9 +163,12 @@ export const createRelayConnection = (
   });
 
 export const createDocumentRelayConnection = (
-  input: Omit<RelaySocketInput, "path" | "message" | "headers"> & { projectId: string },
-) =>
-  createRelaySocket({
+  input: Omit<RelaySocketInput, "path" | "message" | "headers"> & {
+    projectId: string;
+    onLive?: (message: Extract<LiveServerMessage, { type: "live" }>) => void;
+  },
+) => {
+  const connection = createRelaySocket({
     ...input,
     path: syncPath({ kind: "live", projectId: input.projectId }),
     headers: { [syncProtocolHeader]: String(syncProtocolVersion) },
@@ -167,6 +178,12 @@ export const createDocumentRelayConnection = (
         if (event.protocolVersion !== syncProtocolVersion) throw new Error("Unsupported sync protocol");
         return "ready";
       }
+      if (event.type === "live") input.onLive?.(event);
       return event.type === "changed" ? "changed" : null;
     },
   });
+  return {
+    ...connection,
+    send: (message: LiveClientMessage) => connection.send(JSON.stringify(liveClientMessageSchema.parse(message))),
+  };
+};

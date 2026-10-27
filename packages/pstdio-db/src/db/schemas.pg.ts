@@ -1,4 +1,5 @@
 export * from "./schemas/activity-events";
+export * from "./schemas/artifact-file-projections";
 export * from "./schemas/asset-transfers";
 export * from "./schemas/automation";
 export * from "./schemas/board-views";
@@ -8,6 +9,7 @@ export * from "./schemas/extension-connections";
 export * from "./schemas/extension-resource-sequences";
 export * from "./schemas/extensions";
 export * from "./schemas/files";
+export * from "./schemas/native-documents";
 export * from "./schemas/notifications";
 export * from "./schemas/projects";
 export * from "./schemas/recovery-points";

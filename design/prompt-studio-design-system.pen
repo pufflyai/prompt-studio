@@ -226885,6 +226885,792 @@
           }
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "R81yHY",
+      "x": 69640,
+      "y": 0,
+      "name": "Native Markdown · Collaboration components · PS-776",
+      "width": 880,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "QcJ2m",
+          "name": "Section title",
+          "fill": "$ds-fg",
+          "content": "Live Markdown collaboration",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "UjBEZ",
+          "name": "cmp/DocumentParticipant",
+          "context": "Connection-bound presence. One chip per remote editor tab. Show account and device in the accessible tooltip. Remove on leave, disconnect or lease expiry; do not retain an offline participant.",
+          "theme": {
+            "palette": "blue"
+          },
+          "reusable": true,
+          "height": 20,
+          "fill": "$pal-subtle",
+          "cornerRadius": "$chip-radius",
+          "gap": 4,
+          "padding": [
+            0,
+            6
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "ellipse",
+              "id": "g9rYdi",
+              "name": "Participant color",
+              "fill": "$pal-fg",
+              "width": 6,
+              "height": 6
+            },
+            {
+              "type": "text",
+              "id": "gSxhT",
+              "name": "Participant label",
+              "fill": "$ds-fg",
+              "content": "Alex · Laptop",
+              "fontFamily": "$font-body",
+              "fontSize": "$chip-fs",
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "rg6F0",
+          "name": "cmp/RemoteCaret",
+          "context": "Overlay at the resolved Markdown offset. The flag sits above the caret and stays inside the editor viewport. Exclude overlay text from editor selection and screen-reader content; the participant chip gives the accessible identity.",
+          "theme": {
+            "palette": "blue"
+          },
+          "reusable": true,
+          "width": 2,
+          "height": 24,
+          "fill": "$pal-fg",
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "PUc8q",
+              "x": 0,
+              "y": -18,
+              "name": "Caret label",
+              "fill": "$pal-subtle",
+              "cornerRadius": [
+                4,
+                4,
+                4,
+                0
+              ],
+              "padding": [
+                2,
+                6
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "y6eDdV",
+                  "name": "Caret participant",
+                  "fill": "$ds-fg",
+                  "content": "Alex",
+                  "fontFamily": "$font-body",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "nOgQm",
+          "name": "cmp/RemoteSelection",
+          "context": "One non-interactive overlay rectangle for each selected line fragment. Keep document text visible. Use the same palette as its caret and participant chip.",
+          "theme": {
+            "palette": "blue"
+          },
+          "reusable": true,
+          "width": 180,
+          "height": 24,
+          "fill": "$pal-500-15"
+        },
+        {
+          "type": "text",
+          "id": "aHuYN",
+          "name": "Presence behavior",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Typing and selections travel live. Offline edits stay available; remote carets and participants disappear when their connection ends.",
+          "lineHeight": 1.5,
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "JK6xS",
+      "x": 70600,
+      "y": 0,
+      "name": "Native Markdown · light · PS-776",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 820,
+      "height": 460,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "J8u5cu",
+          "name": "Native file header",
+          "width": "fill_container",
+          "height": 44,
+          "stroke": "$ds-border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "gap": 12,
+          "padding": [
+            0,
+            16
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "dCtfR",
+              "name": "File title",
+              "fill": "$ds-fg",
+              "content": "Project plan",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "hrSDq",
+              "name": "Remote participants",
+              "gap": 6,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "a3byi",
+                  "type": "ref",
+                  "ref": "UjBEZ",
+                  "name": "Alex on laptop",
+                  "theme": {
+                    "palette": "blue"
+                  },
+                  "descendants": {
+                    "gSxhT": {
+                      "content": "Alex · Laptop"
+                    }
+                  }
+                },
+                {
+                  "id": "p0JxVU",
+                  "type": "ref",
+                  "ref": "UjBEZ",
+                  "name": "Sam on desktop",
+                  "theme": {
+                    "palette": "purple"
+                  },
+                  "descendants": {
+                    "gSxhT": {
+                      "content": "Sam · Desktop"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ReVwi",
+          "name": "Markdown document",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 28,
+          "padding": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "LRatI",
+              "name": "Document heading",
+              "fill": "$ds-fg",
+              "content": "Build together",
+              "fontFamily": "$font-heading",
+              "fontSize": 24,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "jUpuz",
+              "name": "Shared paragraph",
+              "width": "fill_container",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "W5wAeI",
+                  "name": "Text before selection",
+                  "fill": "$ds-fg",
+                  "content": "Bring ",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "G3nE13",
+                  "name": "Sam selected text",
+                  "theme": {
+                    "palette": "purple"
+                  },
+                  "fill": "$pal-500-15",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "devxt",
+                      "name": "Selected document text",
+                      "fill": "$ds-fg",
+                      "content": "your tools",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-body",
+                      "fontSize": 16,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "UWFkL",
+                  "type": "ref",
+                  "ref": "rg6F0",
+                  "name": "Sam remote caret",
+                  "theme": {
+                    "palette": "purple"
+                  },
+                  "descendants": {
+                    "y6eDdV": {
+                      "content": "Sam"
+                    }
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "GLY7a",
+                  "name": "Text after selection",
+                  "fill": "$ds-fg",
+                  "content": " together.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "j20hTn",
+              "name": "Document paragraph",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Write a plan here. Changes appear on every connected device while you work.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "hvcFz",
+              "name": "Alex editing next line",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "K56sSm",
+                  "name": "Concurrent line",
+                  "fill": "$ds-fg",
+                  "content": "Start with the next step.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "n7gYQP",
+                  "type": "ref",
+                  "ref": "rg6F0",
+                  "name": "Alex remote caret",
+                  "theme": {
+                    "palette": "blue"
+                  },
+                  "descendants": {
+                    "y6eDdV": {
+                      "content": "Alex"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Xy29Q",
+          "name": "Local save and connection state",
+          "context": "Use the existing project sync status. Presence disappears offline; local editing continues.",
+          "width": "fill_container",
+          "height": 28,
+          "fill": "$ds-bg-subtle",
+          "padding": [
+            0,
+            16
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "gWJPO",
+              "name": "Sync state",
+              "fill": "$ds-fg-muted",
+              "content": "Synced",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "GFtLL",
+      "x": 71500,
+      "y": 0,
+      "name": "Native Markdown · dark · PS-776",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 820,
+      "height": 460,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "XbXSl",
+          "name": "Native file header",
+          "width": "fill_container",
+          "height": 44,
+          "stroke": "$ds-border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "gap": 12,
+          "padding": [
+            0,
+            16
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "T3aGfr",
+              "name": "File title",
+              "fill": "$ds-fg",
+              "content": "Project plan",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "NdQOL",
+              "name": "Remote participants",
+              "gap": 6,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "oBPiz",
+                  "type": "ref",
+                  "ref": "UjBEZ",
+                  "name": "Alex on laptop",
+                  "theme": {
+                    "palette": "blue"
+                  },
+                  "descendants": {
+                    "gSxhT": {
+                      "content": "Alex · Laptop"
+                    }
+                  }
+                },
+                {
+                  "id": "kG1E9",
+                  "type": "ref",
+                  "ref": "UjBEZ",
+                  "name": "Sam on desktop",
+                  "theme": {
+                    "palette": "purple"
+                  },
+                  "descendants": {
+                    "gSxhT": {
+                      "content": "Sam · Desktop"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "IkVNN",
+          "name": "Markdown document",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 28,
+          "padding": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "maVjn",
+              "name": "Document heading",
+              "fill": "$ds-fg",
+              "content": "Build together",
+              "fontFamily": "$font-heading",
+              "fontSize": 24,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "EXv70",
+              "name": "Shared paragraph",
+              "width": "fill_container",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "aHIYZ",
+                  "name": "Text before selection",
+                  "fill": "$ds-fg",
+                  "content": "Bring ",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "DJjFx",
+                  "name": "Sam selected text",
+                  "theme": {
+                    "palette": "purple"
+                  },
+                  "fill": "$pal-500-15",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "QpUxK",
+                      "name": "Selected document text",
+                      "fill": "$ds-fg",
+                      "content": "your tools",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-body",
+                      "fontSize": 16,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "HLEZu",
+                  "type": "ref",
+                  "ref": "rg6F0",
+                  "name": "Sam remote caret",
+                  "theme": {
+                    "palette": "purple"
+                  },
+                  "descendants": {
+                    "y6eDdV": {
+                      "content": "Sam"
+                    }
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "m72ged",
+                  "name": "Text after selection",
+                  "fill": "$ds-fg",
+                  "content": " together.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "H9BqYh",
+              "name": "Document paragraph",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Write a plan here. Changes appear on every connected device while you work.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "ccU70",
+              "name": "Alex editing next line",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "rpDYE",
+                  "name": "Concurrent line",
+                  "fill": "$ds-fg",
+                  "content": "Start with the next step.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "DEtlJ",
+                  "type": "ref",
+                  "ref": "rg6F0",
+                  "name": "Alex remote caret",
+                  "theme": {
+                    "palette": "blue"
+                  },
+                  "descendants": {
+                    "y6eDdV": {
+                      "content": "Alex"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "bUwRU",
+          "name": "Local save and connection state",
+          "context": "Use the existing project sync status. Presence disappears offline; local editing continues.",
+          "width": "fill_container",
+          "height": 28,
+          "fill": "$ds-bg-subtle",
+          "padding": [
+            0,
+            16
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "y4H9Rg",
+              "name": "Sync state",
+              "fill": "$ds-fg-muted",
+              "content": "Synced",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "VStfC",
+      "x": 72400,
+      "y": 0,
+      "name": "Native Markdown · Offline · Narrow · PS-776",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 420,
+      "height": 460,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "nwmPv",
+          "name": "Native file header",
+          "width": "fill_container",
+          "height": 44,
+          "stroke": "$ds-border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "gap": 12,
+          "padding": [
+            0,
+            16
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "KFdvC",
+              "name": "File title",
+              "fill": "$ds-fg",
+              "content": "Project plan",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "adgs7",
+          "name": "Markdown document",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 28,
+          "padding": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "jcIsC",
+              "name": "Document heading",
+              "fill": "$ds-fg",
+              "content": "Build together",
+              "fontFamily": "$font-heading",
+              "fontSize": 24,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "P4Jym",
+              "name": "Shared paragraph",
+              "width": "fill_container",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "AVRyg",
+                  "name": "Text before selection",
+                  "fill": "$ds-fg",
+                  "content": "Bring ",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "yAyav",
+                  "name": "Sam selected text",
+                  "theme": {
+                    "palette": "purple"
+                  },
+                  "fill": "#00000000",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "p2bmk5",
+                      "name": "Selected document text",
+                      "fill": "$ds-fg",
+                      "content": "your tools",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-body",
+                      "fontSize": 16,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "T7NzuI",
+                  "name": "Text after selection",
+                  "fill": "$ds-fg",
+                  "content": " together.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "m52oto",
+              "name": "Document paragraph",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Write a plan here. Changes appear on every connected device while you work.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "O8cWQB",
+          "name": "Local save and connection state",
+          "context": "Use the existing project sync status. Presence disappears offline; local editing continues.",
+          "width": "fill_container",
+          "height": 28,
+          "fill": "$ds-bg-subtle",
+          "padding": [
+            0,
+            16
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "rMBcH",
+              "name": "Sync state",
+              "fill": "$ds-fg-muted",
+              "content": "Saved locally · Offline",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

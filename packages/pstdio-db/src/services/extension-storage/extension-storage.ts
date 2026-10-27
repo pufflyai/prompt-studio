@@ -8,9 +8,12 @@ import {
 } from "pstdio-sync";
 import type { Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
+import { createArtifactFileProjectionsDBService } from "./artifact-file-projections";
 import { createStorageMigrations } from "./data-migrations";
 import { createDocumentStorageDBService } from "./document-storage";
 import type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
+import { createNativeDocumentRoomsDBService } from "./native-document-rooms";
+import { createNativeFileProjectionsDBService } from "./native-file-projections";
 import { installRecordIndexes } from "./record-index-installation";
 import { createRecoveryPoints } from "./recovery-points";
 import { getExtensionStorageOwner } from "./storage-owner";
@@ -52,6 +55,10 @@ export const createExtensionStorageDBService = (
     watch: documents.watch,
     documents: documents.documents,
     openTextDocument: documents.openTextDocument,
+    openNativeTextDocument: documents.openNativeTextDocument,
+    nativeRooms: createNativeDocumentRoomsDBService(db),
+    nativeFileProjections: createNativeFileProjectionsDBService(db),
+    fileProjections: createArtifactFileProjectionsDBService(db),
     migrate: createStorageMigrations(db, documents),
     recordId: (scopeType: string, scopeId: string, key: string) => storageRecordId([scopeType, scopeId, "kv"], key),
     open: async (input: { owner: StorageOwner; assets?: AssetStore }) => {

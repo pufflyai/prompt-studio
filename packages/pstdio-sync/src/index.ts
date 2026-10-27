@@ -3,7 +3,13 @@ export { type DocumentHistory, documentHistory } from "./document-history";
 export { documentRecordTypes, type RecordType, readDocumentRecord } from "./document-record";
 export { type DocumentSnapshot, findDocumentReplacements, snapshotDocumentRecords } from "./document-replacements";
 export { createDocumentStorage, type LockedRecords } from "./document-storage";
-export { type DocumentState, type DocumentStore, hasDocumentUserData, memoryDocumentState } from "./document-types";
+export {
+  type DocumentState,
+  type DocumentStore,
+  hasDocumentUserData,
+  isEmptyDocument,
+  memoryDocumentState,
+} from "./document-types";
 export * from "./encryption";
 export { createLegacyRecordStorage } from "./legacy";
 export { createMemoryDocumentStore } from "./memory-document-store";
@@ -49,7 +55,12 @@ export {
   resourceShorthand,
 } from "./resource-numbers";
 export { createRecordStorage } from "./storage";
+export { StorageRevisionChangedError } from "./storage-revision-error";
 export { createTextDocumentStorage } from "./text-document";
+export { mergeTextDocuments, prepareTextDocumentAdoption } from "./text-document-adoption";
+export { applyTextEditorUpdate, editTextDocument, saveTextDocument } from "./text-document-edits";
+export { readTextDocumentSeed, seedTextDocument } from "./text-document-seed";
+export { editProjectedText } from "./text-file-projection";
 export type {
   Acceptance,
   AssetStore,

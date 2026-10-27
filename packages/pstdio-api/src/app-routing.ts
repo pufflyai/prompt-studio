@@ -12,6 +12,7 @@ import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { createLinkIconRoutes } from "./features/link-icons/routes";
+import { createNativeDocumentRoutes } from "./features/native-documents/routes";
 import { createNotificationsRoutes } from "./features/notifications/routes";
 import { createPerformanceRoutes } from "./features/performance/routes";
 import { createProjectRoutes } from "./features/projects/routes";
@@ -188,6 +189,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
   app.route("/v1", createAutomationRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createExtensionRoutes(deps));
+  app.route("/v1", createNativeDocumentRoutes(deps.nativeDocuments));
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createNotificationsRoutes(deps));

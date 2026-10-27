@@ -6,6 +6,7 @@ import {
   normalizeMountRelativePath,
   resolveArtifactMountRoot,
 } from "pstdio-extensions";
+import type { StorageGroup } from "pstdio-sync-contracts";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { PublicationUpdateRequiredError } from "../../features/extensions/publication/types";
@@ -49,7 +50,7 @@ export const createSharedArtifactMount = (
   };
   const packageRoot = root.slice(0, -prefix.length - 1);
   const key = JSON.stringify([owner, packageRoot]);
-  const projection = fileProjection(key);
+  const projection = fileProjection(key, deps.extensionStorageService.fileProjections);
   const assets = deps.assetTransferService;
   const fullPath = (path: string) => posix.join(prefix, normalizeMountRelativePath(path));
   const open = () =>
@@ -79,7 +80,11 @@ export const createSharedArtifactMount = (
     signal: input.signal,
     assertWritable: input.assertWritable,
   });
-  const run = <T>(action: (storage: Awaited<ReturnType<typeof open>>) => Promise<T>) =>
+  const pointTree = async (storage: Awaited<ReturnType<typeof open>>, target: string) =>
+    tree.active(
+      await Promise.all([...tree.ancestors(target), target].map((path) => storage.records.read(fileRecordId(path)))),
+    );
+  const run = <T>(action: (storage: Awaited<ReturnType<typeof open>>) => Promise<T>, target?: string) =>
     serializeFiles(key, async () => {
       try {
         await input.assertWritable?.();
@@ -87,19 +92,19 @@ export const createSharedArtifactMount = (
         if (!(error instanceof PublicationUpdateRequiredError)) throw error;
         return action(await open());
       }
-      return action(await withoutStorageObservation(reconcile));
+      return action(await withoutStorageObservation(() => reconcile(target)));
     });
   const write = (path: string, value: Blob, update: boolean) =>
     run(async (storage) => {
       const target = fullPath(path);
       tree.assertWritable(target);
       await assertBoundary(path);
-      const { live } = tree.active(await storage.records.list());
+      const { live } = await pointTree(storage, target);
       const before = await storage.records.read(fileRecordId(target));
       if (live.get(target)?.node.kind === "directory") throw new Error(`Artifact is a directory: ${path}`);
       if (update && !live.has(target)) throw missing(path);
       const nodes = new Map([...live].map(([path, entry]) => [path, entry.node]));
-      const edits = [];
+      const edits: StorageGroup["edits"] = [];
       for (const parent of tree.ancestors(target)) {
         const existing = nodes.get(parent);
         if (existing?.kind === "file") throw new Error(`Artifact parent is not a directory: ${parent}`);
@@ -134,17 +139,22 @@ export const createSharedArtifactMount = (
       });
       await input.assertWritable?.();
       await storage.records.commit({ operationId: crypto.randomUUID(), edits });
-      await withoutStorageObservation(reconcile);
-    });
+      await withoutStorageObservation(() => reconcile(target));
+    }, fullPath(path));
   const read = (path: string) =>
     run(async (storage) => {
       await assertBoundary(path);
-      const entry = tree.active(await storage.records.list()).live.get(fullPath(path));
+      const entry = (await pointTree(storage, fullPath(path))).live.get(fullPath(path));
       if (entry?.node.kind !== "file" || !entry.record.asset) throw missing(path);
       return assets.read(owner, entry.record.asset, input.signal);
-    });
+    }, fullPath(path));
   const api: ArtifactMount = {
-    exists: (path) => run(async (storage) => artifactTreeReader(storage, prefix, roots).exists(fullPath(path))),
+    exists: (path) =>
+      run(
+        async (storage) =>
+          fullPath(path) === prefix || (await pointTree(storage, fullPath(path))).live.has(fullPath(path)),
+        fullPath(path),
+      ),
     readText: async (path) => new Response(await read(path)).text(),
     readBytes: async (path) => new Uint8Array(await new Response(await read(path)).arrayBuffer()),
     writeText: (path, value) => write(path, new Blob([value], { type: "text/plain" }), false),
@@ -158,8 +168,8 @@ export const createSharedArtifactMount = (
         const target = fullPath(path);
         tree.assertDeletable(target);
         await assertBoundary(path);
-        const entries = [...tree.active(await storage.records.list()).live.values()].filter(({ node }) =>
-          within(node.path, target),
+        const entries = [...tree.active(await storage.records.list('["artifact-file",')).live.values()].filter(
+          ({ node }) => within(node.path, target),
         );
         if (!entries.length) throw missing(path);
         await input.assertWritable?.();

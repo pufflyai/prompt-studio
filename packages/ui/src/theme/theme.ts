@@ -12,6 +12,7 @@ import { checkboxSlotRecipe } from "./recipes/checkbox";
 import { colorPickerSlotRecipe } from "./recipes/color-picker";
 import { dialogSlotRecipe } from "./recipes/dialog";
 import { dividerRecipe } from "./recipes/divider";
+import { documentPresenceSlotRecipe } from "./recipes/document-presence";
 import { drawerSlotRecipe } from "./recipes/drawer";
 import { editableSlotRecipe } from "./recipes/editable";
 import { folderPickerSlotRecipe } from "./recipes/folder-picker";
@@ -101,6 +102,7 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      documentPresence: documentPresenceSlotRecipe,
       kanbanBoardColumn: kanbanBoardColumnSlotRecipe,
       stickyUserMessage: stickyUserMessageRecipe,
       scrollArea: scrollAreaSlotRecipe,

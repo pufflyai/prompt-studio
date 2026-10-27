@@ -64,6 +64,7 @@
     "@tanstack/react-hotkeys": "0.10.0",
     "lucide-react": "^0.557.0",
     "rimless": "0.8.3",
+    "yjs": "^13.6.29",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },
@@ -80,6 +81,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "babel-plugin-react-compiler": "^1.0.0",
     "cross-env": "10.1.0",
+    "pstdio-api": "workspace:*",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-extensions": "workspace:*",
     "pstdio-sync-contracts": "workspace:*",
