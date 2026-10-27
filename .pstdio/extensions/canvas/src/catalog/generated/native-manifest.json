@@ -13,8 +13,8 @@
     ".pstdio/extensions/canvas/scripts/story-catalog-cache.ts": "3e29d2055728702e5c0b4684bcd2d286e577ef1ec0b28235ab605eb1bf77bfa7",
     ".pstdio/extensions/canvas/scripts/parse-story-sources.ts": "8c11eb6a0c6abb4afb51eca789aca49d9e02dea416287ed5d6481ce2a13336b7",
     ".pstdio/extensions/canvas/scripts/story-parser-worker.ts": "aafe813f9996833914c5452acf5ce97b9a162c291410503dc2a490591614db79",
-    ".pstdio/extensions/canvas/src/catalog/generated/stories.json": "8fb4123060f5e183b43665da6e8990085a3268a5da8d15695cf83557014377b0",
-    ".pstdio/extensions/canvas/src/catalog/generated/source-information.json": "e4a66ce2e46c17c64d91f61059b62909a95a6f3ad46de948064c762ab9ed8d94",
+    ".pstdio/extensions/canvas/src/catalog/generated/stories.json": "d515f8f55904cb9e9220502c97cc4920c720700b9abcbee1e85887a51366289c",
+    ".pstdio/extensions/canvas/src/catalog/generated/source-information.json": "b169dc646a2a97b433208326be965011124b09c4e217b9a182006a343c25499e",
     "packages/sdk/package.json": "aecc49123df53a5aae83d8628fc8b96cc24618b4d1382ae0486b9209fc5f3eee",
     "packages/pstdio-workbench/build-entries.ts": "0d008bd492d3679af68b9df8a0db30a5361fe86c6aba126915493873f20d4981",
     "packages/ui/dist/style.css": "8832607af81874e0b51ab816632efa967317df73863e03a527fd3ef96ea913c8",
@@ -152,7 +152,7 @@
     "packages/ui/dist/collection-view.js": "50c24382a72e4b9572c80f6802375fb6299f44dc62cde9292532e05d1168a058",
     "extensions/pstdio-planner/src/timeline/view/supervisor-model-field.tsx": "d8929505fd4e48c4a1e18be000747598ff8591952b673171e1998b45c5f8d2e5",
     "extensions/pstdio-planner/src/timeline/view/auto-build-form.tsx": "5db8f85618ec3f88ba3d284ae5d16d71d6a68bf28e8a746b628b77de867b48c3",
-    "extensions/pstdio-planner/src/timeline/view/auto-build-form.stories.tsx": "77b6d2820f99547d4ff06cb3478c16a4d8af7c6689c8781883e1b5170fa2adf5",
+    "extensions/pstdio-planner/src/timeline/view/auto-build-form.stories.tsx": "f5d14661917a0c1a2b2f4705e11f883cd57c8d08d05ab1dca1f7db5e1ef828c8",
     "extensions/pstdio-planner/src/timeline/view/auto-build-help.tsx": "c6219d1b676299f88555462fc3f05ed987a673c487b16d9d897acc3e06c492b6",
     "extensions/pstdio-planner/src/timeline/view/auto-build.story-fixture.ts": "f966f4a7d0a148d9d22490f8d39424bbd66fd8135f88f9d38c80f6d0b5eead45",
     ".pstdio/extensions/canvas/src/catalog/generated/autobuilder-design.ts": "874e85b5a0999f10ccc17d57f4adf3bd5cc094e8702eaf70942fc8182117be00",
@@ -2277,9 +2277,9 @@
     ".pstdio/extensions/canvas/scripts/native-preview-runtime.tsx": "5bd2c6b3748312f59e4189ba567c97c575f2663b960530c3a8b626e5cf162e77"
   },
   "outputs": {
-    "frame-bundle.ts": "eb0063a4a0f5344696c4af3cac86fcb9df27ade7873dde85f384bacca331f0f3"
+    "frame-bundle.ts": "a62220a17ef833c75313f8f0fb8768cd79424bf2e3537f253c1e7ac8073c1764"
   },
   "stories": 1582,
   "documents": 36,
-  "bytes": 81643252
+  "bytes": 81643217
 }

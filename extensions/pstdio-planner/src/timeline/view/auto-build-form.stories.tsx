@@ -8,7 +8,7 @@ import { AutoBuildHelp } from "./auto-build-help";
 function FormPreview(props: { children: ReactNode }) {
   const { children } = props;
   return (
-    <Dialog.Root defaultOpen closeOnInteractOutside={false} autoFocus={false} size="lg" scrollBehavior="inside">
+    <Dialog.Root defaultOpen closeOnInteractOutside={false} size="lg" scrollBehavior="inside">
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
