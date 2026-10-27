@@ -2,9 +2,13 @@ import type { WebviewKeyboardShortcut, WebviewKeyboardShortcutRequest } from "ps
 
 const normalizeKey = (key: string) => (key === " " ? "SPACE" : key.toUpperCase());
 
+// Option can replace a letter with a symbol or dead key. Keep ordinary layout letters intact.
+const shortcutEventKey = (event: KeyboardEvent) =>
+  event.altKey && !/^[a-z]$/i.test(event.key) && /^Key[A-Z]$/.test(event.code) ? event.code.slice(3) : event.key;
+
 export const matchesKeyboardShortcut = (event: KeyboardEvent, shortcut: WebviewKeyboardShortcut) =>
   !(event.isComposing || event.getModifierState?.("AltGraph")) &&
-  (normalizeKey(event.key) === normalizeKey(shortcut.key) ||
+  (normalizeKey(shortcutEventKey(event)) === normalizeKey(shortcut.key) ||
     (normalizeKey(shortcut.key) === "SPACE" && event.code === "Space") ||
     (/^[0-9]$/.test(shortcut.key) && event.code === `Digit${shortcut.key}`)) &&
   event.ctrlKey === Boolean(shortcut.ctrlKey) &&

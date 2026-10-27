@@ -94,6 +94,26 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await page.keyboard.press("Escape");
     await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
     await expect(page.locator('iframe[title="Lab"]')).toBeFocused();
+    for (const [key, symbol, label] of [
+      ["B", "ı", /Bottom Panel/],
+      ["E", "Dead", /Side Panel/],
+    ] as const) {
+      const toggle = page
+        .getByRole("group", { name: "Panel controls", exact: true })
+        .getByRole("button", { name: label });
+      const wasOpen = await toggle.getAttribute("aria-pressed");
+      await guest.locator("body").dispatchEvent("keydown", {
+        key: symbol,
+        code: `Key${key}`,
+        altKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen !== "true"));
+      await guest.locator("body").press(`Alt+Shift+${key}`);
+      await expect(toggle).toHaveAttribute("aria-pressed", wasOpen!);
+    }
     await enter.click();
     await guest.locator("body").press("Escape");
     await expect(enter).toBeVisible();

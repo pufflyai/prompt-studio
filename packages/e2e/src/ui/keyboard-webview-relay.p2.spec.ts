@@ -5,8 +5,14 @@ test("opaque nested content relays only negotiated entry intents and restores lo
   const inner = `<!doctype html><html><head>${webviewKeyboardRelayDocument}<script>window.addEventListener('message',event=>{if(event.data?.type==='pstdio.keyboard.profile')document.documentElement.dataset.ready='true'});</script></head><body><textarea aria-label="Nested draft">Local draft</textarea><dialog><input aria-label="Modal draft"></dialog></body></html>`;
   const wrapper = `<!doctype html><html><head>${webviewKeyboardRelayDocument}</head><body><script>const child=document.createElement('iframe');child.title='Inner';child.sandbox='allow-scripts';child.srcdoc=${JSON.stringify(inner).replaceAll("</", "<\\/")};document.body.append(child);</script></body></html>`;
   await page.setContent('<output aria-label="Requests">[]</output>');
+  const shortcuts = [
+    { id: "leader", entry: "mode", key: "Space", altKey: true, shiftKey: true },
+    { id: "bottom", entry: "panel", key: "B", altKey: true, shiftKey: true },
+    { id: "side", entry: "panel", key: "E", altKey: true, shiftKey: true },
+    { id: "forbidden", key: "X", altKey: true, shiftKey: true },
+  ];
   await page.addScriptTag({
-    content: `window.requests=[];window.relay=(${installWebviewKeyboardRelay.toString()})({shortcuts:()=>[{id:'leader',entry:'mode',key:'Space',altKey:true,shiftKey:true},{id:'forbidden',key:'X',altKey:true,shiftKey:true}],dispatch:request=>{window.requests.push(request);document.querySelector('output').textContent=JSON.stringify(window.requests)}});`,
+    content: `window.requests=[];window.relay=(${installWebviewKeyboardRelay.toString()})({shortcuts:()=>${JSON.stringify(shortcuts)},dispatch:request=>{window.requests.push(request);document.querySelector('output').textContent=JSON.stringify(window.requests)}});`,
   });
   await page.evaluate((wrapper) => {
     const frame = document.createElement("iframe");
@@ -47,8 +53,30 @@ test("opaque nested content relays only negotiated entry intents and restores lo
   await modal.press("Alt+Shift+Space");
   await modal.press("Alt+Shift+X");
   await expect(page.getByLabel("Requests")).toHaveText(twoRequests);
+  const panelRequests = JSON.parse(twoRequests);
+  for (const [key, symbol, id] of [
+    ["B", "ı", "bottom"],
+    ["E", "Dead", "side"],
+  ] as const) {
+    await modal.press(`Alt+Shift+${key}`);
+    panelRequests.push({ id, repeat: false, nested: true });
+    await expect(page.getByLabel("Requests")).toHaveText(JSON.stringify(panelRequests));
+    await modal.dispatchEvent("keydown", {
+      key: symbol,
+      code: `Key${key}`,
+      altKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    panelRequests.push({ id, repeat: false, nested: true });
+    await expect(page.getByLabel("Requests")).toHaveText(JSON.stringify(panelRequests));
+    await expect(modal).toBeFocused();
+    await expect(modal).toHaveValue("");
+  }
   await guest.locator("dialog").evaluate((dialog: HTMLDialogElement) => dialog.close());
   await draft.focus();
   await draft.press("Alt+Shift+X");
-  await expect(page.getByLabel("Requests")).toHaveText(twoRequests);
+  await expect(page.getByLabel("Requests")).toHaveText(JSON.stringify(panelRequests));
+  await expect(draft).toHaveValue("Unsaved nested draft");
 });

@@ -1,5 +1,5 @@
 export type { HostCapability, HostCapabilityRegistry, HostEventMessage } from "../contract";
-export { hasLocalKeyboardOwner } from "../guest/keyboard-owner";
+export { availableKeyboardShortcuts, hasLocalKeyboardOwner } from "../guest/keyboard-owner";
 export { installKeyboardShortcuts, matchesKeyboardShortcut } from "../guest/keyboard-shortcuts";
 export { ExtensionFrame, type ExtensionFrameProps } from "./extension-frame";
 export {

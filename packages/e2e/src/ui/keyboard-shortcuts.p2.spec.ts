@@ -84,8 +84,8 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
     ["E", /Side Panel/],
   ] as const) {
     const toggle = page
-      .getByRole("group", { name: "Panel controls", exact: true })
-      .getByRole("button", { name: label });
+      .getByRole("group", { name: "Panel controls", exact: true, includeHidden: true })
+      .getByRole("button", { name: label, includeHidden: true });
     const wasOpen = (await toggle.getAttribute("aria-pressed")) === "true";
     await page.keyboard.press(`Alt+Shift+${key}`);
     await expect(toggle).toHaveAttribute("aria-pressed", String(!wasOpen));
@@ -93,6 +93,33 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
     await page.keyboard.press(`Alt+Shift+${key}`);
     await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen));
     await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    // macOS Option emits a symbol or dead key instead of the shortcut's letter.
+    const input = {
+      key: key === "B" ? "ı" : "Dead",
+      code: `Key${key}`,
+      altKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    };
+    await page.locator("body").dispatchEvent("keydown", input);
+    await expect(toggle).toHaveAttribute("aria-pressed", String(!wasOpen));
+    await page.keyboard.press("Alt+Shift+Space");
+    await page.locator("body").dispatchEvent("keydown", input);
+    await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen));
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Shift+/");
+    const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
+    const search = reference.getByRole("textbox", { name: "Search keyboard shortcuts" });
+    await search.fill("Keep this search");
+    await search.dispatchEvent("keydown", input);
+    await expect(toggle).toHaveAttribute("aria-pressed", String(!wasOpen));
+    await page.keyboard.press(`Alt+Shift+${key}`);
+    await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen));
+    await expect(search).toBeFocused();
+    await expect(search).toHaveValue("Keep this search");
     await page.keyboard.press("Escape");
   }
 });

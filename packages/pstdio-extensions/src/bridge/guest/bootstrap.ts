@@ -6,7 +6,7 @@ import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
 import { installEscapeForwarder } from "./escape-forwarder";
-import { hasLocalKeyboardOwner } from "./keyboard-owner";
+import { availableKeyboardShortcuts } from "./keyboard-owner";
 import { installKeyboardShortcuts } from "./keyboard-shortcuts";
 import { installModifierForwarder } from "./modifier-forwarder";
 import { observeContentHeight } from "./observe-content-height";
@@ -167,7 +167,7 @@ const start = async () => {
           inputForwardersInstalled = true;
           installKeyboardShortcuts(
             document,
-            () => (hasLocalKeyboardOwner(document) ? [] : keyboardShortcuts),
+            () => availableKeyboardShortcuts(document, keyboardShortcuts),
             (request) => {
               void connection.remote.dispatchShortcut(request).catch(() => {});
             },

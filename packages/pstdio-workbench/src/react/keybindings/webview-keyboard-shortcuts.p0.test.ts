@@ -3,6 +3,24 @@ import { createWorkbench } from "../../core";
 import { createWebviewKeyboardShortcuts } from "./webview-keyboard-shortcuts";
 import { createWorkbenchHotkeyRegistrations } from "./workbench-hotkey-registrations";
 
+test("nested previews can toggle side and bottom panels through negotiated layout shortcuts", async () => {
+  const workbench = createWorkbench();
+  for (const [region, key] of [
+    ["side", "E"],
+    ["secondary", "B"],
+  ] as const) {
+    workbench.layout.registerWidget({ id: region, title: region, region, rendererId: "test", singleton: false });
+    workbench.shell.setRegionOpen(region, false);
+    const bridge = createWebviewKeyboardShortcuts(workbench);
+    const shortcut = bridge.shortcuts.find((shortcut) => shortcut.key === key)!;
+    expect(shortcut?.entry).toBe("panel");
+    await bridge.dispatch({ id: shortcut.id, repeat: false, nested: true });
+    expect(workbench.shell.getRegionState(region).open).toBe(true);
+    await bridge.dispatch({ id: shortcut.id, repeat: false, nested: true });
+    expect(workbench.shell.getRegionState(region).open).toBe(false);
+  }
+});
+
 test("nested previews can cycle tabs through the negotiated tab navigation chords", async () => {
   const workbench = createWorkbench();
   workbench.layout.registerWidget({

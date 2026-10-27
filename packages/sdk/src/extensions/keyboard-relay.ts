@@ -9,8 +9,9 @@ export interface WebviewKeyboardRelayHost {
 export const installWebviewKeyboardRelay = (host?: WebviewKeyboardRelayHost) => {
   let inherited: readonly WebviewKeyboardShortcut[] = [];
   let lastFocus: HTMLElement | null = null;
-  const shortcuts = () =>
-    (host?.shortcuts() ?? inherited).filter((shortcut) => shortcut.entry === "mode" || shortcut.entry === "tab");
+  const isEntry = (shortcut: WebviewKeyboardShortcut) =>
+    shortcut.entry === "mode" || shortcut.entry === "tab" || shortcut.entry === "panel";
+  const shortcuts = () => (host?.shortcuts() ?? inherited).filter(isEntry);
   const directFrame = (source: MessageEventSource | null) =>
     [...document.querySelectorAll("iframe")].find((frame) => frame.contentWindow === source);
   const sendProfile = (frame: HTMLIFrameElement) =>
@@ -41,10 +42,7 @@ export const installWebviewKeyboardRelay = (host?: WebviewKeyboardRelayHost) => 
       if (data.type === "pstdio.keyboard.profile" && Array.isArray(data.shortcuts)) {
         inherited = data.shortcuts.filter(
           (shortcut: WebviewKeyboardShortcut) =>
-            shortcut &&
-            typeof shortcut.id === "string" &&
-            typeof shortcut.key === "string" &&
-            (shortcut.entry === "mode" || shortcut.entry === "tab"),
+            shortcut && typeof shortcut.id === "string" && typeof shortcut.key === "string" && isEntry(shortcut),
         );
         update();
       }
@@ -66,11 +64,13 @@ export const installWebviewKeyboardRelay = (host?: WebviewKeyboardRelayHost) => 
         'dialog[open], [role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"], [role="menu"][data-state="open"]',
       ),
     ].some((element) => element.getClientRects().length > 0);
-    if (ownsKeys) return;
     const normalize = (key: string) => (key === " " ? "SPACE" : key.toUpperCase());
+    const key =
+      event.altKey && !/^[a-z]$/i.test(event.key) && /^Key[A-Z]$/.test(event.code) ? event.code.slice(3) : event.key;
     const shortcut = shortcuts().find(
       (candidate) =>
-        (normalize(candidate.key) === normalize(event.key) ||
+        (!ownsKeys || candidate.entry === "panel") &&
+        (normalize(candidate.key) === normalize(key) ||
           (normalize(candidate.key) === "SPACE" && event.code === "Space") ||
           (/^[0-9]$/.test(candidate.key) && event.code === `Digit${candidate.key}`)) &&
         Boolean(candidate.ctrlKey) === event.ctrlKey &&

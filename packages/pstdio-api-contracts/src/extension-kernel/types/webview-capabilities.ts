@@ -207,7 +207,7 @@ export interface WebviewKeyboardEventParams {
 export interface WebviewKeyboardShortcut {
   id: string;
   /** Only these host navigation intents may be relayed by untrusted nested content. */
-  entry?: "mode" | "tab";
+  entry?: "mode" | "tab" | "panel";
   key: string;
   ctrlKey?: boolean;
   metaKey?: boolean;

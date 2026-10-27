@@ -15,6 +15,51 @@ const keydown = (key: string, input: Record<string, unknown> = {}) =>
   });
 const leader = { id: "leader", key: "Space", altKey: true, shiftKey: true };
 
+test("Option letter shortcuts resolve macOS symbols and dead keys to the intended action", () => {
+  const target = new EventTarget();
+  const requests: unknown[] = [];
+  installKeyboardShortcuts(
+    target,
+    () => [
+      { id: "pin", key: "I", altKey: true, shiftKey: true },
+      { id: "bottom", key: "B", altKey: true, shiftKey: true },
+      { id: "side", key: "E", altKey: true, shiftKey: true },
+    ],
+    (request) => requests.push(request),
+  );
+  for (const [key, code] of [
+    ["ı", "KeyB"],
+    ["´", "KeyE"],
+    ["Dead", "KeyE"],
+  ] as const) {
+    const event = keydown(key, { code, altKey: true, shiftKey: true });
+    target.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  }
+  expect(requests).toEqual([
+    { id: "bottom", repeat: false },
+    { id: "side", repeat: false },
+    { id: "side", repeat: false },
+  ]);
+});
+
+test("Option letter shortcuts preserve layout letters and leave composition and AltGraph local", () => {
+  const target = new EventTarget();
+  const requests: unknown[] = [];
+  installKeyboardShortcuts(
+    target,
+    () => [{ id: "layout-q", key: "Q", altKey: true, shiftKey: true }],
+    (request) => requests.push(request),
+  );
+  target.dispatchEvent(keydown("Q", { code: "KeyA", altKey: true, shiftKey: true }));
+  for (const extra of [{ isComposing: true }, { getModifierState: () => true }]) {
+    const event = keydown("œ", { code: "KeyQ", altKey: true, shiftKey: true, ...extra });
+    target.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  }
+  expect(requests).toEqual([{ id: "layout-q", repeat: false }]);
+});
+
 test("Option-modified Space opens the keyboard menu when macOS emits a non-breaking space", () => {
   const target = new EventTarget();
   const requests: unknown[] = [];

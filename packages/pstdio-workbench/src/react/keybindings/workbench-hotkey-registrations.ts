@@ -1,3 +1,4 @@
+import type { WebviewKeyboardShortcut } from "@pstdio/sdk/extensions";
 import { getKeybindingSteps, type KeybindingSequence, type WorkbenchCore } from "../../core";
 import { keyboardEntryKind } from "../../core/registries/keybindings/keyboard-entry-commands";
 import { getNavigationTargetKey } from "../../core/registries/navigation/navigation-target-key";
@@ -10,7 +11,7 @@ export interface WorkbenchHotkeyRegistration {
   enabled: boolean;
   ignoreInputs: boolean;
   requestId?: string;
-  entry?: "mode" | "tab";
+  entry?: WebviewKeyboardShortcut["entry"];
   execute(): Promise<unknown>;
 }
 

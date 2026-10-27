@@ -1,4 +1,4 @@
-import { hasLocalKeyboardOwner, installKeyboardShortcuts } from "pstdio-extensions/bridge/host";
+import { availableKeyboardShortcuts, installKeyboardShortcuts } from "pstdio-extensions/bridge/host";
 import { useEffect } from "react";
 import type { WorkbenchCore } from "../../core";
 import { createWebviewKeyboardShortcuts } from "./webview-keyboard-shortcuts";
@@ -14,9 +14,9 @@ export const useGlobalKeyboardShortcuts = (
       installKeyboardShortcuts(
         document,
         () =>
-          disabled || hasLocalKeyboardOwner(document)
+          disabled
             ? []
-            : createWebviewKeyboardShortcuts(workbench, commandIds).shortcuts,
+            : availableKeyboardShortcuts(document, createWebviewKeyboardShortcuts(workbench, commandIds).shortcuts),
         (request) => {
           void createWebviewKeyboardShortcuts(workbench, commandIds).dispatch(request);
         },
