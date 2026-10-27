@@ -27,11 +27,11 @@ export default defineExtension({
   ],
   keybindings: [
     ...noteShortcuts,
-    defineKeybinding({ id: "open-notes", key: "Alt+Shift+O", action: { kind: "page", page: notesPage.ref } }),
     defineKeybinding({
-      id: "new-note",
-      key: "Mod+Alt+N",
-      action: { kind: "command", target: { command: createNoteCommand.ref, params: {} } },
+      id: "open-notes",
+      key: "Alt+Shift+O",
+      sticky: true,
+      action: { kind: "page", page: notesPage.ref },
     }),
   ],
   navigationTrees: [notesTreeNavigation],

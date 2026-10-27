@@ -1,15 +1,8 @@
 import { defineKeybinding } from "@pstdio/sdk/extensions";
 import { createNoteCommand, renameNoteCommand } from "./commands";
 import { createFolderCommand, moveNoteCommand } from "./folder-commands";
-import { note, notesPage } from "./pages";
+import { note } from "./pages";
 export const noteShortcuts = [
-  defineKeybinding({
-    id: "go-notes",
-    layer: "go",
-    key: "N",
-    sticky: true,
-    action: { kind: "page", page: notesPage.ref },
-  }),
   defineKeybinding({
     id: "create-note",
     layer: "create",

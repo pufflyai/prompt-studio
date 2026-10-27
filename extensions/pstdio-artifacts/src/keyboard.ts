@@ -1,9 +1,7 @@
 import { defineKeybinding } from "@pstdio/sdk/extensions";
 import { commands } from "./commands";
-import { libraryTarget } from "./contracts";
 import { artifact } from "./resource-kinds";
 export const artifactShortcuts = [
-  defineKeybinding({ id: "go-library", layer: "go", key: "A", sticky: true, action: libraryTarget }),
   defineKeybinding({
     id: "create-artifact",
     layer: "create",

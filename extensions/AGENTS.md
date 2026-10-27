@@ -23,13 +23,14 @@ Core extensions share the host version through the fixed group in `.changeset/co
 
 ## Shared keyboard actions
 
+- Give each action one default shortcut. Use shared Create keys for creation and keep existing direct navigation shortcuts; do not also add a layered alias for the same action.
 - Put resource creation actions in the shared `create` layer. Derive the key from the first letter of the canonical resource-kind ID, for example `note.ref.id[0]!.toUpperCase()`.
 - Bind the existing public creation command. Include bound parameters for variants such as an agent provider, and name the resource and variant clearly.
 - Reuse the resource's existing UI flow. For renderer-owned creation, bind the same command as `createRow.command`; the host reuses that form, properties, attachments, and submission handler. For immediate creation with optional parameters, bind an empty parameter object rather than opening a generic form.
 - Reuse an initial when resources collide. The host sorts the available actions and gives them numbered choices; do not invent an extension-name step or reserve another resource's letter.
 - Keep each numbered chooser stable while it is open. Extensions declare actions; the host owns selection, availability, and placeholder-card numbers.
 - Contribute navigation to the shared `go` layer using the same target as the navigation item. Keep one canonical shortcut for shared settings actions such as choosing a color theme; do not add a copy for each provider.
-- Put every extension flow in a shared group according to its purpose: Create, Go, Current view, Settings, View, or Help. Do not use the deprecated `extensions` layer or require an extension-name step.
+- Group new extension flows by their purpose: Create, Go, Current view, Settings, View, or Help. Keep base direct navigation chords without adding aliases. Do not use the deprecated `extensions` layer or require an extension-name step.
 
 ## Extension Translations
 
