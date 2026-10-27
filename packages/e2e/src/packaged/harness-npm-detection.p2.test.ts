@@ -16,6 +16,7 @@ const harnesses = [
   { command: "opencode", extension: "harness-open-code", id: "opencode", version: "1.0.175" },
   { command: "codex", extension: "harness-codex", id: "codex", version: "codex-cli 0.157.0" },
   { command: "claude", extension: "harness-claude-code", id: "claude-code", version: "2.1.203 (Claude Code)" },
+  { command: "pi", extension: "harness-pi", id: "pi", version: "0.73.1" },
 ];
 const harnessId = (harness: (typeof harnesses)[number]) => `pstdio.${harness.extension}.harness.${harness.id}`;
 
@@ -30,7 +31,8 @@ const installFixtures = async (prefix: string, state: "healthy" | "broken" | "ha
         state === "broken"
           ? `require('node:fs').writeFileSync(${JSON.stringify(join(prefix, "opencode.pid"))}, String(process.pid)); setInterval(() => {}, 1000);`
           : `console.log(process.argv.includes('--version') ? ${JSON.stringify(harness.version)} : 'opencode/test-model');`;
-    if (state === "broken" && harness.command === "codex") source = "console.error('broken install'); process.exit(7);";
+    if (state === "broken" && (harness.command === "codex" || harness.command === "pi"))
+      source = "console.error('broken install'); process.exit(7);";
     if (state === "hanging")
       source = `require('node:fs').writeFileSync(${JSON.stringify(join(prefix, `${harness.command}.pid`))}, String(process.pid)); setInterval(() => {}, 1000);`;
     writeFileSync(script, `#!/usr/bin/env node\n${source}`);
@@ -102,7 +104,7 @@ for (const broken of [false, true]) {
     const agents = await fetch(`${started.baseUrl}/v1/agents/info?project=${project.id}`, { headers });
     expect(agents.status).toBe(200);
     const result = (await agents.json()) as Array<{ id: string; availability: { type: string; reason?: string } }>;
-    expect(result).toHaveLength(3);
+    expect(result).toHaveLength(harnesses.length);
     for (const harness of harnesses) {
       expect(result).toContainEqual(
         expect.objectContaining({

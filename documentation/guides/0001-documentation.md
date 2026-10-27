@@ -50,7 +50,7 @@ The website publishes some folders as the Docs tab at [prompt.studio/docs](https
 
 - Guides: `guides/getting-started/`, `guides/concepts/`, `guides/extensions/`, and `guides/sdk/`
 - References: `references/cli/`, `references/extensions/`, `references/sdk/`, and `references/workbench/`
-- Extensions: `extensions/<name>/README.md` and the numbered files in `extensions/<name>/docs/` for Planner, Notes, Reports, Artifacts, Remote Workspaces, the Claude Code, Codex, and OpenCode harnesses, and Extension Lab
+- Extensions: `extensions/<name>/README.md` and the numbered files in `extensions/<name>/docs/` for Planner, Notes, Reports, Artifacts, Remote Workspaces, the Claude Code, Codex, OpenCode, and Pi harnesses, and Extension Lab
 
 Nothing else is published. This guide, `guides/development/`, `references/architecture/`, PRDs, ADRs, lessons learned, and `extensions/pstdio-planner/docs/superseded/` stay in the repository. The allow-list of published folders and their sidebar labels lives in `clients/landing-page/src/content/docs-topics.ts`. A folder that is not on that list is never published, so a new folder stays private until someone adds it.
 

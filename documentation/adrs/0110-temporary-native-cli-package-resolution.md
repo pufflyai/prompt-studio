@@ -20,6 +20,8 @@ Claude Code exposes login through CLI output rather than a structured authentica
 
 OpenCode's provider API reports connected providers but does not distinguish stored credentials from anonymous custom providers. Its adapter reads only provider IDs from the native XDG `opencode/auth.json` store to identify removable credentials. Native API calls perform every credential write and removal. Credentials supplied through `OPENCODE_AUTH_CONTENT`, environment variables, or configuration remain managed outside the chat.
 
+Pi's JavaScript CLI does not expose an importable launcher. Its adapter resolves the public package entry and runs the adjacent CLI entry with bundled Bun and a preload that clears interpreter mode before child tools run. Account workers use Pi's public SDK, including native resource loading, provider registration, and credential storage.
+
 ## Limitations
 
 Package layout knowledge stays in each harness's resolver and is tested against its pinned dependency. CLI updates need resolution and protocol checks. Private dependencies are downloaded with the extension even when a CLI already exists on PATH. Platform support follows the native packages shipped by each provider; unsupported platforms report the missing CLI rather than attempting an unrelated installer.
