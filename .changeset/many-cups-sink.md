@@ -8,4 +8,4 @@
 "pstdio": minor
 ---
 
-Add shared keyboard actions and contextual targets across core extensions and repository tools.
+Add shared keyboard actions and contextual targets across core extensions and repository tools, with G R for Scribble navigation.
