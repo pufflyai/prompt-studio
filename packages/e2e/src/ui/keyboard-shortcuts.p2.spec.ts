@@ -65,7 +65,9 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
     .getByRole("dialog", { name: "Focus panel", exact: true })
     .getByRole("button", { name: /Secondary/ })
     .click();
-  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await expect(secondary.getByRole("textbox").last()).toBeFocused();
+  await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("Alt+Shift+M");
   await expect(page.getByRole("dialog", { name: "Move tab", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");

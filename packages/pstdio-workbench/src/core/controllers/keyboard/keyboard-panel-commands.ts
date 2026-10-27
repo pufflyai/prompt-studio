@@ -84,7 +84,8 @@ export const registerKeyboardPanelCommands = (core: WorkbenchCore) => {
     "focus",
     "Focus panel",
     "F",
-    () =>
+    () => {
+      const keepMode = core.keyboard.store.getState().active;
       core.keyboard.select(
         "Focus panel",
         core.keyboard.visibleTargets().map((tab, index) => ({
@@ -92,9 +93,11 @@ export const registerKeyboardPanelCommands = (core: WorkbenchCore) => {
           label: `${tab.label} · ${regionLabel(tab.region)}`,
           choose: () => {
             core.keyboard.selectPresentation(tab.id, tab.resource?.id);
+            if (!keepMode) core.keyboard.finish();
           },
         })),
-      ),
+      );
+    },
     true,
   );
   register("closeTab", "Close tab", "X", () =>

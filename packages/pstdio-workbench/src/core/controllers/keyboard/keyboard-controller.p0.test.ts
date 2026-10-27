@@ -500,6 +500,17 @@ test("direct panel focus stays in shortcut mode and selectors return to the curr
   );
 });
 
+test("the direct focus chooser hands focus to the selected panel without leaving shortcut mode open", async () => {
+  const { core, ticket } = setup();
+  const main = ticket("A");
+  ticket("B", "secondary");
+  await core.commands.executeCommand("workbench.keyboard.focus");
+  await core.keyboard.choose("1");
+  expect(core.layout.getLayout().activeWidgetId).toBe(main.widgetId);
+  expect(core.focus.getActiveRegion()).toBe("main");
+  expect(core.keyboard.store.getState().active).toBe(false);
+});
+
 test("layer assignments reject strict prefixes while keeping exact-key conflicts available", async () => {
   const { core } = setup();
   for (const id of ["short", "long"]) core.commands.registerCommand({ id, label: id }, { execute() {} });

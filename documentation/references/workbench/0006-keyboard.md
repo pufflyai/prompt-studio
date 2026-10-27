@@ -36,7 +36,7 @@ Panel and tab actions use direct Alt+Shift chords and work from any shortcut-mod
 | Toggle secondary panel | B |
 | Toggle side panel | E |
 
-Current view → N starts a fresh session in an existing Session tab. Moving a tab preserves its identity; repositioning a panel uses its allowed positions. Canceling an unfinished flow changes nothing. Direct focus and tab cycling use the live focused panel and active tab outside shortcut mode.
+Current view → N starts a fresh session in an existing Session tab. Moving a tab preserves its identity; repositioning a panel uses its allowed positions. Canceling an unfinished flow changes nothing. Direct focus and tab cycling use the live focused panel and active tab outside shortcut mode. The direct focus chooser finishes in the chosen editor; invoking it from shortcut mode keeps that mode active.
 
 ## Creation and shared settings
 
