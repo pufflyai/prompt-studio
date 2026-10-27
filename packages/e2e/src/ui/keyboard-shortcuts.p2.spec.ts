@@ -82,9 +82,7 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   await testInfo.attach("shortcut-inventory", { body: await dialog.innerText(), contentType: "text/plain" });
   await dialog.getByRole("group", { name: "Open shortcut destination", exact: true }).scrollIntoViewIfNeeded();
   await testInfo.attach("shortcut-reference", { body: await page.screenshot(), contentType: "image/png" });
-  await expect(dialog.getByRole("group", { name: "Open shortcut destination", exact: true })).toContainText(
-    "Shortcut reference",
-  );
+  await expect(dialog.getByRole("heading", { name: "Shortcut reference", exact: true })).toBeVisible();
   await expect(dialog.getByRole("group", { name: "Open shortcut destination", exact: true })).toContainText(/J/i);
   for (const enabled of [false, true]) {
     const changed = await request.patch(`${apiBase}/v1/projects/${project.id}/extensions/${instanceId}`, {
