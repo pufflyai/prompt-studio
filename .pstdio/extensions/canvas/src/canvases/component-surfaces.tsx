@@ -4,7 +4,6 @@ import {
   Chip,
   EmptyState,
   ListRow,
-  ScrollArea,
   SessionIndicator,
   SimpleCard,
   SimpleCardBody,
@@ -13,85 +12,79 @@ import {
 import { useState } from "react";
 
 export const FeedbackStates = () => (
-  <ScrollArea h="full">
-    <Stack p="md" gap="md">
-      <Text textStyle="heading/M">Feedback &amp; status</Text>
-      <AlertMessage status="info" title="Ready to explore">
-        All examples use sample data.
-      </AlertMessage>
-      <AlertMessage status="success" title="Changes saved">
-        The design is ready to compare.
-      </AlertMessage>
-      <AlertMessage status="warning" title="Review before continuing">
-        Check the layout at smaller widths.
-      </AlertMessage>
-      <AlertMessage status="error" title="Preview error" endElement={<Button>Try again</Button>}>
-        This is a sample error state.
-      </AlertMessage>
-    </Stack>
-  </ScrollArea>
+  <Stack p="md" gap="md">
+    <Text textStyle="heading/M">Feedback &amp; status</Text>
+    <AlertMessage status="info" title="Ready to explore">
+      All examples use sample data.
+    </AlertMessage>
+    <AlertMessage status="success" title="Changes saved">
+      The design is ready to compare.
+    </AlertMessage>
+    <AlertMessage status="warning" title="Review before continuing">
+      Check the layout at smaller widths.
+    </AlertMessage>
+    <AlertMessage status="error" title="Preview error" endElement={<Button>Try again</Button>}>
+      This is a sample error state.
+    </AlertMessage>
+  </Stack>
 );
 
 export const BadgeStates = () => (
-  <ScrollArea h="full">
-    <Stack p="md" gap="md">
-      <Text textStyle="heading/M">Badges &amp; identity</Text>
-      <Flex gap="sm" wrap="wrap">
-        <Chip>Feature</Chip>
-        <Chip>UI</Chip>
-        <Badge variant="ticket">Ticket tag</Badge>
-        <Badge colorPalette="green">Done</Badge>
-        <Badge colorPalette="orange">Needs review</Badge>
-        <Badge colorPalette="red">Failed</Badge>
-      </Flex>
-      {(["in_progress", "awaiting_input", "queued", "completed", "failed", "cancelled", "disconnected"] as const).map(
-        (status) => (
-          <Flex gap="xs" align="center" key={status}>
-            <SessionIndicator status={status} ariaLabel={status} />
-            <Text textStyle="label/S/medium">{status}</Text>
-          </Flex>
-        ),
-      )}
-    </Stack>
-  </ScrollArea>
+  <Stack p="md" gap="md">
+    <Text textStyle="heading/M">Badges &amp; identity</Text>
+    <Flex gap="sm" wrap="wrap">
+      <Chip>Feature</Chip>
+      <Chip>UI</Chip>
+      <Badge variant="ticket">Ticket tag</Badge>
+      <Badge colorPalette="green">Done</Badge>
+      <Badge colorPalette="orange">Needs review</Badge>
+      <Badge colorPalette="red">Failed</Badge>
+    </Flex>
+    {(["in_progress", "awaiting_input", "queued", "completed", "failed", "cancelled", "disconnected"] as const).map(
+      (status) => (
+        <Flex gap="xs" align="center" key={status}>
+          <SessionIndicator status={status} ariaLabel={status} />
+          <Text textStyle="label/S/medium">{status}</Text>
+        </Flex>
+      ),
+    )}
+  </Stack>
 );
 
 export const SurfaceStates = () => {
   const [selected, setSelected] = useState("overview");
   return (
-    <ScrollArea h="full">
-      <Stack p="md" gap="md">
-        <Text textStyle="heading/M">Layout &amp; navigation</Text>
-        <SimpleCard>
-          <SimpleCardBody>
-            <Stack gap="sm">
-              <Text textStyle="heading/S">Project overview</Text>
-              <Text textStyle="paragraph/S/regular">A shared card with sample content.</Text>
-            </Stack>
-          </SimpleCardBody>
-        </SimpleCard>
-        <Tabs.Root defaultValue="overview" size="sm">
-          <Tabs.List>
-            <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
-            <Tabs.Trigger value="activity">Activity</Tabs.Trigger>
-            <Tabs.Trigger value="disabled" disabled>
-              Disabled
-            </Tabs.Trigger>
-          </Tabs.List>
-          <Tabs.Content value="overview">
-            <Text textStyle="paragraph/S/regular">Overview content</Text>
-          </Tabs.Content>
-          <Tabs.Content value="activity">
-            <Text textStyle="paragraph/S/regular">Activity content</Text>
-          </Tabs.Content>
-        </Tabs.Root>
-        <Stack gap="none">
-          {["overview", "files", "settings"].map((id) => (
-            <ListRow key={id} label={id} isSelected={selected === id} onActivate={() => setSelected(id)} />
-          ))}
-        </Stack>
+    <Stack p="md" gap="md">
+      <Text textStyle="heading/M">Layout &amp; navigation</Text>
+      <SimpleCard>
+        <SimpleCardBody>
+          <Stack gap="sm">
+            <Text textStyle="heading/S">Project overview</Text>
+            <Text textStyle="paragraph/S/regular">A shared card with sample content.</Text>
+          </Stack>
+        </SimpleCardBody>
+      </SimpleCard>
+      <Tabs.Root defaultValue="overview" size="sm">
+        <Tabs.List>
+          <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
+          <Tabs.Trigger value="activity">Activity</Tabs.Trigger>
+          <Tabs.Trigger value="disabled" disabled>
+            Disabled
+          </Tabs.Trigger>
+        </Tabs.List>
+        <Tabs.Content value="overview">
+          <Text textStyle="paragraph/S/regular">Overview content</Text>
+        </Tabs.Content>
+        <Tabs.Content value="activity">
+          <Text textStyle="paragraph/S/regular">Activity content</Text>
+        </Tabs.Content>
+      </Tabs.Root>
+      <Stack gap="none">
+        {["overview", "files", "settings"].map((id) => (
+          <ListRow key={id} label={id} isSelected={selected === id} onActivate={() => setSelected(id)} />
+        ))}
       </Stack>
-    </ScrollArea>
+    </Stack>
   );
 };
 

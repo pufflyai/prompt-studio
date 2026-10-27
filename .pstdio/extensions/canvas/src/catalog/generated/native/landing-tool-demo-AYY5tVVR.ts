@@ -1,0 +1,474 @@
+// @ts-nocheck
+// Generated from source components; regenerate with build-native-previews.ts.
+import { defineSlotRecipe as e } from "@chakra-ui/react";
+// clients/landing-page/src/theme/recipes/landing-story.ts
+var t = e({
+	slots: [
+		"page",
+		"section",
+		"featureSection",
+		"intro",
+		"visual",
+		"panels",
+		"panel",
+		"panelHeader",
+		"panelBody",
+		"blockGrid",
+		"block",
+		"blockSymbol",
+		"blockMark",
+		"composition"
+	],
+	base: {
+		page: {
+			display: "flex",
+			flexDirection: "column",
+			width: "full",
+			minWidth: 0,
+			gap: "4xl",
+			px: {
+				base: "lg",
+				md: "xl"
+			},
+			py: "3xl",
+			containerType: "inline-size"
+		},
+		section: {
+			display: "flex",
+			flexDirection: "column",
+			gap: "lg",
+			width: "full",
+			minWidth: 0
+		},
+		featureSection: {
+			display: "flex",
+			flexDirection: "column",
+			gap: "xl",
+			width: "full",
+			minWidth: 0
+		},
+		intro: {
+			display: "flex",
+			flexDirection: "column",
+			gap: "sm",
+			maxWidth: "3xl"
+		},
+		visual: {
+			layerStyle: "panel",
+			bg: "bg.subtle",
+			p: "xs",
+			width: "full",
+			minWidth: 0
+		},
+		panels: {
+			display: "grid",
+			alignItems: "start",
+			gridTemplateColumns: "minmax(0, 1fr)",
+			gap: "panel-gap",
+			"@container (min-width: 36rem)": { gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.3fr)" }
+		},
+		panel: {
+			layerStyle: "panel",
+			bg: "bg",
+			minWidth: 0,
+			height: "auto",
+			maxHeight: "32rem",
+			display: "flex",
+			flexDirection: "column",
+			"&[data-highlighted=true]": { borderColor: "fg.muted" }
+		},
+		panelHeader: {
+			display: "flex",
+			alignItems: "center",
+			gap: "sm",
+			p: "md",
+			borderBottomWidth: "1px",
+			borderColor: "border.subtle",
+			textStyle: "label/M/medium"
+		},
+		panelBody: {
+			display: "flex",
+			flexDirection: "column",
+			gap: "md",
+			p: "md",
+			flex: 1,
+			minWidth: 0,
+			minHeight: 0,
+			overflowY: "auto"
+		},
+		blockGrid: {
+			display: "grid",
+			gap: "sm",
+			gridTemplateColumns: "minmax(0, 1fr)",
+			"@container (min-width: 26rem)": { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" },
+			"@container (min-width: 55rem)": { gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }
+		},
+		block: {
+			display: "flex",
+			flexDirection: "column",
+			alignItems: "start",
+			gap: "sm",
+			p: "lg",
+			bg: "bg.subtle",
+			borderRadius: "sm",
+			borderWidth: "1px",
+			borderColor: "border.subtle",
+			textAlign: "left",
+			color: "fg"
+		},
+		blockMark: {
+			display: "inline-flex",
+			flexShrink: 0,
+			"& svg": {
+				height: "full",
+				width: "auto",
+				maxWidth: "none"
+			}
+		},
+		blockSymbol: {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "start",
+			height: "16",
+			width: "full"
+		},
+		composition: {
+			display: "flex",
+			flexDirection: "column",
+			gap: "md",
+			borderTopWidth: "1px",
+			borderColor: "border.subtle",
+			pt: "lg"
+		}
+	},
+	variants: { compact: { true: {
+		panelHeader: {
+			p: "xs",
+			textStyle: "label/S/medium"
+		},
+		panelBody: {
+			p: "xs",
+			gap: "xs",
+			overflowY: "hidden"
+		},
+		panel: {
+			animation: "slide-from-bottom 420ms ease-out",
+			"@media (prefers-reduced-motion: reduce)": { animation: "none" }
+		}
+	} } }
+}), n = e({
+	slots: /* @__PURE__ */ "iconEditor.iconPicker.iconGrid.iconTile.iconName.tileSymbol.iconCanvas.inspectorSymbol.inspector.toolbar.metrics.metric.sessions.session.sessionStatus.preview.checks.prompt.plot.plotGrid.plotCurve.plotComparison.plotCursor.plotPoint.shaderCode.shaderScroll.shaderPanels.shaderCanvas.shaderControls.shaderControl.extensionPanels.agentBoard".split("."),
+	base: {
+		agentBoard: {
+			height: "96",
+			minWidth: 0
+		},
+		extensionPanels: {
+			display: "grid",
+			gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, {sizes.48}), 1fr))",
+			gap: "panel-gap",
+			minHeight: "64",
+			width: "full"
+		},
+		iconPicker: {
+			display: "grid",
+			gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+			"@container (min-width: 26rem)": { gridTemplateColumns: "repeat(6, minmax(0, 1fr))" },
+			gap: "xs"
+		},
+		shaderPanels: {
+			alignItems: "stretch",
+			minHeight: 0
+		},
+		shaderScroll: {
+			flex: 1,
+			height: "full",
+			minHeight: 0,
+			minWidth: 0,
+			"& [data-part=content]": {
+				minHeight: "full",
+				display: "flex",
+				flexDirection: "column"
+			}
+		},
+		shaderCode: {
+			textStyle: "mono/XS",
+			fontSize: "sm",
+			minHeight: "full",
+			flex: "1 0 auto",
+			minWidth: "full",
+			width: "max-content",
+			fieldSizing: "content",
+			overflow: "hidden",
+			resize: "none",
+			display: "block"
+		},
+		shaderCanvas: {
+			display: "block",
+			width: "full",
+			height: "64",
+			bg: "bg.subtle",
+			borderRadius: "sm"
+		},
+		shaderControls: { gap: "lg" },
+		shaderControl: { gap: "sm" },
+		plot: {
+			width: "full",
+			maxHeight: "64",
+			bg: "bg.subtle",
+			borderRadius: "sm"
+		},
+		plotGrid: {
+			fill: "none",
+			stroke: "border.subtle",
+			strokeWidth: 1
+		},
+		plotComparison: {
+			fill: "none",
+			stroke: "fg.muted",
+			strokeWidth: 2,
+			strokeDasharray: "5 5"
+		},
+		plotCurve: {
+			fill: "none",
+			stroke: "fg.info",
+			strokeWidth: 3,
+			strokeLinecap: "round",
+			strokeLinejoin: "round"
+		},
+		plotCursor: {
+			stroke: "fg.muted",
+			strokeWidth: 1,
+			strokeDasharray: "4 4"
+		},
+		plotPoint: {
+			fill: "fg",
+			stroke: "bg",
+			strokeWidth: 2
+		},
+		iconEditor: {
+			display: "grid",
+			alignItems: "start",
+			gridTemplateColumns: "minmax(0, 1fr)",
+			gap: "panel-gap",
+			"@container (min-width: 36rem)": { gridTemplateColumns: "minmax(0, 1.5fr) minmax(0, 1fr)" }
+		},
+		iconGrid: {
+			display: "grid",
+			gridTemplateColumns: "repeat(auto-fill, minmax(min({sizes.24}, 100%), 1fr))",
+			gap: "xs",
+			listStyle: "none",
+			py: "xs"
+		},
+		iconTile: {
+			display: "flex",
+			flexDirection: "column",
+			alignItems: "center",
+			justifyContent: "center",
+			gap: "xs",
+			minWidth: 0,
+			minHeight: "28",
+			p: "sm",
+			bg: "bg.subtle",
+			borderWidth: "1px",
+			borderColor: "border.subtle",
+			borderRadius: "sm",
+			color: "fg",
+			transitionProperty: "opacity, background-color, border-color",
+			transitionDuration: "moderate",
+			"&[data-state=pending]": { opacity: .25 },
+			"&[data-state=active]": {
+				borderColor: "fg.info",
+				bg: "bg.info"
+			},
+			"@media (prefers-reduced-motion: reduce)": { transition: "none" },
+			"&[aria-pressed]": {
+				cursor: "pointer",
+				_hover: { bg: "bg.hover" }
+			},
+			_focusVisible: {
+				outline: "2px solid",
+				outlineColor: "fg",
+				outlineOffset: "2px"
+			},
+			"&[aria-pressed=true]": {
+				borderColor: "fg.info",
+				bg: "bg.info"
+			}
+		},
+		iconName: {
+			textStyle: "label/S/regular",
+			maxWidth: "full",
+			overflow: "hidden",
+			textOverflow: "ellipsis",
+			whiteSpace: "nowrap"
+		},
+		tileSymbol: {
+			display: "grid",
+			placeItems: "center",
+			lineHeight: 1,
+			boxSize: "8",
+			fontSize: "{sizes.8}",
+			mb: "xs"
+		},
+		iconCanvas: {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "center",
+			bg: "bg.subtle",
+			borderRadius: "sm",
+			minHeight: "48",
+			p: "xl"
+		},
+		inspectorSymbol: {
+			display: "grid",
+			placeItems: "center",
+			lineHeight: 1,
+			boxSize: "24",
+			fontSize: "{sizes.24}"
+		},
+		inspector: {
+			display: "flex",
+			flexDirection: "column",
+			gap: "md"
+		},
+		toolbar: {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "space-between",
+			gap: "sm",
+			flexWrap: "wrap"
+		},
+		metrics: {
+			display: "grid",
+			gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+			gap: "panel-gap"
+		},
+		metric: {
+			layerStyle: "panel",
+			bg: "bg",
+			p: "md",
+			display: "flex",
+			flexDirection: "column",
+			gap: "xs"
+		},
+		sessions: {
+			display: "flex",
+			flexDirection: "column",
+			gap: "sm",
+			listStyle: "none"
+		},
+		session: {
+			display: "flex",
+			flexDirection: "column",
+			gap: "md",
+			width: "full",
+			p: "md",
+			minWidth: 0,
+			textAlign: "left",
+			color: "fg",
+			layerStyle: "panel",
+			bg: "bg.subtle",
+			"&[aria-pressed]": {
+				cursor: "pointer",
+				_hover: { bg: "bg.hover" }
+			},
+			_focusVisible: {
+				outline: "2px solid",
+				outlineColor: "fg",
+				outlineOffset: "2px"
+			},
+			"&[aria-pressed=true]": {
+				borderColor: "fg.muted",
+				bg: "bg.active"
+			},
+			"&[data-status=in_progress]": {
+				borderColor: "fg.info",
+				bg: "bg.info"
+			},
+			"&[data-status=completed]": { borderColor: "fg.success" }
+		},
+		sessionStatus: {
+			gap: "xs",
+			"&[data-status=in_progress] > svg": { animation: "spin 1.2s linear infinite" },
+			"@media (prefers-reduced-motion: reduce)": { "&[data-status=in_progress] > svg": { animation: "none" } }
+		},
+		preview: {
+			layerStyle: "panel",
+			bg: "bg.subtle",
+			p: "md",
+			overflow: "hidden",
+			minWidth: 0,
+			flex: 1
+		},
+		checks: {
+			display: "flex",
+			flexWrap: "wrap",
+			gap: "md",
+			textStyle: "label/S/regular",
+			color: "fg.success"
+		},
+		prompt: {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "space-between",
+			flexWrap: "wrap",
+			gap: "md",
+			p: "lg",
+			bg: "bg.subtle",
+			layerStyle: "panel",
+			textStyle: "paragraph/L/regular"
+		}
+	},
+	variants: { compact: { true: {
+		iconGrid: {
+			gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+			gap: "2xs"
+		},
+		iconTile: {
+			minHeight: "22",
+			p: "2xs",
+			gap: "2xs"
+		},
+		tileSymbol: {
+			boxSize: "12",
+			fontSize: "{sizes.12}",
+			mb: 0
+		},
+		iconName: { textStyle: "label/S/regular" },
+		iconCanvas: {
+			minHeight: "28",
+			p: "md"
+		},
+		inspectorSymbol: {
+			boxSize: "16",
+			fontSize: "{sizes.16}"
+		},
+		inspector: { gap: "xs" },
+		shaderPanels: {
+			height: "full",
+			"& > [data-demo-part]": {
+				minHeight: 0,
+				maxHeight: "none"
+			}
+		},
+		shaderCode: {
+			textStyle: "mono/XS",
+			fontSize: "xs"
+		},
+		shaderCanvas: { height: "40" },
+		shaderControls: { gap: "xs" },
+		shaderControl: { gap: "xs" },
+		session: {
+			p: "sm",
+			gap: "xs"
+		},
+		sessions: { gap: "xs" },
+		agentBoard: {
+			width: "calc(100% / 0.72)",
+			height: "64",
+			zoom: .72
+		}
+	} } }
+});
+export { t as n, n as t };

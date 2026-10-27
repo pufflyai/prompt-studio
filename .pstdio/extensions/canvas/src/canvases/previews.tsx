@@ -11,7 +11,9 @@ import {
   OverlayStates,
   SurfaceStates,
 } from "./component-surfaces";
+import { LongDocumentation } from "./documentation";
 import { FoundationColors, FoundationSpacing, FoundationTypography } from "./foundations";
+import { controlsScrollViewportHeight } from "./preview-dimensions";
 
 const ProjectForm = () => {
   const [name, setName] = useState("My workspace");
@@ -95,7 +97,7 @@ const Controls = () => (
       </Dialog.Root>
     </Flex>
     <Box flex="1" minH="0" borderWidth="1px" borderColor="border.subtle" borderRadius="xs">
-      <ScrollArea h="full">
+      <ScrollArea h={`${controlsScrollViewportHeight}px`}>
         <Stack p="sm" gap="sm">
           {Array.from({ length: 15 }, (_, index) => (
             <Text key={index} textStyle="paragraph/S/regular">
@@ -109,6 +111,7 @@ const Controls = () => (
 );
 
 export const previews = {
+  "long-documentation": LongDocumentation,
   "project-form": ProjectForm,
   controls: Controls,
   "foundation-colors": FoundationColors,

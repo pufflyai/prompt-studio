@@ -3,15 +3,23 @@ import { Tooltip } from "@pstdio/ui";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CanvasItem } from "../canvases/definitions";
 import { previews } from "../canvases/previews";
+import { PencilPreview } from "../catalog/pencil/preview";
+import { CatalogPreviewFrame } from "../catalog/preview";
 import type { CanvasRuntime } from "../controller/runtime";
 
 interface ItemProps {
   item: CanvasItem;
   runtime: CanvasRuntime;
 }
+const ItemPreview = (props: { item: CanvasItem }) => {
+  const { item } = props;
+  if (item.preview?.kind === "design") return <PencilPreview file={item.preview.file} rootId={item.preview.rootId} />;
+  if (item.preview) return <CatalogPreviewFrame preview={item.preview} name={item.name} />;
+  const Component = item.component ? previews[item.component] : undefined;
+  return Component ? <Component /> : null;
+};
 export const ItemFrame = (props: ItemProps) => {
   const { item, runtime } = props;
-  const Component = previews[item.component];
   const [feedback, setFeedback] = useState<"" | "Copied" | "Select and copy the name">("");
   const wrapper = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -39,7 +47,15 @@ export const ItemFrame = (props: ItemProps) => {
     }
   };
   return (
-    <Box data-canvas-item={item.id} ref={wrapper} position="absolute" top="0" left="0" w={`${item.width}px`}>
+    <Box
+      data-canvas-item={item.id}
+      data-canvas-control
+      ref={wrapper}
+      position="absolute"
+      top="0"
+      left="0"
+      w={`${item.width}px`}
+    >
       <Flex align="center" gap="xs" wrap="wrap" pb="xs" cursor="default">
         <Tooltip content="Move with the arrow keys. Hold Shift for larger steps." openDelay={300}>
           <Button
@@ -62,6 +78,11 @@ export const ItemFrame = (props: ItemProps) => {
         <Text role="status" aria-live="polite" textStyle="label/XS" color="fg.muted">
           {feedback}
         </Text>
+        {item.preview?.kind === "design" && (
+          <Text textStyle="label/XS" color="fg.muted">
+            Design reference
+          </Text>
+        )}
         {feedback === "Select and copy the name" && (
           <Text tabIndex={0} userSelect="text" textStyle="label/S/medium">
             {item.name}
@@ -69,15 +90,15 @@ export const ItemFrame = (props: ItemProps) => {
         )}
       </Flex>
       <Box
-        h={`${item.height}px`}
-        overflow="hidden"
+        minH={`${item.height}px`}
+        display="flow-root"
         borderWidth="1px"
         borderColor="border.subtle"
         bg="bg"
         borderRadius="xs"
         data-canvas-preview={item.id}
       >
-        <Component />
+        <ItemPreview item={item} />
       </Box>
     </Box>
   );

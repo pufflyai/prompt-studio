@@ -62,6 +62,7 @@ export const createDropFeedbackWorkbench = (pinned = false, floating = false) =>
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Drop feedback",
   component: WorkbenchStory,
+  excludeStories: ["createDropFeedbackWorkbench"],
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof WorkbenchStory>;
 export default meta;

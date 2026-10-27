@@ -1,3 +1,4 @@
+import { type CanvasZoomChange, zoomCanvas } from "@pstdio/ui/canvas";
 import type { CanvasDefinition } from "../canvases/definitions";
 import type { Layout, LayoutChange } from "../layout";
 import { boundedCamera, boundedPoint, type Camera, fitCamera, type Point, revealCamera, zoomAt } from "./geometry";
@@ -28,6 +29,8 @@ export const createCanvasRuntime = (
   const moved = new Set<string>();
   const listeners = new Set<() => void>();
   let cameraDirty = true;
+  let framing: { kind: "all" } | { kind: "item"; id: string } | undefined;
+  let measuredViewport = { width: 0, height: 0 };
   const paint = () => {
     frame = 0;
     if (stage && cameraDirty) {
@@ -61,7 +64,8 @@ export const createCanvasRuntime = (
     timer = setTimeout(flush, 300);
     schedule();
   };
-  const camera = (next: Camera) => {
+  const camera = (next: Camera, retainFraming = false) => {
+    if (!retainFraming) framing = undefined;
     layout = { ...layout, camera: boundedCamera(next) };
     cameraDirty = true;
     changes.camera = layout.camera;
@@ -85,17 +89,29 @@ export const createCanvasRuntime = (
       height: Math.max(...entries.map((entry) => entry.y + entry.height)) - top,
     };
   };
+  const reframe = () => {
+    if (!framing) return;
+    const rect = bounds(framing.kind === "item" ? framing.id : undefined);
+    const view = viewport();
+    const zoom = layout.camera.zoom;
+    if (framing.kind === "all" || rect.width * zoom > view.width - 48 || rect.height * zoom > view.height - 48) {
+      camera(fitCamera(rect, view), true);
+      return;
+    }
+    camera(
+      {
+        zoom,
+        x: (view.width - rect.width * zoom) / 2 - rect.x * zoom,
+        y: (view.height - rect.height * zoom) / 2 - rect.y * zoom,
+      },
+      true,
+    );
+  };
   const reveal = (id: string) => {
     if (!items.has(id)) return;
     raise(id);
-    const rect = bounds(id);
-    const view = viewport();
-    const zoom = layout.camera.zoom;
-    camera({
-      zoom,
-      x: (view.width - rect.width * zoom) / 2 - rect.x * zoom,
-      y: (view.height - rect.height * zoom) / 2 - rect.y * zoom,
-    });
+    framing = { kind: "item", id };
+    reframe();
   };
   return {
     get: () => layout,
@@ -122,11 +138,23 @@ export const createCanvasRuntime = (
     },
     measure: () => {
       // Read all wrapper sizes together. Gestures use this cache without forcing layout.
-      for (const [id, element] of items) sizes.set(id, { width: element.offsetWidth, height: element.offsetHeight });
+      const view = viewport();
+      let changed = view.width !== measuredViewport.width || view.height !== measuredViewport.height;
+      measuredViewport = view;
+      for (const [id, element] of items) {
+        if (element.querySelector("[data-ui-canvas-loading]")) continue;
+        const next = { width: element.offsetWidth, height: element.offsetHeight };
+        const previous = sizes.get(id);
+        changed ||= next.width !== previous?.width || next.height !== previous?.height;
+        sizes.set(id, next);
+      }
+      if (changed) reframe();
     },
     elements: () => [...items.values()],
     camera,
     pan: (delta: Point) => camera({ ...layout.camera, x: layout.camera.x + delta.x, y: layout.camera.y + delta.y }),
+    zoomChange: (change: CanvasZoomChange) =>
+      camera(zoomCanvas(layout.camera, change, { minZoom: 0.000001, maxZoom: 4 })),
     zoom: (factor: number, anchor?: Point) => {
       const view = viewport();
       camera(zoomAt(layout.camera, anchor ?? { x: view.width / 2, y: view.height / 2 }, layout.camera.zoom * factor));
@@ -134,6 +162,7 @@ export const createCanvasRuntime = (
     move: (id: string, delta: Point) => {
       const current = layout.positions[id];
       if (!current) return;
+      framing = undefined;
       layout = {
         ...layout,
         positions: { ...layout.positions, [id]: boundedPoint({ x: current.x + delta.x, y: current.y + delta.y }) },
@@ -143,7 +172,9 @@ export const createCanvasRuntime = (
       changed();
     },
     fit: () => {
-      if (canvas.items.length) camera(fitCamera(bounds(), viewport()));
+      if (!canvas.items.length) return;
+      framing = { kind: "all" };
+      reframe();
     },
     reset: () => camera({ x: 24, y: 24, zoom: 1 }),
     reveal,
@@ -168,6 +199,7 @@ export const createCanvasRuntime = (
     },
     replace: (next: Layout) => {
       if (dirty) return;
+      framing = undefined;
       layout = next;
       cameraDirty = true;
       for (const item of canvas.items) moved.add(item.id);
@@ -178,9 +210,14 @@ export const createCanvasRuntime = (
       flush();
       cancelAnimationFrame(frame);
       cancelAnimationFrame(focusFrame);
+      frame = 0;
+      focusFrame = 0;
+      framing = undefined;
+      cameraDirty = true;
       foreground = undefined;
       listeners.clear();
       items.clear();
+      sizes.clear();
     },
   };
 };

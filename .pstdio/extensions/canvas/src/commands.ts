@@ -13,7 +13,15 @@ export const commands = {
     title: "List canvases",
     cli: true,
     async run(ctx) {
-      return { canvases: canvases.map((canvas) => ({ ...canvas, href: canvasUrl(ctx.projectId, canvas.id) })) };
+      return {
+        canvases: canvases.map(({ id, name, group, items }) => ({
+          id,
+          name,
+          group,
+          previewCount: items.length,
+          href: canvasUrl(ctx.projectId, id),
+        })),
+      };
     },
   }),
   open: defineCommand({

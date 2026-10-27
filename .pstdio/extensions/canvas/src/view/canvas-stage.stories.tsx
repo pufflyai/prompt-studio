@@ -36,3 +36,6 @@ export const Foundations = {
 export const SharedComponents = {
   render: () => <Example canvas={canvases.find((canvas) => canvas.id === "shared-components")!} zoom={0.4} />,
 };
+export const IntrinsicDocumentation = {
+  render: () => <Example canvas={canvases.find((canvas) => canvas.id === "documentation-contract")!} zoom={0.2} />,
+};

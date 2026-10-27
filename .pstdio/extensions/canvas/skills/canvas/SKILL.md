@@ -40,3 +40,13 @@ Do not add runtime content editing, delete shortcuts, resizing, presets, drawing
 For controller changes, test every behavior above at several zooms, viewport sizes, and reloads with saved layout. Use a real supported touch device and actual trackpad input with a real history entry for history-swipe checks. Report unavailable tests honestly. Before claiming smooth performance, profile a populated representative canvas and record preview count, browser, device, timings, long tasks, layout work, storage writes, and preview rerenders.
 
 Finish with changed paths and exact preview names, checks run, limits or untested behaviors, and defaults chosen. The Pencil design-system and website files remain the reference for designs that have not yet moved to canvases. Migrate one topic at a time, verify coverage and fidelity, and update design authority only after the corresponding canvas is complete.
+
+## Documentation migration
+
+Catalog scenarios are generated from current source exports. Keep the original story IDs and the first scenario's group link. Put application scenarios on separate canvases so their seeded stores cannot overwrite other mounted variants. Keep args, decorators, globals, authored descriptions, source references, and original play functions available. Use local adapters for application API calls and analytics. Keep shared React, Chakra, theme, and workbench module identities intact.
+
+The documentation frame must grow with prose, examples, source listings, and expanded details. Never put a vertical scroll area or fixed height on that frame. Fullscreen application examples may declare a minimum internal viewport so their own height-dependent layouts and scroll areas keep working. Observe intrinsic bounds and font completion; explicit reveal must fit a tall frame and its title. Camera and theme changes must preserve mounted inputs and local state.
+
+Pencil canvases labeled Design reference remain evidence until their real-component mappings and visual states are verified. Preserve every node identity, reusable definition, reference override, and asset hash in `src/catalog/generated/migration-ledger.json`. Do not mark a reference renderer or a candidate name match as a completed destination. The acceptance gate is `bun run --cwd scripts canvas:coverage`; structural ledger tests alone do not complete the migration.
+
+Rebuild with `bun run --cwd scripts canvas:build`. Run `canvas:verify` in the isolated Docker tools environment. Source and emitted-file hashes must match before claiming current coverage. Keep the original designs and their authority until the corresponding topic passes its fidelity checks.

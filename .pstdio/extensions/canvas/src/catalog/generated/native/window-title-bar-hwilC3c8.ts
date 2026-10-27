@@ -1,0 +1,153 @@
+// @ts-nocheck
+// Generated from source components; regenerate with build-native-previews.ts.
+import { defineSlotRecipe as e } from "@chakra-ui/react";
+// packages/ui/src/theme/recipes/window-title-bar.ts
+var t = e({
+	className: "ps-window-title-bar",
+	slots: [
+		"root",
+		"content",
+		"actions"
+	],
+	base: {
+		root: {
+			position: "relative",
+			flexShrink: 0,
+			width: "full",
+			height: "window-title-bar",
+			bg: "bg",
+			color: "fg",
+			userSelect: "none",
+			WebkitAppRegion: "drag",
+			"body:has([data-scope=menu][data-part=content][data-state=open], [data-scope=popover][data-part=content][data-state=open]) &": { WebkitAppRegion: "no-drag" }
+		},
+		content: {
+			display: "flex",
+			alignItems: "center",
+			gap: "xs",
+			height: "full",
+			minWidth: 0,
+			paddingInline: "compact",
+			"& button, & a, & input, & [role=tab]": { WebkitAppRegion: "no-drag" }
+		},
+		actions: {
+			display: "flex",
+			alignItems: "center",
+			gap: "xs",
+			marginInlineStart: "auto",
+			flexShrink: 0,
+			_empty: { display: "none" }
+		}
+	},
+	variants: { controls: {
+		mac: { content: {
+			paddingInlineStart: "window-controls-mac",
+			"[data-window-full-screen] &": { paddingInlineStart: "compact" }
+		} },
+		overlay: {
+			content: {
+				marginLeft: "env(titlebar-area-x, 0px)",
+				width: "env(titlebar-area-width, 100%)"
+			},
+			actions: { _after: {
+				content: "\"\"",
+				height: "icon-md",
+				borderInlineStartWidth: "1px",
+				borderColor: "border.subtle"
+			} }
+		}
+	} },
+	defaultVariants: { controls: "overlay" }
+}), n = e({
+	className: "ps-window-tabs",
+	slots: [
+		"list",
+		"tab",
+		"trigger",
+		"label",
+		"close"
+	],
+	base: {
+		list: {
+			display: "flex",
+			alignItems: "center",
+			gap: "2xs",
+			minWidth: 0,
+			height: "full"
+		},
+		tab: {
+			position: "relative",
+			display: "flex",
+			alignItems: "center",
+			flex: "1 1 0",
+			minWidth: "window-tab-min",
+			height: "window-tab",
+			maxWidth: "fit-content",
+			borderRadius: "xs",
+			color: "fg.muted",
+			bg: "transparent",
+			_selected: {
+				bg: "bg.muted",
+				color: "fg"
+			},
+			_hover: {
+				bg: "bg.hover",
+				color: "fg"
+			},
+			_dragging: { opacity: .5 },
+			WebkitAppRegion: "no-drag"
+		},
+		trigger: {
+			display: "flex",
+			alignItems: "center",
+			gap: "window-tab-gap",
+			minWidth: 0,
+			flex: "1 1 auto",
+			height: "full",
+			paddingInlineStart: "compact",
+			paddingInlineEnd: "window-tab-gap",
+			cursor: "pointer",
+			textStyle: "label/S/medium",
+			borderRadius: "xs",
+			focusVisibleRing: "inside",
+			WebkitAppRegion: "no-drag",
+			touchAction: "none",
+			"&[aria-pressed]": { cursor: "grab" },
+			_icon: {
+				width: "icon-xs",
+				height: "icon-xs",
+				flexShrink: 0
+			}
+		},
+		label: {
+			minWidth: 0,
+			maxWidth: "tab-label-max",
+			overflow: "hidden",
+			textOverflow: "ellipsis",
+			whiteSpace: "nowrap"
+		},
+		close: {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "center",
+			flexShrink: 0,
+			width: "window-tab-close",
+			height: "window-tab-close",
+			marginInlineEnd: "compact",
+			color: "fg.muted",
+			borderRadius: "2xs",
+			cursor: "pointer",
+			focusVisibleRing: "outside",
+			WebkitAppRegion: "no-drag",
+			_hover: {
+				bg: "bg.active",
+				color: "fg"
+			},
+			_icon: {
+				width: "full",
+				height: "full"
+			}
+		}
+	}
+});
+export { t as n, n as t };

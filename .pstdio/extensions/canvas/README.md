@@ -1,8 +1,8 @@
-# Canvas
+# UI Canvas
 
 Explore and compare live UI designs inside Prompt Studio. A source registry defines named canvases and previews; the workbench saves their camera and frame positions.
 
-This repository extension needs extension API 0.2.2, as provided by the current source runtime. Desktop 0.43.1 provides API 0.1.6 and cannot load it.
+Use a runtime that satisfies the extension API range declared in `package.json`.
 
 Open **Canvases** in the project navigation. Select a canvas in its navigation tree. **Foundations** contains three previews of the Pencil file's colors, typography, spacing, and radii. **Shared components** contains nine previews of controls, feedback, identity, surfaces, keyboard hints, empty states, and overlays. The starter **Design playground** contains **Project form · default** and **Shared controls · interactive**. All previews use synthetic data and local state. Creating a project in the preview never creates a real project.
 
@@ -64,3 +64,32 @@ Coverage is partial. Component masters, advanced menus, resource widgets, compos
 ## Validation
 
 Run `bun run --cwd .pstdio/extensions/canvas test` and `bun run --cwd .pstdio/extensions/canvas typecheck`. The workspace stories cover the interactive starter, zoomed-out previews, and a populated 24-preview canvas. Validate changes with Playwright in the isolated Docker app. Report physical-device and browser behaviors that were not tested.
+
+## Native documentation catalog
+
+UI Canvas indexes every current CSF export and MDX document. Each scenario has its own source-owned canvas and keeps the original story ID. The first scenario retains the earlier group URL. Original canvases and their preview IDs remain available. Search accepts source paths, export IDs, names, and design keywords.
+
+Scenarios render as React components in the Canvas webview. They share React, Chakra, and the public UI theme context with the surrounding canvas. Application examples use one workbench module graph and local API fixtures. Website analytics is inert in previews. Source play functions remain in their original files for external validation; Canvas does not run them as tests. **Props and source** shows arguments, authored argument types, component references, the source hash, and complete source code.
+
+Documentation frames have content-driven heights. Resize observations and font completion refresh measured bounds. Fit and explicit reveal include a tall panel and its title. Fullscreen application examples retain a minimum viewport inside the documentation frame; lists and editors retain their own scrolling. Long prose, source listings, and API details have no inner vertical scroll area. Open **Documentation panels**, preview **Long documentation · intrinsic height**, to check expansion and draft retention.
+
+The 159 Pencil canvases are labeled **Design reference**. Their DOM renderer is reference evidence. The ledger retains all 24,496 source node identities, 292 reusable definitions, reference overrides, and ten owned asset hashes from RP-1. These entries do not claim completed component migration or transferred design authority. Current Pencil verification is blocked by the account's design-tool usage limit.
+
+### Rebuild and verify
+
+From the repository root:
+
+```sh
+bun run --cwd scripts canvas:build
+bun run --cwd scripts canvas:inventory /path/to/ui-canvas-migration-inventory.json
+bun test scripts/design/story-catalog.p0.test.ts scripts/design/native-preview-freshness.p0.test.ts scripts/design/migration-ledger.p0.test.ts scripts/design/native-api-fixture.p0.test.ts
+bun run --cwd .pstdio/extensions/canvas test
+bun run --cwd .pstdio/extensions/canvas typecheck
+bun run --cwd scripts canvas:coverage
+```
+
+`canvas:build` composes the original sources and records hashes for components, fixtures, dependency versions, and emitted files. Generated modules are build output; edit their sources and rebuild. `canvas:inventory` reads the RP-1 JSON and its adjacent `migration-assets` directory. It never opens or edits a Pencil file. It preserves the evidence snapshot separately from current verification.
+
+`canvas:coverage` fails if the native build is stale, a design node lacks a real-component destination, or current design freshness is unverified. Ledger integrity tests can pass while this acceptance gate remains incomplete.
+
+Run `canvas:verify` inside the isolated Docker tooling container with Chromium installed. It checks native initial renders, documentation expansion, draft retention across a theme change, measured fit, and a populated 24-preview canvas. Failed cases retain screenshots and HTML under `__test-tmp__/native-canvas-verification/`. Original Storybook interaction checks remain required for their scenarios. Physical touch, trackpad behavior, full visual fidelity, packaged verification, full tests, and CI remain separate acceptance work.

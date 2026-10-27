@@ -1,14 +1,14 @@
 {
   "name": "canvas",
   "version": "0.0.0",
-  "displayName": "Canvas",
-  "description": "Explore and compare live designs in named canvases.",
+  "displayName": "UI Canvas",
+  "description": "Designs, component states, and interactive examples in one UI workspace.",
   "publisher": "pstdio",
   "private": true,
   "type": "module",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.2.2"
+    "pstdio": "^0.3.0"
   },
   "pstdio": {
     "scope": "repo"
@@ -20,8 +20,8 @@
   "dependencies": {
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "^0.45.0",
-    "@pstdio/ui": "0.45.0",
+    "@pstdio/sdk": "0.46.0-nightly.20261026030503",
+    "@pstdio/ui": "0.46.0-nightly.20261026030503",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },

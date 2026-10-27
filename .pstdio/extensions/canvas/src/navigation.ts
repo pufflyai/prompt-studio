@@ -11,7 +11,7 @@ import { canvasResource } from "./resource";
 export { canvasResource } from "./resource";
 export const canvasView = defineView({
   id: "canvas",
-  title: "Canvas",
+  title: "UI Canvas",
   body: {
     kind: "webview",
     entry: packageAsset("./view/main.tsx", import.meta.url),
@@ -20,7 +20,7 @@ export const canvasView = defineView({
 });
 export const homePage = definePage({
   id: "canvases",
-  title: "Canvases",
+  title: "UI Canvas",
   path: "canvases",
   mode: workbenchModes.project,
   main: { kind: "view", view: canvasView.ref, cardinality: "one" },
@@ -28,7 +28,7 @@ export const homePage = definePage({
 });
 export const canvasPage = definePage({
   id: "canvas",
-  title: "Canvas",
+  title: "UI Canvas",
   path: "canvases/design",
   mode: workbenchModes.project,
   resource: { kinds: [canvasResource.ref] },

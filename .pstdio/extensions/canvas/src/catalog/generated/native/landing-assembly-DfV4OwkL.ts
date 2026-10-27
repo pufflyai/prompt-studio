@@ -1,0 +1,182 @@
+// @ts-nocheck
+// Generated from source components; regenerate with build-native-previews.ts.
+import { t as e } from "./assembly-layout-BE5FCzRo.ts";
+import { defineSlotRecipe as t } from "@chakra-ui/react";
+// clients/landing-page/src/theme/recipes/landing-assembly.ts
+var n = t({
+	slots: [
+		"root",
+		"frame",
+		"framePreview",
+		"frameTray",
+		"scene",
+		"pile",
+		"piece",
+		"card",
+		"cardTitle",
+		"divider",
+		"chrome",
+		"cursor",
+		"cursorNameplate",
+		"cursorName",
+		"cursorChat",
+		"chatName",
+		"chatCommand",
+		"chatResult",
+		"preview"
+	],
+	base: {
+		frame: {
+			position: "absolute",
+			top: "24px",
+			left: "50%",
+			transform: "translateX(-50%)",
+			width: "calc(var(--assembly-board-scale) * min(100cqw - var(--assembly-horizontal-space), max(1px, max(var(--assembly-min-height), 100cqh) + var(--assembly-bottom-space) - 242px) * 5 / 3))",
+			bg: "bg",
+			outline: "1px solid",
+			outlineColor: "border",
+			borderRadius: "lg",
+			overflow: "hidden",
+			pointerEvents: "none",
+			"[data-assembly-area]:has([data-assembly-ready=true]) &": { visibility: "hidden" },
+			[`@container hero (min-width: ${e / 16}rem)`]: {
+				top: "50%",
+				transform: "translate(-50%, -50%)"
+			}
+		},
+		framePreview: {
+			display: "block",
+			width: "full",
+			height: "auto",
+			aspectRatio: "5 / 3"
+		},
+		frameTray: {
+			height: "78px",
+			borderTopWidth: "1px",
+			borderColor: "border.subtle"
+		},
+		root: {
+			position: "absolute",
+			inset: 0,
+			minWidth: 0,
+			userSelect: "none",
+			pointerEvents: "none",
+			overflow: "hidden",
+			containerType: "inline-size",
+			containerName: "assembly"
+		},
+		scene: {
+			display: "block",
+			width: "full",
+			height: "full",
+			touchAction: "none",
+			pointerEvents: "none",
+			"&:not([data-assembly-ready=true]) [data-tool-board], &:not([data-assembly-ready=true]) [data-assembly-cursor]": { opacity: 0 },
+			"&[data-assembly-ready=true] [data-assembly-pile]": { transform: "none" },
+			"& svg": { overflow: "visible" },
+			"& [data-cursor-icon]": { display: "none" },
+			"& [data-cursor-mode=pointer] [data-cursor-icon=pointer]": { display: "block" },
+			"& [data-cursor-mode=grabbing] [data-cursor-icon=grabbing]": { display: "block" },
+			"& [data-cursor-mode=text] [data-cursor-icon=text]": { display: "block" },
+			"& [data-cursor-chat]": { display: "none" },
+			"& [data-cursor-mode=chat] [data-cursor-chat]": { display: "block" },
+			"& [data-cursor-mode=chat] [data-cursor-tip], & [data-cursor-mode=chat] [data-cursor-label]": { display: "none" },
+			"@media (prefers-reduced-motion: reduce)": { "& [data-assembly-cursor]": { display: "none" } }
+		},
+		pile: { [`@container assembly (min-width: ${e / 16}rem)`]: { transform: "translateX(15rem)" } },
+		piece: {
+			cursor: "grab",
+			pointerEvents: "all",
+			touchAction: "none",
+			outline: "none",
+			"&[data-dragging=true]": { cursor: "grabbing" }
+		},
+		card: {
+			fill: "bg",
+			stroke: "border",
+			strokeWidth: 1
+		},
+		preview: {
+			height: "full",
+			width: "full",
+			overflow: "hidden",
+			scrollbarWidth: "none",
+			containerType: "inline-size",
+			pointerEvents: "none",
+			"& *": {
+				scrollbarWidth: "none",
+				"&::-webkit-scrollbar": { display: "none" }
+			},
+			"& [data-part=scrollbar], & [data-part=corner]": { display: "none" },
+			"& [data-agent-owner]": {
+				outline: "2px solid",
+				outlineColor: "border.focus",
+				outlineOffset: "2px"
+			}
+		},
+		cardTitle: {
+			fill: "fg",
+			textStyle: "label/XS/medium",
+			fontFamily: "body"
+		},
+		divider: {
+			fill: "none",
+			stroke: "border.subtle",
+			strokeWidth: 1
+		},
+		chrome: { fill: "fg.subtle" },
+		cursorNameplate: {
+			fill: "bg",
+			opacity: .94
+		},
+		cursorName: {
+			fill: "fg",
+			textStyle: "label/XS/medium",
+			fontFamily: "body"
+		},
+		cursorChat: {
+			bg: "illustration.page",
+			"&[data-agent=\"1\"]": { bg: "illustration.skill" },
+			"&[data-agent=\"2\"]": { bg: "illustration.automation" },
+			color: "blackAlpha.900",
+			borderRadius: "lg",
+			boxShadow: "md",
+			px: "xs",
+			py: "2xs",
+			display: "flex",
+			alignItems: "center",
+			gap: "xs",
+			height: "full"
+		},
+		chatName: {
+			textStyle: "label/XS/medium",
+			lineHeight: 1,
+			flexShrink: 0,
+			whiteSpace: "nowrap"
+		},
+		chatCommand: {
+			textStyle: "mono/S",
+			lineHeight: 1,
+			whiteSpace: "nowrap",
+			overflow: "hidden",
+			textOverflow: "ellipsis",
+			flex: 1,
+			minWidth: 0
+		},
+		chatResult: {
+			textStyle: "label/S/medium",
+			lineHeight: 1,
+			width: "4",
+			flexShrink: 0,
+			whiteSpace: "nowrap",
+			overflow: "hidden"
+		},
+		cursor: {
+			fill: "illustration.page",
+			"&[data-agent=\"1\"]": { fill: "illustration.skill" },
+			"&[data-agent=\"2\"]": { fill: "illustration.automation" },
+			stroke: "none"
+		}
+	}
+});
+export { n as t };

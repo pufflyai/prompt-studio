@@ -1,4 +1,5 @@
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
+export const boardColumnColors: Record<string, string> = { done: "green", in_progress: "blue" };
 
 export const attributes: AttributeDescriptor[] = [
   {

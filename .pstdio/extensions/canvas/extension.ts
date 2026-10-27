@@ -13,20 +13,27 @@ import { canvasPage, canvasResource, canvasTarget, canvasView, homePage } from "
 
 const tree = defineView({
   id: "canvases",
-  title: "Canvases",
+  title: "UI Canvas",
   body: {
     kind: "tree",
     body: async () => [
       {
         id: "canvases",
-        label: "Canvases",
+        label: "UI Canvas",
         collapsible: false,
-        nodes: canvases.map((canvas) => ({
-          id: canvas.id,
-          label: canvas.name,
-          icon: "layout-dashboard",
-          target: canvasTarget(canvas.id, canvas.name),
-          resource: { type: canvasResource.id, id: canvas.id, label: canvas.name },
+        nodes: [...new Set(canvases.map((canvas) => canvas.group ?? "Designs"))].map((group) => ({
+          id: `group-${group}`,
+          label: group,
+          collapsible: true,
+          nodes: canvases
+            .filter((canvas) => (canvas.group ?? "Designs") === group)
+            .map((canvas) => ({
+              id: canvas.id,
+              label: canvas.name,
+              icon: "layout-dashboard",
+              target: canvasTarget(canvas.id, canvas.name),
+              resource: { type: canvasResource.id, id: canvas.id, label: canvas.name },
+            })),
         })),
       },
     ],
@@ -40,7 +47,7 @@ export default defineExtension({
   navigationItems: [
     defineNavigationItem({
       id: "canvases",
-      label: "Canvases",
+      label: "UI Canvas",
       icon: "layout-dashboard",
       owner: workbenchModes.project,
       slot: "content",

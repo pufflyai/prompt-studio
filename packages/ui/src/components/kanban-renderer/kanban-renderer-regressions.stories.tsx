@@ -4,7 +4,7 @@ import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AlertMessage } from "../primitives/alert";
 import { KanbanRenderer } from "./kanban-renderer";
-import { attributes, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
+import { attributes, boardColumnColors, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
 import type { AttributeDescriptor } from "./types";
 
 const meta: Meta<typeof KanbanRenderer> = {

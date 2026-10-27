@@ -1,9 +1,11 @@
+import { type CatalogPreview, catalogCanvases } from "../catalog/definitions";
 import type { Point } from "../controller/geometry";
 import type { previews } from "./previews";
 export interface CanvasItem {
   id: string;
   name: string;
-  component: keyof typeof previews;
+  component?: keyof typeof previews;
+  preview?: CatalogPreview;
   position: Point;
   width: number;
   height: number;
@@ -11,10 +13,12 @@ export interface CanvasItem {
 export interface CanvasDefinition {
   id: string;
   name: string;
+  group?: string;
+  keywords?: string;
   items: readonly CanvasItem[];
 }
 // This registry owns membership, names and dimensions. Saved layouts only own positions.
-export const canvases: readonly CanvasDefinition[] = [
+export const nativeCanvases: readonly CanvasDefinition[] = [
   {
     id: "playground",
     name: "Design playground",
@@ -145,7 +149,22 @@ export const canvases: readonly CanvasDefinition[] = [
       },
     ],
   },
+  {
+    id: "documentation-contract",
+    name: "Documentation panels",
+    items: [
+      {
+        id: "long-documentation",
+        name: "Long documentation · intrinsic height",
+        component: "long-documentation",
+        position: { x: 0, y: 0 },
+        width: 640,
+        height: 240,
+      },
+    ],
+  },
 ];
+export const canvases: readonly CanvasDefinition[] = [...nativeCanvases, ...catalogCanvases];
 export const findCanvas = (id: string) => {
   const canvas = canvases.find((entry) => entry.id === id);
   if (!canvas) throw new Error(`Canvas "${id}" does not exist`);

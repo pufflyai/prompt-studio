@@ -2,13 +2,16 @@ import { Box, Button, Flex, Text } from "@chakra-ui/react";
 import { createWebviewClient, type GuestHost, type PropsStore, type ResourceRef } from "@pstdio/sdk/extensions";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { type CanvasDefinition, canvases } from "../canvases/definitions";
+import { CanvasThemeContext, CanvasThemeProvider, readCanvasTheme } from "../catalog/theme";
 import type { commands } from "../commands";
 import { type CanvasRuntime, createCanvasRuntime } from "../controller/runtime";
 import { layoutChanged } from "../events";
 import { readLayout } from "../layout";
 import { createLayoutSession } from "../layout-session";
 import { CanvasStage } from "./canvas-stage";
+import { CanvasCatalog } from "./catalog";
 export interface CanvasProps {
+  themePreference?: string;
   resource?: ResourceRef;
   pageLocation?: { resource?: ResourceRef };
 }
@@ -70,8 +73,13 @@ const ConnectedCanvas = (props: { canvas: CanvasDefinition; host: GuestHost }) =
 export const CanvasRoot = (props: RootProps) => {
   const { host, propsStore } = props;
   const current = useSyncExternalStore(propsStore.subscribe, propsStore.get, propsStore.get);
-  const id = current.resource?.id ?? current.pageLocation?.resource?.id ?? canvases[0]?.id;
-  if (!id) return <Text p="md">Add a canvas to the source registry to get started.</Text>;
+  const [theme, setTheme] = useState(() => readCanvasTheme(current.themePreference ?? "pstdio-light"));
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setTheme(readCanvasTheme(current.themePreference ?? "pstdio-light")));
+    return () => cancelAnimationFrame(frame);
+  }, [current.themePreference]);
+  const id = current.resource?.id ?? current.pageLocation?.resource?.id;
+  if (!id) return <CanvasCatalog host={host} />;
   const canvas = canvases.find((item) => item.id === id);
   if (!canvas)
     return (
@@ -79,5 +87,11 @@ export const CanvasRoot = (props: RootProps) => {
         This canvas no longer exists.
       </Text>
     );
-  return <ConnectedCanvas key={id} canvas={canvas} host={host} />;
+  return (
+    <CanvasThemeContext value={theme}>
+      <CanvasThemeProvider>
+        <ConnectedCanvas key={id} canvas={canvas} host={host} />
+      </CanvasThemeProvider>
+    </CanvasThemeContext>
+  );
 };

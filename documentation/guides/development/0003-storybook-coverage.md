@@ -39,3 +39,9 @@ For changes visible in the application, also use [manual Playwright validation](
 See [design rules](../../../design/DESIGN.md), [UI package guidance](../../../packages/ui/README.md), and [testing](0002-testing.md).
 
 For side-by-side extra theme comparisons, use the [theme package Storybook](0007-extra-theme-comparison.md).
+
+## UI Canvas migration
+
+The repository's [UI Canvas extension](../../../.pstdio/extensions/canvas/README.md) also indexes current story exports and MDX documents. Its native catalog renders source components in the Canvas webview and exposes props and source references. The original Storybook stories and play functions remain the interaction-validation source during migration.
+
+The Canvas migration ledger retains design identities and asset provenance from RP-1. Pencil entries labeled **Design reference** have not transferred design authority. A native initial render does not by itself prove every interaction-derived state or visual override. The `canvas:coverage` acceptance command rejects stale builds and incomplete design mappings. See the extension README for rebuild, Docker verification, and remaining checks.
