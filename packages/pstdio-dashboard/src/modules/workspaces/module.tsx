@@ -297,15 +297,7 @@ export const createWorkspacesModule = () =>
       ctx.keybindings.registerKeybinding({
         action: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
         keybinding: "Alt+Shift+W",
-      });
-      ctx.keybindings.registerKeybinding({
-        action: { kind: "command", commandId: dashboardCommandIds.createWorkspace },
-        keybinding: "Mod+Alt+W",
-      });
-      ctx.keybindings.registerKeybinding({
-        action: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
-        keybinding: "W",
-        layer: "go",
+        label: "Go to workspaces",
         sticky: true,
       });
       ctx.keybindings.registerKeybinding({

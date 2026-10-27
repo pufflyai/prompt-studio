@@ -40,7 +40,6 @@ describe("createSettingsModule", () => {
       .catalog()
       .filter(
         (shortcut) =>
-          shortcut.binding.layer === "settings" &&
           shortcut.binding.action.kind === "command" &&
           shortcut.binding.action.commandId === WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
       )
@@ -52,7 +51,7 @@ describe("createSettingsModule", () => {
       expect.arrayContaining([
         ["S E", { panelId: "extensions" }],
         ["S I", { panelId: "appearance" }],
-        ["S R", { panelId: "runtime" }],
+        ["MOD+,", { panelId: "runtime" }],
         ["S S", { panelId: "skills" }],
       ]),
     );

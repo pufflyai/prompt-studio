@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "../../workbench-core";
 
-const commandId = "workbench.action.navigateToRootLevel";
 const fixture = (label = "Project") => {
   const page = (id: string) => ({ kind: "page" as const, extensionId: "test", id });
   const core = createWorkbench({ startPage: page("home") });
@@ -44,24 +43,42 @@ test.each(["ticket", "sessions"])("the mode return chord leaves %s navigation fo
   expect(direct()?.disabled).toBe(true);
 });
 
-test("Go to mode navigation skips nested levels and keeps keyboard mode active", async () => {
+test.each([false, true])("direct history navigation preserves shortcut-mode state: %s", async (active) => {
   const { core, navigate } = fixture();
+  navigate("tickets");
+  navigate("ticket");
+  if (active) core.keyboard.open();
+  for (const [commandId, pageId] of [
+    ["workbench.action.navigateBack", "tickets"],
+    ["workbench.action.navigateForward", "ticket"],
+  ]) {
+    const binding = core.keyboard
+      .catalog(true)
+      .find(
+        (shortcut) => shortcut.binding.action.kind === "command" && shortcut.binding.action.commandId === commandId,
+      )!;
+    await core.keyboard.invoke(binding.id);
+    expect(core.pages.store.getState().activePageId).toBe(pageId);
+    expect(core.keyboard.store.getState().active).toBe(active);
+  }
+});
+
+test("the direct mode-return shortcut also works inside keyboard mode and keeps it active", async () => {
+  const { core, navigate, direct } = fixture();
   navigate("tickets");
   navigate("ticket");
   navigate("sessions");
   core.keyboard.open();
-  await core.keyboard.press("g");
-  await core.keyboard.press("p");
+  await core.keyboard.invoke(direct()!.id);
   expect(core.pages.store.getState().activePageId).toBe("tickets");
   expect(core.keyboard.store.getState().active).toBe(true);
 });
 
 test("mode return uses Home when a nested page was opened first", async () => {
-  const { core, navigate } = fixture();
+  const { core, navigate, direct } = fixture();
   navigate("sessions");
   core.keyboard.open();
-  await core.keyboard.press("g");
-  await core.keyboard.press("p");
+  await core.keyboard.invoke(direct()!.id);
   expect(core.pages.store.getState().activePageId).toBe("home");
 });
 
@@ -71,13 +88,4 @@ test("mode return names the active mode and leaves direct editor chords alone", 
   expect(direct()?.label).toBe("Back to workspace");
   core.context.set("inputFocus", true);
   expect(direct()?.disabled).toBe(true);
-  const layered = core.keyboard
-    .catalog()
-    .find(
-      (entry) =>
-        entry.binding.layer === "go" &&
-        entry.binding.action.kind === "command" &&
-        entry.binding.action.commandId === commandId,
-    );
-  expect(layered?.disabled).toBe(false);
 });

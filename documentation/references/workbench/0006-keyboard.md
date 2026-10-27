@@ -10,13 +10,15 @@ On macOS, Alt is Option. Entry matches the physical Space key even when Option p
 
 Extensions contribute to these shared groups. No flow requires choosing an extension by name first.
 
-The shortcut reference uses the command palette's search layout, groups assigned actions by resource, and shows alternative key sequences on one row. Rows contain the action and keys without subtitles. Internal commands with no assigned shortcut stay in command discovery.
+The shortcut reference uses the command palette's search layout and groups assigned actions by resource. Each action has one default shortcut. Rows contain the action and keys without subtitles. Internal commands with no assigned shortcut stay in command discovery. Shift+/ opens this view, including from shortcut mode.
 
 ## Navigation
 
-**Alt+Shift+Up** or **Go → P** runs the Sidenav's **Back to project** action from nested ticket or session navigation. It returns to the last root-level page, with Home as the fallback. The action follows the active mode's name, appears only inside a navigation level, and keeps shortcut mode active. The direct chord respects focused editor inputs; the keyboard-mode sequence remains available there.
+**Alt+Shift+Up** runs the Sidenav's **Back to project** action from nested ticket or session navigation. It returns to the last root-level page, with Home as the fallback. The action follows the active mode's name and appears only inside a navigation level. The chord works outside and inside shortcut mode and respects focused editor inputs.
 
-Left and Right select the previous or next tab across the visible layout and wrap at either end. One tab has an outline for the keyboard selection, even when several panels each have a selected tab. Navigation keeps shortcut mode active, including Go actions and their aliases. Labels use Go to sessions, Go to tickets, and the same pattern for other destinations; history actions use Go back and Go forward. A completed action keeps its current group available. Enter or Escape returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
+Core navigation uses its direct base chords: Alt+Shift+Left/Right for history, Alt+Shift+S for Sessions, and Alt+Shift+W for Workspaces. These work from any shortcut-mode prefix and keep the mode active; they have no duplicate Go sequence. The command palette keeps Mod+P, commands Alt+Shift+K, the Sidenav Mod+B, and settings Mod+,.
+
+Inside shortcut mode, plain Left and Right select the previous or next tab across the visible layout and wrap at either end. One tab has an outline for the keyboard selection, even when several panels each have a selected tab. Enter or Escape returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
 
 Alt+Shift+1 through Alt+Shift+9 are the default chords for global tab numbers. User overrides live in the `workbench.keyboard` preference and can be set through `workbench.keyboard.setAssignment`; the reference is read-only. Inside keyboard mode, plain 1 through 9 select the same numbers from any navigation group. Empty-panel cards share this numbering: their displayed number opens that card in its own panel. Cards show the direct chord outside keyboard mode and the plain number inside it. An action or target chooser owns its own numbers while open. Numbers follow spatial placement and displayed tab/card order, and recompute when the layout changes. View → T opens a searchable picker beyond nine. Direct selection outside keyboard mode stays outside it.
 
@@ -28,9 +30,9 @@ Create actions use C followed by the first letter of the canonical resource-kind
 
 When actions share an initial, the host sorts the available actions by name, with action identity as the tie-breaker, and offers numbered choices. For example, C → A → 1 can select Analysis and C → A → 2 Artifact. The numbers stay fixed while the chooser is open, even when contributions change. Session providers share C → S; type the displayed number to choose Codex, Claude Code, or another provider. The shortcut reference includes the numbered continuation.
 
-Settings → T is the single default shortcut for choosing a color theme. Theme providers contribute themes to that shared picker rather than registering another shortcut. Installed tools contribute Go → K for Planner Kanban, Go → T for Timeline, and Go → A for Artifacts.
+Settings → T is the single default shortcut for choosing a color theme. Theme providers contribute themes to that shared picker rather than registering another shortcut. Notes keeps Alt+Shift+O, Planner Kanban Alt+Shift+P, and Artifacts Alt+Shift+A for navigation. Timeline uses Go → T. Creation keeps C → N, C → T, and C → A without additional direct creation chords.
 
-Settings → E opens extension settings, I appearance and file icon themes, R agent runtime and skill setup, and S contributed skills. These destinations are registered once, regardless of the number of providers.
+Settings → E opens extension settings, I appearance and file icon themes, and S contributed skills. Mod+, opens agent runtime and skill setup. These destinations are registered once, regardless of the number of providers.
 
 Creation uses the same UI as the resource's existing entry point. Notes create and open directly, with bound empty parameters instead of an optional-parameter dialog. Ticket shortcuts and the palette invoke the board's `createRow.command`, so the shared creation dialog supplies markdown, attachments, editable properties, and the same submission handler. Artifact creation opens the library's existing creation choices.
 

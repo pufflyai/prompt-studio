@@ -3,7 +3,15 @@ import type { WorkbenchCore } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
 
 const ownsKeyboardEvent = (event: KeyboardEvent, content: HTMLElement | null, heading: HTMLElement | null) => {
-  if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.key === "Tab") return false;
+  if (
+    event.isComposing ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.key === "Tab" ||
+    (event.shiftKey && !/^[A-Z]$/.test(event.key))
+  )
+    return false;
   const target = event.target instanceof HTMLElement ? event.target : null;
   const inside = Boolean(target && content?.contains(target));
   if (!inside) return !target?.closest('[role="dialog"],[role="menu"]');

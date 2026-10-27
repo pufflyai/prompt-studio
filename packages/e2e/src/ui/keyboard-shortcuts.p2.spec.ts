@@ -8,6 +8,34 @@ import { changeThemeThroughCommandPalette } from "./helpers/theme-picker";
 
 test.use({ notificationsEnabled: true });
 
+test("base navigation chords work outside and inside shortcut mode and Shift slash opens the reference", async ({
+  page,
+  request,
+}) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Direct core shortcuts" }),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await page.goto(`/projects/${project.id}`);
+  await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
+  await page.keyboard.press("Alt+Shift+S");
+  await expect(page).toHaveURL(/\/sessions\/compose$/);
+  await page.keyboard.press("Alt+Shift+Space");
+  await page.keyboard.press("Alt+Shift+ArrowLeft");
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+  await page.keyboard.press("Alt+Shift+ArrowRight");
+  await expect(page).toHaveURL(/\/sessions\/compose$/);
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+  await page.keyboard.press("Shift+/");
+  const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
+  await expect(reference).toBeVisible();
+  await reference.getByRole("textbox", { name: "Search keyboard shortcuts" }).fill("Keyboard shortcuts");
+  await expect(reference.getByRole("group", { name: "Keyboard shortcuts", exact: true })).toHaveCount(1);
+  await expect(reference.getByRole("group", { name: "Keyboard shortcuts", exact: true }).locator("kbd")).toHaveCount(2);
+});
+
 test("new-tab creation adds a Secondary tab and Close selects that instance", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Typed session tabs" }),
@@ -212,7 +240,9 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await expect(ticketForm).not.toBeVisible();
   await expect(page.getByRole("heading", { name: "Shortcut ticket", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Help", exact: true }).focus();
-  await page.keyboard.press("ControlOrMeta+Alt+W");
+  await page.keyboard.press("Alt+Shift+Space");
+  await page.keyboard.press("c");
+  await page.keyboard.press("w");
   const workspaceForm = page.getByRole("dialog").last();
   await expect(workspaceForm.getByRole("heading", { name: "Create workspace", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");

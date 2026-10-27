@@ -1,5 +1,5 @@
 import type { WorkbenchShellOpenRegion } from "./controllers/shell/shell-controller";
-import type { KeybindingSequence } from "./registries/keybindings/keybinding-registry";
+import type { Keybinding, KeybindingSequence } from "./registries/keybindings/keybinding-registry";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import type { WorkbenchCore } from "./workbench-core";
 
@@ -14,6 +14,9 @@ interface BuiltinCommand {
   label: string;
   icon: string;
   keybinding?: KeybindingSequence;
+  layer?: Keybinding["layer"];
+  sticky?: boolean;
+  category?: string;
   execute: (workbench: WorkbenchCore) => void;
 }
 
@@ -39,22 +42,28 @@ const builtinCommands: BuiltinCommand[] = [
     id: "workbench.action.changeTheme",
     label: "Choose color theme",
     icon: "Palette",
+    keybinding: "T",
+    layer: "settings",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ view: "theme" }),
   },
   {
     id: "workbench.action.navigateBack",
-    label: "Navigate Back",
+    label: "Go back",
     icon: "ArrowLeft",
     keybinding: "Alt+Shift+ArrowLeft",
+    sticky: true,
+    category: "Navigation",
     execute: (workbench: WorkbenchCore) => {
       workbench.pageLocations.goBack();
     },
   },
   {
     id: "workbench.action.navigateForward",
-    label: "Navigate Forward",
+    label: "Go forward",
     icon: "ArrowRight",
     keybinding: "Alt+Shift+ArrowRight",
+    sticky: true,
+    category: "Navigation",
     execute: (workbench: WorkbenchCore) => {
       workbench.pageLocations.goForward();
     },
@@ -64,25 +73,18 @@ const builtinCommands: BuiltinCommand[] = [
     label: "Toggle Sidenav",
     icon: "PanelLeft",
     keybinding: "Mod+B",
+    sticky: true,
     execute: (workbench: WorkbenchCore) => togglePanel(workbench, SIDENAV_PANEL_ID),
   },
 ];
 
 export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
-  const layers: Record<string, { layer: "view" | "go" | "help" | "settings"; keybinding: string; sticky?: boolean }> = {
-    "workbench.toggleCommandPalette": { layer: "help", keybinding: "P" },
-    "workbench.action.showCommands": { layer: "help", keybinding: "C" },
-    "workbench.action.changeTheme": { layer: "settings", keybinding: "T" },
-    "workbench.action.navigateBack": { layer: "go", keybinding: "B", sticky: true },
-    "workbench.action.navigateForward": { layer: "go", keybinding: "F", sticky: true },
-    "workbench.toggleSideBar": { layer: "view", keybinding: "B", sticky: true },
-  };
   for (const command of builtinCommands) {
     workbench.commands.registerCommand(
       {
         id: command.id,
         label: command.label,
-        category: "Workbench",
+        category: command.category ?? "Workbench",
         icon: command.icon,
         when: "!inputFocus",
       },
@@ -92,11 +94,10 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       workbench.keybindings.registerKeybinding({
         action: { kind: "command", commandId: command.id },
         keybinding: command.keybinding,
+        layer: command.layer,
+        sticky: command.sticky,
         when: "!inputFocus",
       });
-    const layer = layers[command.id];
-    if (layer)
-      workbench.keybindings.registerKeybinding({ action: { kind: "command", commandId: command.id }, ...layer });
     workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId: command.id,
       group: "Workbench",

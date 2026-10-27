@@ -4,4 +4,4 @@
 "@pstdio/sdk": minor
 ---
 
-Add shared keyboard action groups with existing resource creation flows, numbered tabs and choices, mode-return navigation, and a grouped palette-style shortcut reference.
+Add shared resource creation shortcuts, direct core navigation, numbered tabs and choices, and a grouped palette-style reference with one default shortcut per action.

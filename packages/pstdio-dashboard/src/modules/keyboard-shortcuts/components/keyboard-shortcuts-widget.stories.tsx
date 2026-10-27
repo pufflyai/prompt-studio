@@ -16,15 +16,10 @@ workbench.commands.registerCommand(
   { id: "sessions.open", label: "Go to sessions", category: "Sessions" },
   { execute() {} },
 );
-for (const [layer, keybinding] of [
-  [undefined, "Alt+Shift+S"],
-  ["go", "S"],
-] as const)
-  workbench.keybindings.registerKeybinding({
-    layer,
-    keybinding,
-    action: { kind: "command", commandId: "sessions.open" },
-  });
+workbench.keybindings.registerKeybinding({
+  keybinding: "Alt+Shift+S",
+  action: { kind: "command", commandId: "sessions.open" },
+});
 const meta = {
   title: "Help/Keyboard shortcuts",
   component: WorkbenchKeyboardShortcutsPanel,

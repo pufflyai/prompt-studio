@@ -48,12 +48,6 @@ export const createKeyboardShortcutsModule = () =>
         keybinding: DASHBOARD_HELP_SHORTCUT_KEYBINDING,
         when: "!inputFocus",
       });
-      for (const layer of ["settings", "help"] as const)
-        ctx.keybindings.registerKeybinding({
-          action: { kind: "command", commandId: dashboardCommandIds.openShortcuts },
-          keybinding: "K",
-          layer,
-        });
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
         commandId: dashboardCommandIds.openShortcuts,
         order: 45,

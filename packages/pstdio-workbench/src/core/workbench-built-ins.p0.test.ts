@@ -1,8 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { findReservedKeybindingConflict } from "pstdio-extensions";
+import { getNavigationTargetKey } from "./registries/navigation/navigation-target-key";
 import { createWorkbench } from "./workbench-core";
 
 describe("workbench built-ins", () => {
+  test("each built-in action has one default shortcut", () => {
+    const workbench = createWorkbench();
+    const actions = workbench.keybindings.listKeybindings().map((binding) => getNavigationTargetKey(binding.action));
+    expect(actions.length).toBe(new Set(actions).size);
+  });
   test("registers command-backed chrome actions and default keybindings", async () => {
     const workbench = createWorkbench();
 

@@ -32,8 +32,7 @@ export const registerModeNavigationShortcuts = (core: WorkbenchCore) => {
     },
   );
   const action = { kind: "command" as const, commandId: MODE_RETURN_COMMAND_ID };
-  core.keybindings.registerKeybinding({ action, keybinding: "Alt+Shift+ArrowUp", when: "!inputFocus" });
-  core.keybindings.registerKeybinding({ action, keybinding: "P", layer: "go", sticky: true });
+  core.keybindings.registerKeybinding({ action, keybinding: "Alt+Shift+ArrowUp", when: "!inputFocus", sticky: true });
   core.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
     commandId: MODE_RETURN_COMMAND_ID,
     group: "Navigation",

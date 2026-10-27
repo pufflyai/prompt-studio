@@ -62,7 +62,6 @@ export const createSettingsModule = () =>
       for (const [key, panelId, label] of [
         ["E", "extensions", "Extension settings"],
         ["I", "appearance", "Appearance settings"],
-        ["R", "runtime", "Configure agent runtime"],
         ["S", "skills", "Inspect contributed skills"],
       ])
         ctx.keybindings.registerKeybinding({
