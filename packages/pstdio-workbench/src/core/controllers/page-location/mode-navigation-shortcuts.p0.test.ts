@@ -43,7 +43,10 @@ test.each(["ticket", "sessions"])("the mode return chord leaves %s navigation fo
   expect(direct()?.disabled).toBe(true);
 });
 
-test.each([false, true])("history navigation finishes with shortcut mode closed (started active: %s)", async (active) => {
+test.each([
+  false,
+  true,
+])("history navigation finishes with shortcut mode closed (started active: %s)", async (active) => {
   const { core, navigate } = fixture();
   navigate("tickets");
   navigate("ticket");
