@@ -29,15 +29,18 @@ describe("workbench built-ins", () => {
       .listCommandKeybindings()
       .filter((binding) => !binding.commandId.startsWith("workbench.keyboard."));
 
-    expect(keybindings).toMatchObject([
-      { commandId: "workbench.toggleSideBar" },
-      { commandId: "workbench.toggleCommandPalette" },
-      { commandId: "workbench.action.showCommands" },
-      { commandId: "workbench.action.changeTheme" },
-      { commandId: "workbench.action.navigateBack" },
-      { commandId: "workbench.action.navigateForward" },
-      { commandId: "workbench.action.navigateToRootLevel" },
-    ]);
+    expect(keybindings.map((binding) => binding.commandId)).toEqual(
+      expect.arrayContaining([
+        "workbench.toggleSideBar",
+        "workbench.toggleCommandPalette",
+        "workbench.action.showCommands",
+        "workbench.action.changeTheme",
+        "workbench.action.navigateBack",
+        "workbench.action.navigateForward",
+        "workbench.action.navigateToRootLevel",
+        "workbench.toggleMainFullscreen",
+      ]),
+    );
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleCommandPalette")).toMatchObject({
       commandId: "workbench.toggleCommandPalette",
       keybinding: "Mod+P",

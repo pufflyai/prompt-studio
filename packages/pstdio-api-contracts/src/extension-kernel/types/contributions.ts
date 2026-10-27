@@ -279,7 +279,7 @@ export interface KeybindingContribution extends ContributionDefinition<"keybindi
   layer?: ShortcutLayer;
   /** Resource mutations deduplicate equal resources; panel actions retain presentation identity. */
   targetScope?: "project" | "resource" | "panel";
-  /** Keep an active keyboard layer after execution until Enter or Escape. */
+  /** @deprecated Completed actions close shortcut mode; only tab navigation retains it until Enter. */
   sticky?: boolean;
   /** Reserve this chord for the workbench even while editing in a view. */
   allowInInputs?: boolean;

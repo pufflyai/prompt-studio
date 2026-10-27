@@ -7,7 +7,6 @@ interface BuiltinCommand {
   label: string;
   icon: string;
   keybinding?: KeybindingSequence;
-  sticky?: boolean;
   category?: string;
   execute: (workbench: WorkbenchCore) => void;
 }
@@ -42,7 +41,6 @@ const builtinCommands: BuiltinCommand[] = [
     label: "Go back",
     icon: "ArrowLeft",
     keybinding: "Alt+Shift+ArrowLeft",
-    sticky: true,
     category: "Navigation",
     execute: (workbench: WorkbenchCore) => {
       workbench.pageLocations.goBack();
@@ -53,7 +51,6 @@ const builtinCommands: BuiltinCommand[] = [
     label: "Go forward",
     icon: "ArrowRight",
     keybinding: "Alt+Shift+ArrowRight",
-    sticky: true,
     category: "Navigation",
     execute: (workbench: WorkbenchCore) => {
       workbench.pageLocations.goForward();
@@ -77,7 +74,6 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       workbench.keybindings.registerKeybinding({
         action: { kind: "command", commandId: command.id },
         keybinding: command.keybinding,
-        sticky: command.sticky,
         when: "!inputFocus",
       });
     workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {

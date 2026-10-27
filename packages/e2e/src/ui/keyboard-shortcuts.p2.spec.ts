@@ -8,6 +8,33 @@ import { changeThemeThroughCommandPalette } from "./helpers/theme-picker";
 
 test.use({ notificationsEnabled: true });
 
+test("the fullscreen shortcut toggles from editing and completes shortcut mode", async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Fullscreen shortcut" }),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+  await page.goto(`/projects/${project.id}/sessions/compose`);
+  const draft = page.locator('[data-workbench-region="main"]').getByRole("textbox").last();
+  await draft.fill("Keep fullscreen draft");
+  await page.keyboard.press("Alt+Shift+Z");
+  await expect(page.getByRole("button", { name: "Exit Main fullscreen", exact: true })).toBeVisible();
+  await expect(draft).toContainText("Keep fullscreen draft");
+  await page.keyboard.press("Alt+Shift+Space");
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+  await page.keyboard.press("Alt+Shift+Z");
+  await expect(page.getByRole("button", { name: "Enter Main fullscreen", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await expect(draft).toContainText("Keep fullscreen draft");
+  await page.keyboard.press("Shift+/");
+  const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
+  await reference.getByRole("textbox", { name: "Search keyboard shortcuts" }).fill("fullscreen");
+  const action = reference.getByRole("group", { name: "Toggle Main fullscreen", exact: true });
+  await expect(action).toHaveCount(1);
+  await expect(action.locator("kbd").last()).toHaveText("Z");
+});
+
 test("Go destinations use shortcut mode while history chords and Shift slash remain available", async ({
   page,
   request,
@@ -23,12 +50,13 @@ test("Go destinations use shortcut mode while history chords and Shift slash rem
   await page.keyboard.press("g");
   await page.keyboard.press("s");
   await expect(page).toHaveURL(/\/sessions\/compose$/);
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
-  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await page.keyboard.press("Alt+Shift+ArrowRight");
   await expect(page).toHaveURL(/\/sessions\/compose$/);
-  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await page.keyboard.press("Shift+/");
   const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
   await expect(reference).toBeVisible();
@@ -93,8 +121,7 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
     await page.keyboard.press("Alt+Shift+Space");
     await page.keyboard.press(`Alt+Shift+${key}`);
     await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen));
-    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
-    await page.keyboard.press("Escape");
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
     // macOS Option emits a symbol or dead key instead of the shortcut's letter.
     const input = {
       key: symbol,
@@ -109,8 +136,7 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
     await page.keyboard.press("Alt+Shift+Space");
     await page.locator("body").dispatchEvent("keydown", input);
     await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen));
-    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
-    await page.keyboard.press("Escape");
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
     await page.keyboard.press("Shift+/");
     const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
     const search = reference.getByRole("textbox", { name: "Search keyboard shortcuts" });

@@ -7,6 +7,7 @@ test("modes can forbid Main fullscreen through commands and the controller", () 
   w.modes.setActiveMode("player");
   expect(() => w.fullscreen.enter()).toThrow("Fullscreen is not available in this mode");
   expect(w.commands.isCommandEnabled("workbench.enterMainFullscreen")).toBe(false);
+  expect(w.commands.isCommandEnabled("workbench.toggleMainFullscreen")).toBe(false);
   expect(w.fullscreen.store.getState().active).toBe(false);
   w.modes.setActiveMode(undefined);
   expect(w.fullscreen.canEnter()).toBe(true);

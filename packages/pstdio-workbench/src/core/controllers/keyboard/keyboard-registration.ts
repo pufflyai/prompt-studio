@@ -51,7 +51,6 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
       action: { kind: "command", commandId: WORKBENCH_KEYBOARD_SELECT_TAB_COMMAND_ID, args: { number } },
       keybinding: `Alt+Shift+${number}`,
       allowInInputs: true,
-      sticky: true,
     });
   for (const [name, key, chord, direction] of [
     ["Previous tab", "ArrowLeft", "Ctrl+Shift+Tab", -1],
@@ -67,7 +66,6 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
       action: { kind: "command", commandId: id },
       keybinding: chord,
       allowInInputs: true,
-      sticky: true,
     });
   }
   registerKeyboardPanelCommands(core);
@@ -97,6 +95,5 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
     action: { kind: "command", commandId: id },
     keybinding: "Alt+Shift+0",
     allowInInputs: true,
-    sticky: true,
   });
 };

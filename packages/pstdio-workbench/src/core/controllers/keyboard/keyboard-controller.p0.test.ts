@@ -287,7 +287,7 @@ test("create actions sharing a resource initial split into stable numbered choic
   expect(created).toEqual(["analysis"]);
 });
 
-test("any contributed shortcut can declare sticky behavior", async () => {
+test("a completed contributed action exits mode before accepting more shortcut keys", async () => {
   const { core } = setup();
   let calls = 0;
   core.commands.registerCommand(
@@ -309,9 +309,7 @@ test("any contributed shortcut can declare sticky behavior", async () => {
   await core.keyboard.press("h");
   await core.keyboard.press("t");
   await core.keyboard.press("t");
-  expect(calls).toBe(2);
-  expect(core.keyboard.store.getState().active).toBe(true);
-  await core.keyboard.press("Escape");
+  expect(calls).toBe(1);
   expect(core.keyboard.store.getState().active).toBe(false);
 });
 
@@ -497,7 +495,7 @@ test("Current view follows rendered visibility when a menu collapses responsivel
   registration.dispose();
 });
 
-test("direct panel focus stays in shortcut mode and selectors return to the current group", async () => {
+test("completed panel focus exits mode and unfinished selectors retain their group", async () => {
   const { core, ticket } = setup();
   ticket("A");
   ticket("B", "secondary");
@@ -505,14 +503,13 @@ test("direct panel focus stays in shortcut mode and selectors return to the curr
   await core.keyboard.press("g");
   await core.keyboard.invoke("workbench.keyboard.focus");
   await core.keyboard.choose("2");
-  expect(core.keyboard.store.getState().active).toBe(true);
+  expect(core.keyboard.store.getState().active).toBe(false);
   expect(core.keyboard.store.getState().selectedRegion).toBe("secondary");
+  core.keyboard.open();
+  await core.keyboard.press("g");
   await core.keyboard.invoke("workbench.keyboard.moveTab");
   core.keyboard.back();
   expect(core.keyboard.store.getState().path).toEqual(["G"]);
-  expect(core.keyboard.catalog().find((entry) => entry.id === "workbench.keyboard.moveTab")?.binding.sticky).toBe(
-    false,
-  );
 });
 
 test("the direct focus chooser hands focus to the selected panel without leaving shortcut mode open", async () => {
@@ -578,7 +575,7 @@ test("contributed terminal and longer paths require an explicit action choice", 
   expect(calls).toEqual(["long"]);
 });
 
-test("directional panel navigation lands on Secondary's selected presentation and stays active", async () => {
+test("directional panel focus completes in Secondary's selected presentation", async () => {
   const { core, ticket } = setup();
   const main = ticket("A");
   ticket("B", "secondary");
@@ -588,7 +585,7 @@ test("directional panel navigation lands on Secondary's selected presentation an
   const down = core.keyboard.catalog().find((entry) => entry.label === "Focus panel down")!;
   await core.keyboard.invoke(down.id);
   expect(core.keyboard.store.getState().selectedId).toBe(secondary.widgetId);
-  expect(core.keyboard.store.getState().active).toBe(true);
+  expect(core.keyboard.store.getState().active).toBe(false);
   expect(core.commands.isCommandEnabled("workbench.keyboard.focus.down")).toBe(false);
 });
 

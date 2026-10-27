@@ -8,7 +8,7 @@ export const registerKeyboardPanelCommands = (core: WorkbenchCore) => {
   registerKeyboardPanelNavigation(core);
   registerKeyboardPanelVisibility(core);
   registerKeyboardNewTab(core);
-  const register = (name: string, label: string, key: string, execute: () => void | Promise<void>, sticky = false) => {
+  const register = (name: string, label: string, key: string, execute: () => void | Promise<void>) => {
     const id = `workbench.keyboard.${name}`;
     core.commands.registerCommand({ id, label, category: "Panels and tabs" }, { execute });
     core.keybindings.registerKeybinding({
@@ -16,7 +16,6 @@ export const registerKeyboardPanelCommands = (core: WorkbenchCore) => {
       action: { kind: "command", commandId: id },
       keybinding: `Alt+Shift+${key}`,
       allowInInputs: true,
-      sticky,
     });
   };
   register("moveTab", "Move tab", "M", () => {
@@ -80,26 +79,20 @@ export const registerKeyboardPanelCommands = (core: WorkbenchCore) => {
         })),
     );
   });
-  register(
-    "focus",
-    "Focus panel",
-    "F",
-    () => {
-      const keepMode = core.keyboard.store.getState().active;
-      core.keyboard.select(
-        "Focus panel",
-        core.keyboard.visibleTargets().map((tab, index) => ({
-          key: String(index + 1),
-          label: `${tab.label} · ${regionLabel(tab.region)}`,
-          choose: () => {
-            core.keyboard.selectPresentation(tab.id, tab.resource?.id);
-            if (!keepMode) core.keyboard.finish();
-          },
-        })),
-      );
-    },
-    true,
-  );
+  register("focus", "Focus panel", "F", () => {
+    const keepMode = core.keyboard.store.getState().active;
+    core.keyboard.select(
+      "Focus panel",
+      core.keyboard.visibleTargets().map((tab, index) => ({
+        key: String(index + 1),
+        label: `${tab.label} · ${regionLabel(tab.region)}`,
+        choose: () => {
+          core.keyboard.selectPresentation(tab.id, tab.resource?.id);
+          if (!keepMode) core.keyboard.finish();
+        },
+      })),
+    );
+  });
   register("closeTab", "Close tab", "X", () =>
     core.keyboard.select(
       "Close tab",

@@ -18,6 +18,7 @@ export interface Keybinding {
   label?: string;
   layer?: ShortcutLayer;
   targetScope?: "project" | "resource" | "panel";
+  /** @deprecated Completed actions close shortcut mode; only tab navigation retains it until Enter. */
   sticky?: boolean;
   /** Extension that authored this binding, when registered by an extension host. */
   sourceExtensionId?: string;

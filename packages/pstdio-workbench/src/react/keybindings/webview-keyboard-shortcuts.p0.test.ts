@@ -3,6 +3,21 @@ import { createWorkbench } from "../../core";
 import { createWebviewKeyboardShortcuts } from "./webview-keyboard-shortcuts";
 import { createWorkbenchHotkeyRegistrations } from "./workbench-hotkey-registrations";
 
+test("the fullscreen shortcut toggles from editable nested content and completes shortcut mode", async () => {
+  const workbench = createWorkbench();
+  workbench.context.set("inputFocus", true);
+  const bridge = createWebviewKeyboardShortcuts(workbench);
+  const shortcut = bridge.shortcuts.find((shortcut) => shortcut.key === "Z")!;
+  expect(shortcut?.entry).toBe("panel");
+  await bridge.dispatch({ id: shortcut.id, repeat: false, nested: true });
+  expect(workbench.fullscreen.store.getState().active).toBe(true);
+  expect(workbench.keyboard.store.getState().active).toBe(false);
+  workbench.keyboard.open();
+  await bridge.dispatch({ id: shortcut.id, repeat: false, nested: true });
+  expect(workbench.fullscreen.store.getState().active).toBe(false);
+  expect(workbench.keyboard.store.getState().active).toBe(false);
+});
+
 test("nested previews can toggle navigation, side and bottom panels through negotiated layout shortcuts", async () => {
   const workbench = createWorkbench();
   for (const [region, key] of [

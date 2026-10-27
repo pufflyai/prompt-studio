@@ -115,7 +115,21 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
       await guest.locator("body").press(`Alt+Shift+${key}`);
       await expect(toggle).toHaveAttribute("aria-pressed", wasOpen!);
     }
-    await enter.click();
+    await guest.locator("body").press("Alt+Shift+Z");
+    await expect(page.getByRole("button", { name: "Exit Main fullscreen", exact: true })).toBeVisible();
+    await guest.locator("body").dispatchEvent("keydown", {
+      key: "¸",
+      code: "KeyZ",
+      altKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    await expect(enter).toBeVisible();
+    await page.keyboard.press("Alt+Shift+Space");
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+    await page.keyboard.press("Alt+Shift+Z");
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
     await guest.locator("body").press("Escape");
     await expect(enter).toBeVisible();
   } finally {

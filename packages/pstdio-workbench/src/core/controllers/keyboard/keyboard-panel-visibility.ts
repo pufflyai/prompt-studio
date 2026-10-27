@@ -23,7 +23,6 @@ export const registerKeyboardPanelVisibility = (core: WorkbenchCore) => {
       action: { kind: "command", commandId: id },
       keybinding: `Alt+Shift+${key}`,
       allowInInputs: true,
-      sticky: true,
     });
     if (region === "sidenav")
       core.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: id, group: "Workbench" });

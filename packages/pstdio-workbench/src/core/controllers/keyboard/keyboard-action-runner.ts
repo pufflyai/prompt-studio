@@ -1,3 +1,4 @@
+import { keyboardEntryKind } from "../../registries/keybindings/keyboard-entry-commands";
 import { getNavigationTargetKey } from "../../registries/navigation/navigation-target-key";
 import type { InternalWorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCore } from "../../workbench-core-types";
@@ -45,9 +46,9 @@ export const createKeyboardActionRunner = (input: {
     }
     const { binding } = current;
     const context = target ? { resource: target.resource, region: target.region } : undefined;
-    const sticky = binding.sticky === true;
+    const keepMode = binding.action.kind === "command" && keyboardEntryKind(binding.action.commandId) === "tab";
     const path = store.getState().path;
-    if (!sticky) stop(false);
+    if (!keepMode) stop(false);
     else {
       resetSelection();
     }
@@ -62,8 +63,8 @@ export const createKeyboardActionRunner = (input: {
       const args = shortcutCommandArgs(record.command.params, action.args, context);
       await core.commands.executeCommand(action.commandId, args, context);
     } else await core.navigation.openTarget(binding.action);
-    if (!sticky) restoreSelectorPath(path);
-    if (sticky) {
+    if (!keepMode) restoreSelectorPath(path);
+    if (keepMode) {
       const selected = core.keyboard
         .visibleTargets()
         .find((target) => target.id === core.layout.getLayout().activeWidgetId);

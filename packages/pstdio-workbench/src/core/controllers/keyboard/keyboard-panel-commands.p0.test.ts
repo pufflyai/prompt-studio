@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "../../workbench-core";
 
-test.each(["secondary", "side"] as const)("direct %s panel toggle preserves shortcut mode", async (region) => {
+test.each(["secondary", "side"] as const)("a completed %s panel toggle exits shortcut mode", async (region) => {
   const core = createWorkbench();
   const id = `workbench.keyboard.toggle.${region}`;
   const wasOpen = core.shell.getRegionState(region).open;
@@ -11,7 +11,7 @@ test.each(["secondary", "side"] as const)("direct %s panel toggle preserves shor
   core.keyboard.open();
   await core.keyboard.invoke(id);
   expect(core.shell.getRegionState(region).open).toBe(wasOpen);
-  expect(core.keyboard.store.getState().active).toBe(true);
+  expect(core.keyboard.store.getState().active).toBe(false);
 });
 
 test.each([

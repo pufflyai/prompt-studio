@@ -26,7 +26,6 @@ test("direct page navigation has a Go to label without a second Go binding", () 
   const shortcuts = core.keyboard.catalog().filter((entry) => entry.id === "notes");
   expect(shortcuts).toHaveLength(1);
   expect(shortcuts[0]?.label).toBe("Go to notes");
-  expect(shortcuts[0]?.binding.sticky).toBe(true);
 });
 
 test("many shortcut hints share availability evaluation until their context changes", () => {
@@ -129,7 +128,7 @@ test("shortcut hints show the configured opening chord", async () => {
   expect(core.keyboard.hints().get(getNavigationTargetKey(action))).toBeUndefined();
 });
 
-test("navigation aliases stay in shortcut mode and use the same destination label", async () => {
+test("completed navigation actions exit shortcut mode and use the same destination label", async () => {
   const core = createWorkbench();
   let calls = 0;
   core.commands.registerCommand(
@@ -150,15 +149,17 @@ test("navigation aliases stay in shortcut mode and use the same destination labe
       .filter((entry) => entry.binding.action.kind === "command" && entry.binding.action.commandId === "tickets")
       .map((entry) => entry.label),
   ).toEqual(["Go to tickets", "Go to tickets"]);
-  await core.keyboard.invoke("direct-tickets");
+  await core.keyboard.press("G");
+  await core.keyboard.press("P");
   expect(calls).toBe(1);
-  expect(core.keyboard.store.getState().active).toBe(true);
-  core.keybindings.registerKeybinding({ id: "one-shot", action, keybinding: "Alt+O", sticky: false });
-  await core.keyboard.invoke("one-shot");
+  expect(core.keyboard.store.getState().active).toBe(false);
+  core.keyboard.open();
+  await core.keyboard.invoke("direct-tickets");
+  expect(calls).toBe(2);
   expect(core.keyboard.store.getState().active).toBe(false);
 });
 
-test("the current sequence includes a completed navigation key and keeps its continuation prefix", async () => {
+test("completed navigation clears its sequence before shortcut mode opens again", async () => {
   const core = createWorkbench();
   core.commands.registerCommand({ id: "sessions", label: "Sessions" }, { execute() {} });
   core.keybindings.registerKeybinding({
@@ -170,8 +171,7 @@ test("the current sequence includes a completed navigation key and keeps its con
   core.keyboard.open();
   await core.keyboard.press("G");
   await core.keyboard.press("S");
-  expect(core.keyboard.store.getState()).toMatchObject({ active: true, path: ["G"], lastKey: "S" });
-  await core.keyboard.press("Backspace");
-  expect(core.keyboard.store.getState().path).toEqual([]);
-  expect(core.keyboard.store.getState().lastKey).toBeUndefined();
+  expect(core.keyboard.store.getState()).toMatchObject({ active: false, path: [], lastKey: undefined });
+  core.keyboard.open();
+  expect(core.keyboard.store.getState()).toMatchObject({ active: true, path: [], lastKey: undefined });
 });

@@ -40,7 +40,6 @@ export const registerKeyboardPanelNavigation = (core: WorkbenchCore) => {
       action: { kind: "command", commandId },
       keybinding: `Alt+Shift+${keybinding}`,
       allowInInputs: true,
-      sticky: true,
     });
   }
 };

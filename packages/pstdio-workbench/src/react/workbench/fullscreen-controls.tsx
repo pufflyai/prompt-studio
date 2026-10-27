@@ -2,6 +2,7 @@ import { IconButton } from "@chakra-ui/react";
 import { PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import { useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore } from "../../core";
+import { WorkbenchShortcutHint } from "../keybindings/shortcut-hint";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useWorkbenchRegionContent } from "./use-workbench-region-content";
@@ -20,16 +21,23 @@ export const FullscreenControls = (props: { workbench: WorkbenchCore }) => {
   if (!active && (!allowed || !hasMain)) return null;
   const label = active ? "Exit Main fullscreen" : "Enter Main fullscreen";
   return (
-    <Tooltip content={label}>
+    <Tooltip
+      content={
+        <WorkbenchShortcutHint
+          workbench={workbench}
+          action={{ kind: "command", commandId: "workbench.toggleMainFullscreen" }}
+        >
+          {label}
+        </WorkbenchShortcutHint>
+      }
+    >
       <IconButton
         ref={exitRef}
         size={PANEL_HEADER_CONTROL_SIZE}
         variant="ghost"
         aria-label={label}
         aria-pressed={active}
-        onClick={() =>
-          workbench.commands.executeCommand(active ? "workbench.exitMainFullscreen" : "workbench.enterMainFullscreen")
-        }
+        onClick={() => workbench.commands.executeCommand("workbench.toggleMainFullscreen")}
       >
         <WorkbenchIcon name={active ? "Minimize" : "Maximize"} size={14} />
       </IconButton>

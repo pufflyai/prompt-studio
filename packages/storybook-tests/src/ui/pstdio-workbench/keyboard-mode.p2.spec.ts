@@ -53,7 +53,7 @@ test("Ctrl Tab cycles tabs and Ctrl Shift Tab goes back without entering shortcu
   await expect(page.getByRole("textbox", { name: "Draft 1", exact: true })).toHaveValue("Keep Main draft");
 });
 
-test("fast entry owns keys, global navigation stays active and exits into Secondary", async ({ page }) => {
+test("fast entry owns keys, tab navigation stays active and exits into Secondary", async ({ page }) => {
   await page.goto(storyUrl(baseUrl, `${prefix}visible-panels`));
   await waitForStoryPlayback(page);
   const draft = page.getByRole("textbox", { name: "Draft 4", exact: true });
@@ -91,6 +91,7 @@ test("ambiguous visible resources require a choice and Enter on the heading is i
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(selector).toBeHidden();
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
 });
 
 test("tabs beyond nine use the direct picker and tab navigation wraps", async ({ page }) => {

@@ -74,7 +74,7 @@ export const resolveShortcutCatalog = (
     return {
       id: core.keybindings.getId(declared),
       label: navigates ? navigationLabel(shortcutLabel(core, binding)) : shortcutLabel(core, binding),
-      binding: { ...binding, sticky: binding.sticky ?? navigates },
+      binding,
       keys: [...prefix, ...getKeybindingSteps(binding.keybinding).map((key) => key.toUpperCase())],
       disabled: binding.disabled || (contextual ? !targets.length : !applicable(core, binding)),
       targets,

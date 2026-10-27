@@ -43,7 +43,7 @@ test.each(["ticket", "sessions"])("the mode return chord leaves %s navigation fo
   expect(direct()?.disabled).toBe(true);
 });
 
-test.each([false, true])("direct history navigation preserves shortcut-mode state: %s", async (active) => {
+test.each([false, true])("history navigation finishes with shortcut mode closed (started active: %s)", async (active) => {
   const { core, navigate } = fixture();
   navigate("tickets");
   navigate("ticket");
@@ -59,11 +59,11 @@ test.each([false, true])("direct history navigation preserves shortcut-mode stat
       )!;
     await core.keyboard.invoke(binding.id);
     expect(core.pages.store.getState().activePageId).toBe(pageId);
-    expect(core.keyboard.store.getState().active).toBe(active);
+    expect(core.keyboard.store.getState().active).toBe(false);
   }
 });
 
-test("the direct mode-return shortcut also works inside keyboard mode and keeps it active", async () => {
+test("the direct mode-return shortcut completes and exits keyboard mode", async () => {
   const { core, navigate, direct } = fixture();
   navigate("tickets");
   navigate("ticket");
@@ -71,7 +71,7 @@ test("the direct mode-return shortcut also works inside keyboard mode and keeps 
   core.keyboard.open();
   await core.keyboard.invoke(direct()!.id);
   expect(core.pages.store.getState().activePageId).toBe("tickets");
-  expect(core.keyboard.store.getState().active).toBe(true);
+  expect(core.keyboard.store.getState().active).toBe(false);
 });
 
 test("mode return uses Home when a nested page was opened first", async () => {

@@ -4,4 +4,4 @@
 "@pstdio/sdk": minor
 ---
 
-Add shared Create and Go shortcuts, matching global navigation/side/bottom panel toggles with macOS Option-key support, sticky numbered tab navigation, Ctrl+Tab cycling, and a grouped palette-style reference with one default shortcut per action.
+Add shared keyboard actions, global panel/fullscreen toggles, Ctrl+Tab and numbered tab selection, automatic exit after completed actions, and a grouped palette reference with one default shortcut per action.

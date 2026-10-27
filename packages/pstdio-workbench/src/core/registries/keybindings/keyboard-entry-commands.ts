@@ -6,6 +6,7 @@ export const keyboardEntryKind = (commandId: string) => {
   if (commandId === WORKBENCH_KEYBOARD_OPEN_COMMAND_ID) return "mode" as const;
   if (
     commandId === "workbench.toggleSideBar" ||
+    commandId === "workbench.toggleMainFullscreen" ||
     commandId === "workbench.keyboard.toggle.side" ||
     commandId === "workbench.keyboard.toggle.secondary"
   )
