@@ -30,7 +30,7 @@ Create actions use C followed by the first letter of the canonical resource-kind
 
 When actions share an initial, the host sorts the available actions by name, with action identity as the tie-breaker, and offers numbered choices. For example, C → A → 1 can select Analysis and C → A → 2 Artifact. The numbers stay fixed while the chooser is open, even when contributions change. Session providers share C → S; type the displayed number to choose Codex, Claude Code, or another provider. The shortcut reference includes the numbered continuation.
 
-Settings → T is the single default shortcut for choosing a color theme. Theme providers contribute themes to that shared picker rather than registering another shortcut. Notes keeps Alt+Shift+O, Planner Kanban Alt+Shift+P, and Artifacts Alt+Shift+A for navigation. Timeline uses Go → T. Creation keeps C → N, C → T, and C → A without additional direct creation chords.
+Alt+Shift+T is the single default shortcut for choosing a color theme. Theme providers contribute themes to that shared picker rather than registering another shortcut. Notes keeps Alt+Shift+O, Planner Kanban Alt+Shift+P, and Artifacts Alt+Shift+A for navigation. Timeline uses Go → T. Creation keeps C → N, C → T, and C → A without additional direct creation chords.
 
 Settings → E opens extension settings, I appearance and file icon themes, and S contributed skills. Mod+, opens agent runtime and skill setup. These destinations are registered once, regardless of the number of providers.
 

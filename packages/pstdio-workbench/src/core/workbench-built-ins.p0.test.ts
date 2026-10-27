@@ -32,6 +32,7 @@ describe("workbench built-ins", () => {
     expect(keybindings).toMatchObject([
       { commandId: "workbench.toggleCommandPalette" },
       { commandId: "workbench.action.showCommands" },
+      { commandId: "workbench.action.changeTheme" },
       { commandId: "workbench.action.navigateBack" },
       { commandId: "workbench.action.navigateForward" },
       { commandId: "workbench.toggleSideBar" },
@@ -54,7 +55,7 @@ describe("workbench built-ins", () => {
             entry.binding.action.commandId === "workbench.action.changeTheme",
         )
         .map((entry) => entry.keys),
-    ).toEqual([["S", "T"]]);
+    ).toEqual([["ALT+SHIFT+T"]]);
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.navigateBack")).toMatchObject({
       commandId: "workbench.action.navigateBack",
       keybinding: "Alt+Shift+ArrowLeft",

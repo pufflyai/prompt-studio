@@ -1,5 +1,5 @@
 import type { WorkbenchShellOpenRegion } from "./controllers/shell/shell-controller";
-import type { Keybinding, KeybindingSequence } from "./registries/keybindings/keybinding-registry";
+import type { KeybindingSequence } from "./registries/keybindings/keybinding-registry";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import type { WorkbenchCore } from "./workbench-core";
 
@@ -14,7 +14,6 @@ interface BuiltinCommand {
   label: string;
   icon: string;
   keybinding?: KeybindingSequence;
-  layer?: Keybinding["layer"];
   sticky?: boolean;
   category?: string;
   execute: (workbench: WorkbenchCore) => void;
@@ -42,8 +41,7 @@ const builtinCommands: BuiltinCommand[] = [
     id: "workbench.action.changeTheme",
     label: "Choose color theme",
     icon: "Palette",
-    keybinding: "T",
-    layer: "settings",
+    keybinding: "Alt+Shift+T",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ view: "theme" }),
   },
   {
@@ -94,7 +92,6 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       workbench.keybindings.registerKeybinding({
         action: { kind: "command", commandId: command.id },
         keybinding: command.keybinding,
-        layer: command.layer,
         sticky: command.sticky,
         when: "!inputFocus",
       });
