@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   createDb,
   createExtensionInstancesDBService,
+  createExtensionStorageDBService,
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
@@ -63,6 +64,7 @@ test("a required provider wins when it appears while an optional copy is being e
     extensionInstancesService: instances,
     installedExtensionSourcesService: sources,
     extensionUserDataService: createExtensionUserDataDBService(database.db),
+    recovery: createExtensionStorageDBService(database.db).recovery,
     projectService,
   });
   const project = await projectService.create({ name: "Claims" });
