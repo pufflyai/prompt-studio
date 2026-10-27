@@ -73,7 +73,7 @@ test("session creation is grouped under C S and a provider is chosen by number",
   for (const registration of registrations) registration.dispose();
 });
 
-test("all color theme providers share one Settings T shortcut", () => {
+test("all color theme providers share one base shortcut", () => {
   const core = createWorkbench();
   registerExtensionSetupShortcuts(core, {
     extensions: [
@@ -94,5 +94,5 @@ test("all color theme providers share one Settings T shortcut", () => {
         entry.binding.action.kind === "command" && entry.binding.action.commandId === "workbench.action.changeTheme",
     );
   expect(shortcuts).toHaveLength(1);
-  expect(shortcuts[0]?.keys).toEqual(["S", "T"]);
+  expect(shortcuts[0]?.keys).toEqual(["ALT+SHIFT+T"]);
 });
