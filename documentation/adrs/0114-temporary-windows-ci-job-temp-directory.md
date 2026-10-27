@@ -4,31 +4,35 @@ Proposed: 2026-10-26
 
 ## Intended design
 
-Hosted Windows jobs should put temporary runtime homes, databases and installation caches in the temporary directory allocated to that job. The runner owns its lifetime. Applications and local tests should keep using the operating system's normal temp API.
+Hosted Windows jobs should put temporary runtime homes, databases and installation caches in a temporary directory that the job owns, on storage that suits many small files. The runner owns its lifetime. Applications and local tests should keep using the operating system's normal temp API.
 
 ## External limitation
 
-The hosted Windows images expose the user-profile directory through `TEMP` and `TMP`, while Actions allocates a separate `RUNNER_TEMP`. The job does not control those image defaults. We cannot make the provider set the normal temp variables to its job directory from application code.
+The hosted Windows images point `TEMP` and `TMP` at the user-profile directory on the `C:` system volume. Actions allocates `RUNNER_TEMP` separately. On x64 images it is on a local `D:` disk; the ARM64 image has no second disk, so `RUNNER_TEMP` is also on `C:`. The job does not control the image's volumes or defaults.
 
-[Comparison 40282116342](https://github.com/pufflyai/prompt-studio/actions/runs/40282116342) runs the same quiet compiled product on both architectures with fresh homes and caches, both complete core cases, standard awaited Bun removal, and the unchanged 120-second allowance. Only `TEMP` and `TMP` placement changes after browser provisioning.
+Cold packaged fixtures install extension dependencies into fresh homes and caches. The largest is the Planner's production install: 463 packages and 38,354 files (389 MB). Writing those files to `C:` is slow on both architectures. [Install comparison 40476653773](https://github.com/pufflyai/prompt-studio/actions/runs/40476653773) and [40477674585](https://github.com/pufflyai/prompt-studio/actions/runs/40477674585) time the same `bun install --frozen-lockfile --ignore-scripts --production` with a fresh cache (cold) and again with that cache after removing `node_modules` (warm):
 
-| Architecture | User-profile temp: features / defaults | Job temp: features / defaults |
+| Volume | x64 cold / warm | ARM64 cold / warm |
 | --- | --- | --- |
-| x64 | Both exceed 120 seconds | 34.23 / 30.31 seconds |
-| ARM64 | Both exceed 120 seconds | 114.46 / 108.69 seconds |
+| `C:` system volume | 51.7 / 26.3 s | 47.3–56.1 / 28.3–31.4 s |
+| x64 `D:` local disk | 16.7–17.6 / 12.7–13.2 s | not available |
+| NTFS virtual disk | 18.6–19.4 / 13.0–13.9 s | 192.1–206.4 / 27.2–30.0 s |
+| ReFS Dev Drive | 8.3–16.3 / 3.1–4.2 s | 8.9–21.6 / 2.9–9.7 s |
 
-The x64 job directory is `D:\a\_temp`; ARM64 uses `C:\a\_temp`. The ARM comparison stays on the same volume. This evidence establishes a directory-placement difference, not a physical-disk or antivirus cause. Separate profiling places the long install phase inside Bun, rather than process resolution or output capture.
+Defender is not the cause: both images already exclude `C:\` and `D:\`, and excluding the job directory changed little. The warm case does no downloads, so the cost is writing and linking files on that volume. A Dev Drive skips most file system filters, which most likely explains the difference; the exact filter is not identified.
+
+Inside the packaged core cases, the Planner's dependency install took 79.7–91.0 seconds on ARM64 and 17.6–18.1 seconds on x64 ([diagnostic 40474309134](https://github.com/pufflyai/prompt-studio/actions/runs/40474309134)). It made first-project creation exceed the 120-second case allowance on ARM64. The other setup phases are about 1.5 times slower on ARM64.
 
 ## Temporary workaround
 
-The shared CI setup action writes `TEMP` and `TMP` from `RUNNER_TEMP` to the job environment on Windows. Later build and test processes inherit the provider-owned directory through the existing temp API. No application path, dependency layout or cache policy changes. Every cold fixture still allocates its own home and cache; no fixture is prewarmed or reused.
+The shared CI setup action creates a dynamic 50 GB ReFS Dev Drive file in `RUNNER_TEMP`, mounts it, and writes `TEMP` and `TMP` to a folder on it for later steps. The job owns the drive; the hosted runner discards it with the job. Both Windows architectures use the same rule. Later build and test processes reach it through the existing temp API. No application path, dependency layout or cache policy changes. Every cold fixture still allocates its own home and cache; no fixture is prewarmed or reused. No timeout, budget or workload changes.
 
-This is a temporary override of the provider defaults. Keeping it in CI setup avoids Windows-only storage rules in the application or test fixtures. The provider's job directory is the intended owner; changing every application caller would put this host concern in the wrong layer.
+This is a temporary override of the provider's storage. Keeping it in CI setup avoids Windows-only storage rules in the application or test fixtures.
 
 ## Limitations
 
-The comparison uses separate hosted jobs. It does not isolate the underlying storage or image-policy mechanism. ARM64 retains much less margin, so final full native qualification remains required. This does not establish ordinary-user startup performance or change any product performance budget. Native cleanup helpers remain rejected and absent from delivery.
+The temp directory is now on a different volume from the checkout. A test that renames files between the checkout and the temp directory would fail on Windows CI. ReFS also differs from NTFS in small ways, such as larger file IDs. The full Windows suites must pass on this configuration. The drive costs 10–15 seconds of setup per Windows job that uses the shared setup action. This does not measure ordinary-user performance, which still writes to the user's own volume, and it does not change any product performance budget.
 
 ## Removal
 
-Remove the override when the hosted Windows images supply their job directory through the standard temp variables, or an equivalent fresh-directory comparison proves that their defaults complete the unchanged native workloads reliably. Run the complete Windows x64 and ARM64 packaged suites on the resulting configuration before removing this ADR.
+Remove the override when the hosted Windows images offer a fast job-owned temp volume on both architectures, or when a fresh-directory comparison shows that their defaults complete the unchanged native workloads reliably. Run the complete Windows x64 and ARM64 packaged suites on the resulting configuration before removing this ADR.

@@ -50,10 +50,15 @@ runs:
     - name: Generate installed Chakra theme declarations
       shell: bash
       run: bun run --cwd packages/ui typegen:tokens
-    - name: Use the Windows job temp directory
+    - name: Use a job-owned Dev Drive as the Windows temp directory
       if: runner.os == 'Windows'
       shell: pwsh
-      # Keep runtime homes and cold install caches in the runner-owned directory. See ADR 0114.
+      # Keep runtime homes and cold install caches on a ReFS Dev Drive owned by this job. See ADR 0114.
       run: |
-        "TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
-        "TMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+        $ErrorActionPreference = 'Stop'
+        $partition = New-VHD -Path (Join-Path $env:RUNNER_TEMP 'temp-dev-drive.vhdx') -SizeBytes 50GB -Dynamic |
+          Mount-VHD -PassThru | Initialize-Disk -PassThru | New-Partition -AssignDriveLetter -UseMaximumSize
+        $partition | Format-Volume -DevDrive -Confirm:$false -Force | Out-Null
+        $temp = New-Item -ItemType Directory -Path "$($partition.DriveLetter):\temp"
+        "TEMP=$temp" >> $env:GITHUB_ENV
+        "TMP=$temp" >> $env:GITHUB_ENV
