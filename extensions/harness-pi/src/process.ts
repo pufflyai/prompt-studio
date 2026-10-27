@@ -24,7 +24,7 @@ const terminateTree = async (child: ChildProcessWithoutNullStreams, signal: Node
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === "ESRCH") return;
-    // Darwin may refuse a group signal while its leader is exiting. See ADR 0111.
+    // Darwin may refuse a group signal while its leader is exiting. See ADR 0115.
     if (process.platform === "darwin" && code === "EPERM") {
       child.kill(signal);
       return;
