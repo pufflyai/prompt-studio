@@ -1,12 +1,12 @@
-name: Diagnose Windows Planner dependency install
+name: Diagnose Windows ReFS rename semantics
 on:
   push:
     branches: [test/diag-win-arm-core]
 permissions:
   contents: read
 jobs:
-  install:
-    name: install (${{ matrix.os }})
+  rename:
+    name: rename (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -18,39 +18,33 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - uses: samypr100/setup-dev-drive@v4
-        with:
-          drive-size: 30GB
-          drive-format: ReFS
-          drive-path: ${{ runner.temp }}\refs_drive.vhdx
-          env-mapping: REFS_DRIVE,{{ DEV_DRIVE }}
-      - uses: samypr100/setup-dev-drive@v4
-        with:
-          drive-size: 30GB
-          drive-format: NTFS
-          drive-path: ${{ runner.temp }}\ntfs_drive.vhdx
-          env-mapping: NTFS_DRIVE,{{ DEV_DRIVE }}
-      - name: Time Planner production installs per volume
+      - run: bun install --frozen-lockfile
+        shell: bash
+      - name: Create ReFS Dev Drive and NTFS virtual disk
         shell: pwsh
         run: |
-          function Time-Install($root, $label) {
-            New-Item -ItemType Directory -Force "$root\app" | Out-Null
-            Copy-Item extensions\pstdio-planner\package.json, extensions\pstdio-planner\bun.lock, extensions\pstdio-planner\bunfig.toml "$root\app"
-            $env:BUN_INSTALL_CACHE_DIR = "$root\cache"
-            Push-Location "$root\app"
-            $cold = Measure-Command { bun install --frozen-lockfile --ignore-scripts --production | Out-Host }
-            $files = (Get-ChildItem node_modules -Recurse -File -Force).Count
-            $bytes = (Get-ChildItem node_modules -Recurse -File -Force | Measure-Object Length -Sum).Sum
-            $cacheBytes = (Get-ChildItem "$root\cache" -Recurse -File -Force | Measure-Object Length -Sum).Sum
-            Remove-Item node_modules -Recurse -Force
-            $warm = Measure-Command { bun install --frozen-lockfile --ignore-scripts --production | Out-Host }
-            Pop-Location
-            "RESULT $label cold=$([math]::Round($cold.TotalSeconds,1))s warm=$([math]::Round($warm.TotalSeconds,1))s files=$files bytes=$bytes cacheBytes=$cacheBytes"
+          $ErrorActionPreference = 'Stop'
+          foreach ($kind in 'refs','ntfs') {
+            $partition = New-VHD -Path (Join-Path $env:RUNNER_TEMP "$kind.vhdx") -SizeBytes 20GB -Dynamic |
+              Mount-VHD -PassThru | Initialize-Disk -PassThru | New-Partition -AssignDriveLetter -UseMaximumSize
+            if ($kind -eq 'refs') { $partition | Format-Volume -DevDrive -Confirm:$false -Force | Out-Null }
+            else { $partition | Format-Volume -FileSystem NTFS -Confirm:$false -Force | Out-Null }
+            $dir = New-Item -ItemType Directory -Path "$($partition.DriveLetter):\temp"
+            "$($kind.ToUpper())_TEMP=$dir" >> $env:GITHUB_ENV
           }
-          "RUNNER_TEMP=$env:RUNNER_TEMP REFS_DRIVE=$env:REFS_DRIVE NTFS_DRIVE=$env:NTFS_DRIVE"
-          Get-Volume | Format-Table DriveLetter,FileSystem,FileSystemLabel,Size,SizeRemaining
-          Time-Install "$env:RUNNER_TEMP\diag-1" "runner-temp"
-          Time-Install "$env:REFS_DRIVE\diag-1" "refs-1"
-          Time-Install "$env:NTFS_DRIVE\diag-1" "ntfs-1"
-          Time-Install "$env:REFS_DRIVE\diag-2" "refs-2"
-          Time-Install "$env:NTFS_DRIVE\diag-2" "ntfs-2"
+      - name: Probe rename over a watched, open file
+        shell: pwsh
+        run: |
+          foreach ($pair in @(@("$env:RUNNER_TEMP",'runner-temp'), @("$env:NTFS_TEMP",'ntfs-vhd'), @("$env:REFS_TEMP",'refs-dev-drive'))) {
+            bun scripts/diag/rename-probe.ts $pair[0] $pair[1]
+            fsutil fsinfo volumeinfo ($pair[0].Substring(0,2) + '\') | Select-String 'File System Name|POSIX'
+          }
+      - name: Run the detached-process test per temp volume
+        shell: pwsh
+        working-directory: packages/pstdio-api
+        run: |
+          foreach ($pair in @(@("$env:RUNNER_TEMP",'runner-temp'), @("$env:NTFS_TEMP",'ntfs-vhd'), @("$env:REFS_TEMP",'refs-dev-drive'))) {
+            $env:TEMP = $pair[0]; $env:TMP = $pair[0]
+            "DETACHED $($pair[1])"
+            bun test src/features/extensions/extension-detached-process.p1.test.ts 2>&1 | Select-String '\((pass|fail)\)|Received|Expected'
+          }
