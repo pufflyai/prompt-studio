@@ -85,7 +85,7 @@ Start with the [extension guide](https://prompt.studio/docs/guides/extensions/au
 
 ## Contributing
 
-Before changing Prompt Studio, read the [mission](MISSION.md), [design rules](design/DESIGN.md), and [nonfunctional requirements](NONFUNCTIONAL_REQUIREMENTS.md).
+Before changing Prompt Studio, read the [mission](MISSION.md) and [design rules](design/DESIGN.md). The [nonfunctional requirements](NONFUNCTIONAL_REQUIREMENTS.md) describe performance targets, nightly checks, and guidance on local benchmarks.
 
 To work on Prompt Studio itself, read the [development setup](https://github.com/pufflyai/prompt-studio/blob/main/documentation/guides/development/0001-setup.md). The [documentation guide](https://github.com/pufflyai/prompt-studio/blob/main/documentation/guides/0001-documentation.md) explains how the docs in `documentation/` are organized and published.
 

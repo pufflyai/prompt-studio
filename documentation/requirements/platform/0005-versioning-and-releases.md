@@ -161,7 +161,7 @@ The desktop side of the nightly channel is described in [Desktop distribution](0
 
 ## Validation
 
-Follow the [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) for download size, compiled-binary size, startup, and resource use. Local builds, cross-platform builds, and verification of prebuilt artifacts enforce its 200 MB compiled-binary limit. Aggregate download size and the M5 startup and memory requirements need their own measurements; the binary guard does not establish compliance with those requirements.
+The [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) describe advisory resource targets, nightly performance coverage, and when local benchmarks are useful. The existing 200 MB compiled-binary check runs during local builds, cross-platform builds, and prebuilt verification. Aggregate download size and the M5 startup and average-memory targets do not have dedicated automated checks yet.
 
 Run `bun run validate` and `bun run --cwd scripts verify:packages`. For changes to release logic, use a disposable Prompt Studio workspace to run `bun changeset status --verbose` and `bun run --cwd scripts release:version`. Check that all group versions agree, extension dependency ranges remain unchanged and `release:notes <version>` contains only actual entries. Do not publish from the disposable workspace.
 

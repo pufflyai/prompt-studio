@@ -2,7 +2,7 @@
 
 Prompt Studio is a workbench where people and agents build and use tools through extensions. Core owns shared execution, workspaces, state, sync, trust, and workbench contracts. Planner, Notes, and Reports own their domain workflows. Read the [mission](../../MISSION.md) before changing product boundaries.
 
-The [design rules](../../design/DESIGN.md) and [nonfunctional requirements](../../NONFUNCTIONAL_REQUIREMENTS.md) govern interactions, download size, startup, memory, and resource use.
+The [design rules](../../design/DESIGN.md) guide interactions. The [nonfunctional requirements](../../NONFUNCTIONAL_REQUIREMENTS.md) describe resource and performance targets, nightly checks, and guidance on local benchmarks.
 
 ## Start here
 

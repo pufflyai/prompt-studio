@@ -4,7 +4,7 @@ Read [MISSION.md](MISSION.md) first. Every feature, fix, and trade-off must pass
 
 # Nonfunctional requirements
 
-Read [NONFUNCTIONAL_REQUIREMENTS.md](NONFUNCTIONAL_REQUIREMENTS.md) before planning or changing the product. Follow its download size, startup, memory, and resource-use requirements. Keep proposed limits distinct from approved requirements and measured results.
+Use [NONFUNCTIONAL_REQUIREMENTS.md](NONFUNCTIONAL_REQUIREMENTS.md) as planning guidance. Its targets are advisory for now. Performance tests run in nightly CI; agents **SHOULD** run relevant benchmarks locally when they expect significant performance impact from a change. These targets add no per-change measurement requirement.
 
 # Repository rules
 

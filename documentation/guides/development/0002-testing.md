@@ -322,7 +322,7 @@ Hosted Intel macOS runners run the packaged and desktop suites two to three time
 
 ## Desktop benchmarks
 
-The [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) set a maximum 2-second cold start on the Apple M5 reference machine and define the required readiness boundary. The CI budgets below use different hardware and a visible-workbench milestone. Passing them does not establish M5 compliance. A dedicated M5 check, aggregate download check, and automated gate for the 1 GB average-memory limit remain coverage gaps recorded in that document.
+The [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) describe advisory targets, including a 2-second M5 cold start and 1 GB average memory. Regular performance coverage runs in nightly CI and stable-release validation. Agents **SHOULD** run relevant benchmarks locally when they expect significant performance impact from a change. The existing CI budgets below use hosted hardware and a visible-workbench milestone; dedicated M5, aggregate-download, and average-memory checks are not implemented yet.
 
 Desktop budgets live in `clients/desktop/src/e2e/*.bench.ts`. Run them against a packaged app:
 
