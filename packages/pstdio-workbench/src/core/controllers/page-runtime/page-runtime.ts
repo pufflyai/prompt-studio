@@ -12,6 +12,7 @@ import { applyModePanelPolicy } from "../../registries/modes/mode-layout";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
+import { resolvePageContent } from "../../registries/pages/page-content";
 import { isSingleViewPage, pageSlots } from "../../registries/pages/page-main";
 import {
   type CreateWorkbenchPageRegistryInput,
@@ -54,10 +55,11 @@ export interface ConnectWorkbenchPageRuntimeInput {
   modes: WorkbenchModeRegistry;
   registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
 }
-const syncOwnedPanelMenus = (layout: LayoutModel) => {
-  const ownedPlacements = Object.values(layout.getLayout().regions)
-    .flatMap((region) => region.widgets)
-    .filter((placement) => Boolean(placement.placementIdentity));
+const syncOwnedPanelMenus = (layout: LayoutModel, pageContent: WorkbenchWidgetPlacement | undefined) => {
+  const ownedPlacements = [
+    ...Object.values(layout.getLayout().regions).flatMap((region) => region.widgets),
+    ...(pageContent ? [pageContent] : []),
+  ].filter((placement) => Boolean(placement.placementIdentity));
   for (const placement of ownedPlacements) {
     const owner = layout.getWidget(placement.contributionId);
     for (const menuId of owner?.ownedPanelMenuIds ?? []) {
@@ -184,7 +186,7 @@ const applyPageState = (
       input.layout.getRegionSettings(region, mode?.id),
     );
     input.layout.restoreLayout(clampPanelSizes(availableLayout, input.layout.getRegionSize));
-    syncOwnedPanelMenus(input.layout);
+    syncOwnedPanelMenus(input.layout, resolvePageContent(latest));
     if (source !== "scope-restore") revealPagePlacements(input, layout, activation);
   });
   return restoresMode ? ("restore-mode" as const) : ("open-page" as const);

@@ -55,12 +55,16 @@ describe("shipped extension composition", () => {
       },
       main: {
         kind: "view",
-        presentation: "page",
         view: { id: "ticket-editor" },
         cardinality: "one",
       },
       slots: [],
     });
+    // Only the Tickets list is tabless; a ticket keeps its tabbed Main.
+    expect(runtime.pages.find((page) => page.localId === "ticket")?.contribution.main).not.toHaveProperty(
+      "presentation",
+      "page",
+    );
     expect(runtime.navigationTrees.find((tree) => tree.localId === "ticket-files")?.contribution).toMatchObject({
       owner: { kind: "page", id: "ticket" },
       slot: "content",

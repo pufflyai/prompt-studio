@@ -119,7 +119,7 @@ Global panel controls render in the web navigation header: closed Sidenav recove
 | `workbench.resizePanel` | `region: sidenav, secondary, side`, `size: number` in pixels |
 | `workbench.setSidePanelPresentation` | `presentation: attached, floating, closed` |
 
-The matching shell methods enforce the same permissions. Main headers follow page presentation: tabless pages have no header, while tabbed pages keep theirs. Header menus offer placement actions without a visibility toggle. `setPanelHeaderVisible` and `shell.setHeaderVisible` remain for legacy auxiliary integrations and cannot override a page's Main header policy. Optional panels collapse after their last tab closes, including panels previously opened empty.
+The matching shell methods enforce the same permissions. Main headers follow page presentation: tabless pages have no tab header, while tabbed pages keep theirs. A tabless page whose view has a closed view menu shows a minimal, borderless menu header that holds only that menu's opener and accepts no tab drops or panel placement. Header menus offer placement actions without a visibility toggle. `setPanelHeaderVisible` and `shell.setHeaderVisible` remain for legacy auxiliary integrations and cannot override a page's Main header policy. Optional panels collapse after their last tab closes, including panels previously opened empty.
 
 ## Panel placement and closed-edge drops
 
