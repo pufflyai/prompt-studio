@@ -48,6 +48,12 @@ jobs:
         env:
           PSTDIO_BUILD_PLATFORM_PKG: ${{ matrix.pkg }}
         run: bun run --cwd scripts build:all
+      - name: Install the packaged smoke browser
+        shell: bash
+        run: >-
+          bun -e 'import { preparePackagedSmokeBrowser } from "./scripts/verify/packaged-runtime-smoke";
+          preparePackagedSmokeBrowser(Bun.argv.at(-1)!);'
+          "$GITHUB_WORKSPACE/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe"
       - name: Run the core cases with the image defaults
         continue-on-error: true
         shell: bash
