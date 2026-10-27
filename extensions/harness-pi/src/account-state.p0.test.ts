@@ -3,6 +3,8 @@ import { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { authenticatePiAccount, getPiAccountState } from "./account-state";
 
 test("Pi stores and removes keys through its native store and scopes readiness to the model provider", async () => {
+  // GitHub Actions supplies GH_TOKEN, which Pi also recognizes as an external Copilot account.
+  for (const key of ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"]) delete process.env[key];
   const authStorage = AuthStorage.inMemory();
   const modelRegistry = ModelRegistry.inMemory(authStorage);
   const accounts = { authStorage, modelRegistry };
@@ -18,6 +20,30 @@ test("Pi stores and removes keys through its native store and scopes readiness t
   await authenticatePiAccount(accounts, { action: "logout", provider: "anthropic" }, channel);
   expect(authStorage.has("anthropic")).toBe(false);
   await authenticatePiAccount(accounts, { action: "logout" }, channel);
+});
+
+test("Pi keeps externally managed Copilot credentials outside native logout", async () => {
+  process.env.GH_TOKEN = "fixture-ci-token";
+  const authStorage = AuthStorage.inMemory();
+  const accounts = { authStorage, modelRegistry: ModelRegistry.inMemory(authStorage) };
+  const state = getPiAccountState(accounts, "github-copilot/gpt-5");
+  expect(state.status).toBe("signed_in");
+  expect(state.providers.find((provider) => provider.id === "github-copilot")?.canLogout).toBe(false);
+  await expect(
+    authenticatePiAccount(
+      accounts,
+      { action: "logout", provider: "github-copilot" },
+      {
+        signal: new AbortController().signal,
+        emit: async () => {},
+        request: async () => {
+          throw new Error("Managed accounts must not prompt for native logout.");
+        },
+      },
+    ),
+  ).rejects.toThrow("managed outside");
+  expect(process.env.GH_TOKEN).toBe("fixture-ci-token");
+  expect(authStorage.list()).toEqual([]);
 });
 
 test("Pi discovers OAuth providers registered by its native extensions and relays their callback choices", async () => {
