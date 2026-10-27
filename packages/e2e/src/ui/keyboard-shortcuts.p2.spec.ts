@@ -56,7 +56,7 @@ test("new-tab creation adds a Secondary tab and Close selects that instance", as
     .click();
   await page
     .getByRole("dialog", { name: "New tab · panel type", exact: true })
-    .getByRole("button", { name: /Session/ })
+    .getByRole("button", { name: /Session/i })
     .click();
   await expect(secondary.getByRole("tab")).toHaveCount(before + 1);
   await page.keyboard.press("Alt+Shift+Space");
