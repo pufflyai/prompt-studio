@@ -375,13 +375,12 @@ test("indexed values and revisions match the authoritative document after a cold
   const authoritative = await reopened.list();
   expect(await f.records.readMany(["note"])).toEqual(authoritative);
   expect(await reopened.readMany(["note"])).toEqual(authoritative);
-  const [{ recordLifetime: memoryLifetime, ...memoryRecord }] = await memory.readMany(["note"]);
-  const [{ recordLifetime: storedLifetime, ...storedRecord }] = authoritative;
+  const [memoryRecord] = await memory.readMany(["note"]);
   // Independently authored histories have different lifetimes but the same values and revisions.
-  expect(memoryLifetime).toEqual(expect.any(String));
-  expect(storedLifetime).toEqual(expect.any(String));
-  expect(memoryLifetime).not.toBe(storedLifetime);
-  expect(memoryRecord).toEqual(storedRecord);
+  expect(authoritative[0].recordLifetime).toEqual(expect.any(String));
+  const expectedMemoryRecord = { ...authoritative[0], recordLifetime: expect.any(String) };
+  expect(memoryRecord).toEqual(expectedMemoryRecord);
+  expect(memoryRecord).not.toEqual(authoritative[0]);
   expect(authoritative[0].value).toEqual({ body: "x�y", "�key": ["\u0000", "😀", "�"] });
   const page = await reopened.query({ index: "text", where: { field: "body", op: "eq", value: "x�y" } });
   expect(page.records[0].revision).toBe(authoritative[0].revision);
