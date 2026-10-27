@@ -19,13 +19,22 @@ test("a numbered chord starts tab navigation and Enter focuses the last plain-nu
   await page.keyboard.press("Alt+Shift+1");
   const mode = page.getByRole("region", { name: "Keyboard shortcut mode", exact: true });
   await expect(mode).toBeVisible();
-  await expect(page.getByRole("tab", { name: "PS-1", exact: true })).toHaveAttribute("aria-selected", "true");
+  const numberedTab = (number: number) =>
+    page
+      .locator("[data-keyboard-tab-number]")
+      .filter({ hasText: new RegExp(`^${number}$`) })
+      .locator('xpath=ancestor::*[@role="tab"]');
+  await expect(numberedTab(1)).toHaveAttribute("data-keyboard-selected", "");
+  const secondLabelId = await numberedTab(2).getAttribute("aria-labelledby");
+  const secondLabel = await page.locator(`[id="${secondLabelId}"]`).textContent();
   await page.keyboard.press("2");
-  await expect(page.getByRole("tab", { name: "PS-2", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(numberedTab(2)).toHaveAttribute("data-keyboard-selected", "");
   await expect(mode).toBeVisible();
   await page.keyboard.press("Enter");
   await expect(mode).toBeHidden();
-  await expect(page.getByRole("textbox", { name: "Draft 2", exact: true })).toBeFocused();
+  await expect(
+    page.getByRole("textbox", { name: `Draft ${secondLabel?.replace("PS-", "")}`, exact: true }),
+  ).toBeFocused();
   await expect(page.getByRole("textbox", { name: "Draft 4", exact: true })).toHaveValue("Keep Secondary draft");
 });
 
@@ -35,7 +44,9 @@ test("Ctrl Tab cycles tabs and Ctrl Shift Tab goes back without entering shortcu
   await page.getByRole("tab", { name: "PS-1", exact: true }).click();
   await page.getByRole("textbox", { name: "Draft 1", exact: true }).fill("Keep Main draft");
   await page.keyboard.press("Control+Tab");
+  await page.keyboard.type(" next tab");
   await expect(page.getByRole("textbox", { name: "Draft 2", exact: true })).toBeFocused();
+  await expect(page.getByRole("textbox", { name: "Draft 2", exact: true })).toHaveValue(/ next tab/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await page.keyboard.press("Control+Shift+Tab");
   await expect(page.getByRole("textbox", { name: "Draft 1", exact: true })).toBeFocused();

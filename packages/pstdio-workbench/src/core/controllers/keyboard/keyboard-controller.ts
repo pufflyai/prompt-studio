@@ -83,12 +83,14 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       message("This tab is no longer available.");
       return;
     }
-    store.setState({ selection: undefined, selectedId: tab.id, selectedRegion: tab.region });
+    store.setState({ selection: undefined, selectedId: tab.id, selectedRegion: tab.region, restoreFocus: false });
     core.layout.activateWidget(tab.id);
     choices = [];
     stack.length = 0;
-    if (!store.getState().active) core.focus.setActiveRegion(tab.region);
-    else refresh();
+    if (!store.getState().active) {
+      store.setState({ restoreFocus: true });
+      core.focus.setActiveRegion(tab.region);
+    } else refresh();
   };
   const run = createKeyboardActionRunner({
     getCore,

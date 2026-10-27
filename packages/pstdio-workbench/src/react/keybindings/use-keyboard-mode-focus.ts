@@ -1,9 +1,8 @@
-import { type RefObject, useEffect, useLayoutEffect, useRef } from "react";
+import { type RefObject, useEffect } from "react";
 import type { WorkbenchCore } from "../../core";
 import type { KeyboardState } from "../../core/controllers/keyboard/keyboard-controller";
 
-const focusSelectedPresentation = (workbench: WorkbenchCore) => {
-  const selected = workbench.keyboard.store.getState();
+const focusSelectedPresentation = (selected: Pick<KeyboardState, "selectedId" | "selectedRegion">) => {
   const instance = selected.selectedId
     ? document.querySelector<HTMLElement>(`[data-workbench-presentation="${CSS.escape(selected.selectedId)}"]`)
     : null;
@@ -38,11 +37,10 @@ export const useKeyboardModeFocus = (
   content: RefObject<HTMLDivElement | null>,
   heading: RefObject<HTMLElement | null>,
 ) => {
-  const wasActive = useRef(false);
-  useLayoutEffect(() => {
-    if (wasActive.current && !state.active && state.restoreFocus) focusSelectedPresentation(workbench);
-    wasActive.current = state.active;
-  }, [state.active, state.restoreFocus, workbench]);
+  useEffect(() => {
+    if (!state.active && state.restoreFocus)
+      focusSelectedPresentation({ selectedId: state.selectedId, selectedRegion: state.selectedRegion });
+  }, [state.active, state.restoreFocus, state.selectedId, state.selectedRegion]);
   useEffect(() => {
     const activation = workbench.layout.onDidActivatePanel((panel) => {
       const current = workbench.keyboard.store.getState();
