@@ -20,6 +20,19 @@ Use page targets to change location and panel targets for auxiliary content. A p
 
 Navigation items and trees contribute to the default host sidebar, including in custom modes. When a mode omits a chrome key, the host keeps its own navigation there, including custom-mode navigation items. A declared view replaces that chrome; `false` hides it. Mode placements keep their identity across pages in the same mode and are removed when their owner is removed.
 
+## Status details
+
+On `main` (planned for 0.46.0), a status bar item can declare `popover: details.ref`
+alongside its `view` and `slot`. The dashboard advertises
+`status-bar-item.popover.v1`. Hosts without that capability reject the contribution.
+Both references must name registered views.
+
+The host opens the detail view above the item, aligned with its leading or trailing
+slot. Its content can extend beyond the status bar iframe. Webviews use their
+intrinsic height, and long details scroll inside the shared popover. Closing it
+unmounts the detail view and releases its subscriptions. The status view remains
+mounted. Existing items without `popover` keep their current behavior.
+
 ## Examples
 
 The [workbench cookbook](../../guides/extensions/0002-workbench-cookbook.md) links working examples for editable pages, inspectors, shared panels, editor collections, provider refs, and webview lifecycle. See also [Contributions](0004-contribution-api.md), [Modes and layout](0009-modes-and-layout.md), and [Navigation and layout state](0010-navigation-and-layout-state.md).

@@ -80,7 +80,7 @@ describe("ticket file operations", () => {
     expect(await readTicketFileContent(storage, "ticket-1", files.get(second.id)!)).toBe("");
   });
 
-  test("file bodies stay out of the ticket record and keep their stored identity across saves", async () => {
+  test("file bodies stay out of the ticket record and replaced bodies are deleted", async () => {
     const storage = createMemoryStorage();
     await putTicket(storage, ticket());
     const blobs = storage.scope({ type: "resource", resource: { type: "ticket", id: "ticket-1" } }).files;
@@ -96,7 +96,7 @@ describe("ticket file operations", () => {
 
     expect(JSON.stringify(await ticketsCollection(storage).get("ticket-1")).length).toBeLessThan(1_000);
     expect(await readTicketFileContent(storage, "ticket-1", updated!)).toBe(body);
-    expect(updated?.blobId).toBe(file.blobId);
+    expect(await blobs.get(file.blobId)).toBeUndefined();
     await deleteTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", fileId: file.id });
     expect(await blobs.list()).toEqual([]);
   });
@@ -145,14 +145,4 @@ describe("ticket file operations", () => {
     expect(stored.title).toBe("Renamed");
     expect(await readTicketFileContent(storage, "ticket-1", stored.files![0])).toBe("new body");
   });
-});
-
-test("saving file content keeps the blob identity used by its shared editor", async () => {
-  const storage = createMemoryStorage();
-  await putTicket(storage, ticket());
-  const ctx = ticketContext(storage);
-  const file = await createTicketFile({ ...ctx, ticketId: "ticket-1", name: "notes.md" });
-  const saved = await updateTicketFile({ ...ctx, ticketId: "ticket-1", fileId: file.id, content: "new body" });
-  expect(saved?.blobId).toBe(file.blobId);
-  expect(await readTicketFileContent(storage, "ticket-1", file)).toBe("new body");
 });

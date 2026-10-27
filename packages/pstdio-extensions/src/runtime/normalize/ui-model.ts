@@ -162,6 +162,7 @@ const registerStatusBarItems = (ext: NormalizedExtension, source: LoadedExtensio
         ...contribution,
         ref: normalizeRef(ext, contribution.ref),
         view: normalizeRef(ext, contribution.view),
+        popover: contribution.popover ? normalizeRef(ext, contribution.popover) : undefined,
         slot: contribution.slot,
       },
     } as RuntimeStatusBarItemRecord);

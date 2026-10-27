@@ -7,22 +7,15 @@ const ticketBlobs = (storage: ExtensionStorageApi, ticketId: string) =>
   storage.scope({ type: "resource", resource: { type: "ticket", id: ticketId } }).files;
 
 export const readTicketFileContent = async (storage: ExtensionStorageApi, ticketId: string, file: StoredTicketFile) =>
-  new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
-    await ticketBlobs(storage, ticketId).getBytes(file.blobId),
-  );
+  new TextDecoder().decode(await ticketBlobs(storage, ticketId).getBytes(file.blobId));
 
-/** Existing files keep one blob identity across editor and command saves. */
+/** Stores a new body and returns its blob id. changeTicketFiles deletes the replaced blob. */
 export const storeTicketFileContent = async (
   storage: ExtensionStorageApi,
   ticketId: string,
   name: string,
   content: string,
-  existingId?: string,
-) => {
-  const blobs = ticketBlobs(storage, ticketId);
-  const input = { name, data: new TextEncoder().encode(content) };
-  return (await (existingId ? blobs.update(existingId, input) : blobs.put(input))).id;
-};
+) => (await ticketBlobs(storage, ticketId).put({ name, data: new TextEncoder().encode(content) })).id;
 
 export const deleteTicketFileContent = (storage: ExtensionStorageApi, ticketId: string, blobIds: string[]) =>
   Promise.all(blobIds.map((id) => ticketBlobs(storage, ticketId).delete(id)));

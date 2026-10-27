@@ -28,6 +28,7 @@ export const writeNavigationExtension = (root: string) => {
         { id: "messages", ref: { kind: "page", id: "messages" }, title: "Messages", path: "messages", mode: { kind: "mode", extensionId: "pstdio", id: "project" }, main: { kind: "group", default: { kind: "page", id: "compose" } }, slots: [], panels: {} },
         { id: "compose", ref: { kind: "page", id: "compose" }, title: "New message", path: "compose", mode: { kind: "mode", extensionId: "pstdio", id: "project" }, parent: { kind: "page", id: "messages" }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one", presentation: "page" }, slots: [], panels: {} },
       ],
+      statusBarItems: [{ id: "status", ref: { kind: "status-bar-item", id: "status" }, view: { kind: "view", id: "document" }, popover: { kind: "view", id: "document" }, slot: { kind: "status-bar-item", extensionId: "pstdio", id: "status-bar.trailing" } }],
       commands: [{
       id: "replace-document", ref: { kind: "command", id: "replace-document" }, title: "Replace document",
       run(ctx: { navigation: { open(target: unknown): void } }) {
@@ -59,6 +60,12 @@ export const expectPackagedNavigation = async (input: {
     headers: input.headers,
   });
   const metadata = await metadataResponse.json();
+  expect(metadata.statusBarItems).toContainEqual(
+    expect.objectContaining({
+      id: "test.navigation-probe.status-bar-item.status",
+      popover: { extensionId: "test.navigation-probe", kind: "view", id: "document" },
+    }),
+  );
   expect(metadata.pages).toContainEqual(
     expect.objectContaining({
       localId: "messages",

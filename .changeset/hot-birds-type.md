@@ -1,7 +1,5 @@
 ---
-"pstdio-planner": minor
 "@pstdio/workbench": minor
-"pstdio-notes": minor
 "pstdio": minor
 "@pstdio/sdk": minor
 "@pstdio/ui": minor

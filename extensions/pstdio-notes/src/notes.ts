@@ -1,4 +1,3 @@
-import { quoteYamlScalar } from "@pstdio/sdk/data";
 import type { ArtifactMount } from "@pstdio/sdk/extensions";
 import { buildNoteDocument, firstNoteTitle, parseNoteDocument } from "./note-frontmatter";
 import { writeResourceInOrder } from "./resource-writes";
@@ -30,28 +29,6 @@ const readNoteDocument = async (mount: NotesMount, id: string) => {
   return document;
 };
 export const readNote = async (mount: NotesMount, id: string) => (await readNoteDocument(mount, id)).body;
-export const readNoteSource = (mount: NotesMount, id: string) => mount.readText(notePath(id));
-export const writeNoteSource = (mount: NotesMount, id: string, source: string) =>
-  writeResourceInOrder(id, async () => {
-    const document = parseNoteDocument(source);
-    let next = source;
-    if (!document.title) {
-      const title = (await readNoteDocument(mount, id)).title || firstNoteTitle(document.body);
-      if (title) {
-        if (/^title:/m.test(document.fields))
-          next = source.replace(/^title:[^\r\n]*/m, () => `title: ${quoteYamlScalar(title)}`);
-        else if (/^---\r?\n/.test(source) && document.fields)
-          next = source.replace(
-            /^(---\r?\n)/,
-            (_match, opening) =>
-              `${opening}title: ${quoteYamlScalar(title)}${opening.endsWith("\r\n") ? "\r\n" : "\n"}`,
-          );
-        else next = buildNoteDocument(document.body, title, document.fields);
-      }
-    }
-    await mount.updateText(notePath(id), next);
-    if (await mount.exists(titlePath(id))) await mount.delete(titlePath(id));
-  });
 export const readNoteTitle = async (mount: NotesMount, id: string) =>
   (await readNoteDocument(mount, id)).title || "New note";
 
