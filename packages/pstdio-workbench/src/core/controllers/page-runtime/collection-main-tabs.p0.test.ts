@@ -190,3 +190,40 @@ test("visiting a detail route keeps the collection's own tabs after reload", asy
     expect.arrayContaining(["library:list:", "library:item:a", "library:item:b"]),
   );
 });
+
+const registerLibrary = (w: ReturnType<typeof modePanelFixture>["w"]) => {
+  const library = { kind: "placement", extensionId: "test", id: "library" } as const;
+  w.modePlacements.registerPlacement({
+    id: "library",
+    ref: library,
+    modeId: "alpha",
+    region: "main",
+    item: { kind: "view", view: { kind: "view", id: "document" }, presence: "closed" },
+  });
+  w.pages.registerPage({
+    id: "library",
+    ref: pageRef("library"),
+    path: "library",
+    modeId: "alpha",
+    main: { kind: "panels", landing: library },
+    panelView: library,
+    slots: [],
+  });
+};
+
+test.each([true, false])("a closed collection landing tab stays closed when its route reloads, scoped=%s", (scoped) => {
+  const s = modePanelFixture(undefined, scoped, [], "");
+  registerLibrary(s.w);
+  s.navigate("library");
+  expect(s.w.layout.listPanelInstances("main")).toHaveLength(1);
+  s.w.closePlacement(s.w.layout.getActivePanel("main")!.placementIdentity!);
+  const location = s.w.pages.store.getState().location!;
+  const restored = modePanelFixture(s.saved, scoped, [], "", { load: () => ({ location }), save() {} });
+  registerLibrary(restored.w);
+  restored.w.pageLocations.boot("project");
+  expect(restored.w.pages.store.getState().activePageId).toBe("library");
+  expect(restored.w.layout.listPanelInstances("main")).toEqual([]);
+  restored.navigate("alpha");
+  restored.navigate("library");
+  expect(restored.w.layout.listPanelInstances("main")).toHaveLength(1);
+});
