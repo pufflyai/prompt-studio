@@ -11,7 +11,7 @@
     "__test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts"
   ],
   "ignoreIssues": {
-    "packages/pstdio/src/adapters/cli/commands/{close,inbox,login,logout,logs,performance,update-channel}.ts": [
+    "packages/pstdio/src/adapters/cli/commands/{close,inbox,login,logout,logs,onboarding,performance,update-channel}.ts": [
       "exports"
     ],
     "packages/pstdio/src/adapters/cli/commands/notifications/list.ts": ["exports"],

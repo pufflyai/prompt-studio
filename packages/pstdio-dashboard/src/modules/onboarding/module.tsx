@@ -1,3 +1,4 @@
+import type { PstdioClient } from "@pstdio/sdk/client";
 import { type PageRef, workbenchPages } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import type { OnboardingInfo } from "pstdio-api-contracts";
@@ -9,7 +10,12 @@ import { Onboarding } from "./onboarding";
 const modeId = "dashboard.onboarding";
 const viewId = "dashboard.onboarding.setup";
 const page: PageRef = { extensionId: "pstdio", kind: "page", id: "onboarding" };
-export const createOnboardingModule = () => {
+export const createOnboardingModule = (
+  client: PstdioClient["onboarding"] = {
+    read: () => getApiClient().onboarding.read(),
+    update: (request) => getApiClient().onboarding.update(request),
+  },
+) => {
   let context: WorkbenchModuleContext;
   let info: OnboardingInfo;
   let complete: () => void;
@@ -18,7 +24,7 @@ export const createOnboardingModule = () => {
     setupPage?.dispose();
     setupPage = undefined;
     context.modes.setActiveMode(modeId);
-    info = await getApiClient().onboarding.read();
+    info = await client.read();
     if (!isCurrent()) return false;
     if (info.state.completed || info.state.hidden) return true;
     const projectId = context.pages.store.getState().projectId!;
@@ -58,11 +64,7 @@ export const createOnboardingModule = () => {
           body: {
             kind: "react",
             render: () => (
-              <Onboarding
-                info={info}
-                update={(request) => getApiClient().onboarding.update(request)}
-                onComplete={() => complete()}
-              />
+              <Onboarding info={info} update={(request) => client.update(request)} onComplete={() => complete()} />
             ),
           },
         }),

@@ -28,10 +28,12 @@ export const createDashboardExtensionWebviewAdapters = (input: CreateDashboardEx
       ? createWorkbenchWebviewHostAdapters({ ...input, workbench: input.workbench, hostEvents: input.base.hostEvents })
       : {}),
     ...input.base,
-    installations: {
-      list: () => getApiClient().extensions.installations(),
-      retry: (id) => getApiClient().extensions.retryInstallation(id),
-    },
+    installations: input.workbench
+      ? {
+          list: () => getApiClient().extensions.installations(),
+          retry: (id) => getApiClient().extensions.retryInstallation(id),
+        }
+      : undefined,
     performance: input.workbench ? getPerformanceDiagnosticsAdapter(input.workbench.settings) : undefined,
     harnesses: input.projectId ? { read: createHarnessReadCapability(input.projectId) } : undefined,
     account: input.projectId ? createAccountAdapter(input.projectId) : undefined,
