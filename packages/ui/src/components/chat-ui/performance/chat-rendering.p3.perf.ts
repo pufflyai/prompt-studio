@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { recordMeasurement } from "pstdio-benchmarks/writer";
 
 const workloads = ["Rich turns", "Plain turns", "1000 responses", "5000 responses", "Large response"];
 
@@ -87,6 +88,12 @@ for (const workload of workloads) {
         ]),
       );
       samples.push({ workload, phase, ...snapshot, ...metrics });
+      const metric = `${workload.toLowerCase().replaceAll(" ", "-")}/${phase}`;
+      const label = `${workload}, ${phase}`;
+      recordMeasurement({ metric, label, unit: "ms", value: snapshot.elapsedMs });
+      const heap = after.metrics.find((entry) => entry.name === "JSHeapUsedSize")?.value;
+      if (heap !== undefined)
+        recordMeasurement({ metric: `${metric}/js-heap`, label: `${label}, page heap`, unit: "bytes", value: heap });
       expect(snapshot.responses).toBeLessThan(30);
       expect(snapshot.elapsedMs).toBeGreaterThan(0);
     }

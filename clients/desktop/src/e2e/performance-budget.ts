@@ -1,4 +1,5 @@
 import { type CDPSession, type Frame, type Page, test } from "@playwright/test";
+import { recordMeasurement } from "pstdio-benchmarks/writer";
 
 // CDP script and task time are proxies for renderer CPU. They count main-thread
 // work in one renderer process, not OS CPU, GPU, or paint cost. Budgets are the
@@ -43,6 +44,17 @@ export const measureRenderers = async (
       },
     ]),
   );
+  // The heap each renderer holds at the end of the window, beside its CPU share.
+  entries.forEach(([name], index) => {
+    const heap = after[index]?.JSHeapUsedSize;
+    if (heap === undefined) return;
+    recordMeasurement({
+      metric: `${label}/${name}-js-heap`,
+      label: `${label}, ${name} heap`,
+      unit: "bytes",
+      value: heap,
+    });
+  });
   await test.info().attach(`${label}-counters.json`, {
     contentType: "application/json",
     body: JSON.stringify({ label, elapsedSeconds, counters }, null, 2),

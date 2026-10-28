@@ -186,7 +186,12 @@ test("a relay outside packages is discovered and obeys package boundaries", () =
   };
   const root = createWorkspace({
     "package.json": { private: true, workspaces: ["packages/*", "clients/*", "services/relay"] },
-    "services/relay/package.json": { name: "pstdio-relay", private: true, dependencies },
+    "services/relay/package.json": {
+      name: "pstdio-relay",
+      private: true,
+      dependencies,
+      devDependencies: { "pstdio-benchmarks": "workspace:*" },
+    },
   });
   expect(verifyBoundaries(root).filter((error) => error.startsWith("services/relay"))).toEqual([]);
 
