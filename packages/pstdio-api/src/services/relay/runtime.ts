@@ -130,7 +130,7 @@ export const startRelayRuntime = async (input: {
       })();
     return running;
   };
-  const stopStorage = deps.extensionStorageService.watch((owner) => {
+  const stopStorage = deps.extensionStorageService.watch((owner, documentId) => {
     if (!workbenches.has(owner.workbenchId)) return;
     if (owner.extensionId === publishedExtensionsId) {
       publications.get(owner.workbenchId)?.wake();
@@ -140,10 +140,15 @@ export const startRelayRuntime = async (input: {
     notify(owner.workbenchId);
     statusChanged(owner.workbenchId);
     const connection = connections.get(JSON.stringify([owner.workbenchId, owner.extensionId]));
-    if (connection) connection.wake();
-    else void refresh();
+    if (connection) {
+      if (documentId && documentId !== "records") connection.wakeDocument(documentId);
+      else connection.wake();
+    } else void refresh();
   });
   const stopCatalog = deps.extensionRuntimeCatalog.subscribeInvalidation(() => void refresh());
+  const stopNativeSources = deps.nativeDocuments.sources.watch((owner, name) => {
+    connections.get(JSON.stringify([owner.workbenchId, owner.extensionId]))?.wakeDocument(name);
+  });
   const stopEvents = deps.eventBus.subscribe((event) => {
     if (["extension_instances", "installed_extension_sources", "projects", "workspaces"].includes(event.table))
       void refresh();
@@ -200,6 +205,7 @@ export const startRelayRuntime = async (input: {
     async close() {
       stopStorage();
       stopCatalog();
+      stopNativeSources();
       stopEvents();
       clearTimeout(retry);
       controller.abort();

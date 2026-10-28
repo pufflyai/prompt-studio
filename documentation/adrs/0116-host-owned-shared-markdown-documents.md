@@ -154,6 +154,16 @@ Known unavailable-source failures retain their document and allow other recovery
 work to continue. Unexpected database failures remain errors. Background storage
 statistics must drain before the database closes, after its writers have stopped.
 
+Known standalone text changes use exact document identities. Their relay work
+does not wait for owner discovery, record streams, other text documents, or file
+refresh. Open editor sources register directly, including after host restart.
+Discovery and exact changes share one serialized worker per replica and coalesce
+changes received during a run. Status reads use worker results without loading
+unrelated documents. New names also request background directory publication;
+owner-directory changes and reconnect discovery cover missed or unknown hints.
+Key rotation aborts and drains the retired replica before replacing it. Only its
+explicit retirement reason is handled as cancellation; real failures still fail.
+
 Relay storage resets invalidate view reads, resource references, and tab title
 queries. The editor header uses that current title. A rename keeps the existing
 document identity, editor session, and pending local edits.

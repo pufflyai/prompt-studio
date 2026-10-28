@@ -81,6 +81,25 @@ const target = { fileRendererId: "example.context.view.document", resource: unde
 const open = (service: ReturnType<typeof createNativeDocumentService>) =>
   service.open({ ...target, projectId: storage.projectAId });
 
+test("open editor sources can register with relay before unrelated discovery finishes", async () => {
+  const { service } = setup();
+  const selected: string[] = [];
+  const stop = service.sources.watch((_owner, name) => selected.push(name));
+  try {
+    const first = await open(service);
+    const second = await open(service);
+    const name = JSON.stringify(["native-markdown", first.documentKey]);
+    expect(selected).toEqual([name, name]);
+    expect(service.sources.current(first.owner)).toEqual([name]);
+    await service.close({ projectId: storage.projectAId, roomId: first.roomId });
+    expect(service.sources.current(first.owner)).toEqual([name]);
+    await service.close({ projectId: storage.projectAId, roomId: second.roomId });
+    expect(service.sources.current(first.owner)).toEqual([]);
+  } finally {
+    stop();
+  }
+});
+
 test("durable acknowledgements and peer snapshots do not wait for a file save", async () => {
   const deps = { ...extension.deps, extensionStorageService: storage.svc };
   const entered = Promise.withResolvers<void>();

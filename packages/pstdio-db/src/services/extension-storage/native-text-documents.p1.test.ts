@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { readTextDocumentSeed, saveTextDocument, seedTextDocument } from "pstdio-sync";
+import { readTextDocumentSeed, type StorageOwner, saveTextDocument, seedTextDocument } from "pstdio-sync";
 import * as Y from "yjs";
 import { storage_document_updates, storage_documents } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
@@ -29,6 +29,22 @@ test("native text seeds once and reopens without creating an owner or record doc
   expect(await reopened.read()).toBe("first\nlast");
   const rows = await f.db.select({ id: storage_documents.document_id }).from(storage_documents);
   expect(rows).toEqual([{ id: '["native-markdown","file-view-key"]' }]);
+});
+
+test("committed text changes announce their exact standalone document identity", async () => {
+  const f = await fixture();
+  await f.text.seed("before");
+  const events: { owner: StorageOwner; name: string | undefined; content: Promise<string> }[] = [];
+  const stop = f.service.watch((owner, name) => events.push({ owner, name, content: f.text.read() }));
+  try {
+    await f.text.save("after");
+    expect(events).toHaveLength(1);
+    expect(events[0]!.owner).toEqual(f.owner);
+    expect(events[0]!.name).toBe('["native-markdown","file-view-key"]');
+    expect(await events[0]!.content).toBe("after");
+  } finally {
+    stop();
+  }
 });
 
 test("native text adopts atomically and invalidates previously cached copies", async () => {
