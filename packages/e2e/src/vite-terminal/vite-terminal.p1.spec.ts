@@ -1,4 +1,5 @@
-import { rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createGitRepo } from "../ui/helpers/workspace-session-attempt";
@@ -72,6 +73,26 @@ test("keeps HTTP same-origin and opens terminals through the runtime WebSocket e
       new Set([`${apiBase.replace("http", "ws")}/v1/terminal`]),
     );
   } finally {
+    const logPath = process.env.E2E_HOME && join(process.env.E2E_HOME, "logs.jsonl");
+    if (logPath && existsSync(logPath)) {
+      const phases = readFileSync(logPath, "utf8")
+        .split("\n")
+        .flatMap((line) => {
+          try {
+            const entry = JSON.parse(line);
+            if (entry.event !== "runtime.setup.phase") return [];
+            const { time, phase, state, duration_ms, extension } = entry;
+            return [{ time, phase, state, duration_ms, extension }];
+          } catch {
+            // The runtime may still be appending its last log line.
+            return [];
+          }
+        });
+      await testInfo.attach("runtime-setup-phases", {
+        body: JSON.stringify(phases, null, 2),
+        contentType: "application/json",
+      });
+    }
     await fetch(`${apiBase}/v1/projects/${project.id}`, { method: "DELETE" }).catch(() => undefined);
     rmSync(repoRoot, { recursive: true, force: true });
   }

@@ -134,7 +134,12 @@ const dependencyPackageState = (nodeModulesPath: string) => {
     }
 
     const packageJsonPath = join(entry.path, "package.json");
-    if (existsSync(packageJsonPath)) hash.update(readFileSync(packageJsonPath));
+    try {
+      hash.update(readFileSync(packageJsonPath));
+    } catch (error) {
+      // Keep missing dependency metadata optional without statting every healthy file twice.
+      if (existsSync(packageJsonPath)) throw error;
+    }
   }
 
   return hash.digest("hex").slice(0, 16);

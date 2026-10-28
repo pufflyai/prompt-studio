@@ -29,3 +29,14 @@ test("returns an empty map when the dashboard root is missing", () => {
   const missing = join(tmpdir(), "pstdio-fs-assets-missing-does-not-exist");
   expect(loadFilesystemAssets(missing).size).toBe(0);
 });
+
+test("serves indexed HTML and binary assets through their response bodies", async () => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-fs-asset-body-"));
+  tempDirs.push(root);
+  writeFileSync(join(root, "index.html"), "<!doctype html><title>Dashboard</title>");
+  const bytes = new Uint8Array([0, 255, 1, 128, 0]);
+  writeFileSync(join(root, "image.png"), bytes);
+  const assets = loadFilesystemAssets(root);
+  expect(await new Response(assets.get("index.html")).text()).toContain("Dashboard");
+  expect(new Uint8Array(await new Response(assets.get("image.png")).arrayBuffer())).toEqual(bytes);
+});

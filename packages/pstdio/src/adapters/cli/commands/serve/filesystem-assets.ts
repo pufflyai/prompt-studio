@@ -1,11 +1,11 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { resolveDashboardRoot } from "../../dashboard/resolve-dashboard-root";
 
 const collectFiles = (dir: string, base: string, files: Map<string, Blob>) => {
-  for (const entry of readdirSync(dir)) {
-    const fullPath = join(dir, entry);
-    const stat = statSync(fullPath);
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+    const stat = entry.isSymbolicLink() ? statSync(fullPath) : entry;
 
     if (stat.isDirectory()) {
       collectFiles(fullPath, base, files);
@@ -13,8 +13,8 @@ const collectFiles = (dir: string, base: string, files: Map<string, Blob>) => {
       // Keys are matched against request URL paths, which always use "/". On
       // Windows `relative` returns "\" separators, so normalize.
       const relPath = relative(base, fullPath).replaceAll("\\", "/");
-      const content = readFileSync(fullPath);
-      files.set(relPath, new Blob([content]));
+      // Match embedded assets: index paths now and read bytes only when a request needs them.
+      files.set(relPath, Bun.file(fullPath));
     }
   }
 };
