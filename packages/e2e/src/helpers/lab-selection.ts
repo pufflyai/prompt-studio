@@ -89,9 +89,9 @@ export const verifyLabSelection = async (page: Page, projectUrl: string) => {
   expect(new URL(page.url()).pathname).toBe(kilnPath);
   await expectDocument(viewport, sceneDocument);
   await expect(main.getByRole("tab")).toHaveCount(0);
-  await expect(
-    page.locator('[data-workbench-panel="side"]').getByRole("tab", { name: "Scene and properties", exact: true }),
-  ).toBeVisible();
+  const side = page.locator('[data-workbench-panel="side"]');
+  await expect(side.locator('iframe[title="Scene and properties"]:visible')).toBeVisible();
+  await expect(side.getByRole("tab")).toHaveCount(0);
   const saved = page.waitForResponse(
     (response) =>
       response.url().includes("state.update/execute") && response.request().method() === "POST" && response.ok(),
@@ -105,5 +105,6 @@ export const verifyLabSelection = async (page: Page, projectUrl: string) => {
   await expect(inspector.getByRole("spinbutton", { name: "Sphere position X", exact: true })).toHaveValue("4.2");
 
   await open("Zipline");
-  await expect(main.getByRole("tab", { name: "My issues", exact: true }).locator("svg.lucide-list-todo")).toBeVisible();
+  await expect(main.getByRole("button", { name: "Polish command menu transitions", exact: true })).toBeVisible();
+  await expect(page.locator('[data-workbench-tab-strip="main"]')).toHaveCount(0);
 };
