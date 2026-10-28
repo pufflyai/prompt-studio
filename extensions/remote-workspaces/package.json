@@ -17,7 +17,7 @@
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.44.0"
+    "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4"
   },
   "devDependencies": {
     "typescript": "6.0.2",

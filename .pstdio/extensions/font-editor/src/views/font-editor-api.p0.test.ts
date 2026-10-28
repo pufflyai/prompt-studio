@@ -9,7 +9,7 @@ describe("font editor webview API", () => {
       extensionId: "pstdio.font-editor",
       call: async (_method: string, params: { commandId: string }) => {
         commandIds.push(params.commandId);
-        return { outcome: { status: "success", value: {} } };
+        return { outcome: { ok: true, value: {} } };
       },
     } as GuestHost;
 

@@ -178,7 +178,7 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
     "Go back",
     "Go forward",
     "Toggle Sidenav",
-    "Go to notifications",
+    "Open notifications",
     "Keyboard shortcuts",
     "Shortcut greeting",
     "Go to shortcut destination",
