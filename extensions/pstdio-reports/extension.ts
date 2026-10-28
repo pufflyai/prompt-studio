@@ -1,5 +1,6 @@
 import {
   defineExtension,
+  defineKeybinding,
   defineResourceKind,
   defineSkill,
   defineTemplateType,
@@ -27,6 +28,28 @@ export default defineExtension({
     saveReportCommand,
     deleteReportCommand,
     ...Object.values(reportTemplateCommands),
+  ],
+  keybindings: [
+    defineKeybinding({
+      id: "create-report",
+      layer: "create",
+      key: "R",
+      action: { kind: "command", target: { command: writeReportCommand.ref } },
+    }),
+    ...(
+      [
+        ["read", "O", readReportCommand],
+        ["save", "S", saveReportCommand],
+      ] as const
+    ).map(([id, key, command]) =>
+      defineKeybinding({
+        id: `current-${id}`,
+        layer: "current",
+        key,
+        targetScope: "project",
+        action: { kind: "command", target: { command: command.ref } },
+      }),
+    ),
   ],
   templateTypes: [
     defineTemplateType({

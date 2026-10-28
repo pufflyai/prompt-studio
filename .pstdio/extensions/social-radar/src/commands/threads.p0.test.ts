@@ -4,6 +4,20 @@ import { commands } from ".";
 import { finish, foundThread, newPost, setup } from "./test-context";
 
 describe("social radar threads", () => {
+  test("current-thread status changes only the chosen resource", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const first = await commands["save-thread"].run(ctx, { input: foundThread(run.runId) });
+    const second = await commands["save-thread"].run(ctx, {
+      input: foundThread(run.runId, "https://news.ycombinator.com/item?id=43"),
+    });
+    await commands["set-current-thread-status"].run(ctx, {
+      resource: { type: "thread", id: second.id },
+      status: "skipped",
+    });
+    expect(await storage.collection<Thread>("threads").get(first.id)).toMatchObject({ status: "new" });
+    expect(await storage.collection<Thread>("threads").get(second.id)).toMatchObject({ status: "skipped" });
+  });
   test("a posted URL belongs to only one saved thread", async () => {
     const { ctx, storage } = setup();
     const run = await commands["run-daily"].run(ctx, {});

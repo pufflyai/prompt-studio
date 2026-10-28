@@ -1,6 +1,8 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
+import { installWebviewKeyboardRelay } from "@pstdio/sdk/extensions";
 import { ThemePreferenceProvider, useThemePreference } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
+import { useEffect, useRef, useState } from "react";
 import { HtmlPreview } from "./html-preview";
 
 const meta = {
@@ -22,6 +24,42 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Interactive: Story = {};
+const KeyboardExample = () => {
+  const [request, setRequest] = useState("Waiting");
+  const heading = useRef<HTMLHeadingElement>(null);
+  const target = useRef<HTMLIFrameElement | null>(null);
+  useEffect(() => {
+    const relay = installWebviewKeyboardRelay({
+      shortcuts: () => [
+        { id: "leader", entry: "mode", key: "Space", altKey: true, shiftKey: true },
+        { id: "tab-four", entry: "tab", key: "4", altKey: true, shiftKey: true },
+        { id: "private-command", key: "X", altKey: true, shiftKey: true },
+      ],
+      dispatch: (input) => {
+        if (document.activeElement instanceof HTMLIFrameElement) target.current = document.activeElement;
+        setRequest(input.id);
+        if (input.id === "leader") heading.current?.focus();
+      },
+    });
+    return () => relay.dispose();
+  }, []);
+  return (
+    <Stack height="full">
+      <Box as="h2" tabIndex={-1} ref={heading}>
+        Keyboard handoff
+      </Box>
+      <output aria-label="Keyboard request">{request}</output>
+      <Button onClick={() => target.current?.contentWindow?.postMessage({ type: "pstdio.keyboard.restore" }, "*")}>
+        Restore editor
+      </Button>
+      <HtmlPreview
+        title="Nested keyboard editor"
+        html='<textarea aria-label="Artifact draft">Unsaved artifact</textarea>'
+      />
+    </Stack>
+  );
+};
+export const KeyboardHandoff: Story = { tags: ["!manifest"], render: () => <KeyboardExample /> };
 export const NavigationIsolation: Story = {
   tags: ["!manifest"],
   args: {

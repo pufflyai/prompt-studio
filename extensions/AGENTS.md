@@ -21,6 +21,17 @@ When a change requires both SDK updates and extension updates:
 
 Core extensions share the host version through the fixed group in `.changeset/config.json`. Add each new core extension to that group. Continue naming changed extensions in changesets. One `pstdio@<version>` tag supplies all core extension code; do not create extension tags or releases. Shared versions do not update published SDK or UI dependency ranges.
 
+## Shared keyboard actions
+
+- Give each action one default shortcut. Use shared Create keys for creation and Go keys for destination navigation; do not also add a direct alias for the same action.
+- Put resource creation actions in the shared `create` layer. Derive the key from the first letter of the canonical resource-kind ID, for example `note.ref.id[0]!.toUpperCase()`.
+- Bind the existing public creation command. Include bound parameters for variants such as an agent provider, and name the resource and variant clearly.
+- Reuse the resource's existing UI flow. For renderer-owned creation, bind the same command as `createRow.command`; the host reuses that form, properties, attachments, and submission handler. For immediate creation with optional parameters, bind an empty parameter object rather than opening a generic form.
+- Reuse an initial when resources collide. The host sorts the available actions and gives them numbered choices; do not invent an extension-name step or reserve another resource's letter.
+- Keep each numbered chooser stable while it is open. Extensions declare actions; the host owns selection, availability, and placeholder-card numbers.
+- Contribute navigation to the shared `go` layer using the same target as the navigation item. Keep one canonical shortcut for shared settings actions such as choosing a color theme; do not add a copy for each provider.
+- Group new extension flows by their purpose: Create, Go, Current view, Settings, View, or Help. Destination navigation belongs in Go; direct Option+Shift chords are for panel and tab controls. Do not use the deprecated `extensions` layer or require an extension-name step.
+
 ## Extension Translations
 
 - Use `l10n("stable.key", "Default copy")` from `@pstdio/sdk/extensions` for user-facing contribution text.
