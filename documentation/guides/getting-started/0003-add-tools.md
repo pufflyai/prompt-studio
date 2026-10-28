@@ -23,7 +23,7 @@ First-launch setup lets you choose harnesses and default tools. You can skip set
 
 The extension is installed and turned on for this project. Its tools appear in the sidebar, in menus, or in the command palette.
 
-Installation continues in the background. Open the puzzle icon in the status bar to see **Installing Extensions**. Each name opens that extension's page. Failed installations offer **Retry**. Completed items show a checkmark. Hide or show this widget under **Settings → Developer tools → Installing Extensions**; hiding it does not stop installation.
+Installation continues in the background. Open the puzzle icon at the left of the status bar to see **Installing Extensions**. Each name opens that extension's page. Failed installations offer **Retry**. Completed items show a checkmark while other work continues. The widget hides when everything succeeds; it keeps failures visible for retry. Its own installation is omitted. Hide or show this widget under **Settings → Developer tools → Installing Extensions**; hiding it does not stop installation.
 
 ![Extensions settings filtered to Artifacts, showing an Available row with an Install button.](../../images/install-extension.png)
 

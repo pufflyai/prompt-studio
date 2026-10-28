@@ -1,6 +1,7 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button, Stack } from "@chakra-ui/react";
 import type { ExtensionInstallation } from "@pstdio/sdk/api";
 import type { Meta, StoryObj } from "@storybook/react";
+import { useState } from "react";
 import { InstallationContent, InstallationIndicator } from "./installation-content";
 import { english } from "./messages";
 
@@ -49,3 +50,38 @@ export const DifferentProjects: Story = {
   },
 };
 export const StatusComplete: Story = { render: (args) => <InstallationIndicator {...args} />, args: Complete.args };
+
+export const InstallingWithoutSelf: Story = {
+  args: {
+    jobs: [
+      { ...job, status: "running", startedAt: queuedAt },
+      {
+        ...job,
+        id: "self",
+        extensionId: "pstdio.pstdio-extension-installations",
+        installName: "my-installations",
+        displayName: "Installing Extensions",
+        status: "running",
+      },
+    ],
+  },
+};
+const StatusLifecycle = () => {
+  const [jobs, setJobs] = useState<ExtensionInstallation[]>([]);
+  return (
+    <Stack>
+      <Button onClick={() => setJobs([{ ...job, status: "running", startedAt: queuedAt }])}>Start installation</Button>
+      <Button onClick={() => setJobs([{ ...job, status: "completed" }])}>Finish installation</Button>
+      <InstallationIndicator jobs={jobs} t={t} />
+    </Stack>
+  );
+};
+export const ActivityLifecycle: Story = { render: () => <StatusLifecycle /> };
+export const QueuedBehindCompleted: Story = {
+  args: {
+    jobs: [
+      job,
+      { ...job, id: "newer", status: "completed", queuedAt: new Date(Date.parse(queuedAt) + 1).toISOString() },
+    ],
+  },
+};

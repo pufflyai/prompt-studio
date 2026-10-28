@@ -47,7 +47,7 @@ export default defineExtension({
       id: "installations",
       view: trigger.ref,
       popover: details.ref,
-      slot: workbenchSlots.statusBarTrailing,
+      slot: workbenchSlots.statusBarLeading,
       visibilitySetting,
     }),
   ],

@@ -7,12 +7,17 @@ import type { Translate } from "./messages";
 export const installationItems = (jobs: ExtensionInstallation[]) => {
   const groups = new Map<string, ExtensionInstallation[]>();
   for (const job of jobs) {
+    if (
+      job.extensionId === "pstdio.pstdio-extension-installations" ||
+      job.installName === "pstdio-extension-installations"
+    )
+      continue;
     const key = JSON.stringify([job.projectId, job.installName]);
     groups.set(key, [...(groups.get(key) ?? []), job]);
   }
   return [...groups.values()].map((group) => {
     group.sort((a, b) => b.queuedAt.localeCompare(a.queuedAt));
-    return group.find((job) => job.status === "running") ?? group[0]!;
+    return group.find((job) => job.status === "running") ?? group.find((job) => job.status === "queued") ?? group[0]!;
   });
 };
 const elapsed = (job: ExtensionInstallation) => {
@@ -28,10 +33,18 @@ interface InstallationContentProps {
 }
 export const InstallationIndicator = (props: Pick<InstallationContentProps, "jobs" | "error" | "t">) => {
   const { jobs, error, t } = props;
-  const pending = jobs.find((job) => job.status === "running" || job.status === "queued");
-  const failed = error || installationItems(jobs).some((job) => job.status === "failed");
+  const items = installationItems(jobs);
+  const pending = items.find((job) => job.status === "running" || job.status === "queued");
+  const failed = error || items.some((job) => job.status === "failed");
+  if (!pending && !failed) return null;
   return (
-    <HStack gap="xs" color={failed ? "fg.error" : "fg.muted"} h="full">
+    <HStack
+      role="status"
+      aria-label={t("installations.title")}
+      gap="xs"
+      color={failed ? "fg.error" : "fg.muted"}
+      h="full"
+    >
       <Icon boxSize="icon-xs">
         <Puzzle />
       </Icon>
@@ -39,11 +52,6 @@ export const InstallationIndicator = (props: Pick<InstallationContentProps, "job
       {failed && (
         <Icon boxSize="icon-xs" aria-label={t("installations.failed")}>
           <TriangleAlert />
-        </Icon>
-      )}
-      {!pending && !failed && jobs.length > 0 && (
-        <Icon boxSize="icon-xs" aria-label={t("installations.complete")}>
-          <Check />
         </Icon>
       )}
       {pending && <Text textStyle="mono/XS">{elapsed(pending)}</Text>}
