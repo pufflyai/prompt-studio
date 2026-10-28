@@ -32,7 +32,7 @@ worker.onmessage = async (event) => {
       files: files.map(({ source, text }) => {
         const csf = loadCsf(text, {
           fileName: source,
-          makeTitle: (title?: string) => title ?? source.replace(/\.stories\.tsx?$/, ""),
+          makeTitle: (title?: string) => title ?? source.replace(/\.canvas\.tsx?$/, ""),
         }).parse();
         return {
           source,

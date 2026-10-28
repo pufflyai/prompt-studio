@@ -97,13 +97,9 @@ Clearly describe it as a temporary workaround, not the intended design.
 ## Visual design rules
 
 - Before creating or implementing a ticket that adds or changes UI, update the relevant design in the Canvas extension. Follow its `canvas` skill. Link the canvas page, exact preview names, and source paths in the ticket. Canvas designs replace artifact prototypes for this workflow.
-- Canvas source lives in `.pstdio/extensions/canvas/src/canvases/`. Preserve existing designs and stable IDs. Pencil remains the reference for designs that have not yet moved to a canvas.
+- Canvas source lives in `.pstdio/extensions/canvas/src/canvases/`. Preserve existing designs and stable IDs.
 - Read [design/DESIGN.md](design/DESIGN.md) before working on UI or design. Follow its shared interaction patterns.
-- Live canvases define the designs that have moved from Pencil. For other sections, Pencil `.pen` designs define how the `@pstdio/ui` component library must look. This includes colors, text styles, spacing, corner roundness, component states, and layout. Make the code match its current design reference.
-- The main design system file is [`design/prompt-studio-design-system.pen`](design/prompt-studio-design-system.pen). Open and edit `.pen` files only with the Pencil CLI. Never edit them by hand.
-- Website and landing page frames live in [`design/prompt-studio-website.pen`](design/prompt-studio-website.pen). Pencil cannot share components between files, so this file keeps copies of the design-system components it uses. Update those copies when the design system changes.
-- If the design and code do not match, update the code to match the design. If the design is wrong, fix it in Pencil first, then update the code.
-- Storybook defines component **APIs and props**. Pencil defines how components **look**.
+- Live canvases define appearance, component states, and example prop usage. Update the relevant canvas before production code, then make the implementation match it.
 
 ## Styling rules
 
@@ -111,7 +107,7 @@ Build the UI with the design system. Do not create one-off styles.
 
 - Build screens with exported `@pstdio/ui` components. Use a basic Chakra component directly only when `@pstdio/ui` has no matching component.
 - Apply styles with Chakra recipes and theme tokens in `packages/ui/src/theme`. Use recipe `variant` and `size` props, semantic color tokens, `textStyles`, and `layerStyles`.
-- If the current recipes and tokens cannot create a visual from the `.pen` design, add the missing variant or token to `packages/ui/src/theme`. This makes it available to every caller.
+- If the current recipes and tokens cannot create a visual from the live canvas, add the missing variant or token to `packages/ui/src/theme`. This makes it available to every caller.
 
 Do not use:
 
@@ -132,7 +128,7 @@ Follow these steps **every time**:
 
 Do not write:
 
-- Tests for UI changes. Use storybook stories instead.
+- Tests for UI changes. Use colocated Canvas examples instead.
 - Tests for changes that only affect configuration.
 - Tests for changes that only affect documentation.
 - Tests that assert literal bundled copy.
@@ -250,7 +246,7 @@ A pull request may contain only one migration entry. If the tools create more th
 
 Do not write:
 
-- Tests for UI changes. Use storybook stories instead.
+- Tests for UI changes. Use colocated Canvas examples instead.
 - Tests for changes that only affect configuration.
 - Tests for changes that only affect documentation.
 - Tests that assert literal bundled copy.

@@ -51,7 +51,7 @@ Some of the tools I use every day started as one sentence to an agent:
 
 - a review that starts by itself when an agent finishes a change
 - a board that shows every ticket and which agent is working on it
-- a panel that opens Storybook for the branch I'm looking at
+- a panel that opens Canvas for the branch I'm looking at
 
 None of these belong in the core of Prompt Studio.
 They belong to my work, and yours will look different.

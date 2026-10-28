@@ -49,8 +49,8 @@ export const sourceFiles = async () => {
   return [...new Set(files)]
     .filter(
       (file) =>
-        /\.(stories\.tsx?|mdx)$/.test(file) &&
-        !/(^|\/)(node_modules|dist|\.publish|__test-tmp__|storybook-static)\//.test(file),
+        /\.(canvas\.tsx?|mdx)$/.test(file) &&
+        !/(^|\/)(node_modules|dist|\.publish|__test-tmp__|canvas-test-static)\//.test(file),
     )
     .sort();
 };

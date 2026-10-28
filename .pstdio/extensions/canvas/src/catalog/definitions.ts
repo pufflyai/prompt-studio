@@ -1,5 +1,4 @@
 import type { CanvasDefinition, CanvasVariant } from "../canvases/definitions";
-import designs from "./generated/designs.json";
 import catalog from "./generated/stories.json";
 import { addGroupItem, placeGroup, storyCanvasId, storyTopic } from "./grouping";
 import { storyLocation } from "./navigation-groups";
@@ -21,13 +20,7 @@ export interface DocumentPreview {
   source: string;
   content: string;
 }
-export interface DesignPreview {
-  kind: "design";
-  file: string;
-  rootId: string;
-  source: string;
-}
-export type CatalogPreview = StoryPreview | DocumentPreview | DesignPreview;
+export type CatalogPreview = StoryPreview | DocumentPreview;
 const groups = new Map<string, CanvasDefinition>();
 for (const story of catalog.stories) {
   const topic = storyTopic(story.title);
@@ -100,33 +93,5 @@ for (const document of catalog.documents) {
       content: document.content,
     },
   });
-}
-for (const file of designs) {
-  const topic = file.id === "autobuilder" ? "dashboard:Extensions/Planner/Auto Build" : `reference:${file.id}`;
-  let canvas = groups.get(topic);
-  if (!canvas) {
-    canvas = {
-      id: `design-${file.id}-${file.roots[0].id}`,
-      name: file.name,
-      group:
-        ({ "design-system": "Design System", website: "Landing Page" } as Record<string, string>)[file.id] ??
-        "Extensions",
-      path: ["Design references"],
-      items: [],
-      aliases: [],
-    };
-    groups.set(topic, canvas);
-  }
-  for (const root of file.roots) {
-    (canvas.aliases as string[]).push(`design-${file.id}-${root.id}`);
-    addGroupItem(canvas, {
-      id: root.id,
-      name: root.name,
-      width: root.width,
-      height: root.height,
-      position: { x: 0, y: 0 },
-      preview: { kind: "design" as const, file: file.id, rootId: root.id, source: file.source },
-    });
-  }
 }
 export const catalogCanvases: CanvasDefinition[] = [...groups.values()].map(placeGroup);

@@ -1,24 +1,20 @@
-import { resolve } from "node:path";
+import { generateMigrationLedger } from "./migration-ledger";
 import { checkNativeBuildFreshness } from "./native-build-freshness";
-import { generatedRoot } from "./story-catalog";
 
 const { manifest, stale } = await checkNativeBuildFreshness();
-const ledger = await Bun.file(resolve(generatedRoot, "migration-ledger.json")).json();
-const unmigrated = ledger.entries.filter((entry: { destination: unknown }) => !entry.destination);
+const ledger = await generateMigrationLedger();
 console.log(
   JSON.stringify(
     {
       nativeSources: Object.keys(manifest.hashes).length,
       stale,
-      stories: ledger.stories.length,
+      variants: ledger.stories.length,
       documents: ledger.documents.length,
-      designNodes: ledger.entries.length,
-      unmigratedDesignNodes: unmigrated.length,
-      designFreshness: ledger.designFreshness,
-      ready: !stale.length && !unmigrated.length && ledger.designFreshness === "verified",
+      originalExports: ledger.inventoriedStories.length,
+      ready: !stale.length,
     },
     null,
     2,
   ),
 );
-if (stale.length || unmigrated.length || ledger.designFreshness !== "verified") process.exitCode = 1;
+if (stale.length) process.exitCode = 1;

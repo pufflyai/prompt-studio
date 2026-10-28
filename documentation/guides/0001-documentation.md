@@ -38,7 +38,7 @@ The API and dashboard share an authenticated runtime. Core sync uses SSE. There 
 
 Use topic folders within categories. References are grouped into `architecture/`, `cli/`, `extensions/`, `sdk/`, and `workbench/`. Guides group getting started, concepts, development, extension authoring, and SDK workflows. Requirements group API, CLI, dashboard, extension, and platform topics.
 
-Every file has a four-digit number within its own folder: `NNNN-kebab-case.md`. For example, `references/architecture/0001-adapters-and-features.md` and `references/sdk/0001-overview.md` belong to separate sequences. Avoid repeating a folder's topic in the filename. Keep published numbers stable and add the next number in that folder. ADRs and lessons retain their existing folders and identifiers; do not recycle removed numbers. Keep ADR proposal dates when their status changes. Package and extension READMEs, extension-owned product docs, and Pencil/design guidance stay beside their owners.
+Every file has a four-digit number within its own folder: `NNNN-kebab-case.md`. For example, `references/architecture/0001-adapters-and-features.md` and `references/sdk/0001-overview.md` belong to separate sequences. Avoid repeating a folder's topic in the filename. Keep published numbers stable and add the next number in that folder. ADRs and lessons retain their existing folders and identifiers; do not recycle removed numbers. Keep ADR proposal dates when their status changes. Package and extension READMEs, extension-owned product docs, and Canvas design guidance stay beside their owners.
 
 Repository-wide governing documents keep their stable names and paths: `MISSION.md`, `NONFUNCTIONAL_REQUIREMENTS.md`, `AGENTS.md`, and `design/DESIGN.md`.
 
@@ -188,7 +188,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 
 - [0001 — Development setup](development/0001-setup.md)
 - [0002 — Tests](development/0002-testing.md)
-- [0003 — Storybook coverage](development/0003-storybook-coverage.md)
+- [0003 — Canvas coverage](development/0003-canvas-coverage.md)
 - [0004 — Pull request area labels](development/0004-pull-request-labels.md)
 - [0005 — Extension conformance and regression coverage](development/0005-conformance.md)
 - [0012 — Portable relay and account manager deployment](development/0012-portable-cloud-deployment.md)
@@ -361,7 +361,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0039 — Temporary Node Windows directory removal](../adrs/0039-temporary-node-windows-directory-removal.md)
 - [0040 — Temporary export marker for bundled type files](../adrs/0040-temporary-dts-export-marker.md)
 - [0041 — Temporary Windows extension dependency links](../adrs/0041-temporary-windows-extension-dependency-links.md)
-- [0042 — Temporary docgen filter in the workbench Storybook](../adrs/0042-temporary-workbench-storybook-docgen-filter.md)
+- [0042 — Temporary docgen filter in the workbench Canvas](../adrs/0042-temporary-workbench-storybook-docgen-filter.md)
 - [0043 — Temporary CI Docker Hub mirror](../adrs/0043-temporary-ci-docker-hub-mirror.md)
 - [0044 — Temporary CI limits for heavy-setup tests](../adrs/0044-temporary-ci-limits-for-heavy-setup-tests.md)
 - [0045 — Temporary Remotion React subpath alias](../adrs/0045-temporary-remotion-react-subpath-alias.md)

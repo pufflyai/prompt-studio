@@ -13,8 +13,7 @@
     "preview": "vite preview",
     "typegen:tokens": "chakra typegen ../ui/src/theme/theme.ts",
     "visualize-bundle": "bunx vite-bundle-visualizer",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build:preview-tests": "storybook build --config-dir .canvas --output-dir canvas-test-static"
   },
   "dependencies": {
     "@chakra-ui/react": "3.32.0",

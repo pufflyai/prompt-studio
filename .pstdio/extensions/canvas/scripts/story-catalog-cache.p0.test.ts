@@ -6,7 +6,7 @@ import { catalogMetadata, digest, parserInputs, readStoryParserCache } from "./s
 
 test("parser reuse rejects changed compiler inputs, dependency locks and generated metadata", async () => {
   const root = await mkdtemp(join(tmpdir(), "canvas-parser-cache-"));
-  const source = "packages/ui/example.stories.tsx";
+  const source = "packages/ui/example.canvas.tsx";
   const inputs = new Map(parserInputs.map((path) => [path, "original compiler input"]));
   inputs.set(
     catalogMetadata[0],

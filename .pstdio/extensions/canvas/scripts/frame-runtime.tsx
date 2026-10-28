@@ -61,11 +61,6 @@ export const mountPreviewRuntime = (
       let active = true;
       const loadContent = async () => {
         await installPrismGlobal();
-        if (item.preview?.kind === "design") {
-          const { PencilPreview } = await import("../src/catalog/pencil/preview");
-          const { file, rootId } = item.preview;
-          return { Component: () => <PencilPreview file={file} rootId={rootId} /> };
-        }
         if (item.preview) return load(item.preview);
         const { previews } = await import("../src/canvases/previews");
         return { Component: previews[item.component!] as ComponentType<Record<string, unknown>> };

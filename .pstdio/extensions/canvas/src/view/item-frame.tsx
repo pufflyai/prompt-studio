@@ -85,11 +85,6 @@ export const ItemFrame = (props: ItemProps) => {
         <Text role="status" aria-live="polite" textStyle="label/XS" color="fg.muted">
           {feedback}
         </Text>
-        {item.preview?.kind === "design" && (
-          <Text textStyle="label/XS" color="fg.muted">
-            Design reference
-          </Text>
-        )}
         {feedback === "Select and copy the name" && (
           <Text tabIndex={0} userSelect="text" textStyle="label/S/medium">
             {item.name}

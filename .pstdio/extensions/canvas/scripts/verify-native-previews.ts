@@ -56,9 +56,7 @@ const server = Bun.serve({
 });
 const selected = new Set(process.argv.slice(2));
 const targets = verificationCanvases.filter(
-  (canvas) =>
-    canvas.items.some((item) => item.preview?.kind !== "design") &&
-    (!selected.size || selected.has(canvas.id) || selected.has(canvas.group ?? "native")),
+  (canvas) => !selected.size || selected.has(canvas.id) || selected.has(canvas.group ?? "native"),
 );
 const browser = await chromium.launch({ headless: true });
 let cancelled = false;

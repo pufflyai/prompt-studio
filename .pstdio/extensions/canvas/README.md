@@ -4,7 +4,7 @@ Explore and compare live UI designs inside Prompt Studio. A source registry defi
 
 Use a runtime that satisfies the extension API range declared in `package.json`.
 
-Open **Canvases** in the project navigation. Browse **Design System**, **Workbench Core**, **Dashboard**, **Extensions**, and **Landing Page**, with expandable subgroups. All canvases use one shared, project-owned tab viewer. Selecting a canvas opens an unpinned preview tab by default. The next unpinned selection replaces that preview. Use Pin tab to pin a canvas; pinned canvases retain their preview inputs and camera in the shared tab list. Landing-page components and website design references have their own Landing Page group. Host UI such as Paused extension view belongs under Workbench Core → Chrome; actual extension-owned examples belong under Extensions. **Foundations** contains three previews of the Pencil file's colors, typography, spacing, and radii. **Shared components** contains nine previews of controls, feedback, identity, surfaces, keyboard hints, empty states, and overlays. All previews use synthetic data and local state. Creating a project in the preview never creates a real project.
+Open **Canvases** in the project navigation. Browse **Design System**, **Workbench Core**, **Dashboard**, **Extensions**, and **Landing Page**, with expandable subgroups. All canvases use one shared, project-owned tab viewer. Selecting a canvas opens an unpinned preview tab by default. The next unpinned selection replaces that preview. Use Pin tab to pin a canvas; pinned canvases retain their preview inputs and camera in the shared tab list. Landing-page components have their own Landing Page group. Host UI such as Paused extension view belongs under Workbench Core → Chrome; actual extension-owned examples belong under Extensions. **Foundations** contains three previews of semantic colors, typography, spacing, and radii. **Shared components** contains nine previews of controls, feedback, identity, surfaces, keyboard hints, empty states, and overlays. All previews use synthetic data and local state. Creating a project in the preview never creates a real project.
 
 ## Work with a design
 
@@ -44,42 +44,23 @@ The browser and CLI use the same layout commands. `list` and `open` return proje
 
 Canvas saves after gestures or a bounded debounce. It renders source defaults when storage is unavailable and reports read or save failures beside the canvas. Draft input survives camera and layout changes but is intentionally not persisted across reload.
 
-## Ticket designs and the Pencil migration
+## Ticket designs
 
-Tickets that add or change UI update the relevant live canvas before production work. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. This replaces the artifact prototype step. Planner's **Update canvas designs for UI changes** setting controls this guidance.
-
-The first migration recreates the main foundation scales and shared component examples as live previews. The existing Pencil files remain intact and retain authority over sections that have not moved. These previews use the production component APIs and theme tokens, rather than copied screenshots.
-
-| Pencil section | Source node | Canvas content |
-| --- | --- | --- |
-| Colors | `i1gN4b` | Foundations: semantic color tokens |
-| Typography | `W0pwAV` | Foundations: display, heading, label, paragraph, and mono styles |
-| Spacing & Radius | `el3Rl` | Foundations: spacing and radius scales |
-| Buttons & actions | `jQEhP` | Shared components: variants, sizes, disabled and loading states |
-| Inputs & form controls | `lOGqd` | Shared components: field and selection states |
-| Keyboard | `HDvXd` | Shared components: shortcut styles |
-| Feedback & status | `Q31Kq` | Shared components: alerts and session indicators |
-| Badges & resources | `tMDs1` | Shared components: badges, chips, and ticket tags |
-| Overlays & menus | `awyYC` | Shared components: tooltip, popover, and dialog behavior |
-| Layout & navigation | `ZhucE` | Shared components: card, tabs, rows, and empty state examples |
-
-Coverage is partial. Component masters, advanced menus, resource widgets, composite screens, workbench layouts, chat, Planner, and the website still need migration. Move these in reviewable groups, each with its own named canvas. Reuse shared components across groups. Compare each group with its Pencil frames and record missing content or states. Change design authority only after coverage, dimensions, and appearance have been checked.
+Canvas is the source of truth for UI appearance, component states, and example prop usage. Tickets that add or change UI update the relevant live canvas before production work. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Planner's **Update canvas designs for UI changes** setting controls this guidance.
 
 ## Validation
 
-Run `bun run --cwd .pstdio/extensions/canvas test` and `bun run --cwd .pstdio/extensions/canvas typecheck`. The workspace stories cover the interactive starter, zoomed-out previews, and a populated 24-preview canvas. Validate changes with Playwright in the isolated Docker app. Report physical-device and browser behaviors that were not tested.
+Run `bun run --cwd .pstdio/extensions/canvas test` and `bun run --cwd .pstdio/extensions/canvas typecheck`. The workspace examples cover the interactive starter, zoomed-out previews, and a populated 24-preview canvas. Validate changes with Playwright in the isolated Docker app. Report physical-device and browser behaviors that were not tested.
 
 ## Native documentation catalog
 
-UI Canvas indexes every current CSF export and MDX document. Related scenarios share one source-owned topic canvas and keep their original story IDs. Auto Build combines its status and form examples; Create folder combines folder-picker states. Earlier scenario URLs resolve to the grouped canvas. Select canvases in the navigation panel or find them through global resource search. The Design playground and Documentation panels demo canvases have been removed from navigation. Their interaction fixtures remain in verification stories. Search accepts source paths, export IDs, names, and design keywords.
+UI Canvas indexes every current CSF export and MDX document. Related scenarios share one source-owned topic canvas and keep their original scenario IDs. Auto Build combines its status and form examples; Create folder combines folder-picker states. Earlier scenario URLs resolve to the grouped canvas. Select canvases in the navigation panel or find them through global resource search. The Design playground and Documentation panels demo canvases have been removed from navigation. Their interaction fixtures remain in verification examples. Search accepts source paths, export IDs, names, and design keywords.
 
-Each component has one frame. Its **Variant** menu, beside **Theme**, selects an original story’s predefined parameters. Selecting a variant resets that example’s local fixture state and keeps its frame theme and position. Every original story ID remains in the migration ledger and resource search.
+Each component has one frame. Its **Variant** menu, beside **Theme**, selects an original scenario’s predefined parameters. Selecting a variant resets that example’s local fixture state and keeps its frame theme and position. Every original scenario ID remains in the migration ledger and resource search.
 
-Scenarios render compiled original React components in individual preview documents. Each document owns its React, Chakra, theme, and application fixture state so several dialogs and store variants can be used together. This runs native source components without a standalone Storybook server or manager. Preview code is built into a compressed module archive; project storage cannot provide executable content. Application examples use local API and in-memory storage fixtures. Gallery token overrides stay local to each preview. Monaco uses its public worker factory to load the prebuilt classic workers from document-owned URLs, preserving TypeScript diagnostics inside the opaque sandbox. Website analytics is inert in previews. Source play functions remain in their original files for external validation; Canvas does not run them as tests. **Props and source** shows arguments, authored argument types, component references, the source hash, and complete source code.
+Scenarios render compiled original React components in individual preview documents. Each document owns its React, Chakra, theme, and application fixture state so several dialogs and store variants can be used together. Preview code is built into a compressed module archive; project storage cannot provide executable content. Application examples use local API and in-memory storage fixtures. Gallery token overrides stay local to each preview. Monaco uses its public worker factory to load the prebuilt classic workers from document-owned URLs, preserving TypeScript diagnostics inside the opaque sandbox. Website analytics is inert in previews. Source play functions remain in their original files for external validation; Canvas does not run them as tests. **Props and source** shows arguments, authored argument types, component references, the source hash, and complete source code.
 
 Documentation frames have content-driven heights. Resize observations and font completion refresh measured bounds. Fit and explicit reveal include a tall panel and its title. Fullscreen application examples retain a minimum viewport inside the documentation frame; lists and editors retain their own scrolling. Long prose, source listings, and API details have no inner vertical scroll area. The **IntrinsicDocumentation** verification story checks expansion and draft retention outside the canvas resource registry.
-
-The 159 Pencil canvases are labeled **Design reference**. Their DOM renderer is reference evidence. The ledger retains all 24,496 source node identities, 292 reusable definitions, reference overrides, and ten owned asset hashes from RP-1. These entries do not claim completed component migration or transferred design authority. Current Pencil verification is blocked by the account's design-tool usage limit.
 
 ### Rebuild and verify
 
@@ -87,17 +68,14 @@ From the repository root:
 
 ```sh
 bun run --cwd scripts canvas:build
-bun run --cwd scripts canvas:inventory /path/to/ui-canvas-migration-inventory.json
-bun run --cwd .pstdio/extensions/canvas test
+bun run --cwd scripts canvas:inventory
 bun run --cwd .pstdio/extensions/canvas test
 bun run --cwd .pstdio/extensions/canvas typecheck
 bun run --cwd scripts canvas:coverage
 ```
 
-`canvas:build` composes the original sources and records hashes for components, fixtures, dependency versions, and emitted files. Generated modules are build output; edit their sources and rebuild. `canvas:inventory` reads the RP-1 JSON and its adjacent `migration-assets` directory. It never opens or edits a Pencil file. It preserves the evidence snapshot separately from current verification.
+`canvas:build` composes colocated `*.canvas.tsx` examples and MDX documents, then records source and output hashes. Generated modules are build output; edit the source and rebuild. The builder retains each scenario's existing ID, variant parameters, decorators, loaders, and interaction functions. `canvas:inventory` regenerates the source destination ledger. The original scenario inventory checks that every covered export still has a canvas destination.
 
-Catalog scans read and hash every current source. They reuse the existing parser output only when the compiler, dependency lock, and generated metadata hashes still match. Changed and new sources use the original Storybook parser.
+`canvas:coverage` rejects stale builds or missing source destinations. It checks current live sources; it does not certify historical visual fidelity.
 
-`canvas:coverage` fails if the native build is stale, a design node lacks a real-component destination, or current design freshness is unverified. Ledger integrity tests can pass while this acceptance gate remains incomplete.
-
-Run `canvas:verify` inside the isolated Docker tooling container with Chromium installed. It checks every switchable native variant, documentation expansion, draft retention across a theme change, measured fit, and a populated 24-preview canvas. Failed cases retain screenshots and HTML under `__test-tmp__/native-canvas-verification/`. Original Storybook interaction checks remain required for their scenarios. Physical touch, trackpad behavior, full visual fidelity, packaged verification, full tests, and CI remain separate acceptance work.
+Run `canvas:verify` inside the isolated Docker tooling container with Chromium installed. It checks every switchable native variant, documentation expansion, retained drafts, measured fit, and a populated 24-preview canvas. Failed cases retain screenshots and HTML under `__test-tmp__/native-canvas-verification/`. Browser interaction checks live in `packages/canvas-tests`; its static preview build is test-only. The live Canvas is the developer catalog. Physical touch, trackpad behavior, full visual fidelity, packaged verification, full tests, and CI remain separate checks.

@@ -17,10 +17,8 @@
   "type": "module",
   "scripts": {
     "test": "bun ../../scripts/ci/run-bun-tests.ts --pass-with-no-tests",
-    "typecheck": "bun check && bun check -p tsconfig.storybook.json",
-    "storybook": "storybook dev -p 6009",
-    "build-storybook": "storybook build",
-    "test-storybook": "test-storybook --url http://127.0.0.1:6009"
+    "typecheck": "bun check && bun check -p tsconfig.canvas.json",
+    "build:preview-tests": "storybook build --config-dir .canvas --output-dir canvas-test-static"
   },
   "dependencies": {
     "@pstdio/sdk": "^0.35.0"

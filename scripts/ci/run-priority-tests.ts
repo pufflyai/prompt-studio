@@ -60,7 +60,7 @@ if (args.includes("--list")) {
       });
     for (const owner of new Set(plan.flatMap((run) => (run.storybook ? [run.storybook] : []))))
       setup.push({
-        id: `build-storybook:${owner}`,
+        id: `build:preview-tests:${owner}`,
         cwd: root,
         command: [
           "bun",
@@ -68,7 +68,7 @@ if (args.includes("--list")) {
           "--no-install",
           "lerna",
           "run",
-          "build-storybook",
+          "build:preview-tests",
           "--scope",
           packages.find((pkg) => pkg.dir === `packages/${owner}`)?.name ?? owner,
         ],
@@ -87,7 +87,7 @@ if (args.includes("--list")) {
       id: run.id,
       cwd: join(root, run.cwd),
       command: run.storybook
-        ? ["bun", "x", "--no-install", "cross-env", `STORYBOOK_PACKAGES=${run.storybook}`, ...run.command]
+        ? ["bun", "x", "--no-install", "cross-env", `CANVAS_TEST_PACKAGES=${run.storybook}`, ...run.command]
         : run.command,
     }));
     const result = await runCiChecks(checks, {

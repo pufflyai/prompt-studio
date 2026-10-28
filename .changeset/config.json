@@ -43,7 +43,7 @@
     "pstdio-service-telemetry",
     "pstdio-psx",
     "storage-scale-fixture",
-    "storybook-tests",
+    "canvas-tests",
     "canvas"
   ],
   "snapshot": {

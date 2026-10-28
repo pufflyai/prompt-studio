@@ -72,7 +72,7 @@ const runCommand = (runner: string, files: string[], owner: TestPackage, storybo
     owner.scripts.test &&
     owner.scripts.test.trim() !== "bun test" &&
     owner.name !== "e2e" &&
-    owner.name !== "storybook-tests" &&
+    owner.name !== "canvas-tests" &&
     runner !== "browser-helper"
   )
     return ["bun", "run", "test", ...paths.map((path) => `./${path}`)];
@@ -84,7 +84,7 @@ const runCommand = (runner: string, files: string[], owner: TestPackage, storybo
 
 const groupDetails = (file: string, runner: string, owner: TestPackage) => {
   if (runner === "component") {
-    const storybook = relative("packages/storybook-tests/src/ui", dirname(file)).replaceAll("\\", "/");
+    const storybook = relative("packages/canvas-tests/src/ui", dirname(file)).replaceAll("\\", "/");
     if (!storybook || storybook.includes("/")) throw new Error(`Component test needs an owner directory: ${file}`);
     return { subgroup: storybook, storybook };
   }

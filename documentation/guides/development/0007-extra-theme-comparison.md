@@ -1,12 +1,8 @@
 # Extra theme comparison
 
-The comparison Storybook belongs to `extensions/pstdio-base-themes`. It renders Solarized Light, Solarized Dark, Dracula, and Monokai side by side using the shipped theme assets and the public UI components.
+The comparison Canvas belongs to `extensions/pstdio-base-themes`. It renders Solarized Light, Solarized Dark, Dracula, and Monokai side by side using the shipped theme assets and the public UI components.
 
-```sh
-bun run --cwd extensions/pstdio-base-themes storybook
-```
-
-Open `http://localhost:6009/?path=/story/themes-compare--all-core-components`. The comparison also has focused stories for surfaces, button states, forms, navigation, feedback, overlays, and composed controls. The single-theme story has a theme toolbar and a section selector.
+Open Design System → Themes in Canvas, or search for the theme comparison. Use its predefined variants for surfaces, buttons, forms, navigation, feedback, overlays, and composed controls. Each frame also has an independent Theme menu.
 
 Each comparison column uses a separate document. Theme classes, color mode, CSS variables, focus, and portals stay local to that column. Menus, dialogs, drawers, popovers, and tooltips use the same theme as their trigger. On narrow screens, scroll horizontally to compare readable columns.
 
@@ -43,9 +39,8 @@ The stories show default, hover, pressed, focus, disabled, loading, invalid, che
 
 ```sh
 bun run --cwd extensions/pstdio-base-themes typecheck
-bun run --cwd extensions/pstdio-base-themes build-storybook
-# With the Storybook server running on port 6009:
-bun run --cwd extensions/pstdio-base-themes test-storybook
+bun run --cwd scripts canvas:build
+bun run --cwd scripts canvas:verify
 ```
 
-`@pstdio/ui`, Chakra, React, Vite, and Storybook are development dependencies. `extension.ts` imports only the SDK. The package file list includes the entry point, theme assets, and icon assets; it excludes stories and Storybook output. Git installs retain the extension lockfile. A production-only install does not install UI or Storybook.
+UI and preview tooling are development dependencies. `extension.ts` imports only the SDK. The package file list includes its entry point, themes, and icons; it excludes preview sources and test output. Git installs retain the extension lockfile.

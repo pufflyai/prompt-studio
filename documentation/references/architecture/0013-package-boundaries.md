@@ -127,11 +127,11 @@ layer-map change.
    on `main`, or on a pull request labeled `ci:full`; see
    [CI scope](../../requirements/platform/0001-cross-platform-support.md#ci-scope).
 
-   The private `storybook-tests` package owns component browser interactions and
-   their Storybook servers. It declares `@pstdio/ui`, `@pstdio/workbench`, and
+   The private `canvas-tests` package owns component browser interactions and
+   their Canvas servers. It declares `@pstdio/ui`, `@pstdio/workbench`, and
    `pstdio-dashboard` as development dependencies because it loads their stories.
    Story sources stay with those owners. It does not depend on the API, database,
-   CLI, or `e2e`. App E2E never starts or builds Storybook.
+   CLI, or `e2e`. App E2E never starts or builds Canvas.
 
    `e2e` and `@pstdio/desktop` declare the private `pstdio-scripts` workspace as a
    development dependency. Their Playwright configs use its `./test-quarantine`

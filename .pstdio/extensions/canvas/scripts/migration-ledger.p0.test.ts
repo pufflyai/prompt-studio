@@ -1,15 +1,10 @@
 import { expect, test } from "bun:test";
-import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { canvases } from "../src/canvases/definitions";
-import { collectStoryCatalog, extensionRoot, generatedRoot } from "./story-catalog";
+import { collectStoryCatalog, generatedRoot } from "./story-catalog";
 
-test("the migration ledger retains every original design node, definition, and native preview provenance", async () => {
+test("the source ledger retains every original scenario and native preview destination", async () => {
   const ledger = await Bun.file(resolve(generatedRoot, "migration-ledger.json")).json();
-  expect(ledger.entries).toHaveLength(24496);
-  expect(ledger.entries.filter((entry: { reusable: boolean }) => entry.reusable)).toHaveLength(292);
-  expect(new Set(ledger.entries.map((entry: { key: string }) => entry.key)).size).toBe(24496);
-  expect(ledger.files.flatMap((file: { roots: string[] }) => file.roots)).toHaveLength(159);
   expect(ledger.native).toHaveLength(14);
   expect(ledger.inventoriedStories).toHaveLength(1569);
   for (const entry of ledger.inventoriedStories) {
@@ -43,13 +38,4 @@ test("the migration ledger retains every original design node, definition, and n
   expect(ledger.documents.map((document: { source: string }) => document.source).sort()).toEqual(
     current.documents.map((document) => document.source).sort(),
   );
-});
-
-test("every owned migration image matches its recorded provenance", async () => {
-  const ledger = await Bun.file(resolve(generatedRoot, "migration-ledger.json")).json();
-  expect(ledger.assets).toHaveLength(10);
-  for (const asset of ledger.assets) {
-    const bytes = await Bun.file(resolve(extensionRoot, asset.destination)).arrayBuffer();
-    expect(createHash("sha256").update(new Uint8Array(bytes)).digest("hex")).toBe(asset.sha256);
-  }
 });

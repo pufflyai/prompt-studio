@@ -9,7 +9,7 @@ import { readWorkspacePackages } from "./workspace-packages";
 
 const priorities: TestPriority[] = ["P0", "P1", "P2"];
 // These owners have separate native database or end-to-end jobs.
-const separateOwners = new Set(["pstdio-api", "pstdio-db", "e2e", "storybook-tests"]);
+const separateOwners = new Set(["pstdio-api", "pstdio-db", "e2e", "canvas-tests"]);
 
 export const createWindowsUnitPlan = (
   files: string[],

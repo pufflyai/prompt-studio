@@ -4,7 +4,7 @@ import { catalogCanvases } from "./definitions";
 test("related Auto Build scenarios share one canvas without losing source items", () => {
   const groups = catalogCanvases.filter((canvas) =>
     canvas.items.some(
-      (item) => item.preview?.kind === "story" && /auto-build-(button|form)\.stories/.test(item.preview.source),
+      (item) => item.preview?.kind === "story" && /auto-build-(button|form)\.canvas/.test(item.preview.source),
     ),
   );
   expect(groups).toHaveLength(1);
@@ -17,7 +17,7 @@ test("related Auto Build scenarios share one canvas without losing source items"
 test("folder picker states remain together on one canvas", () => {
   const groups = catalogCanvases.filter((canvas) =>
     canvas.items.some(
-      (item) => item.preview?.kind === "story" && item.preview.source.endsWith("folder-picker-dialog.stories.tsx"),
+      (item) => item.preview?.kind === "story" && item.preview.source.endsWith("folder-picker-dialog.canvas.tsx"),
     ),
   );
   expect(groups).toHaveLength(1);
@@ -35,13 +35,9 @@ test("host extension chrome belongs to the workbench while extension-owned UI st
   expect(catalogCanvases.find((canvas) => canvas.name === "Auto Build")!.group).toBe("Extensions");
 });
 
-test("landing-page components and website design references share their own navigation group", () => {
+test("landing-page components have their own navigation group", () => {
   const landing = catalogCanvases.filter((canvas) =>
-    canvas.items.some((item) =>
-      item.preview?.kind === "story"
-        ? item.preview.suite === "website"
-        : item.preview?.kind === "design" && item.preview.file === "website",
-    ),
+    canvas.items.some((item) => item.preview?.kind === "story" && item.preview.suite === "website"),
   );
   expect(landing.length).toBeGreaterThan(0);
   expect(new Set(landing.map((canvas) => canvas.group))).toEqual(new Set(["Landing Page"]));

@@ -575,7 +575,7 @@ jobs:
     env:
       CI_PRIORITY: ${{ matrix.priority }}
       TEST_PRIORITIES: ${{ matrix.priority }}
-      STORYBOOK_PACKAGES: ${{ matrix.package }}
+      CANVAS_TEST_PACKAGES: ${{ matrix.package }}
       COMPONENT_TEST_FILES: ${{ matrix.files }}
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       GH_TOKEN: ${{ github.token }}
@@ -595,17 +595,17 @@ jobs:
         with:
           profile: playwright
       - name: Build selected Storybook owner
-        run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun x --no-install lerna run build-storybook --scope '${{ matrix.project }}'
+        run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun x --no-install lerna run build:preview-tests --scope '${{ matrix.project }}'
       - name: Test selected component contracts
-        run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun run --cwd packages/storybook-tests test:browser
+        run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun run --cwd packages/canvas-tests test:browser
       - name: Preserve component evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: component-results-${{ matrix.package }}-${{ matrix.priority }}-attempt-${{ github.run_attempt }}
           path: |
-            packages/storybook-tests/test-results
-            packages/storybook-tests/playwright-report
+            packages/canvas-tests/test-results
+            packages/canvas-tests/playwright-report
           if-no-files-found: warn
       - name: Preserve owner build archives for certified main promotion
         if: ${{ !cancelled() && needs.scope.outputs.stage == 'merge_queue' }}

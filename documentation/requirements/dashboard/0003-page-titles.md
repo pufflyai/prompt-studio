@@ -29,7 +29,7 @@ Search-engine optimization, configurable title templates, and new routes for ret
 
 ## Acceptance evidence
 
-A future implementation needs a Storybook or browser journey that navigates between project, session, workspace, and extension pages, changes a resource title, and verifies fallback behavior during loading. Follow the [design rules](../../../design/DESIGN.md) and [manual browser workflow](../../guides/development/0001-setup.md#playwright-validation).
+A future implementation needs a Canvas or browser journey that navigates between project, session, workspace, and extension pages, changes a resource title, and verifies fallback behavior during loading. Follow the [design rules](../../../design/DESIGN.md) and [manual browser workflow](../../guides/development/0001-setup.md#playwright-validation).
 
 Current sources: [dashboard HTML](../../../packages/pstdio-dashboard/index.html) and [page navigation](../../references/workbench/0004-navigation.md).
 

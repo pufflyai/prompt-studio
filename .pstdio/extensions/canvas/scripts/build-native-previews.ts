@@ -39,7 +39,7 @@ const buildPreviews = async (
     `const __UI_CANVAS_PROJECTS__={${Object.entries(suites)
       .map(
         ([suite, path]) =>
-          `${JSON.stringify(suite)}:()=>import(${JSON.stringify(resolve(repoRoot, path, ".storybook/preview.tsx"))})`,
+          `${JSON.stringify(suite)}:()=>import(${JSON.stringify(resolve(repoRoot, path, ".canvas/preview.tsx"))})`,
       )
       .join(",")}};`,
   );
@@ -98,7 +98,7 @@ const buildPreviews = async (
               map: null,
             };
           }
-          if (id.endsWith("/foundations/component-gallery.stories.tsx")) {
+          if (id.endsWith("/foundations/component-gallery.canvas.tsx")) {
             const hook = 'import { useTokenEditorValues } from "@/components/internal/token-editor-state";';
             const call = "useTokenEditorValues({ themePreference, themePreferences })";
             if (!source.includes(hook) || !source.includes(call))
@@ -116,7 +116,7 @@ const buildPreviews = async (
               map: null,
             };
           }
-          if (id.endsWith("/modules/workspaces/collections/workspace-list.stories.tsx")) {
+          if (id.endsWith("/modules/workspaces/collections/workspace-list.canvas.tsx")) {
             const start = source.indexOf("const useDiffSummaryResponses =");
             const end = source.indexOf("interface WorkspaceListStoryProps", start);
             if (start < 0 || end < 0)
@@ -165,7 +165,7 @@ const buildPreviews = async (
             return `export * from ${JSON.stringify(resolve(import.meta.dir, "frame-storage-fixture.ts"))};`;
           if (id === resolve(repoRoot, suites.dashboard, "src/lib/api.ts"))
             return `export * from ${JSON.stringify(resolve(import.meta.dir, "native-api-fixture.ts"))};`;
-          if (id === resolve(repoRoot, suites.ui, ".storybook/preview.tsx"))
+          if (id === resolve(repoRoot, suites.ui, ".canvas/preview.tsx"))
             return 'export default {parameters:{layout:"padded"}};';
         },
       },

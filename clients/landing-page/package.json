@@ -8,8 +8,7 @@
     "preview": "astro preview",
     "test": "bun ../../scripts/ci/run-bun-tests.ts",
     "astro": "astro",
-    "storybook": "storybook dev -p 6007",
-    "build-storybook": "storybook build"
+    "build:preview-tests": "storybook build --config-dir .canvas --output-dir canvas-test-static"
   },
   "engines": {
     "bun": ">=1.4.4"

@@ -28,7 +28,7 @@ import {
 import { checkExtensionRegistryResolution, type ExtensionPackageDependencies } from "./extension-registry-resolution";
 import { sourceImports } from "./source-imports";
 
-const SKIP_DIRS = new Set(["node_modules", "dist", ".cache", "__test-tmp__", "_reference", "storybook-static"]);
+const SKIP_DIRS = new Set(["node_modules", "dist", ".cache", "__test-tmp__", "_reference", "canvas-test-static"]);
 
 interface WorkspacePackage extends ExtensionPackageDependencies {
   declared: Set<string>;

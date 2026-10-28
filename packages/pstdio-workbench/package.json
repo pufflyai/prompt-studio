@@ -46,8 +46,7 @@
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
     "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --silent",
-    "storybook": "storybook dev -p 6007",
-    "build-storybook": "storybook build",
+    "build:preview-tests": "storybook build --config-dir .canvas --output-dir canvas-test-static",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --coverage",
     "prepublishOnly": "bun run build"
   },

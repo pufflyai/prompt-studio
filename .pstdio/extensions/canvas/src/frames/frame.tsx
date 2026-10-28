@@ -114,7 +114,7 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
       >
         Reset frame
       </Button>
-      {item.preview && item.preview.kind !== "design" && (
+      {item.preview && (
         <Box as="details" p="sm" onToggle={(event) => setExpanded(event.currentTarget.hasAttribute("open"))}>
           <Box as="summary">Props and source</Box>
           <Text textStyle="mono/XS">

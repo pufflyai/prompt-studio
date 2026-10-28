@@ -10,7 +10,7 @@ test("global resource search finds a grouped canvas by its scenarios and source 
     open: "preview",
     resource: { type: "canvas" },
   });
-  expect(await canvasResources.query(ctx, { query: "folder-picker-dialog.stories", limit: 5 } as never)).toMatchObject({
+  expect(await canvasResources.query(ctx, { query: "folder-picker-dialog.canvas", limit: 5 } as never)).toMatchObject({
     items: [{ label: "Create folder" }],
   });
 });

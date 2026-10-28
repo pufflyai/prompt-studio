@@ -18,8 +18,8 @@
       "!!.pstdio/extensions/canvas/src/catalog/generated",
       "!!packages/e2e/playwright-report",
       "!!packages/e2e/test-results",
-      "!!packages/storybook-tests/playwright-report",
-      "!!packages/storybook-tests/test-results",
+      "!!packages/canvas-tests/playwright-report",
+      "!!packages/canvas-tests/test-results",
       "!!packages/pstdio-extensions/src/bridge/webview-runtime/runtime.bundle.js",
       "!!packages/pstdio-agents/src/providers/opencode/mocks/full-conversation.json"
     ]
@@ -131,8 +131,8 @@
         "**/mocks/**",
         "packages/e2e/**",
         "clients/desktop/src/e2e/**",
-        "**/*.stories.ts",
-        "**/*.stories.tsx",
+        "**/*.canvas.ts",
+        "**/*.canvas.tsx",
         "**/*.css",
         "**/*.generated.*",
         "**/generated/**",

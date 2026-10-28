@@ -15,7 +15,7 @@ export const checkCanvasVariants = async (surface: Frame, canvas: CanvasDefiniti
       await expect(frame.locator("iframe")).toHaveAttribute("data-frame-story", variant.id);
       await expect(frame.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
       await expect(frame.locator("[data-ui-canvas-error]")).toHaveCount(0);
-      if (variant.preview.source.endsWith("/diff-viewer/code-editor.stories.tsx")) {
+      if (variant.preview.source.endsWith("/diff-viewer/code-editor.canvas.tsx")) {
         const document = frame.frameLocator("iframe");
         let editors = 1;
         if (variant.preview.exportName === "Diff") editors = 2;

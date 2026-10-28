@@ -26,7 +26,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `bun run build-storybook && bun ./scripts/serve-static.ts storybook-static ${port}`,
+    command: `bun run build:preview-tests && bun ./scripts/serve-static.ts canvas-test-static ${port}`,
     port,
     reuseExistingServer: false,
     timeout: 120_000,
