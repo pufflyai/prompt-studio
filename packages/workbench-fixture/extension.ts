@@ -14,6 +14,7 @@ import { labSettings } from "./src/data/lab-settings";
 import { labHarnesses } from "./src/harnesses";
 import { labHooks } from "./src/hooks";
 import { labMiddlewares } from "./src/middlewares";
+import { createPanelViewFixture } from "./src/renderers/panel-views";
 import {
   createLabUi,
   labActivityItems,
@@ -22,6 +23,7 @@ import {
   labSettingsSection,
 } from "./src/renderers/ui-contributions";
 
+const panelViews = createPanelViewFixture(import.meta.url);
 const labUi = createLabUi(import.meta.url);
 
 const extension = defineExtension({
@@ -32,19 +34,19 @@ const extension = defineExtension({
 
   settings: labSettings,
 
-  commands: labCommands,
+  commands: [...labCommands, ...panelViews.commands],
   middlewares: labMiddlewares,
   hooks: labHooks,
   schedules: labSchedules,
   harnesses: labHarnesses,
 
   modes: labModes,
-  resourceKinds: [...labResourceKinds],
-  views: [...labUi.views],
+  resourceKinds: [...labResourceKinds, ...panelViews.resourceKinds],
+  views: [...labUi.views, ...panelViews.views],
   viewMenus: labUi.viewMenus,
-  placements: labUi.placements,
-  pages: [...labUi.pages],
-  navigationItems: [...labUi.navigationItems],
+  placements: [...labUi.placements, ...panelViews.placements],
+  pages: [...labUi.pages, ...panelViews.pages],
+  navigationItems: [...labUi.navigationItems, ...panelViews.navigationItems],
   navigationTrees: labUi.navigationTrees,
   statusBarItems: labUi.statusBarItems,
   activityItems: labActivityItems,

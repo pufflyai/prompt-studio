@@ -27,6 +27,7 @@ describe("shipped extension composition", () => {
       ["kiln.object", "pstdio.extension-lab"],
       ["marmalade.document", "pstdio.extension-lab"],
       ["glass-lab-artifact", "pstdio.workbench-fixture"],
+      ["letter", "pstdio.workbench-fixture"],
     ]);
     expect(
       runtime.placements.find(
