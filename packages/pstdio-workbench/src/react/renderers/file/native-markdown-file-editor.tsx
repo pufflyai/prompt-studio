@@ -1,17 +1,19 @@
 import { Flex } from "@chakra-ui/react";
-import { DocumentHeader, DocumentSaveStatus, documentParticipantColors } from "@pstdio/ui";
 import { LazyMarkdownEditor, type MarkdownEditorProps } from "@pstdio/ui/rich-text";
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type {
   NativeDocumentSession,
   NativeDocumentSessionSnapshot,
 } from "../../../core/native-documents/native-document-session";
+import type { WorkbenchPresence } from "../../../core/presence/workbench-presence";
+import { participantColor } from "../../shared/participant-color";
 import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 import { FileRendererLoading } from "./file-renderer-loading";
 
 interface NativeMarkdownFileEditorProps {
   connect: () => NativeDocumentSession;
-  title?: string;
+  presence: WorkbenchPresence;
+  open: boolean;
   placeholder?: string;
   sectionNavigation?: MarkdownEditorProps["sectionNavigation"];
   onActiveSectionChange?: MarkdownEditorProps["onActiveSectionChange"];
@@ -21,33 +23,41 @@ const empty: NativeDocumentSessionSnapshot = { document: null, pending: false, c
 const subscribeEmpty = () => () => {};
 const getEmpty = () => empty;
 const decode = (value: string) => Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
-const colorFor = (id: string) => {
-  let hash = 0;
-  for (const character of id) hash = (Math.imul(hash, 31) + character.charCodeAt(0)) >>> 0;
-  return documentParticipantColors[hash % documentParticipantColors.length]!;
-};
 
 export const NativeMarkdownFileEditor = (props: NativeMarkdownFileEditorProps) => {
-  const { connect, title = "Document", placeholder, sectionNavigation, onActiveSectionChange, errorNotice } = props;
+  const { connect, presence, open, placeholder, sectionNavigation, onActiveSectionChange, errorNotice } = props;
   const connectRef = useRef(connect);
   connectRef.current = connect;
+  const openRef = useRef(open);
+  openRef.current = open;
   const [session, setSession] = useState<NativeDocumentSession | null>(null);
   const state = useSyncExternalStore(session?.subscribe ?? subscribeEmpty, session?.getSnapshot ?? getEmpty, getEmpty);
   useEffect(() => {
     const next = connectRef.current();
+    next.setOpen(openRef.current);
     setSession(next);
     void next.start().catch(() => {});
     return () => {
       void next.close().catch(() => {});
     };
   }, []);
+  useEffect(() => {
+    if (!session) return;
+    session.setOpen(open);
+    if (!open) return;
+    const registration = presence.register({
+      getParticipants: () =>
+        session.getSnapshot().participants.map((person) => ({ id: person.deviceId, label: person.label })),
+      subscribe: session.subscribe,
+    });
+    return () => registration.dispose();
+  }, [session, presence, open]);
   const participants = state.participants.map((participant) => {
     const id = `${participant.deviceId}:${participant.participantId}`;
     return {
       id,
       label: participant.label,
-      deviceName: participant.deviceName,
-      color: colorFor(id),
+      color: participantColor(participant.deviceId),
       selection: participant.selection
         ? { anchor: decode(participant.selection.anchor), focus: decode(participant.selection.head) }
         : null,
@@ -55,7 +65,6 @@ export const NativeMarkdownFileEditor = (props: NativeMarkdownFileEditorProps) =
   });
   return (
     <Flex direction="column" h="full" minH="0" bg="bg">
-      <DocumentHeader title={title} participants={participants} />
       {errorNotice}
       {state.error && (
         <FileRendererErrorNotice
@@ -86,7 +95,6 @@ export const NativeMarkdownFileEditor = (props: NativeMarkdownFileEditorProps) =
       ) : (
         <FileRendererLoading />
       )}
-      {state.document && <DocumentSaveStatus pending={state.pending} connected={state.connected} />}
     </Flex>
   );
 };

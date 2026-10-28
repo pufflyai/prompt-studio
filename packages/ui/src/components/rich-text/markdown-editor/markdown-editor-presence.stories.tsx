@@ -3,13 +3,13 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useEffect, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import * as Y from "yjs";
-import { DocumentHeader } from "../../primitives/document-header";
+import { DocumentParticipants } from "../../primitives/document-participants";
 import { MarkdownEditor } from "./markdown-editor";
 import type { MarkdownCollaboration } from "./plugins/markdown-collaboration-plugin";
 
 const body = "First **shared** paragraph with a flag 🇸🇪.\n\nSecond paragraph stays in place.";
 const frontmatter = "---\ntitle: Shared plan\n---\n\n";
-const participant = { id: "alex-laptop", label: "Alex", deviceName: "Laptop", color: "blue" as const };
+const participant = { id: "alex-laptop", label: "Alex", color: "blue" as const };
 
 const PresenceScene = (props: { long?: boolean; narrow?: boolean }) => {
   const { long = false, narrow = false } = props;
@@ -47,7 +47,7 @@ const PresenceScene = (props: { long?: boolean; narrow?: boolean }) => {
       </Button>
       <Box h="24rem" minH="0" borderWidth="1px" borderColor="border.subtle" data-testid="document-frame">
         <Stack gap="0" h="full" minH="0">
-          <DocumentHeader title="Project plan" participants={participants} />
+          <DocumentParticipants participants={participants} label="Other editors" />
           <Box flex="1" minH="0">
             <MarkdownEditor defaultState="" isEditable collaboration={{ document, participants }} />
           </Box>

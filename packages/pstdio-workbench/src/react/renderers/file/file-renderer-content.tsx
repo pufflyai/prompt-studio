@@ -6,12 +6,15 @@ import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
 import { type ReactNode, type RefObject, Suspense, useLayoutEffect } from "react";
 import type { FileRendererContent } from "../../../core";
 import type { NativeDocumentSession } from "../../../core/native-documents/native-document-session";
+import type { WorkbenchPresence } from "../../../core/presence/workbench-presence";
 import { FileRendererLoading } from "./file-renderer-loading";
 import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 import { NativeMarkdownFileEditor } from "./native-markdown-file-editor";
 
 interface FileRendererContentViewProps {
   content: FileRendererContent | null;
+  presence: WorkbenchPresence;
+  open: boolean;
   position?: FileSourcePosition;
   editorKey: string;
   errorNotice: ReactNode;
@@ -30,6 +33,8 @@ interface FileRendererContentViewProps {
 export const FileRendererContentView = (props: FileRendererContentViewProps) => {
   const {
     content,
+    presence,
+    open,
     position,
     editorKey,
     errorNotice,
@@ -130,7 +135,8 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
         <NativeMarkdownFileEditor
           key={editorKey}
           connect={connectDocument}
-          title={title}
+          presence={presence}
+          open={open}
           placeholder={content.placeholder ?? "Write…"}
           sectionNavigation={sectionNavigation}
           onActiveSectionChange={onActiveSectionChange}

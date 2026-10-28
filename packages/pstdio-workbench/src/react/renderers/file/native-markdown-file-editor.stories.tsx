@@ -1,15 +1,14 @@
-import { Box, Button } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { StrictMode, useState } from "react";
+import { StrictMode } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import * as Y from "yjs";
-import { createWorkbench, getWorkbenchRenderers, type WorkbenchPanelInstance } from "../../../core";
 import type {
   NativeDocumentSession,
   NativeDocumentSessionSnapshot,
 } from "../../../core/native-documents/native-document-session";
+import { createWorkbenchPresence } from "../../../core/presence/workbench-presence";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
-import { WorkbenchFileRendererView } from "./file-renderer-view";
 import { NativeMarkdownFileEditor } from "./native-markdown-file-editor";
 
 const createStorySession = (offline = false): NativeDocumentSession => {
@@ -33,6 +32,7 @@ const createStorySession = (offline = false): NativeDocumentSession => {
     else publish({ error: "Changes are waiting to be saved." });
   });
   return {
+    setOpen: () => {},
     setSelection: async () => {},
     start: async () => {},
     flush: acknowledge,
@@ -53,6 +53,7 @@ const createStorySession = (offline = false): NativeDocumentSession => {
 const meta = {
   title: "Renderers/Native Markdown File Editor",
   component: NativeMarkdownFileEditor,
+  args: { presence: createWorkbenchPresence(), open: true },
   decorators: [
     (Story) => (
       <WorkbenchThemeProvider>
@@ -101,74 +102,4 @@ export const StrictEffects: Story = {
     </StrictMode>
   ),
   tags: ["!manifest"],
-};
-
-const RenamedResource = () => {
-  const [fixture] = useState(() => {
-    const workbench = createWorkbench();
-    const listeners = new Set<() => void>();
-    let title = "Planning note";
-    const renderers = getWorkbenchRenderers(workbench);
-    renderers.registerFileRenderer({
-      id: "note",
-      title: "Note",
-      load: () => ({
-        fileName: "opaque-storage-id.md",
-        mimeType: "text/markdown",
-        content: "Text",
-        editable: true,
-        documentSource: { kind: "workspace", path: "note.md" },
-      }),
-      save: () => {},
-      connectDocument: () => createStorySession(),
-    });
-    const placement: WorkbenchPanelInstance = {
-      instanceId: "note",
-      panelId: "note",
-      closable: true,
-      resource: { type: "note", id: "same-source", label: "Planning note" },
-      tab: {
-        getSnapshot: () => ({ label: title }),
-        subscribe: (listener) => {
-          listeners.add(listener);
-          return () => {
-            listeners.delete(listener);
-          };
-        },
-      },
-    };
-    return {
-      workbench,
-      placement,
-      contribution: renderers.getFileRenderer("note")!,
-      rename: () => {
-        title = "Renamed planning note";
-        for (const listener of listeners) listener();
-      },
-    };
-  });
-  return (
-    <>
-      <Button onClick={fixture.rename}>Rename note</Button>
-      <WorkbenchFileRendererView
-        workbench={fixture.workbench}
-        contribution={fixture.contribution}
-        placement={fixture.placement}
-      />
-    </>
-  );
-};
-export const ResourceTitle: Story = {
-  args: { connect: () => createStorySession() },
-  render: () => <RenamedResource />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await waitFor(() => expect(canvasElement.querySelector('[contenteditable="true"]')).not.toBeNull());
-    const editor = canvasElement.querySelector('[contenteditable="true"]');
-    await expect(canvas.getByRole("heading", { name: "Planning note" })).toBeVisible();
-    await expect(canvas.queryByText("opaque-storage-id.md")).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Rename note" }));
-    await expect(canvas.getByRole("heading", { name: "Renamed planning note" })).toBeVisible();
-    await expect(canvasElement.querySelector('[contenteditable="true"]')).toBe(editor);
-  },
 };

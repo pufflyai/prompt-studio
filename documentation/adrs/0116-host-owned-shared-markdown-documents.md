@@ -165,8 +165,22 @@ Key rotation aborts and drains the retired replica before replacing it. Only its
 explicit retirement reason is handled as cancellation; real failures still fail.
 
 Relay storage resets invalidate view reads, resource references, and tab title
-queries. The editor header uses that current title. A rename keeps the existing
+queries. The workbench breadcrumb uses that current title. A rename keeps the existing
 document identity, editor session, and pending local edits.
+
+The workbench presence service observes connected editors from every open native
+document tab. The breadcrumb header shows each remote device once, using its
+friendly account name. Device and session IDs remain internal. Views own their
+connections and unregister when closed; text and selection updates do not redraw
+unchanged chrome presence. The native editor adds no title header or local-save
+footer. Save failures still appear beside the document, and the close guard still
+protects edits that have not been acknowledged.
+
+Presence follows open placement ownership, not React mount lifetime. The workbench
+can retain a closed editor for recovery. That editor pauses its live stream and
+leaves presence while keeping its document, room and pending frames. A pending
+save can finish without reopening presence. Reopening the tab resumes the same
+document. Inactive tabs that are still open continue participating.
 
 ## Bounded file access
 

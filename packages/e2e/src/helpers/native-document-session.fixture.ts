@@ -58,7 +58,7 @@ export const createNativeDocumentSessionFixture = async () => {
   const disconnects = new Set<() => void>();
   let pause:
     | {
-        operation: "open" | "updates";
+        operation: "open" | "updates" | "stream";
         entered: ReturnType<typeof Promise.withResolvers<void>>;
         release: ReturnType<typeof Promise.withResolvers<void>>;
       }
@@ -67,10 +67,11 @@ export const createNativeDocumentSessionFixture = async () => {
     if (offline) throw new Error("Test network is offline");
     const response = await handle.app.fetch(new Request(String(url), init));
     const path = new URL(String(url)).pathname;
-    let operation: "updates" | "open" | undefined;
-    if (path.endsWith("/updates")) operation = "updates";
+    let operation: "updates" | "open" | "stream" | undefined;
+    if (path.endsWith("/stream")) operation = "stream";
+    else if (path.endsWith("/updates")) operation = "updates";
     else if (path.endsWith("/native-documents")) operation = "open";
-    if (pause && init?.method === "POST" && pause.operation === operation) {
+    if (pause && (init?.method === "POST" || operation === "stream") && pause.operation === operation) {
       const gate = pause;
       pause = undefined;
       gate.entered.resolve();
@@ -122,6 +123,15 @@ export const createNativeDocumentSessionFixture = async () => {
     pauseNextAcknowledgement() {
       const gate = {
         operation: "updates" as const,
+        entered: Promise.withResolvers<void>(),
+        release: Promise.withResolvers<void>(),
+      };
+      pause = gate;
+      return gate;
+    },
+    pauseNextStream() {
+      const gate = {
+        operation: "stream" as const,
         entered: Promise.withResolvers<void>(),
         release: Promise.withResolvers<void>(),
       };

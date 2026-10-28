@@ -69,6 +69,10 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
     return result.filter((resource) => referenceKey(resource) !== primaryKey);
   };
   const applyResource = (resource: ResourceRef, result: unknown) => {
+    if (result === null) {
+      ctx.resources.removed(resource);
+      return;
+    }
     const value = toDashboardExtensionResource(result, input.projectId, input.metadata.resourceKinds);
     if (!value) return;
     const updated = {

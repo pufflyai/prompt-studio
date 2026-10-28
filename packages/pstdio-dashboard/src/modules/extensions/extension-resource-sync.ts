@@ -106,14 +106,14 @@ export const watchOpenExtensionResource = (
     route: string,
   ) => {
     const resolution = resolutionFromResult(value, { batch: resolver.batch, identityOf, open });
-    const resolved = toDashboardExtensionResource(resolution?.resource, input.projectId, input.metadata.resourceKinds);
     const latest = ctx.getPrimaryResource();
-    if (
-      !resolved ||
-      !latest ||
-      routeOf(latest) !== route ||
-      routeOf({ ...resolved, extensionId: resolved.extensionId ?? resolver.extensionId }) !== route
-    )
+    if (!latest || routeOf(latest) !== route) return;
+    if (!resolver.batch && value === null) {
+      ctx.resources.removed(latest);
+      return;
+    }
+    const resolved = toDashboardExtensionResource(resolution?.resource, input.projectId, input.metadata.resourceKinds);
+    if (!resolved || routeOf({ ...resolved, extensionId: resolved.extensionId ?? resolver.extensionId }) !== route)
       return;
     // The resolver describes the resource; the open page keeps its identity and route.
     const current = {

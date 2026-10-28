@@ -18,6 +18,11 @@ export interface NativeDocumentSessionInput {
   client: NativeDocumentsClient;
 }
 type Room = Pick<NativeDocumentJoined, "roomId" | "documentKey" | "seedId" | "sourceSeedId">;
+const roomAddress = (projectId: string, room: Room) => ({
+  projectId,
+  documentKey: room.documentKey,
+  roomId: room.roomId,
+});
 
 export const createNativeDocumentSession = (input: NativeDocumentSessionInput) => {
   let replica: ReturnType<typeof createNativeDocumentReplica> | undefined;
@@ -28,6 +33,7 @@ export const createNativeDocumentSession = (input: NativeDocumentSessionInput) =
   let operation: Promise<void> | undefined;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
   let closing = false;
+  let open = true;
   let disposed = false;
   let requested = false;
   let state: NativeDocumentSessionSnapshot = { document: null, pending: false, connected: false, participants: [] };
@@ -38,11 +44,7 @@ export const createNativeDocumentSession = (input: NativeDocumentSessionInput) =
     for (const listener of listeners) listener();
   };
   const presence = createNativeDocumentPresence({ ...input, changed: (participants) => publish({ participants }) });
-  const address = (value: Room) => ({
-    projectId: input.projectId,
-    documentKey: value.documentKey,
-    roomId: value.roomId,
-  });
+  const address = (value: Room) => roomAddress(input.projectId, value);
   const retire = async (value: Room | undefined) => {
     if (value) await input.client.close(address(value)).catch(() => {});
   };
@@ -50,7 +52,7 @@ export const createNativeDocumentSession = (input: NativeDocumentSessionInput) =
     void drive().catch(() => {});
   };
   const schedule = () => {
-    if (disposed || retryTimer) return;
+    if (disposed || retryTimer || (!open && !replica?.pending())) return;
     retryTimer = setTimeout(() => {
       retryTimer = undefined;
       background();
@@ -73,6 +75,7 @@ export const createNativeDocumentSession = (input: NativeDocumentSessionInput) =
   };
   const startWatch = (active: Room) => {
     watch?.abort();
+    if (!open) return;
     const connection = new AbortController();
     watch = connection;
     presence.start(active, connection.signal);
@@ -81,10 +84,10 @@ export const createNativeDocumentSession = (input: NativeDocumentSessionInput) =
         ...address(active),
         signal: connection.signal,
         onSnapshot: (snapshot) => {
-          if (room === active && !disposed) receive(active, snapshot);
+          if (room === active && !disposed && open && !connection.signal.aborted) receive(active, snapshot);
         },
         onPresence: (snapshot) => {
-          if (room === active && !disposed) presence.receive(active, snapshot);
+          if (room === active && !disposed && open && !connection.signal.aborted) presence.receive(active, snapshot);
         },
       })
       .then(() => {
@@ -156,6 +159,7 @@ export const createNativeDocumentSession = (input: NativeDocumentSessionInput) =
   };
   const pump = async () => {
     while (!disposed) {
+      if (!open && !replica?.pending()) return;
       if (!room) await join();
       const active = room;
       if (!active) continue;
@@ -199,6 +203,19 @@ export const createNativeDocumentSession = (input: NativeDocumentSessionInput) =
     return operation;
   }
   return {
+    /** Retained closed views keep their document and pending saves, but leave live presence. */
+    setOpen(nextOpen: boolean) {
+      if (disposed || open === nextOpen) return;
+      open = nextOpen;
+      if (!open) {
+        watch?.abort();
+        presence.disconnect();
+        publish({ connected: false });
+        return;
+      }
+      if (room) startWatch(room);
+      background();
+    },
     setSelection: presence.setSelection,
     start: drive,
     flush: drive,
