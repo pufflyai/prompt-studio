@@ -1,14 +1,14 @@
 [
   {
-    "id": "storybook-servers",
+    "id": "preview-servers",
     "command": ["bun", "run", "test:scripts"]
   },
   {
-    "id": "storybook-build",
-    "command": ["bun", "run", "build:stories"]
+    "id": "preview-build",
+    "command": ["bun", "run", "build:previews"]
   },
   {
-    "id": "storybook-browser",
+    "id": "preview-browser",
     "command": ["bun", "run", "test:browser"]
   }
 ]
