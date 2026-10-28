@@ -199,7 +199,7 @@ A pull request may contain only one migration entry. If the tools create more th
 ## Fixing bugs
 
 - Always reproduce a bug before fixing it.
-- Always write a test that proves the bug stays fixed.
+- Add a regression test when it protects meaningful supported behavior. Visual-only bugs follow the critical browser-check policy below.
 - Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies.
 
 ## Git
@@ -239,7 +239,7 @@ A pull request may contain only one migration entry. If the tools create more th
 - Run one group with `bun test:p0`, `bun test:p1`, `bun test:p2`, or `bun test:p3`. Use `--scope <workspace>` and `--runner <kind>` for targeted work. Discovery owns membership; do not add test filename lists to workflows.
 - Put each test **next to the file it tests**.
 - Avoid mocks. Test real behavior when possible.
-- For a bug fix, add a test that reproduces the bug before changing the code.
+- For a meaningful behavioral bug, add a reproducing regression test before changing code. Visual-only changes follow the critical-check policy.
 - Test behavior that users can use and rules the product still supports.
 - When removing a feature, delete or update its tests. Do not add tests that only prove the feature is gone.
 - Write failure-case tests only for rules the product still supports, such as validation, permissions, and error handling. Never use them to prove deleted code stays gone.
