@@ -76,7 +76,7 @@ jobs:
         with:
           node-version: "24"
       - name: Install dependencies
-        run: node scripts/ci/install-native-dependencies.ts
+        run: bun scripts/ci/install-native-dependencies.ts
       - uses: actions/download-artifact@v4
         with:
           name: windows-signed-baseline

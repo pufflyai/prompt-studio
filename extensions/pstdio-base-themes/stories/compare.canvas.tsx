@@ -1,46 +1,16 @@
-import { Box, Grid, Stack, Text } from "@chakra-ui/react";
+import { Stack, Text } from "@chakra-ui/react";
 import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
-import type { Section } from "./core-components.canvas";
-import { themePreferences } from "./theme-preferences";
+import { CoreComponents, type Section } from "./core-components.canvas";
 
-const heights: Record<Section, number> = {
-  all: 4700,
-  foundations: 650,
-  buttons: 780,
-  inputs: 850,
-  navigation: 650,
-  feedback: 1050,
-  overlays: 650,
-  composed: 1100,
-};
 function Compare(props: { section: Section }) {
   const { section } = props;
   return (
-    <Stack p="md" gap="md">
-      <Text as="h1" textStyle="heading/M">
-        Extra themes — core components
+    <Stack gap="md">
+      <Text p="md" textStyle="paragraph/S/regular" color="fg.muted">
+        Use Theme in the frame toolbar to compare these components. Each frame keeps its own theme and interaction
+        state.
       </Text>
-      <Text textStyle="paragraph/S/regular" color="fg.muted">
-        The same components and states in every theme. Scroll horizontally on smaller screens. Each column has its own
-        document so menus, dialogs and keyboard focus use the real theme.
-      </Text>
-      <Box overflowX="auto">
-        <Grid templateColumns="repeat(4, minmax(22rem, 1fr))" gap="sm">
-          {themePreferences.map((theme) => (
-            <Stack key={theme.id} gap="xs" minW="0">
-              <Text as="h2" textStyle="label/M/medium">
-                {theme.title}
-              </Text>
-              <Box asChild width="full" height={`${heights[section]}px`} borderWidth="1px" borderColor="border">
-                <iframe
-                  title={theme.title}
-                  src={`iframe.html?id=themes-single-theme--core&viewMode=story&globals=theme:${theme.id}&args=section:${section}`}
-                />
-              </Box>
-            </Stack>
-          ))}
-        </Grid>
-      </Box>
+      <CoreComponents section={section} />
     </Stack>
   );
 }

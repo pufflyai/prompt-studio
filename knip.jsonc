@@ -2,7 +2,14 @@
   "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
   "ignoreExportsUsedInFile": true,
   // `check` is a built-in Bun command, not a dependency binary.
-  "ignoreBinaries": ["check", "gh", "wait", "version"],
+  "ignoreBinaries": [
+    "check",
+    "gh",
+    "wait",
+    "version",
+    // Candidate workflows sparsely check out these installer files at runtime; see ADR 0028.
+    "__test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts"
+  ],
   "ignoreIssues": {
     "packages/pstdio/src/adapters/cli/commands/{close,inbox,login,logout,logs,performance,update-channel}.ts": [
       "exports"

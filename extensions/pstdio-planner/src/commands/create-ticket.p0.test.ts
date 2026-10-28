@@ -7,6 +7,18 @@ import { createTicketCommand } from "./create-ticket";
 import { deleteTicketCommand } from "./delete-ticket";
 
 describe("createTicketCommand", () => {
+  test("creating outside a board column uses the default status when no status is selected", async () => {
+    const storage = createMemoryStorage();
+    const statuses = await seedDefaultStatuses(storage);
+    const ticket = await createTicketCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { content: "# Shortcut ticket", attributes: { status: "" } },
+      }),
+    );
+    expect(ticket.statusId).toBe(statuses.find((status) => status.isDefault)!.id);
+  });
+
   test("creates a ticket with the default status and an incrementing shorthand", async () => {
     const storage = createMemoryStorage();
     const statuses = await seedDefaultStatuses(storage);

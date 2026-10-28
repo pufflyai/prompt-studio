@@ -21,8 +21,8 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.46.0-preview.sha-c241f7d0c109edf636f9e5d715a0fc05043ddc8c",
-    "@pstdio/ui": "0.46.0-preview.sha-c241f7d0c109edf636f9e5d715a0fc05043ddc8c",
+    "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
+    "@pstdio/ui": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
     "entities": "4.5.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

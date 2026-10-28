@@ -157,7 +157,7 @@ const codexShellInvocations: ToolPart[] = [
       status: "completed",
       input: {
         command:
-          "bun run --cwd packages/ui test tool-rendering && bun run --cwd packages/ui build:preview-tests && bun run validate",
+          "bun run --cwd packages/ui test tool-rendering && bun run test:canvas && bun run validate",
       },
       output:
         "26 [chromium] › src/ui/workspaces.p2.spec.ts:192:3 › Workspace diff › fork_point resolves\n27 [chromium] › src/ui/workspaces.p2.spec.ts:223:3 › Workspace diff › fork_point handles rebase\n28 [chromium] › src/ui/workspaces.p2.spec.ts:273:3 › Workspace rename › renames the branch\n\n3 skipped\n25 passed (34.1s)",
@@ -169,6 +169,25 @@ export const CodexShell: Story = {
   render: () => (
     <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
       <ToolInvocationTimeline invocations={codexShellInvocations} />
+    </Box>
+  ),
+};
+export const CommandWithoutOutput: Story = {
+  id: "patterns-chat-tool-invocation-timeline--command-without-output",
+  tags: ["command-disclosure"],
+  args: {
+    invocations: [
+      {
+        type: "tool",
+        tool: "shell",
+        status: "pending",
+        state: { input: { command: "bun run --cwd packages/ui test && bun run --cwd packages/ui typecheck" } },
+      },
+    ],
+  },
+  render: (args) => (
+    <Box width="full" maxW="sm">
+      <ToolInvocationTimeline {...args} />
     </Box>
   ),
 };

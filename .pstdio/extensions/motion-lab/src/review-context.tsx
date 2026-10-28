@@ -90,7 +90,11 @@ export const useReviewConnection = (host: GuestHost, propsStore: PropsStore<Revi
       const event = next.lastCommand;
       if (!event || event.tick <= lastTick) return;
       lastTick = event.tick;
-      if (event.extensionId === host.extensionId && event.commandId.endsWith(".review.update") && event.outcome.ok)
+      if (
+        event.extensionId === host.extensionId &&
+        [".review.update", ".review.playback"].some((suffix) => event.commandId.endsWith(suffix)) &&
+        event.outcome.ok
+      )
         void connection.refresh();
     });
     void refresh();

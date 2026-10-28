@@ -1,5 +1,6 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Frame, type Page, test } from "@playwright/test";
 import { type BenchmarkMeasurement, recordMeasurement } from "pstdio-benchmarks/writer";
+import { openPerformancePreview } from "./canvas-preview";
 import type { ChatMountMetric } from "./chat-mount-metrics";
 
 type PerfStats = {
@@ -26,7 +27,7 @@ declare global {
   }
 }
 
-const STORY_IDS = {
+const VARIANT_IDS = {
   largeConversation: "patterns-chat-chat-panel-performance--large-conversation",
   sessionSwitching: "patterns-chat-chat-panel-performance--session-switching",
   streamingScenario: "patterns-chat-chat-panel-performance--streaming-scenario",
@@ -41,9 +42,9 @@ const BUDGETS = {
 const shouldAssertBudgets = process.env.UI_PERF_ASSERT_BUDGETS === "1";
 
 // Records the scenario time and the heap the page keeps afterwards, after garbage collection.
-const recordScenario = async (page: Page, timing: Omit<BenchmarkMeasurement, "unit">) => {
+const recordScenario = async (page: Frame, timing: Omit<BenchmarkMeasurement, "unit">) => {
   recordMeasurement({ ...timing, unit: "ms" });
-  const session = await page.context().newCDPSession(page);
+  const session = await page.page().context().newCDPSession(page);
   await session.send("HeapProfiler.collectGarbage");
   await session.send("Performance.enable");
   const { metrics } = await session.send("Performance.getMetrics");
@@ -86,7 +87,7 @@ const throttleChromiumCpu = async (page: Page) => {
   await session.send("Emulation.setCPUThrottlingRate", { rate });
 };
 
-const waitForMark = async (page: Page, markName: string, startMarkName?: string) => {
+const waitForMark = async (page: Frame, markName: string, startMarkName?: string) => {
   await page.waitForFunction((name) => performance.getEntriesByName(name).length > 0, markName);
   return page.evaluate(
     ({ readyName, startName }) => {
@@ -100,7 +101,7 @@ const waitForMark = async (page: Page, markName: string, startMarkName?: string)
   );
 };
 
-const waitForMountMetric = async (page: Page, scenario: string, label?: string) => {
+const waitForMountMetric = async (page: Frame, scenario: string, label?: string) => {
   await page.waitForFunction(
     ({ scenarioName, metricLabel }) =>
       window.__chatPanelMountMetrics?.some(
@@ -118,10 +119,10 @@ const waitForMountMetric = async (page: Page, scenario: string, label?: string) 
   );
 };
 
-const getTotalLongTaskDuration = (page: Page) =>
+const getTotalLongTaskDuration = (page: Frame) =>
   page.evaluate(() => window.__longTasks?.reduce((total, task) => total + task.duration, 0) ?? 0);
 
-const getProfilerStats = async (page: Page, scenario: string) => {
+const getProfilerStats = async (page: Frame, scenario: string) => {
   const samples = await page.evaluate(
     (scenarioName) => window.__chatPanelPerf?.filter((sample) => sample.scenario === scenarioName) ?? [],
     scenario,
@@ -144,10 +145,10 @@ const expectWithinBudget = (value: number, budget: number) => {
   expect(value).toBeGreaterThanOrEqual(0);
 };
 
-const openStory = async (page: Page, storyId: string) => {
+const openPreview = async (page: Page, variantId: string) => {
   await installLongTaskObserver(page);
   await throttleChromiumCpu(page);
-  await page.goto(`/iframe.html?id=${storyId}&globals=theme:pstdio-light`);
+  return openPerformancePreview(page, variantId);
 };
 
 test.describe("chat panel performance", () => {
@@ -164,15 +165,15 @@ test.describe("chat panel performance", () => {
   });
 
   test("loads a large conversation", async ({ page }) => {
-    await openStory(page, STORY_IDS.largeConversation);
+    const preview = await openPreview(page, VARIANT_IDS.largeConversation);
 
-    const mountMetric = await waitForMountMetric(page, "large-conversation", "Large chat mount");
-    const longTasks = await getTotalLongTaskDuration(page);
-    const profiler = await getProfilerStats(page, "large-conversation");
+    const mountMetric = await waitForMountMetric(preview, "large-conversation", "Large chat mount");
+    const longTasks = await getTotalLongTaskDuration(preview);
+    const profiler = await getProfilerStats(preview, "large-conversation");
 
     expect(mountMetric).not.toBeNull();
     largeMountSamples.push(mountMetric?.totalMs ?? 0);
-    await recordScenario(page, {
+    await recordScenario(preview, {
       metric: "large-conversation",
       label: "Load a large conversation",
       value: mountMetric?.totalMs ?? 0,
@@ -188,29 +189,29 @@ test.describe("chat panel performance", () => {
   });
 
   test("switches between large sessions", async ({ page }) => {
-    await openStory(page, STORY_IDS.sessionSwitching);
-    await waitForMark(page, "chat-perf:session-switch-ready");
+    const preview = await openPreview(page, VARIANT_IDS.sessionSwitching);
+    await waitForMark(preview, "chat-perf:session-switch-ready");
 
-    await page.evaluate(() => {
+    await preview.evaluate(() => {
       performance.clearMarks();
       window.__chatPanelMountMetrics = [];
       window.__longTasks = [];
     });
-    await page.evaluate(() => performance.mark("chat-perf:test-session-switch-click"));
-    await page.getByRole("button", { name: "Secondary" }).click();
+    await preview.evaluate(() => performance.mark("chat-perf:test-session-switch-click"));
+    await preview.getByRole("button", { name: "Secondary" }).click();
 
     const switchStartDelay = await waitForMark(
       page,
       "chat-perf:session-switch-start",
       "chat-perf:test-session-switch-click",
     );
-    const switchMetric = await waitForMountMetric(page, "session-switching", "Secondary session switch");
-    const longTasks = await getTotalLongTaskDuration(page);
-    const profiler = await getProfilerStats(page, "session-switching");
+    const switchMetric = await waitForMountMetric(preview, "session-switching", "Secondary session switch");
+    const longTasks = await getTotalLongTaskDuration(preview);
+    const profiler = await getProfilerStats(preview, "session-switching");
 
     expect(switchMetric).not.toBeNull();
     switchSamples.push(switchMetric?.totalMs ?? 0);
-    await recordScenario(page, {
+    await recordScenario(preview, {
       metric: "session-switch",
       label: "Switch between large sessions",
       value: switchMetric?.totalMs ?? 0,
@@ -224,19 +225,19 @@ test.describe("chat panel performance", () => {
     expect(switchStartDelay).toBeLessThan(500);
     expectWithinBudget(switchMetric?.totalMs ?? 0, BUDGETS.sessionSwitchMs);
     expectWithinBudget(longTasks, BUDGETS.totalLongTaskMs);
-    expect(await page.getByTestId("chat-perf-message-count").textContent()).toContain("1000 messages");
+    expect(await preview.getByTestId("chat-perf-message-count").textContent()).toContain("1000 messages");
   });
 
   test("streams incremental updates into an existing conversation", async ({ page }) => {
-    await openStory(page, STORY_IDS.streamingScenario);
+    const preview = await openPreview(page, VARIANT_IDS.streamingScenario);
 
-    const streamTime = await waitForMark(page, "chat-perf:stream-complete", "chat-perf:stream-start");
-    const mountMetric = await waitForMountMetric(page, "streaming", "Seed chat mount");
-    const longTasks = await getTotalLongTaskDuration(page);
-    const profiler = await getProfilerStats(page, "streaming");
+    const streamTime = await waitForMark(preview, "chat-perf:stream-complete", "chat-perf:stream-start");
+    const mountMetric = await waitForMountMetric(preview, "streaming", "Seed chat mount");
+    const longTasks = await getTotalLongTaskDuration(preview);
+    const profiler = await getProfilerStats(preview, "streaming");
 
     streamingSamples.push(streamTime);
-    await recordScenario(page, {
+    await recordScenario(preview, {
       metric: "streaming",
       label: "Stream into an existing conversation",
       value: streamTime,
@@ -248,6 +249,6 @@ test.describe("chat panel performance", () => {
 
     expectWithinBudget(streamTime, BUDGETS.streamingCompleteMs);
     expectWithinBudget(longTasks, BUDGETS.totalLongTaskMs);
-    expect(await page.getByTestId("chat-perf-message-count").textContent()).toContain("1000 messages");
+    expect(await preview.getByTestId("chat-perf-message-count").textContent()).toContain("1000 messages");
   });
 });

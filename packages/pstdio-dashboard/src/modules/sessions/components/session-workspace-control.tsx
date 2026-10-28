@@ -12,6 +12,7 @@ interface SessionWorkspaceControlProps {
   selectedWorkspaceId: string;
   setSelectedWorkspaceId: Dispatch<SetStateAction<string>>;
   onSelectWorkspace?: (workspace: DashboardWorkspaceOption) => void;
+  onOpenWorkspace: (workspace: DashboardWorkspaceOption) => void;
 }
 
 const getSelectedWorkspaceLabel = (input: {
@@ -27,7 +28,7 @@ const getSelectedWorkspaceLabel = (input: {
 
 /** Workspace identity/selector for the workspace hub header. */
 export const SessionWorkspaceControl = (props: SessionWorkspaceControlProps) => {
-  const { view, projectId, selectedWorkspaceId, setSelectedWorkspaceId, onSelectWorkspace } = props;
+  const { view, projectId, selectedWorkspaceId, setSelectedWorkspaceId, onSelectWorkspace, onOpenWorkspace } = props;
   const { isLoading: isProjectLoading } = useProject(projectId);
   const workspaceOptions = createDashboardWorkspaceOptions(projectId);
   const workspaceSelectionKey = workspaceOptions.map((workspace) => workspace.id).join("|");
@@ -39,6 +40,7 @@ export const SessionWorkspaceControl = (props: SessionWorkspaceControlProps) => 
     workspaces: workspaceOptions,
   });
   const isExistingSession = Boolean(view.sessionId);
+  const selectedWorkspace = workspaceOptions.find((workspace) => workspace.id === selectedWorkspaceId);
 
   // The options factory returns a fresh array on every render; the key captures the IDs the
   // resolver reads without turning that array identity into an unconditional effect trigger.
@@ -66,6 +68,7 @@ export const SessionWorkspaceControl = (props: SessionWorkspaceControlProps) => 
       selectedWorkspaceLabel={selectedWorkspaceLabel}
       onSelectWorkspace={handleSelectWorkspace}
       isDisabled={isExistingSession || isProjectLoading}
+      onOpenWorkspace={selectedWorkspace ? () => onOpenWorkspace(selectedWorkspace) : undefined}
     />
   );
 };

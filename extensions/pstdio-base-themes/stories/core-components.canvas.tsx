@@ -16,7 +16,7 @@ const sections = {
   composed: ComposedComponents,
 };
 export type Section = "all" | keyof typeof sections;
-function CoreComponents(props: { section: Section }) {
+export function CoreComponents(props: { section: Section }) {
   const { section } = props;
   const visible = section === "all" ? Object.entries(sections) : ([[section, sections[section]]] as const);
   return (

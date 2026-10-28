@@ -1342,7 +1342,18 @@
       "source": "extensions/pstdio-artifacts/src/components/html-preview.canvas.tsx",
       "suite": "dashboard",
       "title": "Extensions/Artifacts/HtmlPreview",
-      "sourceHash": "c5f50306a3dfb8d80de6317dd848442a931fdfec772871df50d229ffd211f753",
+      "sourceHash": "6d1acf080773dc5a008d545c02b5e18018d29e4a10c4013b86a8ab74f0691aa3",
+      "component": "HtmlPreview",
+      "componentImport": "./html-preview"
+    },
+    {
+      "id": "dashboard-extensions-artifacts-htmlpreview--keyboard-handoff",
+      "name": "Keyboard Handoff",
+      "exportName": "KeyboardHandoff",
+      "source": "extensions/pstdio-artifacts/src/components/html-preview.canvas.tsx",
+      "suite": "dashboard",
+      "title": "Extensions/Artifacts/HtmlPreview",
+      "sourceHash": "6d1acf080773dc5a008d545c02b5e18018d29e4a10c4013b86a8ab74f0691aa3",
       "component": "HtmlPreview",
       "componentImport": "./html-preview"
     },
@@ -1353,7 +1364,7 @@
       "source": "extensions/pstdio-artifacts/src/components/html-preview.canvas.tsx",
       "suite": "dashboard",
       "title": "Extensions/Artifacts/HtmlPreview",
-      "sourceHash": "c5f50306a3dfb8d80de6317dd848442a931fdfec772871df50d229ffd211f753",
+      "sourceHash": "6d1acf080773dc5a008d545c02b5e18018d29e4a10c4013b86a8ab74f0691aa3",
       "component": "HtmlPreview",
       "componentImport": "./html-preview"
     },
@@ -1364,7 +1375,7 @@
       "source": "extensions/pstdio-artifacts/src/components/html-preview.canvas.tsx",
       "suite": "dashboard",
       "title": "Extensions/Artifacts/HtmlPreview",
-      "sourceHash": "c5f50306a3dfb8d80de6317dd848442a931fdfec772871df50d229ffd211f753",
+      "sourceHash": "6d1acf080773dc5a008d545c02b5e18018d29e4a10c4013b86a8ab74f0691aa3",
       "component": "HtmlPreview",
       "componentImport": "./html-preview"
     },
@@ -1375,7 +1386,7 @@
       "source": "extensions/pstdio-artifacts/src/components/html-preview.canvas.tsx",
       "suite": "dashboard",
       "title": "Extensions/Artifacts/HtmlPreview",
-      "sourceHash": "c5f50306a3dfb8d80de6317dd848442a931fdfec772871df50d229ffd211f753",
+      "sourceHash": "6d1acf080773dc5a008d545c02b5e18018d29e4a10c4013b86a8ab74f0691aa3",
       "component": "HtmlPreview",
       "componentImport": "./html-preview"
     },
@@ -1386,7 +1397,7 @@
       "source": "extensions/pstdio-base-themes/stories/compare.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Compare",
-      "sourceHash": "c923f537b0d57291aeb26752724d27983faf000608fba89a394af921575578a0",
+      "sourceHash": "6ca7efee93088dd85fc5be506a150717168f0b35d5525ce3f6c7ed01ab082f09",
       "component": "Compare"
     },
     {
@@ -1396,7 +1407,7 @@
       "source": "extensions/pstdio-base-themes/stories/compare.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Compare",
-      "sourceHash": "c923f537b0d57291aeb26752724d27983faf000608fba89a394af921575578a0",
+      "sourceHash": "6ca7efee93088dd85fc5be506a150717168f0b35d5525ce3f6c7ed01ab082f09",
       "component": "Compare"
     },
     {
@@ -1406,7 +1417,7 @@
       "source": "extensions/pstdio-base-themes/stories/compare.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Compare",
-      "sourceHash": "c923f537b0d57291aeb26752724d27983faf000608fba89a394af921575578a0",
+      "sourceHash": "6ca7efee93088dd85fc5be506a150717168f0b35d5525ce3f6c7ed01ab082f09",
       "component": "Compare"
     },
     {
@@ -1416,7 +1427,7 @@
       "source": "extensions/pstdio-base-themes/stories/compare.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Compare",
-      "sourceHash": "c923f537b0d57291aeb26752724d27983faf000608fba89a394af921575578a0",
+      "sourceHash": "6ca7efee93088dd85fc5be506a150717168f0b35d5525ce3f6c7ed01ab082f09",
       "component": "Compare"
     },
     {
@@ -1426,7 +1437,7 @@
       "source": "extensions/pstdio-base-themes/stories/compare.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Compare",
-      "sourceHash": "c923f537b0d57291aeb26752724d27983faf000608fba89a394af921575578a0",
+      "sourceHash": "6ca7efee93088dd85fc5be506a150717168f0b35d5525ce3f6c7ed01ab082f09",
       "component": "Compare"
     },
     {
@@ -1436,7 +1447,7 @@
       "source": "extensions/pstdio-base-themes/stories/compare.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Compare",
-      "sourceHash": "c923f537b0d57291aeb26752724d27983faf000608fba89a394af921575578a0",
+      "sourceHash": "6ca7efee93088dd85fc5be506a150717168f0b35d5525ce3f6c7ed01ab082f09",
       "component": "Compare"
     },
     {
@@ -1446,7 +1457,7 @@
       "source": "extensions/pstdio-base-themes/stories/compare.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Compare",
-      "sourceHash": "c923f537b0d57291aeb26752724d27983faf000608fba89a394af921575578a0",
+      "sourceHash": "6ca7efee93088dd85fc5be506a150717168f0b35d5525ce3f6c7ed01ab082f09",
       "component": "Compare"
     },
     {
@@ -1456,7 +1467,7 @@
       "source": "extensions/pstdio-base-themes/stories/compare.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Compare",
-      "sourceHash": "c923f537b0d57291aeb26752724d27983faf000608fba89a394af921575578a0",
+      "sourceHash": "6ca7efee93088dd85fc5be506a150717168f0b35d5525ce3f6c7ed01ab082f09",
       "component": "Compare"
     },
     {
@@ -1466,7 +1477,7 @@
       "source": "extensions/pstdio-base-themes/stories/core-components.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Single theme",
-      "sourceHash": "1a3294555220d862f1666721fb3e7ceea9de84541caae71ba59bca36dbf27abd",
+      "sourceHash": "34004364f3ce6cb16bf3ceb795790872ba7b34ae35848099a0bab7bf2d2ee250",
       "component": "CoreComponents"
     },
     {
@@ -1476,7 +1487,7 @@
       "source": "extensions/pstdio-base-themes/stories/core-components.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Single theme",
-      "sourceHash": "1a3294555220d862f1666721fb3e7ceea9de84541caae71ba59bca36dbf27abd",
+      "sourceHash": "34004364f3ce6cb16bf3ceb795790872ba7b34ae35848099a0bab7bf2d2ee250",
       "component": "CoreComponents"
     },
     {
@@ -1486,7 +1497,7 @@
       "source": "extensions/pstdio-base-themes/stories/core-components.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Single theme",
-      "sourceHash": "1a3294555220d862f1666721fb3e7ceea9de84541caae71ba59bca36dbf27abd",
+      "sourceHash": "34004364f3ce6cb16bf3ceb795790872ba7b34ae35848099a0bab7bf2d2ee250",
       "component": "CoreComponents"
     },
     {
@@ -1496,7 +1507,7 @@
       "source": "extensions/pstdio-base-themes/stories/core-components.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Single theme",
-      "sourceHash": "1a3294555220d862f1666721fb3e7ceea9de84541caae71ba59bca36dbf27abd",
+      "sourceHash": "34004364f3ce6cb16bf3ceb795790872ba7b34ae35848099a0bab7bf2d2ee250",
       "component": "CoreComponents"
     },
     {
@@ -1506,8 +1517,48 @@
       "source": "extensions/pstdio-base-themes/stories/core-components.canvas.tsx",
       "suite": "themes",
       "title": "Themes/Single theme",
-      "sourceHash": "1a3294555220d862f1666721fb3e7ceea9de84541caae71ba59bca36dbf27abd",
+      "sourceHash": "34004364f3ce6cb16bf3ceb795790872ba7b34ae35848099a0bab7bf2d2ee250",
       "component": "CoreComponents"
+    },
+    {
+      "id": "themes-themes-solarized-chat--dark",
+      "name": "Dark",
+      "exportName": "Dark",
+      "source": "extensions/pstdio-base-themes/stories/solarized-chat.canvas.tsx",
+      "suite": "themes",
+      "title": "Themes/Solarized chat",
+      "sourceHash": "7d2ab60b1f21d92e62082a21b544850e22c6076077fbd0bacf759d7fccbff21d",
+      "component": "SolarizedChat"
+    },
+    {
+      "id": "themes-themes-solarized-chat--light",
+      "name": "Light",
+      "exportName": "Light",
+      "source": "extensions/pstdio-base-themes/stories/solarized-chat.canvas.tsx",
+      "suite": "themes",
+      "title": "Themes/Solarized chat",
+      "sourceHash": "7d2ab60b1f21d92e62082a21b544850e22c6076077fbd0bacf759d7fccbff21d",
+      "component": "SolarizedChat"
+    },
+    {
+      "id": "themes-themes-solarized-chat--dark-side-panel",
+      "name": "Dark Side Panel",
+      "exportName": "DarkSidePanel",
+      "source": "extensions/pstdio-base-themes/stories/solarized-chat.canvas.tsx",
+      "suite": "themes",
+      "title": "Themes/Solarized chat",
+      "sourceHash": "7d2ab60b1f21d92e62082a21b544850e22c6076077fbd0bacf759d7fccbff21d",
+      "component": "SolarizedChat"
+    },
+    {
+      "id": "themes-themes-solarized-chat--light-side-panel",
+      "name": "Light Side Panel",
+      "exportName": "LightSidePanel",
+      "source": "extensions/pstdio-base-themes/stories/solarized-chat.canvas.tsx",
+      "suite": "themes",
+      "title": "Themes/Solarized chat",
+      "sourceHash": "7d2ab60b1f21d92e62082a21b544850e22c6076077fbd0bacf759d7fccbff21d",
+      "component": "SolarizedChat"
     },
     {
       "id": "dashboard-extensions-planner-ticket-archive-filter--active",
@@ -3202,6 +3253,17 @@
       "sourceHash": "4290a36737931db3e9bf8f41450a660f223e0e0dcc4214f53d7dd11a6a320224",
       "component": "SessionPersonalDevice",
       "componentImport": "./session-personal-device"
+    },
+    {
+      "id": "dashboard-modules-sessions-workspace-selector--editable-and-locked",
+      "name": "Editable And Locked",
+      "exportName": "EditableAndLocked",
+      "source": "packages/pstdio-dashboard/src/modules/sessions/components/session-workspace-menu.canvas.tsx",
+      "suite": "dashboard",
+      "title": "Modules/Sessions/Workspace selector",
+      "sourceHash": "3a7c1d35604307a7dae2e82b5032b290a896d79d108159f517abf3be6a41ebd4",
+      "component": "SessionWorkspaceMenu",
+      "componentImport": "./session-workspace-menu"
     },
     {
       "id": "dashboard-settings-appearance--default",
@@ -8503,6 +8565,50 @@
       "componentImport": "./chat-panel"
     },
     {
+      "id": "ui-patterns-chat-activity-layout--workspace-activity",
+      "name": "Workspace Activity",
+      "exportName": "WorkspaceActivity",
+      "source": "packages/ui/src/components/chat-ui/components/chat-panel-activity.canvas.tsx",
+      "suite": "ui",
+      "title": "Patterns/Chat/Activity Layout",
+      "sourceHash": "a18825d831080699d732ce915e81d6afd65beb9856ffc7cb1002cec1d723199a",
+      "component": "ChatPanel",
+      "componentImport": "./chat-panel"
+    },
+    {
+      "id": "ui-patterns-chat-activity-layout--narrow",
+      "name": "Narrow",
+      "exportName": "Narrow",
+      "source": "packages/ui/src/components/chat-ui/components/chat-panel-activity.canvas.tsx",
+      "suite": "ui",
+      "title": "Patterns/Chat/Activity Layout",
+      "sourceHash": "a18825d831080699d732ce915e81d6afd65beb9856ffc7cb1002cec1d723199a",
+      "component": "ChatPanel",
+      "componentImport": "./chat-panel"
+    },
+    {
+      "id": "ui-patterns-chat-activity-layout--answer-after-activity",
+      "name": "Answer After Activity",
+      "exportName": "AnswerAfterActivity",
+      "source": "packages/ui/src/components/chat-ui/components/chat-panel-activity.canvas.tsx",
+      "suite": "ui",
+      "title": "Patterns/Chat/Activity Layout",
+      "sourceHash": "a18825d831080699d732ce915e81d6afd65beb9856ffc7cb1002cec1d723199a",
+      "component": "ChatPanel",
+      "componentImport": "./chat-panel"
+    },
+    {
+      "id": "ui-patterns-chat-activity-layout--scroll-aware-activity",
+      "name": "Scroll Aware Activity",
+      "exportName": "ScrollAwareActivity",
+      "source": "packages/ui/src/components/chat-ui/components/chat-panel-activity.canvas.tsx",
+      "suite": "ui",
+      "title": "Patterns/Chat/Activity Layout",
+      "sourceHash": "a18825d831080699d732ce915e81d6afd65beb9856ffc7cb1002cec1d723199a",
+      "component": "ChatPanel",
+      "componentImport": "./chat-panel"
+    },
+    {
       "id": "ui-patterns-chat-chat-panel-alerts--alert-variants",
       "name": "Alert Variants",
       "exportName": "AlertVariants",
@@ -9927,7 +10033,7 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "4675dd8bcc728f91376dcbafa06f795c5b8eca447764d301a40901a9f6928641",
+      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },
@@ -9938,7 +10044,7 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "4675dd8bcc728f91376dcbafa06f795c5b8eca447764d301a40901a9f6928641",
+      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },
@@ -9949,7 +10055,7 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "4675dd8bcc728f91376dcbafa06f795c5b8eca447764d301a40901a9f6928641",
+      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },
@@ -9960,7 +10066,18 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "4675dd8bcc728f91376dcbafa06f795c5b8eca447764d301a40901a9f6928641",
+      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
+      "component": "ToolInvocationTimeline",
+      "componentImport": "./tool-invocation-timeline"
+    },
+    {
+      "id": "ui-patterns-chat-tool-invocation-timeline--command-without-output",
+      "name": "Command Without Output",
+      "exportName": "CommandWithoutOutput",
+      "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
+      "suite": "ui",
+      "title": "Patterns/Chat/Tool Invocation Timeline",
+      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },
@@ -9971,7 +10088,7 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "4675dd8bcc728f91376dcbafa06f795c5b8eca447764d301a40901a9f6928641",
+      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },
@@ -9982,7 +10099,7 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "4675dd8bcc728f91376dcbafa06f795c5b8eca447764d301a40901a9f6928641",
+      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },

@@ -97,7 +97,6 @@
     "typecheck": "bun check -p tsconfig.build.json && bun check -p tsconfig.examples.json",
     "perf:chat": "bunx playwright test -c playwright.chat-perf.config.ts",
     "perf:chat:trace": "PLAYWRIGHT_TRACE=on bunx playwright test -c playwright.chat-perf.config.ts",
-    "prebuild:preview-tests": "bun run build:monaco",
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
