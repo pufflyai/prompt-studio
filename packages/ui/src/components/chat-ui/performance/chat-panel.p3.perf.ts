@@ -201,7 +201,7 @@ test.describe("chat panel performance", () => {
     await preview.getByRole("button", { name: "Secondary" }).click();
 
     const switchStartDelay = await waitForMark(
-      page,
+      preview,
       "chat-perf:session-switch-start",
       "chat-perf:test-session-switch-click",
     );
