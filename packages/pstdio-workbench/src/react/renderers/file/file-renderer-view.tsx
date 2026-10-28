@@ -8,6 +8,7 @@ import {
   resolveFileSectionTargetId,
   shouldClearFileSectionSelection,
 } from "../../../core/registries/renderers/file-section-navigation";
+import { usePlacementTab } from "../../shared/use-placement-tab";
 import { usePageParams } from "../use-page-params";
 import { FileRendererContentView } from "./file-renderer-content";
 import {
@@ -81,6 +82,7 @@ const fileRendererOwnerKey = (
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
   const resource = props.placement?.resource;
+  const tab = usePlacementTab(props.placement, workbench);
   const position = props.placement?.position;
   const sectionNavigation = getFileSectionNavigation(resource);
   const requestedSection = props.placement?.section;
@@ -303,7 +305,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           onChange={handleChange}
           rendererRef={rendererRef}
           sectionNavigation={editorSectionNavigation}
-          title={resource?.label ?? contribution.title}
+          title={tab.label ?? resource?.label ?? contribution.title}
           connectDocument={
             contribution.connectDocument ? () => contribution.connectDocument!(resource, pageParams) : undefined
           }
