@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { Hono } from "hono";
 import { createDb, createExtensionStorageDBService, projects } from "pstdio-db";
-import { saveTextDocument, seedTextDocument } from "pstdio-sync";
+import { saveTextDocument, seedTextDocument } from "pstdio-sync/text";
 import * as Y from "yjs";
 import { createWorkspaceContextFixture } from "../../features/extensions/workspace-context.test-fixture";
 import { createNativeDocumentRoutes } from "../../features/native-documents/routes";

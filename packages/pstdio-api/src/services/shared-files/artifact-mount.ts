@@ -6,7 +6,7 @@ import {
   normalizeMountRelativePath,
   resolveArtifactMountRoot,
 } from "pstdio-extensions";
-import { nativeTextAssetKey } from "pstdio-sync";
+import { nativeTextAssetKey } from "pstdio-sync/records";
 import type { StorageGroup } from "pstdio-sync-contracts";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";

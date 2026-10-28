@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
 import { storage_documents } from "pstdio-db";
-import { NativeSourcePendingError, storageRecordId } from "pstdio-sync";
+import { NativeSourcePendingError } from "pstdio-sync";
+import { storageRecordId } from "pstdio-sync/records";
 import { createExtensionFileService } from "./extension-file-service";
 import { blobFilesFixture } from "./shared-files/blob-files.fixture";
 

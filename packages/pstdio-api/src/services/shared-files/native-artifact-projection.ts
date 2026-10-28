@@ -1,10 +1,5 @@
-import {
-  type NativeRecordSources,
-  NativeSourcePendingError,
-  nativeAssetBaseline,
-  nativeTextAssetKey,
-  type StorageOwner,
-} from "pstdio-sync";
+import { NativeSourcePendingError, type StorageOwner } from "pstdio-sync";
+import { type NativeRecordSources, nativeAssetBaseline, nativeTextAssetKey } from "pstdio-sync/records";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { createNativeFileCopy } from "../native-documents/file-copy";
 import { checkpointText } from "../native-documents/text-checkpoint";

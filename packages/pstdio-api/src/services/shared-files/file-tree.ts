@@ -1,7 +1,7 @@
 import { posix } from "node:path";
 import { type ArtifactFileNode, artifactFileNodeSchema } from "pstdio-api-contracts";
 import { normalizeMountRelativePath } from "pstdio-extensions";
-import { storageRecordId } from "pstdio-sync";
+import { storageRecordId } from "pstdio-sync/records";
 
 export const fileNode = artifactFileNodeSchema;
 export type FileNode = ArtifactFileNode;

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { type SpaceKey, syncIdSchema } from "pstdio-sync-contracts";
 import * as Y from "yjs";
-import { decodeBytes } from "../encoding";
+import { decodeBytes } from "../shared/encoding";
 import {
   createSyncSpace,
   openBlob,

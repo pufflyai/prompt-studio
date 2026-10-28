@@ -2,14 +2,9 @@ import { createHash } from "node:crypto";
 import { posix } from "node:path";
 import { createNativeSourceKey, type NativeDocumentSource } from "pstdio-api-contracts";
 import { createFileMount, normalizeMountRelativePath } from "pstdio-extensions";
-import {
-  hasTextSourceImport,
-  importTextSource,
-  readTextDocumentSeed,
-  type StorageOwner,
-  StorageRevisionChangedError,
-  storageRecordId,
-} from "pstdio-sync";
+import { type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
+import { storageRecordId } from "pstdio-sync/records";
+import { hasTextSourceImport, importTextSource, readTextDocumentSeed } from "pstdio-sync/text";
 import { resolveWorkspaceFilesPath } from "../../features/extensions/command-environment/workspace-files";
 import { WorkspaceTargetUnavailableError } from "../../features/extensions/command-environment/workspace-target";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";

@@ -1,15 +1,13 @@
 import type { ReadResult, StateInfo, StoredUpdate } from "pstdio-sync-contracts";
 import * as Y from "yjs";
-import { isEmptyDocument } from "../document-types";
-import { decodeBytes, encodeBytes } from "../encoding";
 import { openState, openSummary, openUpdate, sealState, sealUpdate } from "../encryption";
+import { checkSummary, cloneDocument, decodeBytes, encodeBytes, isEmptyDocument, missingUpdate } from "../shared";
 import {
   downloadDocumentBlobs,
   prepareDocumentBlobs,
   uploadDocumentBlobs,
   validateDocumentBlobs,
 } from "./document-blobs";
-import { checkSummary, cloneDocument, missingUpdate } from "./document-merge";
 import { type DocumentSyncInput, DocumentUpdateTooLarge, type SyncFailure } from "./document-sync-types";
 import { retainNativeSource, withSourceRecovery } from "./source-recovery";
 

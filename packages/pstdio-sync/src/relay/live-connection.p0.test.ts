@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { liveClientMessageSchema, syncProtocolVersion } from "pstdio-sync-contracts";
-import { createSyncSpace, openLive, sealLive } from "../encryption";
+import { createSyncSpace, openLive, sealLive } from "../encryption/index";
 import { createDocumentRelayConnection } from "./connection";
 
 test("a document change starts independently while background synchronization stays held", async () => {

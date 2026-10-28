@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { editProjectedText, type StorageOwner } from "pstdio-sync";
+import type { StorageOwner } from "pstdio-sync";
+import { editProjectedText } from "pstdio-sync/text";
 import * as Y from "yjs";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { createNativeFileCopy } from "./file-copy";

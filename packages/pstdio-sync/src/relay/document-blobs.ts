@@ -1,7 +1,7 @@
 import { type Asset, assetSchema, syncIdSchema } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { openBlob, sealBlob } from "../encryption";
-import type { AssetStore } from "../types";
+import type { AssetStore } from "../shared";
 import { DocumentBlobMissing, type DocumentSyncInput } from "./document-sync-types";
 
 interface BlobReference {

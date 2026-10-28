@@ -1,13 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
-import {
-  createSyncSpace,
-  editResourceDocument,
-  NativeSourceRecoveryError,
-  openUpdate,
-  readDocumentRecord,
-  recordTextBindingUpdate,
-  sealUpdate,
-} from "pstdio-sync";
+import { NativeSourceRecoveryError } from "pstdio-sync";
+import { createSyncSpace, openUpdate, sealUpdate } from "pstdio-sync/encryption";
+import { editResourceDocument, readDocumentRecord, recordTextBindingUpdate } from "pstdio-sync/records";
 import {
   createRecordStreamSync,
   decodeRecordFrame,

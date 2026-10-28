@@ -3,10 +3,10 @@ import { NativeDocumentRoomError } from "pstdio-db";
 import {
   NativeSourcePendingError,
   NativeSourceRecoveryError,
-  readTextDocumentSeed,
   type StorageOwner,
   StorageRevisionChangedError,
 } from "pstdio-sync";
+import { readTextDocumentSeed } from "pstdio-sync/text";
 import * as Y from "yjs";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";

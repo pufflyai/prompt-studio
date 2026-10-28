@@ -1,11 +1,5 @@
-import {
-  type AssetStore,
-  createLegacyRecordStorage,
-  type StorageObserver,
-  type StorageOwner,
-  scopeRecordStorage,
-  storageRecordId,
-} from "pstdio-sync";
+import type { AssetStore, StorageObserver, StorageOwner } from "pstdio-sync";
+import { createLegacyRecordStorage, scopeRecordStorage, storageRecordId } from "pstdio-sync/records";
 import type { Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { createArtifactFileProjectionsDBService } from "./artifact-file-projections";

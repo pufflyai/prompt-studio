@@ -1,12 +1,7 @@
 import { expect, test } from "bun:test";
-import {
-  coreOwnerId,
-  createMemoryDocumentStore,
-  createSyncSpace,
-  rememberResourceNumber,
-  resourceNumbers,
-  resourceNumbersDocumentId,
-} from "pstdio-sync";
+import { createMemoryDocumentStore } from "pstdio-sync";
+import { createSyncSpace } from "pstdio-sync/encryption";
+import { coreOwnerId, rememberResourceNumber, resourceNumbers, resourceNumbersDocumentId } from "pstdio-sync/records";
 import { createDocumentSync } from "pstdio-sync/relay";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createResourceNumberSync } from "./resource-number-sync";

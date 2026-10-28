@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { storageRecordId } from "pstdio-sync";
+import { storageRecordId } from "pstdio-sync/records";
 import { blobFilesFixture } from "./shared-files/blob-files.fixture";
 
 test("native blob response bytes match the metadata snapshot used for its ETag", async () => {

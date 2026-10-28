@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import type { Asset } from "pstdio-sync-contracts";
 import * as Y from "yjs";
-import { createSyncSpace, openBlob } from "../encryption";
-import { createMemoryDocumentStore } from "../memory-document-store";
-import type { AssetStore } from "../types";
+import { createSyncSpace, openBlob } from "../encryption/index";
+import { createMemoryDocumentStore } from "../shared/memory-document-store";
+import type { AssetStore } from "../shared/types";
 import { downloadDocumentBlobs, prepareDocumentBlobs, uploadDocumentBlobs } from "./document-blobs";
 import { DocumentBlobMissing } from "./document-sync-types";
 

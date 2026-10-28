@@ -1,11 +1,6 @@
 import { and, eq, like } from "drizzle-orm";
-import {
-  adoptResourceDocument,
-  mergeResourceDocument,
-  NativeSourceRecoveryError,
-  resourceDocumentState,
-  type StorageOwner,
-} from "pstdio-sync";
+import { NativeSourceRecoveryError, type StorageOwner } from "pstdio-sync";
+import { adoptResourceDocument, mergeResourceDocument, resourceDocumentState } from "pstdio-sync/records";
 import type { RecordBytes, RecordFrame } from "pstdio-sync/relay";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_documents } from "../../db/schemas.pg";

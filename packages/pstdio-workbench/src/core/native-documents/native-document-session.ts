@@ -1,9 +1,9 @@
 import type { NativeDocumentJoined, NativeDocumentSnapshot, NativeDocumentsClient } from "@pstdio/sdk/client";
 import type { NativeParticipant } from "pstdio-api-contracts";
+import { createTextReplica } from "pstdio-sync/text";
 import type * as Y from "yjs";
 import { registerNativeDocumentCloseGuard } from "./native-document-close-guard";
 import { createNativeDocumentPresence } from "./native-document-presence";
-import { createNativeDocumentReplica } from "./native-document-replica";
 
 export interface NativeDocumentSessionSnapshot {
   document: Y.Doc | null;
@@ -25,7 +25,7 @@ const roomAddress = (projectId: string, room: Room) => ({
 });
 
 export const createNativeDocumentSession = (input: NativeDocumentSessionInput) => {
-  let replica: ReturnType<typeof createNativeDocumentReplica> | undefined;
+  let replica: ReturnType<typeof createTextReplica> | undefined;
   let stopLocal: (() => void) | undefined;
   let stopCloseGuard: (() => void) | undefined;
   let room: Room | undefined;
@@ -103,7 +103,7 @@ export const createNativeDocumentSession = (input: NativeDocumentSessionInput) =
   const install = (joined: NativeDocumentJoined) => {
     const previous = replica;
     stopLocal?.();
-    replica = createNativeDocumentReplica(joined);
+    replica = createTextReplica(joined);
     stopCloseGuard ??= registerNativeDocumentCloseGuard(() => replica?.pending() ?? false, drive);
     stopLocal = replica.subscribe(() => {
       publish();

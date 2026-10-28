@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { coreOwnerId, resourceNumbers, resourceNumbersDocumentId, resourceShorthand } from "pstdio-sync";
+import { coreOwnerId, resourceNumbers, resourceNumbersDocumentId, resourceShorthand } from "pstdio-sync/records";
 import { fingerprint } from "pstdio-sync-contracts";
 import type * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { bigint, boolean, foreignKey, index, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
-import type { NativeRecordSources } from "pstdio-sync";
+import type { NativeRecordSources } from "pstdio-sync/records";
 import type { StorageRecord, StorageRecordIndex } from "pstdio-sync-contracts";
 import { projects } from "./projects";
 import { storage_documents } from "./storage-documents";

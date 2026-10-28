@@ -1,6 +1,6 @@
 import type { ReadResult, StateInfo, StoredUpdate } from "pstdio-sync-contracts";
-import { decodeBytes } from "../encoding";
 import { sealBlob, sealState, sealUpdate } from "../encryption";
+import { decodeBytes } from "../shared";
 import { latestStateLimits } from "./document-sync";
 import { createRecordAssets } from "./record-assets";
 import { encodeRecordFrame, type RecordFrame, recordFrameCost } from "./record-frames";

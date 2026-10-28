@@ -1,7 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
 import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
+import { createMemoryDocumentStore } from "pstdio-sync";
+import { createDocumentStorage } from "pstdio-sync/records";
 import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
 import { createProjectsDBService } from "../projects/projects";
 import { createDocumentStorageDBService } from "./document-storage";

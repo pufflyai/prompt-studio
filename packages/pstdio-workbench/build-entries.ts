@@ -7,6 +7,8 @@ const INLINE_PACKAGES = new Set([
   "pstdio-extensions",
   "pstdio-api-contracts",
   "pstdio-sync-contracts",
+  "pstdio-sync",
+  "fast-diff",
   "@noble/hashes",
 ]);
 
