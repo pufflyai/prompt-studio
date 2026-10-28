@@ -1,4 +1,9 @@
-import { defineExtension, defineKeybinding, type PageContribution, type ViewContribution } from "@pstdio/sdk/extensions";
+import {
+  defineExtension,
+  defineKeybinding,
+  type PageContribution,
+  type ViewContribution,
+} from "@pstdio/sdk/extensions";
 import { marmaladeCommands } from "./src/apps/marmalade/marmalade-commands";
 import boombox from "./src/examples/boombox";
 import kiln from "./src/examples/kiln";
