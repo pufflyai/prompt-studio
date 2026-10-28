@@ -1,24 +1,21 @@
 import { Badge, Box, Button, HStack, IconButton, Input, Stack, Text, Textarea } from "@chakra-ui/react";
-import type { PageRef, ResourceRef } from "@pstdio/sdk/extensions";
 import { ScrollArea } from "@pstdio/ui";
 import { useEffect } from "react";
-import { initials, useExampleStore, usePageResource } from "../example-store";
+import { initials, useExampleStore } from "../example-store";
 import { ExampleIcon } from "../icon";
-import type { ExampleViewInput } from "../view-context";
-import { type PigeonThread, pigeonThreads } from "./pigeon-data";
+import { pigeonReader } from "../pigeon-refs";
+import { type ExampleViewInput, usePageSelection } from "../view-context";
+import { pigeonThreads } from "./pigeon-data";
 import { PigeonInboxRow } from "./pigeon-inbox-row";
 import { pigeonStore } from "./pigeon-state";
 
-const page: PageRef = { extensionId: "pstdio.extension-lab", kind: "page", id: "pigeon-resource" };
-const homePage: PageRef = { extensionId: "pstdio.extension-lab", kind: "page", id: "pigeon" };
-const resource = (thread: PigeonThread): ResourceRef => ({
-  type: "pigeon.thread",
-  id: thread.id,
-  label: thread.subject,
-});
 export const Inbox = (props: { input: ExampleViewInput }) => {
-  const selectedId = usePageResource(props.input.host)?.id;
+  const selectedId = usePageSelection(props.input.host);
   const state = useExampleStore(pigeonStore);
+  const select = async (id: string) => {
+    await props.input.host.page.updateParams({ selection: id });
+    await props.input.host.navigate({ kind: "panel", panel: pigeonReader });
+  };
   const messages =
     state.folder === "Sent"
       ? state.sent.map((message) => ({
@@ -68,7 +65,7 @@ export const Inbox = (props: { input: ExampleViewInput }) => {
               key={thread.id}
               thread={thread}
               selected={selectedId === thread.id}
-              onOpen={() => props.input.host.navigate({ kind: "page", page, resource: resource(thread) })}
+              onOpen={() => select(thread.id)}
             />
           ))}
           {threads.length === 0 ? (
@@ -86,6 +83,7 @@ export const Inbox = (props: { input: ExampleViewInput }) => {
 export const ReadingPane = (props: { input: ExampleViewInput }) => {
   const { input } = props;
   const state = useExampleStore(pigeonStore);
+  const selectedId = usePageSelection(input.host);
   const thread = [
     ...pigeonThreads,
     ...state.sent.map((message) => ({
@@ -98,7 +96,7 @@ export const ReadingPane = (props: { input: ExampleViewInput }) => {
       unread: false,
       starred: false,
     })),
-  ].find((item) => item.id === input.resource?.id);
+  ].find((item) => item.id === selectedId);
   useEffect(() => {
     if (thread?.unread && !state.readIds.includes(thread.id)) {
       pigeonStore.setState({ readIds: [...state.readIds, thread.id] });
@@ -107,7 +105,7 @@ export const ReadingPane = (props: { input: ExampleViewInput }) => {
   if (!thread) return null;
   const archive = () => {
     pigeonStore.setState({ archivedIds: [...state.archivedIds, thread.id] });
-    input.host.navigate({ kind: "page", page: homePage });
+    void input.host.page.updateParams({ selection: null });
   };
   return (
     <Stack h="full" overflowY="auto" gap="lg" p="lg">
@@ -129,15 +127,12 @@ export const ReadingPane = (props: { input: ExampleViewInput }) => {
           <IconButton
             aria-label="Previous thread"
             onClick={() =>
-              input.host.navigate({
-                kind: "page",
-                page,
-                resource: resource(
+              input.host.page.updateParams({
+                selection:
                   pigeonThreads[
                     (pigeonThreads.findIndex((item) => item.id === thread.id) + pigeonThreads.length - 1) %
                       pigeonThreads.length
-                  ],
-                ),
+                  ].id,
               })
             }
             size="sm"
@@ -148,12 +143,10 @@ export const ReadingPane = (props: { input: ExampleViewInput }) => {
           <IconButton
             aria-label="Next thread"
             onClick={() =>
-              input.host.navigate({
-                kind: "page",
-                page,
-                resource: resource(
-                  pigeonThreads[(pigeonThreads.findIndex((item) => item.id === thread.id) + 1) % pigeonThreads.length],
-                ),
+              input.host.page.updateParams({
+                selection:
+                  pigeonThreads[(pigeonThreads.findIndex((item) => item.id === thread.id) + 1) % pigeonThreads.length]
+                    .id,
               })
             }
             size="sm"

@@ -45,16 +45,21 @@ for (const name of ["scribble", "boombox", "zipline", "pigeon", "kiln"]) {
     expect(runtime.themes).toHaveLength(1);
     expect(metadata.resourceKinds).toHaveLength(1);
     const home = metadata.pages.find((page) => page.localId === name)!;
-    const detail = metadata.pages.find((page) => page.localId === `${name}-resource`)!;
     expect(home.main).toMatchObject({ view: expect.any(Object) });
-    expect(detail.resource).toMatchObject({ kinds: expect.any(Array) });
-    expect(detail.parent).toEqual({ extensionId: "pstdio.extension-lab", kind: "page", id: name });
+    if (name === "scribble" || name === "zipline") {
+      const detail = metadata.pages.find((page) => page.localId === `${name}-resource`)!;
+      expect(detail.resource).toMatchObject({ kinds: expect.any(Array) });
+      expect(detail.parent).toEqual({ extensionId: "pstdio.extension-lab", kind: "page", id: name });
+    } else {
+      expect(home.main).toMatchObject({ presentation: "page" });
+      expect(home.params).toMatchObject({ selection: { type: "string" } });
+    }
     expect(metadata.views.length).toBeGreaterThanOrEqual(2);
     expect(metadata.navigationItems[0].action).toMatchObject({
       kind: "page",
       page: {
         extensionId: "pstdio.extension-lab",
-        id: ["scribble", "boombox", "kiln"].includes(name) ? `${name}-resource` : name,
+        id: name === "scribble" ? `${name}-resource` : name,
       },
     });
   });

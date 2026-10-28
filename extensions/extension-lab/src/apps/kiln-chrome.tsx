@@ -1,7 +1,7 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import { usePageResource } from "../example-store";
 import { ExampleIcon } from "../icon";
 import type { ExampleHost } from "../view-context";
+import { usePageSelection } from "../view-context";
 import { BackToProject } from "./back-to-project";
 import { kilnObjects } from "./kiln-data";
 
@@ -21,7 +21,7 @@ export const KilnNav = () => (
 
 export const KilnStatus = (props: { host: ExampleHost }) => {
   const { host } = props;
-  const selectedId = usePageResource(host)?.id;
+  const selectedId = usePageSelection(host);
   const selected = kilnObjects.find((object) => object.id === selectedId) ?? kilnObjects[0];
   return (
     <HStack h="full" px="sm" gap="md">

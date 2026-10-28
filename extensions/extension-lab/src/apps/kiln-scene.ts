@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import type { ExampleHost } from "../view-context";
+import { type ExampleHost, pageSelection } from "../view-context";
 import { kilnTracks, sampleKilnTrack } from "./kiln-animation";
-import { kilnObjects, kilnPage, kilnResource } from "./kiln-data";
+import { kilnObjects } from "./kiln-data";
 import { kilnStore } from "./kiln-state";
 
 export const createKilnScene = (canvas: HTMLCanvasElement, host: ExampleHost) => {
@@ -120,7 +120,7 @@ export const createKilnScene = (canvas: HTMLCanvasElement, host: ExampleHost) =>
       const value = sampleKilnTrack(track.keys, state.frame);
       object[track.property].z += track.property === "rotation" ? THREE.MathUtils.degToRad(value) : value;
     }
-    const selectedId = host.getResource()?.id ?? kilnObjects[0].id;
+    const selectedId = pageSelection(host) ?? kilnObjects[0].id;
     const selected = objects.get(selectedId);
     for (const [id, outline] of outlines) outline.visible = id === selectedId;
     selection.visible = Boolean(selected?.visible) && !outlines.has(selectedId);
@@ -139,7 +139,7 @@ export const createKilnScene = (canvas: HTMLCanvasElement, host: ExampleHost) =>
   observer.observe(canvas);
   controls.addEventListener("change", render);
   const unsubscribe = kilnStore.subscribe(sync);
-  const resourceListener = host.subscribeResource(sync);
+  const resourceListener = host.page.subscribe(sync);
 
   const pointerStart = new THREE.Vector2();
   const pointerDown = (event: PointerEvent) => pointerStart.set(event.clientX, event.clientY);
@@ -157,7 +157,7 @@ export const createKilnScene = (canvas: HTMLCanvasElement, host: ExampleHost) =>
     let target: THREE.Object3D | undefined = hit?.object;
     while (target && !target.userData.objectId) target = target.parent ?? undefined;
     const object = kilnObjects.find((item) => item.id === target?.userData.objectId);
-    if (object) host.navigate({ kind: "page", page: kilnPage, resource: kilnResource(object) });
+    if (object) void host.page.updateParams({ selection: object.id });
   };
   canvas.addEventListener("pointerdown", pointerDown);
   canvas.addEventListener("pointerup", select);
