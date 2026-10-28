@@ -52,3 +52,9 @@ The documentation frame must grow with prose, examples, source listings, and exp
 Keep source examples in colocated `*.canvas.tsx` files and suite providers in `.canvas/preview.tsx`. Preserve stable scenario IDs, exports, arguments, decorators, loaders, and interaction functions when moving sources. Do not add a second developer catalog. Test-only preview configuration lives beside the suite providers; browser checks remain in `packages/canvas-tests`.
 
 Rebuild with `bun run --cwd scripts canvas:build`, regenerate source destinations with `canvas:inventory`, and run `canvas:coverage`. Run `canvas:verify` in the isolated Docker tools environment. Source and emitted-file hashes must match before claiming current coverage. Report gaps in live behavior or appearance honestly.
+
+## Source handoff between workspaces
+
+A canvas URL does not transfer its source changes. Before handing a ticket to another workspace, make the reviewed design source retrievable there. For Git projects, commit only the intended design sources, push that revision to a reachable branch, and record the branch and commit SHA with the canvas links and paths in the ticket. Reuse an existing implementation owner when one exists; do not start a competing writer or commit unrelated edits.
+
+The implementation must fetch and include the recorded design revision, or verify that its contents are already present, before changing production UI. For other workspace providers, use the project's supported source-transfer workflow and identify the retrievable snapshot in the ticket. Verify the handoff from the implementation workspace. Working-tree-only edits in the refinement checkout do not complete a handoff; report a failed transfer before finishing refinement.

@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parseStorySources } from "./parse-story-sources";
@@ -28,7 +29,7 @@ export interface CatalogStory {
   component?: string;
   componentImport?: string;
 }
-export const sourceFiles = async () => {
+export const sourceFiles = async (root = repoRoot) => {
   // Git includes new source files without traversing every installed dependency and build output.
   const files = execFileSync(
     "git",
@@ -44,13 +45,14 @@ export const sourceFiles = async () => {
       "clients",
       ".pstdio/extensions",
     ],
-    { cwd: repoRoot, encoding: "utf8" },
+    { cwd: root, encoding: "utf8" },
   ).split("\0");
   return [...new Set(files)]
     .filter(
       (file) =>
         /\.(canvas\.tsx?|mdx)$/.test(file) &&
-        !/(^|\/)(node_modules|dist|\.publish|__test-tmp__|canvas-test-static)\//.test(file),
+        !/(^|\/)(node_modules|dist|\.publish|__test-tmp__|canvas-test-static)\//.test(file) &&
+        existsSync(resolve(root, file)),
     )
     .sort();
 };

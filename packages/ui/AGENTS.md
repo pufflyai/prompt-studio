@@ -1,6 +1,6 @@
 # @pstdio/ui Agent Instructions
 
-Use the live Canvas designs as the source of truth for appearance, component states, and example prop usage. Update the relevant canvas before production UI work. Read [Canvas coverage](../../documentation/guides/development/0003-canvas-coverage.md).
+Use the live Canvas designs as the source of truth for appearance, component states, and example prop usage. Follow the project's Canvas policy: update the relevant design first when enabled and available; otherwise follow the existing design workflow and record the skipped step. Read [Canvas coverage](../../documentation/guides/development/0003-canvas-coverage.md).
 
 - Start from [Foundations](src/docs/agents/foundations.mdx) for tokens and density rules.
 - Use [Component Map](src/docs/agents/component-map.mdx) to choose components and [Patterns](src/docs/agents/patterns.mdx) for composed flows.

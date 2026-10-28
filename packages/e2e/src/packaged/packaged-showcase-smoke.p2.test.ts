@@ -97,12 +97,14 @@ test(
       expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "views", "workflow-settings.ts"))).toBe(
         true,
       );
-      const implementationSkill = ["extensions", "pstdio-planner", "skills", "implement-ticket", "SKILL.md"];
-      const packagedSkill = Bun.file(join(tempRoot, ...implementationSkill));
-      const sourceSkill = Bun.file(join(import.meta.dirname, "../../../..", ...implementationSkill));
-      expect(Bun.CryptoHasher.hash("sha256", await packagedSkill.arrayBuffer(), "hex")).toBe(
-        Bun.CryptoHasher.hash("sha256", await sourceSkill.arrayBuffer(), "hex"),
-      );
+      for (const name of ["create-ticket", "refine-ticket", "implement-ticket"]) {
+        const path = ["extensions", "pstdio-planner", "skills", name, "SKILL.md"];
+        const packagedSkill = Bun.file(join(tempRoot, ...path));
+        const sourceSkill = Bun.file(join(import.meta.dirname, "../../../..", ...path));
+        expect(Bun.CryptoHasher.hash("sha256", await packagedSkill.arrayBuffer(), "hex")).toBe(
+          Bun.CryptoHasher.hash("sha256", await sourceSkill.arrayBuffer(), "hex"),
+        );
+      }
       await expectPackagedRefinement({
         baseUrl: started.baseUrl,
         projectId: project.id,

@@ -46,7 +46,7 @@ Canvas saves after gestures or a bounded debounce. It renders source defaults wh
 
 ## Ticket designs
 
-Canvas is the source of truth for UI appearance, component states, and example prop usage. Tickets that add or change UI update the relevant live canvas before production work. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Planner's **Update canvas designs for UI changes** setting controls this guidance.
+Canvas is the source of truth for UI appearance, component states, and example prop usage. When the project's Canvas policy is enabled and Canvas is available, tickets that change UI update the relevant live design before production work. Record a skipped step when disabled or unavailable. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Planner's **Update canvas designs for UI changes** setting controls this guidance.
 
 ## Validation
 
