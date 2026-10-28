@@ -73,7 +73,7 @@ export const createObservedFileMount = (root: string, mount: ArtifactMount): Art
     readBytes,
     readText: (path) =>
       isObservingStorage()
-        ? readBytes(path).then((bytes) => new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes))
+        ? readBytes(path).then((bytes) => new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes))
         : mount.readText(path),
     writeText: (path, value) =>
       write(
