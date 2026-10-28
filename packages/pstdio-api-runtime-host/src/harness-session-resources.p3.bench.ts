@@ -1,3 +1,4 @@
+import { recordMeasurement, recordPeakMemory } from "pstdio-benchmarks/writer";
 import { createHarnessSessionResources, SESSION_RESOURCE_RETENTION_MS } from "./harness-session-resources";
 
 const count = 10_000;
@@ -38,6 +39,10 @@ const expired = performance.now();
 const used = process.cpuUsage(cpu);
 if (released !== count) throw new Error(`Released ${released} of ${count} idle sessions`);
 await resources.retire(owner);
+recordMeasurement({ metric: "acquire", label: "Acquire 10,000 sessions", unit: "ms", value: acquired - started });
+recordMeasurement({ metric: "close", label: "Close 10,000 sessions", unit: "ms", value: closed - acquired });
+recordMeasurement({ metric: "expire", label: "Expire idle sessions", unit: "ms", value: expired - closed });
+recordPeakMemory("session-resources-memory", "Session resources peak memory");
 console.info(
   JSON.stringify({
     sessions: count,

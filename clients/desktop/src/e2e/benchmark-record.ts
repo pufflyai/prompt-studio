@@ -4,12 +4,19 @@ import { readFileSync } from "node:fs";
 import { availableParallelism, cpus } from "node:os";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { resolvePackagedLayout } from "../packaging/package-layout";
 import { type BenchmarkMetric, findBudgetFailures } from "../testing/benchmark-budget";
 import { attachBenchmarkPerformance } from "./benchmark-performance-evidence";
 import type { PackagedApp } from "./packaged-app-helpers";
 
 const desktopRoot = resolve(import.meta.dirname, "../..");
+
+const words = (name: string) => name.replaceAll("-", " ");
+const metricLabel = (benchmark: string, metric: string) => {
+  const title = words(benchmark).replace(/^./, (first) => first.toUpperCase());
+  return benchmark === metric ? title : `${title}, ${words(metric)}`;
+};
 const packageLayout = resolvePackagedLayout(desktopRoot, process.platform, process.arch);
 let sidecarSha256: string | undefined;
 
@@ -55,6 +62,15 @@ export const recordBenchmark = async (benchmark: Benchmark) => {
       2,
     ),
   });
+  for (const metric of benchmark.metrics) {
+    recordMeasurement({
+      metric: `${benchmark.name}/${metric.name}`,
+      label: metricLabel(benchmark.name, metric.name),
+      unit: metric.unit,
+      value: metric.value,
+      budget: metric.budget,
+    });
+  }
   if (performance) await attachBenchmarkPerformance(performance.app, benchmark.name, performance.endedAt);
   expect(findBudgetFailures(benchmark.metrics), benchmark.name).toEqual([]);
 };

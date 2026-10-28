@@ -3,11 +3,12 @@ import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-fo
 import { showSidenavEntry } from "../ui/helpers/sidenav-navigation";
 import {
   afterTwoFrames,
+  budgetMisses,
   collectRepeatSamples,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
-  reportSamples,
+  reportPageMemory,
   resetInteraction,
   waitForTicketsView,
 } from "./perf-helpers";
@@ -69,16 +70,19 @@ test("navigates global collections within the interaction budget", async ({ page
     samples.push({ collection, duration: result.duration });
   }
 
+  await reportPageMemory(page, "sidenav-header");
+
   const results = collectRepeatSamples(testInfo, "sidenav-header", samples);
   if (!results) return;
   expect(results).toHaveLength(testInfo.project.repeatEach * collections.length);
-  for (const collection of collections) {
-    const summary = reportSamples(
+  const misses = collections.flatMap((collection) =>
+    budgetMisses(
       "sidenav-header",
       collection,
       results.filter((result) => result.collection === collection).map((result) => result.duration),
-    );
-    // Set on 2026-10-26 from hosted ubuntu-24.04 runs (slowest 336 ms) plus about 20%.
-    expect(summary.max).toBeLessThanOrEqual(425);
-  }
+      // Set on 2026-10-26 from hosted ubuntu-24.04 runs (slowest 336 ms) plus about 20%.
+      425,
+    ),
+  );
+  expect(misses).toEqual([]);
 });

@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import {
+  budgetMisses,
   collectRepeatSamples,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
-  reportSamples,
+  reportPageMemory,
   resetInteraction,
 } from "./perf-helpers";
 
@@ -49,9 +50,11 @@ test("opens one Panel tab within the interaction budget", async ({ page, request
   expect(finalTabs - initialTabs).toBe(1);
   expect(result.longTasks).toEqual([]);
 
+  await reportPageMemory(page, "panel-tabs");
+
   const results = collectRepeatSamples(testInfo, "panel-tabs", [result.duration]);
   if (!results) return;
   expect(results).toHaveLength(testInfo.project.repeatEach);
   // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 664 ms) plus about 20%.
-  expect(reportSamples("panel-tabs", "open-panel", results).max).toBeLessThanOrEqual(800);
+  expect(budgetMisses("panel-tabs", "open-panel", results, 800)).toEqual([]);
 });
