@@ -1,9 +1,9 @@
 import { resolve, sep } from "node:path";
-import manifest from "../../../../extensions/canvas/src/catalog/generated/frame-manifest.json";
-import { readFrameAssets } from "../../../../extensions/canvas/src/frames/module-graph";
+import manifest from "../src/catalog/generated/frame-manifest.json";
+import { readFrameAssets } from "../src/frames/module-graph";
 
-const root = resolve(import.meta.dir, "../../../../__test-tmp__/native-canvas-verification/dist");
-const extensionRoot = resolve(import.meta.dir, "../../../../extensions/canvas");
+const root = resolve(import.meta.dir, "../../../__test-tmp__/native-canvas-verification/dist");
+const extensionRoot = resolve(import.meta.dir, "..");
 const headers = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type" };
 const server = Bun.serve({
   hostname: "127.0.0.1",
