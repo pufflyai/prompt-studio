@@ -15,7 +15,7 @@
   },
   "scripts": {
     "test": "bun test src scripts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && bun scripts/typecheck-examples.ts",
     "catalog:build": "bun scripts/build-native-previews.ts",
     "catalog:inventory": "bun scripts/migration-ledger.ts",
     "catalog:coverage": "bun scripts/verify-migration-coverage.ts",

@@ -26,6 +26,12 @@ export const checkFrameSelection = async (surface: Frame, page: Page) => {
   await document.getByRole("textbox", { name: "Project name" }).fill("Retained selection draft");
   const frame = await form.locator("iframe").elementHandle();
   const originalDocument = await frame!.contentFrame();
+  await form.getByRole("button", { name: "Theme for" }).click();
+  await surface.getByRole("menuitem", { name: "Dark", exact: true }).click();
+  await expect(document.locator("html")).toHaveClass(/dark/);
+  await expect(controls.frameLocator("iframe").locator("html")).not.toHaveClass(/dark/);
+  await expect(document.getByRole("textbox", { name: "Project name" })).toHaveValue("Retained selection draft");
+
   const handle = form.getByRole("button", { name: "Move Project form · default", exact: true });
   const dimensions = await handle.evaluate((element) => ({ width: element.clientWidth, height: element.clientHeight }));
   expect(dimensions.width).toBeGreaterThanOrEqual(32);

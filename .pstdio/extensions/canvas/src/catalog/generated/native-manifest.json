@@ -1,6 +1,6 @@
 {
   "hashes": {
-    ".pstdio/extensions/canvas/package.json": "e010b55ca7eba5073da1447a33c745cc9dc81c250fa42acd2a9eb69b4e6e42fa",
+    ".pstdio/extensions/canvas/package.json": "e28ac7a6b2441a6d3ddb95a4718f51c8dc326b00210b1da3683cb4555c6bd03f",
     ".pstdio/extensions/canvas/scripts/build-native-previews.ts": "0c314920f041c74e642c8ad39dbeab17ba58723030923b0ccaef5b1f4bf1003d",
     ".pstdio/extensions/canvas/scripts/native-build-output.ts": "e2c716f3be1e6b25e96a00c9eb1b80c84b527331849103560e2dfaa0e53a3e58",
     ".pstdio/extensions/canvas/scripts/frame-archive.ts": "30ec08048fbc835689941c70f2a8692e5f2b5dea001ce9745f4ca0752ebde451",
@@ -399,6 +399,11 @@
     "packages/pstdio-workbench/src/react/command-palette/command-resource-options.canvas.tsx": "1fedcda53b126973604ab2ab68c16ffed3c290394288de68697dab7459356553",
     "packages/pstdio-workbench/src/core/registries/commands/command-resource-params.ts": "a37f2b45e1ad5e84f63f25ed31002ab4566a0075c41086546ef8667c91767064",
     "packages/pstdio-dashboard/src/shared/app/commands.ts": "6d8b40eb9ee4162926dc5598be32eb1ebb2ecc4be161bd8e6ea464765c2620a3",
+    "extensions/pstdio-base-themes/themes/dracula-color-theme.json": "f4d5ddad23aa10e061202abda73de369d480b7088722f2ff99a30f4cb8599d00",
+    "extensions/pstdio-base-themes/themes/monokai-color-theme.json": "5feadc9b802644fb2c5fc8e74892ef8c7a6bc8b85c1036bad4a511570c37ccca",
+    "extensions/pstdio-base-themes/themes/solarized-dark-color-theme.json": "cce88c0387c54bd913e20bf18ee5f6bcb045d03846f5790275037b88656e598b",
+    "extensions/pstdio-base-themes/themes/solarized-light-color-theme.json": "daa0a3271d5ee0b319e66b7ca66eb02bffb0f1ec0e9aa57a48792778616c1dfd",
+    "extensions/pstdio-base-themes/stories/theme-preferences.ts": "70741adcf4852dafdd0fe9372d3cedeea6225527ec10097ce372b434a2e1fc02",
     "extensions/pstdio-base-themes/stories/compare.canvas.tsx": "c923f537b0d57291aeb26752724d27983faf000608fba89a394af921575578a0",
     "packages/ui/src/components/primitives/content-placeholder.tsx": "40493c8d13be85c08a90398c5a075dc97eed964f71fbb89dff07590a476e2feb",
     "packages/ui/src/components/internal/token-editor-controls.tsx": "99a011ef31dfdcc2cf73ae7652d559e3bc89e3877c4d7aa5089dc993d3818bd1",
@@ -1353,12 +1358,12 @@
     "extensions/pstdio-planner/src/timeline/planner.ts": "fc59a8bc9ddf6b851f6abec69e46883f0a36aed1bf6e7f35d37d450ed33462c4",
     "packages/pstdio-workbench/.canvas/preview.css": "cca9922e9458bca9e56436e0582dc56b29716e2ea400b303852c3e78fb5eabf5",
     "packages/pstdio-workbench/.canvas/preview.tsx": "e4037e5b53a962970820743e9da1eaaf37fc012d8d79d36dbf28c1dd4e2ed794",
-    "extensions/pstdio-base-themes/.canvas/preview.tsx": "85bce9c544528cac86c93af8b0eb52a47f09c2f88c82cb73950e057d79d290cf",
     "packages/ui/.canvas/preview.tsx": "d4eb16f29674e50f9e94ddd4d5f46674043ee016a1bae35f553bd6d9b7303483",
     "clients/landing-page/src/theme/theme.ts": "46a3aba3527ec9c596f992d60553ef168f847d4a12d3fa65c6cd03c9765c086c",
     "clients/landing-page/src/components/root-provider.tsx": "e775e2df15af3d6278a21e23fe7609bf23c2d6c9a56809bf8ffe8ceadb7e0f6c",
     "clients/landing-page/.canvas/preview.tsx": "8889b7449a4019e5387a5eed7831aff02c85977e66d3115aea4ce1a7d7bded92",
     "clients/desktop/.canvas/preview.tsx": "60c2ee6b03af09dd5789959508676b90efde55d11db22010df49bbae52f8644b",
+    "extensions/pstdio-base-themes/.canvas/preview.tsx": "77cd89df6adc5369d82e4e8c6bf9eb0b2ed648b954ea5ec210358785235b1819",
     "packages/pstdio-dashboard/.canvas/preview.tsx": "819a3633a083b2de133b50e066639999c599a19dd24785e815e4cdbb3e72492d",
     ".pstdio/extensions/canvas/src/canvases/component-controls.tsx": "a0d61c1ecea57ea9eee48d02a9854f40e1a31e3b88fa81168122232ba14ace3a",
     ".pstdio/extensions/canvas/src/canvases/component-surfaces.tsx": "8ebcd97c7ff3d3f409fcaccb6d8f9828beabb563cc2676c05b802ae294effb78",
@@ -1758,11 +1763,6 @@
     "packages/ui/src/theme/theme.ts": "bf5fce2d4bc6c01be52362ad772474d4560f456522a014ae03d054f6a8af37e9",
     "packages/ui/dist/theme-BnXJzMHb.js": "babf25862f38ab169ae0b0362061c4224e8b1094429c1b431837c8f211df36e6",
     "packages/ui/dist/theme-preference-Bdi0s7vE.js": "258d256448a911afa69e48063649c0d3ddc281c0f4042666d1db8be71cdd5140",
-    "extensions/pstdio-base-themes/themes/dracula-color-theme.json": "f4d5ddad23aa10e061202abda73de369d480b7088722f2ff99a30f4cb8599d00",
-    "extensions/pstdio-base-themes/themes/monokai-color-theme.json": "5feadc9b802644fb2c5fc8e74892ef8c7a6bc8b85c1036bad4a511570c37ccca",
-    "extensions/pstdio-base-themes/themes/solarized-dark-color-theme.json": "cce88c0387c54bd913e20bf18ee5f6bcb045d03846f5790275037b88656e598b",
-    "extensions/pstdio-base-themes/themes/solarized-light-color-theme.json": "daa0a3271d5ee0b319e66b7ca66eb02bffb0f1ec0e9aa57a48792778616c1dfd",
-    "extensions/pstdio-base-themes/stories/theme-preferences.ts": "70741adcf4852dafdd0fe9372d3cedeea6225527ec10097ce372b434a2e1fc02",
     ".pstdio/extensions/social-radar/src/thread/linked-text.tsx": "d3c75a5dfce3d675e644e3157c5d85db79eb295c6c6d2bc86f20007942c56106",
     ".pstdio/extensions/social-radar/src/thread/reply-idea.tsx": "a6c2261c3d2663f5cd7549a98dd17433a2cb51372eeffdc22e0b8b812615c5a2",
     ".pstdio/extensions/social-radar/src/thread/thread-images.tsx": "50294115ebc0ab3175d7a9d22e76baee6b7e66944b83437e417afbfffb17d510",
@@ -2340,9 +2340,9 @@
     ".pstdio/extensions/canvas/scripts/native-preview-runtime.tsx": "3c46fed360b95b7c7292be3a0669aca9f7969a204106476fbf443783746408ff"
   },
   "outputs": {
-    "frame-bundle.ts": "abacd3a3e24f4d581355b7f0134f8545d21abca17195d90fd55e48f6532cff1d"
+    "frame-bundle.ts": "b19df47a3aac373c55349e8e0dd5041a820bac712c741c39573520311a8ce951"
   },
   "stories": 1600,
   "documents": 36,
-  "bytes": 66444177
+  "bytes": 66443127
 }

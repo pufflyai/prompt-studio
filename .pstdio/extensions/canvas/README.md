@@ -76,6 +76,8 @@ bun run --cwd scripts canvas:coverage
 
 `canvas:build` composes colocated `*.canvas.tsx` examples and MDX documents, then records source and output hashes. Generated modules are build output; edit the source and rebuild. The builder retains each scenario's existing ID, variant parameters, providers and asynchronous setup. `canvas:inventory` regenerates the source destination ledger. The original scenario inventory checks that every covered export still has a canvas destination.
 
+`typecheck` checks the extension and examples across all owning workspaces. Published extension configurations exclude repository-only examples; the catalog checks them separately with the private authoring types.
+
 `canvas:coverage` rejects stale builds or missing source destinations. It checks current live sources; it does not certify historical visual fidelity.
 
 Run `canvas:verify` inside the isolated Docker tooling container with Chromium installed. It checks representative critical interactions, documentation expansion, retained drafts, measured fit, and the unchanged populated 24-preview workload. It does not behaviorally test every variant. Failed cases retain Playwright traces and screenshots under `packages/canvas-tests/test-results/`. Browser interaction checks live in `packages/canvas-tests`; its static preview build is test-only. The live Canvas is the developer catalog. Physical touch, trackpad behavior, full visual fidelity, packaged verification, full tests, and CI remain separate checks.

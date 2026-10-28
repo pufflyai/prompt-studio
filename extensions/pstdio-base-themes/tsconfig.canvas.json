@@ -1,5 +1,16 @@
 {
   "extends": "./tsconfig.json",
-  "include": [".canvas/**/*.ts", ".canvas/**/*.tsx", "stories/**/*.ts", "stories/**/*.tsx", "themes/**/*.json"],
-  "compilerOptions": { "resolveJsonModule": true, "types": ["bun", "vite/client"] }
+  "compilerOptions": {
+    "rootDir": ".",
+    "resolveJsonModule": true,
+    "types": ["bun"]
+  },
+  "include": [
+    "src/**/*.canvas.tsx",
+    "stories/**/*.canvas.tsx",
+    ".canvas/preview.tsx",
+    "src/**/*.d.ts",
+    ".astro/types.d.ts"
+  ],
+  "exclude": []
 }
