@@ -28,8 +28,15 @@ for (const pid of JSON.parse(readFileSync(${JSON.stringify(pidFile)}, "utf8"))) 
   // A process group is signalled together, but each descendant exits independently.
   const deadline = Date.now() + 1000;
   while (true) {
-    try { process.kill(pid, 0); } catch (error) {
-      if (error.code !== "ESRCH") throw error;
+    try {
+      process.kill(pid, 0);
+      if (process.platform === "linux") {
+        const stat = readFileSync("/proc/" + pid + "/stat", "utf8");
+        const state = stat.slice(stat.lastIndexOf(")") + 2).split(" ", 1)[0];
+        if (state === "Z" || state === "X") break;
+      }
+    } catch (error) {
+      if (error.code !== "ESRCH" && error.code !== "ENOENT") throw error;
       break;
     }
     if (Date.now() >= deadline) { process.exitCode = 1; console.error("Leaked process", pid); break; }
@@ -40,7 +47,11 @@ for (const pid of JSON.parse(readFileSync(${JSON.stringify(pidFile)}, "utf8"))) 
   );
   try {
     // Run the cleanup in Node, the runtime that owns the packaged Playwright children.
-    const runner = Bun.spawn([node, script], { stdout: "pipe", stderr: "pipe" });
+    const runner = Bun.spawn([node, script], {
+      env: { ...process.env, FORCE_COLOR: undefined },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
     const [code, stderr] = await Promise.all([runner.exited, new Response(runner.stderr).text()]);
     expect(stderr).toBe("");
     expect(code).toBe(0);
