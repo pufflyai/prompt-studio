@@ -1,6 +1,6 @@
 {
   "entry": "ui.js",
-  "catalog": "canvas-catalog-DIt8o7qb.js",
+  "catalog": "canvas-catalog-BbSkos3k.js",
   "sources": {
     ".pstdio/extensions/motion-lab/src/study-status.canvas.tsx": {
       "script": "study-status.canvas-D_8jYcub.js",
@@ -95,7 +95,7 @@
       "project": "preview-D3srzc49.js"
     },
     "extensions/canvas/src/view/canvas-stage.canvas.tsx": {
-      "script": "canvas-stage.canvas-MXgD7p3r.js",
+      "script": "canvas-stage.canvas-CkQbzOxR.js",
       "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-artifacts/src/components/artifact-reader.canvas.tsx": {
@@ -1538,16 +1538,28 @@
     "packages/ui/src/docs/agents/story-authoring.mdx": {
       "script": "story-authoring-Cj7Pu6dQ.js"
     },
-    "$native": {
-      "script": "previews-Crz1Eim-.js"
+    "$native:documentation.tsx": {
+      "script": "documentation-Dx3tPB5h.js"
+    },
+    "$native:interactive-previews.tsx": {
+      "script": "interactive-previews-BXEqcZEX.js"
+    },
+    "$native:foundations.tsx": {
+      "script": "foundations-o830AnIl.js"
+    },
+    "$native:component-controls.tsx": {
+      "script": "component-controls-CNxPNBfS.js"
+    },
+    "$native:component-surfaces.tsx": {
+      "script": "component-surfaces-g5TM0yoc.js"
     }
   },
   "modules": {
     "ui.js": {
-      "file": "src/catalog/generated/frame-modules/1db4b1ffe1f0cc504fe1cfc2ea28d5679b12e591b36913ad34b449688ef8b15a.txt",
+      "file": "src/catalog/generated/frame-modules/233df833b50af86a96b1efa11eb7942d1baf61c4b89c5a127fb7405599f43a66.txt",
       "imports": [
         "rolldown-runtime-QGRDbDUS.js",
-        "canvas-catalog-DIt8o7qb.js",
+        "canvas-catalog-BbSkos3k.js",
         "react-Bw8B6lLq.js",
         "src-CLPg5V6K.js",
         "jsx-runtime-B6mqV-zo.js",
@@ -1559,10 +1571,8 @@
         "client-fQihL_ZN.js",
         "protocol-5M4vgAvZ.js"
       ],
-      "dynamicImports": [
-        "previews-Crz1Eim-.js"
-      ],
-      "bytes": 11606,
+      "dynamicImports": [],
+      "bytes": 11218,
       "css": [
         "entry.css"
       ]
@@ -3387,8 +3397,8 @@
       "dynamicImports": [],
       "bytes": 13515
     },
-    "canvas-catalog-DIt8o7qb.js": {
-      "file": "src/catalog/generated/frame-modules/6023abf2ea6ea127550a637455b741c8d2e298c57b97aed7836700c23c1b94e5.txt",
+    "canvas-catalog-BbSkos3k.js": {
+      "file": "src/catalog/generated/frame-modules/4b218f505d18bc498bbe239f3fd3eac8731a8c54b0bce24c68977acdc631f4a8.txt",
       "imports": [],
       "dynamicImports": [
         "preview-C0-scMWs.js",
@@ -3420,7 +3430,7 @@
         "landing-tool-demo.canvas-BFLXGARK.js",
         "landing.canvas-BxatZMkM.js",
         "frame-loading.canvas-CML9Kq7M.js",
-        "canvas-stage.canvas-MXgD7p3r.js",
+        "canvas-stage.canvas-CkQbzOxR.js",
         "artifact-reader.canvas-DHWQT1gC.js",
         "artifacts.canvas-B8o3E1he.js",
         "html-preview.canvas-DPDD4hoW.js",
@@ -3789,9 +3799,14 @@
         "foundations-CU1q7xkp.js",
         "overview-B5lf2NbW.js",
         "patterns-CK8S1NnH.js",
-        "story-authoring-Cj7Pu6dQ.js"
+        "story-authoring-Cj7Pu6dQ.js",
+        "documentation-Dx3tPB5h.js",
+        "interactive-previews-BXEqcZEX.js",
+        "foundations-o830AnIl.js",
+        "component-controls-CNxPNBfS.js",
+        "component-surfaces-g5TM0yoc.js"
       ],
-      "bytes": 58118
+      "bytes": 59785
     },
     "canvas-gestures.canvas-DUFQZv4S.js": {
       "file": "src/catalog/generated/frame-modules/6180b11a17f1ccd650676b57f4199cd7e0d331012130841e87b996433222b76c.txt",
@@ -3806,8 +3821,8 @@
       "dynamicImports": [],
       "bytes": 1871
     },
-    "canvas-stage.canvas-MXgD7p3r.js": {
-      "file": "src/catalog/generated/frame-modules/c04c4bb7caa6f4266ca4c44e162305381f7738c3922fa5aed98fd7ee6fb6026b.txt",
+    "canvas-stage.canvas-CkQbzOxR.js": {
+      "file": "src/catalog/generated/frame-modules/df3361712d227c9e6ea393b5c815a4f9a2eb2cf1f8b03411b47c5e5694dc9f86.txt",
       "imports": [
         "rolldown-runtime-QGRDbDUS.js",
         "react-Bw8B6lLq.js",
@@ -3836,7 +3851,7 @@
       "dynamicImports": [
         "source-information-DtZjA1BE.js"
       ],
-      "bytes": 915009
+      "bytes": 916513
     },
     "canvas.canvas-Bx5CCBom.js": {
       "file": "src/catalog/generated/frame-modules/1e09f42b75e35b3d41fb24c3554e9dab5bacdd3d32ef44bb43725b9b13ca2b9c.txt",
@@ -5786,6 +5801,28 @@
       "dynamicImports": [],
       "bytes": 475
     },
+    "component-controls-CNxPNBfS.js": {
+      "file": "src/catalog/generated/frame-modules/c894542c64b4d1757cd44bafa63db7c9b3f3c9b4c62536cec1f9f789103ea501.txt",
+      "imports": [
+        "rolldown-runtime-QGRDbDUS.js",
+        "react-Bw8B6lLq.js",
+        "jsx-runtime-B6mqV-zo.js",
+        "number-input-D3mniipd.js",
+        "text-8uWvIPLb.js",
+        "field-C0BxfK2t.js",
+        "input-B0r4DZXN.js",
+        "textarea-B5OcdFjR.js",
+        "stack-Dj0YoQNr.js",
+        "flex-B9Wo4RBB.js",
+        "prism-BLkcH5BQ-xxIjanrv.js",
+        "host-storage-CtscVB4w-DQ-RZ729.js",
+        "radio-BPnviQ4h-DKt6loXj.js",
+        "dist-BFLPU_Hv.js",
+        "themed-primitives-mzB9hZz9.js"
+      ],
+      "dynamicImports": [],
+      "bytes": 5768
+    },
     "component-gallery.canvas-BD0hwLn7.js": {
       "file": "src/catalog/generated/frame-modules/ba8d3377ad340d86fd2fd6dfc3ac914d68d927e585df429c1734809c964d1aac.txt",
       "imports": [
@@ -5895,6 +5932,31 @@
       ],
       "dynamicImports": [],
       "bytes": 9625
+    },
+    "component-surfaces-g5TM0yoc.js": {
+      "file": "src/catalog/generated/frame-modules/65915f4e39fade9f75e0d10d067abbf3e639398aa70985d72c84805b41fb2f4a.txt",
+      "imports": [
+        "rolldown-runtime-QGRDbDUS.js",
+        "react-Bw8B6lLq.js",
+        "jsx-runtime-B6mqV-zo.js",
+        "popover-DKrBhPH4.js",
+        "text-8uWvIPLb.js",
+        "dialog-Bstv3gBC.js",
+        "portal-BdZBwN5b.js",
+        "tabs-BiuPXJ3g.js",
+        "stack-Dj0YoQNr.js",
+        "flex-B9Wo4RBB.js",
+        "kbd-97kl370T.js",
+        "list-row-CspatwmP-Dn6N6_Op.js",
+        "tooltip-Drs_bdZy-BQ7fdLYc.js",
+        "prism-BLkcH5BQ-xxIjanrv.js",
+        "workspace-badge-B0bqYC-f-BY6HzutG.js",
+        "empty-state-J96iLli9-Gt6UdBjV.js",
+        "dist-BFLPU_Hv.js",
+        "themed-primitives-mzB9hZz9.js"
+      ],
+      "dynamicImports": [],
+      "bytes": 8142
     },
     "computer-B5llOBHp.js": {
       "file": "src/catalog/generated/frame-modules/e147cf9f7a5b543264cb9c7cbf9787bad7143ac24525e67a9ca313590a403905.txt",
@@ -7671,6 +7733,21 @@
       "dynamicImports": [],
       "bytes": 2629
     },
+    "documentation-Dx3tPB5h.js": {
+      "file": "src/catalog/generated/frame-modules/091eb28694d98551a01af5872719f7f71373f8c823692c056f9a4515838653da.txt",
+      "imports": [
+        "rolldown-runtime-QGRDbDUS.js",
+        "react-Bw8B6lLq.js",
+        "jsx-runtime-B6mqV-zo.js",
+        "box-D2uNzuEW.js",
+        "text-8uWvIPLb.js",
+        "input-B0r4DZXN.js",
+        "stack-Dj0YoQNr.js",
+        "themed-primitives-mzB9hZz9.js"
+      ],
+      "dynamicImports": [],
+      "bytes": 2377
+    },
     "download-B0fIBYSx.js": {
       "file": "src/catalog/generated/frame-modules/a58da0eb47b1587ad7b269475d971419106cfcd7def605c2540698adb5daca5f.txt",
       "imports": [
@@ -8906,6 +8983,19 @@
       "dynamicImports": [],
       "bytes": 5086
     },
+    "foundations-o830AnIl.js": {
+      "file": "src/catalog/generated/frame-modules/ed07cc4c09c0504d8ecb9a1eca8350eabca16c044dd585c7a5f5b608c19ea8e3.txt",
+      "imports": [
+        "jsx-runtime-B6mqV-zo.js",
+        "box-D2uNzuEW.js",
+        "grid-CYrM7P6c.js",
+        "text-8uWvIPLb.js",
+        "stack-Dj0YoQNr.js",
+        "flex-B9Wo4RBB.js"
+      ],
+      "dynamicImports": [],
+      "bytes": 3294
+    },
     "frame-loading-B76mbDU6.js": {
       "file": "src/catalog/generated/frame-modules/1502ec1744b521335275590bba7cbb633a2b3c950d1ecf6e032d9e7c54d119f8.txt",
       "imports": [
@@ -9883,6 +9973,30 @@
       ],
       "dynamicImports": [],
       "bytes": 1583
+    },
+    "interactive-previews-BXEqcZEX.js": {
+      "file": "src/catalog/generated/frame-modules/4b2f7835b177cf0fbb5761bfd4a9ceb6308ea1dd21a0431a90b610d6050cfad9.txt",
+      "imports": [
+        "rolldown-runtime-QGRDbDUS.js",
+        "react-Bw8B6lLq.js",
+        "jsx-runtime-B6mqV-zo.js",
+        "box-D2uNzuEW.js",
+        "popover-DKrBhPH4.js",
+        "text-8uWvIPLb.js",
+        "dialog-Bstv3gBC.js",
+        "field-C0BxfK2t.js",
+        "input-B0r4DZXN.js",
+        "portal-BdZBwN5b.js",
+        "stack-Dj0YoQNr.js",
+        "flex-B9Wo4RBB.js",
+        "link-DcglgLXt.js",
+        "scroll-area-ZHp84XPy-ChGNk8Sf.js",
+        "prism-BLkcH5BQ-xxIjanrv.js",
+        "host-storage-CtscVB4w-DQ-RZ729.js",
+        "themed-primitives-mzB9hZz9.js"
+      ],
+      "dynamicImports": [],
+      "bytes": 4973
     },
     "ishikawaDiagram-WSZJBQD7-CbCq6x-e.js": {
       "file": "src/catalog/generated/frame-modules/733d98ce02851a4b59e466245a1c42574bdd282f0f45ba95e86caec915cd5ca7.txt",
@@ -13577,41 +13691,6 @@
       "imports": [],
       "dynamicImports": [],
       "bytes": 120
-    },
-    "previews-Crz1Eim-.js": {
-      "file": "src/catalog/generated/frame-modules/520e19823f1c1f0c482942e9cf4e1268420c888b78d600874aa85c733048f7c1.txt",
-      "imports": [
-        "rolldown-runtime-QGRDbDUS.js",
-        "react-Bw8B6lLq.js",
-        "jsx-runtime-B6mqV-zo.js",
-        "box-D2uNzuEW.js",
-        "grid-CYrM7P6c.js",
-        "number-input-D3mniipd.js",
-        "popover-DKrBhPH4.js",
-        "text-8uWvIPLb.js",
-        "dialog-Bstv3gBC.js",
-        "field-C0BxfK2t.js",
-        "input-B0r4DZXN.js",
-        "textarea-B5OcdFjR.js",
-        "portal-BdZBwN5b.js",
-        "tabs-BiuPXJ3g.js",
-        "stack-Dj0YoQNr.js",
-        "flex-B9Wo4RBB.js",
-        "kbd-97kl370T.js",
-        "link-DcglgLXt.js",
-        "list-row-CspatwmP-Dn6N6_Op.js",
-        "tooltip-Drs_bdZy-BQ7fdLYc.js",
-        "scroll-area-ZHp84XPy-ChGNk8Sf.js",
-        "prism-BLkcH5BQ-xxIjanrv.js",
-        "workspace-badge-B0bqYC-f-BY6HzutG.js",
-        "host-storage-CtscVB4w-DQ-RZ729.js",
-        "empty-state-J96iLli9-Gt6UdBjV.js",
-        "radio-BPnviQ4h-DKt6loXj.js",
-        "dist-BFLPU_Hv.js",
-        "themed-primitives-mzB9hZz9.js"
-      ],
-      "dynamicImports": [],
-      "bytes": 22144
     },
     "prism-BLkcH5BQ-xxIjanrv.js": {
       "file": "src/catalog/generated/frame-modules/78d3f99b155c909894d7eab784c4eb4387f2400310b66287ed2acb1568949894.txt",

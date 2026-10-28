@@ -9,7 +9,7 @@ export interface FrameArchiveInputs {
   repoRoot: string;
   sources: Record<string, string>;
   projects: Record<string, string>;
-  nativeSource: string;
+  nativeSources: Record<string, string>;
   catalogSource: string;
 }
 const bindSources = (manifest: FrameManifest, sources: Map<string, string>, inputs: FrameArchiveInputs) => {
@@ -25,7 +25,8 @@ const bindSources = (manifest: FrameManifest, sources: Map<string, string>, inpu
       ...(!source.endsWith(".mdx") && project ? { project: chunkFor(project) } : {}),
     };
   }
-  manifest.sources.$native = { script: chunkFor(inputs.nativeSource) };
+  for (const [name, source] of Object.entries(inputs.nativeSources))
+    manifest.sources[`$native:${name}`] = { script: chunkFor(source) };
   manifest.catalog = chunkFor(inputs.catalogSource);
 };
 const chunkStyles = (output: NativeBuildOutput) => {

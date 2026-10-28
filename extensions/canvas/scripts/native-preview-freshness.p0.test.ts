@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { previews } from "../src/canvases/previews";
 import frames from "../src/catalog/generated/frame-manifest.json";
 import catalog from "../src/catalog/generated/stories.json";
 import { selectFrameModules } from "../src/frames/module-graph";
@@ -16,9 +17,10 @@ test("native previews match the component sources, fixtures, and generated files
 
 test("every catalog source has a complete packaged dependency graph", () => {
   const sources = [...new Set([...catalog.stories, ...catalog.documents].map((entry) => entry.source))];
-  expect(Object.keys(frames.sources).sort()).toEqual([...sources, "$native"].sort());
+  const native = [...new Set(Object.values(previews).map(({ source }) => `$native:${source}`))];
+  expect(Object.keys(frames.sources).sort()).toEqual([...sources, ...native].sort());
   const assets = new Set(frames.styles);
-  for (const source of [...sources, "$native", "$runtime"]) {
+  for (const source of [...sources, ...native, "$runtime"]) {
     const modules = selectFrameModules(frames, source);
     expect(modules).toContain(frames.entry);
     for (const name of modules) assets.add(name);

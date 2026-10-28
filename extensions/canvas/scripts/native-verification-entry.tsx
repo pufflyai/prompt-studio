@@ -12,6 +12,7 @@ import { verificationCanvases } from "./native-verification-fixtures";
 import "@pstdio/ui/style.css";
 import { createFrameAssetLoader } from "../src/frames/asset-loader";
 import { installFrameAssetLoader } from "../src/frames/assets";
+import { frameProtocol } from "../src/frames/protocol";
 
 installFrameAssetLoader(
   createFrameAssetLoader(async (request) => {
@@ -32,14 +33,14 @@ declare global {
 }
 window.__CANVAS_VERIFICATION__ = { saves: 0, longTasks: [] };
 let maximumStarting = 0;
-new MutationObserver(() => {
-  maximumStarting = Math.max(maximumStarting, document.querySelectorAll('[data-frame-startup="loading"]').length);
+const starting = new Set<MessageEventSource>();
+// Import handshakes finish before React commits its loading display.
+window.addEventListener("message", (event) => {
+  if (!event.source || event.data?.protocol !== frameProtocol) return;
+  if (event.data.type === "bootstrap") starting.add(event.source);
+  if (["imports-ready", "loaded", "error"].includes(event.data.type)) starting.delete(event.source);
+  maximumStarting = Math.max(maximumStarting, starting.size);
   document.documentElement.dataset.canvasStartupMaximum = String(maximumStarting);
-}).observe(document.body, {
-  subtree: true,
-  childList: true,
-  attributes: true,
-  attributeFilter: ["data-frame-startup"],
 });
 const longTasks = new PerformanceObserver((list) => {
   window.__CANVAS_VERIFICATION__.longTasks.push(...list.getEntries().map((entry) => entry.duration));

@@ -2,6 +2,7 @@ import { Box, Text } from "@chakra-ui/react";
 import { type ThemePreferenceOption, useThemePreference } from "@pstdio/ui";
 import { type RefObject, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CanvasItem } from "../canvases/definitions";
+import { previews } from "../canvases/previews";
 import themes from "../catalog/generated/frame-themes.json";
 import { PreviewSource } from "../catalog/source-information";
 import { Button } from "../components/themed-primitives";
@@ -16,6 +17,7 @@ const postFrame = (frame: HTMLIFrameElement | null, message: Omit<FrameRequest, 
   frame?.contentWindow?.postMessage({ protocol: frameProtocol, ...message }, "*");
 const validFrameMessage = (event: MessageEvent<FrameMessage>, frame: HTMLIFrameElement | null) =>
   event.source === frame?.contentWindow && event.data?.protocol === frameProtocol;
+const frameThemes = [...themes, { id: "pstdio-light", mode: "light" }, { id: "pstdio-dark", mode: "dark" }];
 
 interface FramePreviewProps {
   item: CanvasItem;
@@ -41,13 +43,10 @@ export const FramePreview = (props: FramePreviewProps) => {
   const selected = useSyncExternalStore(runtime.subscribe, () => runtime.get().themes[item.id] ?? "app");
   const app = useThemePreference();
   const appTheme = app.themePreferences.find((theme) => theme.id === app.themePreference);
-  const theme =
-    selected === "app"
-      ? appTheme
-      : [...themes, { id: "pstdio-light", mode: "light" }, { id: "pstdio-dark", mode: "dark" }].find(
-          (theme) => theme.id === selected,
-        );
-  const source = item.preview?.source ?? "$native";
+  const theme = selected === "app" ? appTheme : frameThemes.find((theme) => theme.id === selected);
+  const sentTheme = useRef<typeof theme>(undefined);
+  const native = previews[item.component as keyof typeof previews];
+  const source = item.preview?.source ?? `$native:${native?.source ?? item.component}`;
   useEffect(() => {
     if (!started) return;
     let active = true;
@@ -66,10 +65,12 @@ export const FramePreview = (props: FramePreviewProps) => {
     };
   }, [source, started]);
   useEffect(() => {
-    if (imported || ready || error) job.current?.finish();
-  }, [imported, ready, error, job]);
+    if (ready || error) job.current?.finish();
+  }, [ready, error, job]);
   useEffect(() => {
-    if (ready) postFrame(frame.current, { nonce: nonce.current, type: "theme", theme: theme as ThemePreferenceOption });
+    if (!ready || sentTheme.current === theme) return;
+    sentTheme.current = theme;
+    postFrame(frame.current, { nonce: nonce.current, type: "theme", theme: theme as ThemePreferenceOption });
   }, [theme, ready]);
   useEffect(() => {
     const receive = (event: MessageEvent<FrameMessage>) => {
@@ -80,6 +81,7 @@ export const FramePreview = (props: FramePreviewProps) => {
           postFrame(frame.current, { nonce: nonce.current, type: "bootstrap", bootstrap });
           return;
         case "boot":
+          sentTheme.current = theme;
           postFrame(frame.current, {
             nonce: nonce.current,
             type: "render",
@@ -91,6 +93,8 @@ export const FramePreview = (props: FramePreviewProps) => {
       if (message.nonce !== nonce.current) return;
       switch (message.type) {
         case "imports-ready":
+          // Let the next imports start without waiting for a React commit.
+          job.current?.finish();
           setImported(true);
           break;
         case "painted":
@@ -135,7 +139,7 @@ export const FramePreview = (props: FramePreviewProps) => {
     };
     window.addEventListener("message", receive);
     return () => window.removeEventListener("message", receive);
-  }, [bootstrap, theme, item, runtime, startedAt, queuedAt]);
+  }, [bootstrap, theme, item, runtime, startedAt, queuedAt, job]);
   let phase = "queued";
   if (started) phase = "loading";
   if (imported) phase = "setup";

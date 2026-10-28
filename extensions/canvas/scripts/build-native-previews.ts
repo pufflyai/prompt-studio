@@ -1,10 +1,22 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
+import { previews } from "../src/canvases/previews";
 import { type NativeBuildOutput, publishNativeBuild } from "./native-build-output";
 
 import { generatedRoot, generateStoryCatalog, repoRoot, suites } from "./story-catalog";
 
+const nativeRoot = resolve(repoRoot, "extensions/canvas/src/canvases");
+const nativeSources = Object.fromEntries(
+  Object.values(previews).map(({ source }) => [source, resolve(nativeRoot, source)]),
+);
+const nativeLookup = () =>
+  `const __UI_CANVAS_NATIVE__={${Object.entries(previews)
+    .map(
+      ([name, preview]) =>
+        `${JSON.stringify(name)}:()=>import(${JSON.stringify(resolve(nativeRoot, preview.source))}).then(module=>module[${JSON.stringify(preview.exportName)}])`,
+    )
+    .join(",")}};`;
 const buildPreviews = async (
   stories: Awaited<ReturnType<typeof generateStoryCatalog>>["stories"],
   documents: Awaited<ReturnType<typeof generateStoryCatalog>>["documents"],
@@ -45,15 +57,18 @@ const buildPreviews = async (
   declarations.push(
     `const __UI_CANVAS_MODULES__={${files.map((file) => `${JSON.stringify(file)}:()=>import(${JSON.stringify(resolve(repoRoot, file))})`).join(",")}};`,
   );
+  declarations.push(nativeLookup());
   const lookup = resolve(scratch, "catalog-lookup.ts");
   await writeFile(lookup, declarations.map((code) => `export ${code}`).join("\n"));
   declarations.length = 0;
-  declarations.push(`import {__UI_CANVAS_MODULES__,__UI_CANVAS_PROJECTS__} from ${JSON.stringify(lookup)};`);
+  declarations.push(
+    `import {__UI_CANVAS_MODULES__,__UI_CANVAS_PROJECTS__,__UI_CANVAS_NATIVE__} from ${JSON.stringify(lookup)};`,
+  );
   declarations.push(
     `import {createPreviewLoader} from ${JSON.stringify(resolve(repoRoot, "packages/canvas/src/native-preview-runtime.tsx"))};`,
   );
   declarations.push(
-    `import {mountPreviewRuntime} from ${JSON.stringify(resolve(import.meta.dir, "frame-runtime.tsx"))}; mountPreviewRuntime(createPreviewLoader(__UI_CANVAS_MODULES__,__UI_CANVAS_PROJECTS__));`,
+    `import {mountPreviewRuntime} from ${JSON.stringify(resolve(import.meta.dir, "frame-runtime.tsx"))}; mountPreviewRuntime(createPreviewLoader(__UI_CANVAS_MODULES__,__UI_CANVAS_PROJECTS__),(component)=>__UI_CANVAS_NATIVE__[component]());`,
   );
   const entry = resolve(scratch, "entry.tsx");
   await writeFile(entry, declarations.join("\n"));
@@ -204,7 +219,7 @@ const buildPreviews = async (
       projects: Object.fromEntries(
         Object.entries(suites).map(([name, path]) => [name, resolve(repoRoot, path, ".canvas/preview.tsx")]),
       ),
-      nativeSource: resolve(repoRoot, "extensions/canvas/src/canvases/previews.tsx"),
+      nativeSources,
       catalogSource: lookup,
     },
   );

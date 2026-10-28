@@ -47,6 +47,7 @@ export const publishNativeBuild = async (
     "extensions/canvas/scripts/build-native-previews.ts",
     "extensions/canvas/scripts/native-build-output.ts",
     "extensions/canvas/scripts/frame-archive.ts",
+    "extensions/canvas/src/canvases/previews.tsx",
     ...["frame-runtime.tsx", "frame-navigation.ts", "frame-story.tsx"].map(
       (file) => `extensions/canvas/scripts/${file}`,
     ),

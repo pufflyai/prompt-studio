@@ -52,5 +52,5 @@ test("bounded startup reaches all 24 frames and reuses their immutable assets", 
   const maximum = Number(await surface.locator("html").getAttribute("data-canvas-startup-maximum"));
   expect(maximum).toBeGreaterThan(0);
   expect(maximum).toBeLessThanOrEqual(4);
-  expect(requested).toEqual(["$runtime", "$native"]);
+  expect(requested).toEqual(["$runtime", "$native:interactive-previews.tsx"]);
 });
