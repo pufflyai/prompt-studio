@@ -8,6 +8,7 @@ import { snapshotCodexMessageImages } from "./image-items";
 import { discoverCodexModels } from "./models";
 import { recoverNativeHistory } from "./native-history";
 import { approvedPlanKey, readCodexProposedPlan } from "./plan-approval";
+import { prepareCodex } from "./prepare";
 import type { ThreadGoal } from "./protocol/v2/ThreadGoal";
 
 const sessionEnv = (ctx: HarnessContext, sessionId: string) => ({
@@ -50,6 +51,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
   return {
     id: "codex",
     label: l10n("harness.codex", "Codex"),
+    prepare: prepareCodex,
     skills: { dir: ".agents/skills" },
     params: {
       service_tier: params.select({

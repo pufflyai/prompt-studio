@@ -9,6 +9,7 @@ import { detectClaude } from "./detection";
 import { recoverClaudeMessages } from "./history-reconciliation";
 import { discoverClaudeModels } from "./models";
 import { normalizeClaudeCodeMessages } from "./normalize-transcript";
+import { prepareClaude } from "./prepare";
 import { resumeClaudeCodeSession, startClaudeCodeSession } from "./spawn";
 import type { ClaudeCodeTranscriptEntry } from "./types";
 
@@ -105,6 +106,7 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
   return {
     id: "claude-code",
     label: l10n("harness.claudeCode", "Claude Code"),
+    prepare: prepareClaude,
     skills: { dir: ".claude/skills" },
     params: {
       permission_mode: {

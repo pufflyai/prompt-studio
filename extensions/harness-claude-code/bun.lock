@@ -5,10 +5,10 @@
     "": {
       "name": "harness-claude-code",
       "dependencies": {
-        "@anthropic-ai/claude-code": "2.1.203",
         "@pstdio/sdk": "0.46.0-preview.sha-714def5a655f68a3dbc195afeea06ea134c88924",
       },
       "devDependencies": {
+        "@anthropic-ai/claude-code": "2.1.203",
         "@types/bun": "1.4.4",
         "typescript": "6.0.2",
       },

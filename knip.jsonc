@@ -313,6 +313,10 @@
       "entry": ["package.json", "extension.ts", "*.test.ts", "src/**/*.test.ts", "src/views/*.tsx"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
+    "extensions/pstdio-extension-installations": {
+      "entry": ["package.json", "extension.ts", "src/*-entry.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
     "extensions/pstdio-artifacts": {
       "entry": ["package.json", "extension.ts", "*.test.ts", "src/**/*.test.ts", "src/{view,open-artifact}.tsx"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]

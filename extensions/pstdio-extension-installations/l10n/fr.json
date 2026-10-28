@@ -1,0 +1,8 @@
+{
+  "installations.title": "Installation des extensions",
+  "installations.empty": "Aucune installation",
+  "installations.queued": "En attente",
+  "installations.retry": "Réessayer",
+  "installations.failed": "Échec de l’installation",
+  "installations.complete": "Installation terminée"
+}

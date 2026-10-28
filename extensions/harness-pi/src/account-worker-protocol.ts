@@ -6,6 +6,7 @@ import type {
 export type AccountWorkerInput =
   | { type: "status"; model?: string }
   | { type: "authenticate"; input: HarnessAuthenticationInput };
+export type AccountWorkerRequest = { action: AccountWorkerInput; module: string };
 export type AccountWorkerMessage =
   | { type: "state"; value: HarnessAuthentication }
   | { type: "prompt"; prompt: HarnessAuthenticationPrompt; id?: number }

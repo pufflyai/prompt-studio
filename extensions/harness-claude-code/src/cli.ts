@@ -2,8 +2,14 @@ import { existsSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, win32 } from "node:path";
 
+let acquiredPackage: string | null = null;
+export const setClaudePackage = (path: string | null) => {
+  acquiredPackage = path;
+};
 const installedPackage = (name: string) => {
-  const manifest = createRequire(import.meta.url).resolve("@anthropic-ai/claude-code/package.json");
+  const manifest = acquiredPackage
+    ? join(acquiredPackage, "package.json")
+    : createRequire(import.meta.url).resolve("@anthropic-ai/claude-code/package.json");
   return createRequire(manifest).resolve(`${name}/package.json`);
 };
 
@@ -55,6 +61,10 @@ export const resolveClaudeCommand = (
   } = {},
 ) => {
   const command = (input.which ?? (() => Bun.which("claude", { PATH: process.env.PATH })))();
+  if (acquiredPackage && !input.managed) {
+    const acquired = resolveManagedClaude();
+    if (acquired) return acquired;
+  }
   if (command && (input.platform ?? process.platform) === "win32" && /\.(cmd|bat|ps1)$/i.test(command)) {
     const native = win32.join(
       win32.dirname(command),

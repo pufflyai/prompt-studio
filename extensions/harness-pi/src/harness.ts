@@ -3,6 +3,7 @@ import { l10n, params, reconcileMessageHistory } from "@pstdio/sdk/extensions";
 import { getPiAuthentication, runPiAccountWorker } from "./authentication";
 import { detectPi } from "./detection";
 import { readPiHistory } from "./history";
+import { preparePi } from "./prepare";
 import { type PiProcessOptions, piRequest } from "./process";
 import { startPiTurn } from "./turn";
 
@@ -41,6 +42,7 @@ export const createPiHarness = (options: PiProcessOptions = {}) => {
   return {
     id: "pi",
     label: l10n("harness.pi", "Pi"),
+    prepare: preparePi,
     skills: { dir: ".pi/skills", globalDir: ".pi/agent/skills" },
     params: {
       thinking: params.select({

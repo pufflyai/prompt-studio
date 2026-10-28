@@ -13,7 +13,7 @@ Prompt Studio publishes these tools as extensions. They use the public extension
 | [Reports](../../../extensions/pstdio-reports/README.md) | Reports that agents hand to each other | `pstdio-reports` |
 | [Artifacts](../../../extensions/pstdio-artifacts/README.md) | Interactive HTML pages with saved revisions | `pstdio-artifacts` |
 
-New projects already have the agent harnesses, the base themes, and Prompt Studio Skills.
+First-launch setup lets you choose harnesses and default tools. You can skip setup, install tools later, or build your own extensions. Base themes, Prompt Studio Skills, and the installation widget are provided automatically.
 
 ## Install from the dashboard
 
@@ -22,6 +22,8 @@ New projects already have the agent harnesses, the base themes, and Prompt Studi
 3. Choose **Install**.
 
 The extension is installed and turned on for this project. Its tools appear in the sidebar, in menus, or in the command palette.
+
+Installation continues in the background. Open the puzzle icon in the status bar to see **Installing Extensions**. Each name opens that extension's page. Failed installations offer **Retry**. Completed items show a checkmark. Hide or show this widget under **Settings → Developer tools → Installing Extensions**; hiding it does not stop installation.
 
 ![Extensions settings filtered to Artifacts, showing an Available row with an Install button.](../../images/install-extension.png)
 

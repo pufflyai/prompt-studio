@@ -1,13 +1,12 @@
 import { createInterface } from "node:readline";
-import { createAgentSessionServices } from "@mariozechner/pi-coding-agent";
 import type { HarnessAuthenticationChannel } from "@pstdio/sdk/extensions";
 import { authenticatePiAccount, getPiAccountState } from "./account-state";
-import type { AccountWorkerInput, AccountWorkerMessage } from "./account-worker-protocol";
+import type { AccountWorkerMessage, AccountWorkerRequest } from "./account-worker-protocol";
 
 // Native extensions may log while registering providers. Stdout belongs to this private protocol.
 console.log = (...args: unknown[]) => console.error(...args);
 const controller = new AbortController();
-const initial = Promise.withResolvers<AccountWorkerInput>();
+const initial = Promise.withResolvers<AccountWorkerRequest>();
 const pending = new Map<number, ReturnType<typeof Promise.withResolvers<string>>>();
 let sequence = 0;
 let started = false;
@@ -54,7 +53,8 @@ const channel: HarnessAuthenticationChannel = {
   },
 };
 const main = async () => {
-  const request = await initial.promise;
+  const { action: request, module } = await initial.promise;
+  const { createAgentSessionServices } = (await import(module)) as typeof import("@mariozechner/pi-coding-agent");
   const services = await createAgentSessionServices({
     cwd: process.cwd(),
     resourceLoaderOptions: { noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true },

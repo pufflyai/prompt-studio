@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import type { HarnessAuthentication, HarnessAuthenticationChannel, HarnessContext } from "@pstdio/sdk/extensions";
 import type { AccountWorkerInput, AccountWorkerMessage } from "./account-worker-protocol";
-import { piBunCommand } from "./cli";
+import { piBunCommand, resolvePiModule } from "./cli";
 import { type PiProcessOptions, piRecords, startPiProcess } from "./process";
 
 export const runPiAccountWorker = async (
@@ -10,6 +10,7 @@ export const runPiAccountWorker = async (
   channel?: HarnessAuthenticationChannel,
 ) => {
   const launcher = piBunCommand(fileURLToPath(new URL("./account-worker.ts", import.meta.url)));
+  const module = resolvePiModule();
   const signals = [
     options.signal,
     channel?.signal,
@@ -25,7 +26,7 @@ export const runPiAccountWorker = async (
   const failure = Promise.withResolvers<never>();
   let finished = false;
   const pump = async () => {
-    worker.child.stdin.write(`${JSON.stringify(input)}\n`);
+    worker.child.stdin.write(`${JSON.stringify({ action: input, module })}\n`);
     for await (const value of piRecords(worker.child.stdout)) {
       const message = value as unknown as AccountWorkerMessage;
       if (message.type === "state") return message.value;

@@ -2,8 +2,15 @@ import { existsSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
+let acquiredPackage: string | null = null;
+export const setCodexPackage = (path: string | null) => {
+  acquiredPackage = path;
+};
+export const acquiredCodexCommand = () => (acquiredPackage ? resolveManagedCodex() : null);
 const installedPackage = (name: string) => {
-  const manifest = createRequire(import.meta.url).resolve("@openai/codex/package.json");
+  const manifest = acquiredPackage
+    ? join(acquiredPackage, "package.json")
+    : createRequire(import.meta.url).resolve("@openai/codex/package.json");
   return createRequire(manifest).resolve(`${name}/package.json`);
 };
 

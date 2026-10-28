@@ -16,6 +16,7 @@ const config: StorybookConfig = {
     "../../../.pstdio/extensions/pstdio-dev/src/**/*.stories.tsx",
     "../../../extensions/pstdio-artifacts/src/**/*.stories.tsx",
     "../../../extensions/pstdio-planner/src/**/*.stories.tsx",
+    "../../../extensions/pstdio-extension-installations/src/**/*.stories.tsx",
   ],
   addons: [],
   framework: getAbsolutePath("@storybook/react-vite"),

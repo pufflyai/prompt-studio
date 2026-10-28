@@ -17,6 +17,7 @@ import { normalizeOpencodeMessage } from "./opencode-normalizer";
 import { pollOpencodeQuestionReply } from "./opencode-question-reply-poller";
 import type { createOpencodeService } from "./opencode-service";
 import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-poller";
+import { prepareOpencode } from "./prepare";
 
 // --- Detection ---
 
@@ -184,6 +185,7 @@ export const createOpencodeHarness = (
   return {
     id: "opencode",
     label: l10n("harness.opencode", "OpenCode"),
+    prepare: prepareOpencode,
     skills: { dir: ".agents/skills" },
     params: opencodeParams,
 

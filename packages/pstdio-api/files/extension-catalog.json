@@ -54,6 +54,20 @@
       "default": false
     },
     {
+      "installName": "pstdio-extension-installations",
+      "displayName": "Installing Extensions",
+      "description": "Track extension installations and retry failed work from the status bar.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-extension-installations",
+        "ref": "{hostRelease}"
+      },
+      "default": true,
+      "alwaysEnabled": true,
+      "extensionId": "pstdio.pstdio-extension-installations"
+    },
+    {
       "installName": "pstdio-base-themes",
       "displayName": "Prompt Studio Base Themes",
       "description": "Color themes and the Seti file icon theme.",

@@ -1,0 +1,36 @@
+{
+  "name": "pstdio-extension-installations",
+  "version": "0.1.0",
+  "displayName": "Installing Extensions",
+  "description": "Track extension installations and retry failed work from the status bar.",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^0.3.0"
+  },
+  "pstdio": {
+    "scope": "user"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "bun check",
+    "lint": "bun run typecheck && biome check ."
+  },
+  "dependencies": {
+    "@chakra-ui/react": "3.32.0",
+    "@emotion/react": "^11.0.0",
+    "@pstdio/sdk": "0.46.0-preview.sha-714def5a655f68a3dbc195afeea06ea134c88924",
+    "@pstdio/ui": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
+    "lucide-react": "^0.556.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "6.0.2",
+    "@storybook/react": "^10.6.0"
+  }
+}

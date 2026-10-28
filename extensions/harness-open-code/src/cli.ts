@@ -2,8 +2,14 @@ import { existsSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, win32 } from "node:path";
 
+let acquiredPackage: string | null = null;
+export const setOpencodePackage = (path: string | null) => {
+  acquiredPackage = path;
+};
 const installedPackage = (name: string) => {
-  const manifest = createRequire(import.meta.url).resolve("opencode-ai/package.json");
+  const manifest = acquiredPackage
+    ? join(acquiredPackage, "package.json")
+    : createRequire(import.meta.url).resolve("opencode-ai/package.json");
   return createRequire(manifest).resolve(`${name}/package.json`);
 };
 
@@ -56,6 +62,10 @@ export const resolveOpencodeCommand = (
   } = {},
 ) => {
   const command = (input.which ?? (() => Bun.which("opencode", { PATH: process.env.PATH })))();
+  if (acquiredPackage && !input.managed) {
+    const acquired = resolveManagedOpencode();
+    if (acquired) return acquired;
+  }
   if (command && (input.platform ?? process.platform) === "win32" && /\.(cmd|bat|ps1)$/i.test(command)) {
     const native = win32.join(win32.dirname(command), "node_modules", "opencode-ai", "bin", "opencode.exe");
     if ((input.exists ?? existsSync)(native)) return native;

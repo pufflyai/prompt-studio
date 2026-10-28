@@ -14,7 +14,7 @@ describe("resolveDefaultExtensionsConfig", () => {
   test("returns the production defaults when the env override is absent", async () => {
     const config = await resolveDefaultExtensionsConfig({});
 
-    expect(config.defaultExtensions).toEqual(["pstdio-base-themes", "pstdio-skills"]);
+    expect(config.defaultExtensions).toEqual(["pstdio-extension-installations", "pstdio-base-themes", "pstdio-skills"]);
   });
 
   test("uses PSTDIO_DEFAULT_EXTENSIONS JSON when set", async () => {
@@ -297,7 +297,11 @@ describe("installDefaultExtensions sources", () => {
     });
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
-    expect(calls.map((call) => call.installName)).toEqual(["pstdio-base-themes", "pstdio-skills"]);
+    expect(calls.map((call) => call.installName)).toEqual([
+      "pstdio-extension-installations",
+      "pstdio-base-themes",
+      "pstdio-skills",
+    ]);
     expect(
       calls.every(
         (call) =>

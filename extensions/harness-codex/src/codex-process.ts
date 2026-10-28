@@ -2,7 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { win32 } from "node:path";
 import type { Readable, Writable } from "node:stream";
-import { isPrivateCodexLauncher, resolveManagedCodex } from "./managed-cli";
+import { acquiredCodexCommand, isPrivateCodexLauncher, resolveManagedCodex } from "./managed-cli";
 
 type SpawnedChild = {
   stdin: Writable;
@@ -74,6 +74,10 @@ export const resolveCodexCommand = (
     which?: (command: string) => string | null;
   } = {},
 ) => {
+  if (!input.managed) {
+    const acquired = acquiredCodexCommand();
+    if (acquired) return acquired;
+  }
   const platform = input.platform ?? process.platform;
   const arch = input.arch ?? process.arch;
   const which =
