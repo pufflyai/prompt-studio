@@ -2,7 +2,11 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "rootDir": ".",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": [
+      "bun",
+      "astro/client"
+    ]
   },
   "include": [
     "src/**/*.canvas.tsx",
