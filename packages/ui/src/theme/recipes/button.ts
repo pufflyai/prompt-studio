@@ -131,6 +131,7 @@ export const buttonRecipe = defineRecipe({
         border: "none",
         _hover: { bg: "transparent" },
         _active: { bg: "transparent" },
+        _disabled: { color: "fg", bg: "transparent", cursor: "default", _hover: { bg: "transparent" } },
       },
       subtle: {
         color: "fg",

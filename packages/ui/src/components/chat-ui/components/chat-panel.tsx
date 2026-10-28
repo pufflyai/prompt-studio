@@ -159,6 +159,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const { groups, leadingResponses } = groupMessagesByTurn(merged);
   const [expandedStickyMessageIds, setExpandedStickyMessageIds] = useState(() => new Set<string>());
   const [readyMessageListKey, setReadyMessageListKey] = useState<string | null>(null);
+  const [workspaceActivityContainer, setWorkspaceActivityContainer] = useState<HTMLDivElement | null>(null);
   const showLoadingState = !hasMessages && loading;
   const defaultEmptyContent = (
     <EmptyState
@@ -230,6 +231,13 @@ export const ChatPanel = (props: ChatPanelProps) => {
                     {emptyContent}
                   </>
                 )}
+                {streaming && (
+                  <WorkingIndicator
+                    startedAt={streamingStartedAt}
+                    hidden={!showThinkingIndicator}
+                    workspaceContainer={workspaceActivityContainer}
+                  />
+                )}
               </ChatPrimitives.Viewport>
               {isMessageViewportReady ? <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" /> : null}
             </ChatPrimitives.Root>
@@ -268,15 +276,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
                   queuedFollowUps={queuedFollowUps}
                   streaming={streaming}
                   workspaceHub={workspaceHub}
-                  activity={
-                    streaming ? (
-                      <WorkingIndicator
-                        key={messageListKey}
-                        startedAt={streamingStartedAt}
-                        hidden={!showThinkingIndicator}
-                      />
-                    ) : null
-                  }
+                  activity={streaming ? <Box ref={setWorkspaceActivityContainer} /> : undefined}
                 />
               </Box>
             )}

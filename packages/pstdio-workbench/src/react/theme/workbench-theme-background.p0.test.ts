@@ -16,12 +16,21 @@ describe("workbench theme backgrounds", () => {
     expect(getWorkbenchRegionBackground("main")).toBe(
       "var(--chakra-colors-vscode-editor-background, var(--chakra-colors-bg))",
     );
-    expect(getWorkbenchRegionBackground("secondary")).toBe(
-      "var(--chakra-colors-vscode-panel-background, var(--chakra-colors-bg-panel))",
-    );
-    expect(getWorkbenchRegionBackground("side")).toBe(
-      "var(--chakra-colors-vscode-editorWidget-background, var(--chakra-colors-vscode-panel-background, var(--chakra-colors-bg-panel)))",
-    );
+    for (const region of [
+      "main-header",
+      "main-left-menu",
+      "main-right-menu",
+      "secondary",
+      "secondary-header",
+      "secondary-left-menu",
+      "secondary-right-menu",
+      "side",
+      "side-header",
+      "side-left-menu",
+      "side-right-menu",
+    ] as const) {
+      expect(getWorkbenchRegionBackground(region)).toBe(getWorkbenchRegionBackground("main"));
+    }
     expect(getWorkbenchRegionBackground("status")).toBe(
       "var(--chakra-colors-vscode-editor-background, var(--chakra-colors-bg))",
     );

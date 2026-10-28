@@ -62,16 +62,19 @@ const meta = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const workspace = canvasElement.querySelector(".ps-chat-composer__workspace")!;
+    await waitFor(() => {
+      expect(canvas.getByText("Working", { exact: true })).toBeVisible();
+      expect(workspace).not.toContainElement(canvas.getByText(/^\d+[smh](?: \d+[sm])?$/));
+    });
     const timer = canvas.getByText(/^\d+[smh](?: \d+[sm])?$/);
-    await expect(workspace).toContainElement(timer);
+    await expect(workspace).not.toContainElement(timer);
+    await expect(canvas.getByRole("log")).toContainElement(timer);
+    await expect(canvas.getByText("Working", { exact: true })).toBeVisible();
     await expect(getComputedStyle(workspace.parentElement!).paddingTop).toBe("0px");
     const open = canvas.getByRole("button", { name: "Open workspace" }).getBoundingClientRect();
     const identity = canvas.getByRole("button", { name: "main" }).getBoundingClientRect();
-    const time = timer.getBoundingClientRect();
     await expect(open.left).toBeGreaterThanOrEqual(identity.right);
     await expect(open.left - identity.right).toBeLessThanOrEqual(12);
-    await expect(time.left).toBeGreaterThan(identity.right);
-    await expect(Math.abs(time.top - open.top)).toBeLessThan(open.height);
     const assistant = canvas.getByText("I will check the files.").closest(".ai-message__root")!;
     await expect(getComputedStyle(assistant).gap).toBe("4px");
     await expect(parseFloat(getComputedStyle(assistant).marginBottom)).toBeGreaterThan(0);
@@ -123,5 +126,39 @@ export const AnswerAfterActivity: Story = {
         ],
       },
     ],
+  },
+};
+
+export const ScrollAwareActivity: Story = {
+  args: {
+    messages: [
+      { id: "user", role: "user", parts: [{ type: "text", text: "Review the project." }] },
+      ...Array.from({ length: 24 }, (_, index) => ({
+        id: `reply-${index}`,
+        role: "assistant" as const,
+        parts: [
+          {
+            type: "text" as const,
+            text: `Reviewed file ${index + 1}.\n\nThe implementation follows the shared project rules.`,
+          },
+        ],
+      })),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const viewport = canvas.getByRole("log").querySelector<HTMLElement>('[data-part="viewport"]')!;
+    const workspace = canvasElement.querySelector(".ps-chat-composer__workspace")!;
+    await waitFor(() => expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight));
+    viewport.scrollTop = viewport.scrollHeight;
+    await waitFor(() => expect(workspace).not.toContainElement(canvas.getByRole("status", { name: "Agent working" })));
+    viewport.scrollTop -= 10;
+    await waitFor(() => expect(workspace).toContainElement(canvas.getByRole("status", { name: "Agent working" })));
+    await expect(
+      canvas.getByRole("status", { name: "Agent working" }).getBoundingClientRect().right,
+    ).toBeLessThanOrEqual(workspace.getBoundingClientRect().right);
+    viewport.scrollTop = viewport.scrollHeight;
+    await waitFor(() => expect(workspace).not.toContainElement(canvas.getByRole("status", { name: "Agent working" })));
+    await expect(canvas.getAllByRole("status", { name: "Agent working" })).toHaveLength(1);
   },
 };
