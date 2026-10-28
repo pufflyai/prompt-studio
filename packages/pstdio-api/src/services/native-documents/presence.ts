@@ -45,17 +45,17 @@ const upsertFrame = (address: PresenceAddress, participantId: string, value: Val
   if (frame.action !== "upsert") throw new Error("Invalid native presence update");
   return frame;
 };
-const frameOf = (address: PresenceAddress, change: PresenceChange<Value>): NativePresenceLive =>
+const frameOf = (address: PresenceAddress, change: PresenceChange<Value>) =>
   change.action === "upsert"
     ? upsertFrame(address, change.participantId, change.value)
-    : {
+    : ({
         kind: "native-document-presence",
         version: 1,
         action: "leave",
         extensionId: address.owner.extensionId,
         documentKey: address.resourceId,
         participantId: change.participantId,
-      };
+      } satisfies NativePresenceLive);
 
 /** Native text wire validation and room authorization wrap the format-independent live registry. */
 export const createNativePresence = (input: {
