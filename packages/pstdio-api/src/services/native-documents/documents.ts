@@ -12,6 +12,7 @@ import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
 import { createNativeFileProjector } from "./file-projection";
 import { type loadNativeMarkdownFile, NativeDocumentSourceError, type saveNativeMarkdownFile } from "./file-source";
+import { createNativeProjectionQueue } from "./projection-queue";
 import { createNativeSessionPresence } from "./session-presence";
 
 interface Room {
@@ -57,6 +58,14 @@ export const createNativeDocumentService = (deps: {
 }) => {
   const storage = deps.storage;
   const projection = createNativeFileProjector(deps);
+  const files = createNativeProjectionQueue({
+    reconcile: projection.reconcile,
+    failed: ({ documentKey }, error) =>
+      apiLogger.warn(
+        { event: "native_document.projection.pending", documentKey, error },
+        "Shared text is saved. Its file projection will retry on the next change or flush.",
+      ),
+  });
   const presence = createNativeSessionPresence({ deviceId: deps.deviceId, identity: deps.presenceIdentity });
   const rooms = new Map<string, Room>();
   const pending = new Set<Promise<unknown>>();
@@ -79,13 +88,6 @@ export const createNativeDocumentService = (deps: {
     }
   };
   const snapshot = async (room: Room, roomId: string) => {
-    try {
-      await projection.reconcile(room);
-    } catch (error) {
-      if (!(error instanceof StorageRevisionChangedError)) throw error;
-      // Text is already durable. Keep the pending projection for the next snapshot
-      // or restart instead of disconnecting an editor because another writer won.
-    }
     const state = await canonical(room).exportUpdate();
     const document = new Y.Doc();
     try {
@@ -103,6 +105,7 @@ export const createNativeDocumentService = (deps: {
             update: Y.encodeStateAsUpdate(document, Y.encodeStateVector(source.document)),
           });
         }
+        void files.request(room).catch(() => {});
         return {
           state,
           seedId,
@@ -207,6 +210,9 @@ export const createNativeDocumentService = (deps: {
     snapshot(input: RoomRequest) {
       return run(input, (room) => snapshot(room, input.roomId));
     },
+    flush(input: RoomRequest) {
+      return run(input, (room) => files.request(room));
+    },
     watch(input: RoomRequest, changed: () => void, onClose?: () => void) {
       return run(input, async (room) => {
         const stop = canonical(room).watch(changed);
@@ -225,7 +231,7 @@ export const createNativeDocumentService = (deps: {
     close(input: RoomRequest) {
       return run(input, async (room) => {
         await integrate(room.owner, input.roomId);
-        await projection.reconcile(room);
+        await files.request(room);
         await storage.nativeRooms.remove({ owner: room.owner, roomId: input.roomId });
         presence.closeRoom(input.roomId);
         for (const close of room.closeWatchers) close();
@@ -249,6 +255,7 @@ export const createNativeDocumentService = (deps: {
     async dispose() {
       closed = true;
       await Promise.allSettled([...pending]);
+      await files.drain();
       presence.close();
       for (const room of rooms.values()) for (const close of room.closeWatchers) close();
       rooms.clear();

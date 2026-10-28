@@ -118,10 +118,12 @@ export const startCoreDocumentSync = (input: {
     onLive: (message) => {
       void live.receive(message).catch(() => {});
     },
-    onStatusChange: () => {
-      if (!connection.status().connected) live.clearSpace();
-      input.statusChanged?.();
+    onReady: () => live.republish(),
+    onDisconnect: (reason) => {
+      if (reason === "renewal") live.renewAccess();
+      else live.clearSpace();
     },
+    onStatusChange: input.statusChanged,
   });
   const changed = (changed: { workbenchId: string }) => {
     if (changed.workbenchId !== owner.workbenchId) return;

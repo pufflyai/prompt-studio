@@ -10,7 +10,6 @@ import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 import { NativeMarkdownFileEditor } from "./native-markdown-file-editor";
 
 const CodeEditor = lazy(() => import("@pstdio/ui/diff").then((module) => ({ default: module.CodeEditor })));
-const fileTitle = (content: FileRendererContent, fallback: string) => content.fileName ?? content.filePath ?? fallback;
 
 interface FileRendererContentViewProps {
   content: FileRendererContent | null;
@@ -132,7 +131,7 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
         <NativeMarkdownFileEditor
           key={editorKey}
           connect={connectDocument}
-          title={fileTitle(content, title)}
+          title={title}
           placeholder={content.placeholder ?? "Write…"}
           sectionNavigation={sectionNavigation}
           onActiveSectionChange={onActiveSectionChange}

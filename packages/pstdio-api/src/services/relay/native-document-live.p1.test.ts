@@ -35,6 +35,51 @@ const join = (manager: ReturnType<typeof createNativeSessionPresence>) =>
     { roomId: crypto.randomUUID(), seedId: "b".repeat(64) },
   );
 
+test("credential renewal retains remote presence until a real disconnect", async () => {
+  const manager = createNativeSessionPresence({
+    deviceId: "receiver",
+    identity: async () => ({ label: "Receiver", deviceName: "Desktop" }),
+  });
+  const space = await createSyncSpace({ projectId, spaceOwner: null, keys: [key(1)] });
+  const bridge = createNativeDocumentLive({ projectId, deviceId: "receiver", live: manager.live, send: () => true });
+  const local = await join(manager);
+  try {
+    bridge.setSpace(space);
+    const encrypted = await sealLive(
+      space,
+      "peer",
+      new TextEncoder().encode(
+        JSON.stringify({
+          kind: "native-document-presence",
+          version: 1,
+          action: "upsert",
+          extensionId: "example.notes",
+          documentKey: "a".repeat(64),
+          participantId: crypto.randomUUID(),
+          seedId: "b".repeat(64),
+          label: "Peer",
+          deviceName: "Laptop",
+          selection: null,
+        }),
+      ),
+    );
+    await bridge.receive({ ...encrypted, deviceId: "peer" });
+    expect(local.snapshot()).toHaveLength(2);
+    bridge.renewAccess();
+    expect(local.snapshot()).toHaveLength(2);
+    // Credential rotation does not wait for the durable synchronizer to fetch the space again.
+    expect(await bridge.receive({ ...encrypted, deviceId: "peer" })).toBe(true);
+    bridge.setSpace(space);
+    expect(local.snapshot()).toHaveLength(2);
+    bridge.clearSpace();
+    expect(local.snapshot()).toHaveLength(1);
+  } finally {
+    local.close();
+    await bridge.close();
+    manager.close();
+  }
+});
+
 test("live encryption preserves publish order so a delayed update cannot arrive after its leave", async () => {
   const s = source();
   const sent: LiveClientMessage[] = [];

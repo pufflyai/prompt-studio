@@ -81,6 +81,54 @@ const target = { fileRendererId: "example.context.view.document", resource: unde
 const open = (service: ReturnType<typeof createNativeDocumentService>) =>
   service.open({ ...target, projectId: storage.projectAId });
 
+test("durable acknowledgements and peer snapshots do not wait for a file save", async () => {
+  const deps = { ...extension.deps, extensionStorageService: storage.svc };
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const service = createService({
+    storage: storage.svc,
+    load: (input) => loadNativeMarkdownFile(deps, input),
+    save: async (input) => {
+      entered.resolve();
+      await release.promise;
+      return saveNativeMarkdownFile(deps, input);
+    },
+  });
+  const room = await open(service);
+  const peer = await open(service);
+  const author = new Y.Doc();
+  Y.applyUpdate(author, room.state);
+  const vector = Y.encodeStateVector(author);
+  author.getText("content").insert(0, "EDITOR ");
+  const submitted = service.submit({
+    projectId: storage.projectAId,
+    roomId: room.roomId,
+    update: Y.encodeStateAsUpdate(author, vector),
+  });
+  try {
+    await entered.promise;
+    const accepted = await Promise.race([submitted, Bun.sleep(1000).then(() => null)]);
+    expect(accepted).not.toBeNull();
+    const received = await service.snapshot({ projectId: storage.projectAId, roomId: peer.roomId });
+    Y.applyUpdate(author, received.state);
+    expect(author.getText("content").toString()).toBe("EDITOR selected folder");
+    // Another edit while the save is held must be included in the final physical copy.
+    const before = Y.encodeStateVector(author);
+    author.getText("content").insert(author.getText("content").length, " LATER");
+    await service.submit({
+      projectId: storage.projectAId,
+      roomId: room.roomId,
+      update: Y.encodeStateAsUpdate(author, before),
+    });
+  } finally {
+    release.resolve();
+    await submitted;
+    await service.close({ projectId: storage.projectAId, roomId: room.roomId });
+    author.destroy();
+  }
+  expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("EDITOR selected folder LATER");
+});
+
 test("native edits project through the file save handler and retain a non-overlapping outside write", async () => {
   const { service } = setup();
   const room = await open(service);
@@ -95,8 +143,11 @@ test("native edits project through the file save handler and retain a non-overla
       roomId: room.roomId,
       update: Y.encodeStateAsUpdate(author, vector),
     });
+    expect(accepted.revision).toBeGreaterThan(0);
+    await service.flush({ projectId: storage.projectAId, roomId: room.roomId });
     const result = new Y.Doc();
-    Y.applyUpdate(result, accepted.state);
+    const projected = await service.snapshot({ projectId: storage.projectAId, roomId: room.roomId });
+    Y.applyUpdate(result, projected.state);
     expect(result.getText("content").toString()).toBe("EDITOR selected folder OUTSIDE");
     expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("EDITOR selected folder OUTSIDE");
     result.destroy();
@@ -138,8 +189,9 @@ test("a racing file projection retains its pending write and acknowledges durabl
     } finally {
       received.destroy();
     }
+    await expect(service.flush({ projectId: storage.projectAId, roomId: room.roomId })).rejects.toThrow();
     expect((await storage.svc.nativeFileProjections.read(room))?.pending).toBeInstanceOf(Uint8Array);
-    await service.snapshot({ projectId: storage.projectAId, roomId: room.roomId });
+    await service.flush({ projectId: storage.projectAId, roomId: room.roomId });
     expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("LOCAL selected folder OUTSIDE");
     expect((await storage.svc.nativeFileProjections.read(room))?.pending).toBeNull();
   } finally {
@@ -150,19 +202,29 @@ test("a racing file projection retains its pending write and acknowledges durabl
 test("restart retries an unfinished file save without losing its durable editor text", async () => {
   const { deps, service } = setup();
   const room = await open(service);
+  const request = { projectId: storage.projectAId, roomId: room.roomId };
+  const participant = await service.presence.join({ ...request, seedId: room.seedId });
   const author = new Y.Doc();
   try {
     Y.applyUpdate(author, room.state);
     const vector = Y.encodeStateVector(author);
     author.getText("content").insert(0, "RETRY ");
     await writeFile(join(extension.root, "pause-save"), "pause");
-    await expect(
-      service.submit({
-        projectId: storage.projectAId,
-        roomId: room.roomId,
-        update: Y.encodeStateAsUpdate(author, vector),
-      }),
-    ).rejects.toThrow("File save paused");
+    await service.submit({
+      projectId: storage.projectAId,
+      roomId: room.roomId,
+      update: Y.encodeStateAsUpdate(author, vector),
+    });
+    await expect(service.flush({ projectId: storage.projectAId, roomId: room.roomId })).rejects.toThrow(
+      "File save paused",
+    );
+    await expect(service.close(request)).rejects.toThrow("File save paused");
+    expect(participant.snapshot()).toHaveLength(1);
+    // File failures retain the room; acknowledged text remains readable.
+    const readable = new Y.Doc();
+    Y.applyUpdate(readable, (await service.snapshot(request)).state);
+    expect(readable.getText("content").toString()).toBe("RETRY selected folder");
+    readable.destroy();
     expect((await storage.svc.nativeFileProjections.read(room))?.pending).toBeInstanceOf(Uint8Array);
     await service.dispose();
     const restarted = createService({
@@ -191,16 +253,18 @@ test("an outside deletion after bytes were written survives a later save-handler
     const vector = Y.encodeStateVector(author);
     author.getText("content").insert(0, "EDITOR ");
     await writeFile(join(extension.root, "pause-after-write"), "pause");
-    await expect(
-      service.submit({
-        projectId: storage.projectAId,
-        roomId: room.roomId,
-        update: Y.encodeStateAsUpdate(author, vector),
-      }),
-    ).rejects.toThrow("after writing bytes");
+    await service.submit({
+      projectId: storage.projectAId,
+      roomId: room.roomId,
+      update: Y.encodeStateAsUpdate(author, vector),
+    });
+    await expect(service.flush({ projectId: storage.projectAId, roomId: room.roomId })).rejects.toThrow(
+      "after writing bytes",
+    );
     expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("EDITOR selected folder");
     await writeFile(join(extension.root, "notes.txt"), "selected folder OUTSIDE");
     await rm(join(extension.root, "pause-after-write"));
+    await service.flush({ projectId: storage.projectAId, roomId: room.roomId });
     const snapshot = await service.snapshot({ projectId: storage.projectAId, roomId: room.roomId });
     const received = new Y.Doc();
     Y.applyUpdate(received, snapshot.state);
@@ -264,6 +328,7 @@ test("native room acknowledges durable edits and recovery preserves an accepted 
   const update = Y.encodeStateAsUpdate(author, before);
   // This is the durable boundary at which a process can stop before canonical integration.
   await storage.svc.nativeRooms.apply({ owner: joined.owner, roomId: joined.roomId, update });
+  await service.dispose();
   const restartedStorage = createExtensionStorageDBService(storage.db);
   const restartedDeps = { ...deps, extensionStorageService: restartedStorage };
   const restarted = createService({
