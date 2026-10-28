@@ -3,8 +3,7 @@ import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createWorkspacesModule } from "../../workspaces/module";
-import type { DashboardSessionView } from "../data/dashboard-sessions";
-import { openReviewWorkspace, openSelectedWorkspace } from "./session-chat-panel";
+import { openSelectedWorkspace } from "./session-chat-panel";
 
 const localWorkspace = {
   id: "workspace-1",
@@ -22,30 +21,14 @@ const localWorkspace = {
   updatedAt: "2026-05-22T08:55:00Z",
 };
 
-const sessionView = {
-  id: "session-1",
-  draftKey: "session-1",
-  sessionId: "session-1",
-  workspaceTitle: "Dashboard workbench datalayer",
-  workspaceId: "workspace-1",
-  workspaceBranch: "workspace/PS-307_A1",
-  workspaceShorthand: "PS-307_A1",
-  agent: null,
-  lastSelectedModel: null,
-  lastRequestStarted: null,
-  additions: 12,
-  deletions: 3,
-  messages: [],
-} satisfies DashboardSessionView;
-
-describe("openReviewWorkspace", () => {
+describe("workspace navigation", () => {
   test("opens the linked workspace resource for review changes", async () => {
     const workbench = createWorkbench();
 
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
-    await openReviewWorkspace({ workbench }, sessionView, [localWorkspace]);
+    await openSelectedWorkspace({ workbench }, localWorkspace, "project-1");
 
     expect(workbench.commandPalette.isOpen()).toBe(false);
     expect(workbench.modes.getActiveModeId()).toBe("project");

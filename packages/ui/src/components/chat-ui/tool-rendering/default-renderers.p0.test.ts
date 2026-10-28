@@ -7,7 +7,7 @@ const renderInvocation = (invocation: ToolPart) => {
 };
 
 describe("shell renderer", () => {
-  it("renders the command in the title and only output in the disclosure", () => {
+  it("keeps the full command and output available in the disclosure", () => {
     const item = renderInvocation({
       type: "tool",
       tool: "shell",
@@ -29,10 +29,13 @@ describe("shell renderer", () => {
         monospace: true,
       },
     ]);
-    expect(item.blocks).toEqual([{ type: "code", language: "text", code: "Validated 42 projects" }]);
+    expect(item.blocks).toEqual([
+      { type: "code", language: "shell", code: "bun run validate" },
+      { type: "code", language: "text", code: "Validated 42 projects" },
+    ]);
   });
 
-  it("keeps a pending command visible without an empty disclosure", () => {
+  it("keeps a pending command expandable before output exists", () => {
     const item = renderInvocation({
       type: "tool",
       tool: "shell",
@@ -53,7 +56,7 @@ describe("shell renderer", () => {
         monospace: true,
       },
     ]);
-    expect(item.blocks).toEqual([]);
+    expect(item.blocks).toEqual([{ type: "code", language: "shell", code: "bun run validate" }]);
   });
 
   it("keeps a failed command visible with the existing error treatment", () => {
@@ -80,7 +83,10 @@ describe("shell renderer", () => {
       },
       { kind: "text", text: "failed", muted: true },
     ]);
-    expect(item.blocks).toEqual([{ type: "comment", text: "Validation failed" }]);
+    expect(item.blocks).toEqual([
+      { type: "comment", text: "Validation failed" },
+      { type: "code", language: "shell", code: "bun run validate" },
+    ]);
   });
 });
 

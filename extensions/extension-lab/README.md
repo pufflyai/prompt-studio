@@ -11,7 +11,7 @@ Extension Lab has six small, working tools built only with the public extension 
 | Kiln     | Scene objects | Three.js viewport, selection, visibility, transforms, animated timeline |
 | Marmalade | Layered documents | Drawing, editable type, transforms, image adjustments, groups, undo/redo, and layer controls |
 
-Each example adds its own page, mode, resource kind, views, sample data, and theme. A mode is a workbench layout with its own navigation, panels, and theme. A resource kind is a type of item, such as a document or a track, that the workbench can open and link to.
+Each example adds its own page, mode, resource kind, views, sample data, and theme. A mode is a workbench layout with its own navigation, panels, and theme. A resource kind names an item type, such as a document or a track. Scribble and Zipline show how to open and link to those items through resource pages.
 
 ## Install
 
@@ -27,7 +27,11 @@ Open an example from the project's **Examples** group. You do not need a setup c
 
 ## State and resources
 
-The samples are ready right away. Your changes are saved in the extension's storage for the project. The first five tools patch individual fields; Marmalade serializes document edits and saves history with each change. Views share saved state rather than overwriting stale document copies. Views subscribe to the shared change event and refetch saved state. Kiln derives its playback frame from one saved start frame and time, so newly opened views stay in sync. Navigation uses public page targets and resource references. No view reads the host's database or internal registries.
+The samples are ready right away. Your changes are saved in the extension's storage for the project. Views use the public editing-session API to share edits immediately across panels, while its save command persists changed fields. Storage events refresh that shared session after external changes. Kiln derives its playback frame from one saved start frame and time, so newly opened views stay in sync. Marmalade retains serialized document edits and saves history with each change.
+
+Boombox, Pigeon and Kiln each have one tabless page. Their selected track, message or object lives in the page's declared `selection` parameter. Views subscribe with `client.page.subscribe` and change selection with `client.page.updateParams`. Selecting an item updates the existing views without opening a resource route, adding history entries or changing panel tabs. Scribble and Zipline demonstrate resource navigation instead. No view reads the host's database or internal registries.
+
+Scribble uses a native searchable navigation tree. Search matches page titles and saved content. Drag pages or use Alt+Up/Down to reorder them; the extension persists that order. Native groups support renaming, icons, and drag-and-drop membership. Existing pages open retained tabs. **New page** opens an unpinned draft editor without creating a note. **Save page** creates the note; later content edits save automatically. Use **Pin tab** to retain a tab. Draft text stays in the editing preview until Save and is discarded when its view is released or reloaded. Page titles and icons update the tree, tab, and breadcrumb. Project switching uses the shared Workbench header.
 
 Read an example's data from a terminal:
 

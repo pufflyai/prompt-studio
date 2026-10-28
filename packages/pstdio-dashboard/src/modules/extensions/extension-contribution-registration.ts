@@ -35,6 +35,7 @@ import {
 import { createDashboardKanbanAdapter, toDashboardExtensionResource } from "./extension-kanban-adapter";
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 import { watchOpenExtensionResource } from "./extension-resource-sync";
+import { registerExtensionSetupShortcuts } from "./extension-setup-shortcuts";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
 
 // Shown once for the registered set, never for the trial sets that isolate a failing extension.
@@ -178,6 +179,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         workbench: input.ctx,
       }),
       registerExtensionResourceHierarchy(input.ctx, { metadata: input.metadata, projectId: input.projectId }),
+      ...registerExtensionSetupShortcuts(input.ctx, input.metadata),
       watchOpenExtensionResource(input.ctx, input),
     );
   } catch (error) {

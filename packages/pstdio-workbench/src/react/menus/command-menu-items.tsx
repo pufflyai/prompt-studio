@@ -2,6 +2,7 @@ import { Box, Image } from "@chakra-ui/react";
 import { PaletteShortcut, Tooltip, type TreeListActionMenuItem } from "@pstdio/ui";
 import type { KeybindingSequence, WorkbenchCoreContributionContext } from "../../core";
 import { reportUserActionError } from "../../core/shared/run-user-action";
+import { WorkbenchShortcutHint } from "../keybindings/shortcut-hint";
 import { WorkbenchIcon } from "../shared/icon";
 import { type MenuEntry, type ResolveMenuEntriesInput, resolveMenuEntries, withLeadingSeparator } from "./menu-entries";
 export interface CreateMenuItemsInput extends ResolveMenuEntriesInput {
@@ -62,12 +63,15 @@ const toMenuItem = (
   commandId: entry.commandId,
   description: entry.description,
   icon: createMenuIcon(entry),
-  endContent: createMenuEndContent({
-    external: entry.external,
-    binding: entry.binding,
-    disabledReason: entry.description,
-    readOnly: entry.readOnly,
-  }),
+  endContent: (
+    <WorkbenchShortcutHint workbench={workbench} action={entry.action}>
+      {createMenuEndContent({
+        external: entry.external,
+        disabledReason: entry.description,
+        readOnly: entry.readOnly,
+      })}
+    </WorkbenchShortcutHint>
+  ),
   disabled: entry.disabled,
   readOnly: entry.readOnly,
   separatorBefore: entry.separatorBefore,

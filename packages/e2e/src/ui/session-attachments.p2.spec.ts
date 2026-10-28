@@ -53,8 +53,8 @@ const openSessionsView = async (page: import("@playwright/test").Page) => {
   await page.keyboard.press("ControlOrMeta+KeyP");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("textbox").fill("> open sessions");
-  await page.locator("text=Open sessions").first().click();
+  await dialog.getByRole("textbox").fill("> go to sessions");
+  await dialog.getByText("Go to sessions", { exact: true }).click();
 };
 
 const fetchConversationMessages = async (request: import("@playwright/test").APIRequestContext, sessionId: string) => {

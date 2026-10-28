@@ -1,4 +1,14 @@
 import { defineCommand, l10n, params, workbenchPanels } from "@pstdio/sdk/extensions";
+import { libraryTarget } from "./contracts";
+
+export const openCreation = defineCommand({
+  id: "open-creation",
+  title: l10n("commands.startCreation", "Create an artifact"),
+  palette: [{}],
+  run(ctx) {
+    ctx.navigation.open(libraryTarget);
+  },
+});
 
 export type ArtifactExample = "brief" | "diagram";
 

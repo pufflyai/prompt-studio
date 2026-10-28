@@ -23,6 +23,8 @@ const extensionCatalogEntrySchema = z.object({
   origin: gitOriginSchema,
   publisher: z.string().min(1).optional(),
   default: z.boolean(),
+  /** Host policy: keep this installed user extension enabled in every project. */
+  alwaysEnabled: z.boolean().optional(),
 });
 
 const extensionCatalogSchema = z.object({
@@ -99,11 +101,20 @@ export const loadExtensionCatalog = async (input: LoadExtensionCatalogInput = {}
   return parseCatalogText(await readFile(path, "utf8"));
 };
 
-let catalogPromise: Promise<ExtensionCatalog> | undefined;
+// One load per configured catalog source, so policy checks do not fetch a remote catalog each time.
+const catalogPromises = new Map<string, Promise<ExtensionCatalog>>();
 
 export const getExtensionCatalog = () => {
-  catalogPromise ??= loadExtensionCatalog();
-  return catalogPromise;
+  const key = process.env.PSTDIO_EXTENSION_CATALOG?.trim() ?? "";
+  const cached = catalogPromises.get(key);
+  if (cached) return cached;
+  const loaded = loadExtensionCatalog();
+  catalogPromises.set(key, loaded);
+  // A failed load is retried on the next read instead of failing until restart.
+  loaded.catch(() => {
+    if (catalogPromises.get(key) === loaded) catalogPromises.delete(key);
+  });
+  return loaded;
 };
 
 export class ExtensionNotInCatalogError extends Error {

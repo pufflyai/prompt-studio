@@ -12,7 +12,6 @@ const vscodeColor = (token: string, fallback: string) =>
 export const workbenchBackgrounds = {
   sidenav: vscodeColor("sideBar.background", chakraBackgrounds.sidenav),
   main: vscodeColor("editor.background", chakraBackgrounds.main),
-  panel: vscodeColor("panel.background", chakraBackgrounds.panel),
   widget: vscodeColor("editorWidget.background", vscodeColor("panel.background", chakraBackgrounds.panel)),
 } as const;
 
@@ -21,19 +20,19 @@ const workbenchRegionBackgrounds = {
   activity: workbenchBackgrounds.main,
   sidenav: workbenchBackgrounds.sidenav,
   "main-header": workbenchBackgrounds.main,
-  "main-left-menu": workbenchBackgrounds.panel,
+  "main-left-menu": workbenchBackgrounds.main,
   main: workbenchBackgrounds.main,
-  "main-right-menu": workbenchBackgrounds.panel,
-  "secondary-header": workbenchBackgrounds.panel,
-  "secondary-left-menu": workbenchBackgrounds.panel,
-  secondary: workbenchBackgrounds.panel,
-  "secondary-right-menu": workbenchBackgrounds.panel,
+  "main-right-menu": workbenchBackgrounds.main,
+  "secondary-header": workbenchBackgrounds.main,
+  "secondary-left-menu": workbenchBackgrounds.main,
+  secondary: workbenchBackgrounds.main,
+  "secondary-right-menu": workbenchBackgrounds.main,
   status: workbenchBackgrounds.main,
-  overlay: workbenchBackgrounds.widget,
-  "side-header": workbenchBackgrounds.widget,
-  "side-left-menu": workbenchBackgrounds.widget,
-  side: workbenchBackgrounds.widget,
-  "side-right-menu": workbenchBackgrounds.widget,
+  overlay: workbenchBackgrounds.main,
+  "side-header": workbenchBackgrounds.main,
+  "side-left-menu": workbenchBackgrounds.main,
+  side: workbenchBackgrounds.main,
+  "side-right-menu": workbenchBackgrounds.main,
 } as const satisfies Record<WorkbenchRegion, string>;
 
 export const workbenchFocusBorder = vscodeColor("focusBorder", "var(--chakra-colors-color-palette-focus-ring)");

@@ -1,4 +1,4 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, type JsonObject, params } from "@pstdio/sdk/extensions";
 import { requireRunning } from "../run-lifecycle";
 import { ideaStatus, isNewPost, saveIdea, updateIdea } from "../schemas";
 import { changed, ideasOf, requireThread } from "../store";
@@ -9,22 +9,48 @@ const requireIdea = async (ctx: Parameters<typeof ideasOf>[0], id: string) => {
   return idea;
 };
 
+const persistIdea = async (ctx: Parameters<typeof ideasOf>[0], data: ReturnType<typeof saveIdea.parse>) => {
+  const thread = await requireThread(ctx, data.threadId);
+  if (isNewPost(thread)) throw new Error("A new post has no reply ideas; revise its draft instead.");
+  if (data.replyTo && !thread.snapshot?.comments.some((comment) => comment.id === data.replyTo))
+    throw new Error("replyTo must name a comment in the thread's snapshot.");
+  const id = crypto.randomUUID();
+  await ideasOf(ctx).put(id, { ...data, id, status: "new", createdAt: new Date().toISOString() });
+  await changed(ctx, thread.id);
+  return { id };
+};
+
 export const saveIdeaCommand = defineCommand({
   id: "save-idea",
   title: "Save a reply idea",
   cli: true,
-  params: { input: params.json({ required: true }) },
+  params: { input: params.json<JsonObject, { required: true }>({ required: true }) },
   async run(ctx, { input }) {
     const data = saveIdea.parse(input);
     await requireRunning(ctx, data.runId);
-    const thread = await requireThread(ctx, data.threadId);
-    if (isNewPost(thread)) throw new Error("A new post has no reply ideas; revise its draft instead.");
-    if (data.replyTo && !thread.snapshot?.comments.some((comment) => comment.id === data.replyTo))
-      throw new Error("replyTo must name a comment in the thread's snapshot.");
-    const id = crypto.randomUUID();
-    await ideasOf(ctx).put(id, { ...data, id, status: "new", createdAt: new Date().toISOString() });
-    await changed(ctx, thread.id);
-    return { id };
+    return persistIdea(ctx, data);
+  },
+});
+export const saveCurrentIdea = defineCommand({
+  id: "save-current-idea",
+  title: saveIdeaCommand.title,
+  mutating: true,
+  params: {
+    resource: params.resource({ resourceType: "thread", required: true, resolvedFrom: "resource" }),
+    body: params.longText({ required: true }),
+    replyTo: params.text(),
+  },
+  async run(ctx, input) {
+    const thread = await requireThread(ctx, input.resource.id);
+    return persistIdea(
+      ctx,
+      saveIdea.parse({
+        runId: thread.runId,
+        threadId: thread.id,
+        body: input.body,
+        ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+      }),
+    );
   },
 });
 

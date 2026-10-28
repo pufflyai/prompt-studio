@@ -1,6 +1,7 @@
 import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { type APIRequestContext, expect, type Page, type TestInfo } from "@playwright/test";
+import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { prepareDashboard } from "../ui/helpers/workspace-files";
 
 declare global {
@@ -21,12 +22,42 @@ export const summarizeSamples = (samples: number[]) => {
   return { samples, min: sorted[0], median, max: sorted[sorted.length - 1] };
 };
 
-// A few samples cannot support a percentile, so reports list every sample and callers gate on
-// the slowest one.
-export const reportSamples = (metric: string, interaction: string, samples: number[]) => {
+const words = (name: string) => name.replaceAll("-", " ");
+const metricLabel = (metric: string, interaction: string) =>
+  `${words(metric).replace(/^./, (first) => first.toUpperCase())}, ${words(interaction)}`;
+
+// A few samples cannot support a percentile, so reports list every sample and the gate checks the
+// slowest one. It returns misses instead of asserting, so a test records all its series before it fails.
+export const budgetMisses = (metric: string, interaction: string, samples: number[], budget: number) => {
   const summary = summarizeSamples(samples);
   console.info(JSON.stringify({ metric, interaction, ...summary }));
-  return summary;
+  for (const value of samples) {
+    recordMeasurement({
+      metric: `${metric}/${interaction}`,
+      label: metricLabel(metric, interaction),
+      unit: "ms",
+      value,
+      budget,
+    });
+  }
+  return summary.max <= budget ? [] : [`${metric} ${interaction}: slowest ${summary.max} ms exceeds ${budget} ms`];
+};
+
+// Garbage collection first, so the figure is the heap the page keeps after its interactions.
+export const reportPageMemory = async (page: Page, metric: string) => {
+  const session = await page.context().newCDPSession(page);
+  await session.send("HeapProfiler.collectGarbage");
+  await session.send("Performance.enable");
+  const { metrics } = await session.send("Performance.getMetrics");
+  await session.detach();
+  const heap = metrics.find((entry) => entry.name === "JSHeapUsedSize")?.value;
+  if (heap === undefined) return;
+  recordMeasurement({
+    metric: `${metric}/js-heap`,
+    label: `${metricLabel(metric, "page heap")}`,
+    unit: "bytes",
+    value: heap,
+  });
 };
 
 // Each repeat runs as its own test, so samples wait in the run's output folder until the last

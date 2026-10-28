@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import type { ExtensionLoggerApi, TerminalEvent } from "pstdio-api-contracts/extension-kernel";
@@ -29,6 +30,12 @@ const posixOnlyTest = process.platform === "win32" ? test.skip : test;
 const isAlive = (pid: number) => {
   try {
     process.kill(pid, 0);
+    if (process.platform === "linux") {
+      // Orphans can remain as zombies until PID 1 reaps them, even though they have exited.
+      const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+      const state = stat.slice(stat.lastIndexOf(")") + 2).split(" ", 1)[0];
+      if (state === "Z" || state === "X") return false;
+    }
     return true;
   } catch {
     return false;

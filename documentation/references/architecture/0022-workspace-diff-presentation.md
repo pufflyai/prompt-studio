@@ -32,7 +32,11 @@ reopen either view. The workspace page declares its routed resource separately a
 - `Files` — a searchable file tree in the left Panel menu and a shared file renderer in the body
 - `Diffs` — changed-file metadata and an on-demand diff body
 
-`Diffs` is active on the first visit. Resource-owned layout state restores the last valid sub-panel and Files menu state on later visits. File selection uses `workspaceView: "files"` and `workspaceFilePath` metadata on the same workspace resource URI.
+Native tree views size to the host viewport and own their scrolling. Their virtual list spacer must not expand the outer region; only rows near the visible viewport mount, including when a large folder is expanded.
+
+Opening a workspace text file starts Monaco's shared runtime loader alongside the file request. The file read does not wait for editor initialization. Known image and binary paths keep their lightweight previews without starting Monaco.
+
+`Files` is active on the first visit. Opening Files does not calculate diffs or Git badges. `Changes` calculates diffs when selected. Resource-owned layout state restores the last valid sub-panel and Files menu state on later visits. File selection uses `workspaceView: "files"` and `workspaceFilePath` metadata on the same workspace resource URI.
 
 ### 4) Workspaces list (summary only)
 
@@ -49,7 +53,7 @@ sequenceDiagram
   participant API as pstdio-api
   participant Git as pstdio-wt (git)
 
-  User->>Dashboard: Open workspace attempt
+  User->>Dashboard: Open Changes
   Dashboard->>API: GET /v1/workspaces/:id/diff-files?mode=fork_point
   API->>Git: Resolve base via reflog fork point (preferred) or merge-base fallback
   API->>Git: Collect changed-file metadata and line counts
@@ -67,7 +71,7 @@ The Files flow uses the same workspace resource:
 1. `GET /v1/workspaces/:id/files` lists direct children or bounded search results.
 2. `GET /v1/workspaces/:id/file?path=...` reads one existing text file or supported image.
 3. Editable text opens in Monaco. Opening does not format, change, or save the file.
-4. `PUT /v1/workspaces/:id/file?path=...` replaces an existing UTF-8 text file after an edit.
+4. Edits remain in the open editor until the user presses Command-S or Control-S. A dot beside the path marks unsaved edits. `PUT /v1/workspaces/:id/file?path=...` replaces an existing UTF-8 text file only on explicit save. Save before switching files or reloading; unsaved edits are not retained across those actions.
 5. `POST /v1/workspaces/:id/file?path=...` creates a file under an existing directory.
 6. `POST /v1/workspaces/:id/directory?path=...` creates a directory under an existing directory.
 7. `PATCH /v1/workspaces/:id/entry?path=...` moves a file without replacing an existing destination.
@@ -203,10 +207,10 @@ planner file query so re-saved artifact content updates in place.
 
 ## Verification
 
-1. Open a worktree workspace and confirm `Files` and `Diffs` are present with `Diffs` active.
+1. Open a worktree workspace and confirm `Files` and `Changes` are present with Files active and no diff requests from Files.
 2. Open Files, search for an unchanged markdown or extensionless text file, and confirm it opens in Monaco.
 3. Confirm opening the file does not issue a write.
-4. Edit and save the file, then open Diffs and confirm the file and saved body appear.
+4. Edit a file and confirm the unsaved dot appears without a write. Press Command-S or Control-S and confirm one write and the dot clearing. Open Changes and confirm the saved body appears.
 5. Confirm the initial Diffs load calls `/diff-files` once and calls `/diff-file` only for the selected file.
 6. Confirm a supported image uses the shared preview.
 7. Open the default folder workspace and confirm Files browses and edits its exact folder through Monaco.

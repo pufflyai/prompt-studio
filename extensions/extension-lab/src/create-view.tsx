@@ -31,7 +31,7 @@ interface ExampleRootProps {
 }
 const ExampleRoot = (props: ExampleRootProps) => {
   const { Component, bridge, propsStore, store, background } = props;
-  const [host] = useState(() => createExampleHost(bridge, propsStore));
+  const [host] = useState(() => createExampleHost(bridge));
   const [error, setError] = useState<string>();
   const [ready, setReady] = useState(!store);
   const hostProps = useSyncExternalStore(propsStore.subscribe, propsStore.get, propsStore.get);

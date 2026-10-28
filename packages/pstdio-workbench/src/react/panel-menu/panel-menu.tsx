@@ -13,7 +13,7 @@ import { useWorkbenchPanelMenus, type WorkbenchPanelMenuView } from "./use-panel
 const WorkbenchPanelMenu = (props: { workbench: WorkbenchCore; view: WorkbenchPanelMenuView }) => {
   const { view, workbench } = props;
   const panel = view.region.split("-")[0] as WorkbenchPanelRegion;
-  const background = panel === "side" ? workbenchBackgrounds.widget : workbenchBackgrounds.panel;
+  const background = workbenchBackgrounds.main;
 
   return (
     <AttachedMenu

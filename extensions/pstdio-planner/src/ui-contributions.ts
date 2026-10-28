@@ -11,6 +11,7 @@ import {
   workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
+import { attentionPanelTarget } from "./attention-panel";
 import { archiveTicketColumnAction } from "./commands/archive-ticket";
 import { attachTicketFileCommand } from "./commands/attach-ticket-file";
 import { createTicketCommand } from "./commands/create-ticket";
@@ -99,7 +100,7 @@ export const createPlannerUi = (baseUrl: string) => {
       onRowActivate: async (ctx, { row }) => {
         if (!row.resource) return;
         const pending = hasPendingInput(await listTicketReviewRequests(ctx.storage, row.resource.id));
-        ctx.navigation.open(ticketActivationTarget(row.resource, pending));
+        ctx.navigation.open(pending ? attentionPanelTarget(row.resource) : ticketActivationTarget(row.resource, false));
       },
       onAttributeChange: setTicketAttribute,
       onMove: moveTicketOnBoard,

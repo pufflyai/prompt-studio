@@ -231,7 +231,7 @@ function TimelineItemRow({
   return (
     <Timeline.Item gap="xs" key={itemKey}>
       <Timeline.Connector>
-        <Timeline.Separator />
+        <Timeline.Separator data-state={isOpen ? "open" : "closed"} />
         <IndicatorView ind={item.indicator} />
       </Timeline.Connector>
       <Timeline.Content h={isOpen ? "auto" : "20px"}>

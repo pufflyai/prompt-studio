@@ -8,7 +8,7 @@ test("offscreen resource rows defer menu resolution until requested", () => {
   const workbench = createWorkbench();
   workbench.commands.registerCommand({ id: "note.rename", label: "Rename" }, { execute() {} });
   workbench.layout.registerMenuItem(resourceContextMenuPath("note"), { commandId: "note.rename" });
-  const shortcuts = spyOn(workbench.keybindings, "listCommandKeybindings");
+  const shortcuts = spyOn(workbench.keyboard, "hints");
   try {
     const section = toTreeListSection(
       {
@@ -348,6 +348,6 @@ describe("toTreeListSection end content", () => {
       {},
       { workbench },
     );
-    expect(section.nodes[0]?.endContent).toBe(explicitEndContent);
+    expect(section.nodes[0]?.endContent).toMatchObject({ props: { children: explicitEndContent } });
   });
 });

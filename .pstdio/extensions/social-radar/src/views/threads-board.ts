@@ -63,14 +63,17 @@ const settings: KanbanRendererSettings = {
   viewMode: "list",
   columnGrouping: "status",
   rowGrouping: "none",
-  ordering: { attributeId: "relevance", direction: "desc" },
   displayProperties: ["mention", "ideas", "kind", "site", "found"],
 };
 const view = (id: string, title: string, filters: Record<string, string[]>): KanbanRendererSavedView => ({
   id,
   title,
   settings,
-  filters,
+  filter: {
+    conjunction: "and",
+    rules: Object.entries(filters).map(([attributeId, value]) => ({ attributeId, condition: "is-any-of", value })),
+  },
+  sorts: [{ attributeId: "relevance", direction: "desc" }],
 });
 const ideaCount = (thread: Thread, ideas: Idea[]) => {
   const count = ideas.filter((idea) => idea.threadId === thread.id && idea.status !== "dismissed").length;

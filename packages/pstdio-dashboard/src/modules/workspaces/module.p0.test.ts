@@ -140,7 +140,7 @@ describe("createWorkspacesModule", () => {
         },
       }),
     ]);
-    expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceDiffs);
+    expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceFiles);
     expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.viewId)).toEqual([
       dashboardWidgetIds.workspaceDiffs,
       dashboardWidgetIds.workspaceFiles,
@@ -192,7 +192,7 @@ describe("createWorkspacesModule", () => {
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     openWorkspacesPage(workbench, workspace);
-    expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceDiffs);
+    expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceFiles);
     openWorkspacesPage(workbench, fileResource);
     const layout = workbench.layout.getLayout();
     expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceFiles);
@@ -267,7 +267,7 @@ describe("createWorkspacesModule navigation", () => {
     expect(nodeIds).not.toContain("new-workspace");
     expect(workspacesNode).toMatchObject({
       commandId: dashboardCommandIds.openWorkspaces,
-      target: { kind: "page", page: workbenchPages.workspaces },
+      target: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
     });
     expect(workspacesNode?.hiddenByDefault).toBe(true);
     expect(nodeIds).toContain(dashboardViews.workspaces.id);

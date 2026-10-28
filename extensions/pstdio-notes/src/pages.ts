@@ -27,6 +27,7 @@ export const notesMount = (ctx: ExtensionContextBase) => ctx.artifacts.mount(doc
 export const editor = defineView({
   id: "note-editor",
   title: l10n("views.noteEditor", "Note"),
+  icon: "file-text",
   body: {
     kind: "file",
     refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
@@ -82,11 +83,12 @@ export const notesPage = definePage({
   path: "notes",
   icon: "notebook-pen",
   mode: workbenchModes.project,
-  main: { kind: "panels", empty: editor.ref },
+  main: { kind: "panels" },
   slots: [
     {
       id: "note",
       region: "main",
+      addableIn: ["main"],
       order: 0,
       mountStrategy: "keep-mounted",
       tab: {
@@ -108,7 +110,12 @@ export const notesPage = definePage({
       },
       item: {
         kind: "binding",
-        binding: { kinds: [note.ref], view: editor.ref, cardinality: "many" },
+        binding: {
+          kinds: [note.ref],
+          view: editor.ref,
+          cardinality: "many",
+          add: { kind: "command", target: { command: { kind: "command", id: "notes.create" } } },
+        },
       },
     },
   ],

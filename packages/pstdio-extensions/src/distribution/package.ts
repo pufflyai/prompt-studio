@@ -10,7 +10,13 @@ import { createPackageArchive } from "./package-archive";
 export const packageSha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 export const MAX_EXTENSION_PACKAGE_BYTES = 64 * 1024 * 1024;
 const segment = /^[a-z][a-z0-9-]*$/;
-const stableVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+const numericIdentifier = "(?:0|[1-9]\\d*)";
+const prereleaseIdentifier = `(?:${numericIdentifier}|\\d*[A-Za-z-][0-9A-Za-z-]*)`;
+const packageVersion = new RegExp(
+  `^${numericIdentifier}\\.${numericIdentifier}\\.${numericIdentifier}` +
+    `(?:-${prereleaseIdentifier}(?:\\.${prereleaseIdentifier})*)?` +
+    "(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$(?![\\s\\S])",
+);
 const safePath = (path: string) =>
   path.length > 0 &&
   !path.includes("\\") &&
@@ -26,7 +32,7 @@ export const packageMetadata = (raw: Record<string, unknown>) => {
     typeof publisher !== "string" ||
     !segment.test(publisher) ||
     typeof version !== "string" ||
-    !stableVersion.test(version) ||
+    !packageVersion.test(version) ||
     typeof main !== "string" ||
     !safePath(main.replace(/^\.\//, "")) ||
     typeof engines?.pstdio !== "string" ||

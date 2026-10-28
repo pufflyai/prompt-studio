@@ -1,6 +1,6 @@
 import { listAnalysis } from "./analysis";
 import { getChannelState, setChannelPaused } from "./channel-state";
-import { saveIdeaCommand, setIdeaStatus, updateIdeaCommand } from "./ideas";
+import { saveCurrentIdea, saveIdeaCommand, setIdeaStatus, updateIdeaCommand } from "./ideas";
 import { addMedia } from "./media";
 import { finishRunCommand, getContext, listAnswered, listDigest, runDaily, startResearch } from "./runs";
 import {
@@ -13,7 +13,14 @@ import {
   updateSettings,
 } from "./settings";
 import { addThreadImage } from "./thread-images";
-import { getThread, recordOutcome, saveThreadCommand, setThreadStatus, updateThreadCommand } from "./threads";
+import {
+  getThread,
+  recordOutcome,
+  saveThreadCommand,
+  setCurrentThreadStatus,
+  setThreadStatus,
+  updateThreadCommand,
+} from "./threads";
 
 // Keys match command ids, so webviews can call them through the typed client.
 export const commands = {
@@ -24,9 +31,11 @@ export const commands = {
   "get-context": getContext,
   "save-thread": saveThreadCommand,
   "save-idea": saveIdeaCommand,
+  "save-current-idea": saveCurrentIdea,
   "update-thread": updateThreadCommand,
   "update-idea": updateIdeaCommand,
   "set-thread-status": setThreadStatus,
+  "set-current-thread-status": setCurrentThreadStatus,
   "set-idea-status": setIdeaStatus,
   "get-thread": getThread,
   "add-media": addMedia,

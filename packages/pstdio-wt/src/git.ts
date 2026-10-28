@@ -57,8 +57,19 @@ export const resolveGitExecutable = (deps: GitExecutableDeps = {}) => {
   return nativeGit ?? resolved;
 };
 
+export const createGitExecutableResolver = (deps: GitExecutableDeps = {}) => {
+  let executable: string | undefined;
+  const exists = deps.exists ?? existsSync;
+  return () => {
+    if (!executable || !exists(executable)) executable = resolveGitExecutable(deps) ?? undefined;
+    return executable;
+  };
+};
+
+const resolveSystemGit = createGitExecutableResolver();
+
 export const requireGitExecutable = () => {
-  const executable = resolveGitExecutable();
+  const executable = resolveSystemGit();
   if (!executable) throw new GitUnavailableError();
   return executable;
 };

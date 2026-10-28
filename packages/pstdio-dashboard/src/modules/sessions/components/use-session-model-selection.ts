@@ -8,10 +8,10 @@ import { resolveSessionSelectionSync } from "../runtime/session-runtime-selectio
 export const useSessionModelSelection = (view: DashboardSessionView, projectId: string | undefined) => {
   const [recent] = useState(() => (view.sessionId ? undefined : readRecentHarnessSelection(projectId)));
   const [selectedAgent, setSelectedAgent] = useState(view.agent ?? recent?.harnessId ?? "");
-  const [selectedModel, setSelectedModel] = useState(view.lastSelectedModel ?? recent?.model ?? "");
+  const [selectedModel, setSelectedModel] = useState(view.lastSelectedModel ?? (view.agent ? "" : recent?.model) ?? "");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(view.workspaceId ?? "");
   const [harnessParamOverrides, setHarnessParamOverrides] = useState<HarnessParamValues>(
-    view.sessionId ? (view.params ?? {}) : (recent?.params ?? {}),
+    view.sessionId || view.agent ? (view.params ?? {}) : (recent?.params ?? {}),
   );
   const previousViewRef = useRef(view);
 

@@ -1,6 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { projectExtensionInstanceSchema, setProjectExtensionEnabledRequestSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
+import { AlwaysEnabledExtensionError } from "../always-on-extensions";
 import type { ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
 const errorSchema = z.object({ error: z.string() });
@@ -30,6 +31,7 @@ export const setProjectExtensionEnabledRoute = createRoute({
       description: "Extension instance not found for project.",
       content: { "application/json": { schema: errorSchema } },
     },
+    409: { description: "The host requires this extension.", content: { "application/json": { schema: errorSchema } } },
   },
 });
 
@@ -40,8 +42,13 @@ export const setProjectExtensionEnabledHandler = (
     const { projectId, instanceId } = c.req.valid("param");
     const { enabled } = c.req.valid("json");
 
-    const updated = await deps.projectExtensionLifecycle.setEnabled(projectId, instanceId, enabled);
-    if (!updated) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
-    return c.json(updated, 200);
+    try {
+      const updated = await deps.projectExtensionLifecycle.setEnabled(projectId, instanceId, enabled);
+      if (!updated) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
+      return c.json(updated, 200);
+    } catch (error) {
+      if (error instanceof AlwaysEnabledExtensionError) return c.json({ error: error.message }, 409);
+      throw error;
+    }
   };
 };

@@ -17,17 +17,23 @@ const closeFixtureRuntime = async (root: string, home: string) => {
   if (existsSync(join(home, "runtime.json"))) await runPackagedAsync(["close", "--force"], root, { PSTDIO_HOME: home });
 };
 
-test("a packaged CLI gives unchanged extension contents identical archives across time", async () => {
+test.each([
+  "0.45.1",
+  "0.46.0-nightly.20261028030226",
+])("a packaged CLI preserves version %s and gives unchanged extension contents identical archives across time", async (version) => {
   const root = await mkdtemp(join(tmpdir(), "packaged-extension-reproducibility-"));
   const home = join(root, "home");
   try {
     const source = join(root, "notes");
     await mkdir(home);
-    await writeRegistryNotes(source, "0.45.1");
+    await writeRegistryNotes(source, version);
     const args = ["extensions", "pack", source, "--out-dir", root];
     const path = (await runPackagedAsync(args, root, { PSTDIO_HOME: home })).trim();
+    expect(path).toBe(join(root, `pstdio.pstdio-notes-${version}.tgz`));
     expect(existsSync(join(home, "runtime.json"))).toBe(false);
     const first = await Bun.file(path).bytes();
+    const files = await new Bun.Archive(first).files();
+    expect(JSON.parse(await files.get("package.json")!.text()).version).toBe(version);
     await Bun.sleep(1100);
     const repeated = (await runPackagedAsync(args, root, { PSTDIO_HOME: home })).trim();
     expect(await Bun.file(repeated).bytes()).toEqual(first);

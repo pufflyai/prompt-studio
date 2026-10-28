@@ -1,9 +1,52 @@
 import { describe, expect, test } from "bun:test";
+import { sessionEnded } from "../run-lifecycle";
 import type { Idea } from "../schemas";
 import { commands } from ".";
-import { foundThread, newPost, setup } from "./test-context";
+import { finish, foundThread, newPost, setup } from "./test-context";
 
 describe("social radar reply ideas", () => {
+  test.each([
+    "done",
+    "failed",
+  ] as const)("a person can save a current-thread idea after its run is %s", async (status) => {
+    const { ctx, storage } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const thread = await commands["save-thread"].run(ctx, { input: foundThread(run.runId) });
+    if (status === "done") await commands["finish-run"].run(ctx, { input: finish(run.runId) });
+    else await sessionEnded(ctx, run.sessionId!, "Research session failed.");
+
+    const idea = await commands["save-current-idea"].run(ctx, {
+      resource: { type: "thread", id: thread.id },
+      body: "A follow-up after research.",
+      replyTo: "c1",
+    });
+    expect(await storage.collection<Idea>("ideas").get(idea.id)).toMatchObject({
+      threadId: thread.id,
+      runId: run.runId,
+      replyTo: "c1",
+      body: "A follow-up after research.",
+    });
+    await expect(
+      commands["save-idea"].run(ctx, {
+        input: { runId: run.runId, threadId: thread.id, body: "An agent cannot keep writing." },
+      }),
+    ).rejects.toThrow("Run has ended.");
+  });
+
+  test("the current-thread action fixes the selected thread and run before saving the idea", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const thread = await commands["save-thread"].run(ctx, { input: foundThread(run.runId) });
+    const idea = await commands["save-current-idea"].run(ctx, {
+      resource: { type: "thread", id: thread.id },
+      body: "A shared workbench helps.",
+    });
+    expect(await storage.collection<Idea>("ideas").get(idea.id)).toMatchObject({
+      threadId: thread.id,
+      runId: run.runId,
+      body: "A shared workbench helps.",
+    });
+  });
   test("a reply idea answers a comment in the thread's snapshot", async () => {
     const { ctx, storage } = setup();
     const run = await commands["run-daily"].run(ctx, {});

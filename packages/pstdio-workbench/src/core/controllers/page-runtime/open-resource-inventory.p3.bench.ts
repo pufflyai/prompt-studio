@@ -1,3 +1,4 @@
+import { recordMeasurement, recordPeakMemory } from "pstdio-benchmarks/writer";
 import { createDefaultWorkbenchLayout } from "../../registries/layout/layout-types";
 import { createWorkbenchLayoutCache } from "./workbench-layout-cache";
 
@@ -40,6 +41,15 @@ for (let iteration = 0; iteration < 1000; iteration++) {
 }
 if (ids.size !== count || enumerations !== 1) throw new Error("Saved sessions were not restored once");
 samples.sort((a, b) => a - b);
+recordMeasurement({ metric: "restore", label: "Restore 10,000 open resources", unit: "ms", value: restored - started });
+// One lookup is shorter than the timer resolution, so the trend tracks all 1,000 together.
+recordMeasurement({
+  metric: "lookups",
+  label: "1,000 open-resource lookups",
+  unit: "ms",
+  value: samples.reduce((sum, sample) => sum + sample, 0),
+});
+recordPeakMemory("open-resources-memory", "Open resources peak memory");
 console.info(
   JSON.stringify({
     sessions: count,

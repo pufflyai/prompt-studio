@@ -1,20 +1,16 @@
-import { Box, IconButton } from "@chakra-ui/react";
-import { Tooltip } from "@pstdio/ui";
+import { Box } from "@chakra-ui/react";
 import { type ChatInputQuestionResponse, ChatSkeleton } from "@pstdio/ui/chat-ui";
 import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
-import { ArrowUpRight } from "lucide-react";
 import type { SessionAttachment } from "pstdio-api-contracts";
-import type { ReactNode } from "react";
 import { useApiFileParts } from "@/lib/api-file-url";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import {
   createDashboardWorkspaceOptionResource,
-  createDashboardWorkspaceOptions,
   type DashboardWorkspaceOption,
 } from "@/shared/workspaces/workspace-options";
 import { createDraftCommandSession } from "../chat/create-draft-command-session";
@@ -46,35 +42,8 @@ interface DashboardSessionChatPanelProps {
   history: ReturnType<typeof useDashboardSessionMessages>;
   emptyStateTitle: string;
   emptyStateDescription: string;
-  workspaceAction: ReactNode;
   drafts?: DashboardSessionDraftPersistence;
 }
-
-type SessionWorkspaceReviewView = Pick<
-  DashboardSessionView,
-  "workspaceBranch" | "workspaceId" | "workspaceShorthand" | "workspaceTitle"
->;
-
-const createSessionWorkspaceResource = (
-  view: SessionWorkspaceReviewView,
-  projectId: string | undefined,
-  workspaces: readonly DashboardWorkspaceOption[],
-) => {
-  if (!view.workspaceId) return undefined;
-  const workspace = workspaces.find((candidate) => candidate.id === view.workspaceId);
-  return workspace ? createDashboardWorkspaceOptionResource(workspace, projectId) : undefined;
-};
-
-export const openReviewWorkspace = (
-  input: Pick<WorkbenchPanelRenderInput, "workbench">,
-  view: SessionWorkspaceReviewView,
-  workspaces = createDashboardWorkspaceOptions(getDashboardSelectedProjectId(input.workbench)),
-) => {
-  const resource = createSessionWorkspaceResource(view, getDashboardSelectedProjectId(input.workbench), workspaces);
-  if (!resource) return undefined;
-
-  return openWorkspacesPage(input.workbench, resource);
-};
 
 export const openSelectedWorkspace = (
   input: Pick<WorkbenchPanelRenderInput, "workbench">,
@@ -85,7 +54,7 @@ export const openSelectedWorkspace = (
 const nonEmptyHarnessParams = (params: HarnessParamValues) => (Object.keys(params).length > 0 ? params : undefined);
 
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
-  const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction, drafts, history } = props;
+  const { input, view, emptyStateTitle, emptyStateDescription, drafts, history } = props;
   const attachedResources = [view.workspaceTitle, view.workspaceShorthand].filter(Boolean);
   const sessionId = view.sessionId ?? null;
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
@@ -294,7 +263,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               }
               additions={view.additions}
               deletions={view.deletions}
-              action={workspaceAction}
+              onOpenWorkspace={(workspace) => void openSelectedWorkspace(input, workspace, projectId)}
             />
           }
           onSubmitMessage={view.device ? undefined : submit}
@@ -302,22 +271,5 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
         />
       </Box>
     </Box>
-  );
-};
-
-export const ReviewChangesAction = (props: { input: WorkbenchPanelRenderInput; view: SessionWorkspaceReviewView }) => {
-  const { input, view } = props;
-
-  return (
-    <Tooltip content="Open workspace">
-      <IconButton
-        size="xs"
-        variant="ghost"
-        aria-label="Open workspace"
-        onClick={() => void openReviewWorkspace(input, view)}
-      >
-        <ArrowUpRight size={14} />
-      </IconButton>
-    </Tooltip>
   );
 };

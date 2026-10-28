@@ -2,8 +2,9 @@ import { defineSlotRecipe } from "@chakra-ui/react";
 
 export const chatComposerRecipe = defineSlotRecipe({
   className: "ps-chat-composer",
-  slots: ["input", "workspace"],
+  slots: ["root", "input", "workspace"],
   base: {
+    root: { px: "xs", pb: "xs", pt: "0", gap: "0" },
     input: {
       position: "relative",
       width: "full",

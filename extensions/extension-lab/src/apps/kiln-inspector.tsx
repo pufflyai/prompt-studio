@@ -1,8 +1,8 @@
 import { Badge, Box, Button, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react";
-import { useExampleStore, usePageResource } from "../example-store";
+import { useExampleStore } from "../example-store";
 import { ExampleIcon } from "../icon";
-import type { ExampleViewInput } from "../view-context";
-import { type KilnObject, type KilnVector, kilnObjects, kilnPage, kilnResource } from "./kiln-data";
+import { type ExampleViewInput, usePageSelection } from "../view-context";
+import { type KilnObject, type KilnVector, kilnObjects } from "./kiln-data";
 import { kilnStore, toggleKilnVisibility, updateKilnVector } from "./kiln-state";
 
 const axisColors = { X: "red.fg", Y: "green.fg", Z: "blue.fg" } as const;
@@ -68,13 +68,7 @@ const SceneOutliner = (props: { input: ExampleViewInput; selectedId: string }) =
                 variant={selectedId === object.id ? "subtle" : "ghost"}
                 justifyContent="flex-start"
                 aria-current={selectedId === object.id ? "true" : undefined}
-                onClick={() =>
-                  input.host.navigate({
-                    kind: "page",
-                    page: kilnPage,
-                    resource: kilnResource(object),
-                  })
-                }
+                onClick={() => input.host.page.updateParams({ selection: object.id })}
               >
                 <ExampleIcon name={object.icon} />
                 <Text truncate>{object.name}</Text>
@@ -99,7 +93,7 @@ const SceneOutliner = (props: { input: ExampleViewInput; selectedId: string }) =
 export const KilnInspector = (props: { input: ExampleViewInput }) => {
   const { input } = props;
   const state = useExampleStore(kilnStore);
-  const selectedId = usePageResource(input.host)?.id ?? kilnObjects[0].id;
+  const selectedId = usePageSelection(input.host) ?? kilnObjects[0].id;
   const object = kilnObjects.find((item) => item.id === selectedId) ?? kilnObjects[0];
   const objectState = state.objectStates[object.id];
 

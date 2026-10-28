@@ -84,6 +84,7 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   const processTitle = useWorkbenchStore(workbench.terminal.store, (state) =>
     sessionId ? state.sessionsById[sessionId]?.title : undefined,
   );
+  const keyboardActive = useWorkbenchStore(workbench.keyboard.store, (state) => state.active);
   const active = useWorkbenchStore(workbench.layout.store, (state) => {
     const region = Object.values(state.layout.regions).find((region) =>
       region.widgets.some((candidate) => candidate.widgetId === placement.instanceId),
@@ -120,7 +121,7 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
       <Terminal
         bridge={bridge}
         theme={createTerminalThemeFromPreference(preference)}
-        autoFocus={active}
+        autoFocus={active && !keyboardActive}
         killOnUnmount={false}
         onSessionOpen={setSessionId}
       />

@@ -22,13 +22,25 @@ export const createKeyboardShortcutsModule = () =>
       ctx.overlays.registerOverlay({
         id: dashboardWidgetIds.shortcutHelp,
         viewId: dashboardWidgetIds.shortcutHelp,
-        config: { size: "md", placement: "center", scrollBehavior: "inside" },
+        config: {
+          size: "md",
+          placement: "center",
+          scrollBehavior: "inside",
+          contentMaxWidth: "palette-width",
+          contentWidth: "full",
+        },
       });
 
       ctx.commands.registerCommand(
         { id: dashboardCommandIds.openShortcuts, label: "Keyboard shortcuts", category: "Help", icon: "CircleHelp" },
         {
-          execute: () => ctx.overlays.openOverlay(dashboardWidgetIds.shortcutHelp, { title: "Keyboard shortcuts" }),
+          execute: (args?: { extensionId?: string }) =>
+            ctx.overlays.openOverlay(dashboardWidgetIds.shortcutHelp, {
+              title: "Keyboard shortcuts",
+              resource: args?.extensionId
+                ? { type: "keyboard-shortcuts", id: args.extensionId, metadata: { extensionId: args.extensionId } }
+                : undefined,
+            }),
         },
       );
       ctx.keybindings.registerKeybinding({

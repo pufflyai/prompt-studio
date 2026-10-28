@@ -102,6 +102,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
     // `flex: 1 0 auto` lets the host fill its region when the widget is short and
     // grow past it when the widget is tall, so the region's ScrollArea can scroll.
     <Box
+      data-workbench-presentation={placement.widgetId}
       data-workbench-view={view?.id ?? placement.contributionId}
       data-workbench-renderer={renderer ? "mounted" : "missing"}
       display="flex"
@@ -111,6 +112,9 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       minH="0"
       w="full"
       overflow="hidden"
+      // A tree owns its scrollbar. Its virtual spacer must not size the region
+      // to the full file list and turn every row into a visible row.
+      contain={view?.body.kind === "tree" && props.sizing !== "content-height" ? "size" : undefined}
     >
       <WorkbenchActionErrors workbench={workbench} target={placement.widgetId} />
       {renderer ? (

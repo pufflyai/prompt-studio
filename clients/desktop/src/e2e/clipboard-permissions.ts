@@ -1,4 +1,5 @@
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
+import { focusWorkbench } from "./focus-workbench";
 
 export const expectClipboardPermissions = async (electronApp: ElectronApplication, window: Page) => {
   await test.step("copies message text through the browser clipboard API", async () => {
@@ -37,6 +38,9 @@ export const expectClipboardPermissions = async (electronApp: ElectronApplicatio
       document.body.append(frame);
     });
     const extensionCopy = window.frameLocator('iframe[title="Extension draft"]').getByRole("button");
+    await focusWorkbench(electronApp, window);
+    await extensionCopy.focus();
+    await expect(extensionCopy).toBeFocused();
     await extensionCopy.click();
     await expect(extensionCopy).toHaveText("Copied extension draft");
     expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe("Extension draft");
@@ -63,6 +67,9 @@ export const expectClipboardPermissions = async (electronApp: ElectronApplicatio
         );
       };
     });
+    await focusWorkbench(electronApp, window);
+    await embeddedCopy.focus();
+    await expect(embeddedCopy).toBeFocused();
     await embeddedCopy.click();
     await expect(embeddedCopy).toHaveText("denied");
     expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe("Extension draft");
