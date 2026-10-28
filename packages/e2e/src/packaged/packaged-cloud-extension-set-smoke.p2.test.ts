@@ -213,5 +213,5 @@ test(
       await rm(root, { recursive: true, force: true });
     }
   },
-  PACKAGED_TEST_TIMEOUT,
+  process.platform === "win32" ? 60_000 : PACKAGED_TEST_TIMEOUT,
 );
