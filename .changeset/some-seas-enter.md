@@ -3,4 +3,4 @@
 "@pstdio/workbench": patch
 ---
 
-Match content panel surfaces and keep working activity visible while scrolling.
+Match content panel surfaces and keep elapsed activity in the workspace header.

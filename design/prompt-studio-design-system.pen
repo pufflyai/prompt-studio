@@ -19588,7 +19588,7 @@
                       "type": "frame",
                       "id": "ANO6t",
                       "name": "cmp/SessionWorkspaceMenu",
-                      "context": "SessionWorkspaceMenu (pstdio-dashboard/src/modules/sessions/components/session-workspace-menu.tsx). SearchableMenu width 280, radius 8, primary $ds-bg surface on a $ds-border hairline. Menu padding 6 so rows inset and their 6px radius reads. Search row only renders when workspaces.length > 10. Rows are single-line: GitBranch icon + workspace.title, no description. Default workspace (root repo) is pinned first, rest newest-first. Empty state: 'No workspaces', compact row, 16px icon, disabled. The locked selector uses the identical xs button layout and chevron with neutral static styling, disabled for interaction.",
+                      "context": "Workspace selection uses the xs ghost button. Editable state has GitBranch, workspace name and ChevronDown. Locked selection becomes an Open workspace button with GitBranch, workspace name and ArrowUpRight; clicking opens the workspace. No chevron or duplicate open icon button. Keep the shared button padding and text style.",
                       "reusable": true,
                       "clip": true,
                       "width": 280,
@@ -28746,7 +28746,7 @@
                       "type": "frame",
                       "id": "JGKK1",
                       "name": "cmp/ChatWorkspaceHub",
-                      "context": "Borderless workspace shell uses ds-surface, matching selected tabs. Restore Solarized Light surface #EEE8D5. Surrounding composer inset is 0px top and 8px on the other sides. Selector, then open action, then diff; compact time at the far right. No gap between header and input. Working plus elapsed time sits at the conversation bottom when fully scrolled down, and otherwise at the right of this workspace header. Locked workspace selection keeps the same button padding, icon, chevron and text, with no click or hover style.",
+                      "context": "Borderless workspace shell uses ds-surface, matching selected tabs. Surrounding composer inset is 0px top and 8px on the other sides. Spinner and elapsed time stay right aligned in the workspace header at every scroll position, without a Working label. Editable workspace selection keeps its chevron followed by a separate open action. Once selection is locked, merge the workspace identity and open action into one ghost button with a trailing ArrowUpRight, no chevron and no separate icon button. No gap between header and input.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "$ds-surface",
@@ -28780,8 +28780,14 @@
                                 {
                                   "type": "frame",
                                   "id": "KD1W1",
-                                  "name": "Workspace",
-                                  "gap": 7,
+                                  "name": "Open workspace button",
+                                  "height": 28,
+                                  "cornerRadius": 4,
+                                  "gap": 8,
+                                  "padding": [
+                                    0,
+                                    4
+                                  ],
                                   "alignItems": "center",
                                   "children": [
                                     {
@@ -28803,28 +28809,18 @@
                                       "fontFamily": "$font-heading",
                                       "fontSize": 13,
                                       "fontWeight": "500"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "id": "o51iMN",
-                                  "type": "ref",
-                                  "ref": "nvvgg",
-                                  "name": "Open",
-                                  "width": 24,
-                                  "height": 24,
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  },
-                                  "descendants": {
-                                    "k7mgm": {
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "SUtRj",
+                                      "name": "Open workspace",
+                                      "width": 14,
+                                      "height": 14,
                                       "icon": "arrow-up-right",
-                                      "width": 12,
-                                      "height": 12,
+                                      "library": "lucide",
                                       "fill": "$ds-fg-muted"
                                     }
-                                  }
+                                  ]
                                 },
                                 {
                                   "type": "frame",
@@ -28905,16 +28901,6 @@
                                   "icon": "loader-circle",
                                   "library": "lucide",
                                   "fill": "$ds-info"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "KGemd",
-                                  "name": "Working label",
-                                  "fill": "$ds-fg-muted",
-                                  "content": "Working",
-                                  "fontFamily": "$font-body",
-                                  "fontSize": 11,
-                                  "fontWeight": "normal"
                                 },
                                 {
                                   "type": "text",

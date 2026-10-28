@@ -1,7 +1,5 @@
-import { Box, HStack, Spinner, Text } from "@chakra-ui/react";
+import { HStack, Spinner, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import { useConversationBottom } from "./use-conversation-bottom";
 
 // Compact, unit-dropping elapsed format: "4s", "48s", "10m 20s", "1h 04m".
 const formatElapsed = (totalSeconds: number) => {
@@ -18,13 +16,11 @@ const formatElapsed = (totalSeconds: number) => {
 interface WorkingIndicatorProps {
   startedAt?: number;
   hidden?: boolean;
-  workspaceContainer?: HTMLElement | null;
 }
 
-// Keep the clock mounted while its content moves between the transcript and workspace header.
+// Keep the elapsed clock in the workspace header for the active conversation.
 export const WorkingIndicator = (props: WorkingIndicatorProps) => {
-  const { startedAt, hidden = false, workspaceContainer } = props;
-  const atBottom = useConversationBottom();
+  const { startedAt, hidden = false } = props;
   const [mountedAt] = useState(Date.now);
   const [now, setNow] = useState(Date.now);
 
@@ -39,18 +35,12 @@ export const WorkingIndicator = (props: WorkingIndicatorProps) => {
 
   if (hidden) return null;
 
-  const indicator = (
+  return (
     <HStack role="status" aria-label="Agent working" aria-live="off" gap="2xs" px="xs" py="2xs" flexShrink="0">
       <Spinner size="xs" color="fg.info" />
-      <Text textStyle="label/XS/regular" color="fg.muted">
-        Working
-      </Text>
       <Text fontFamily="mono" textStyle="mono/XS" color="fg.muted" letterSpacing="-0.2px">
         {formatElapsed((now - (startedAt ?? mountedAt)) / 1000)}
       </Text>
     </HStack>
   );
-
-  // Reserve the same space in both positions so relocating the indicator cannot move the scroll boundary.
-  return <Box h="7">{atBottom || !workspaceContainer ? indicator : createPortal(indicator, workspaceContainer)}</Box>;
 };

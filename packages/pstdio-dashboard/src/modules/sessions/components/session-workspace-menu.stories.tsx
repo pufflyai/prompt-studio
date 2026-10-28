@@ -1,6 +1,6 @@
 import { Box, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import type { DashboardWorkspaceOption } from "@/shared/workspaces/workspace-options";
 import { SessionWorkspaceMenu } from "./session-workspace-menu";
 
@@ -28,7 +28,8 @@ const meta = {
     workspaces: [workspace],
     selectedWorkspaceId: workspace.id,
     selectedWorkspaceLabel: workspace.title,
-    onSelectWorkspace: () => {},
+    onSelectWorkspace: fn(),
+    onOpenWorkspace: fn(),
   },
   render: (args) => (
     <Stack p="md" gap="md" bg="bg.muted">
@@ -40,17 +41,20 @@ const meta = {
       </Box>
     </Stack>
   ),
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const editable = within(canvas.getByTestId("editable")).getByRole("button", { name: "Select workspace" });
-    const locked = within(canvas.getByTestId("locked")).getByRole("button", { name: "Select workspace" });
-    await expect(locked).toBeDisabled();
+    const locked = within(canvas.getByTestId("locked")).getByRole("button", { name: "Open workspace" });
+    await expect(locked).toBeEnabled();
+    await expect(within(canvas.getByTestId("locked")).getAllByRole("button")).toHaveLength(1);
+    await expect(locked.querySelector(".lucide-chevron-down")).toBeNull();
+    await expect(locked.querySelector(".lucide-arrow-up-right")).not.toBeNull();
+    await userEvent.click(locked);
+    await expect(args.onOpenWorkspace).toHaveBeenCalledTimes(1);
+    await expect(args.onSelectWorkspace).not.toHaveBeenCalled();
     for (const property of ["height", "width", "paddingLeft", "paddingRight", "gap"] as const) {
       await expect(getComputedStyle(locked)[property]).toBe(getComputedStyle(editable)[property]);
     }
-    const background = getComputedStyle(locked).backgroundColor;
-    await userEvent.hover(canvas.getByTestId("locked"));
-    await expect(getComputedStyle(locked).backgroundColor).toBe(background);
     await userEvent.click(editable);
     await waitFor(() =>
       expect(within(canvasElement.ownerDocument.body).getByTestId("session-workspace-options")).toBeVisible(),

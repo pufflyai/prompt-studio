@@ -63,13 +63,11 @@ const meta = {
     const canvas = within(canvasElement);
     const workspace = canvasElement.querySelector(".ps-chat-composer__workspace")!;
     await waitFor(() => {
-      expect(canvas.getByText("Working", { exact: true })).toBeVisible();
-      expect(workspace).not.toContainElement(canvas.getByText(/^\d+[smh](?: \d+[sm])?$/));
+      expect(canvas.getByRole("status", { name: "Agent working" })).toBeVisible();
+      expect(workspace).toContainElement(canvas.getByText(/^\d+[smh](?: \d+[sm])?$/));
     });
     const timer = canvas.getByText(/^\d+[smh](?: \d+[sm])?$/);
-    await expect(workspace).not.toContainElement(timer);
-    await expect(canvas.getByRole("log")).toContainElement(timer);
-    await expect(canvas.getByText("Working", { exact: true })).toBeVisible();
+    await expect(workspace).toContainElement(timer);
     await expect(getComputedStyle(workspace.parentElement!).paddingTop).toBe("0px");
     const open = canvas.getByRole("button", { name: "Open workspace" }).getBoundingClientRect();
     const identity = canvas.getByRole("button", { name: "main" }).getBoundingClientRect();
@@ -151,14 +149,14 @@ export const ScrollAwareActivity: Story = {
     const workspace = canvasElement.querySelector(".ps-chat-composer__workspace")!;
     await waitFor(() => expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight));
     viewport.scrollTop = viewport.scrollHeight;
-    await waitFor(() => expect(workspace).not.toContainElement(canvas.getByRole("status", { name: "Agent working" })));
+    await waitFor(() => expect(workspace).toContainElement(canvas.getByRole("status", { name: "Agent working" })));
     viewport.scrollTop -= 10;
     await waitFor(() => expect(workspace).toContainElement(canvas.getByRole("status", { name: "Agent working" })));
     await expect(
       canvas.getByRole("status", { name: "Agent working" }).getBoundingClientRect().right,
     ).toBeLessThanOrEqual(workspace.getBoundingClientRect().right);
     viewport.scrollTop = viewport.scrollHeight;
-    await waitFor(() => expect(workspace).not.toContainElement(canvas.getByRole("status", { name: "Agent working" })));
+    await waitFor(() => expect(workspace).toContainElement(canvas.getByRole("status", { name: "Agent working" })));
     await expect(canvas.getAllByRole("status", { name: "Agent working" })).toHaveLength(1);
   },
 };
