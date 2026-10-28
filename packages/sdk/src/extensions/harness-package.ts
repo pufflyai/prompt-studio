@@ -17,7 +17,7 @@ export const prepareHarnessPackage = async (
       env: input.env,
       timeoutMs: 3_000,
     });
-    const version = `${result.stdout}\n${result.stderr}`.match(/\b\d+\.\d+\.\d+(?:-[\w.-]+)?\b/)?.[0];
+    const version = Bun.stripANSI(`${result.stdout}\n${result.stderr}`).match(/\b\d+\.\d+\.\d+(?:-[\w.-]+)?\b/)?.[0];
     if (result.exitCode === 0 && version && Bun.semver.satisfies(version, `>=${input.minimumVersion}`)) return null;
   } catch {
     /* An unavailable global command needs the pinned fallback. */
