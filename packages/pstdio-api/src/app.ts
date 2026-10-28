@@ -9,6 +9,7 @@ import { createAppSettingsService, createCoreDomainServices } from "./app-domain
 import { productionAppDependencies, wireAppExtensionServices } from "./app-extension-services";
 import { registerApi } from "./app-routing";
 import {
+  closeAppDatabase,
   createAppTerminalSupervisor,
   createRuntimeRouteDeps,
   startAppArtifactMountWatch,
@@ -300,13 +301,7 @@ const buildApp = async (
     artifactMountWatch,
     automationService,
     terminalSupervisor,
-    closeDb: async () => {
-      try {
-        await deps.extensionResourceSequencesService.flush();
-      } finally {
-        await closeDb();
-      }
-    },
+    closeDb: () => closeAppDatabase(deps, closeDb),
   });
   return account.connectAccountRelay({ app, close, deps, eventBus });
 };

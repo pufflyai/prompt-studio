@@ -2,7 +2,11 @@ import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import { createFileMount, createReadBoundary } from "pstdio-extensions";
 import { createObservedFileMount } from "../../../services/shared-files/observed-file-mount";
 import type { ExtensionsRouteDeps } from "../deps";
-import { resolveLocalWorkspaceTarget, type WorkspaceTargetInput } from "./workspace-target";
+import {
+  resolveLocalWorkspaceTarget,
+  type WorkspaceTargetInput,
+  WorkspaceTargetUnavailableError,
+} from "./workspace-target";
 
 export type FileAccess = "read" | "write";
 
@@ -14,7 +18,7 @@ export const resolveWorkspaceFilesPath = async (
   const target = await resolveLocalWorkspaceTarget(deps, input, "file");
   const files = target.workspace.provider_capabilities_json?.files;
   if (files === "none" || (access === "write" && files && files !== "write"))
-    throw new Error(`Workspace provider does not allow file ${access} access.`);
+    throw new WorkspaceTargetUnavailableError(`Workspace provider does not allow file ${access} access.`);
   return target.root;
 };
 

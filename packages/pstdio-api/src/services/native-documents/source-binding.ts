@@ -11,10 +11,35 @@ import {
   storageRecordId,
 } from "pstdio-sync";
 import { resolveWorkspaceFilesPath } from "../../features/extensions/command-environment/workspace-files";
+import { WorkspaceTargetUnavailableError } from "../../features/extensions/command-environment/workspace-target";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
+import { ProjectFolderMissingError } from "../../features/projects/project-folder-missing";
 import { fileRecordId } from "../shared-files/file-tree";
 import { workspaceFileObservationKey } from "../shared-files/observed-file-mount";
 import { withStorageObservation } from "../shared-files/storage-observation";
+import { NativeDocumentSourceError } from "./source-error";
+
+const unavailable = (message: string) =>
+  new NativeDocumentSourceError(404, "native_document_source_unavailable", message);
+const workspaceRoot = async (deps: ExtensionsRouteDeps, projectId: string) => {
+  try {
+    return await resolveWorkspaceFilesPath(deps, { projectId }, "read");
+  } catch (error) {
+    if (error instanceof WorkspaceTargetUnavailableError || error instanceof ProjectFolderMissingError)
+      throw unavailable(error.message);
+    throw error;
+  }
+};
+const readWorkspaceSource = async (root: string, path: string) => {
+  try {
+    return await createFileMount(root).readBytes(path);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR" || code === "EACCES")
+      throw unavailable("The shared workspace file is unavailable");
+    throw error;
+  }
+};
 
 export const resolveNativeSource = async (
   deps: ExtensionsRouteDeps,
@@ -43,7 +68,7 @@ export const resolveNativeSource = async (
   const mount = snapshot.runtime.artifactMounts.find(
     (mount) => mount.extensionId === owner.extensionId && (mount.id === source.mount || mount.localId === source.mount),
   );
-  if (!mount) throw new Error("The declared text source mount is unavailable");
+  if (!mount) throw unavailable("The declared text source mount is unavailable");
   const path = posix.join(mount.relativePath, normalizeMountRelativePath(source.path));
   return { documentKey: createNativeSourceKey(["artifact", mount.id, source.identity]), recordId: fileRecordId(path) };
 };
@@ -60,13 +85,27 @@ export const resolveNativeLoadedSource = async (
   const address = await resolveNativeSource(deps, input.owner, input.source);
   let copy: { projectionKey: string; content: string } | undefined;
   if (input.source.kind === "workspace") {
-    const root = await resolveWorkspaceFilesPath(deps, { projectId: input.owner.workbenchId }, "read");
+    const root = await workspaceRoot(deps, input.owner.workbenchId);
     const projectionKey = workspaceFileObservationKey(root, input.source.path);
-    const bytes = await createFileMount(root).readBytes(input.source.path);
+    const bytes = await readWorkspaceSource(root, input.source.path);
     const revision = createHash("sha256").update(bytes).digest("hex");
     if (input.versions[projectionKey] !== revision) throw new StorageRevisionChangedError();
-    const content = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
-    if (content !== input.content) throw new Error("A shared Markdown view must load its full declared source");
+    let content: string;
+    try {
+      content = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+    } catch {
+      throw new NativeDocumentSourceError(
+        400,
+        "native_document_source_invalid",
+        "The shared workspace file is not valid UTF-8",
+      );
+    }
+    if (content !== input.content)
+      throw new NativeDocumentSourceError(
+        400,
+        "native_document_source_invalid",
+        "A shared Markdown view must load its full declared source",
+      );
     copy = { projectionKey, content };
   }
   return { documentKey: address.documentKey, copy };

@@ -174,6 +174,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
           });
           return { dispose: unsubscribe };
         },
+        subscribeRefreshReset: (listener) => ({ dispose: subscribeToExtensionEventReset(listener, owner) }),
         workbench: input.ctx,
       }),
       registerExtensionResourceHierarchy(input.ctx, { metadata: input.metadata, projectId: input.projectId }),

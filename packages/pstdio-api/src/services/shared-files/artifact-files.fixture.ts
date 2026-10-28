@@ -109,7 +109,11 @@ export const artifactFilesFixture = async () => {
     recordId,
     replace,
     close: async () => {
-      await connection.close();
+      try {
+        await deps.extensionStorageService.flushStatistics();
+      } finally {
+        await connection.close();
+      }
       if (previousHome === undefined) delete process.env.PSTDIO_HOME;
       else process.env.PSTDIO_HOME = previousHome;
       await rm(root, { recursive: true, force: true });

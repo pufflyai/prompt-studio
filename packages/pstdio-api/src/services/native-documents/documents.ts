@@ -41,7 +41,7 @@ const recoverSource = async (documentKey: string, action: () => Promise<unknown>
     )
       throw error;
     apiLogger.warn(
-      { event: "native_document.recovery.pending", documentKey },
+      { event: "native_document.recovery.pending", documentKey, err: error },
       "Shared text recovery is pending. Saved edits and file copies were retained.",
     );
   }

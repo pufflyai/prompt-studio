@@ -348,6 +348,59 @@ test("native room acknowledges durable edits and recovery preserves an accepted 
   snapshot.destroy();
 });
 
+test("recovery retains an unavailable source and continues to a healthy document", async () => {
+  await Bun.write(
+    join(extension.root, "extension.ts"),
+    `export default { views: [{
+    id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: { kind: "file",
+      load: async (ctx, {renderer}) => {
+        const path = renderer.resource.id + ".md";
+        return {fileName:"note.md", documentSource:{kind:"workspace",path}, content:await ctx.workspaceFiles.readText(path)};
+      },
+      save: async (ctx, {renderer,content}) => ctx.workspaceFiles.writeText(renderer.resource.id + ".md",content),
+    },
+  }] };`,
+  );
+  for (const id of ["missing", "healthy"]) await writeFile(join(extension.root, `${id}.md`), id);
+  const { service } = setup();
+  const opened = await Promise.all(
+    ["missing", "healthy"].map((id) =>
+      service.open({
+        ...target,
+        projectId: storage.projectAId,
+        resource: { type: "note", id },
+      }),
+    ),
+  );
+  await service.dispose();
+  for (const room of opened) {
+    const author = new Y.Doc();
+    Y.applyUpdate(author, room.state);
+    const before = Y.encodeStateVector(author);
+    author.getText("content").insert(0, "EDIT ");
+    await storage.svc.nativeRooms.apply({
+      owner: room.owner,
+      roomId: room.roomId,
+      update: Y.encodeStateAsUpdate(author, before),
+    });
+    author.destroy();
+  }
+  await rm(join(extension.root, "missing.md"));
+  const restarted = setup().service;
+  await restarted.recover();
+  const retained = await storage.svc.nativeRooms.read({ owner: opened[0].owner, roomId: opened[0].roomId });
+  expect(retained.document.getText("content").toString()).toBe("EDIT missing");
+  retained.document.destroy();
+  const removed = await storage.svc.nativeRooms
+    .read({ owner: opened[1].owner, roomId: opened[1].roomId })
+    .catch(() => null);
+  expect(removed).toBeNull();
+  expect(await readFile(join(extension.root, "healthy.md"), "utf8")).toBe("EDIT healthy");
+  await writeFile(join(extension.root, "missing.md"), "missing OUTSIDE");
+  await restarted.recover();
+  expect(await readFile(join(extension.root, "missing.md"), "utf8")).toBe("EDIT missing OUTSIDE");
+});
+
 test("two local rooms converge and a stale frame retains edits made in both rooms", async () => {
   const { service } = setup();
   const first = await open(service);

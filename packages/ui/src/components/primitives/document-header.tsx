@@ -12,7 +12,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
   const middle = Math.ceil(title.length / 2);
   return (
     <Box css={styles.header}>
-      <Text css={styles.title} title={title} aria-label={title}>
+      <Text as="h2" css={styles.title} title={title} aria-label={title}>
         <Box as="span" css={styles.titleStart} aria-hidden="true">
           {title.slice(0, middle)}
         </Box>

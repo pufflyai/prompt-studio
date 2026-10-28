@@ -167,6 +167,21 @@ const createAppCloser = (input: {
   };
 };
 
+export const closeAppDatabase = async (
+  deps: Pick<RouteDeps, "extensionResourceSequencesService" | "extensionStorageService">,
+  closeDb: () => Promise<void>,
+) => {
+  try {
+    await deps.extensionResourceSequencesService.flush();
+  } finally {
+    try {
+      await deps.extensionStorageService.flushStatistics();
+    } finally {
+      await closeDb();
+    }
+  }
+};
+
 export const startAppLifecycle = async (input: {
   deps: RouteDeps;
   notificationWakeTimer: ReturnType<typeof setInterval>;
