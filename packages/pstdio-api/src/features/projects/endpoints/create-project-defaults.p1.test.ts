@@ -1,10 +1,9 @@
-import { expect, spyOn, test } from "bun:test";
+import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
-import * as defaultInstallQueue from "../../extensions/default-extension-install-queue";
 
 test("concurrent projects open with complete defaults after a held installation", async () => {
   const root = await mkdtemp(join(tmpdir(), "concurrent-project-defaults-"));
@@ -23,16 +22,6 @@ test("concurrent projects open with complete defaults after a held installation"
     },
   });
   const requests: Promise<Response>[] = [];
-  const secondPreparation = Promise.withResolvers<void>();
-  const enqueue = defaultInstallQueue.enqueueDefaultExtensionInstall;
-  let preparations = 0;
-  const observePreparation = spyOn(defaultInstallQueue, "enqueueDefaultExtensionInstall").mockImplementation(
-    (install, signal) => {
-      const pending = enqueue(install, signal);
-      if (++preparations === 2) secondPreparation.resolve();
-      return pending;
-    },
-  );
   try {
     const source = join(root, "source");
     await mkdir(source);
@@ -68,7 +57,11 @@ test("concurrent projects open with complete defaults after a held installation"
     requests.push(open("first"));
     await entered.promise;
     requests.push(open("second"));
-    await secondPreparation.promise;
+    while (
+      handle.deps.extensionInstallations.list().filter((job) => job.installName === "shared-defaults").length < 2
+    ) {
+      await Bun.sleep(1);
+    }
     const listed = await handle.app.request("/v1/projects");
     expect(await listed.json()).toHaveLength(0);
     release.resolve();
@@ -85,7 +78,6 @@ test("concurrent projects open with complete defaults after a held installation"
   } finally {
     release.resolve();
     await Promise.allSettled(requests);
-    observePreparation.mockRestore();
     gate.stop(true);
     await handle.close();
     await rm(root, { recursive: true, force: true });
