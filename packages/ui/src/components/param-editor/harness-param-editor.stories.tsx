@@ -1,13 +1,23 @@
 import { Box, Dialog, Portal, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { HarnessParamEditor } from "./harness-param-editor";
 import type { HarnessParamValues } from "./harness-param-values";
 import { ParamEditor } from "./param-editor";
 import type { SelectionParam } from "./param-editor.types";
 
 const codexSchema = {
+  collaboration_mode: {
+    type: "select" as const,
+    control: "command" as const,
+    label: "Collaboration",
+    defaultValue: "default",
+    options: [
+      { label: "Default", value: "default" },
+      { label: "Planning", value: "plan" },
+    ],
+  },
   model_reasoning_effort: {
     type: "select" as const,
     label: "Reasoning effort",
@@ -96,16 +106,17 @@ const HarnessParamEditorStory = (props: {
   initial?: HarnessParamValues;
   defaults?: HarnessParamValues;
   schema?: typeof codexSchema;
+  showCommandParams?: boolean;
 }) => {
-  const [overrides, setOverrides] = useState<HarnessParamValues>(props.initial ?? {});
+  const { initial, defaults, schema, showCommandParams } = props;
+  const [overrides, setOverrides] = useState<HarnessParamValues>(initial ?? {});
 
   return (
     <Box maxW="640px" p="4" bg="bg" borderWidth="1px" borderColor="border.subtle">
       <HarnessParamEditor
-        schema={props.schema ?? codexSchema}
-        defaults={
-          props.defaults ?? { model_reasoning_effort: "medium", model_reasoning_summary: "auto", dryRun: false }
-        }
+        schema={schema ?? codexSchema}
+        defaults={defaults ?? { model_reasoning_effort: "medium", model_reasoning_summary: "auto", dryRun: false }}
+        showCommandParams={showCommandParams}
         overrides={overrides}
         onOverridesChange={setOverrides}
       />
@@ -122,7 +133,15 @@ export default meta;
 
 type Story = StoryObj<typeof HarnessParamEditorStory>;
 
-export const Defaults: Story = {};
+export const Defaults: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Collaboration", { exact: true })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Default", exact: true }));
+    await userEvent.click(await within(document.body).findByRole("menuitemradio", { name: "Planning" }));
+    await expect(canvas.getByRole("button", { name: "Planning", exact: true })).toBeVisible();
+  },
+};
 
 export const WithOverrides: Story = {
   args: {
@@ -167,6 +186,7 @@ export const Narrow: Story = {
 // The run attempt modal renders this editor inside a dialog, so its options must remain
 // clickable there as well as in a standalone form.
 export const InsideDialog: Story = {
+  args: { showCommandParams: false },
   parameters: { layout: "fullscreen" },
   decorators: [
     (Story) => (
@@ -202,8 +222,9 @@ export const InsideDialog: Story = {
   play: async () => {
     const body = within(document.body);
 
-    await expect(body.getByRole("button", { name: "GPT-5.3 Codex" })).toBeVisible();
+    await waitFor(() => expect(body.getByRole("button", { name: "GPT-5.3 Codex" })).toBeVisible());
     await expect(body.getByRole("button", { name: "PS-10_A1" })).toBeVisible();
+    await expect(body.queryByText("Collaboration", { exact: true })).not.toBeInTheDocument();
 
     await userEvent.click(body.getByRole("button", { name: "Medium" }));
 

@@ -12,6 +12,7 @@ interface HarnessParamEditorProps {
   overrides: HarnessParamValues;
   onOverridesChange: (next: HarnessParamValues) => void;
   disabled?: boolean;
+  showCommandParams?: boolean;
 }
 
 const resolveParamValue = (
@@ -49,8 +50,10 @@ const buildParam = (key: string, descriptor: HarnessParamsInfo[string]): Param =
 };
 
 export const HarnessParamEditor = (props: HarnessParamEditorProps) => {
-  const { schema, defaults, overrides, onOverridesChange, disabled = false } = props;
-  const entries = Object.entries(schema ?? {});
+  const { schema, defaults, overrides, onOverridesChange, disabled = false, showCommandParams = true } = props;
+  const entries = Object.entries(schema ?? {}).filter(
+    ([, descriptor]) => showCommandParams || descriptor.control !== "command",
+  );
   if (entries.length === 0) return null;
 
   const params = entries.map(([key, descriptor]) => buildParam(key, descriptor));

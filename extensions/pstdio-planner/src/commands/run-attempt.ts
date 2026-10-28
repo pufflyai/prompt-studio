@@ -45,7 +45,11 @@ const humanReadinessReasons = new Set<HumanRequestReason>([
 
 const runAttemptParams = {
   ...ticketActionParams,
-  newVariant: params.boolean({ label: "Explore another implementation variant" }),
+  newVariant: params.boolean({
+    label: "Explore another implementation variant",
+    description:
+      "Start a separate workspace and conversation to try a different solution for this ticket. Leave this off to resume the existing variant when one is available.",
+  }),
   // Attempts review and merge Git commits, so only a Git worktree can run one.
   workspace: params.workspace({ label: "Workspace", providers: ["pstdio.worktree"] }),
 };
