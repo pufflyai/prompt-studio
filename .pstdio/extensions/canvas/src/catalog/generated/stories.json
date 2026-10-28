@@ -10033,7 +10033,7 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
+      "sourceHash": "5c4ceeda70e493be2aa2a80f8950cc39bfce7b0e21fa13e8eff0746f1813d713",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },
@@ -10044,7 +10044,7 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
+      "sourceHash": "5c4ceeda70e493be2aa2a80f8950cc39bfce7b0e21fa13e8eff0746f1813d713",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },
@@ -10055,7 +10055,7 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
+      "sourceHash": "5c4ceeda70e493be2aa2a80f8950cc39bfce7b0e21fa13e8eff0746f1813d713",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },
@@ -10066,7 +10066,7 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
+      "sourceHash": "5c4ceeda70e493be2aa2a80f8950cc39bfce7b0e21fa13e8eff0746f1813d713",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },
@@ -10077,7 +10077,7 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
+      "sourceHash": "5c4ceeda70e493be2aa2a80f8950cc39bfce7b0e21fa13e8eff0746f1813d713",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },
@@ -10088,7 +10088,7 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
+      "sourceHash": "5c4ceeda70e493be2aa2a80f8950cc39bfce7b0e21fa13e8eff0746f1813d713",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },
@@ -10099,7 +10099,7 @@
       "source": "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Chat/Tool Invocation Timeline",
-      "sourceHash": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
+      "sourceHash": "5c4ceeda70e493be2aa2a80f8950cc39bfce7b0e21fa13e8eff0746f1813d713",
       "component": "ToolInvocationTimeline",
       "componentImport": "./tool-invocation-timeline"
     },

@@ -15,8 +15,8 @@
     ".pstdio/extensions/canvas/scripts/story-catalog-cache.ts": "6f2ad4268876b37e56a1314e0d5aaa49187b4ed55ba159e0b9a182b5a62c9583",
     ".pstdio/extensions/canvas/scripts/parse-story-sources.ts": "00990a116d46cc54fda3aef4190eb93af851730621cabb21db35718e360fb464",
     ".pstdio/extensions/canvas/scripts/story-parser-worker.ts": "1c85acaad4c23aa7aab5cc1694bd2f0cbe961f57450d118e5fc28f8ed7e93e1a",
-    ".pstdio/extensions/canvas/src/catalog/generated/stories.json": "19c188ae48c961fd29548de2ef84192cf709d66823332f587d48a42c621045d8",
-    ".pstdio/extensions/canvas/src/catalog/generated/source-information.json": "5a05b352fc40be397935ec5adf8066fefbd861cb561700766e29b0f7da94ec3e",
+    ".pstdio/extensions/canvas/src/catalog/generated/stories.json": "bfcb65d1567546312f23652cf8756de5d80c7ded732d478b4084c9b510e68e1c",
+    ".pstdio/extensions/canvas/src/catalog/generated/source-information.json": "1c29d9c87c2865384db30653e8dad6be15c5f8799afa017964b5c410688d2711",
     "packages/sdk/package.json": "aecc49123df53a5aae83d8628fc8b96cc24618b4d1382ae0486b9209fc5f3eee",
     "packages/pstdio-workbench/build-entries.ts": "0d008bd492d3679af68b9df8a0db30a5361fe86c6aba126915493873f20d4981",
     "packages/ui/dist/style.css": "8832607af81874e0b51ab816632efa967317df73863e03a527fd3ef96ea913c8",
@@ -1824,7 +1824,7 @@
     "packages/ui/src/components/chat-ui/tool-rendering/default-renderers.ts": "4123d7d59f87feae79b3d95c91c098bd3dacf5a7b8c6c90189d41874b84821f9",
     "packages/ui/src/components/chat-ui/tool-rendering/build-timeline.ts": "20ac8d3411e8cc597866d84fada72afb1f7f897dd4c8242b9b6796cd674fb122",
     "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.tsx": "44e37cab5f3ee43cccfe20f1b51f27f288f3250dbe8ec0589223a720984981ca",
-    "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx": "fc06db43607a0ca21037b6f45c523a1958338cf5b4cf088ae5ea91630c54aed0",
+    "packages/ui/src/components/chat-ui/components/tool-invocation-timeline.canvas.tsx": "5c4ceeda70e493be2aa2a80f8950cc39bfce7b0e21fa13e8eff0746f1813d713",
     "packages/ui/src/components/primitives/tooltip.tsx": "f054eab90a4d9e436bf5de8ae70bf789e2026334ac0cbc166927e9415bdf6457",
     "packages/ui/dist/tooltip-Drs_bdZy.js": "71fbc2b774b5843cfd1cfab2c23a2ad6134c36d95671629b35a38052ae15da17",
     "packages/ui/src/components/primitives/tooltip.canvas.tsx": "8172e93c2c7174906bd6a6d36dd025aebfcda97c19abf3c0e9e200334a58deec",
@@ -2371,9 +2371,9 @@
     ".pstdio/extensions/canvas/scripts/native-preview-runtime.tsx": "3c46fed360b95b7c7292be3a0669aca9f7969a204106476fbf443783746408ff"
   },
   "outputs": {
-    "frame-bundle.ts": "485d5a049d4288a002369d5e7e7cb1347316544cf36a6a425ba215e926ce5104"
+    "frame-bundle.ts": "9f0b37b69a6a64898122020281daa9b8c46c46e8d7fcebfbd481c9e462f3a9a6"
   },
   "stories": 1625,
   "documents": 36,
-  "bytes": 66556757
+  "bytes": 66556746
 }
