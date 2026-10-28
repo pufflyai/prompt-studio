@@ -174,6 +174,7 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
         onModelChange={handleSelectModel}
       />
       <HarnessParamEditor
+        showCommandParams={false}
         schema={effectiveParamSchema ?? undefined}
         defaults={effectiveParamDefaults}
         overrides={effectiveParams}
