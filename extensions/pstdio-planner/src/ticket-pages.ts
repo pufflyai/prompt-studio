@@ -1,4 +1,5 @@
 import { definePage, definePlacement, l10n, type ViewRef, workbenchModes } from "@pstdio/sdk/extensions";
+import { attentionPanel } from "./attention-panel";
 import { REVIEW_REQUEST_ICON } from "./data/review-request-summary";
 import { ticketDocumentPage, ticketRequestsPage } from "./data/ticket-page-target";
 import { ticketResourceKind } from "./resource-kinds";
@@ -19,7 +20,7 @@ export const createTicketPages = (tickets: ViewRef, editor: ViewRef, requests: V
     mode: workbenchModes.project,
     main: { kind: "view", presentation: "page", view: tickets, cardinality: "one" },
     panelView: ticketBoardPanel.ref,
-    slots: [],
+    slots: [attentionPanel],
   });
   const ticketDetailPage = definePage({
     id: ticketDocumentPage.id,

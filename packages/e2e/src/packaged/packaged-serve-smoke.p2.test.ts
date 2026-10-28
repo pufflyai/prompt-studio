@@ -24,6 +24,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
 // packaged-main-fullscreen.p2.spec.ts checks panel/fullscreen shortcuts and mode completion through the bundled opaque guest runtime.
 // packaged-notes-page.p2.spec.ts checks Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
+// packaged-planner-timeline-smoke.ts checks side-panel attention actions without leaving the board or timeline.
 // performance-observer.p2.test.ts checks native CPU units and memory in the compiled observer.
 // packaged-core-extensions-smoke.p1.test.ts checks Notes, Planner and Reports allocate record IDs through core.
 // packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
