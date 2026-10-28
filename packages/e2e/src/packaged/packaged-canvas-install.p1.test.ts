@@ -3,10 +3,12 @@ import { type ChildProcess, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { type Browser, chromium } from "@playwright/test";
 import { packExtension } from "pstdio-extensions/distribution";
 import { folderProjectInput } from "../helpers/folder-project";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
-import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
@@ -40,6 +42,7 @@ test(
       },
     });
     let child: ChildProcess | undefined;
+    let browser: Browser | undefined;
     try {
       const started = await startPackagedServe(root, { PSTDIO_EXTENSION_RELEASE_REF: `psx:${registry.url.origin}` });
       child = started.child;
@@ -81,7 +84,8 @@ test(
         });
       const list = cli(["canvas", "list"]);
       expect(list.status).toBe(0);
-      expect(JSON.parse(list.stdout).canvases).toContainEqual(expect.objectContaining({ id: "shared-components" }));
+      const listed = JSON.parse(list.stdout).canvases;
+      expect(listed).toContainEqual(expect.objectContaining({ id: "shared-components" }));
       const layout = cli(["canvas", "layout", "read", "--canvas", "shared-components"]);
       expect(layout.status).toBe(0);
       expect(JSON.parse(layout.stdout).camera.zoom).toBeGreaterThan(0);
@@ -114,7 +118,19 @@ test(
           ]),
         }),
       );
+      // Critical: packaged assets must also reach an opaque preview through the real webview command bridge.
+      const button = listed.find((canvas: { id: string }) => canvas.id === "stories-ui-components-inputs-button");
+      expect(button).toBeDefined();
+      browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
+      const page = await browser.newPage();
+      await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+      await signInBrowser(page, started.descriptor);
+      await page.goto(new URL(button.href, started.baseUrl).href);
+      const viewer = page.frameLocator('iframe[title="UI Canvas"]');
+      await viewer.locator('iframe[data-frame-ready="true"]').waitFor();
+      expect(await viewer.locator("[data-ui-canvas-error]").count()).toBe(0);
     } finally {
+      await browser?.close();
       if (child) await stopProcess(child);
       registry.stop(true);
       rmSync(root, { recursive: true, force: true });
