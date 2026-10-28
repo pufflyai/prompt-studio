@@ -112,7 +112,8 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
 
     // 01: the analysis page counts the saved tags.
-    await page.goto(`/projects/${projectId}/extensions/pstdio.social-radar/social-radar`);
+    await page.goto(`/projects/${projectId}`);
+    await page.getByRole("option", { name: "Social radar", exact: true }).click();
     const analysis = page.frameLocator('iframe[title="Social radar"]');
     await expect(analysis.getByText("Threads found")).toBeVisible();
     await expect(analysis.getByText("Tried Prompt Studio for reviews")).toBeVisible();
