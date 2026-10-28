@@ -13,13 +13,13 @@ const formatElapsed = (totalSeconds: number) => {
   return `${hours}h ${String(minutes % 60).padStart(2, "0")}m`;
 };
 
-/**
- * Working indicator: a spinner followed by the elapsed run time in mono digits — never a
- * static "Working…" label. The elapsed time is the one thing a static label cannot tell you
- * and how you judge whether a run is stuck. Counts from the start of the active stream, including
- * time spent temporarily hidden while the workspace initializes.
- */
-export const WorkingIndicator = (props: { startedAt?: number; hidden?: boolean }) => {
+interface WorkingIndicatorProps {
+  startedAt?: number;
+  hidden?: boolean;
+}
+
+// Keep the elapsed clock in the workspace header for the active conversation.
+export const WorkingIndicator = (props: WorkingIndicatorProps) => {
   const { startedAt, hidden = false } = props;
   const [mountedAt] = useState(Date.now);
   const [now, setNow] = useState(Date.now);
@@ -36,9 +36,9 @@ export const WorkingIndicator = (props: { startedAt?: number; hidden?: boolean }
   if (hidden) return null;
 
   return (
-    <HStack gap="2xs" px="sm" py="xs">
-      <Spinner size="xs" color="fg.muted" />
-      <Text fontFamily="mono" fontSize="xs" color="fg.muted" letterSpacing="-0.2px">
+    <HStack role="status" aria-label="Agent working" aria-live="off" gap="2xs" px="xs" py="2xs" flexShrink="0">
+      <Spinner size="xs" color="fg.info" />
+      <Text fontFamily="mono" textStyle="mono/XS" color="fg.muted" letterSpacing="-0.2px">
         {formatElapsed((now - (startedAt ?? mountedAt)) / 1000)}
       </Text>
     </HStack>

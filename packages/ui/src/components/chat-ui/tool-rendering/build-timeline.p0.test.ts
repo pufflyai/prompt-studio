@@ -17,7 +17,7 @@ describe("buildTimelineDocFromInvocations", () => {
     expect(doc.items[2]?.title).toContainEqual({ kind: "text", text: "Run command", bold: true });
     expect(doc.items[4]?.title).toContainEqual({ kind: "text", text: "Load skill", bold: true });
     expect(doc.items[0]?.blocks).toEqual([]);
-    expect(doc.items[2]?.blocks?.[0]).toMatchObject({ type: "code", language: "text" });
+    expect(doc.items[2]?.blocks).toContainEqual(expect.objectContaining({ type: "code", language: "text" }));
   });
 
   test("renders Edit tool output as a linked diff", () => {

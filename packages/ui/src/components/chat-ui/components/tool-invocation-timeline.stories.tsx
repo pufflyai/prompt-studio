@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "storybook/test";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import type { SessionMessage, ToolPart } from "./message-types";
 import { ToolInvocationTimeline } from "./tool-invocation-timeline";
@@ -177,6 +178,32 @@ export const CodexShell: Story = {
       <ToolInvocationTimeline invocations={codexShellInvocations} />
     </Box>
   ),
+};
+
+export const CommandWithoutOutput: Story = {
+  tags: ["command-disclosure"],
+  args: {
+    invocations: [
+      {
+        type: "tool",
+        tool: "shell",
+        status: "pending",
+        state: { input: { command: "bun run --cwd packages/ui test && bun run --cwd packages/ui typecheck" } },
+      },
+    ],
+  },
+  render: (args) => (
+    <Box width="full" maxW="sm">
+      <ToolInvocationTimeline {...args} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByText("Shell", { exact: true }));
+    await expect(canvas.getByLabelText("shell code block")).toHaveTextContent(
+      "bun run --cwd packages/ui test && bun run --cwd packages/ui typecheck",
+    );
+  },
 };
 
 const codexApplyPatchInvocations: ToolPart[] = [

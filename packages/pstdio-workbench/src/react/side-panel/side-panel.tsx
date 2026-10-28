@@ -58,7 +58,7 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         data-workbench-region="side"
         width="full"
         minWidth="0"
-        bg={workbenchBackgrounds.widget}
+        bg={workbenchBackgrounds.main}
         layerStyle="panel"
         header={
           attached ? (
@@ -140,7 +140,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         containerProps={{
           "data-workbench-panel": "side",
           bottom: floatingPanelBottom(bottomOffset),
-          bg: workbenchBackgrounds.widget,
+          bg: workbenchBackgrounds.main,
         }}
         popOutLabel="Reattach Side Panel"
         header={

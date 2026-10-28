@@ -10,10 +10,7 @@ const recipe = defineSlotRecipe({
       width: "full",
       alignItems: "end",
       justifyContent: "end",
-      gap: "sm",
-      "&:has(+ [data-scope='ai-message'][data-part='root'])": {
-        mb: 0,
-      },
+      gap: "2xs",
     },
     content: {
       display: "flex",
@@ -42,13 +39,14 @@ const recipe = defineSlotRecipe({
       },
       assistant: {
         root: {
-          mb: "md",
+          mb: "xs",
           flexDirection: "row",
           justifyContent: "start",
         },
         content: {
           width: "full",
           px: "xs",
+          "& [data-chat-response] [data-lexical-editor] > .rich-text__p:first-child": { mt: "xs!" },
         },
       },
       developer: {
@@ -63,12 +61,10 @@ const recipe = defineSlotRecipe({
     },
     size: {
       sm: {
-        root: { gap: "xs" },
         content: { textStyle: "xs" },
       },
       md: {},
       lg: {
-        root: { gap: "md" },
         content: { textStyle: "md" },
       },
     },

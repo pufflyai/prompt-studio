@@ -12,7 +12,7 @@ const ChatRichContent = (props: ChatRichContentProps) => {
   const { children, linkHandler, streaming, ...rest } = props;
 
   return (
-    <Box {...rest}>
+    <Box data-chat-response {...rest}>
       <RichMessage defaultState={children} linkHandler={linkHandler} streaming={streaming} fullWidth />
     </Box>
   );
