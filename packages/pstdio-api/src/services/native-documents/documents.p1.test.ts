@@ -129,6 +129,68 @@ test("durable acknowledgements and peer snapshots do not wait for a file save", 
   expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("EDITOR selected folder LATER");
 });
 
+test("opening during a file projection cannot import a stale load as an outside edit", async () => {
+  const deps = { ...extension.deps, extensionStorageService: storage.svc };
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const loaded = Promise.withResolvers<void>();
+  let hold = true;
+  let reopening = false;
+  const service = createService({
+    storage: storage.svc,
+    load: async (input) => {
+      const result = await loadNativeMarkdownFile(deps, input);
+      if (reopening) loaded.resolve();
+      return result;
+    },
+    save: async (input) => {
+      if (hold) {
+        hold = false;
+        entered.resolve();
+        await release.promise;
+      }
+      return saveNativeMarkdownFile(deps, input);
+    },
+  });
+  const room = await open(service);
+  const author = new Y.Doc();
+  Y.applyUpdate(author, room.state);
+  try {
+    const first = Y.encodeStateVector(author);
+    author.getText("content").insert(0, "FIRST ");
+    await service.submit({
+      projectId: storage.projectAId,
+      roomId: room.roomId,
+      update: Y.encodeStateAsUpdate(author, first),
+    });
+    await entered.promise;
+    const second = Y.encodeStateVector(author);
+    author.getText("content").insert(author.getText("content").length, " LAST");
+    await service.submit({
+      projectId: storage.projectAId,
+      roomId: room.roomId,
+      update: Y.encodeStateAsUpdate(author, second),
+    });
+    reopening = true;
+    const next = open(service);
+    await loaded.promise;
+    release.resolve();
+    const joined = await next;
+    const received = new Y.Doc();
+    try {
+      Y.applyUpdate(received, joined.state);
+      expect(received.getText("content").toString()).toBe("FIRST selected folder LAST");
+    } finally {
+      received.destroy();
+    }
+    await service.close({ projectId: storage.projectAId, roomId: joined.roomId });
+    expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("FIRST selected folder LAST");
+  } finally {
+    release.resolve();
+    author.destroy();
+  }
+});
+
 test("native edits project through the file save handler and retain a non-overlapping outside write", async () => {
   const { service } = setup();
   const room = await open(service);

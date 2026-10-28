@@ -21,11 +21,13 @@ export const createNativeFileProjector = (deps: {
   const jobs = new Map<string, Promise<unknown>>();
   const canonical = (address: Address) =>
     deps.storage.openNativeTextDocument({ owner: address.owner, fileId: address.documentKey });
-  const initialize = async (address: Address, loaded: Loaded) => {
+  const observe = async (address: Address, loaded: Loaded) => {
     if (loaded.copy)
       await createNativeFileCopy(deps.storage, { ...address, projectionKey: loaded.copy.projectionKey }).observe(
         loaded.copy.content,
       );
+  };
+  const initialize = async (address: Address) => {
     if (await projections.read(address)) return;
     const state = await canonical(address).exportUpdate();
     await projections.initialize({ ...address, state: await checkpointInitialState(state) });
@@ -41,7 +43,16 @@ export const createNativeFileProjector = (deps: {
     return result;
   };
   return {
-    initialize: (address: Address, loaded: Loaded) => serialize(address, () => initialize(address, loaded)),
+    initialize: async (address: Address, loaded: Loaded) => {
+      if (await projections.read(address)) return;
+      return serialize(address, async () => {
+        // An open may have loaded before a queued save. Only the serialized reconciler
+        // observes later physical copies against an existing projection baseline.
+        if (await projections.read(address)) return;
+        await observe(address, loaded);
+        await initialize(address);
+      });
+    },
     reconcile(address: Address) {
       return serialize(address, async () => {
         const target = await deps.storage.nativeRooms.source(address);
@@ -54,7 +65,8 @@ export const createNativeFileProjector = (deps: {
             "native_document_source_changed",
             "Native document source changed its owner",
           );
-        await initialize(address, loaded);
+        await observe(address, loaded);
+        await initialize(address);
         const saved = (await projections.read(address))!;
         const state = await canonical(address).exportUpdate();
         const content = checkpointText(state);
