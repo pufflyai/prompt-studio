@@ -204,7 +204,9 @@ test("Kiln docks the inspector and persists object changes", async ({ page }) =>
   await expect(gridToggle).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByRole("button", { name: "Float Side Panel", exact: true })).toHaveCount(0);
   await expect(page.locator('[data-workbench-panel="main"]').getByRole("tab")).toHaveCount(0);
-  await expect(page.getByRole("tab", { name: "Scene and properties", exact: true })).toBeVisible();
+  const side = page.locator('[data-workbench-panel="side"]');
+  await expect(side.locator('iframe[title="Scene and properties"]:visible')).toBeVisible();
+  await expect(side.getByRole("tab")).toHaveCount(0);
   await expect(page.locator('[data-workbench-panel-header="secondary"]')).toBeHidden();
   await expect(page.getByRole("button", { name: /Hide (Side|Bottom) Panel/ })).toHaveCount(0);
   await inspector.getByRole("button", { name: "Hide Cube", exact: true }).click();
