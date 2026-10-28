@@ -199,37 +199,6 @@ const checkSameTickEdits = async (canvasElement: HTMLElement, order: "remote-fir
     await expect(device.getByRole("textbox")).toHaveTextContent("REMOTE Start LOCAL");
   }
 };
-export const SameTickRemoteFirst: Story = {
-  render: () => <CollaborationScene source="Start" commitOrder="remote-first" />,
-  play: async ({ canvasElement }) => checkSameTickEdits(canvasElement, "remote-first"),
-};
-export const SameTickLocalFirst: Story = {
-  render: () => <CollaborationScene source="Start" commitOrder="local-first" />,
-  play: async ({ canvasElement }) => checkSameTickEdits(canvasElement, "local-first"),
-};
-
-export const SameTickBothEditors: Story = {
-  render: () => <CollaborationScene source="Start" commitOrder="both-local-first" />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const laptop = within(canvas.getByTestId("device-0"));
-    const desktop = within(canvas.getByTestId("device-1"));
-    await userEvent.click(canvas.getByRole("button", { name: "Commit both-local-first edits" }));
-    for (const device of [laptop, desktop]) {
-      await waitFor(() => expect(device.getByTestId("source")).toHaveTextContent("LOCAL-A"));
-      await expect(device.getByTestId("source")).toHaveTextContent("LOCAL-B");
-      await expect(device.getByTestId("source")).toHaveTextContent("REMOTE Start");
-    }
-    await expect(laptop.getByTestId("source").textContent).toBe(desktop.getByTestId("source").textContent);
-    await userEvent.click(laptop.getByRole("textbox"));
-    await userEvent.keyboard("{Control>}z{/Control}");
-    await waitFor(() => expect(laptop.getByTestId("source")).not.toHaveTextContent("LOCAL-A"));
-    await expect(laptop.getByTestId("source")).toHaveTextContent("REMOTE Start");
-    await expect(laptop.getByTestId("source")).toHaveTextContent("LOCAL-B");
-    await expect(desktop.getByTestId("source").textContent).toBe(laptop.getByTestId("source").textContent);
-  },
-};
-
 export const SharedEditing: Story = {
   render: () => <CollaborationScene />,
   play: async ({ canvasElement }) => {
@@ -287,5 +256,39 @@ export const SharedTableEditing: Story = {
     await userEvent.click(page.getByRole("button", { name: "Save cell", exact: true }));
     await waitFor(() => expect(laptop.getByTestId("source")).toHaveTextContent("REMOTE left draft"));
     await expect(laptop.getByRole("cell", { name: "REMOTE left draft", exact: true })).toBeVisible();
+  },
+};
+
+export const SameTickRemoteFirst: Story = {
+  tags: ["!manifest"],
+  render: () => <CollaborationScene source="Start" commitOrder="remote-first" />,
+  play: async ({ canvasElement }) => checkSameTickEdits(canvasElement, "remote-first"),
+};
+export const SameTickLocalFirst: Story = {
+  tags: ["!manifest"],
+  render: () => <CollaborationScene source="Start" commitOrder="local-first" />,
+  play: async ({ canvasElement }) => checkSameTickEdits(canvasElement, "local-first"),
+};
+
+export const SameTickBothEditors: Story = {
+  tags: ["!manifest"],
+  render: () => <CollaborationScene source="Start" commitOrder="both-local-first" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const laptop = within(canvas.getByTestId("device-0"));
+    const desktop = within(canvas.getByTestId("device-1"));
+    await userEvent.click(canvas.getByRole("button", { name: "Commit both-local-first edits" }));
+    for (const device of [laptop, desktop]) {
+      await waitFor(() => expect(device.getByTestId("source")).toHaveTextContent("LOCAL-A"));
+      await expect(device.getByTestId("source")).toHaveTextContent("LOCAL-B");
+      await expect(device.getByTestId("source")).toHaveTextContent("REMOTE Start");
+    }
+    await expect(laptop.getByTestId("source").textContent).toBe(desktop.getByTestId("source").textContent);
+    await userEvent.click(laptop.getByRole("textbox"));
+    await userEvent.keyboard("{Control>}z{/Control}");
+    await waitFor(() => expect(laptop.getByTestId("source")).not.toHaveTextContent("LOCAL-A"));
+    await expect(laptop.getByTestId("source")).toHaveTextContent("REMOTE Start");
+    await expect(laptop.getByTestId("source")).toHaveTextContent("LOCAL-B");
+    await expect(desktop.getByTestId("source").textContent).toBe(laptop.getByTestId("source").textContent);
   },
 };
