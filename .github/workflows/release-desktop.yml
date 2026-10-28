@@ -101,6 +101,17 @@ jobs:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
 
+      # Older patch candidates may contain the Node-specific installer.
+      - name: Check out the workflow's native installer
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: __test-tmp__/native-installer
+          sparse-checkout: |
+            /scripts/ci/install-native-dependencies.ts
+            /scripts/ci/native-dependency-environment.ts
+          sparse-checkout-cone-mode: false
+
       - name: Isolate hosted Intel runner indexing
         if: matrix.target == 'darwin-x64'
         # Temporary hosted-runner workaround; see ADR 0032.
@@ -119,7 +130,7 @@ jobs:
           node-version: "24"
 
       - name: Install dependencies
-        run: bun scripts/ci/install-native-dependencies.ts
+        run: bun __test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts
 
       - name: Test device performance lifecycle and file authorization
         run: bun test clients/desktop/src/performance

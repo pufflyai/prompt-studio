@@ -62,6 +62,16 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
+      # Keep the installer matched to this workflow when validating an older candidate.
+      - name: Check out the workflow's native installer
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: __test-tmp__/native-installer
+          sparse-checkout: |
+            /scripts/ci/install-native-dependencies.ts
+            /scripts/ci/native-dependency-environment.ts
+          sparse-checkout-cone-mode: false
           fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
@@ -70,7 +80,7 @@ jobs:
         with:
           node-version: "24"
       - name: Install native dependencies
-        run: bun scripts/ci/install-native-dependencies.ts
+        run: bun __test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts
       - name: Download the immutable compiled candidate
         uses: actions/download-artifact@v4
         with:
