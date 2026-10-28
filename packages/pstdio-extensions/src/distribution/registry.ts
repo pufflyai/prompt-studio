@@ -10,16 +10,16 @@ export class ExtensionRegistryError extends Error {
 }
 
 const identity = z.string().regex(/^[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*$/);
-const version = z.string().regex(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
+export const registryVersionSchema = z.string().regex(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
 const releaseSchema = z.object({
   id: identity,
-  version,
+  version: registryVersionSchema,
   enginesPstdio: z.string(),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
   withdrawn: z.boolean(),
 });
 export type RegistryRelease = z.infer<typeof releaseSchema>;
-const sourceSchema = z.object({ registry: z.string().url(), id: identity, version });
+const sourceSchema = z.object({ registry: z.string().url(), id: identity, version: registryVersionSchema });
 export type RegistrySource = z.infer<typeof sourceSchema>;
 export const registrySourceRef = (source: RegistrySource) => `psx:${JSON.stringify(sourceSchema.parse(source))}`;
 export const parseRegistrySourceRef = (ref: string | null | undefined) => {
@@ -76,7 +76,10 @@ export const createRegistryClient = (registry: string) => {
     versions,
     latest,
     prepare: async (release: RegistryRelease, target: string, signal?: AbortSignal) => {
-      const response = await request(`/api/${idPath(release.id)}/${version.parse(release.version)}/file`, signal);
+      const response = await request(
+        `/api/${idPath(release.id)}/${registryVersionSchema.parse(release.version)}/file`,
+        signal,
+      );
       const chunks: Uint8Array[] = [];
       let length = 0;
       if (!response.body) throw new ExtensionRegistryError("Extension package download is empty");
