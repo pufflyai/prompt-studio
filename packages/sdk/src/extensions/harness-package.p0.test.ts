@@ -17,6 +17,9 @@ test("a usable global CLI avoids package acquisition; missing and old CLIs acqui
   const input = { command: ["tool"], minimumVersion: "2.0.0", name: "tool-cli", version: "2.1.0" };
   expect(await prepareHarnessPackage(context, input)).toBeNull();
   expect(acquisitions).toEqual([]);
+  version = "\u001b[32m2.0.0\u001b[0m";
+  expect(await prepareHarnessPackage(context, input)).toBeNull();
+  expect(acquisitions).toEqual([]);
   version = "tool 1.0.0";
   expect(await prepareHarnessPackage(context, input)).toEqual({ path: "/cache/tool" });
   version = "unavailable";
