@@ -85,53 +85,73 @@ export const startLocalWorkspaceRegistry = async (input: {
   const packages = input.packagePaths.map((packagePath) => packWorkspacePackage(packagePath, registryRoot));
   const upstreamOrigin = input.upstreamOrigin ?? "https://registry.npmjs.org";
   const upstreamLifetime = new AbortController();
-  const publishedByName = new Map<string, Promise<RegistryMetadata>>();
-  const publishedMetadata = (name: string) => {
-    let metadata = publishedByName.get(name);
-    if (!metadata) {
-      // Published versions supplement local tarballs; npm availability must not block the local registry.
-      metadata = readPublishedMetadata(name, upstreamOrigin, upstreamLifetime.signal).catch(() => ({}));
+  // Share completed metadata only. Each installer owns its in-flight lookup, so an
+  // abandoned request cannot leave later installers waiting on the same stalled promise.
+  const publishedByName = new Map<string, RegistryMetadata>();
+  const publishedMetadata = async (name: string, signal: AbortSignal) => {
+    const cached = publishedByName.get(name);
+    if (cached) return cached;
+    try {
+      const metadata = await readPublishedMetadata(name, upstreamOrigin, signal);
+      signal.throwIfAborted();
       publishedByName.set(name, metadata);
+      return metadata;
+    } catch (error) {
+      if (signal.aborted) throw error;
+      // An unavailable upstream must not hide local packages or poison later resolutions.
+      return {};
     }
-    return metadata;
   };
   const packagesByName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
   const tarballsByPath = new Map(packages.map((pkg) => [`${pkg.manifest.name}/-/${pkg.tarballName}`, pkg.tarball]));
 
   let origin = "";
   const server = createServer(async (request, response) => {
-    const requestPath = decodeURIComponent(new URL(request.url ?? "/", origin).pathname).replace(/^\/+/, "");
-    const pkg = packagesByName.get(requestPath);
-    if (pkg) {
-      response.setHeader("content-type", "application/json");
-      response.end(JSON.stringify(packageMetadata(pkg, origin, await publishedMetadata(pkg.manifest.name))));
-      return;
-    }
+    const requestLifetime = new AbortController();
+    const disconnected = () => requestLifetime.abort();
+    const signal = AbortSignal.any([upstreamLifetime.signal, requestLifetime.signal]);
+    response.once("close", disconnected);
+    try {
+      const requestPath = decodeURIComponent(new URL(request.url ?? "/", origin).pathname).replace(/^\/+/, "");
+      const pkg = packagesByName.get(requestPath);
+      if (pkg) {
+        response.setHeader("content-type", "application/json");
+        response.end(JSON.stringify(packageMetadata(pkg, origin, await publishedMetadata(pkg.manifest.name, signal))));
+        return;
+      }
 
-    const tarball = tarballsByPath.get(requestPath);
-    if (tarball) {
-      response.setHeader("content-type", "application/octet-stream");
-      response.end(tarball);
-      return;
-    }
+      const tarball = tarballsByPath.get(requestPath);
+      if (tarball) {
+        response.setHeader("content-type", "application/octet-stream");
+        response.end(tarball);
+        return;
+      }
 
-    // Lockfiles resolved against npm request published tarballs from this scope registry.
-    if (requestPath.includes("/-/")) {
-      try {
-        const published = await fetch(new URL(requestPath, `${upstreamOrigin}/`), {
-          signal: upstreamLifetime.signal,
-        });
-        if (published.ok) {
-          const bytes = Buffer.from(await published.arrayBuffer());
-          response.setHeader("content-type", "application/octet-stream");
-          response.end(bytes);
-          return;
-        }
-      } catch {}
-    }
+      // Lockfiles resolved against npm request published tarballs from this scope registry.
+      if (requestPath.includes("/-/")) {
+        try {
+          const published = await fetch(new URL(requestPath, `${upstreamOrigin}/`), {
+            signal,
+          });
+          if (published.ok) {
+            const bytes = Buffer.from(await published.arrayBuffer());
+            response.setHeader("content-type", "application/octet-stream");
+            response.end(bytes);
+            return;
+          }
+        } catch {}
+      }
 
-    response.statusCode = 404;
-    response.end("Not found");
+      response.statusCode = 404;
+      response.end("Not found");
+    } catch {
+      if (!signal.aborted) {
+        response.statusCode = 502;
+        response.end("Registry request failed");
+      }
+    } finally {
+      response.off("close", disconnected);
+    }
   });
 
   await new Promise<void>((resolve, reject) => {
