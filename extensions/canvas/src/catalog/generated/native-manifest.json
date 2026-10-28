@@ -2,9 +2,9 @@
   "hashes": {
     "extensions/canvas/package.json": "c17f10fcb4d8c009bea395ae9e83f678afe3118d68966594f1acadd786604df3",
     "extensions/canvas/scripts/build-catalog.ts": "10226f83219f55ed115f3f48feabcfea37fd02be1d00c5aad1c3260439e9ada5",
-    "extensions/canvas/scripts/build-native-previews.ts": "de8ddca5584c533161d956310f4e703c81a73bcac8fd934fad52c20c9092bd16",
+    "extensions/canvas/scripts/build-native-previews.ts": "6a670840c7d671bdcb19d11ee10fd364be1e0c39aefaa191bbe5beb70aadc5ba",
     "extensions/canvas/scripts/native-build-output.ts": "199c72391e90cdb72b47acc545dfc84ba1eff3daa66a76f8281feb14dc4e1b9f",
-    "extensions/canvas/scripts/frame-archive.ts": "56466355909535c2c4f95c916a3b6660882b257584db3f16bb165f4549365d57",
+    "extensions/canvas/scripts/frame-archive.ts": "f51059504ba91f133e15a83f25fc6267b0e6e33cec7ac912d292f4edd2b32fbc",
     "extensions/canvas/scripts/frame-runtime.tsx": "31291a8467af687088fe9880e86e1bff75979e8a890eca3b4ce4427676fa9067",
     "extensions/canvas/scripts/frame-navigation.ts": "9719a4c95b8b4e6b6c0b65c1bb5ca53fb142685ee21493079ee0480383f69718",
     "extensions/canvas/scripts/frame-story.tsx": "2104729609abface63a1fcd237cf7424e155dbcd2e6539ac1426570fe7b824ab",
@@ -2376,7 +2376,7 @@
     "extensions/pstdio-planner/src/data/write-guard.ts": "52a991c3ca506f6de1bed732219c773a82cff5772c6fe730d7fa9a55cd1d5563"
   },
   "outputs": {
-    "frame-manifest.json": "142fc647c870b9062cf14be85a0c65d3be5f3cb516cbef01b123b6bf84526c12",
+    "frame-manifest.json": "f51b30314629804d47d5d565ac11d7772d89f8398aff79624fccad1a3a2ea566",
     "frame-modules/f74e25403714b5d7238f009076683723983dc45a50fd67bf183977870071b54c.txt": "1ca8547d5fc17621597831d5b981cc4f43b1ecc7855cba0c0eea0fa4993a4e90",
     "frame-modules/f51a3cb99e432d4a25426fd499762b1ef1321cf06682b03a8489b937df891d34.txt": "06ac9026a655f9244dc24c46c68b7c38f5a5079d8377143902a259f9afde20c1",
     "frame-modules/b083beff7d8b2d378ef1521ba8243e5b85ef9d8b5981c7aef41d655379ef201b.txt": "ace2afca79bb75770ff55d870470d8ad81473a8aec8443f8ff4282c19b158419",

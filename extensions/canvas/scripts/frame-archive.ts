@@ -1,13 +1,13 @@
 import { createHash } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import type { FrameManifest } from "../src/frames/module-graph";
 import type { NativeBuildOutput } from "./native-build-output";
 
 export interface FrameArchiveInputs {
   repoRoot: string;
-  sources: string[];
+  sources: Record<string, string>;
   projects: Record<string, string>;
   nativeSource: string;
   catalogSource: string;
@@ -18,10 +18,8 @@ const bindSources = (manifest: FrameManifest, sources: Map<string, string>, inpu
     if (!chunk) throw new Error(`Preview source has no emitted module: ${source}`);
     return chunk;
   };
-  for (const source of inputs.sources) {
-    const project = Object.values(inputs.projects).find((file) =>
-      resolve(inputs.repoRoot, source).startsWith(`${dirname(dirname(file))}/`),
-    );
+  for (const [source, suite] of Object.entries(inputs.sources)) {
+    const project = inputs.projects[suite];
     manifest.sources[source] = {
       script: chunkFor(source),
       ...(!source.endsWith(".mdx") && project ? { project: chunkFor(project) } : {}),

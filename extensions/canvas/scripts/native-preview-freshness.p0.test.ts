@@ -26,3 +26,16 @@ test("every catalog source has a complete packaged dependency graph", () => {
   for (const name of assets)
     expect(existsSync(resolve(extensionRoot, frames.modules[name as keyof typeof frames.modules].file))).toBe(true);
 });
+
+test("example graphs include the provider used by their catalog suite, including fallback suites", () => {
+  const providers = new Map<string, string>();
+  for (const { source, suite } of catalog.stories) {
+    const frame = frames.sources[source as keyof typeof frames.sources];
+    const provider = "project" in frame ? frame.project : undefined;
+    if (provider) providers.set(suite, provider);
+  }
+  for (const { source, suite } of catalog.stories) {
+    const frame = frames.sources[source as keyof typeof frames.sources];
+    expect("project" in frame ? frame.project : undefined, source).toBe(providers.get(suite));
+  }
+});

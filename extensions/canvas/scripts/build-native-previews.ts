@@ -200,7 +200,7 @@ const buildPreviews = async (
     { stories: stories.length, documents: documents.length },
     {
       repoRoot,
-      sources: files,
+      sources: Object.fromEntries([...stories, ...documents].map(({ source, suite }) => [source, suite])),
       projects: Object.fromEntries(
         Object.entries(suites).map(([name, path]) => [name, resolve(repoRoot, path, ".canvas/preview.tsx")]),
       ),

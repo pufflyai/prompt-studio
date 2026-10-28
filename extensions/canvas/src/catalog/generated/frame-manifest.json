@@ -3,22 +3,28 @@
   "catalog": "canvas-catalog-DIt8o7qb.js",
   "sources": {
     ".pstdio/extensions/motion-lab/src/study-status.canvas.tsx": {
-      "script": "study-status.canvas-D_8jYcub.js"
+      "script": "study-status.canvas-D_8jYcub.js",
+      "project": "preview-D3srzc49.js"
     },
     ".pstdio/extensions/pstdio-dev/src/compare/compare.canvas.tsx": {
-      "script": "compare.canvas-BBI9O6xN.js"
+      "script": "compare.canvas-BBI9O6xN.js",
+      "project": "preview-D3srzc49.js"
     },
     ".pstdio/extensions/pstdio-dev/src/runs/runs.canvas.tsx": {
-      "script": "runs.canvas-BWwIfwo9.js"
+      "script": "runs.canvas-BWwIfwo9.js",
+      "project": "preview-D3srzc49.js"
     },
     ".pstdio/extensions/pstdio-dev/src/trends/trends.canvas.tsx": {
-      "script": "trends.canvas-CrtFVy7p.js"
+      "script": "trends.canvas-CrtFVy7p.js",
+      "project": "preview-D3srzc49.js"
     },
     ".pstdio/extensions/social-radar/src/analysis/analysis-sections.canvas.tsx": {
-      "script": "analysis-sections.canvas-DmsTM0_i.js"
+      "script": "analysis-sections.canvas-DmsTM0_i.js",
+      "project": "preview-D3srzc49.js"
     },
     ".pstdio/extensions/social-radar/src/thread/thread.canvas.tsx": {
-      "script": "thread.canvas-Dwix-oLc.js"
+      "script": "thread.canvas-Dwix-oLc.js",
+      "project": "preview-D3srzc49.js"
     },
     "clients/desktop/src/renderer/desktop-lifecycle-app.canvas.tsx": {
       "script": "desktop-lifecycle-app.canvas-CDC7pfIM.js",
@@ -85,19 +91,24 @@
       "project": "preview-C48oGJEg.js"
     },
     "extensions/canvas/src/frames/frame-loading.canvas.tsx": {
-      "script": "frame-loading.canvas-CML9Kq7M.js"
+      "script": "frame-loading.canvas-CML9Kq7M.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/canvas/src/view/canvas-stage.canvas.tsx": {
-      "script": "canvas-stage.canvas-MXgD7p3r.js"
+      "script": "canvas-stage.canvas-MXgD7p3r.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-artifacts/src/components/artifact-reader.canvas.tsx": {
-      "script": "artifact-reader.canvas-DHWQT1gC.js"
+      "script": "artifact-reader.canvas-DHWQT1gC.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-artifacts/src/components/artifacts.canvas.tsx": {
-      "script": "artifacts.canvas-B8o3E1he.js"
+      "script": "artifacts.canvas-B8o3E1he.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-artifacts/src/components/html-preview.canvas.tsx": {
-      "script": "html-preview.canvas-DPDD4hoW.js"
+      "script": "html-preview.canvas-DPDD4hoW.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-base-themes/stories/compare.canvas.tsx": {
       "script": "compare.canvas-BZCQpqRc.js",
@@ -112,49 +123,64 @@
       "project": "preview-Dg-VXvlD.js"
     },
     "extensions/pstdio-planner/src/ticket-archive-filter.canvas.tsx": {
-      "script": "ticket-archive-filter.canvas-Xw6ROqeP.js"
+      "script": "ticket-archive-filter.canvas-Xw6ROqeP.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/ticket-create-form.canvas.tsx": {
-      "script": "ticket-create-form.canvas-CpO4emKw.js"
+      "script": "ticket-create-form.canvas-CpO4emKw.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/timeline/view/auto-build-button.canvas.tsx": {
-      "script": "auto-build-button.canvas-Bkxf003z.js"
+      "script": "auto-build-button.canvas-Bkxf003z.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/timeline/view/auto-build-form.canvas.tsx": {
-      "script": "auto-build-form.canvas-C-1GsA7a.js"
+      "script": "auto-build-form.canvas-C-1GsA7a.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/timeline/view/background-menu.canvas.tsx": {
-      "script": "background-menu.canvas-DDqAbY7L.js"
+      "script": "background-menu.canvas-DDqAbY7L.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/timeline/view/graph-card.canvas.tsx": {
-      "script": "graph-card.canvas-sZZTVGsM.js"
+      "script": "graph-card.canvas-sZZTVGsM.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/timeline/view/plan-graph-tracks.canvas.tsx": {
-      "script": "plan-graph-tracks.canvas-DuNc1W1v.js"
+      "script": "plan-graph-tracks.canvas-DuNc1W1v.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/timeline/view/plan-graph.canvas.tsx": {
-      "script": "plan-graph.canvas-CfZ0VHJH.js"
+      "script": "plan-graph.canvas-CfZ0VHJH.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/timeline/view/plan-header.canvas.tsx": {
-      "script": "plan-header.canvas-CKaLKavB.js"
+      "script": "plan-header.canvas-CKaLKavB.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/timeline/view/plan-root.canvas.tsx": {
-      "script": "plan-root.canvas-xPaSZ3aC.js"
+      "script": "plan-root.canvas-xPaSZ3aC.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/timeline/view/requests-panel.canvas.tsx": {
-      "script": "requests-panel.canvas-CsuKxoTD.js"
+      "script": "requests-panel.canvas-CsuKxoTD.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/timeline/view/section-header.canvas.tsx": {
-      "script": "section-header.canvas-CUcf7SEe.js"
+      "script": "section-header.canvas-CUcf7SEe.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/timeline/view/timeline-display-menu.canvas.tsx": {
-      "script": "timeline-display-menu.canvas-VSw9Ccrb.js"
+      "script": "timeline-display-menu.canvas-VSw9Ccrb.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/views/status-settings-panel.canvas.tsx": {
-      "script": "status-settings-panel.canvas-C6aAALOS.js"
+      "script": "status-settings-panel.canvas-C6aAALOS.js",
+      "project": "preview-D3srzc49.js"
     },
     "extensions/pstdio-planner/src/views/workflow-settings.canvas.tsx": {
-      "script": "workflow-settings.canvas-Bq29Ojms.js"
+      "script": "workflow-settings.canvas-Bq29Ojms.js",
+      "project": "preview-D3srzc49.js"
     },
     "packages/pstdio-dashboard/src/lib/sync/backend-connection-status.canvas.tsx": {
       "script": "backend-connection-status.canvas-Df5vC2kT.js",
