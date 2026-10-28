@@ -306,6 +306,12 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
     await page.keyboard.press("Alt+Shift+Space");
     await page.keyboard.press("g");
     await page.keyboard.press(key);
+    if (key === "K") {
+      const choices = page.getByRole("dialog", { name: "Choose action", exact: true });
+      await expect(choices.getByRole("button", { name: "Go to kiln 1", exact: true })).toBeVisible();
+      await expect(choices.getByRole("button", { name: "Go to tickets 2", exact: true })).toBeVisible();
+      await page.keyboard.press("2");
+    }
     await expect(page).toHaveURL(destination);
     await page.keyboard.press("Escape");
   }
