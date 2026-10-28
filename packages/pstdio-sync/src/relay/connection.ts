@@ -49,7 +49,11 @@ const createRelaySocket = (input: RelaySocketInput) => {
         await input.synchronize(signal);
       }
     } catch {
-      if (!signal.aborted) input.onError?.();
+      if (!signal.aborted) {
+        attempt?.abort();
+        input.onDisconnect?.("offline");
+        input.onError?.();
+      }
       failSocket?.();
     } finally {
       running = undefined;
@@ -148,6 +152,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
       try {
         const access = await input.access();
         if (input.signal.aborted) break;
+        attempt.signal.throwIfAborted();
         renewal = await open(access, () => {
           failures = 0;
         });

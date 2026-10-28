@@ -1,14 +1,15 @@
 import { Box, Button } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { StrictMode, useRef, useState } from "react";
+import { StrictMode, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import * as Y from "yjs";
+import { createWorkbench, getWorkbenchRenderers, type WorkbenchPanelInstance } from "../../../core";
 import type {
   NativeDocumentSession,
   NativeDocumentSessionSnapshot,
 } from "../../../core/native-documents/native-document-session";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
-import { FileRendererContentView } from "./file-renderer-content";
+import { WorkbenchFileRendererView } from "./file-renderer-view";
 import { NativeMarkdownFileEditor } from "./native-markdown-file-editor";
 
 const createStorySession = (offline = false): NativeDocumentSession => {
@@ -103,26 +104,56 @@ export const StrictEffects: Story = {
 };
 
 const RenamedResource = () => {
-  const [title, setTitle] = useState("Planning note");
-  const rendererRef = useRef<HTMLDivElement>(null);
+  const [fixture] = useState(() => {
+    const workbench = createWorkbench();
+    const listeners = new Set<() => void>();
+    let title = "Planning note";
+    const renderers = getWorkbenchRenderers(workbench);
+    renderers.registerFileRenderer({
+      id: "note",
+      title: "Note",
+      load: () => ({
+        fileName: "opaque-storage-id.md",
+        mimeType: "text/markdown",
+        content: "Text",
+        editable: true,
+        documentSource: { kind: "workspace", path: "note.md" },
+      }),
+      save: () => {},
+      connectDocument: () => createStorySession(),
+    });
+    const placement: WorkbenchPanelInstance = {
+      instanceId: "note",
+      panelId: "note",
+      closable: true,
+      resource: { type: "note", id: "same-source", label: "Planning note" },
+      tab: {
+        getSnapshot: () => ({ label: title }),
+        subscribe: (listener) => {
+          listeners.add(listener);
+          return () => {
+            listeners.delete(listener);
+          };
+        },
+      },
+    };
+    return {
+      workbench,
+      placement,
+      contribution: renderers.getFileRenderer("note")!,
+      rename: () => {
+        title = "Renamed planning note";
+        for (const listener of listeners) listener();
+      },
+    };
+  });
   return (
     <>
-      <Button onClick={() => setTitle("Renamed planning note")}>Rename note</Button>
-      <FileRendererContentView
-        content={{
-          fileName: "opaque-storage-id.md",
-          mimeType: "text/markdown",
-          content: "Text",
-          editable: true,
-          documentSource: { kind: "workspace", path: "note.md" },
-        }}
-        editorKey="same-source"
-        title={title}
-        rendererRef={rendererRef}
-        errorNotice={null}
-        contributionCanSave
-        onChange={() => {}}
-        connectDocument={() => createStorySession()}
+      <Button onClick={fixture.rename}>Rename note</Button>
+      <WorkbenchFileRendererView
+        workbench={fixture.workbench}
+        contribution={fixture.contribution}
+        placement={fixture.placement}
       />
     </>
   );

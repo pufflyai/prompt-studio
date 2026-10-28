@@ -349,3 +349,68 @@ test("transport status follows the socket through offline and back and signals e
     await connection.done;
   }
 });
+
+test("a permanent synchronization error during access renewal retires its attempt", async () => {
+  const controller = new AbortController();
+  const firstStarted = Promise.withResolvers<AbortSignal>();
+  const secondStarted = Promise.withResolvers<AbortSignal>();
+  const renewalEntered = Promise.withResolvers<void>();
+  const renewedGrant = Promise.withResolvers<void>();
+  const failSync = Promise.withResolvers<void>();
+  const reported = Promise.withResolvers<void>();
+  let grants = 0,
+    runs = 0;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 426 });
+    },
+    websocket: {
+      open(socket) {
+        socket.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+      },
+      message() {},
+    },
+  });
+  const connection = createRelayConnection({
+    origin: server.url.origin,
+    scope: { accountId: "a", workbenchId: "w", extensionId: "e" },
+    signal: controller.signal,
+    access: async () => {
+      const n = ++grants;
+      if (n === 2) {
+        renewalEntered.resolve();
+        await renewedGrant.promise;
+      }
+      return { token: `t-${n}`, expiresAt: new Date(Date.now() + (n === 1 ? 60 : 60_000)).toISOString() };
+    },
+    synchronize: async (signal) => {
+      if (++runs === 1) {
+        firstStarted.resolve(signal);
+        await failSync.promise;
+        throw new Error("Permanent synchronization failure");
+      }
+      secondStarted.resolve(signal);
+    },
+    onError: () => reported.resolve(),
+  });
+  try {
+    const first = await firstStarted.promise;
+    await renewalEntered.promise;
+    failSync.resolve();
+    await reported.promise;
+    await new Promise<void>((r) => setImmediate(r));
+    renewedGrant.resolve();
+    const second = await secondStarted.promise;
+    expect(first.aborted).toBe(true);
+    expect(second).not.toBe(first);
+  } finally {
+    failSync.resolve();
+    renewedGrant.resolve();
+    controller.abort();
+    await connection.done;
+    await server.stop(true);
+  }
+});
