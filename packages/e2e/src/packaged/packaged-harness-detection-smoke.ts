@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { folderProjectInput } from "../helpers/folder-project";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
@@ -49,6 +50,14 @@ export const registerHarnessDetectionSmokeTests = () => {
           }),
         });
         child = started.child;
+        const projectPath = join(root, "project");
+        mkdirSync(projectPath);
+        const project = await fetch(`${started.baseUrl}/v1/projects`, {
+          method: "POST",
+          headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+          body: JSON.stringify(folderProjectInput({ name: "Detection" }, projectPath)),
+        });
+        expect(project.status).toBe(201);
         const response = await fetch(`${started.baseUrl}/v1/agents/info`, {
           headers: runtimeAuthorization(started.descriptor),
         });

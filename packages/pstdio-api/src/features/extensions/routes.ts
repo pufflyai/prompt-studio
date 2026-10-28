@@ -69,6 +69,12 @@ import {
 } from "./endpoints/get-marketplace-extension-contributions";
 import { getProjectExtensionUiHandler, getProjectExtensionUiRoute } from "./endpoints/get-project-extension-ui";
 import { installExtensionHandler, installExtensionRoute } from "./endpoints/install-extension";
+import {
+  installationJobsHandler,
+  installationJobsRoute,
+  retryInstallationJobHandler,
+  retryInstallationJobRoute,
+} from "./endpoints/installation-jobs";
 import { listExtensionAppearanceHandler, listExtensionAppearanceRoute } from "./endpoints/list-extension-appearance";
 import { listExtensionCommandsHandler, listExtensionCommandsRoute } from "./endpoints/list-extension-commands";
 import { listProjectExtensionsHandler, listProjectExtensionsRoute } from "./endpoints/list-project-extensions";
@@ -140,7 +146,7 @@ const registerExtensionArtifactRoutes = (
 
 const registerProjectExtensionRoutes = (
   routes: ExtensionRoutes,
-  deps: ProjectExtensionLifecycleRouteDeps & ExtensionWebviewMetadataDeps,
+  deps: ProjectExtensionLifecycleRouteDeps & ExtensionWebviewMetadataDeps & Pick<RouteDeps, "extensionInstallations">,
 ) => {
   routes.openapi(listProjectExtensionsRoute, listProjectExtensionsHandler(deps));
   routes.openapi(installExtensionRoute, installExtensionHandler(deps));
@@ -173,7 +179,7 @@ export const createExtensionRoutes = (
   deps: ExtensionsRouteDeps &
     ExtensionWebviewMetadataDeps &
     ExtensionWebviewRouteDeps &
-    Pick<RouteDeps, "installedExtensionSourcesService" | "webviewPreferencesDBService">,
+    Pick<RouteDeps, "installedExtensionSourcesService" | "webviewPreferencesDBService" | "extensionInstallations">,
 ) => {
   const routes = new OpenAPIHono<AppBindings>();
   routes.onError((error, c) => {
@@ -183,6 +189,8 @@ export const createExtensionRoutes = (
   });
 
   routes.route("/", publicationRoutes(deps));
+  routes.openapi(installationJobsRoute, installationJobsHandler(deps));
+  routes.openapi(retryInstallationJobRoute, retryInstallationJobHandler(deps));
   routes.route("/", createDeviceAutomationRoutes(deps));
   registerInstalledExtensionRoutes(routes, deps);
   registerExtensionWorkbenchRoutes(routes, deps);

@@ -1,9 +1,12 @@
+import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import type { Asset } from "pstdio-sync-contracts";
 import { scheduleProjectWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
 import type { ExtensionsRouteDeps } from "../deps";
+import { packagedExtensionCatalog } from "../extension-catalog";
 import { openPublishedCatalog, type Publication } from "./catalog";
 import { preparePublicationActivation } from "./prepare-activation";
+import { publishedRevisionOf } from "./source";
 
 interface Entry {
   publication: Publication;
@@ -99,7 +102,36 @@ export const activatePublishedSet = (...args: Parameters<typeof applySet>) => {
     queues = new Map();
     activationQueues.set(deps.extensionService, queues);
   }
-  const result = (queues.get(projectId) ?? Promise.resolve()).catch(() => {}).then(() => applySet(...args));
+  const result = (queues.get(projectId) ?? Promise.resolve())
+    .catch(() => {})
+    .then(async () => {
+      const installed = await deps.extensionService.listProjectExtensionInstances(projectId);
+      const identities = args[2].flatMap(({ publication }) => {
+        const source = installed.find(
+          ({ installedSource }) => installedSource.extension_id === publication.extensionId,
+        )?.installedSource;
+        const adopting = args[4] === true || args[4] === publication.extensionId;
+        if (
+          !adopting &&
+          source &&
+          existsSync(source.source_path) &&
+          publishedRevisionOf(source.source_ref) === publication.revision
+        )
+          return [];
+        const catalog = packagedExtensionCatalog.extensions.find(
+          (entry) => entry.extensionId === publication.extensionId,
+        );
+        return [
+          {
+            projectId,
+            extensionId: publication.extensionId,
+            installName: source?.install_name ?? catalog?.installName ?? publication.extensionId,
+            displayName: source?.display_name ?? catalog?.displayName ?? publication.extensionId,
+          },
+        ];
+      });
+      return deps.extensionInstallations.runGroup(identities, () => applySet(...args));
+    });
   queues.set(projectId, result);
   return result.finally(() => {
     if (queues.get(projectId) === result) queues.delete(projectId);

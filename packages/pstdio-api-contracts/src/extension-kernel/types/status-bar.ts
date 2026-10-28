@@ -5,6 +5,8 @@ export interface StatusBarItemContribution extends ContributionDefinition<"statu
   readonly view: ViewRef;
   /** Detail view opened above this item. The host owns placement outside the status iframe. */
   readonly popover?: ViewRef;
+  /** Owned boolean setting. False hides the item without stopping its background work. */
+  readonly visibilitySetting?: string;
   readonly slot: StatusBarSlotRef;
   readonly order?: number;
   readonly when?: WhenExpression;

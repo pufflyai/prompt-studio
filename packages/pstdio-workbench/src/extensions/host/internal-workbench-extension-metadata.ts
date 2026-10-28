@@ -116,6 +116,7 @@ export interface InternalWorkbenchExtensionMetadata {
     extensionId: string;
     viewId: string;
     popoverViewId?: string;
+    visibilitySetting?: string;
     slot: "leading" | "trailing";
     order?: number;
     when?: {

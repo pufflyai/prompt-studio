@@ -2,5 +2,28 @@
   "browserSignIn": {
     "title": "ターミナルから Prompt Studio を開いてください",
     "description": "このブラウザーはサインインしていません。ターミナルでこのコマンドを実行すると、サインイン済みのダッシュボードが開きます。"
+  },
+  "onboarding": {
+    "onThisDevice": "このデバイス",
+    "onThisMac": "このMac",
+    "available": "インストール可能",
+    "workAreas": "作業分野",
+    "extensions": "インストールする拡張機能",
+    "coding": "コーディング",
+    "planning": "プロジェクト計画",
+    "steps": "セットアップ手順",
+    "harnesses": "ハーネス",
+    "work": "作業",
+    "skip": "セットアップをスキップ",
+    "chooseHarnesses": "ハーネスを選択",
+    "chooseWork": "何に取り組みますか？",
+    "subtitle": "これらは標準の拡張機能です。後からインストールしたり、独自の拡張機能を作成したりできます。",
+    "noHarness": "Prompt Studioは引き続き使用できますが、アプリからハーネスを実行できません。",
+    "continue": "続ける",
+    "finish": "完了",
+    "back": "戻る",
+    "saveError": "設定を保存できませんでした",
+    "customizations": "カスタマイズ",
+    "dontShow": "初期設定を表示しない"
   }
 }

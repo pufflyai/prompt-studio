@@ -42,6 +42,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // packaged-cloud-notes-onboarding.p2.test.ts checks local folder ownership and the actual Notes plus/save/sync flow.
 // packaged-board-panning-smoke.p2.test.ts retains card opening and dragging; the UI Card Gestures story covers nested-control pointer ownership.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { expectPackagedOnboarding } from "./packaged-onboarding-smoke";
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -106,6 +107,7 @@ test(
         OPENAI_API_KEY: "provider-secret",
       });
       child = started.child;
+      await expectPackagedOnboarding(started.baseUrl, runtimeAuthorization(started.descriptor));
 
       const projectFolder = join(tempRoot, "project");
       const peerFolder = join(tempRoot, "peer-project");

@@ -17,6 +17,7 @@ export * from "./harness-commands";
 export * from "./history-reconciliation";
 export * from "./link-icons";
 export * from "./notifications/types";
+export * from "./onboarding";
 export * from "./pagination";
 export * from "./project-folder";
 export * from "./project-recovery";

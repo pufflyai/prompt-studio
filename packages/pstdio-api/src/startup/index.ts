@@ -62,6 +62,7 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
 
   try {
     const installed = await installDefaultExtensions({
+      extensionInstallations: deps.extensionInstallations,
       forceSourceDefaults: sourceMode,
       onInstallFailure: ({ error, installName, source }) => {
         if (signal?.aborted) return;
@@ -90,6 +91,7 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
 };
 
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
+  await deps.onboarding.resume();
   const defaultExtensionPreparation = (async () => {
     signal?.throwIfAborted();
     if (options?.prepareDefaultExtensions) await options.prepareDefaultExtensions(signal);

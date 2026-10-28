@@ -21,6 +21,26 @@ The Settings → Extensions Upgrade action uses the same update path. Each
 extension shows its own version. Git and local development sources keep their
 chosen source.
 
+## Installation jobs (0.46)
+
+On the unreleased 0.46 host, every installation path reports jobs through the
+same service. Inspect progress or retry a failed job:
+
+~~~bash
+pst extensions installations
+pst extensions installations <job-id>
+~~~
+
+The public client exposes `client.extensions.installations()` and
+`client.extensions.retryInstallation(id)`. The HTTP routes are
+`GET /v1/extension-installations` and `POST /v1/extension-installations/{id}/retry`.
+Jobs report queued, running, completed, or failed state. Retrying a completed job
+does nothing. An atomic published extension set retries together because it
+cannot partly activate.
+
+First-launch catalog jobs survive a runtime restart. Completed jobs are not
+replayed, so restarting does not re-enable an extension you later disabled.
+
 ## Share a package
 
 ~~~bash

@@ -55,6 +55,8 @@ const terminalRequest = z.object({
 const projectId = { projectId: identifier.optional() };
 
 const schemas = {
+  "extensions.installations.read": empty,
+  "extensions.installations.retry": z.object({ id: identifier }).strict(),
   "performance.read": z.strictObject({
     operation: z.enum(["state", "snapshot", "subscribe", "unsubscribe", "recordings", "retain", "dispose"]),
   }),

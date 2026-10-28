@@ -1,6 +1,7 @@
 import type {
   CreateNotificationInput,
   ExtensionBlobRef,
+  ExtensionInstallation,
   Notification,
   ProjectExtensionInstance,
   WebviewArtifactFile,
@@ -14,6 +15,9 @@ const projectPath = (projectId: string) => `/v1/projects/${encodeURIComponent(pr
 const artifactPath = (projectId: string, instanceId: string, mountId: string) =>
   `${projectExtensionPath(projectId, instanceId)}/artifacts/${encodeURIComponent(mountId)}`;
 export const createExtensionManagementClient = (request: RequestFn) => ({
+  installations: () => request<ExtensionInstallation[]>("/v1/extension-installations"),
+  retryInstallation: (id: string) =>
+    request<ExtensionInstallation>(`/v1/extension-installations/${encodeURIComponent(id)}/retry`, { method: "POST" }),
   createNotification: (projectId: string, extensionId: string, body: Omit<CreateNotificationInput, "projectId">) =>
     request<Notification>(`${projectPath(projectId)}/${encodeURIComponent(extensionId)}/notifications`, {
       method: "POST",

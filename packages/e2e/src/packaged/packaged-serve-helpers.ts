@@ -3,6 +3,7 @@ import { once } from "node:events";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
+import { hideTestOnboarding } from "../helpers/onboarding";
 import { stopChildProcess } from "../scripts/child-process";
 import { registerPendingTestProcess } from "../scripts/pending-test-processes";
 import { waitForProcessReady } from "../scripts/process-readiness";
@@ -144,6 +145,9 @@ export const startPackagedServe = async (
   try {
     if (child.pid !== undefined) observe?.({ pid: child.pid, descriptor: null });
     const descriptor = await waitForPackagedReady(descriptorPath, child, observe);
+    // Migration fixtures also launch older releases, before the setup API existed.
+    if (binaryPath === PACKAGED_BINARY_PATH)
+      await hideTestOnboarding(descriptor.origin, runtimeAuthorization(descriptor));
     return { child, baseUrl: descriptor.origin, descriptor };
   } catch (error) {
     await stopProcess(child);

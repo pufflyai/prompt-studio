@@ -11,7 +11,7 @@
         "path": "extensions/harness-claude-code",
         "ref": "{hostRelease}"
       },
-      "default": true,
+      "default": false,
       "extensionId": "pstdio.harness-claude-code"
     },
     {
@@ -24,7 +24,7 @@
         "path": "extensions/harness-codex",
         "ref": "{hostRelease}"
       },
-      "default": true,
+      "default": false,
       "extensionId": "pstdio.harness-codex"
     },
     {
@@ -37,7 +37,7 @@
         "path": "extensions/harness-open-code",
         "ref": "{hostRelease}"
       },
-      "default": true,
+      "default": false,
       "extensionId": "pstdio.harness-open-code"
     },
     {

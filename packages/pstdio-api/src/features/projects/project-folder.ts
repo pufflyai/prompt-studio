@@ -3,6 +3,7 @@ import type { CreateProjectInput, ExtensionSetupWarning } from "pstdio-api-contr
 import { traceSetupPhase } from "../../lib/setup-phase";
 import { installRepoDefaultExtensions, resolveDefaultExtensionsConfig } from "../extensions/default-extensions";
 import { syncRepoExtensionsForProject } from "../extensions/repo-extensions";
+import { trackedSourceInstaller } from "../extensions/tracked-source-install";
 import { runWorkspaceProvisioning } from "../workspaces/provision-coordinator";
 import { ensureWorkspaceConfig } from "../workspaces/workspace-config";
 import { PROVIDER_READY_TIMEOUT_MS } from "../workspaces/workspace-provider-creation";
@@ -76,6 +77,7 @@ const initializeLocalProjectWorkspace = async (
     );
     await traceSetupPhase("project.repo_extensions", context, () =>
       installRepoDefaultExtensions({
+        installExtensionSource: trackedSourceInstaller(deps.extensionInstallations),
         defaultExtensions: defaults.defaultExtensions,
         repoPath: rootPath,
         releaseRef: deps.extensionUpgradeService?.releaseRef,

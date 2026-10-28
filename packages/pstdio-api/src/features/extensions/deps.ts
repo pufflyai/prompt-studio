@@ -14,6 +14,7 @@ export type ExtensionsRouteDeps = Pick<
   | "boardViewsService"
   | "resourceLinksService"
   | "extensionService"
+  | "extensionInstallations"
   | "extensionRuntimeCatalog"
   | "extensionResourceSequencesService"
   | "projectInfoService"

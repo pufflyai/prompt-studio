@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { upgradeProjectExtensionResponseSchema } from "pstdio-api-contracts";
 import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-unavailable-error";
 import type { AppRouteHandler } from "../../../types";
+import type { RouteDeps } from "../../deps";
 import type { ExtensionsRouteDeps } from "../deps";
 import { refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
 import { toProjectExtensionInstance } from "../project-extension-instance";
@@ -42,7 +43,7 @@ export const upgradeProjectExtensionRoute = createRoute({
 });
 
 export const upgradeProjectExtensionHandler = (
-  deps: ExtensionsRouteDeps,
+  deps: ExtensionsRouteDeps & Pick<RouteDeps, "extensionInstallations">,
 ): AppRouteHandler<typeof upgradeProjectExtensionRoute> => {
   return async (c) => {
     const { projectId, instanceId } = c.req.valid("param");
@@ -51,7 +52,18 @@ export const upgradeProjectExtensionHandler = (
     }
 
     try {
-      const result = await deps.extensionUpgradeService.upgrade(projectId, instanceId);
+      const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
+      if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
+      const source = existing.installedSource;
+      const result = await deps.extensionInstallations.run(
+        {
+          projectId,
+          installName: source.install_name,
+          displayName: source.display_name,
+          extensionId: source.extension_id,
+        },
+        () => deps.extensionUpgradeService!.upgrade(projectId, instanceId),
+      );
       if (!result) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
 
       await refreshProjectSkillsInRepos(deps, projectId);

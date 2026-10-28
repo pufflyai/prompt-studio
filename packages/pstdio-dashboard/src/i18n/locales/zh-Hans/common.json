@@ -2,5 +2,28 @@
   "browserSignIn": {
     "title": "请从终端打开 Prompt Studio",
     "description": "此浏览器尚未登录。在终端中运行此命令，即可打开已登录的仪表板。"
+  },
+  "onboarding": {
+    "onThisDevice": "此设备上",
+    "onThisMac": "此 Mac 上",
+    "available": "可安装",
+    "workAreas": "工作领域",
+    "extensions": "要安装的扩展",
+    "coding": "编程",
+    "planning": "项目规划",
+    "steps": "设置步骤",
+    "harnesses": "Harnesses",
+    "work": "工作",
+    "skip": "跳过设置",
+    "chooseHarnesses": "选择 harnesses",
+    "chooseWork": "你想做什么？",
+    "subtitle": "这些是默认扩展。你可以稍后安装，也可以自行构建。",
+    "noHarness": "你仍可使用 Prompt Studio，但无法从应用中运行 harnesses。",
+    "continue": "继续",
+    "finish": "完成",
+    "back": "返回",
+    "saveError": "无法保存设置",
+    "customizations": "自定义",
+    "dontShow": "不显示初始设置"
   }
 }

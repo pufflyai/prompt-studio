@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import {
   type createExtensionConnectionsDBService,
   type createExtensionInstancesDBService,
@@ -19,10 +20,14 @@ import { installExtensionSource } from "./features/extensions/install-extension-
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
 import { createProjectExtensionRuntimeCatalog } from "./features/extensions/project-extension-runtime-catalog";
 import { subscribeProjectWorkspaceExtensionRefresh } from "./features/extensions/project-workspace-extension-refresh";
+import { createHarnessPackages } from "./features/harnesses/harness-packages";
 import { createHarnessRegistryService } from "./features/harnesses/harness-registry-service";
+import { createOnboardingInstaller, enqueueOnboardingExtension } from "./features/onboarding/install-choices";
+import { createOnboarding } from "./features/onboarding/onboarding";
 import type { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
 import { logStartupPhase } from "./lib/startup-phase";
+import { createExtensionInstallations } from "./services/extension-installations";
 import { createExtensionService } from "./services/extension-service";
 import { createExtensionUpgradeService } from "./services/extension-upgrade-service";
 import type { createProjectService } from "./services/project-service";
@@ -49,6 +54,11 @@ export const productionAppDependencies: AppDependencies = {
 };
 
 export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
+  let installCatalog: ReturnType<typeof createOnboardingInstaller>;
+  const extensionInstallations = createExtensionInstallations({
+    path: join(input.storageRoot, "extension-installations.json"),
+    installCatalog: (name, signal) => installCatalog(name, signal),
+  });
   let refreshInstalledExtensionProcesses: (
     sourcePath?: string,
     validatedSource?: LoadedExtensionSnapshot,
@@ -73,6 +83,15 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     installExtensionSource: input.dependencies.installExtensionSource,
     release: input.config.release,
     workspaceService: input.workspaceService,
+  });
+  installCatalog = createOnboardingInstaller({
+    extensionService,
+    projectService: input.projectService,
+    releaseRef: extensionUpgradeService.releaseRef,
+  });
+  const onboarding = createOnboarding({
+    path: join(input.storageRoot, "onboarding.json"),
+    enqueue: (name) => enqueueOnboardingExtension(extensionInstallations, name),
   });
   const extensionRuntimeCatalog = createProjectExtensionRuntimeCatalog({
     extensionService,
@@ -117,6 +136,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
       ),
   });
   const harnessRegistry = input.dependencies.createHarnessRegistry({
+    packages: createHarnessPackages({ installations: extensionInstallations }),
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionRuntimeCatalog,
     createConnectionsApi: (scope) => createExtensionConnectionsApi(extensionConnectionService, scope),
@@ -159,6 +179,8 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     .catch((err) => apiLogger.error({ err, event: "extensions.startup.error" }, "Extension startup failed"));
 
   return {
+    onboarding,
+    extensionInstallations,
     extensionStartup,
     extensionRuntime,
     extensionRuntimeCatalog,

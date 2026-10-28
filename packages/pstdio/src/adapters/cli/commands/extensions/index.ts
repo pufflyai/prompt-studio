@@ -4,6 +4,7 @@ import * as automationsCommand from "./automations";
 import * as checkCommand from "./check";
 import * as devCommand from "./dev";
 import * as installBrowserCommand from "./install-browser";
+import * as installationsCommand from "./installations";
 import * as packCommand from "./pack";
 import * as publicationCommand from "./publication";
 import * as testCommand from "./test";
@@ -16,6 +17,7 @@ export const { command, describe, subcommands, builder, handler } = defineComman
   checkCommand,
   devCommand,
   installBrowserCommand,
+  installationsCommand,
   updateCommand,
   publicationCommand,
   testCommand,

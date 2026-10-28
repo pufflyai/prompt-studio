@@ -51,6 +51,7 @@ export const prepareDefaultProjectExtensions = async (deps: ProjectsRouteDeps) =
 
   try {
     const installed = await installMissingDefaultExtensions({
+      extensionInstallations: deps.extensionInstallations,
       forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
       onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
       releaseRef: deps.extensionUpgradeService?.releaseRef,
