@@ -18,6 +18,19 @@ const execute = (body = {}) =>
     body,
   });
 
+test("resource-resolved parameters reach commands invoked directly through the API", async () => {
+  const snapshot = await fixture.deps.extensionRuntimeCatalog.get("project-1");
+  const command = snapshot.runtime.commands[0]!;
+  command.params = { noteId: { type: "text", required: true, resolvedFrom: "resource" } };
+  command.run = async (_ctx, params) => params;
+  const body = { resource: { type: "note", id: "current-note" } };
+  expect((await execute(body)).outcome).toMatchObject({ ok: true, value: { noteId: "current-note" } });
+  expect((await execute({ ...body, params: { noteId: "explicit-note" } })).outcome).toMatchObject({
+    ok: true,
+    value: { noteId: "explicit-note" },
+  });
+});
+
 test("an omitted workspace uses the trusted default workspace in the command context", async () => {
   const result = await execute();
   expect(result.outcome).toMatchObject({
