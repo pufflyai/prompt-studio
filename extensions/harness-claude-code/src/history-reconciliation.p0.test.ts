@@ -36,3 +36,34 @@ test("actual Claude transcript tool results merge with live normalization and re
     messages: nativeMessages,
   });
 });
+
+test("plan review keeps its Markdown preview when native history omits the approval context", async () => {
+  const { toolUsePart } = await import("./message-parts");
+  const call = { type: "tool_use" as const, id: "plan", name: "ExitPlanMode", input: {} };
+  const preview: SessionMessage = {
+    id: "stream-plan-plan",
+    role: "assistant",
+    parts: [{ type: "text", text: "# Plan\n\nAdd a greeting." }],
+  };
+  const known: SessionMessage = {
+    id: "live-plan",
+    role: "assistant",
+    parts: [
+      { ...toolUsePart(call), status: "completed", state: { ...toolUsePart(call).state, output: "Plan approved." } },
+    ],
+  };
+  const nativeMessages = normalizeClaudeCodeMessages([
+    { uuid: "a", type: "assistant", message: { role: "assistant", content: [call] } },
+    {
+      uuid: "b",
+      type: "user",
+      message: { role: "user", content: [{ type: "tool_result", tool_use_id: call.id, content: "Plan approved." }] },
+    },
+  ]);
+  const result = recoverClaudeMessages({ knownMessages: [known, preview], nativeMessages });
+  expect(result.kind).toBe("recovered");
+  if (result.kind === "recovered") {
+    expect(result.messages.flatMap((message) => message.parts)).toContainEqual(preview.parts[0]);
+    expect(result.messages.flatMap((message) => message.parts).filter((part) => part.type === "tool")).toHaveLength(1);
+  }
+});

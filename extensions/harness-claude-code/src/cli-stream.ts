@@ -2,6 +2,7 @@ import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
 import type { ApprovalResponse, HarnessApprovalChannel, HarnessQuestionChannel } from "@pstdio/sdk/extensions";
 import { ASK_USER_QUESTION } from "./message-parts";
+import { EXIT_PLAN_MODE, reviewPlan } from "./plan-mode";
 import { askPerson } from "./questions";
 import { type AskUserQuestionInput, parseStdoutLine, type RawLogEvent } from "./types";
 
@@ -53,6 +54,10 @@ const answerControlRequest = async (parsed: Record<string, unknown>, channels: C
     return askPerson(channels.questions, { id, toolUseId, input: toolInput as AskUserQuestionInput });
   }
 
+  if (toolName === EXIT_PLAN_MODE && channels.questions) {
+    return reviewPlan(channels.questions, { id, toolUseId, input: toolInput });
+  }
+
   const decision: ControlDecision = channels.approvals
     ? (await channels.approvals.requestApproval({ id, toolName, toolInput, toolUseId })).decision
     : "unavailable";
@@ -94,6 +99,10 @@ export async function* createRawEventStream(
     const parsed = parseStdoutLine(trimmed);
 
     if (parsed && isControlRequest(parsed)) {
+      // Permission requests include plan text that the original tool call can omit.
+      if ((parsed.request as Record<string, unknown>)?.tool_name === EXIT_PLAN_MODE && channels.questions) {
+        yield { type: "stdout", data: trimmed };
+      }
       // Keep reading while the person decides. The host closes an open question only after the run
       // ends, so waiting for the answer here would keep the run from ever ending if Claude exits.
       void answerControlRequest(parsed, channels)

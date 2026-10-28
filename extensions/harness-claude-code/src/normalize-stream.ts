@@ -1,5 +1,6 @@
 import type { SessionMessage } from "@pstdio/sdk/extensions";
 import { apiErrorPart, normalizeErrorPart, toolResultPart, toolUsePart } from "./message-parts";
+import { EXIT_PLAN_MODE } from "./plan-mode";
 import type { ClaudeCodeContentBlock, ClaudeCodeToolResultBlock, ClaudeCodeToolUseBlock, RawLogEvent } from "./types";
 import { parseStdoutLine } from "./types";
 import { parseTimestamp } from "./utils";
@@ -205,6 +206,26 @@ const dispatchStdoutEvent = (parsed: Record<string, unknown>, ctx: StreamContext
   if (eventType === "content_block_start") {
     const msg = handleContentBlockStart(parsed, ctx);
     return msg ? [msg] : [];
+  }
+
+  if (eventType === "control_request") {
+    const request = parsed.request as Record<string, unknown>;
+    if (request.tool_name !== EXIT_PLAN_MODE) return [];
+    const message = contentBlockToMessage(
+      { type: "tool_use", id: request.tool_use_id as string, name: EXIT_PLAN_MODE, input: request.input },
+      ctx,
+    );
+    const plan = (request.input as { plan?: unknown } | undefined)?.plan;
+    if (typeof plan !== "string" || !plan.trim()) return message ? [message] : [];
+    return [
+      {
+        id: `stream-plan-${request.tool_use_id}`,
+        role: "assistant",
+        parts: [{ type: "text", text: `\n\n${plan}\n\n` }],
+        index: ctx.index,
+      },
+      ...(message ? [{ ...message, index: ctx.index + 1 }] : []),
+    ];
   }
 
   if (eventType === "assistant") {
