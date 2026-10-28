@@ -37,6 +37,7 @@ import { DASHBOARD_SIDENAV_REGION_SIZE } from "./shared/workbench/dashboard-side
 export { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 
 interface CreateDashboardWorkbenchInput {
+  onboarding?: Parameters<typeof createOnboardingModule>[0];
   projectTabs?: DesktopProjectTabsController;
   pageLocationBrowser?: WorkbenchPageLocationBrowser;
   storage?: WorkbenchStorageLike;
@@ -44,6 +45,7 @@ interface CreateDashboardWorkbenchInput {
 }
 
 type CreateDashboardModulesInput = {
+  onboarding?: Parameters<typeof createOnboardingModule>[0];
   initialProjectId?: string;
   projectTabs?: DesktopProjectTabsController;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
@@ -51,7 +53,7 @@ type CreateDashboardModulesInput = {
 };
 
 export const createDashboardModules = (input: CreateDashboardModulesInput & { settings: SettingsRegistry }) => {
-  const onboarding = createOnboardingModule();
+  const onboarding = createOnboardingModule(input.onboarding);
   return [
     createSidenavModule(),
     createWorkspacesModule(),
@@ -128,6 +130,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     },
   });
   const modules = createDashboardModules({
+    onboarding: input.onboarding,
     settings: workbench.settings,
     initialProjectId: urlProjectId,
     projectTabs: input.projectTabs,

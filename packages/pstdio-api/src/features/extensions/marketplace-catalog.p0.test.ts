@@ -100,9 +100,6 @@ describe("extension catalog", () => {
       .map((catalogEntry) => catalogEntry.installName);
 
     expect(defaults).toEqual([
-      "harness-claude-code",
-      "harness-codex",
-      "harness-open-code",
       "pstdio-base-themes",
       "pstdio-skills",
     ]);
