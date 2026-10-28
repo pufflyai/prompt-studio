@@ -40,6 +40,38 @@ const createHarness = (input?: { failSaves?: number; saveRevision?: string; save
 };
 
 describe("manual file editing", () => {
+  test.each(["third", "first"])("typing %s after a queued save remains unsaved", async (latest) => {
+    let finishFirst!: () => void;
+    let loads = 0;
+    const saves: string[] = [];
+    const controller = createFileEditController({
+      binding,
+      debounceMs: DEBOUNCE_MS,
+      saveMode: "manual",
+      load: () => {
+        loads++;
+      },
+      save: async (value) => {
+        saves.push(value);
+        if (value === "first") await new Promise<void>((resolve) => (finishFirst = resolve));
+      },
+    });
+    controller.setBaseline("loaded");
+    controller.handleChange("first");
+    controller.flush();
+    controller.handleChange("second");
+    controller.flush();
+    controller.handleChange(latest);
+    controller.handleRefreshEvent({ revision: "remote" });
+    finishFirst();
+    await tick();
+    expect(saves).toEqual(["first", "second"]);
+    expect(controller.getBaseline()).toBe("second");
+    expect(controller.getDraft()).toBe(latest);
+    expect(controller.getState()).toEqual({ dirty: true, saving: false });
+    expect(loads).toBe(0);
+  });
+
   for (const failFirst of [false, true]) {
     test(`an explicit save during ${failFirst ? "a failing" : "an active"} save saves the pending edit without overlap`, async () => {
       let finishFirst!: () => void;
