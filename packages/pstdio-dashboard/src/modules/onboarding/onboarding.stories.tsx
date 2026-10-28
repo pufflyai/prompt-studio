@@ -1,8 +1,8 @@
-import { Box, Text } from "@chakra-ui/react";
+import { Box, Dialog, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { OnboardingInfo } from "pstdio-api-contracts";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Onboarding } from "./onboarding";
 
 const info: OnboardingInfo = {
@@ -15,16 +15,28 @@ const Example = (props: { info: OnboardingInfo }) => {
   if (complete) return <Text>Workspace</Text>;
   return (
     <Box h="100dvh">
-      <Onboarding
-        info={props.info}
-        update={async (request) => ({
-          ...props.info.state,
-          ...(request.step === "harnesses" ? { harnesses: request.harnesses } : {}),
-          ...(request.step === "complete" ? { completed: true, workAreas: request.workAreas } : {}),
-          ...(request.step === "skip" ? { completed: true } : {}),
-        })}
-        onComplete={() => setComplete(true)}
-      />
+      <Dialog.Root open placement="center" scrollBehavior="inside" closeOnInteractOutside={false}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content
+            w="folder-picker-width"
+            h="folder-picker-height"
+            maxW="calc(100vw - {spacing.xl})"
+            maxH="calc(100dvh - {spacing.xl})"
+          >
+            <Onboarding
+              info={props.info}
+              update={async (request) => ({
+                ...props.info.state,
+                ...(request.step === "harnesses" ? { harnesses: request.harnesses } : {}),
+                ...(request.step === "complete" ? { completed: true, workAreas: request.workAreas } : {}),
+                ...(request.step === "skip" ? { completed: true } : {}),
+              })}
+              onComplete={() => setComplete(true)}
+            />
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </Box>
   );
 };
@@ -42,6 +54,21 @@ export const Work: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "Continue" }));
     await expect(within(canvasElement).getByRole("heading", { name: "What do you want to work on?" })).toBeVisible();
+  },
+};
+export const BreadcrumbNavigation: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const breadcrumb = within(canvas.getByRole("navigation", { name: "Setup steps" }));
+    await waitFor(() => expect(breadcrumb.getByRole("list")).toBeVisible());
+    await expect(breadcrumb.getByText("Harnesses")).toHaveAttribute("aria-current", "page");
+    await userEvent.click(canvas.getByRole("button", { name: "Continue" }));
+    await expect(breadcrumb.getByText("Work")).toHaveAttribute("aria-current", "page");
+    await userEvent.click(breadcrumb.getByRole("button", { name: "Harnesses" }));
+    await expect(canvas.getByRole("heading", { name: "Choose your harnesses" })).toBeVisible();
+    await expect(canvas.getByRole("checkbox", { name: "Codex" })).toBeChecked();
+    await expect(canvas.getByRole("checkbox", { name: "OpenCode" })).toBeChecked();
+    await expect(breadcrumb.getByText("Harnesses")).toHaveAttribute("aria-current", "page");
   },
 };
 export const CombinedWork: Story = {

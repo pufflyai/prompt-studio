@@ -30,6 +30,26 @@ const browserAt = (url: string): WorkbenchPageLocationBrowser => {
 };
 
 describe("createBootstrapModule", () => {
+  test("runs setup before project selection when no project exists", async () => {
+    const workbench = createWorkbench();
+    workbench.modes.registerMode({ id: "project-selection", label: "Projects", activate: () => undefined });
+    let resume: (() => void) | undefined;
+    const beforeOpen = mock(async (next: () => void) => {
+      resume = next;
+      return false;
+    });
+    const bootstrap = workbench.registerModule(createBootstrapModule({ beforeOpen }));
+    try {
+      await flushMicrotasks();
+      expect(beforeOpen).toHaveBeenCalledTimes(1);
+      expect(workbench.modes.getActiveModeId()).toBeUndefined();
+      resume!();
+      expect(workbench.modes.getActiveModeId()).toBe("project-selection");
+    } finally {
+      bootstrap.dispose();
+    }
+  });
+
   test("opens Start before project extensions are ready", async () => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });

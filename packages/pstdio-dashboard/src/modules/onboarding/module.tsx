@@ -1,15 +1,12 @@
 import type { PstdioClient } from "@pstdio/sdk/client";
-import { type PageRef, workbenchPages } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import type { OnboardingInfo } from "pstdio-api-contracts";
 import { getApiClient } from "@/lib/api";
-import { pageTargetFromLocation } from "@/shared/workbench/page-navigation";
 import { Customizations } from "./customizations";
 import { Onboarding } from "./onboarding";
 
 const modeId = "dashboard.onboarding";
 const viewId = "dashboard.onboarding.setup";
-const page: PageRef = { extensionId: "pstdio", kind: "page", id: "onboarding" };
 export const createOnboardingModule = (
   client: PstdioClient["onboarding"] = {
     read: () => getApiClient().onboarding.read(),
@@ -19,38 +16,16 @@ export const createOnboardingModule = (
   let context: WorkbenchModuleContext;
   let info: OnboardingInfo;
   let complete: () => void;
-  let setupPage: { dispose(): void } | undefined;
   const open = async (onComplete: () => void, isCurrent: () => boolean) => {
-    setupPage?.dispose();
-    setupPage = undefined;
-    context.modes.setActiveMode(modeId);
-    info = await client.read();
+    const loaded = await client.read();
     if (!isCurrent()) return false;
-    if (info.state.completed || info.state.hidden) return true;
-    const projectId = context.pages.store.getState().projectId!;
-    const previous = context.pageLocations.getBootLocation(projectId);
+    if (loaded.state.completed || loaded.state.hidden) return true;
+    info = loaded;
     complete = () => {
       if (!isCurrent()) return;
       onComplete();
-      const target =
-        previous && previous.page.id !== page.id
-          ? pageTargetFromLocation(previous)
-          : { kind: "page" as const, page: workbenchPages.start };
-      const restored = context.pageLocations.navigate(target);
-      if (!restored.ok) context.pageLocations.navigate({ kind: "page", page: workbenchPages.start });
-      setupPage?.dispose();
-      setupPage = undefined;
     };
-    setupPage = context.pages.registerPage({
-      id: page.id,
-      ref: page,
-      title: "Setup",
-      modeId,
-      path: "setup",
-      main: { kind: "view", cardinality: "one", presentation: "page", view: { kind: "view", id: viewId } },
-      slots: [],
-    });
-    context.pageLocations.navigate({ kind: "page", page });
+    context.modes.setActiveMode(modeId);
     return false;
   };
   const module = {
@@ -72,11 +47,29 @@ export const createOnboardingModule = (
           id: modeId,
           canFullscreen: false,
           label: "Setup",
-          panels: ["main"],
+          panels: [],
           floatingPanels: "hidden",
-          chrome: { nav: false, sidenav: false, activity: false },
+          chrome: { nav: false, sidenav: false, activity: false, status: false },
           regionSettings: { main: { showHeader: false, acceptsTabs: false, canClose: false } },
           activate: () => undefined,
+          enter: (modeCtx) => {
+            const instanceId = modeCtx.overlays.openOverlay(viewId, { title: "Setup" });
+            return { dispose: () => modeCtx.overlays.closeOverlay(instanceId) };
+          },
+        }),
+        ctx.overlays.registerOverlay({
+          id: viewId,
+          viewId,
+          closable: false,
+          config: {
+            placement: "center",
+            scrollBehavior: "inside",
+            closeOnInteractOutside: false,
+            contentWidth: "folder-picker-width",
+            contentHeight: "folder-picker-height",
+            contentMaxWidth: "calc(100vw - {spacing.xl})",
+            contentMaxHeight: "calc(100dvh - {spacing.xl})",
+          },
         }),
         ctx.views.registerView({
           id: "dashboard.settings.customizations",
