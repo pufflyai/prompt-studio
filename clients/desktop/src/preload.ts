@@ -7,6 +7,7 @@ import {
   type PromptStudioDesktopApi,
 } from "./desktop-api";
 import type { DesktopState } from "./lifecycle/lifecycle-machine";
+import { installTitleBarGeometry } from "./windows/install-title-bar-geometry";
 import { observeTitleBarAppearance } from "./windows/observe-title-bar-appearance";
 
 if (process.platform === "darwin") {
@@ -27,13 +28,21 @@ if (process.platform !== "darwin") {
   window.addEventListener(
     "DOMContentLoaded",
     () => {
+      const stopGeometry = installTitleBarGeometry();
       const stop = observeTitleBarAppearance((appearance) => {
         void ipcRenderer.invoke(DESKTOP_CHANNELS.titleBarAppearance, {
           ...appearance,
           height: Math.round(appearance.height * webFrame.getZoomFactor()),
         });
       });
-      window.addEventListener("unload", stop, { once: true });
+      window.addEventListener(
+        "unload",
+        () => {
+          stop();
+          stopGeometry();
+        },
+        { once: true },
+      );
     },
     { once: true },
   );

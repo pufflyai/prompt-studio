@@ -44,7 +44,10 @@ export const windowTitleBarRecipe = defineSlotRecipe({
         },
       },
       overlay: {
-        content: { marginLeft: "env(titlebar-area-x, 0px)", width: "env(titlebar-area-width, 100%)" },
+        content: {
+          marginLeft: "var(--pstdio-title-bar-area-x, env(titlebar-area-x, 0px))",
+          width: "var(--pstdio-title-bar-area-width, env(titlebar-area-width, 100%))",
+        },
         actions: {
           _after: {
             content: '""',
