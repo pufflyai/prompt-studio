@@ -144,6 +144,8 @@ Run `bun run --cwd scripts verify:published-extensions` to typecheck and test ev
 
 Published-extension checks and public-package consumer checks use a one-day minimum release age for fresh installs. This keeps a third-party publish in progress from selecting packages whose matching dependencies are not available yet. Prompt Studio packages in the Changesets release group are exempt, so these checks can use the SDK and UI immediately after a release. The repository's frozen-lockfile install is unchanged. See [Bun's minimum release age](https://bun.sh/docs/pm/cli/install#minimum-release-age).
 
+Keep the Storybook development tools in Artifacts, Base Themes and Planner pinned to the same tested release. A fresh install must not select a newly eligible Storybook parent while its exact-version companion packages are still inside the age window. Update the tools and their extension lockfiles together; keep the one-day policy.
+
 On pull requests, the CI job runs for selected extension, SDK, UI, API contract, and shared-tooling code changes. Complete queue and production functional profiles include it. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
 
 ## Extension smoke checks
@@ -175,6 +177,8 @@ Copy `dist/pstdio` to a private path and point `E2E_PACKAGED_BINARY_PATH` at the
 When an assertion waits for child-process or socket output, await the operation before asserting on its result or captured error. Bun's `expect(promise).rejects` and `.resolves` can synchronously drive a nested event loop and block Windows I/O callbacks. See [the pipe-read lesson](../../lessons-learned/0016-bun-expect-rejects-blocks-pipe-reads.md) for the safe rejection pattern.
 
 Bun tests preload `scripts/test-setup.ts`. It removes inherited `PSTDIO_*` runtime settings, creates a temporary home, and restores the environment around each test. Tests that need runtime settings must supply them inside their setup or to the process they start. Do not run tests that mutate `process.env` concurrently in one process.
+
+The local workspace registry caches only completed, successful published metadata. Each client owns its pending upstream request, which is cancelled when that client disconnects. A failed or abandoned request must not leave another installer waiting on the same lookup. Packaged core-default fixtures retain setup logs under `packages/e2e/test-results/packaged-core-extensions`, outside the disposable runtime home, so timeout artifacts show the last active install phase.
 
 Windows CI passes `--timeout=15000` to its Bun test commands, including package scripts run through Lerna. Tests and lifecycle hooks get a 15 s default. Explicit test limits and custom runners retain their own limits. Other CI platforms retain their existing defaults. This temporary allowance accounts for hosted Windows runner variance; ADR 0044 records the evidence and removal criteria.
 

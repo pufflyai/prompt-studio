@@ -3,7 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
@@ -37,6 +37,9 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
   const startedAt = Date.now();
   const phase = (name: string) => console.log(`Packaged core: ${name} (${Date.now() - startedAt}ms)`);
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-core-"));
+  // Keep setup evidence outside the disposable home, including when Bun ends a timed-out case.
+  const evidenceRoot = join(REPO_ROOT, "packages/e2e/test-results/packaged-core-extensions");
+  mkdirSync(evidenceRoot, { recursive: true });
   let child: ChildProcess | undefined;
   let closeRegistry: (() => Promise<void>) | undefined;
   try {
@@ -52,6 +55,7 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("Planner source ready");
     const started = await startPackagedServe(tempRoot, {
       NPM_CONFIG_USERCONFIG: npmConfigPath,
+      PSTDIO_LOG_PATH: join(evidenceRoot, `${basename(tempRoot)}.jsonl`),
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
         defaultExtensions: CORE_DEFAULT_EXTENSION_NAMES.map((installName) => ({
           installName,
