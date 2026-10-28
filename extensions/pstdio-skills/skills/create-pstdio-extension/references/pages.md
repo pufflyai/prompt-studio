@@ -26,12 +26,24 @@ Declare `resource: { kinds }` when the route accepts a resource. Pass `ResourceR
 
 Choose Main separately:
 
-- `main: { kind: "view", view, cardinality }` renders routed content. Multiple instances require a resource-bound page. Resource view pages declare a `parent` for navigation and, when multiple resources are supported, closing their last tab.
+- `main: { kind: "view", presentation: "page", view, cardinality }` renders one routed page or resource without a tab strip, Add, Close, Pin, or drop targets. Navigation replaces its content. Omit `presentation` or use `"tabs"` for a tabbed Main. Resource pages declare a `parent` for navigation.
 - `main: { kind: "panels", empty }` renders peer Main panels and shows the empty view when none are open. A routed workspace remains the page context while its file panels change.
 
 Additional page `slots` and mode placements both use `item`. A static item has `kind: "view"`, `view`, and `presence`. A binding item has `kind: "binding"` and `binding: { kinds, view, cardinality, add? }`. The same region, mounting, and tab rules apply to both.
 
 `cardinality: "one"` rebinds one instance. `"many"` retains separate resource instances. Use `open: "pin"` to retain a tab or `"preview"` to permit replacement. Generated references such as `page.panels.inspector` identify page slots.
+
+## Panel views
+
+The typechecked [panel view example](examples/panel-view.ts) and its [webview entry](examples/panel-view-entry.tsx) declare a tabless composer, persisted drafts, a reusable viewer, and recent-note switching. The save command returns caller-relative replacement navigation. The webview requests Main navigation through the public host capability. Copy both files together.
+
+Declare a reusable browser or viewer with `definePlacement`, then reference it from `page.panelView`. Include both in the extension arrays. A static browser is a singleton; a many-resource binding provides separate viewers and needs an explicit `add` action for the chooser. Panel views keep their mode lifetime when Main navigates. Header choices never change tab acceptance.
+
+A browser opens resources with a page target, which targets Main. A viewer switches itself with `{ kind: "viewer", operation: "switch", from: props.resource, resource: next }`. After creation, use `operation: "replace"`. The host captures the caller, project and deletion version. Do not send a placement identity or inspect host layout. A current Main landing can supply `page` and omit `from`; a Main resource can supply a compatible destination page. A panel viewer omits `page`. A switch to a resource already open elsewhere focuses that viewer without changing the caller.
+
+Webviews receive viewer coordinates in `viewLocation`; `pageLocation` describes Main. A resource-free page can supply a view breadcrumb label and menu through `main.tab`. The page keeps its title before that view crumb. Page navigation items can use `intent: "restore"` to restore the page context; omit it to open the landing state. Memory never reserves a resource: if Side owns the remembered resource, restoring opens the landing state.
+
+Use `replaces: [oldPageSlotRef]` on an independent placement when migrating a public page slot. Keep and deprecate the old exported ref. The host migrates saved owners and resolves old links. Do not register duplicate hidden slots or redirect through a webview.
 
 ## Navigation
 
@@ -47,7 +59,7 @@ Commands and row activation callbacks request navigation with `ctx.navigation.op
 
 Static presence is `fixed`, `open`, or `closed`. Fixed panels cannot close. Open and closed are initial values; saved user choices win later.
 
-A Main view with `cardinality: "one"` is the page content: it has no close action or resource tab by default. Selecting another resource rebinds that view. A Main view with `cardinality: "many"` keeps its tab and close action even with only one resource open; closing the last tab follows the page's declared parent. Closing an auxiliary panel preserves the route. `openOn: "page-resource"` opens a matching binding on page navigation. Closing it keeps it closed until another navigation opens it.
+A Main view with `presentation: "page"` has no header, resource tab, or close action. Presentation is independent of cardinality. Tabbed Main keeps its header, normal tabs, and close actions; closing the last resource follows the declared parent. Closing an auxiliary panel preserves the route. `openOn: "page-resource"` opens a matching binding on page navigation. Closing it keeps it closed until another navigation opens it.
 
 A webview declares `placement.close` and calls `host.call("placement.close", {})`. It supplies no placement identity. The host uses the same controller as native tabs and rejects closing fixed content, including single-resource Main views.
 
