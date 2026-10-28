@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { expect } from "@playwright/test";
 import { discoverRuntime } from "pstdio/runtime";
+import { waitForWorkbenchPage } from "./desktop-pages";
 import { type PackagedApp, waitForDescriptor } from "./packaged-app-helpers";
 
 export const crashPackagedRuntime = (pid: number) =>
@@ -13,14 +14,15 @@ export const waitForAutomaticRecovery = async (app: PackagedApp) => {
     const discovery = await discoverRuntime(join(app.home, "runtime.json"));
     return discovery.state === "healthy" && discovery.descriptor.instanceId === runtime.instanceId;
   });
+  // A healthy API can precede Windows renderer startup. Wait for the recovered page
+  // within the owning test's deadline before asserting the lifecycle transition.
+  app.page = await waitForWorkbenchPage(app.lifecyclePage, replacement.origin);
   await expect
     .poll(() => app.lifecyclePage.evaluate(() => window.promptStudioDesktop.getStartupState()))
     .toMatchObject({
       kind: "workbench",
       runtime: { instanceId: replacement.instanceId },
     });
-  await app.page.waitForURL(`${replacement.origin}/**`);
-  await expect(app.page.locator("#root")).not.toBeEmpty();
   app.runtime = replacement;
   return replacement;
 };

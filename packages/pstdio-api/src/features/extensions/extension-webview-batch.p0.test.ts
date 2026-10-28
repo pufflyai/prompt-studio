@@ -20,8 +20,8 @@ test("replacement validation builds every view with shared production dependenci
     });
     expect(result).toEqual({ success: true, details: "" });
     const files = [...new Bun.Glob("**/*.js").scanSync(outdir)];
-    expect(files).toContain("first/index.js");
-    expect(files).toContain("second/index.js");
+    expect(files).toContain(join("first", "index.js"));
+    expect(files).toContain(join("second", "index.js"));
     const modules = await Promise.all(
       ["first", "second"].map(async (name) => {
         const state = globalThis as Record<string, unknown>;

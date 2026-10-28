@@ -15,8 +15,9 @@ describe("git", () => {
         return "/custom/Xcode.app/Contents/Developer";
       },
     });
-    expect(resolve()).toBe("/custom/Xcode.app/Contents/Developer/usr/bin/git");
-    expect(resolve()).toBe("/custom/Xcode.app/Contents/Developer/usr/bin/git");
+    const executable = join("/custom/Xcode.app/Contents/Developer", "usr/bin/git");
+    expect(resolve()).toBe(executable);
+    expect(resolve()).toBe(executable);
     expect(resolutions).toBe(1);
   });
   test("does not resolve a missing Git executable on any supported platform", () => {
