@@ -21,6 +21,8 @@ A device is one client runtime. Its environment ID is its device ID. Logging in 
 - `manager_space_keys` holds the encryption keys of each cloud project: a project key and the key for the owner's private project data, one row per generation. The first key request for a cloud project creates generation 1. Removing a device adds the next generation of every key of the account, so the removed device cannot read data written afterward. Older generations stay. See [ADR 0085](../../adrs/0085-encrypt-sync-data-with-account-manager-keys.md).
 - Every renewal updates the device's last-seen time.
 
+Renewal prepares its signed token before opening the account transaction. Signing reads persisted keys through the connection pool, so holding an account transaction during signing can deadlock when waiting requests occupy the other connections. Before delivering the prepared token, renewal rechecks the current credential, account state, device, project membership and relay grant under the account lock. Its scope must still match the prepared claims, and the presence update must commit. A removal or credential replacement that commits during signing denies delivery. An expired preparation fails rather than returning expired access. Clients may retry that service failure normally.
+
 ## Cloud early access
 
 Signing in and managing devices work for every active account. Cloud projects, encryption keys and new relay access require the account's `relay` feature. `manager_account_features` stores one row per account and feature, with `grantedAt`. There is no grant by default, including for existing accounts after migration. Plans and billing are separate future work.
