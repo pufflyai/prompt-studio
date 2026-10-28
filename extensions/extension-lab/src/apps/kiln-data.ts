@@ -1,5 +1,3 @@
-import type { PageRef, ResourceRef } from "@pstdio/sdk/extensions";
-
 export type KilnVector = [number, number, number];
 
 export interface KilnObject {
@@ -12,12 +10,6 @@ export interface KilnObject {
   rotation: KilnVector;
   scale: KilnVector;
 }
-
-export const kilnPage: PageRef = {
-  extensionId: "pstdio.extension-lab",
-  kind: "page",
-  id: "kiln-resource",
-};
 
 export const kilnObjects: KilnObject[] = [
   {
@@ -61,9 +53,3 @@ export const kilnObjects: KilnObject[] = [
     scale: [1, 1, 1],
   },
 ];
-
-export const kilnResource = (object: KilnObject): ResourceRef => ({
-  type: "kiln.object",
-  id: object.id,
-  label: object.name,
-});

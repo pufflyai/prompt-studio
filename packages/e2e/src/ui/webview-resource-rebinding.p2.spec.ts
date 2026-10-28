@@ -14,22 +14,27 @@ test("resource pages retain their browsing contexts and restore them on Back", a
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
     await page.goto(
-      `/projects/${project.id}/extensions/pstdio.extension-lab/boombox/resource?resource=${encodeURIComponent("pstdio://extension-resource/boombox.track/paper-moon")}`,
+      `/projects/${project.id}/extensions/pstdio.extension-lab/scribble/resource?resource=${encodeURIComponent("pstdio://extension-resource/scribble.document/north-star")}`,
     );
-    const playlist = page.locator('iframe[title="Lazy Sunday"]:visible');
-    await expect(playlist.contentFrame().getByText("Lazy Sunday", { exact: true })).toBeVisible();
-    const original = (await (await playlist.elementHandle())!.contentFrame())!;
+    const document = page.locator('iframe[title="Document"]:visible');
+    await expect(document.contentFrame().locator('[contenteditable="true"]').first()).toContainText("Why now");
+    const original = (await (await document.elementHandle())!.contentFrame())!;
     await original.evaluate(() => Reflect.set(window, "resourceRebindingMarker", "original context"));
-    await playlist.contentFrame().getByRole("button", { name: "Play Afterimage by", exact: false }).click();
-    await expect(page).toHaveURL(/\/boombox\/resource\?resource=.*afterimage/);
-    await expect(page.locator("iframe:visible")).toHaveCount(5);
+    await page
+      .locator('[data-workbench-region="sidenav"]')
+      .getByRole("option", { name: "Field notes", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/scribble\/resource\?resource=.*field-notes/);
+    await expect(page.getByRole("tab", { name: "Field notes", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(document).toHaveCount(1);
     expect(original.isDetached()).toBe(false);
     expect(await (await original.frameElement()).isVisible()).toBe(false);
-    const next = (await (await playlist.elementHandle())!.contentFrame())!;
+    const next = (await (await document.elementHandle())!.contentFrame())!;
     expect(next).not.toBe(original);
     await page.goBack();
-    await expect(page).toHaveURL(/\/boombox\/resource\?resource=.*paper-moon/);
-    await expect(page.locator("iframe:visible")).toHaveCount(5);
+    await expect(page).toHaveURL(/\/scribble\/resource\?resource=.*north-star/);
+    await expect(page.getByRole("tab", { name: "North star", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(document).toHaveCount(1);
     expect(await (await original.frameElement()).isVisible()).toBe(true);
     expect(await original.evaluate(() => Reflect.get(window, "resourceRebindingMarker"))).toBe("original context");
     expect(next.isDetached()).toBe(false);

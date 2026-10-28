@@ -1,4 +1,10 @@
-import type { ModeContribution, PageSlot, ViewRef, WebviewCapabilityDeclaration } from "@pstdio/sdk/extensions";
+import type {
+  ModeContribution,
+  PageContribution,
+  PageSlot,
+  ViewRef,
+  WebviewCapabilityDeclaration,
+} from "@pstdio/sdk/extensions";
 import {
   defineMode,
   defineNavigationItem,
@@ -20,22 +26,26 @@ export const webview = (id: string, title: string, capabilities: WebviewCapabili
     body: {
       kind: "webview",
       entry: packageAsset(`./src/views/${id}.tsx`, baseUrl),
-      capabilities: ["commands.execute", "navigation.open", ...capabilities],
+      capabilities: ["commands.execute", "navigation.open", "page.params.update", "editing.session", ...capabilities],
     },
   });
-interface ExampleDefinition {
+interface ExampleEnvironment {
   name: keyof typeof exampleResources;
   label: string;
   icon: string;
-  primary: ViewRef;
   regions?: ModeContribution["regions"];
   chrome?: ModeContribution["chrome"];
   floatingPanels?: ModeContribution["floatingPanels"];
+  canFullscreen?: ModeContribution["canFullscreen"];
   regionSettings?: ModeContribution["regionSettings"];
+}
+interface ExampleDefinition extends ExampleEnvironment {
+  primary: ViewRef;
   slots?: PageSlot[];
   initialResource?: boolean;
+  params?: PageContribution["params"];
 }
-export const defineExample = (input: ExampleDefinition) => {
+export const defineExampleEnvironment = (input: ExampleEnvironment) => {
   const { name, label, icon } = input;
   const theme = defineTheme({
     id: name,
@@ -57,14 +67,22 @@ export const defineExample = (input: ExampleDefinition) => {
     defaultTheme: theme.ref,
     chrome: input.chrome,
     floatingPanels: input.floatingPanels,
+    canFullscreen: input.canFullscreen,
     regionSettings: { main: { alwaysShowTabs: false }, ...input.regionSettings },
   });
+  return { theme, resourceKind, mode };
+};
+
+export const defineExample = (input: ExampleDefinition) => {
+  const { theme, resourceKind, mode } = defineExampleEnvironment(input);
+  const { name, label, icon } = input;
   const homePage = definePage({
     id: name,
     title: l10n(`pages.${name}`, label),
     icon,
     path: name,
     mode: mode.ref,
+    params: input.params,
     main: {
       kind: "view",
       view: input.primary,
@@ -79,6 +97,7 @@ export const defineExample = (input: ExampleDefinition) => {
     path: `${name}/resource`,
     mode: mode.ref,
     parent: homePage.ref,
+    params: input.params,
     resource: {
       kinds: [resourceKind.ref],
     },
@@ -101,4 +120,29 @@ export const defineExample = (input: ExampleDefinition) => {
       : { kind: "page", page: homePage.ref },
   });
   return { theme, resourceKind, mode, homePage, page, navigation };
+};
+
+export const definePageExample = (input: Omit<ExampleDefinition, "initialResource">) => {
+  const { theme, resourceKind, mode } = defineExampleEnvironment(input);
+  const { name, label, icon } = input;
+  const page = definePage({
+    id: name,
+    title: l10n(`pages.${name}`, label),
+    icon,
+    path: name,
+    mode: mode.ref,
+    params: input.params,
+    main: { kind: "view", view: input.primary, cardinality: "one", presentation: "page" },
+    slots: input.slots ?? [],
+  });
+  const navigation = defineNavigationItem({
+    id: name,
+    label: l10n(`navigation.${name}`, label),
+    icon,
+    owner: workbenchModes.project,
+    group: "Examples",
+    slot: "content",
+    action: { kind: "page", page: page.ref },
+  });
+  return { theme, resourceKind, mode, page, navigation };
 };

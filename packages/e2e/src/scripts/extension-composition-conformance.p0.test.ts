@@ -21,12 +21,14 @@ describe("shipped extension composition", () => {
     expect(runtime.resourceKinds.map((kind) => [kind.localId, kind.extensionId])).toEqual([
       ["ticket", "pstdio.pstdio-planner"],
       ["scribble.document", "pstdio.extension-lab"],
+      ["scribble.draft", "pstdio.extension-lab"],
       ["boombox.track", "pstdio.extension-lab"],
       ["zipline.issue", "pstdio.extension-lab"],
       ["pigeon.thread", "pstdio.extension-lab"],
       ["kiln.object", "pstdio.extension-lab"],
       ["marmalade.document", "pstdio.extension-lab"],
       ["glass-lab-artifact", "pstdio.workbench-fixture"],
+      ["letter", "pstdio.workbench-fixture"],
     ]);
     expect(
       runtime.placements.find(

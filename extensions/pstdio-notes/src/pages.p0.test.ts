@@ -75,7 +75,7 @@ describe("note editor", () => {
     const { ctx, mount } = createContext();
     const note = await createNote(mount, coreIds.create(), "Original");
     await renameNote(mount, note.id, "Renamed");
-    const query = notesPage.slots[0].tab.query;
+    const query = notesPage.slots[0].tab!.query;
     expect(
       await query(ctx as never, {
         renderer: { rendererId: "notes", resource: { type: "note", id: note.id, label: "Original" } },
