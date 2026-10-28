@@ -1,5 +1,6 @@
 import { Box, Button, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { $getRoot, $getSelection, $isRangeSelection, getNearestEditorFromDOMNode } from "lexical";
 import { useEffect, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import * as Y from "yjs";
@@ -23,8 +24,11 @@ const createPair = (source: string) => {
   return [first, second] as const;
 };
 
-const CollaborationScene = (props: { source?: string }) => {
-  const { source = initial } = props;
+const CollaborationScene = (props: {
+  source?: string;
+  commitOrder?: "remote-first" | "local-first" | "both-local-first";
+}) => {
+  const { source = initial, commitOrder } = props;
   const [documents] = useState(() => createPair(source));
   const [connected, setConnected] = useState(true);
   const [sources, setSources] = useState([source, source]);
@@ -63,6 +67,36 @@ const CollaborationScene = (props: { source?: string }) => {
   );
   return (
     <Stack gap="md">
+      {commitOrder ? (
+        <Button
+          size="xs"
+          alignSelf="start"
+          onClick={(event) => {
+            const roots =
+              event.currentTarget.parentElement!.querySelectorAll<HTMLElement>('[data-lexical-editor="true"]');
+            const local = (index = 0, value = " LOCAL") =>
+              getNearestEditorFromDOMNode(roots[index]!)!.update(() => {
+                $getRoot().selectEnd();
+                const range = $getSelection();
+                if ($isRangeSelection(range)) range.insertText(value);
+              });
+            const remote = () => documents[1].getText("content").insert(0, "REMOTE ");
+            if (commitOrder === "both-local-first") {
+              local(0, " LOCAL-A");
+              local(1, " LOCAL-B");
+              remote();
+            } else if (commitOrder === "remote-first") {
+              remote();
+              local();
+            } else {
+              local();
+              remote();
+            }
+          }}
+        >
+          Commit {commitOrder} edits
+        </Button>
+      ) : null}
       <Button size="xs" alignSelf="start" onClick={() => setConnected(!connected)}>
         {connected ? "Disconnect" : "Reconnect"}
       </Button>
@@ -155,6 +189,46 @@ const meta = {
 } satisfies Meta<typeof MarkdownEditor>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+const checkSameTickEdits = async (canvasElement: HTMLElement, order: "remote-first" | "local-first") => {
+  const canvas = within(canvasElement);
+  await userEvent.click(canvas.getByRole("button", { name: `Commit ${order} edits` }));
+  for (const id of ["device-0", "device-1"]) {
+    const device = within(canvas.getByTestId(id));
+    await waitFor(() => expect(device.getByTestId("source").textContent).toBe("REMOTE Start LOCAL"));
+    await expect(device.getByRole("textbox")).toHaveTextContent("REMOTE Start LOCAL");
+  }
+};
+export const SameTickRemoteFirst: Story = {
+  render: () => <CollaborationScene source="Start" commitOrder="remote-first" />,
+  play: async ({ canvasElement }) => checkSameTickEdits(canvasElement, "remote-first"),
+};
+export const SameTickLocalFirst: Story = {
+  render: () => <CollaborationScene source="Start" commitOrder="local-first" />,
+  play: async ({ canvasElement }) => checkSameTickEdits(canvasElement, "local-first"),
+};
+
+export const SameTickBothEditors: Story = {
+  render: () => <CollaborationScene source="Start" commitOrder="both-local-first" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const laptop = within(canvas.getByTestId("device-0"));
+    const desktop = within(canvas.getByTestId("device-1"));
+    await userEvent.click(canvas.getByRole("button", { name: "Commit both-local-first edits" }));
+    for (const device of [laptop, desktop]) {
+      await waitFor(() => expect(device.getByTestId("source")).toHaveTextContent("LOCAL-A"));
+      await expect(device.getByTestId("source")).toHaveTextContent("LOCAL-B");
+      await expect(device.getByTestId("source")).toHaveTextContent("REMOTE Start");
+    }
+    await expect(laptop.getByTestId("source").textContent).toBe(desktop.getByTestId("source").textContent);
+    await userEvent.click(laptop.getByRole("textbox"));
+    await userEvent.keyboard("{Control>}z{/Control}");
+    await waitFor(() => expect(laptop.getByTestId("source")).not.toHaveTextContent("LOCAL-A"));
+    await expect(laptop.getByTestId("source")).toHaveTextContent("REMOTE Start");
+    await expect(laptop.getByTestId("source")).toHaveTextContent("LOCAL-B");
+    await expect(desktop.getByTestId("source").textContent).toBe(laptop.getByTestId("source").textContent);
+  },
+};
 
 export const SharedEditing: Story = {
   render: () => <CollaborationScene />,
