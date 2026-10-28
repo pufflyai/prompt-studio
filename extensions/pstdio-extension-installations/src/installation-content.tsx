@@ -79,7 +79,7 @@ export const InstallationContent = (props: InstallationContentProps) => {
                 <Puzzle />
               </Icon>
               <Link
-                variant="resource"
+                variant="plain"
                 textStyle="label/M/regular"
                 flex="1"
                 minW="0"
