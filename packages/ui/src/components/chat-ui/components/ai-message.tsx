@@ -10,7 +10,7 @@ const recipe = defineSlotRecipe({
       width: "full",
       alignItems: "end",
       justifyContent: "end",
-      gap: "sm",
+      gap: "2xs",
     },
     content: {
       display: "flex",
@@ -61,12 +61,10 @@ const recipe = defineSlotRecipe({
     },
     size: {
       sm: {
-        root: { gap: "xs" },
         content: { textStyle: "xs" },
       },
       md: {},
       lg: {
-        root: { gap: "md" },
         content: { textStyle: "md" },
       },
     },

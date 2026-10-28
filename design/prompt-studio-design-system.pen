@@ -28178,10 +28178,11 @@
                       "type": "frame",
                       "id": "CQVFo",
                       "name": "cmp/ChatUserMessage",
+                      "context": " The message root gap is 2xs (4px) for every size.",
                       "reusable": true,
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 6,
+                      "gap": 4,
                       "children": [
                         {
                           "type": "frame",
@@ -28246,11 +28247,11 @@
                       "type": "frame",
                       "id": "X7Yj6",
                       "name": "cmp/ChatAssistantMessage",
-                      "context": "Leave 8px after each assistant message. The first paragraph in assistant content has an 8px top margin. Tool rows inside one message remain flush.",
+                      "context": "Leave 8px after each assistant message. The first paragraph in assistant content has an 8px top margin. Tool rows inside one message remain flush. The message root gap is 2xs (4px) for every size.",
                       "reusable": true,
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 8,
+                      "gap": 4,
                       "padding": [
                         0,
                         0,

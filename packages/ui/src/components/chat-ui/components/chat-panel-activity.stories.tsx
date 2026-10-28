@@ -73,6 +73,7 @@ const meta = {
     await expect(time.left).toBeGreaterThan(identity.right);
     await expect(Math.abs(time.top - open.top)).toBeLessThan(open.height);
     const assistant = canvas.getByText("I will check the files.").closest(".ai-message__root")!;
+    await expect(getComputedStyle(assistant).gap).toBe("4px");
     await expect(parseFloat(getComputedStyle(assistant).marginBottom)).toBeGreaterThan(0);
     const paragraph = canvas.getByText("I will check the files.").closest("p")!;
     await expect(parseFloat(getComputedStyle(paragraph).marginTop)).toBeGreaterThan(0);
