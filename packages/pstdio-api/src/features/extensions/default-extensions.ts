@@ -6,6 +6,7 @@ import { resolvePstdioHome } from "pstdio-paths";
 import { traceSetupPhase } from "../../lib/setup-phase";
 import type { ExtensionInstallations } from "../../services/extension-installations";
 import {
+  createDefaultCheckoutBatch,
   sourceFor,
   sourceModeDefaultEntry,
   toInstallInput,
@@ -72,101 +73,81 @@ const runDefaultExtensionInstall = async (
   },
 ) => {
   const install = deps.installExtensionSource ?? installExtensionSource;
-  const installed: InstalledExtensionSource[] = [];
-  const reportFailure = (failure: {
-    entry?: DefaultExtensionEntry;
-    error: unknown;
-    installName?: string;
-    source: string;
-  }) => {
-    const installName =
-      failure.installName ??
-      (failure.entry && typeof failure.entry !== "string" ? failure.entry.installName : undefined) ??
-      sourceFor(failure.entry ?? failure.source);
-    deps.onInstallFailure?.({ error: failure.error, installName, source: failure.source });
-  };
-
-  await withResolvedDefaultEntries(
-    {
-      config: context.config,
-      onEntryFailure: deps.onInstallFailure
-        ? ({ entry, error, source }) => reportFailure({ entry, error, source })
-        : undefined,
-      prepareSharedCheckout: deps.prepareSharedCheckout,
-      forceSourceDefaults: deps.forceSourceDefaults,
-      releaseRef: deps.releaseRef,
-      signal: deps.signal,
-    },
-    async (entries, prepareNamedSource) => {
-      const pendingByName = new Map<string, Promise<InstalledExtensionSource | undefined>>();
-      const pending: Promise<InstalledExtensionSource | undefined>[] = [];
-      const active = new Set<Promise<void>>();
-      for (const resolved of entries.filter((entry) => entry.scope === "user")) {
-        // Leave capacity for the database and foreground UI while dependencies prepare.
-        if (active.size >= 2) await Promise.race(active);
-        const previous = pendingByName.get(resolved.installName);
-        const request = (async () => {
-          // Two entries for one target must not promote source trees over each other.
-          if (previous) await previous;
-          deps.signal?.throwIfAborted();
-          try {
-            const target = join(resolvePstdioHome({ env: context.env }), "extensions", resolved.installName);
-            const catalogEntry = packagedExtensionCatalog.extensions.find(
-              (entry) => entry.installName === resolved.installName,
-            );
-            const perform = (signal?: AbortSignal) =>
-              enqueueDefaultExtensionInstall(
-                target,
-                async () => {
-                  if (!needsDefaultExtensionInstall(resolved.entry, join(target, ".."), context.mode)) return undefined;
+  const entries = context.config.defaultExtensions;
+  const batch = createDefaultCheckoutBatch(entries, deps.prepareSharedCheckout);
+  const extensionsRoot = join(resolvePstdioHome({ env: context.env }), "extensions");
+  const pending: Promise<InstalledExtensionSource | undefined>[] = [];
+  const pendingByName = new Map<string, Promise<InstalledExtensionSource | undefined>>();
+  const active = new Set<Promise<void>>();
+  try {
+    for (const entry of entries) {
+      if (active.size >= 2) await Promise.race(active);
+      const name = typeof entry === "string" ? entry : (entry.installName ?? basename(entry.source));
+      const previous = pendingByName.get(name);
+      const request = (async () => {
+        if (previous) await previous;
+        const perform = (signal?: AbortSignal) =>
+          enqueueDefaultExtensionInstall(
+            join(extensionsRoot, name),
+            async () => {
+              // A preceding install may have completed while this request waited for its target.
+              if (!needsDefaultExtensionInstall(entry, extensionsRoot, context.mode)) return undefined;
+              return withResolvedDefaultEntries(
+                {
+                  config: { defaultExtensions: [entry] },
+                  prepareSharedCheckout: batch.prepare,
+                  releaseRef: deps.releaseRef,
+                  signal,
+                },
+                async (resolved, prepareNamedSource) => {
+                  const source = resolved[0];
+                  if (!source || source.scope !== "user") return undefined;
                   return install({
-                    ...toInstallInput(resolved.entry, deps.releaseRef),
+                    ...toInstallInput(source.entry, deps.releaseRef),
                     env: context.env,
                     existsOk: true,
                     prepareNamedSource,
                     signal,
                   });
                 },
-                signal,
               );
-            return await traceSetupPhase("default_extensions.install", { extension: resolved.installName }, () =>
-              deps.extensionInstallations
-                ? deps.extensionInstallations.run(
-                    {
-                      installName: resolved.installName,
-                      displayName: catalogEntry?.displayName ?? resolved.installName,
-                      extensionId: catalogEntry?.extensionId,
-                    },
-                    (signal) => perform(deps.signal ? AbortSignal.any([signal, deps.signal]) : signal),
-                  )
-                : perform(deps.signal),
-            );
-          } catch (error) {
-            if (!deps.onInstallFailure) throw error;
-            reportFailure({ error, installName: resolved.installName, source: resolved.source });
-            return undefined;
-          }
-        })();
-        pendingByName.set(resolved.installName, request);
-        pending.push(request);
-        const complete = request
-          .then(
-            () => undefined,
-            () => undefined,
-          )
-          .finally(() => active.delete(complete));
-        active.add(complete);
-      }
-      // Every install must settle before the shared checkout can be removed.
-      for (const result of await Promise.allSettled(pending)) {
-        if (result.status === "rejected") throw result.reason;
-        if (result.value) installed.push(result.value);
-      }
-    },
-  );
-
-  deps.signal?.throwIfAborted();
-  return installed;
+            },
+            signal,
+          );
+        const catalog = packagedExtensionCatalog.extensions.find((item) => item.installName === name);
+        try {
+          return await traceSetupPhase("default_extensions.install", { extension: name }, () =>
+            deps.extensionInstallations
+              ? deps.extensionInstallations.run(
+                  { installName: name, displayName: catalog?.displayName ?? name, extensionId: catalog?.extensionId },
+                  (signal) => perform(deps.signal ? AbortSignal.any([signal, deps.signal]) : signal),
+                )
+              : perform(deps.signal),
+          );
+        } catch (error) {
+          if (!deps.onInstallFailure) throw error;
+          deps.onInstallFailure({ error, installName: name, source: sourceFor(entry) });
+          return undefined;
+        }
+      })();
+      pendingByName.set(name, request);
+      pending.push(request);
+      const complete = request
+        .then(
+          () => undefined,
+          () => undefined,
+        )
+        .finally(() => active.delete(complete));
+      active.add(complete);
+    }
+    const results = await Promise.allSettled(pending);
+    const failed = results.find((result) => result.status === "rejected");
+    if (failed?.status === "rejected") throw failed.reason;
+    deps.signal?.throwIfAborted();
+    return results.flatMap((result) => (result.status === "fulfilled" && result.value ? [result.value] : []));
+  } finally {
+    await batch.dispose();
+  }
 };
 
 const prepareDefaultExtensions = (deps: InstallDefaultExtensionsDeps, mode: DefaultExtensionInstallMode) => {

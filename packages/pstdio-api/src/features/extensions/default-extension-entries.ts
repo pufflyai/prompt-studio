@@ -84,6 +84,35 @@ const readDefaultScope = (sourcePath: string) => {
 
 type SharedCheckout = Awaited<ReturnType<typeof createSharedNamedSourceCheckout>>;
 
+export const createDefaultCheckoutBatch = (
+  entries: DefaultExtensionEntry[],
+  prepareShared = createSharedNamedSourceCheckout,
+) => {
+  const namesByRef = new Map<string | undefined, string[]>();
+  for (const entry of entries) {
+    const source = sourceFor(entry);
+    if (!isLocalExtensionSource(source))
+      namesByRef.set(entryRef(entry), [...(namesByRef.get(entryRef(entry)) ?? []), source]);
+  }
+  const pending = new Map<string | undefined, Promise<SharedCheckout>>();
+  const prepare: typeof createSharedNamedSourceCheckout = async (names, options) => {
+    const ref = options?.ref;
+    let checkout = pending.get(ref);
+    if (!checkout) {
+      checkout = Promise.resolve().then(() => prepareShared(namesByRef.get(ref) ?? names, options));
+      pending.set(ref, checkout);
+    }
+    const shared = await checkout;
+    return { ...shared, cleanup: () => {} };
+  };
+  const dispose = async () => {
+    for (const result of await Promise.allSettled([...pending.values()])) {
+      if (result.status === "fulfilled") result.value.cleanup();
+    }
+  };
+  return { prepare, dispose };
+};
+
 const prepareDefaultCheckouts = async (
   entries: DefaultExtensionEntry[],
   input: {
