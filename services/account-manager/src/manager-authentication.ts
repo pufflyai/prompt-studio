@@ -9,7 +9,7 @@ import { type ManagerAuthConfig, parseManagerAuthConfig } from "./auth-config";
 import * as authSchema from "./auth-schema";
 import { connectManager } from "./database";
 import { createDeviceAccess, createDeviceLogin } from "./device-access";
-import { accountOfCredential, findDeviceAccess } from "./devices";
+import { findDeviceAccess } from "./devices";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 import { devices } from "./schema";
 import { withAccountTransaction } from "./transactions";
@@ -55,33 +55,43 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
       identitySchema.parse(workbenchId);
       let category: "database" | "signing" = "database";
       try {
-        const accountId = await accountOfCredential(connection.db, token);
-        if (!accountId) throw new EnvironmentAccessDenied();
-        return await withAccountTransaction(connection.db, accountId, async (transaction) => {
-          const access = await findDeviceAccess(transaction, token, workbenchId);
-          if (!access) throw new EnvironmentAccessDenied();
+        const access = await findDeviceAccess(connection.db, token, workbenchId);
+        if (!access) throw new EnvironmentAccessDenied();
+        const iat = Math.floor(Date.now() / 1000);
+        const exp = iat + config.accessLifetimeSeconds;
+        category = "signing";
+        // Signing reads its key through the pool. Never hold a transaction's connection while it waits.
+        const signed = await auth.api.signJWT({
+          body: {
+            payload: {
+              tokenType: "pstdio-environment-access",
+              accountId: access.accountId,
+              workbenchId: access.workbenchId,
+              environmentId: access.deviceId,
+              sub: access.deviceId,
+              iat,
+              exp,
+            },
+          },
+        });
+        category = "database";
+        await withAccountTransaction(connection.db, access.accountId, async (transaction) => {
+          const current = await findDeviceAccess(transaction, token, workbenchId);
+          if (
+            !current ||
+            current.accountId !== access.accountId ||
+            current.deviceId !== access.deviceId ||
+            current.workbenchId !== access.workbenchId
+          )
+            throw new EnvironmentAccessDenied();
           await transaction
             .update(devices)
             .set({ lastSeenAt: sql`clock_timestamp()` })
             .where(and(eq(devices.accountId, access.accountId), eq(devices.id, access.deviceId)));
-          const iat = Math.floor(Date.now() / 1000);
-          const exp = iat + config.accessLifetimeSeconds;
-          category = "signing";
-          const signed = await auth.api.signJWT({
-            body: {
-              payload: {
-                tokenType: "pstdio-environment-access",
-                accountId: access.accountId,
-                workbenchId: access.workbenchId,
-                environmentId: access.deviceId,
-                sub: access.deviceId,
-                iat,
-                exp,
-              },
-            },
-          });
-          return { token: signed.token, expiresAt: new Date(exp * 1000).toISOString() };
         });
+        category = "signing";
+        if (Date.now() >= exp * 1000) throw new Error("Prepared access expired before issuance");
+        return { token: signed.token, expiresAt: new Date(exp * 1000).toISOString() };
       } catch (error) {
         if (error instanceof EnvironmentAccessDenied) throw error;
         throw new EnvironmentAccessFailure(category);
