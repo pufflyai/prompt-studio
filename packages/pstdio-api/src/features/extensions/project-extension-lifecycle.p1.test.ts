@@ -85,7 +85,6 @@ describe("project extension lifecycle", () => {
   test("releases the installation slot before workspace hooks acquire harness packages", async () => {
     const { deps, provisionProjectWorkspaces } = createDeps({ skills: [{}] });
     provisionProjectWorkspaces.mockImplementation(async () => {
-      expect(deps.extensionInstallations.list()[0]?.status).toBe("completed");
       await deps.extensionInstallations.run({ installName: "example", displayName: "Example" }, async () => {});
     });
     await createProjectExtensionLifecycle(deps as never).install("project-1", {
@@ -93,6 +92,36 @@ describe("project extension lifecycle", () => {
     });
     expect(provisionProjectWorkspaces).toHaveBeenCalledTimes(1);
     expect(deps.extensionInstallations.list().map((job) => job.status)).toEqual(["completed", "completed"]);
+  });
+  test("retry completes workspace setup after a source installation failure", async () => {
+    const { deps, provisionProjectWorkspaces } = createDeps({ skills: [{}] });
+    const installSource = deps.extensionUpgradeService.installSource;
+    installSource.mockRejectedValueOnce(new Error("Download failed"));
+    await expect(
+      createProjectExtensionLifecycle(deps as never).install("project-1", {
+        source: { kind: "catalog", name: "example" },
+      }),
+    ).rejects.toThrow("Download failed");
+    const job = deps.extensionInstallations.list()[0]!;
+    deps.extensionInstallations.retry(job.id);
+    await deps.extensionInstallations.wait(job.id);
+    expect(provisionProjectWorkspaces).toHaveBeenCalledTimes(1);
+    expect(deps.extensionInstallations.list()[0]?.status).toBe("completed");
+  });
+  test("retry resumes failed workspace setup without reinstalling the completed source", async () => {
+    const { deps, provisionProjectWorkspaces } = createDeps({ skills: [{}] });
+    provisionProjectWorkspaces.mockRejectedValueOnce(new Error("Setup failed"));
+    await expect(
+      createProjectExtensionLifecycle(deps as never).install("project-1", {
+        source: { kind: "catalog", name: "example" },
+      }),
+    ).rejects.toThrow("Setup failed");
+    const job = deps.extensionInstallations.list()[0]!;
+    expect(job.status).toBe("failed");
+    deps.extensionInstallations.retry(job.id);
+    await deps.extensionInstallations.wait(job.id);
+    expect(deps.extensionUpgradeService.installSource).toHaveBeenCalledTimes(1);
+    expect(provisionProjectWorkspaces).toHaveBeenCalledTimes(2);
   });
   test("installs without provisioning when the extension has no workspace contributions", async () => {
     const { deps, provisionProjectWorkspaces } = createDeps();
