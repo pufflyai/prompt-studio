@@ -5160,7 +5160,7 @@
       "source": "packages/pstdio-workbench/src/examples/showcases/showcases.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Showcases",
-      "sourceHash": "a5228b4a076ad0969a8de7f2dfc377a8c3be3b25a63eb64558da7835de899e3c"
+      "sourceHash": "62b8eb7c8571aacce4a669d29d81730fe02189ebff87eb528ff930d63d1da46e"
     },
     {
       "id": "workbench-pstdio-workbench-showcases--boombox",
@@ -5169,7 +5169,7 @@
       "source": "packages/pstdio-workbench/src/examples/showcases/showcases.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Showcases",
-      "sourceHash": "a5228b4a076ad0969a8de7f2dfc377a8c3be3b25a63eb64558da7835de899e3c"
+      "sourceHash": "62b8eb7c8571aacce4a669d29d81730fe02189ebff87eb528ff930d63d1da46e"
     },
     {
       "id": "workbench-pstdio-workbench-showcases--zipline",
@@ -5178,7 +5178,7 @@
       "source": "packages/pstdio-workbench/src/examples/showcases/showcases.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Showcases",
-      "sourceHash": "a5228b4a076ad0969a8de7f2dfc377a8c3be3b25a63eb64558da7835de899e3c"
+      "sourceHash": "62b8eb7c8571aacce4a669d29d81730fe02189ebff87eb528ff930d63d1da46e"
     },
     {
       "id": "workbench-pstdio-workbench-showcases--pigeon",
@@ -5187,7 +5187,7 @@
       "source": "packages/pstdio-workbench/src/examples/showcases/showcases.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Showcases",
-      "sourceHash": "a5228b4a076ad0969a8de7f2dfc377a8c3be3b25a63eb64558da7835de899e3c"
+      "sourceHash": "62b8eb7c8571aacce4a669d29d81730fe02189ebff87eb528ff930d63d1da46e"
     },
     {
       "id": "workbench-pstdio-workbench-showcases--kiln",
@@ -5196,7 +5196,7 @@
       "source": "packages/pstdio-workbench/src/examples/showcases/showcases.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Showcases",
-      "sourceHash": "a5228b4a076ad0969a8de7f2dfc377a8c3be3b25a63eb64558da7835de899e3c"
+      "sourceHash": "62b8eb7c8571aacce4a669d29d81730fe02189ebff87eb528ff930d63d1da46e"
     },
     {
       "id": "workbench-pstdio-workbench-reference-core-api-side-panel--attached-only",
@@ -11514,6 +11514,17 @@
       "suite": "ui",
       "title": "Patterns/Kanban Renderer/Board",
       "sourceHash": "6b651182aac303df71bd82e3eab70265a0b3f45a12d509c74b9db2bc50dad119"
+    },
+    {
+      "id": "ui-patterns-kanban-renderer-card-gestures--nested-control-release",
+      "name": "Nested Control Release",
+      "exportName": "NestedControlRelease",
+      "source": "packages/ui/src/components/kanban-renderer/kanban-renderer-card-gestures.canvas.tsx",
+      "suite": "ui",
+      "title": "Patterns/Kanban Renderer/Card Gestures",
+      "sourceHash": "256ddc9a6ab5204e7f83a2bd643f81ee23c771660b40db291f1d58b89916332d",
+      "component": "KanbanRendererCard",
+      "componentImport": "./kanban-renderer-card"
     },
     {
       "id": "ui-patterns-kanban-renderer-card-stability--drag-retains-card-content",

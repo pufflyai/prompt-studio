@@ -10,6 +10,7 @@ import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves and independent schema dependencies.
 // packaged-extension-settings-smoke.p2.test.ts checks device settings across projects and restarts.
+// packaged-independent-extensions-smoke.p2.test.ts checks stable and nightly extension package versions.
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
 // Also checks native harness controls and their structured values in packaged command handlers.
@@ -24,10 +25,14 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
 // packaged-main-fullscreen.p2.spec.ts checks panel/fullscreen shortcuts and mode completion through the bundled opaque guest runtime.
 // packaged-notes-page.p2.spec.ts checks Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
+// packaged-planner-timeline-smoke.ts checks side-panel attention actions without leaving the board or timeline.
+// packaged-lab-selection.p2.spec.ts checks tabless selection, retained frames, shared edits and saved transforms.
+// packaged-scribble-pages.p2.spec.ts checks native Scribble pages, drafts, favorites and group operations.
 // performance-observer.p2.test.ts checks native CPU units and memory in the compiled observer.
 // packaged-core-extensions-smoke.p1.test.ts checks Notes, Planner and Reports allocate record IDs through core.
 // packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
 // packaged-cloud-extension-set-smoke.p2.test.ts checks offline number collisions, aliases and later allocations across three compiled hosts.
+// packaged-board-panning-smoke.p2.test.ts retains card opening and dragging; the UI Card Gestures story covers nested-control pointer ownership.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";

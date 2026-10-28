@@ -1,13 +1,10 @@
 import { Box, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react";
-import type { PageRef, ResourceRef } from "@pstdio/sdk/extensions";
-import { createExampleStore, useExampleStore, usePageResource } from "../example-store";
+import { createExampleStore, useExampleStore } from "../example-store";
 import { ExampleIcon } from "../icon";
 import { exampleDefaults } from "../state-defaults";
-import type { ExampleHost, ExampleViewInput } from "../view-context";
+import { type ExampleHost, type ExampleViewInput, usePageSelection } from "../view-context";
 import { type BoomboxTrack, boomboxTracks } from "./boombox-data";
 
-const page: PageRef = { extensionId: "pstdio.extension-lab", kind: "page", id: "boombox-resource" };
-const resource = (track: BoomboxTrack): ResourceRef => ({ type: "boombox.track", id: track.id, label: track.title });
 export const boomboxStore = createExampleStore("boombox", exampleDefaults.boombox);
 
 const Artwork = (props: { size?: string; track: BoomboxTrack }) => (
@@ -33,10 +30,10 @@ export const Playlist = (props: { input: ExampleViewInput }) => {
       (state.filter !== "Liked songs" || state.likedIds.includes(track.id)) &&
       `${track.title} ${track.artist}`.toLowerCase().includes(state.query.toLowerCase()),
   );
-  const activeId = input.resource?.id ?? boomboxTracks[0].id;
+  const activeId = usePageSelection(input.host) ?? boomboxTracks[0].id;
   const play = (track: BoomboxTrack) => {
     boomboxStore.setState({ playing: true });
-    input.host.navigate({ kind: "page", page, resource: resource(track) });
+    void input.host.page.updateParams({ selection: track.id });
   };
   return (
     <Stack h="full" overflow="hidden" bg="bg" gap="0">
@@ -144,7 +141,7 @@ export const Playlist = (props: { input: ExampleViewInput }) => {
 
 export const Queue = (props: { host: ExampleHost }) => {
   const state = useExampleStore(boomboxStore);
-  const activeId = usePageResource(props.host)?.id ?? boomboxTracks[0].id;
+  const activeId = usePageSelection(props.host) ?? boomboxTracks[0].id;
   const queued = boomboxTracks.filter((track) => state.queueIds.includes(track.id));
   return (
     <Stack h="full" p="md" gap="lg">
@@ -197,8 +194,8 @@ export const Queue = (props: { host: ExampleHost }) => {
 
 export const Player = (props: { host: ExampleHost }) => {
   const state = useExampleStore(boomboxStore);
-  const activeResource = usePageResource(props.host);
-  const track = boomboxTracks.find((item) => item.id === activeResource?.id) ?? boomboxTracks[0];
+  const activeId = usePageSelection(props.host);
+  const track = boomboxTracks.find((item) => item.id === activeId) ?? boomboxTracks[0];
   const liked = state.likedIds.includes(track.id);
   return (
     <HStack h="full" px="md" justify="space-between">
@@ -230,12 +227,9 @@ export const Player = (props: { host: ExampleHost }) => {
           aria-label="Previous track"
           variant="ghost"
           onClick={() =>
-            props.host.navigate({
-              kind: "page",
-              page,
-              resource: resource(
-                boomboxTracks[(boomboxTracks.indexOf(track) - 1 + boomboxTracks.length) % boomboxTracks.length],
-              ),
+            props.host.page.updateParams({
+              selection:
+                boomboxTracks[(boomboxTracks.indexOf(track) - 1 + boomboxTracks.length) % boomboxTracks.length].id,
             })
           }
         >
@@ -254,10 +248,8 @@ export const Player = (props: { host: ExampleHost }) => {
           aria-label="Next track"
           variant="ghost"
           onClick={() =>
-            props.host.navigate({
-              kind: "page",
-              page,
-              resource: resource(boomboxTracks[(boomboxTracks.indexOf(track) + 1) % boomboxTracks.length]),
+            props.host.page.updateParams({
+              selection: boomboxTracks[(boomboxTracks.indexOf(track) + 1) % boomboxTracks.length].id,
             })
           }
         >

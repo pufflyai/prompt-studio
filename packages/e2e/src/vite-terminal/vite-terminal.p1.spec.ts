@@ -36,6 +36,8 @@ test("keeps HTTP same-origin and opens terminals through the runtime WebSocket e
   page,
   request,
 }, testInfo) => {
+  // Includes cold Vite loading, two terminal launches and a full page reload on CI.
+  test.setTimeout(60_000);
   const repoRoot = createGitRepo("pstdio-ps-232-", "vite terminal e2e");
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: `PS-232 Vite Terminal ${testInfo.project.name}` }, repoRoot),

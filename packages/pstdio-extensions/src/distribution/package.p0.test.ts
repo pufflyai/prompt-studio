@@ -2,13 +2,13 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { packExtension, readExtensionPackage, unpackExtension } from "./package";
+import { packageMetadata, packExtension, readExtensionPackage, unpackExtension } from "./package";
 
 const roots: string[] = [];
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
-const fixture = async () => {
+const fixture = async (version = "0.45.1") => {
   const root = await mkdtemp(join(tmpdir(), "extension-package-"));
   roots.push(root);
   await writeFile(
@@ -16,7 +16,7 @@ const fixture = async () => {
     JSON.stringify({
       name: "notes",
       publisher: "alice",
-      version: "0.45.1",
+      version,
       main: "extension.ts",
       engines: { pstdio: "^0.2.0" },
       files: ["extension.ts", "assets"],
@@ -28,6 +28,46 @@ const fixture = async () => {
   await writeFile(join(root, "private.env"), "SECRET");
   return root;
 };
+
+test.each([
+  "0.46.0-nightly.20261028030226",
+  "1.0.0-rc.1+build.42",
+  "1.0.0+build.001",
+])("packs and unpacks the exact semantic version %s", async (version) => {
+  const packed = await packExtension(await fixture(version));
+  expect(packed.filename).toBe(`alice.notes-${version}.tgz`);
+  const target = await mkdtemp(join(tmpdir(), "unpacked-extension-version-"));
+  roots.push(target);
+  const manifest = await unpackExtension(packed.bytes, target, {
+    id: "alice.notes",
+    version,
+    sha256: packed.sha256,
+  });
+  expect(manifest.version).toBe(version);
+  expect(JSON.parse(await readFile(join(target, "package.json"), "utf8")).version).toBe(version);
+});
+
+test.each([
+  "01.2.3",
+  "1.2",
+  "1.2.3-01",
+  "1.2.3-nightly..1",
+  "1.2.3-",
+  "1.2.3+",
+  "1.2.3+build..1",
+  "1.2.3/path",
+  "1.2.3\n",
+])("refuses malformed package version %s", (version) => {
+  expect(() =>
+    packageMetadata({
+      name: "notes",
+      publisher: "alice",
+      version,
+      main: "extension.ts",
+      engines: { pstdio: "^0.2.0" },
+    }),
+  ).toThrow("Invalid extension package");
+});
 
 test("packs the declared runtime files under the full identity and round trips them", async () => {
   const root = await fixture();

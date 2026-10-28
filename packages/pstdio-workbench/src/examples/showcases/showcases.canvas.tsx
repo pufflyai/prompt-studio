@@ -45,6 +45,7 @@ const KilnStory = () => {
 export const Scribble: Story = {
   id: "pstdio-workbench-showcases--scribble",
   render: ScribbleStory,
+  tags: ["scribble-tabs"],
 };
 export const Boombox: Story = {
   id: "pstdio-workbench-showcases--boombox",

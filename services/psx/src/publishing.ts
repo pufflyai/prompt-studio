@@ -1,4 +1,4 @@
-import { packageSha256, readExtensionPackage } from "pstdio-extensions/distribution";
+import { packageSha256, readExtensionPackage, registryVersionSchema } from "pstdio-extensions/distribution";
 import { getRelease, objectKey } from "./releases";
 import { extensionReleases } from "./schema";
 import type { PsxOptions } from "./service";
@@ -13,6 +13,9 @@ export const publishPackage = async (options: PsxOptions, request: Request) => {
     return Response.json({ error: "Invalid extension package" }, { status: 400 });
   }
   if (manifest.publisher !== "pstdio") return Response.json({ error: "Core publishing only" }, { status: 403 });
+  if (!registryVersionSchema.safeParse(manifest.version).success) {
+    return Response.json({ error: "PSX publishes stable extension versions only" }, { status: 400 });
+  }
   const release = {
     extensionId: manifest.id,
     version: manifest.version,

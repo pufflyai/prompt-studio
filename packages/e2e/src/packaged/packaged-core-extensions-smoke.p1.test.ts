@@ -45,6 +45,8 @@ const expectCoreSkills = async (baseUrl: string, projectId: string, headers: Rec
         expect.objectContaining({ path: "references/examples/pigeon.ts" }),
         expect.objectContaining({ path: "references/examples/controls.ts" }),
         expect.objectContaining({ path: "references/examples/table-navigation.ts" }),
+        expect.objectContaining({ path: "references/examples/panel-view.ts" }),
+        expect.objectContaining({ path: "references/examples/panel-view-entry.tsx" }),
         expect.objectContaining({ path: "references/examples/resource-reviewer/catalog.ts" }),
         expect.objectContaining({ path: "references/examples/resource-reviewer/commands.ts" }),
         expect.objectContaining({ path: "references/examples/resource-reviewer/extension.ts" }),
