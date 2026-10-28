@@ -12,6 +12,9 @@ const parsedKeybindingChordSchema = z.object({
 });
 
 export const extensionKeybindingRecordSchema = z.object({
+  layer: z.enum(["view", "go", "create", "current", "extensions", "settings", "help"]).optional(),
+  targetScope: z.enum(["project", "resource", "panel"]).optional(),
+  sticky: z.boolean().optional(),
   id: z.string(),
   extensionId: z.string(),
   action: navigationTargetSchema,
@@ -34,6 +37,7 @@ export const extensionKeybindingRecordSchema = z.object({
     })
     .optional(),
   when: extensionWhenExpressionSchema.optional(),
+  allowInInputs: z.boolean().optional(),
 });
 
 export type ExtensionKeybindingRecord = z.infer<typeof extensionKeybindingRecordSchema>;

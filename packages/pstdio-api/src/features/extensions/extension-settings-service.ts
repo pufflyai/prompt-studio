@@ -38,6 +38,15 @@ const enumIncludes = (values: unknown[] | undefined, value: unknown) => {
 };
 
 const ownerFor = (context: ExtensionSettingsContext, definition: ExtensionSettingDefinitionRecord) => {
+  // This table is local to the host and excluded from project sync. Device values
+  // belong to the extension identity, regardless of the project or installed copy.
+  if (definition.scope === "device") {
+    return {
+      owner_type: "device_extension" as ExtensionSettingOwnerType,
+      owner_id: context.extensionId,
+      extension_id: context.extensionId,
+    };
+  }
   if (definition.scope === "global") {
     return {
       owner_type: "installed_extension" as ExtensionSettingOwnerType,

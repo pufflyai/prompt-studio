@@ -142,6 +142,8 @@ describe("core extension catalog", () => {
       "references/examples.md",
       "references/examples/commands.ts",
       "references/examples/controls.ts",
+      "references/examples/panel-view-entry.tsx",
+      "references/examples/panel-view.ts",
       "references/examples/pigeon.ts",
       "references/examples/resource-reviewer/catalog.ts",
       "references/examples/resource-reviewer/commands.ts",

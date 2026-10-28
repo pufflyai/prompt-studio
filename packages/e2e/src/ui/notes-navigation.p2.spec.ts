@@ -71,7 +71,9 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
     await page.getByRole("button", { name: `Close ${first.title}`, exact: true }).click();
     await expect(firstRow).toHaveAttribute("aria-selected", "false");
-    await expect(page.getByText("No note open", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: "Available tabs" }).getByRole("button", { name: "New note", exact: true }),
+    ).toBeVisible();
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

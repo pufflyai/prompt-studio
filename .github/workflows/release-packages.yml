@@ -61,7 +61,7 @@ jobs:
         with:
           node-version: "24"
       - name: Install dependencies
-        run: node scripts/ci/install-native-dependencies.ts
+        run: bun scripts/ci/install-native-dependencies.ts
       - name: Give SDK/UI previews a source-based version
         run: bun run --cwd scripts release:packages:version
       - name: Build SDK and UI with their dependencies
@@ -106,7 +106,7 @@ jobs:
         with:
           node-version: "24"
       - name: Install dependencies
-        run: node scripts/ci/install-native-dependencies.ts
+        run: bun scripts/ci/install-native-dependencies.ts
       - name: Prepare the patch candidate
         id: patch
         env:
@@ -208,7 +208,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changed.outputs.changed == 'true' || (steps.changed.outputs.changed == 'false' && steps.existing.outcome == 'failure')
-        run: node scripts/ci/install-native-dependencies.ts
+        run: bun scripts/ci/install-native-dependencies.ts
 
       # The version change is never pushed to main. The tag keeps it so every job builds the same versions.
       - name: Version and tag the nightly
@@ -443,6 +443,28 @@ jobs:
           previous-tag: ${{ needs.plan.outputs.previous_tag }}
           patch: ${{ inputs.channel == 'patch' }}
 
+  # Stable and patch releases measure every benchmark suite for the Performance pages. The run is
+  # separate and starts after publishing, so benchmarks never hold or fail a release.
+  benchmarks:
+    needs: [plan, publish]
+    if: ${{ !cancelled() && needs.publish.result == 'success' && needs.plan.outputs.channel != 'nightly' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ needs.plan.outputs.tag }}
+      COMMIT: ${{ needs.plan.outputs.commit }}
+      TARGETS: ${{ needs.plan.outputs.targets }}
+    steps:
+      - name: Start the release benchmarks
+        run: |
+          set -euo pipefail
+          gh workflow run benchmarks.yml --ref "$TAG" \
+            -f commits="$COMMIT" -f platforms="$(jq -r 'join(",")' <<< "$TARGETS")" -f release_tag="$TAG"
+
   # Runs only after a nightly published with every asset.
   nightly_prune:
     needs: [plan, publish_nightly]
@@ -493,7 +515,7 @@ jobs:
           node-version: "24"
 
       - name: Install dependencies
-        run: node scripts/ci/install-native-dependencies.ts
+        run: bun scripts/ci/install-native-dependencies.ts
 
       - name: Read the current stable version baseline
         id: baseline

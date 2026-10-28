@@ -9,7 +9,7 @@ export function IndicatorView(props: { ind?: Indicator }) {
   if (ind.type === "icon") {
     const IndicatorIcon = getIconComponent(ind.icon);
     return (
-      <ChakraTimeline.Indicator outline="none" border="none" background="bg" color="fg">
+      <ChakraTimeline.Indicator color="fg">
         <Span display="inline-flex" alignItems="center">
           <IndicatorIcon size={14} strokeWidth={1} />
         </Span>

@@ -1,5 +1,5 @@
 import { defineExtension, definePlacement, defineStatusBarItem, workbenchSlots } from "@pstdio/sdk/extensions";
-import { defineExample, webview } from "../definition";
+import { definePageExample, webview } from "../definition";
 
 const views = [
   webview("kiln-viewport", "3D viewport"),
@@ -8,11 +8,12 @@ const views = [
   webview("kiln-nav", "Kiln project"),
   webview("kiln-status", "Scene status"),
 ];
-const example = defineExample({
+const example = definePageExample({
   name: "kiln",
   label: "Kiln",
   icon: "Box",
   primary: views[0].ref,
+  params: { selection: { type: "string" } },
   chrome: { nav: views[3].ref, sidenav: false, activity: false },
   regionSettings: {
     side: {
@@ -27,18 +28,13 @@ const example = defineExample({
     {
       id: "inspector",
       region: "side",
-      openOn: "page-resource",
       item: {
-        kind: "binding",
-        binding: {
-          kinds: [{ kind: "resource-kind", id: "kiln.object" }],
-          view: views[1].ref,
-          cardinality: "one",
-        },
+        kind: "view",
+        view: views[1].ref,
+        presence: "open",
       },
     },
   ],
-  initialResource: true,
 });
 export default defineExtension({
   statusBarItems: [
@@ -60,7 +56,7 @@ export default defineExtension({
   modes: [example.mode],
   themes: [example.theme],
   resourceKinds: [example.resourceKind],
-  pages: [example.homePage, example.page],
+  pages: [example.page],
   views: [...views],
   navigationItems: [example.navigation],
 });

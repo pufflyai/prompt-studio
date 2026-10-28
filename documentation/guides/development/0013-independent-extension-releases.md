@@ -42,6 +42,10 @@ hand from main until PSX is deployed. Re-running it skips existing versions. The
 registry refuses a different package at an existing version, including withdrawn
 versions.
 
+PSX publishes only stable `major.minor.patch` versions. Nightly archives retain
+their snapshot versions for host bundling and local installation; PSX rejects
+prerelease and build-metadata versions before storing them.
+
 ## Deploy PSX
 
 The service container workflow builds infra/psx/Dockerfile. Add psx to the

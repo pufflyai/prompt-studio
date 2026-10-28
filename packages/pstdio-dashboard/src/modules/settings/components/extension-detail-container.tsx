@@ -119,6 +119,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
     <>
       {!confirmingUninstall && errorNotice}
       <ExtensionDetail
+        workbench={settingsInput?.workbench}
         projectId={projectId}
         extension={extension}
         metadata={contributions}

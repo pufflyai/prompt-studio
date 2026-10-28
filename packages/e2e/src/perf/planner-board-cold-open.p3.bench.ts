@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "@playwright/test";
+import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { folderProjectInput } from "../helpers/folder-project";
 import { buildBinary, PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
 import { preparePlannerSource } from "../packaged/packaged-planner-source";
@@ -239,6 +240,15 @@ Reports every sample against the ${targetMs} ms target. Seeding takes several mi
     for (let sample = 0; sample < Number(option("--samples", 3)); sample++)
       samples.push(await measureColdOpen(home, fixture));
     const firstTicket = summarizeSamples(samples.map((sample) => sample.firstTicketMs));
+    for (const sample of samples) {
+      recordMeasurement({
+        metric: "cold-open",
+        label: `Open Tickets with ${fixture.tickets.toLocaleString("en-US")} tickets after a restart`,
+        unit: "ms",
+        value: sample.firstTicketMs,
+        budget: targetMs,
+      });
+    }
     process.stdout.write(
       `${JSON.stringify(
         {

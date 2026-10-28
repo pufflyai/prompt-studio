@@ -42,7 +42,7 @@ export const createResourceRowActions = (item: ListRowItem, showContextMenuTrigg
 };
 
 const iconLabelGaps: Record<string, string> = { collection: "compact", tree: "1" };
-const denseVariants = new Set(["compact", "collection", "full-width", "tree", "empty-state"]);
+const denseVariants = new Set(["compact", "collection", "full-width", "tree", "file", "empty-state"]);
 
 const resolveLabelColor = (input: {
   isEmptyStateVariant: boolean;

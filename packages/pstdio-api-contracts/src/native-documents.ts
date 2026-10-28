@@ -8,9 +8,10 @@ interface FileRendererLoadKeyInput {
   fileRendererId: string;
   resource: ResourceRef | undefined;
   pageParams?: PageParams;
+  documentKey?: string;
 }
 
-export type NativeDocumentTarget = FileRendererLoadKeyInput;
+export type NativeDocumentTarget = Omit<FileRendererLoadKeyInput, "documentKey">;
 
 const stableValue = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -27,6 +28,10 @@ const stableValue = (value: unknown): unknown => {
 
 export const createFileRendererLoadKey = (input: FileRendererLoadKeyInput) => {
   const { fileRendererId, resource } = input;
+  if (input.documentKey !== undefined) {
+    const key = `${JSON.stringify(resourceKey(resource))}:${fileRendererId}:${input.documentKey}`;
+    return input.pageParams ? `${key}:${JSON.stringify(stableValue(input.pageParams))}` : key;
+  }
   const resourceValue = resource
     ? stableValue({ id: resource.id, type: resource.type, metadata: resource.metadata })
     : null;
@@ -35,5 +40,5 @@ export const createFileRendererLoadKey = (input: FileRendererLoadKeyInput) => {
 };
 
 /** A document address follows the loaded view, never a browser-supplied file path. */
-export const createNativeDocumentKey = (input: FileRendererLoadKeyInput) =>
+export const createNativeDocumentKey = (input: NativeDocumentTarget) =>
   bytesToHex(sha256(new TextEncoder().encode(createFileRendererLoadKey(input))));

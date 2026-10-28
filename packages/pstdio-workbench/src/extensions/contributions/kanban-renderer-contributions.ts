@@ -88,7 +88,7 @@ const toCreateRowHandler = (
   return async (submission: KanbanRendererCreateSubmission) => {
     const params = mergeParams(
       submission.values,
-      contribution.columnParam ? { [contribution.columnParam]: submission.columnId } : undefined,
+      contribution.columnParam && submission.columnId ? { [contribution.columnParam]: submission.columnId } : undefined,
       contribution.attributesParam ? { [contribution.attributesParam]: submission.attributeValues } : undefined,
     );
     const created = await runMutation(record, contribution.commandId, params);
@@ -235,6 +235,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           emptyTitle: localize(record.emptyTitle, ""),
           emptyDescription: localize(record.emptyDescription, ""),
           hideToolbar: record.hideToolbar,
+          createCommandId: record.createRow?.commandId,
           createRow: toCreateRowConfig(record, localize),
           getBoardColumnConfig: (groupKey) => toWorkbenchBoardColumnConfig(columnConfigs?.[groupKey], localize),
           onRowActivate,

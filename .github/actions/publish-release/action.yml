@@ -69,7 +69,7 @@ runs:
 
     - name: Install publication dependencies
       shell: bash
-      run: node scripts/ci/install-native-dependencies.ts
+      run: bun scripts/ci/install-native-dependencies.ts
 
     - name: Restore the verified publication artifacts
       shell: bash

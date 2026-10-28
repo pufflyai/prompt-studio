@@ -2943,7 +2943,7 @@
                           "width": "fill_container",
                           "fill": "#002B36",
                           "cornerRadius": 12,
-                          "stroke": "#2B2B4A",
+                          "stroke": "#7A989C",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "layout": "vertical",
@@ -2962,7 +2962,7 @@
                                   "type": "text",
                                   "id": "wnS57",
                                   "name": "Aa",
-                                  "fill": "#FFFFFF",
+                                  "fill": "#FDF6E3",
                                   "content": "Aa",
                                   "fontFamily": "$font-display",
                                   "fontSize": 20,
@@ -3048,7 +3048,7 @@
                               "type": "text",
                               "id": "O2VMCc",
                               "name": "M",
-                              "fill": "#93A1A1",
+                              "fill": "#EEE8D5",
                               "content": "muted text",
                               "fontFamily": "$font-body",
                               "fontSize": 11,
@@ -3103,7 +3103,7 @@
                           "width": "fill_container",
                           "fill": "#FDF6E3",
                           "cornerRadius": 12,
-                          "stroke": "#EEE8D5",
+                          "stroke": "#909A92",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "layout": "vertical",
@@ -19588,7 +19588,7 @@
                       "type": "frame",
                       "id": "ANO6t",
                       "name": "cmp/SessionWorkspaceMenu",
-                      "context": "SessionWorkspaceMenu (pstdio-dashboard/src/modules/sessions/components/session-workspace-menu.tsx). SearchableMenu width 280, radius 8, primary $ds-bg surface on a $ds-border hairline. Menu padding 6 so rows inset and their 6px radius reads. Search row only renders when workspaces.length > 10. Rows are single-line: GitBranch icon + workspace.title, no description. Default workspace (root repo) is pinned first, rest newest-first. Empty state: 'No workspaces', compact row, 16px icon, disabled.",
+                      "context": "Workspace selection uses the xs ghost button. Editable state has GitBranch, workspace name and ChevronDown. Locked selection becomes an Open workspace button with GitBranch, workspace name and ArrowUpRight; clicking opens the workspace. No chevron or duplicate open icon button. Keep the shared button padding and text style.",
                       "reusable": true,
                       "clip": true,
                       "width": 280,
@@ -27365,7 +27365,7 @@
                       "type": "frame",
                       "id": "yA7dV",
                       "name": "cmp/ChatToolRow",
-                      "context": "One collapsed tool call in an assistant turn. Rows stack flush — the row is exactly its content height and the group adds no gap between rows — so a run of calls reads as one quiet block instead of a list of separate entries. Separation belongs to the group boundary: the stack takes extra space above (8) to detach it from whatever precedes it; never reintroduce per-row spacing.\n\nThe icon is bare: no ring, no plate. A 20px outlined disc around every glyph turned a quiet list of calls into a column of buttons competing with the assistant's text; the glyph alone is enough to type the row.\n\ncall axis: rest | hover. The chevron exists only while the row is hovered (call: hover) or while the call is expanded — at rest the row is glyph + label + argument and nothing else. A column of permanent chevrons repeats the same affordance once per row; showing it on the row under the pointer says the same thing exactly when it is needed. When it does appear, it sits immediately after the label, not flushed right — it is the affordance for THIS row's disclosure, so it belongs with the thing it opens.\n\nThe trailing slot is the ONE thing worth reading without expanding: Lk (the file, info-coloured) OR St (a bare status) OR Diff (+/− counts). Enable exactly one; two competing arguments defeat the point of collapsing.\n\ntool axis: ok | error. Error recolours the glyph only ($ds-error) and swaps it for triangle-alert — the label stays fg.muted so a failed call does not shout louder than the prose around it.",
+                      "context": "One collapsed tool call in an assistant turn. Rows stack flush — the row is exactly its content height and the group adds no gap between rows — so a run of calls reads as one quiet block instead of a list of separate entries. Separation belongs to the group boundary: the stack takes extra space above (8) to detach it from whatever precedes it; never reintroduce per-row spacing.\n\nThe icon is bare: no ring, no plate. A 20px outlined disc around every glyph turned a quiet list of calls into a column of buttons competing with the assistant's text; the glyph alone is enough to type the row.\n\ncall axis: rest | hover. The chevron exists only while the row is hovered (call: hover) or while the call is expanded — at rest the row is glyph + label + argument and nothing else. A column of permanent chevrons repeats the same affordance once per row; showing it on the row under the pointer says the same thing exactly when it is needed. When it does appear, it sits immediately after the label, not flushed right — it is the affordance for THIS row's disclosure, so it belongs with the thing it opens.\n\nThe trailing slot is the ONE thing worth reading without expanding: Lk (the file, info-coloured) OR St (a bare status) OR Diff (+/− counts). Enable exactly one; two competing arguments defeat the point of collapsing.\n\ntool axis: ok | error. Error recolours the glyph only ($ds-error) and swaps it for triangle-alert — the label stays fg.muted so a failed call does not shout louder than the prose around it. Tool call content has no hover tooltip; expanding the row shows its content.",
                       "theme": {
                         "tool": "ok"
                       },
@@ -28178,10 +28178,11 @@
                       "type": "frame",
                       "id": "CQVFo",
                       "name": "cmp/ChatUserMessage",
+                      "context": " The message root gap is 2xs (4px) for every size.",
                       "reusable": true,
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 6,
+                      "gap": 4,
                       "children": [
                         {
                           "type": "frame",
@@ -28246,10 +28247,17 @@
                       "type": "frame",
                       "id": "X7Yj6",
                       "name": "cmp/ChatAssistantMessage",
+                      "context": "Leave 8px after each assistant message. The first paragraph in assistant content has an 8px top margin. Tool rows inside one message remain flush. The message root gap is 2xs (4px) for every size.",
                       "reusable": true,
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 8,
+                      "gap": 4,
+                      "padding": [
+                        0,
+                        0,
+                        8,
+                        0
+                      ],
                       "children": [
                         {
                           "type": "frame",
@@ -28259,6 +28267,8 @@
                           "layout": "vertical",
                           "gap": 12,
                           "padding": [
+                            8,
+                            8,
                             0,
                             8
                           ],
@@ -28481,7 +28491,7 @@
                       "type": "frame",
                       "id": "TlakR",
                       "name": "cmp/ChatToolTimeline",
-                      "context": "An expanded Shell tool call. The row title is always `Shell` followed by the command, so the most useful input remains readable while collapsed. Expanding reveals only the command output. Never repeat the command inside the expandable block and never add separate Input/Output labels.\n\nOutput is mono and does not wrap — long test lines run past the right edge and clip. The block clips; expand or scroll for the rest.\n\nColour carries only status: green checks on passing lines, $ds-error on failures. Everything else stays fg.muted so the block reads as a quiet transcript. See cmp/ChatToolDiff for the patch equivalent.",
+                      "context": "Tool indicators have transparent fill, no outline or border. Collapsed tool calls have no connector. Expanded calls show a vertical border.subtle connector starting 4px below the icon, ending at the expanded content bottom, including the final row. Never draw it behind the icon. Titles show the command without a tooltip; expansion shows full command and output.",
                       "reusable": true,
                       "width": "fill_container",
                       "gap": 8,
@@ -28491,7 +28501,9 @@
                           "id": "A7AWad",
                           "name": "Rail",
                           "width": 16,
+                          "height": "fill_container",
                           "layout": "vertical",
+                          "gap": 4,
                           "alignItems": "center",
                           "children": [
                             {
@@ -28518,6 +28530,14 @@
                                   "fill": "$ds-fg-muted"
                                 }
                               ]
+                            },
+                            {
+                              "type": "rectangle",
+                              "id": "J2Onn",
+                              "name": "Expanded tool connector",
+                              "fill": "$ds-border-subtle",
+                              "width": 1,
+                              "height": "fill_container"
                             }
                           ]
                         },
@@ -28726,7 +28746,7 @@
                       "type": "frame",
                       "id": "JGKK1",
                       "name": "cmp/ChatWorkspaceHub",
-                      "context": "Workspace container around the chat input. The shell stays borderless and uses ds-surface, matching the selected tab background. The input is borderless at rest and shows a 1px inner ds-focus outline while focus is inside it. Keep the workspace identity, diff counts or setup status, and open action above the input. Shell padding is 4px, with no gap between header and input. The open action has a tooltip and accessible name.",
+                      "context": "Borderless workspace shell uses ds-surface, matching selected tabs. Surrounding composer inset is 0px top and 8px on the other sides. Spinner and elapsed time stay right aligned in the workspace header at every scroll position, without a Working label. Editable workspace selection keeps its chevron followed by a separate open action. Once selection is locked, merge the workspace identity and open action into one ghost button with a trailing ArrowUpRight, no chevron and no separate icon button. No gap between header and input.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "$ds-surface",
@@ -28760,8 +28780,14 @@
                                 {
                                   "type": "frame",
                                   "id": "KD1W1",
-                                  "name": "Workspace",
-                                  "gap": 7,
+                                  "name": "Open workspace button",
+                                  "height": 28,
+                                  "cornerRadius": 4,
+                                  "gap": 8,
+                                  "padding": [
+                                    0,
+                                    4
+                                  ],
                                   "alignItems": "center",
                                   "children": [
                                     {
@@ -28783,6 +28809,16 @@
                                       "fontFamily": "$font-heading",
                                       "fontSize": 13,
                                       "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "SUtRj",
+                                      "name": "Open workspace",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "arrow-up-right",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
                                     }
                                   ]
                                 },
@@ -28850,24 +28886,33 @@
                               ]
                             },
                             {
-                              "id": "o51iMN",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Open",
-                              "width": 24,
-                              "height": 24,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "arrow-up-right",
+                              "type": "frame",
+                              "id": "GS4G1",
+                              "name": "Working time",
+                              "gap": 4,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "m6TJD",
+                                  "name": "Working spinner",
                                   "width": 12,
                                   "height": 12,
-                                  "fill": "$ds-fg-muted"
+                                  "icon": "loader-circle",
+                                  "library": "lucide",
+                                  "fill": "$ds-info"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ZKYLM",
+                                  "name": "Elapsed time",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "1m 05s",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
                                 }
-                              }
+                              ]
                             }
                           ]
                         },
@@ -31265,6 +31310,7 @@
                               },
                               "width": 28,
                               "height": 28,
+                              "fill": "#00000000",
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "panel-right",
@@ -31535,6 +31581,7 @@
                               },
                               "width": 28,
                               "height": 28,
+                              "fill": "#00000000",
                               "descendants": {
                                 "k7mgm": {
                                   "icon": "panel-right",
@@ -44272,11 +44319,6 @@
                           "name": "WorkspaceHub",
                           "width": "fill_container",
                           "descendants": {
-                            "o51iMN": {
-                              "theme": {
-                                "btn": "ghost"
-                              }
-                            },
                             "J3u0Q/scrOP": {
                               "theme": {
                                 "res": "ok"
@@ -44858,11 +44900,6 @@
                               "name": "Hub",
                               "width": "fill_container",
                               "descendants": {
-                                "o51iMN": {
-                                  "theme": {
-                                    "btn": "ghost"
-                                  }
-                                },
                                 "J3u0Q/scrOP": {
                                   "theme": {
                                     "res": "ok"
@@ -44930,11 +44967,6 @@
                               "descendants": {
                                 "XHWWg": {
                                   "enabled": false
-                                },
-                                "o51iMN": {
-                                  "theme": {
-                                    "btn": "ghost"
-                                  }
                                 },
                                 "J3u0Q/scrOP": {
                                   "theme": {
@@ -45006,14 +45038,6 @@
                                 },
                                 "PqUOk": {
                                   "enabled": true
-                                },
-                                "o51iMN": {
-                                  "theme": {
-                                    "btn": "ghost"
-                                  }
-                                },
-                                "o51iMN/k7mgm": {
-                                  "fill": "$ds-fg-subtle"
                                 },
                                 "J3u0Q/scrOP": {
                                   "theme": {
@@ -45093,14 +45117,6 @@
                                 "v3ytj": {
                                   "content": "Workspace setup failed",
                                   "fill": "$ds-error"
-                                },
-                                "o51iMN": {
-                                  "theme": {
-                                    "btn": "ghost"
-                                  }
-                                },
-                                "o51iMN/k7mgm": {
-                                  "fill": "$ds-fg-subtle"
                                 },
                                 "J3u0Q/scrOP": {
                                   "theme": {
@@ -47832,12 +47848,6 @@
                   "ref": "JGKK1",
                   "name": "WorkspaceHub",
                   "descendants": {
-                    "o51iMN": {
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "2xs"
-                      }
-                    },
                     "J3u0Q/scrOP": {
                       "theme": {
                         "res": "ok"
@@ -51244,7 +51254,7 @@
                                       "clip": true,
                                       "width": "fill_container",
                                       "height": 96,
-                                      "fill": "$ds-surface",
+                                      "fill": "$ds-bg",
                                       "cornerRadius": 8,
                                       "stroke": "$ds-border-subtle",
                                       "strokeWidth": 1,
@@ -56301,7 +56311,7 @@
                                       "clip": true,
                                       "width": "fill_container",
                                       "height": 74,
-                                      "fill": "$ds-surface",
+                                      "fill": "$ds-bg",
                                       "cornerRadius": 8,
                                       "stroke": "$ds-border-subtle",
                                       "strokeWidth": 1,
@@ -58233,7 +58243,7 @@
                       "name": "Secondary Panel",
                       "width": "fill_container",
                       "height": 250,
-                      "fill": "$ds-code",
+                      "fill": "$ds-bg",
                       "stroke": "$ds-border",
                       "strokeWidth": {
                         "top": 1
@@ -69394,6 +69404,7 @@
               "type": "frame",
               "id": "H621et",
               "name": "Canonical Workbench Window",
+              "context": " Main, secondary and side panel shells, headers and attached menus use ds-bg across every theme. Sidenav can use its own surface.",
               "clip": true,
               "width": "fill_container",
               "height": 820,
@@ -69799,7 +69810,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -69812,7 +69823,7 @@
                                   "name": "Main Panel Header",
                                   "width": "fill_container",
                                   "height": 40,
-                                  "fill": "$ds-bg-subtle",
+                                  "fill": "$ds-bg",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
                                     "bottom": 1
@@ -70235,7 +70246,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": 240,
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -70248,7 +70259,7 @@
                                   "name": "Secondary Panel Header",
                                   "width": "fill_container",
                                   "height": 40,
-                                  "fill": "$ds-bg-subtle",
+                                  "fill": "$ds-bg",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
                                     "bottom": 1
@@ -70656,7 +70667,7 @@
                       "clip": true,
                       "width": 420,
                       "height": "fill_container",
-                      "fill": "$ds-surface",
+                      "fill": "$ds-bg",
                       "cornerRadius": 8,
                       "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
@@ -70669,7 +70680,7 @@
                           "name": "Side Panel Header",
                           "width": "fill_container",
                           "height": 40,
-                          "fill": "$ds-bg-subtle",
+                          "fill": "$ds-bg",
                           "stroke": "$ds-border",
                           "strokeWidth": {
                             "bottom": 1
@@ -71052,7 +71063,7 @@
                           "name": "Main Panel Header",
                           "width": "fill_container",
                           "height": 40,
-                          "fill": "$ds-bg-subtle",
+                          "fill": "$ds-bg",
                           "stroke": "$ds-border",
                           "strokeWidth": {
                             "bottom": 1
@@ -71496,7 +71507,7 @@
                           "name": "Secondary Panel Header",
                           "width": "fill_container",
                           "height": 40,
-                          "fill": "$ds-bg-subtle",
+                          "fill": "$ds-bg",
                           "stroke": "$ds-border",
                           "strokeWidth": {
                             "bottom": 1
@@ -71940,7 +71951,7 @@
                           "name": "Side Panel Header",
                           "width": "fill_container",
                           "height": 40,
-                          "fill": "$ds-bg-subtle",
+                          "fill": "$ds-bg",
                           "stroke": "$ds-border",
                           "strokeWidth": {
                             "bottom": 1
@@ -72726,7 +72737,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": "fill_container",
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1
@@ -72738,7 +72749,7 @@
                           "clip": true,
                           "width": 120,
                           "height": "fill_container",
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -72994,7 +73005,7 @@
                   "name": "Main Panel",
                   "width": "fill_container",
                   "height": "fill_container",
-                  "fill": "$ds-bg-subtle",
+                  "fill": "$ds-bg",
                   "cornerRadius": 8,
                   "stroke": "$ds-border",
                   "strokeWidth": 1,
@@ -73019,7 +73030,7 @@
                       "name": "Main Panel Header",
                       "width": "fill_container",
                       "height": 40,
-                      "fill": "$ds-bg-subtle",
+                      "fill": "$ds-bg",
                       "stroke": "$ds-border",
                       "strokeWidth": {
                         "bottom": 1
@@ -73142,7 +73153,7 @@
                   "name": "Secondary Panel",
                   "width": "fill_container",
                   "height": "fill_container",
-                  "fill": "$ds-bg-subtle",
+                  "fill": "$ds-bg",
                   "cornerRadius": 8,
                   "stroke": "$ds-border",
                   "strokeWidth": 1,
@@ -73167,7 +73178,7 @@
                       "name": "Secondary Panel Header",
                       "width": "fill_container",
                       "height": 40,
-                      "fill": "$ds-bg-subtle",
+                      "fill": "$ds-bg",
                       "stroke": "$ds-border",
                       "strokeWidth": {
                         "bottom": 1
@@ -73290,7 +73301,7 @@
                   "name": "Side Panel",
                   "width": "fill_container",
                   "height": "fill_container",
-                  "fill": "$ds-bg-subtle",
+                  "fill": "$ds-bg",
                   "cornerRadius": 8,
                   "stroke": "$ds-border",
                   "strokeWidth": 1,
@@ -73315,7 +73326,7 @@
                       "name": "Side Panel Header",
                       "width": "fill_container",
                       "height": 40,
-                      "fill": "$ds-bg-subtle",
+                      "fill": "$ds-bg",
                       "stroke": "$ds-border",
                       "strokeWidth": {
                         "bottom": 1
@@ -75693,7 +75704,7 @@
                           "name": "Main Panel Header",
                           "width": 650,
                           "height": 40,
-                          "fill": "$ds-bg-subtle",
+                          "fill": "$ds-bg",
                           "stroke": "$ds-border",
                           "strokeWidth": {
                             "bottom": 1
@@ -76015,7 +76026,7 @@
                           "name": "Secondary Panel Header",
                           "width": 650,
                           "height": 40,
-                          "fill": "$ds-bg-subtle",
+                          "fill": "$ds-bg",
                           "stroke": "$ds-border",
                           "strokeWidth": {
                             "bottom": 1
@@ -76199,7 +76210,7 @@
                           "name": "Side Panel Header",
                           "width": 650,
                           "height": 40,
-                          "fill": "$ds-bg-subtle",
+                          "fill": "$ds-bg",
                           "stroke": "$ds-border",
                           "strokeWidth": {
                             "bottom": 1
@@ -76562,7 +76573,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": "fill_container",
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -76608,7 +76619,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": 72,
-                          "fill": "$ds-code",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -76691,7 +76702,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": "fill_container",
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -76737,7 +76748,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": 118,
-                          "fill": "$ds-code",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -76820,7 +76831,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": "fill_container",
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -76866,7 +76877,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": 40,
-                          "fill": "$ds-code",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -76949,7 +76960,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": "fill_container",
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -77049,7 +77060,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": "fill_container",
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -77095,7 +77106,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": 118,
-                          "fill": "$ds-code",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -77358,7 +77369,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -77385,7 +77396,7 @@
                               "clip": true,
                               "width": 190,
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -77399,7 +77410,7 @@
                                   "name": "Side Panel Header",
                                   "width": "fill_container",
                                   "height": 32,
-                                  "fill": "$ds-bg-subtle",
+                                  "fill": "$ds-bg",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
                                     "bottom": 1
@@ -77679,7 +77690,7 @@
                           "clip": true,
                           "width": 480,
                           "height": 260,
-                          "fill": "$ds-elevated",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -77692,7 +77703,7 @@
                               "name": "Side Panel Header",
                               "width": "fill_container",
                               "height": 40,
-                              "fill": "$ds-bg-subtle",
+                              "fill": "$ds-bg",
                               "stroke": "$ds-border",
                               "strokeWidth": {
                                 "bottom": 1
@@ -81149,7 +81160,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -81161,7 +81172,7 @@
                                   "name": "Main Panel Header",
                                   "width": "fill_container",
                                   "height": 34,
-                                  "fill": "$ds-bg-subtle",
+                                  "fill": "$ds-bg",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
                                     "bottom": 1
@@ -81434,7 +81445,7 @@
                                   "name": "Side Panel Header",
                                   "width": "fill_container",
                                   "height": 34,
-                                  "fill": "$ds-bg-subtle",
+                                  "fill": "$ds-bg",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
                                     "bottom": 1
@@ -81820,7 +81831,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -81832,7 +81843,7 @@
                                   "name": "Main Panel Header",
                                   "width": "fill_container",
                                   "height": 34,
-                                  "fill": "$ds-bg-subtle",
+                                  "fill": "$ds-bg",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
                                     "bottom": 1
@@ -82075,7 +82086,7 @@
                                   "name": "Side Panel Header",
                                   "width": "fill_container",
                                   "height": 34,
-                                  "fill": "$ds-bg-subtle",
+                                  "fill": "$ds-bg",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
                                     "bottom": 1
@@ -82442,7 +82453,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -82768,7 +82779,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -83074,7 +83085,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -83380,7 +83391,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -83700,7 +83711,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -84026,7 +84037,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -84372,7 +84383,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -84698,7 +84709,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -84931,7 +84942,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -85193,7 +85204,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -85480,7 +85491,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -85699,7 +85710,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -86375,7 +86386,7 @@
                                   "clip": true,
                                   "width": "fill_container",
                                   "height": "fill_container",
-                                  "fill": "$ds-surface",
+                                  "fill": "$ds-bg",
                                   "cornerRadius": 8,
                                   "stroke": "$ds-border-subtle",
                                   "strokeWidth": 1,
@@ -86388,7 +86399,7 @@
                                       "name": "Main Panel Header",
                                       "width": "fill_container",
                                       "height": 40,
-                                      "fill": "$ds-bg-subtle",
+                                      "fill": "$ds-bg",
                                       "stroke": "$ds-border",
                                       "strokeWidth": {
                                         "bottom": 1
@@ -86811,7 +86822,7 @@
                                   "clip": true,
                                   "width": "fill_container",
                                   "height": 240,
-                                  "fill": "$ds-surface",
+                                  "fill": "$ds-bg",
                                   "cornerRadius": 8,
                                   "stroke": "$ds-border-subtle",
                                   "strokeWidth": 1,
@@ -86824,7 +86835,7 @@
                                       "name": "Secondary Panel Header",
                                       "width": "fill_container",
                                       "height": 40,
-                                      "fill": "$ds-bg-subtle",
+                                      "fill": "$ds-bg",
                                       "stroke": "$ds-border",
                                       "strokeWidth": {
                                         "bottom": 1
@@ -87232,7 +87243,7 @@
                           "clip": true,
                           "width": 420,
                           "height": "fill_container",
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -87245,7 +87256,7 @@
                               "name": "Side Panel Header",
                               "width": "fill_container",
                               "height": 40,
-                              "fill": "$ds-bg-subtle",
+                              "fill": "$ds-bg",
                               "stroke": "$ds-border",
                               "strokeWidth": {
                                 "bottom": 1
@@ -87988,7 +87999,7 @@
                                   "clip": true,
                                   "width": "fill_container",
                                   "height": "fill_container",
-                                  "fill": "$ds-surface",
+                                  "fill": "$ds-bg",
                                   "cornerRadius": 8,
                                   "stroke": "$ds-border-subtle",
                                   "strokeWidth": 1,
@@ -88001,7 +88012,7 @@
                                       "name": "Main Panel Header",
                                       "width": "fill_container",
                                       "height": 40,
-                                      "fill": "$ds-bg-subtle",
+                                      "fill": "$ds-bg",
                                       "stroke": "$ds-border",
                                       "strokeWidth": {
                                         "bottom": 1
@@ -88546,7 +88557,7 @@
                                   "enabled": false,
                                   "width": 1406,
                                   "height": 60,
-                                  "fill": "$ds-surface",
+                                  "fill": "$ds-bg",
                                   "cornerRadius": 8,
                                   "stroke": "$ds-border-subtle",
                                   "strokeWidth": 1,
@@ -88559,7 +88570,7 @@
                                       "name": "Secondary Panel Header",
                                       "width": "fill_container",
                                       "height": 40,
-                                      "fill": "$ds-bg-subtle",
+                                      "fill": "$ds-bg",
                                       "stroke": "$ds-border",
                                       "strokeWidth": {
                                         "bottom": 1
@@ -88967,7 +88978,7 @@
                           "clip": true,
                           "width": 420,
                           "height": "fill_container",
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -88980,7 +88991,7 @@
                               "name": "Side Panel Header",
                               "width": "fill_container",
                               "height": 40,
-                              "fill": "$ds-bg-subtle",
+                              "fill": "$ds-bg",
                               "stroke": "$ds-border",
                               "strokeWidth": {
                                 "bottom": 1
@@ -89597,7 +89608,7 @@
                                   "clip": true,
                                   "width": "fill_container",
                                   "height": "fill_container",
-                                  "fill": "$ds-surface",
+                                  "fill": "$ds-bg",
                                   "cornerRadius": 8,
                                   "stroke": "$ds-border-subtle",
                                   "strokeWidth": 1,
@@ -89609,7 +89620,7 @@
                                       "name": "Main Panel Header",
                                       "width": "fill_container",
                                       "height": 40,
-                                      "fill": "#0E1016",
+                                      "fill": "$ds-bg",
                                       "stroke": "#2E333F",
                                       "strokeWidth": {
                                         "bottom": 1
@@ -90094,7 +90105,7 @@
                                   "clip": true,
                                   "width": "fill_container",
                                   "height": "fill_container",
-                                  "fill": "$ds-surface",
+                                  "fill": "$ds-bg",
                                   "cornerRadius": 8,
                                   "stroke": "$ds-border-subtle",
                                   "strokeWidth": 1,
@@ -90106,7 +90117,7 @@
                                       "name": "Main Panel Header",
                                       "width": "fill_container",
                                       "height": 40,
-                                      "fill": "#0E1016",
+                                      "fill": "$ds-bg",
                                       "stroke": "#2E333F",
                                       "strokeWidth": {
                                         "bottom": 1
@@ -90492,7 +90503,7 @@
                                   "clip": true,
                                   "width": "fill_container",
                                   "height": "fill_container",
-                                  "fill": "$ds-surface",
+                                  "fill": "$ds-bg",
                                   "cornerRadius": 8,
                                   "stroke": "$ds-border-subtle",
                                   "strokeWidth": 1,
@@ -90504,7 +90515,7 @@
                                       "name": "Main Panel Header",
                                       "width": "fill_container",
                                       "height": 40,
-                                      "fill": "#0E1016",
+                                      "fill": "$ds-bg",
                                       "stroke": "#2E333F",
                                       "strokeWidth": {
                                         "bottom": 1
@@ -110139,7 +110150,7 @@
                       "clip": true,
                       "width": "fill_container",
                       "height": "fill_container",
-                      "fill": "$ds-surface",
+                      "fill": "$ds-bg",
                       "cornerRadius": 8,
                       "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
@@ -110152,7 +110163,7 @@
                           "name": "Main Panel Header",
                           "width": "fill_container",
                           "height": 40,
-                          "fill": "#0E1016",
+                          "fill": "$ds-bg",
                           "stroke": "#2E333F",
                           "strokeWidth": {
                             "bottom": 1
@@ -111755,7 +111766,7 @@
                   "clip": true,
                   "width": 400,
                   "height": "fill_container",
-                  "fill": "$ds-surface",
+                  "fill": "$ds-bg",
                   "cornerRadius": 8,
                   "stroke": "$ds-border-subtle",
                   "strokeWidth": 1,
@@ -111769,7 +111780,7 @@
                       "name": "Side Panel Header",
                       "width": "fill_container",
                       "height": 40,
-                      "fill": "#0E1016",
+                      "fill": "$ds-bg",
                       "stroke": "#2E333F",
                       "strokeWidth": {
                         "bottom": 1
@@ -112887,7 +112898,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": "fill_container",
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -112900,7 +112911,7 @@
                               "name": "Main Panel Header",
                               "width": "fill_container",
                               "height": 40,
-                              "fill": "#0E1016",
+                              "fill": "$ds-bg",
                               "stroke": "#2E333F",
                               "strokeWidth": {
                                 "bottom": 1
@@ -114080,7 +114091,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": 180,
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -114094,7 +114105,7 @@
                               "name": "Secondary Panel Header",
                               "width": "fill_container",
                               "height": 40,
-                              "fill": "#0E1016",
+                              "fill": "$ds-bg",
                               "stroke": "#2E333F",
                               "strokeWidth": {
                                 "bottom": 1
@@ -114286,7 +114297,7 @@
                   "clip": true,
                   "width": 400,
                   "height": "fill_container",
-                  "fill": "$ds-surface",
+                  "fill": "$ds-bg",
                   "cornerRadius": 8,
                   "stroke": "$ds-border-subtle",
                   "strokeWidth": 1,
@@ -114300,7 +114311,7 @@
                       "name": "Side Panel Header",
                       "width": "fill_container",
                       "height": 40,
-                      "fill": "#0E1016",
+                      "fill": "$ds-bg",
                       "stroke": "#2E333F",
                       "strokeWidth": {
                         "bottom": 1
@@ -145809,7 +145820,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": "fill_container",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -145822,7 +145833,7 @@
                                   "name": "Main Panel Header",
                                   "width": "fill_container",
                                   "height": 40,
-                                  "fill": "$ds-bg-subtle",
+                                  "fill": "$ds-bg",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
                                     "bottom": 1
@@ -146245,7 +146256,7 @@
                               "clip": true,
                               "width": "fill_container",
                               "height": 240,
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg",
                               "cornerRadius": 8,
                               "stroke": "$ds-border-subtle",
                               "strokeWidth": 1,
@@ -146258,7 +146269,7 @@
                                   "name": "Secondary Panel Header",
                                   "width": "fill_container",
                                   "height": 40,
-                                  "fill": "$ds-bg-subtle",
+                                  "fill": "$ds-bg",
                                   "stroke": "$ds-border",
                                   "strokeWidth": {
                                     "bottom": 1
@@ -146666,7 +146677,7 @@
                       "clip": true,
                       "width": 420,
                       "height": "fill_container",
-                      "fill": "$ds-surface",
+                      "fill": "$ds-bg",
                       "cornerRadius": 8,
                       "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
@@ -146679,7 +146690,7 @@
                           "name": "Side Panel Header",
                           "width": "fill_container",
                           "height": 40,
-                          "fill": "$ds-bg-subtle",
+                          "fill": "$ds-bg",
                           "stroke": "$ds-border",
                           "strokeWidth": {
                             "bottom": 1
@@ -187799,7 +187810,7 @@
       "x": 46942,
       "y": 0,
       "name": "ChatPanel · Content width and pane scrollbar · PS-656",
-      "context": "ChatPanel fills its parent pane in both main and side regions, with no placement-specific vertical padding. Transcript content and the composer share a centered maximum width of 832px (52rem), shrinking to the available pane width. Main and side composer bottom insets are equal. The vertical scrollbar remains at the trailing edge of the full pane. Implement with the shared chatContent layer style and chat-content size token. Empty states, notices, approvals, the working indicator, workspace hub, and queued messages use the same content column.",
+      "context": "ChatPanel fills its parent pane in both main and side regions, with no placement-specific vertical padding. Transcript content and the composer share a centered maximum width of 832px (52rem), shrinking to the available pane width. Main and side composer bottom insets are equal. The vertical scrollbar remains at the trailing edge of the full pane. Implement with the shared chatContent layer style and chat-content size token. Empty states, notices, approvals, the working indicator, workspace hub, and queued messages use the same content column. Every ChatPanel owns an opaque ds-bg canvas in both main and side regions. A side panel host may use ds-surface, but the conversation canvas stays ds-bg so user messages and the workspace keep their contrast.",
       "width": 1780,
       "fill": "$ds-bg",
       "layout": "vertical",
@@ -187958,6 +187969,12 @@
                               "ref": "JGKK1",
                               "name": "Workspace hub and composer",
                               "width": "fill_container",
+                              "padding": [
+                                0,
+                                8,
+                                8,
+                                8
+                              ],
                               "descendants": {
                                 "J3u0Q/m7n0s": {
                                   "width": 0
@@ -188107,6 +188124,12 @@
                               "ref": "JGKK1",
                               "name": "Workspace hub and composer",
                               "width": "fill_container",
+                              "padding": [
+                                0,
+                                8,
+                                8,
+                                8
+                              ],
                               "descendants": {
                                 "J3u0Q/m7n0s": {
                                   "width": 0
@@ -188265,6 +188288,12 @@
                               "ref": "JGKK1",
                               "name": "Workspace hub and composer",
                               "width": "fill_container",
+                              "padding": [
+                                0,
+                                8,
+                                8,
+                                8
+                              ],
                               "descendants": {
                                 "J3u0Q/m7n0s": {
                                   "width": 0
@@ -188414,6 +188443,12 @@
                               "ref": "JGKK1",
                               "name": "Workspace hub and composer",
                               "width": "fill_container",
+                              "padding": [
+                                0,
+                                8,
+                                8,
+                                8
+                              ],
                               "descendants": {
                                 "J3u0Q/m7n0s": {
                                   "width": 0
@@ -193644,7 +193679,7 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "No items: no indicator. Orange: items needing attention. Green: resolved total. Each indicator opens the ticket Needs attention page.",
+          "content": "No items: no indicator. Orange: items needing attention. Green: resolved total. Needs attention is visible by default. Card and timeline indicators open the selected ticket’s forms on the right while keeping Tickets or Timeline open. The ticket sidebar still opens its full Needs attention page.",
           "fontFamily": "$font-label",
           "fontSize": 12,
           "fontWeight": "normal"
@@ -197906,6 +197941,7 @@
                       "clip": true,
                       "width": "fill_container",
                       "height": "fill_container",
+                      "fill": "$ds-bg",
                       "cornerRadius": 8,
                       "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
@@ -197918,7 +197954,7 @@
                           "name": "Main Panel Header",
                           "width": "fill_container",
                           "height": 40,
-                          "fill": "#0E1016",
+                          "fill": "$ds-bg",
                           "stroke": "#2E333F",
                           "strokeWidth": {
                             "bottom": 1
@@ -199163,7 +199199,7 @@
                   "clip": true,
                   "width": 400,
                   "height": "fill_container",
-                  "fill": "$ds-surface",
+                  "fill": "$ds-bg",
                   "cornerRadius": 8,
                   "stroke": "$ds-border-subtle",
                   "strokeWidth": 1,
@@ -199177,7 +199213,7 @@
                       "name": "Side Panel Header",
                       "width": "fill_container",
                       "height": 40,
-                      "fill": "#0E1016",
+                      "fill": "$ds-bg",
                       "stroke": "#2E333F",
                       "strokeWidth": {
                         "bottom": 1
@@ -199866,7 +199902,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": "fill_container",
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -199879,7 +199915,7 @@
                               "name": "Main Panel Header",
                               "width": "fill_container",
                               "height": 40,
-                              "fill": "#0E1016",
+                              "fill": "$ds-bg",
                               "stroke": "#2E333F",
                               "strokeWidth": {
                                 "bottom": 1
@@ -201060,7 +201096,7 @@
                           "clip": true,
                           "width": "fill_container",
                           "height": 180,
-                          "fill": "$ds-surface",
+                          "fill": "$ds-bg",
                           "cornerRadius": 8,
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": 1,
@@ -201074,7 +201110,7 @@
                               "name": "Secondary Panel Header",
                               "width": "fill_container",
                               "height": 40,
-                              "fill": "#0E1016",
+                              "fill": "$ds-bg",
                               "stroke": "#2E333F",
                               "strokeWidth": {
                                 "bottom": 1
@@ -201266,7 +201302,7 @@
                   "clip": true,
                   "width": 400,
                   "height": "fill_container",
-                  "fill": "$ds-surface",
+                  "fill": "$ds-bg",
                   "cornerRadius": 8,
                   "stroke": "$ds-border-subtle",
                   "strokeWidth": 1,
@@ -201280,7 +201316,7 @@
                       "name": "Side Panel Header",
                       "width": "fill_container",
                       "height": 40,
-                      "fill": "#0E1016",
+                      "fill": "$ds-bg",
                       "stroke": "#2E333F",
                       "strokeWidth": {
                         "bottom": 1
@@ -227936,7 +227972,7 @@
           }
         },
         {
-          "value": "#FDF6E3",
+          "value": "#EEE8D5",
           "theme": {
             "mode": "solarized-light"
           }
@@ -227977,7 +228013,7 @@
           }
         },
         {
-          "value": "#047AA6",
+          "value": "#073642",
           "theme": {
             "mode": "solarized-dark"
           }
@@ -228024,13 +228060,13 @@
           }
         },
         {
-          "value": "#073642",
+          "value": "#1B4852",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#EEE8D5",
+          "value": "#D7D2BF",
           "theme": {
             "mode": "solarized-light"
           }
@@ -228065,7 +228101,7 @@
           }
         },
         {
-          "value": "#FFFFFF",
+          "value": "#FDF6E3",
           "theme": {
             "mode": "solarized-dark"
           }
@@ -228112,7 +228148,7 @@
           }
         },
         {
-          "value": "#FFFFFF",
+          "value": "#EEE8D5",
           "theme": {
             "mode": "solarized-dark"
           }
@@ -228206,13 +228242,13 @@
           }
         },
         {
-          "value": "#2B2B4A",
+          "value": "#7A989C",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#EEE8D5",
+          "value": "#909A92",
           "theme": {
             "mode": "solarized-light"
           }
@@ -228470,13 +228506,13 @@
           }
         },
         {
-          "value": "#81B4FE",
+          "value": "#8FCBEE",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#0E6EF6",
+          "value": "#145886",
           "theme": {
             "mode": "solarized-light"
           }
@@ -228511,13 +228547,13 @@
           }
         },
         {
-          "value": "#859900",
+          "value": "#B3C95A",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#859900",
+          "value": "#3B5400",
           "theme": {
             "mode": "solarized-light"
           }
@@ -228552,13 +228588,13 @@
           }
         },
         {
-          "value": "#FFAD57",
+          "value": "#E6C46A",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#A74810",
+          "value": "#745000",
           "theme": {
             "mode": "solarized-light"
           }
@@ -228593,13 +228629,13 @@
           }
         },
         {
-          "value": "#DC322F",
+          "value": "#FFB3A8",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#DC322F",
+          "value": "#991B1B",
           "theme": {
             "mode": "solarized-light"
           }
@@ -228728,13 +228764,13 @@
           }
         },
         {
-          "value": "#274642",
+          "value": "#486E75",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#EEE8D5",
+          "value": "#CFCEBE",
           "theme": {
             "mode": "solarized-light"
           }
@@ -228775,13 +228811,13 @@
           }
         },
         {
-          "value": "#2B2B4A",
+          "value": "#46626B",
           "theme": {
             "mode": "solarized-dark"
           }
         },
         {
-          "value": "#EEE8D5",
+          "value": "#D3CFBF",
           "theme": {
             "mode": "solarized-light"
           }
@@ -236838,7 +236874,7 @@
           }
         },
         {
-          "value": "$ds-bg-subtle",
+          "value": "$ds-surface",
           "theme": {
             "mode": "solarized-dark"
           }

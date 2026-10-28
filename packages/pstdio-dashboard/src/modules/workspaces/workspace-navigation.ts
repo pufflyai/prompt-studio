@@ -1,5 +1,4 @@
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
-import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { TreeNode, WorkbenchModuleContext } from "@pstdio/workbench";
 import { QueryObserver } from "@tanstack/react-query";
 import { getDashboardQueryClient } from "@/lib/query-client";
@@ -22,7 +21,7 @@ export const workspaceNavigationNode = (providers: readonly WorkspaceProviderDes
     canHide: true,
     hiddenByDefault: true,
     commandId: dashboardCommandIds.openWorkspaces,
-    target: { kind: "page", page: workbenchPages.workspaces },
+    target: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
     actions: providers.length
       ? [
           {

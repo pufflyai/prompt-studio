@@ -22,6 +22,11 @@ export const tabsSlotRecipe = defineSlotRecipe({
       },
     },
     trigger: {
+      "&[data-keyboard-selected]": {
+        outline: "2px solid",
+        outlineColor: "border.accent",
+        outlineOffset: "-2px",
+      },
       "&[data-reorderable]": { cursor: "grab", touchAction: "none" },
       "&[data-dragging]": { opacity: 0.5 },
       flexShrink: "0",

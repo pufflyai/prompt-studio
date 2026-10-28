@@ -1,5 +1,5 @@
 // Owns the editable file renderer's save lifecycle: the last loaded or saved
-// value (the baseline), the debounced draft, the one in-flight save, and
+// value (the baseline), the local draft, the one in-flight save, and
 // refresh events that arrive while a draft or save exists.
 //
 // Invariants (from the renderer edit/refresh lifecycle PRD):
@@ -14,6 +14,7 @@ import type {
   FileRendererRefreshOrigin,
   FileRendererSaveResult,
 } from "../../../core/registries/renderers/file-renderer-registry";
+import { acquireFileSaveTurn } from "./file-renderer-save-queue";
 
 export interface FileEditControllerState {
   dirty: boolean;
@@ -25,6 +26,8 @@ export interface FileEditControllerState {
 export interface FileEditControllerInput {
   binding: Omit<FileRendererRefreshOrigin, "operationId"> & { resourceKey?: string };
   debounceMs: number;
+  saveMode?: "auto" | "manual";
+  saveKey?: string;
   load: (event?: FileRendererRefreshEnvelope) => void;
   save: (value: string, origin: FileRendererRefreshOrigin) => Promise<FileRendererSaveResult | undefined>;
   createOperationId?: () => string;
@@ -39,6 +42,8 @@ export const createFileEditController = (input: FileEditControllerInput) => {
   let baselineRevision: string | undefined;
   let draft: string | null = null;
   let activeSave: { value: string; origin: FileRendererRefreshOrigin } | null = null;
+  let pendingSave: string | null = null;
+  let saveTurn: ReturnType<typeof acquireFileSaveTurn> | undefined;
   let saveError: string | undefined;
   let deferredRevision: string | undefined;
   let genericRefreshDeferred = false;
@@ -64,7 +69,8 @@ export const createFileEditController = (input: FileEditControllerInput) => {
 
   const nextOperationId = () => input.createOperationId?.() ?? `file-save-${Date.now()}-${++operationSequence}`;
 
-  const hasPendingLocalState = () => draft !== null || activeSave !== null || timer !== null || Boolean(saveError);
+  const hasPendingLocalState = () =>
+    draft !== null || activeSave !== null || pendingSave !== null || timer !== null || Boolean(saveError);
 
   const deferRefresh = (event: FileRendererRefreshEnvelope) => {
     if (event.revision && (!deferredRevision || event.revision.localeCompare(deferredRevision) > 0)) {
@@ -82,7 +88,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
   };
 
   const takeDeferredRefresh = (savedRevision?: string) => {
-    if (draft !== null || activeSave) return;
+    if (draft !== null || activeSave || pendingSave !== null) return;
     const revision = deferredRevision;
     const generic = genericRefreshDeferred;
     deferredRevision = undefined;
@@ -94,10 +100,10 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     if (generic) input.load({ resourceKey: input.binding.resourceKey });
   };
 
-  const runSave = () => {
-    if (removed || draft === null || activeSave || saveError) return;
-    const value = draft;
-    draft = null;
+  const runSave = (value = draft) => {
+    if (removed || value === null || activeSave || saveError) return;
+    const shown = draft ?? baseline;
+    draft = shown === value ? null : (shown ?? null);
     const origin = {
       rendererId: input.binding.rendererId,
       instanceId: input.binding.instanceId,
@@ -105,7 +111,10 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     };
     activeSave = { value, origin };
     notify();
-    void Promise.resolve(input.save(value, origin))
+    if (input.saveKey) saveTurn ??= acquireFileSaveTurn(input.saveKey);
+    const save = () => input.save(value, origin);
+    const saving = saveTurn?.ready ? saveTurn.ready.then(save) : Promise.resolve(save());
+    void saving
       .then((result) => {
         if (activeSave?.origin.operationId !== origin.operationId) return;
         activeSave = null;
@@ -131,11 +140,23 @@ export const createFileEditController = (input: FileEditControllerInput) => {
         if (draft === null) draft = value;
         saveError = describeError(error);
         notify();
+      })
+      .finally(() => {
+        const requested = pendingSave;
+        pendingSave = null;
+        if (requested !== null && !removed) {
+          saveError = undefined;
+          runSave(requested);
+          return;
+        }
+        saveTurn?.release();
+        saveTurn = undefined;
       });
   };
 
   const schedule = () => {
     clearTimer();
+    if (input.saveMode === "manual") return;
     timer = setTimeout(() => {
       timer = null;
       runSave();
@@ -229,6 +250,11 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     },
     flush() {
       clearTimer();
+      if (input.saveMode === "manual") saveError = undefined;
+      if (activeSave) {
+        pendingSave = draft;
+        return;
+      }
       runSave();
     },
   };

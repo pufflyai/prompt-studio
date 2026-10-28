@@ -5,6 +5,7 @@ import { enableInstalledExtensionRequestSchema, enableInstalledExtensionResponse
 import { ExtensionNameConflictError, ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
 import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
+import { AlwaysEnabledExtensionError } from "../always-on-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { resolvePstdioHome } from "../install-extension-source";
 import { nameFromSource } from "../project-extension-instance";
@@ -111,7 +112,8 @@ export const enableInstalledExtensionHandler = (
       );
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
-      if (error instanceof ExtensionNameConflictError) return c.json({ error: error.message }, 409);
+      if (error instanceof ExtensionNameConflictError || error instanceof AlwaysEnabledExtensionError)
+        return c.json({ error: error.message }, 409);
       throw error;
     }
   };

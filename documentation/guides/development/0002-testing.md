@@ -25,7 +25,7 @@ Three alternating complete-process samples on macOS arm64 on 2026-10-25 produced
 
 Keep package type-check concurrency at two. For the same six scopes with two package processes, default checker threads took a median 1.514 s versus 1.900 s with two threads per checker. The default thread count remains in use.
 
-Native CI installs use `scripts/ci/install-native-dependencies.ts`. On Linux and macOS it gives node-gyp the headers already installed with Node. This removes another download from native addon builds. The setting applies only to dependency installation; Electron packaging selects the headers for Electron separately.
+Native CI installs run `bun scripts/ci/install-native-dependencies.ts`. On Linux and macOS the installer reuses headers beside the Node executable on `PATH` when they exist, following symlinks to the installation directory. An explicit `npm_config_nodedir` takes precedence. Without local headers, node-gyp uses its normal header resolution when a native build needs it; their absence does not block dependency installation. The setting applies only to dependency installation; Electron packaging selects the headers for Electron separately.
 
 Choose checks that cover the changed behavior and its affected callers. Start with one test file or one end-to-end spec. Run a package's tests, lint, type checks, or build when that is the smallest useful scope. After a failure, rerun only failed or affected checks. Do not repeat passing checks without a new change or unresolved concern.
 
@@ -215,7 +215,7 @@ Evidence artifact names end in `-attempt-<run_attempt>` so a manual rerun keeps 
 
 Packaged toolchain checks run through the CI runner with direct arguments and the operating system's default shell. Do not wrap Windows verification in a Git Bash pipeline: it gives child processes an inherited Ctrl+C-ignore attribute, preventing the real terminal interruption check from exercising normal Windows signal handling.
 
-Windows CI setup sets `TEMP` and `TMP` to Actions' `RUNNER_TEMP`. This puts runtime homes, databases and cold install caches in the directory owned by the job. Every fixture still creates a fresh home and cache, and cleanup stays inside its existing test allowance. The user-profile temp directory exceeds that allowance in native comparisons. [ADR 0114](../../adrs/0114-temporary-windows-ci-job-temp-directory.md) records the temporary provider-default override and its removal check.
+Windows packaged-toolchain CI opts into a ReFS Dev Drive owned by the job and sets `TEMP` and `TMP` to a folder on it. Other Windows jobs keep `TEMP` and `TMP` on `RUNNER_TEMP`, preserving their existing database and detached-process fixtures. The opt-in puts cold packaged runtime homes and install caches on storage that writes many small files quickly. Every fixture still creates a fresh home and cache, and cleanup stays inside its existing test allowance. On the `C:` system volume, the only volume on Windows ARM64 runners, cold extension installs exceed that allowance. [ADR 0114](../../adrs/0114-temporary-windows-ci-job-temp-directory.md) records the temporary storage override and its removal check.
 
 App reports and traces are under `packages/e2e/playwright-report` and `packages/e2e/test-results`; component reports use those folder names under `packages/storybook-tests`. Desktop results are under `clients/desktop/test-results`. Each packaged test home attaches complete redacted copies of `logs.jsonl` and `desktop-runtime.log` as files before removal. Startup errors include the last 50 runtime output lines. Electron traces start before the lifecycle-page wait, after the sidecar startup wait has protected process isolation; an unavailable attachment states why a trace could not start or be saved. Missing evidence warns without replacing the original build or test failure.
 
@@ -327,6 +327,8 @@ Hosted Intel macOS runners run the packaged and desktop suites two to three time
 ## Desktop benchmarks
 
 The [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) describe advisory targets, including a 2-second M5 cold start and 1 GB average memory. Regular performance coverage runs in nightly CI and stable-release validation. Agents **SHOULD** run relevant benchmarks locally when they expect significant performance impact from a change. The existing CI budgets below use hosted hardware and a visible-workbench milestone; dedicated M5, aggregate-download, and average-memory checks are not implemented yet.
+
+Every benchmark, including these, also reports to the shared result format that the Benchmarks workflow and the Performance pages use. See [Benchmark results](../../references/performance/0006-benchmark-results.md).
 
 Desktop budgets live in `clients/desktop/src/e2e/*.bench.ts`. Run them against a packaged app:
 

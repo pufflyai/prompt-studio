@@ -52,3 +52,12 @@ test("native document key ordering is independent of a device's locale", () => {
   });
   expect(key.endsWith('{"Z":1,"a":2,"ä":3}')).toBe(true);
 });
+
+test("an explicit renderer document key keeps drafts across unrelated metadata updates", () => {
+  const target = { ...input, documentKey: "draft.md" };
+  const key = createFileRendererLoadKey(target);
+  expect(createFileRendererLoadKey({ ...target, resource: { ...input.resource, metadata: { count: 2 } } })).toBe(key);
+  expect(createFileRendererLoadKey({ ...target, documentKey: "other.md" })).not.toBe(key);
+  expect(createFileRendererLoadKey({ ...target, pageParams: { live: false } })).not.toBe(key);
+  expect(createFileRendererLoadKey({ ...target, resource: { ...input.resource, projectId: "other" } })).not.toBe(key);
+});

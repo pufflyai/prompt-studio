@@ -1,105 +1,17 @@
 import { useEffect, useState } from "react";
-import { getKeybindingSteps, type KeybindingSequence, type WorkbenchCore } from "../../core";
-import { runUserAction } from "../../core/shared/run-user-action";
-import { hasCommandParameters } from "../command-palette/command-palette-params";
+import type { WorkbenchCore } from "../../core";
+import { getKeybindingSteps } from "../../core";
 import { useTanStackWorkbenchHotkeys } from "./tanstack-hotkey-adapter";
+import { useGlobalKeyboardShortcuts } from "./use-global-keyboard-shortcuts";
+import { createWorkbenchHotkeyRegistrations } from "./workbench-hotkey-registrations";
 
-export interface WorkbenchHotkeyRegistration {
-  id: string;
-  hotkey: KeybindingSequence;
-  enabled: boolean;
-  ignoreInputs: boolean;
-  execute(): Promise<unknown>;
-}
-
-export interface CreateWorkbenchHotkeyRegistrationsInput {
-  workbench: WorkbenchCore;
-  disabled?: boolean;
-  commandIds?: readonly string[];
-}
+export * from "./workbench-hotkey-registrations";
 
 export interface WorkbenchKeybindingDispatcherProps {
   workbench: WorkbenchCore;
   disabled?: boolean;
   commandIds?: readonly string[];
 }
-
-const keyAliases: Record<string, string> = {
-  alt: "Alt",
-  cmd: "Meta",
-  command: "Meta",
-  ctrl: "Control",
-  control: "Control",
-  meta: "Meta",
-  mod: "Mod",
-  option: "Alt",
-  shift: "Shift",
-};
-
-const normalizeWorkbenchKeybindingStep = (keybinding: string) =>
-  keybinding
-    .split("+")
-    .map((part) => {
-      const trimmed = part.trim();
-      const alias = keyAliases[trimmed.toLowerCase()];
-      if (alias) return alias;
-      if (trimmed.length === 1) return trimmed.toUpperCase();
-      return trimmed.slice(0, 1).toUpperCase() + trimmed.slice(1);
-    })
-    .join("+");
-
-export const normalizeWorkbenchKeybinding = (keybinding: KeybindingSequence): KeybindingSequence => {
-  const steps = getKeybindingSteps(keybinding).map(normalizeWorkbenchKeybindingStep);
-  return steps.length === 1 ? (steps[0] ?? "") : steps;
-};
-
-export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyRegistrationsInput) => {
-  const { workbench, disabled = false, commandIds } = input;
-  const allowedCommandIds = commandIds ? new Set(commandIds) : undefined;
-
-  return workbench.keybindings.listActiveKeybindings().flatMap((keybinding, index) => {
-    const action = keybinding.action;
-    if (action.kind === "command") {
-      if (allowedCommandIds && !allowedCommandIds.has(action.commandId)) return [];
-      const record = workbench.commands.getCommand(action.commandId);
-      if (!record) return [];
-      const enabled =
-        !disabled &&
-        workbench.commands.isCommandVisible(record.command.id, action.args) &&
-        workbench.commands.isCommandEnabled(record.command.id, action.args);
-      return [
-        {
-          id: record.command.id,
-          hotkey: normalizeWorkbenchKeybinding(keybinding.keybinding),
-          enabled,
-          ignoreInputs: true,
-          execute: async () => {
-            if (action.args === undefined && hasCommandParameters(record.command.params)) {
-              const resource = workbench.getPrimaryResource();
-              workbench.commandPalette.requestParams({
-                record,
-                label: record.command.label,
-                context: resource ? { resource } : undefined,
-              });
-              return;
-            }
-            return runUserAction(workbench, record.command.label, () => workbench.navigation.openTarget(action));
-          },
-        } satisfies WorkbenchHotkeyRegistration,
-      ];
-    }
-    if (allowedCommandIds) return [];
-    return [
-      {
-        id: `workbench.keybinding.${index}`,
-        hotkey: normalizeWorkbenchKeybinding(keybinding.keybinding),
-        enabled: !disabled,
-        ignoreInputs: true,
-        execute: () => runUserAction(workbench, "Open", () => workbench.navigation.openTarget(action)),
-      } satisfies WorkbenchHotkeyRegistration,
-    ];
-  });
-};
 
 export const WorkbenchKeybindingDispatcher = (props: WorkbenchKeybindingDispatcherProps) => {
   const { workbench, disabled, commandIds } = props;
@@ -108,15 +20,26 @@ export const WorkbenchKeybindingDispatcher = (props: WorkbenchKeybindingDispatch
   );
   useEffect(() => {
     const refresh = () => setRegistrations(createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds }));
-    const subscriptions = [workbench.keybindings.store, workbench.context.store, workbench.commands.store].map(
-      (store) => store.subscribe(refresh),
-    );
+    const subscriptions = [
+      workbench.keybindings.store,
+      workbench.context.store,
+      workbench.commands.store,
+      workbench.layout.store,
+      workbench.keyboard.store,
+    ].map((store) => store.subscribe(refresh));
+    const preferences = workbench.preferences.onDidChangeValue(refresh);
     refresh();
     return () => {
       for (const unsubscribe of subscriptions) unsubscribe();
+      preferences.dispose();
     };
   }, [workbench, disabled, commandIds]);
-  useTanStackWorkbenchHotkeys(registrations);
+  useGlobalKeyboardShortcuts(workbench, disabled, commandIds);
+  useTanStackWorkbenchHotkeys(
+    registrations.filter(
+      (registration) => registration.ignoreInputs || getKeybindingSteps(registration.hotkey).length > 1,
+    ),
+  );
 
   return null;
 };

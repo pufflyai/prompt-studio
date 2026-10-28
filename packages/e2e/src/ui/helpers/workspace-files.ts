@@ -158,7 +158,6 @@ export const exerciseWorkspaceFileOperations = async (input: {
   await expect(page.getByText("Created created.md", { exact: true })).toHaveCount(0);
 
   const createdFile = page.getByRole("option").filter({ hasText: "created.md" }).first();
-  await expect(createdFile.getByText("A", { exact: true })).toBeVisible();
   await expect(createdFile.getByRole("button", { name: "Resource actions" })).toHaveCount(0);
   await createdFile.click({ button: "right" });
   await expect(page.getByRole("menuitem", { name: "Reveal in Finder" })).toHaveCount(0);

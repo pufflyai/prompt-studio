@@ -69,6 +69,36 @@ Only `string` settings accept `options`; on other types the host ignores `option
 
 Extensions declare metadata and handlers; the host owns installation, project enablement, command routing, workbench chrome, trusted context keys, and layout primitives.
 
+## App-wide settings
+
+On `main` (planned extension API 0.3.0, after 0.45.0), a settings panel can target
+`workbenchSlots.globalSettings`. The host registers it with global scope in every
+project where the extension is enabled. Use `workbenchSlots.projectSettings` for
+project settings and `workbenchSlots.extensionSettings` for the owner's extension
+detail Settings tab. Panel placement does not change a setting's storage scope.
+
+```ts
+const panel = defineSettingsPanel({
+  id: "device",
+  view: deviceView.ref,
+  slot: workbenchSlots.globalSettings,
+});
+```
+
+Each property in `settings.properties` declares `scope: "project"`, `"global"`, or
+`"device"`. Project values belong to the project extension instance. Global values
+belong to the installed extension. Device values belong to the extension identity
+on this host, so they are shared across its projects and installed copies, persist
+across restarts, and never enter synced project data. Another device starts with
+the declared default. A remote host stores values on that host, not in the browser.
+Every installed copy with the same extension ID reads the same device values, so
+store only values that any copy of the extension may read.
+
+Commands use `ctx.settings.all()`, `get(key)`, `set(key, value)`, and `delete(key)`.
+Webviews use the same methods on `client.settings` and declare the matching
+`extension.settings.*` capabilities. The host selects storage from the property's
+declared scope. Deleting an override restores its default.
+
 Extension code should not:
 
 - define package identity inside `defineExtension()`
@@ -83,7 +113,9 @@ When extension UI needs dashboard placement, attach it to a host-owned target an
 
 Keybindings bind app-level keyboard shortcuts to a navigation `action`. The action is any navigation target: a command, a page, a panel, an href, or a compound target. Pages and panels bind directly; no wrapper command is needed. Chords use `@tanstack/hotkeys` syntax and are validated by the extension runtime. Invalid chords, modifier-only chords, and duplicate platform-aware chords are reported by extension checks and dropped from metadata.
 
-Help → Keyboard shortcuts lists assigned bindings, including bindings whose context is currently inactive. It groups extension actions by the extension display name from its package metadata. Menus, the command palette, and navigation items supply readable action labels. Repeated placements of the same target and parameters share one row. Different parameters remain separate. The reference updates when extensions change. Hidden row actions release label space; labels truncate only when visible content needs that space. Navigation rows do not show shortcut badges. Row actions use the existing hover fade and remain visible while keyboard focus is inside the row. Command shortcuts without supplied parameters open the shared parameter form before execution.
+Help → Keyboard shortcuts manages assigned, inactive, disabled, and unassigned actions. It supports personal bindings, disabling, resetting, Leader, and extension aliases. Menus, the command palette, and navigation items supply readable action labels. Repeated placements of the same target and parameters share one row. Different parameters remain separate. The reference updates when extensions change. Hidden row actions release label space; labels truncate only when visible content needs that space. Navigation rows show effective shortcut hints while keyboard mode is active. Row actions use the existing hover fade and remain visible while keyboard focus is inside the row. Command shortcuts without supplied parameters open the shared parameter form before execution.
+
+Layered bindings add `layer` (`view`, `go`, `create`, `current`, `extensions`, `settings`, or `help`) and `targetScope` (`project`, `resource`, or `panel`). Their keys are letters or numbers relative to the group. Shared keys open an action or target chooser. Completed actions exit shortcut mode; tab navigation remains active until Enter or Escape. The deprecated `sticky` field is accepted for older declarations but no longer retains mode after completion. Existing direct bindings can declare `allowInInputs`; use it only for explicit workbench chords that must be consumed before editors. See [Keyboard shortcuts](../workbench/0006-keyboard.md) for navigation, target rules, preferences, and nested webviews.
 
 The main destinations use `Alt+Shift`: Sessions `S`, Workspaces `W`, Notes `O`, Tickets `P`, and Artifacts `A`. Notes uses `O` because notifications already uses `N`. Creation uses `Mod+Alt`: session `S`, workspace `W`, note `N`, and ticket `P`. Settings uses `Mod+,`. Command palette placements use their source command and exact parameters to resolve shortcut hints. Sessions, Workspaces, and Tickets bind their existing open commands so the command palette shows their navigation shortcuts. These extension defaults live in their own contributions; the host does not assign shortcuts to third-party tools.
 
@@ -527,6 +559,8 @@ export default defineExtension({
 The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels.
 
 Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
+
+The same action is available with **Alt+Shift+Up**, both outside and inside shortcut mode. Its shortcut hint appears on the return row in keyboard mode, and it is listed under the current mode's name in shortcut discovery and the command palette.
 
 Users can hide and reorder a level's labeled sections, but its rows keep the order their owner gives them.
 

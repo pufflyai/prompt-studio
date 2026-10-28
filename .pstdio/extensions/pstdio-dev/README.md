@@ -1,6 +1,6 @@
 # Prompt Studio Dev extension
 
-This repository-local extension prepares Prompt Studio worktrees, controls isolated development stacks, and discovers high-impact issues.
+This repository-local extension prepares Prompt Studio worktrees, controls isolated development stacks, discovers high-impact issues, and tracks benchmark performance.
 
 ## CLI commands
 
@@ -15,6 +15,19 @@ pst pstdio-dev workspace stop-isolation --workspace-id <id>
 The extension also installs dependencies and builds a new worktree after the workspace-ready event.
 
 At noon each day, it starts an evidence-gated search for one high-impact issue. It creates a planner ticket only when the search reproduces a valuable, untracked problem.
+
+## Performance
+
+The **Performance** item in the project navigation opens three pages. **Trends** shows every benchmark across releases, or every benchmark in one release. **Compare** compares two commits. **Runs** starts benchmark runs on GitHub Actions. Results are cached in extension storage; see [Benchmark results](../../../documentation/references/performance/0006-benchmark-results.md).
+
+```sh
+pst pstdio-dev benchmarks sync
+pst pstdio-dev benchmarks start-run --commits pstdio@0.45.0 --commits main
+```
+
+The pages use your GitHub CLI login. Run `gh auth login` in this repository first.
+
+## Merge queue repair
 
 Every five minutes, it repairs pull requests that GitHub removed from the merge queue. It lists open pull requests with the `removed-from-queue` label, which the Merge queue removals workflow manages. For each one, it creates a workspace from the pull request's branch and starts a session that reproduces and fixes the failure, then pushes to the same branch. A pull request gets one repair session per queue removal, identified by its latest removal event's timestamp. A repair's own push does not start another session. A later removal after requeueing can start a fresh repair. Session history includes older pages and archived sessions. If one pull request's repair cannot start, the command tries the others before reporting the failed pull requests and their errors. Pull requests from forks are skipped. The command needs an authenticated `gh` CLI.
 

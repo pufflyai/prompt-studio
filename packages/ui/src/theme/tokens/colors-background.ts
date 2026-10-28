@@ -13,6 +13,10 @@ export const bg = {
     },
   },
 
+  tag: {
+    value: { _light: "{colors.bg.muted}", _dark: "{colors.bg.subtle}" },
+  },
+
   subtle: {
     value: {
       _light: "#F9FBFA",

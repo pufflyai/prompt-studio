@@ -127,3 +127,26 @@ export const Project: Story = {
 };
 export const RenamedMode: Story = { args: { modeLabel: "Workspace" }, play: Project.play };
 export const WithoutHeaderItems: Story = { args: { showHeader: false }, play: Project.play };
+
+export const KeyboardReturn: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByText("details", { exact: true }));
+    await userEvent.keyboard("{Alt>}{Shift>}{ArrowUp}{/Shift}{/Alt}");
+    await expect(await within(canvas.getByRole("main")).findByText("home", { exact: true })).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Back to project" })).toBeNull();
+  },
+};
+
+export const GoToProject: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByText("details", { exact: true }));
+    await userEvent.keyboard("{Alt>}{Shift>}[Space]{/Shift}{/Alt}gp");
+    await expect(await within(canvas.getByRole("main")).findByText("home", { exact: true })).toBeVisible();
+    await expect(
+      within(canvasElement.ownerDocument.body).getByRole("region", { name: "Keyboard shortcut mode" }),
+    ).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+  },
+};

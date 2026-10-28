@@ -79,7 +79,57 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
     const guest = page.frameLocator('iframe[title="Lab"]');
     await expect(guest.getByRole("heading", { name: "Sandbox webview", exact: true })).toBeVisible();
-    await enter.click();
+    await page.locator('iframe[title="Lab"]').focus();
+    await guest.locator("body").dispatchEvent("keydown", {
+      key: "\u00a0",
+      code: "Space",
+      altKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+    await page.keyboard.press("V");
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+    await expect(page.locator('iframe[title="Lab"]')).toBeFocused();
+    for (const [key, symbol, label] of [
+      ["S", "Í", /Sidenav/],
+      ["B", "ı", /Bottom Panel/],
+      ["E", "Dead", /Side Panel/],
+    ] as const) {
+      const toggle = page
+        .getByRole("group", { name: "Panel controls", exact: true })
+        .getByRole("button", { name: label });
+      const wasOpen = await toggle.getAttribute("aria-pressed");
+      await guest.locator("body").dispatchEvent("keydown", {
+        key: symbol,
+        code: `Key${key}`,
+        altKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen !== "true"));
+      await guest.locator("body").press(`Alt+Shift+${key}`);
+      await expect(toggle).toHaveAttribute("aria-pressed", wasOpen!);
+    }
+    await guest.locator("body").press("Alt+Shift+Z");
+    await expect(page.getByRole("button", { name: "Exit Main fullscreen", exact: true })).toBeVisible();
+    await guest.locator("body").dispatchEvent("keydown", {
+      key: "¸",
+      code: "KeyZ",
+      altKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    await expect(enter).toBeVisible();
+    await page.keyboard.press("Alt+Shift+Space");
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
+    await page.keyboard.press("Alt+Shift+Z");
+    await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
     await guest.locator("body").press("Escape");
     await expect(enter).toBeVisible();
   } finally {

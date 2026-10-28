@@ -87,3 +87,15 @@ test("concurrent publishers leave one complete immutable release", async () => {
   const downloaded = await request("/api/pstdio/notes/0.45.3/file");
   expect(new Uint8Array(await downloaded.arrayBuffer())).toEqual(winner.bytes);
 });
+
+test.each([
+  "0.46.0-nightly.20261028030226",
+  "0.46.0+build.42",
+])("refuses registry publication of snapshot package %s without changing released versions", async (version) => {
+  const before = await (await request("/api/pstdio/notes/versions")).json();
+  const packed = await pack("export default {};", version);
+  const response = await publish(packed.bytes);
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({ error: "PSX publishes stable extension versions only" });
+  expect(await (await request("/api/pstdio/notes/versions")).json()).toEqual(before);
+});

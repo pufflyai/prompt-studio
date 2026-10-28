@@ -1,5 +1,6 @@
 import { defineExtension } from "@pstdio/sdk/extensions";
-import { defineExample, webview } from "../definition";
+import { definePageExample, webview } from "../definition";
+import { pigeonReader } from "../pigeon-refs";
 
 const views = [
   webview("pigeon-inbox", "Inbox"),
@@ -7,11 +8,12 @@ const views = [
   webview("pigeon-folders", "Folders"),
   webview("pigeon-nav", "Pigeon"),
 ];
-export const example = defineExample({
+export const example = definePageExample({
   name: "pigeon",
   label: "Pigeon",
   icon: "Mail",
   primary: views[0].ref,
+  params: { selection: { type: "string" } },
   regions: ["main", "side"],
   chrome: { nav: views[3].ref, sidenav: views[2].ref, activity: false },
   regionSettings: {
@@ -20,26 +22,21 @@ export const example = defineExample({
   },
   slots: [
     {
-      id: "reader",
+      id: pigeonReader.id,
       region: "side",
-      openOn: "page-resource",
       item: {
-        kind: "binding",
-        binding: {
-          kinds: [{ kind: "resource-kind", id: "pigeon.thread" }],
-          view: views[1].ref,
-          cardinality: "one",
-        },
+        kind: "view",
+        view: views[1].ref,
+        presence: "open",
       },
     },
   ],
-  initialResource: false,
 });
 export default defineExtension({
   modes: [example.mode],
   themes: [example.theme],
   resourceKinds: [example.resourceKind],
-  pages: [example.homePage, example.page],
+  pages: [example.page],
   views: [...views],
   navigationItems: [example.navigation],
 });

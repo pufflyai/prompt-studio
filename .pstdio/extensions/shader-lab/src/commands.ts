@@ -1,6 +1,7 @@
 import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { addShader, deleteConfig, duplicateConfig, listShaders, readConfig, updateConfig } from "./configs";
 import { shadersChanged } from "./events";
+import { parseVersionId } from "./navigation";
 import { findShader, shaders } from "./shaders/definitions";
 
 const projectFiles = (ctx: Pick<CommandContext, "projectFiles">) => {
@@ -131,7 +132,35 @@ const compareUpdate = defineCommand({
   },
 });
 
+const currentVersion = {
+  resource: params.resource({ resourceType: "shader-lab.version", required: true, resolvedFrom: "resource" }),
+};
+const renameCurrent = defineCommand({
+  id: "current.rename",
+  title: rename.title,
+  mutating: true,
+  params: { ...currentVersion, name: params.text({ required: true }) },
+  run: (ctx, input) => rename.run(ctx, { ...parseVersionId(input.resource.id), name: input.name }),
+});
+const duplicateCurrent = defineCommand({
+  id: "current.duplicate",
+  title: duplicate.title,
+  mutating: true,
+  params: { ...currentVersion, name: params.text({ required: true }) },
+  run: (ctx, input) => duplicate.run(ctx, { ...parseVersionId(input.resource.id), name: input.name }),
+});
+const compareCurrent = defineCommand({
+  id: "current.compare",
+  title: compareUpdate.title,
+  mutating: true,
+  params: { ...currentVersion, version: params.text() },
+  run: (ctx, input) =>
+    compareUpdate.run(ctx, { shader: parseVersionId(input.resource.id).shader, version: input.version }),
+});
 export const commands = {
+  "current.rename": renameCurrent,
+  "current.duplicate": duplicateCurrent,
+  "current.compare": compareCurrent,
   "shaders.list": list,
   "shaders.add": add,
   "version.read": read,

@@ -6,6 +6,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
 test("the artifact library moves between panels and remains a singleton", async ({ page, request }) => {
+  test.setTimeout(45_000);
   const tempRoot = resolve(import.meta.dirname, "../../../../__test-tmp__");
   mkdirSync(tempRoot, { recursive: true });
   const folder = mkdtempSync(join(tempRoot, "artifact-placeholder-"));

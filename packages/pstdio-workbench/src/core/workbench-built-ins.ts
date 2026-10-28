@@ -1,19 +1,13 @@
-import type { WorkbenchShellOpenRegion } from "./controllers/shell/shell-controller";
 import type { KeybindingSequence } from "./registries/keybindings/keybinding-registry";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import type { WorkbenchCore } from "./workbench-core";
-
-const SIDENAV_PANEL_ID = "sidenav";
-
-const togglePanel = (workbench: WorkbenchCore, region: WorkbenchShellOpenRegion) => {
-  workbench.shell.setRegionOpen(region, !workbench.shell.getRegionState(region).open);
-};
 
 interface BuiltinCommand {
   id: string;
   label: string;
   icon: string;
-  keybinding: KeybindingSequence;
+  keybinding?: KeybindingSequence;
+  category?: string;
   execute: (workbench: WorkbenchCore) => void;
 }
 
@@ -37,35 +31,30 @@ const builtinCommands: BuiltinCommand[] = [
   },
   {
     id: "workbench.action.changeTheme",
-    label: "Change Theme",
+    label: "Choose color theme",
     icon: "Palette",
     keybinding: "Alt+Shift+T",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ view: "theme" }),
   },
   {
     id: "workbench.action.navigateBack",
-    label: "Navigate Back",
+    label: "Go back",
     icon: "ArrowLeft",
     keybinding: "Alt+Shift+ArrowLeft",
+    category: "Navigation",
     execute: (workbench: WorkbenchCore) => {
       workbench.pageLocations.goBack();
     },
   },
   {
     id: "workbench.action.navigateForward",
-    label: "Navigate Forward",
+    label: "Go forward",
     icon: "ArrowRight",
     keybinding: "Alt+Shift+ArrowRight",
+    category: "Navigation",
     execute: (workbench: WorkbenchCore) => {
       workbench.pageLocations.goForward();
     },
-  },
-  {
-    id: "workbench.toggleSideBar",
-    label: "Toggle Sidenav",
-    icon: "PanelLeft",
-    keybinding: "Mod+B",
-    execute: (workbench: WorkbenchCore) => togglePanel(workbench, SIDENAV_PANEL_ID),
   },
 ];
 
@@ -75,20 +64,24 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       {
         id: command.id,
         label: command.label,
-        category: "Workbench",
+        category: command.category ?? "Workbench",
         icon: command.icon,
         when: "!inputFocus",
       },
       { execute: () => command.execute(workbench) },
     );
-    workbench.keybindings.registerKeybinding({
-      action: { kind: "command", commandId: command.id },
-      keybinding: command.keybinding,
-      when: "!inputFocus",
-    });
+    if (command.keybinding)
+      workbench.keybindings.registerKeybinding({
+        action: { kind: "command", commandId: command.id },
+        keybinding: command.keybinding,
+        when: "!inputFocus",
+      });
     workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId: command.id,
       group: "Workbench",
     });
   }
+  registerModeNavigationShortcuts(workbench);
 };
+
+import { registerModeNavigationShortcuts } from "./controllers/page-location/mode-navigation-shortcuts";

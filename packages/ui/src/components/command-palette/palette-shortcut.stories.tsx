@@ -1,5 +1,6 @@
 import { Button, HStack, Kbd } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, within } from "storybook/test";
 import { Tooltip } from "../primitives/tooltip";
 import { PaletteShortcut } from "./palette-shortcut";
 
@@ -14,6 +15,18 @@ type Story = StoryObj<typeof meta>;
 export const Inline: Story = {};
 
 export const Sequence: Story = { args: { binding: ["Mod+K", "Mod+S"] } };
+
+export const ArrowKeys: Story = {
+  args: { binding: ["ArrowLeft", "ArrowUp", "ArrowDown", "ArrowRight"] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const direction of ["Left", "Up", "Down", "Right"]) {
+      const key = canvas.getByLabelText(`Arrow ${direction}`);
+      await expect(key.querySelector("svg")).not.toBeNull();
+      await expect(key).toHaveTextContent("");
+    }
+  },
+};
 
 export const InTooltip: Story = {
   render: (args) => (

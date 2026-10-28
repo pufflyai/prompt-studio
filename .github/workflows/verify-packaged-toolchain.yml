@@ -66,6 +66,7 @@ jobs:
         uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
+          windows-dev-drive: "true"
       - name: Download immutable compiled candidate
         if: inputs.artifact_run_id != ''
         uses: actions/download-artifact@v4

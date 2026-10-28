@@ -16,8 +16,9 @@ test("empty panels offer the same permitted tabs as Add panel", async ({ page })
   for (const region of ["main", "side", "secondary"]) {
     const panel = page.locator(`[data-workbench-panel="${region}"]`).filter({ visible: true });
     const cards = panel.getByRole("group", { name: "Available tabs" });
-    const names = await cards.getByRole("button").allTextContents();
-    expect(names).toEqual(region === "side" ? ["Inspector", "Session", "Terminal"] : ["Session", "Terminal"]);
+    const names = region === "side" ? ["Inspector", "Session", "Terminal"] : ["Session", "Terminal"];
+    await expect(cards.getByRole("button")).toHaveCount(names.length);
+    for (const name of names) await expect(cards.getByRole("button", { name, exact: true })).toBeVisible();
     await panel.getByRole("button", { name: "Add panel", exact: true }).click();
     await expect(page.getByRole("menuitem")).toHaveText(names);
     await page.keyboard.press("Escape");

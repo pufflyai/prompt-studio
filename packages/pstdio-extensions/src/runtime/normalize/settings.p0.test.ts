@@ -20,6 +20,15 @@ const wrap = (definition: ExtensionDefinition): LoadedExtensionSource => ({
 });
 
 describe("normalizeExtensionSources settings", () => {
+  test("registers device settings for command and webview consumers", () => {
+    const runtime = normalizeExtensionSources([
+      wrap({ settings: { properties: { capacity: { type: "number", scope: "device", default: 2 } } } }),
+    ]);
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.settings.map(toSettingDefinitionRecord)).toEqual([
+      expect.objectContaining({ key: "capacity", scope: "device", default: 2 }),
+    ]);
+  });
   test("registers declared settings", () => {
     const runtime = normalizeExtensionSources([
       wrap({

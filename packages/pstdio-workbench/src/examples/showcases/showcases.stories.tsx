@@ -52,8 +52,19 @@ const KilnStory = () => {
 
 export const Scribble: Story = {
   render: ScribbleStory,
+  tags: ["scribble-tabs"],
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector('[data-workbench-region="sidenav"]')).toBeVisible();
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("option", { name: "Field notes" }));
+    await expect(canvas.getByRole("tab", { name: "North star" })).toBeVisible();
+    await expect(canvas.getByRole("tab", { name: "Field notes" })).toBeVisible();
+    const search = canvas.getByRole("textbox", { name: "Search pages" });
+    await userEvent.type(search, "coffee");
+    await expect(await canvas.findByRole("option", { name: "Oslo weekend" })).toBeVisible();
+    await expect(canvas.queryByRole("option", { name: "Field notes" })).toBeNull();
+    await userEvent.clear(search);
+    await userEvent.click(await canvas.findByRole("option", { name: "New page" }));
+    await expect(await canvas.findByRole("tab", { name: "Untitled page" })).toBeVisible();
   },
 };
 export const Boombox: Story = {

@@ -77,6 +77,23 @@ export const connectMainFullscreen = (core: WorkbenchCore) => {
       if ((closed || emptied) && core.shell.getPanelPolicy("side").canClose) core.fullscreen.hideSide();
     }),
   ];
+  const toggleId = "workbench.toggleMainFullscreen";
+  core.commands.registerCommand(
+    { id: toggleId, label: "Toggle Main fullscreen", category: "Panels and tabs", icon: "Maximize" },
+    {
+      isEnabled: () => core.fullscreen.store.getState().active || core.fullscreen.canEnter(),
+      execute: () => {
+        if (core.fullscreen.store.getState().active) core.fullscreen.exit();
+        else core.fullscreen.enter();
+      },
+    },
+  );
+  core.keybindings.registerKeybinding({
+    id: toggleId,
+    action: { kind: "command", commandId: toggleId },
+    keybinding: "Alt+Shift+Z",
+    allowInInputs: true,
+  });
   for (const [id, label, execute] of [
     ["enterMainFullscreen", "Enter Main fullscreen", core.fullscreen.enter],
     ["exitMainFullscreen", "Exit Main fullscreen", core.fullscreen.exit],

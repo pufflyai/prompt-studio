@@ -2,6 +2,7 @@ import {
   defineCommand,
   defineExtension,
   defineHook,
+  defineKeybinding,
   defineSchedule,
   defineSkill,
   packageAsset,
@@ -10,6 +11,8 @@ import {
   workspaceSlots,
 } from "@pstdio/sdk/extensions";
 import { repairRemovedCommand, repairRemovedSchedule } from "./merge-queue-repair";
+import { benchmarkCommands, syncCommandRef } from "./src/benchmarks/commands";
+import { navigationItems, navigationTrees, pages, views } from "./src/pages";
 
 const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
 const BUILD_COMMAND = ["bun", "run", "build"];
@@ -166,7 +169,30 @@ export default defineExtension({
     openInVscodeCommand,
     openInIsolationCommand,
     stopIsolationCommand,
+    ...Object.values(benchmarkCommands),
     repairRemovedCommand,
+  ],
+  views,
+  pages,
+  navigationItems,
+  navigationTrees,
+  keybindings: [
+    ...(
+      [
+        ["open", "O", openInVscodeCommand],
+        ["isolate", "I", openInIsolationCommand],
+        ["stop", "S", stopIsolationCommand],
+        ["discover", "D", discoverHighImpactIssuesCommand],
+      ] as const
+    ).map(([id, key, command]) =>
+      defineKeybinding({
+        id: `keyboard-${id}`,
+        layer: "current",
+        targetScope: "project",
+        key,
+        action: { kind: "command", target: { command: command.ref } },
+      }),
+    ),
   ],
   skills: [
     defineSkill({
@@ -191,6 +217,13 @@ export default defineExtension({
       title: "Daily high-impact issue discovery",
       schedule: "0 12 * * *",
       command: discoverHighImpactIssuesCommand.ref,
+    }),
+    // Caches new release and run results before GitHub's artifact retention removes them.
+    defineSchedule({
+      id: "daily-benchmark-sync",
+      title: "Daily benchmark result sync",
+      schedule: "0 6 * * *",
+      command: syncCommandRef,
     }),
     repairRemovedSchedule,
   ],

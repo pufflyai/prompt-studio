@@ -8,14 +8,31 @@ import {
   definePage,
   definePlacement,
   defineResourceKind,
+  defineSettingsPanel,
   defineView,
   packageAsset,
   resourceMenuSlotRef,
   workbenchModes,
   workbenchPages,
+  workbenchSlots,
 } from "./index";
 
 describe("extension contribution definitions", () => {
+  test("declares app-wide panels and device settings through the public SDK", () => {
+    const view = defineView({
+      id: "account",
+      title: "Account",
+      body: { kind: "webview", entry: packageAsset("./account.tsx", import.meta.url) },
+    });
+    const panel = defineSettingsPanel({ id: "account", view: view.ref, slot: workbenchSlots.globalSettings });
+    const extension = defineExtension({
+      views: [view],
+      settingsPanels: [panel],
+      settings: { properties: { capacity: { type: "number", scope: "device", default: 2 } } },
+    });
+    expect(extension.settingsPanels?.[0]?.slot.id).toBe("global.settings");
+    expect(extension.settings?.properties.capacity.scope).toBe("device");
+  });
   test("returns local typed references for independently addressable contributions", () => {
     const view = defineView({
       id: "tickets",

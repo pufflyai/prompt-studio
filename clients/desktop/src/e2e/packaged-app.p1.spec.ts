@@ -22,6 +22,8 @@ import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runti
 test("starts without editors and serves both authenticated transport paths", { tag: "@essential" }, async ({
   browserName: _browserName,
 }) => {
+  // Cold SDK installation exceeded 25s on hosted macOS ARM64; the 45s allowance is user-approved.
+  if (process.platform === "darwin" && process.arch === "arm64") test.setTimeout(45_000);
   const home = createPackagedHome();
   let app: PackagedApp | null = null;
   try {
@@ -75,6 +77,12 @@ test("starts without editors and serves both authenticated transport paths", { t
 test("promotes ownership, detaches, and preserves data through a warm relaunch", async ({
   browserName: _browserName,
 }) => {
+  // Initial setup, trace capture and relaunch share this user-approved execution allowance.
+  if (
+    (process.platform === "darwin" && process.arch === "arm64") ||
+    (process.platform === "linux" && process.arch === "x64")
+  )
+    test.setTimeout(45_000);
   const home = createPackagedHome();
   let first: PackagedApp | null = null;
   let second: PackagedApp | null = null;

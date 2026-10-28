@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { type BenchmarkMeasurement, recordMeasurement } from "pstdio-benchmarks/writer";
 import type { ChatMountMetric } from "./chat-mount-metrics";
 
 type PerfStats = {
@@ -38,6 +39,24 @@ const BUDGETS = {
   totalLongTaskMs: Number(process.env.UI_PERF_TOTAL_LONG_TASK_MS ?? "20000"),
 };
 const shouldAssertBudgets = process.env.UI_PERF_ASSERT_BUDGETS === "1";
+
+// Records the scenario time and the heap the page keeps afterwards, after garbage collection.
+const recordScenario = async (page: Page, timing: Omit<BenchmarkMeasurement, "unit">) => {
+  recordMeasurement({ ...timing, unit: "ms" });
+  const session = await page.context().newCDPSession(page);
+  await session.send("HeapProfiler.collectGarbage");
+  await session.send("Performance.enable");
+  const { metrics } = await session.send("Performance.getMetrics");
+  await session.detach();
+  const heap = metrics.find((entry) => entry.name === "JSHeapUsedSize")?.value;
+  if (heap !== undefined)
+    recordMeasurement({
+      metric: `${timing.metric}/js-heap`,
+      label: `${timing.label}, page heap`,
+      unit: "bytes",
+      value: heap,
+    });
+};
 
 const calculateStats = (samples: number[]): PerfStats => {
   const sorted = [...samples].sort((a, b) => a - b);
@@ -153,6 +172,12 @@ test.describe("chat panel performance", () => {
 
     expect(mountMetric).not.toBeNull();
     largeMountSamples.push(mountMetric?.totalMs ?? 0);
+    await recordScenario(page, {
+      metric: "large-conversation",
+      label: "Load a large conversation",
+      value: mountMetric?.totalMs ?? 0,
+      budget: BUDGETS.largeConversationReadyMs,
+    });
     longTaskSamples.push(longTasks);
     console.info("large-conversation-mount", mountMetric);
     console.info("large-conversation-profiler", profiler);
@@ -185,6 +210,12 @@ test.describe("chat panel performance", () => {
 
     expect(switchMetric).not.toBeNull();
     switchSamples.push(switchMetric?.totalMs ?? 0);
+    await recordScenario(page, {
+      metric: "session-switch",
+      label: "Switch between large sessions",
+      value: switchMetric?.totalMs ?? 0,
+      budget: BUDGETS.sessionSwitchMs,
+    });
     longTaskSamples.push(longTasks);
     console.info("session-switching", switchMetric);
     console.info("session-switching-profiler", profiler);
@@ -205,6 +236,12 @@ test.describe("chat panel performance", () => {
     const profiler = await getProfilerStats(page, "streaming");
 
     streamingSamples.push(streamTime);
+    await recordScenario(page, {
+      metric: "streaming",
+      label: "Stream into an existing conversation",
+      value: streamTime,
+      budget: BUDGETS.streamingCompleteMs,
+    });
     longTaskSamples.push(longTasks);
     console.info("streaming-seed-mount", mountMetric);
     console.info("streaming-profiler", profiler);

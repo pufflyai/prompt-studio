@@ -18,6 +18,7 @@ import {
 } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
+import { useKeyboardTabStrip } from "../keybindings/use-keyboard-tab-strip";
 import type { WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { WorkbenchPanelAddMenu } from "./panel-add-menu";
@@ -69,6 +70,7 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
   const tabOverrides = tabStore.tabOverrides;
   const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(region, placement);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
+  useKeyboardTabStrip(workbench, panelRegion, showTabs, visiblePlacements, viewport);
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const menuActions = buildTabVisibilityMenuActions(

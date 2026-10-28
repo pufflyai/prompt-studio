@@ -1,7 +1,7 @@
 import { defineRecipe } from "@chakra-ui/react";
 
 export const ticketTagStyle = {
-  bg: { _light: "bg.muted", _dark: "bg.subtle" },
+  bg: "bg.tag",
   color: "fg.muted",
   _hover: { bg: { _light: "bg.subtle", _dark: "bg.hover" } },
 } as const;

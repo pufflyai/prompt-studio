@@ -5,8 +5,11 @@ inputs:
     description: Separate host and Playwright-container workspace paths.
     default: host
   install-strategy:
-    description: Install workspace dependencies normally or with the native Node headers.
+    description: Install workspace dependencies normally or with the native build-tool setup.
     default: workspace
+  windows-dev-drive:
+    description: Use a job-owned ReFS Dev Drive for cold packaged toolchain installs.
+    default: "false"
 runs:
   using: composite
   steps:
@@ -31,7 +34,7 @@ runs:
         if [ "$INSTALL_STRATEGY" = native ]; then
           peers=()
           if [ "${CI_PRIORITY:-P0}" = P1 ]; then peers=(--observe-peers); fi
-          bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "${CI_PRIORITY:-P0}" "${peers[@]}" -- node scripts/ci/install-native-dependencies.ts
+          bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "${CI_PRIORITY:-P0}" "${peers[@]}" -- bun scripts/ci/install-native-dependencies.ts
         else
           bun install --frozen-lockfile
         fi
@@ -50,10 +53,21 @@ runs:
     - name: Generate installed Chakra theme declarations
       shell: bash
       run: bun run --cwd packages/ui typegen:tokens
-    - name: Use the Windows job temp directory
-      if: runner.os == 'Windows'
+    - name: Use the job temp directory on Windows
+      if: runner.os == 'Windows' && inputs.windows-dev-drive != 'true'
       shell: pwsh
-      # Keep runtime homes and cold install caches in the runner-owned directory. See ADR 0114.
       run: |
         "TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
         "TMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+    - name: Use a job-owned Dev Drive as the Windows temp directory
+      if: runner.os == 'Windows' && inputs.windows-dev-drive == 'true'
+      shell: pwsh
+      # Keep runtime homes and cold install caches on a ReFS Dev Drive owned by this job. See ADR 0114.
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $partition = New-VHD -Path (Join-Path $env:RUNNER_TEMP 'temp-dev-drive.vhdx') -SizeBytes 50GB -Dynamic |
+          Mount-VHD -PassThru | Initialize-Disk -PassThru | New-Partition -AssignDriveLetter -UseMaximumSize
+        $partition | Format-Volume -DevDrive -Confirm:$false -Force | Out-Null
+        $temp = New-Item -ItemType Directory -Path "$($partition.DriveLetter):\temp"
+        "TEMP=$temp" >> $env:GITHUB_ENV
+        "TMP=$temp" >> $env:GITHUB_ENV
