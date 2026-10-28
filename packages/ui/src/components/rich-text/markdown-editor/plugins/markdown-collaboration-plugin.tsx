@@ -47,7 +47,7 @@ export const MarkdownCollaborationPlugin = (props: CollaborationPluginProps) => 
   const callbacks = useRef({ editable, onChange, onSelectionChange });
   callbacks.current = { editable, onChange, onSelectionChange };
   useEffect(() => {
-    const binding = createMarkdownTextDocument(document);
+    const binding = createMarkdownTextDocument(document, () => editor.read(() => undefined));
     bindingRef.current = binding;
     let frontmatter = splitFrontmatter(binding.text.toString()).frontmatter;
     let selection: { anchor: Y.RelativePosition; focus: Y.RelativePosition } | null = null;
@@ -95,6 +95,7 @@ export const MarkdownCollaborationPlugin = (props: CollaborationPluginProps) => 
           captureSelection();
         },
         {
+          discrete: true,
           tag: [
             remoteTag,
             SKIP_SCROLL_INTO_VIEW_TAG,

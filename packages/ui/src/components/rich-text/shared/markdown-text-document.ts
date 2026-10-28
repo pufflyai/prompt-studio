@@ -3,7 +3,7 @@ import * as Y from "yjs";
 
 type ChangeOrigin = "remote" | "history" | "composition" | "edit";
 /** A rendering replica keeps composition edits based on the source the person still sees. */
-export const createMarkdownTextDocument = (shared: Y.Doc) => {
+export const createMarkdownTextDocument = (shared: Y.Doc, beforeRemote?: () => void) => {
   const replica = new Y.Doc({ gc: false });
   Y.applyUpdate(replica, Y.encodeStateAsUpdate(shared));
   const text = replica.getText("content");
@@ -27,6 +27,8 @@ export const createMarkdownTextDocument = (shared: Y.Doc) => {
   };
   const receive = (_update?: Uint8Array, origin?: unknown) => {
     if (composition || origin === localOrigin) return;
+    // Pending editor changes still belong to the rendered replica's causal history.
+    beforeRemote?.();
     applyRemote();
     publish("remote");
   };

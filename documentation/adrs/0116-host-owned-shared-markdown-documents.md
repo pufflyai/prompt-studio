@@ -199,6 +199,12 @@ they never reach shared text, files or durable state. Position maps cover text,
 decorators and empty blocks. Remote changes keep unaffected Lexical blocks and
 restore selections through Yjs relative positions.
 
+Commit pending local Lexical edits before merging remote history into the
+rendering replica. Their diff belongs to the source the person still sees.
+Commit remote reconciliation separately, so a later local edit cannot inherit
+the remote update tag and skip publication. Composition keeps its own replica
+until it finishes; a remote receive must not flush that transient draft.
+
 Table editors retain their local drafts across changes to other cells. Capture
 surviving source anchors for the table, rows and columns before a remote update.
 Use those anchors to preserve the existing table view and its local IDs, including

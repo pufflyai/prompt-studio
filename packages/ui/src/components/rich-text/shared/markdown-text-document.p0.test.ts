@@ -2,6 +2,26 @@ import { expect, test } from "bun:test";
 import * as Y from "yjs";
 import { createMarkdownTextDocument } from "./markdown-text-document";
 
+test("pending local edits use the rendered history before remote history is merged", () => {
+  const shared = new Y.Doc();
+  shared.getText("content").insert(0, "Start");
+  let flushes = 0;
+  let binding: ReturnType<typeof createMarkdownTextDocument>;
+  binding = createMarkdownTextDocument(shared, () => {
+    flushes++;
+    binding.write("Start LOCAL");
+  });
+  try {
+    shared.getText("content").insert(0, "REMOTE ");
+    expect(shared.getText("content").toString()).toBe("REMOTE Start LOCAL");
+    expect(binding.text.toString()).toBe("REMOTE Start LOCAL");
+    expect(flushes).toBe(1);
+  } finally {
+    binding.destroy();
+    shared.destroy();
+  }
+});
+
 const clone = (document: Y.Doc) => {
   const next = new Y.Doc();
   Y.applyUpdate(next, Y.encodeStateAsUpdate(document));
@@ -13,7 +33,10 @@ test("composition defers remote rendering without overwriting a concurrent remot
   first.getText("content").insert(0, "first\nlast");
   const second = clone(first);
   const left = createMarkdownTextDocument(first);
-  const right = createMarkdownTextDocument(second);
+  let remoteFlushes = 0;
+  const right = createMarkdownTextDocument(second, () => {
+    remoteFlushes++;
+  });
   const rendered: string[] = [];
   const origins: string[] = [];
   right.subscribe((source, origin) => {
@@ -25,6 +48,7 @@ test("composition defers remote rendering without overwriting a concurrent remot
   Y.applyUpdate(second, Y.encodeStateAsUpdate(first));
   expect(right.text.toString()).toBe("first\nlast");
   expect(rendered).toEqual([]);
+  expect(remoteFlushes).toBe(0);
   right.write("first\nLAST");
   expect(right.text.toString()).toBe("first\nLAST");
   right.setComposing(false);
