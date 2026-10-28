@@ -130,7 +130,8 @@ const toHandle = (
     ensureActive();
     return context;
   };
-  const ctx = (options?: HarnessCallOptions) => {
+  const ctx = async (options?: HarnessCallOptions) => {
+    ensureActive();
     const key = options?.projectId;
     let pending = preparation.get(key);
     if (!pending) {
@@ -146,7 +147,9 @@ const toHandle = (
         });
       preparation.set(key, pending);
     }
-    return pending;
+    const context = await pending;
+    ensureActive();
+    return context;
   };
   const provider = record.provider;
   const authentication = createHarnessAuthenticationLifetime();
