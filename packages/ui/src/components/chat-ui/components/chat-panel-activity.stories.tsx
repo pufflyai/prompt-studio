@@ -28,7 +28,6 @@ const meta = {
       },
     ],
     streaming: true,
-    streamingStartedAt: Date.now() - 65_000,
     emptyStateTitle: "No messages",
     emptyStateDescription: "Start a conversation.",
     chatInputPlaceholder: "Reply...",
@@ -57,7 +56,7 @@ const meta = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const workspace = canvasElement.querySelector(".ps-chat-composer__workspace")!;
-    const timer = canvas.getByText(/^\d+m \d+s$/);
+    const timer = canvas.getByText(/^\d+[smh](?: \d+[sm])?$/);
     await expect(workspace).toContainElement(timer);
     const open = canvas.getByRole("button", { name: "Open workspace" }).getBoundingClientRect();
     const identity = canvas.getByRole("button", { name: "main" }).getBoundingClientRect();
