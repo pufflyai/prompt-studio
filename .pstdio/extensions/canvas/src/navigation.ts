@@ -51,7 +51,13 @@ export const canvasTarget = (id: string, label: string, projectId?: string) => (
   kind: "page" as const,
   page: canvasPage.ref,
   open: "preview" as const,
-  resource: { type: canvasResource.id, id, label, ...(projectId ? { projectId, extensionId: "pstdio.canvas" } : {}) },
+  resource: {
+    type: canvasResource.id,
+    id,
+    label,
+    icon: canvasResource.icon,
+    ...(projectId ? { projectId, extensionId: "pstdio.canvas" } : {}),
+  },
 });
 export const canvasUrl = (projectId: string, id: string) =>
   serializePageUrl({

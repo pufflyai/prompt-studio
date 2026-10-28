@@ -4,6 +4,7 @@ import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import extension from "../extension";
 import { canvases } from "./canvases/definitions";
 import { canvasPage, homePage } from "./navigation";
+import { resolveCanvasCommand } from "./resource";
 
 const leaves = (nodes: TreeNode[]): TreeNode[] =>
   nodes.flatMap((node) => (node.children ? leaves(node.children) : [node]));
@@ -29,7 +30,22 @@ test("the canvas navigation panel exposes each grouped resource on overview and 
       expect(node.target).toMatchObject({
         kind: "page",
         open: "preview",
-        resource: { type: "canvas", id: node.resource!.id, projectId: ctx.projectId, extensionId: "pstdio.canvas" },
+        resource: {
+          type: "canvas",
+          id: node.resource!.id,
+          icon: "diamond",
+          projectId: ctx.projectId,
+          extensionId: "pstdio.canvas",
+        },
       });
   }
+});
+
+test("resolving a restored canvas replaces its stale resource icon", async () => {
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: { resource: { type: "canvas", id: "shared-components", icon: "table-properties" } },
+  });
+  expect(await resolveCanvasCommand.run(ctx, {})).toMatchObject({ id: "shared-components", icon: "diamond" });
 });

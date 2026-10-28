@@ -1,6 +1,8 @@
 import { defineCommand, defineResourceKind } from "@pstdio/sdk/extensions";
 import { canvases } from "./canvases/definitions";
 
+const canvasIcon = "diamond";
+
 export const resolveCanvasCommand = defineCommand({
   id: "resolve",
   title: "Resolve canvas",
@@ -14,6 +16,7 @@ export const resolveCanvasCommand = defineCommand({
       type: "canvas",
       id: canvas.id,
       label: canvas.name,
+      icon: canvasIcon,
       projectId: ctx.projectId,
       extensionId: "pstdio.canvas",
     };
@@ -22,6 +25,6 @@ export const resolveCanvasCommand = defineCommand({
 export const canvasResource = defineResourceKind({
   id: "canvas",
   label: "Canvas",
-  icon: "diamond",
+  icon: canvasIcon,
   resolve: resolveCanvasCommand.ref,
 });
