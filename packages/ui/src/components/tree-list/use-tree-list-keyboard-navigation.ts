@@ -80,20 +80,23 @@ export const useTreeListKeyboardNavigation = (input: {
   }, [focusedRowId, focusableRows]);
 
   useEffect(() => {
-    if (!pendingFocusRowId) return;
-    const frame = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const element = findRowElement(rootRef.current, pendingFocusRowId);
-        if (!element) return;
-        element.focus();
-        setPendingFocusRowId(undefined);
-      });
-    });
-
-    return () => cancelAnimationFrame(frame);
+    const root = rootRef.current;
+    if (!pendingFocusRowId || !root) return;
+    const focusMountedRow = () => {
+      const element = findRowElement(root, pendingFocusRowId);
+      if (!element) return;
+      element.focus();
+      setPendingFocusRowId(undefined);
+    };
+    // Virtual rows mount after scrolling and measurement, rather than after a fixed frame count.
+    const observer = new MutationObserver(focusMountedRow);
+    observer.observe(root, { childList: true, subtree: true });
+    focusMountedRow();
+    return () => observer.disconnect();
   }, [pendingFocusRowId]);
 
   const focusRow = (rowId: string) => {
+    setPendingFocusRowId(undefined);
     setFocusedRowId(rowId);
     const element = findRowElement(rootRef.current, rowId);
     if (element) {

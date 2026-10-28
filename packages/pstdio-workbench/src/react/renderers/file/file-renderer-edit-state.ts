@@ -1,5 +1,5 @@
 // Owns the editable file renderer's save lifecycle: the last loaded or saved
-// value (the baseline), the debounced draft, the one in-flight save, and
+// value (the baseline), the local draft, the one in-flight save, and
 // refresh events that arrive while a draft or save exists.
 //
 // Invariants (from the renderer edit/refresh lifecycle PRD):
@@ -25,6 +25,7 @@ export interface FileEditControllerState {
 export interface FileEditControllerInput {
   binding: Omit<FileRendererRefreshOrigin, "operationId"> & { resourceKey?: string };
   debounceMs: number;
+  saveMode?: "auto" | "manual";
   load: (event?: FileRendererRefreshEnvelope) => void;
   save: (value: string, origin: FileRendererRefreshOrigin) => Promise<FileRendererSaveResult | undefined>;
   createOperationId?: () => string;
@@ -136,6 +137,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
 
   const schedule = () => {
     clearTimer();
+    if (input.saveMode === "manual") return;
     timer = setTimeout(() => {
       timer = null;
       runSave();
@@ -229,6 +231,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     },
     flush() {
       clearTimer();
+      if (input.saveMode === "manual") saveError = undefined;
       runSave();
     },
   };

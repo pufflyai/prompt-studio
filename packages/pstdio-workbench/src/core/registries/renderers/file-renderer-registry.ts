@@ -50,6 +50,10 @@ export interface FileRendererContribution {
   id: string;
   title: string;
   resourceKind?: string;
+  /** Manual files write only on an explicit save. Defaults to autosave. */
+  saveMode?: "auto" | "manual";
+  /** Stable document identity when unrelated resource metadata may change. */
+  documentKey?(resource: ResourceRef | undefined): string;
 
   /** Resolve the file's content (and identity) for the bound resource. */
   load(

@@ -68,6 +68,9 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
     const filesTab = page.getByRole("tab", { name: "Files" });
     const changesTab = page.getByRole("tab", { name: "Changes" });
     await expect(filesTab).toBeVisible();
+    await expect(filesTab).toHaveAttribute("aria-selected", "true");
+    expect(diffRequests).toEqual([]);
+    await changesTab.click();
     await expect(changesTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: "Diffs" })).toHaveCount(0);
     await expect(page.getByTestId("diff-viewer")).toBeVisible();
@@ -123,6 +126,10 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
     );
     await editor.locator(".view-lines").click();
     await page.keyboard.insertText(appendedReadme);
+    await expect(page.getByLabel("Unsaved changes", { exact: true })).toBeVisible();
+    await page.waitForTimeout(900);
+    expect(fileWrites).toEqual([]);
+    await page.keyboard.press("ControlOrMeta+s");
     expect((await saveResponse).ok()).toBe(true);
     await expect.poll(() => readFileSync(join(worktreePath, "README.md"), "utf8")).toContain(appendedReadme);
     await page.waitForTimeout(900);
@@ -140,7 +147,6 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
 
     await filesTab.click();
     await search.fill("README");
-    await expect(page.getByRole("option", { name: /README\.md/ }).getByText("M", { exact: true })).toBeVisible();
     const searchResponse = Promise.withResolvers<void>();
     await page.route("**/files?query=logo&limit=500", async (route) => {
       await searchResponse.promise;
@@ -206,7 +212,25 @@ test("browses and edits files in the default workspace", async ({ page, request 
     const search = page.getByRole("textbox", { name: "Search files" });
     await search.fill("README");
     await expect(page.getByRole("region", { name: "Files", exact: true }).getByRole("option")).toHaveCount(1);
-    await page.getByRole("option", { name: "README.md" }).click();
+    const fileResponse = Promise.withResolvers<void>();
+    const pendingFileRoutes: Promise<void>[] = [];
+    let fileRequested = false;
+    await page.route("**/file?path=README.md", (route) => {
+      fileRequested = true;
+      const continued = fileResponse.promise.then(() => route.continue());
+      pendingFileRoutes.push(continued);
+      return continued;
+    });
+    try {
+      await page.getByRole("option", { name: "README.md" }).click();
+      await expect.poll(() => fileRequested).toBe(true);
+      // The editor runtime loads while the file is still on the network.
+      await expect.poll(() => page.evaluate(() => "MonacoEnvironment" in window)).toBe(true);
+    } finally {
+      fileResponse.resolve();
+      await Promise.all(pendingFileRoutes);
+      await page.unroute("**/file?path=README.md");
+    }
     const editor = page.locator(".monaco-editor");
     await expect(editor).toBeVisible();
 
@@ -216,6 +240,10 @@ test("browses and edits files in the default workspace", async ({ page, request 
     );
     await editor.locator(".view-lines").click();
     await page.keyboard.insertText(appendedReadme);
+    await expect(page.getByLabel("Unsaved changes", { exact: true })).toBeVisible();
+    await page.waitForTimeout(900);
+    expect(readFileSync(join(repoRoot, "README.md"), "utf8")).toBe("Default workspace files e2e\n");
+    await page.keyboard.press("ControlOrMeta+s");
     expect((await saveResponse).ok()).toBe(true);
     await expect.poll(() => readFileSync(join(repoRoot, "README.md"), "utf8")).toContain(appendedReadme);
 

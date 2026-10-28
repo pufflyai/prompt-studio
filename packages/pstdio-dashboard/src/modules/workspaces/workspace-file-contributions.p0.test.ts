@@ -80,7 +80,6 @@ describe("workspace file contributions", () => {
       expect.objectContaining({
         id: "README.md",
         label: "README.md",
-        endContent: expect.objectContaining({ props: { change: "modified" } }),
       }),
     ]);
     expect(file?.emptyState).toEqual({
@@ -90,7 +89,6 @@ describe("workspace file contributions", () => {
     expect(
       fetchMock.mock.calls.some(([input]) => String(input).includes("/v1/workspaces/workspace-1/files?limit=500")),
     ).toBe(true);
-    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/diff-files?mode=current"))).toBe(true);
   });
   test("searches, opens, loads, and saves a workspace text file through one resource", async () => {
     const calls: Array<{
@@ -275,7 +273,6 @@ describe("workspace file operations", () => {
     const file = sections[0]?.nodes.find((node) => node.id === "README.md");
     expect(file?.iconElement).toBeDefined();
     expect(file?.canDrag).toBe(true);
-    expect(file?.endContent).toMatchObject({ props: { change: "modified" } });
     expect(file?.actions).toBeUndefined();
     expect(file?.contextMenuActions?.map((action) => action.label)).toEqual([
       "Rename",

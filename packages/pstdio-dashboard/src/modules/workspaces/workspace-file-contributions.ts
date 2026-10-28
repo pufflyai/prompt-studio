@@ -1,3 +1,4 @@
+import { isBinaryDiffPath, preloadCodeEditor } from "@pstdio/ui/diff";
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getApiClient } from "@/lib/api";
 import { getDashboardQueryClient } from "@/lib/query-client";
@@ -210,6 +211,9 @@ const registerWorkspaceFileRenderer = (ctx: WorkbenchModuleContext) => {
     body: {
       kind: "file",
       resourceKind: "workspace",
+      saveMode: "manual",
+      documentKey: (resource) =>
+        JSON.stringify([workspaceIdOf(resource), workspaceMetadataString(resource, "workspaceFilePath")]),
       load: async (resource, signal) => {
         const workspaceId = workspaceIdOf(resource);
         const path = workspaceMetadataString(resource, "workspaceFilePath");
@@ -221,7 +225,12 @@ const registerWorkspaceFileRenderer = (ctx: WorkbenchModuleContext) => {
             emptyState: { title: "Select a file", description: "Choose a file from the Files panel." },
           };
         }
-        const file = await getApiClient().workspaces.readFile(workspaceId, path, { signal });
+        const fileRequest = getApiClient().workspaces.readFile(workspaceId, path, { signal });
+        // Workspace text uses Monaco. Start its shared loader alongside the file read;
+        // the editor owns any loading error when it mounts.
+        if (typeof window !== "undefined" && !isBinaryDiffPath(path) && !path.toLowerCase().endsWith(".svg"))
+          void preloadCodeEditor().catch(() => undefined);
+        const file = await fileRequest;
         return {
           fileName: file.file_name,
           filePath: file.path,

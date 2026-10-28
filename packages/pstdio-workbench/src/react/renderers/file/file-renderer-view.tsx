@@ -6,7 +6,6 @@ import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
 import {
   getFileSectionNavigation,
   resolveFileSectionTargetId,
-  shouldClearFileSectionSelection,
 } from "../../../core/registries/renderers/file-section-navigation";
 import { usePageParams } from "../use-page-params";
 import { FileRendererContentView } from "./file-renderer-content";
@@ -25,6 +24,7 @@ import {
   storeCachedFileContent,
 } from "./file-renderer-load-state";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
+import { useFileSectionSelection } from "./file-renderer-sections";
 
 interface WorkbenchFileRendererViewProps {
   workbench: WorkbenchCore;
@@ -64,10 +64,15 @@ const getEditorSectionNavigation = (
     targetId: resolveFileSectionTargetId(navigation, selectedNodeId),
   };
 };
-const FileRendererHeader = (props: { file: LoadedFile }) => {
-  const { file } = props;
+const FileRendererHeader = (props: { file: LoadedFile; dirty: boolean; saving: boolean }) => {
+  const { file, dirty, saving } = props;
   return file.filePath ? (
-    <FileRendererPathHeader fileName={file.fileName ?? file.filePath} filePath={file.filePath} />
+    <FileRendererPathHeader
+      fileName={file.fileName ?? file.filePath}
+      filePath={file.filePath}
+      dirty={dirty}
+      saving={saving}
+    />
   ) : null;
 };
 
@@ -89,7 +94,13 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       ? { anchors: [...requestedSection.anchors], targetId: targetAnchor.id }
       : getEditorSectionNavigation(workbench, sectionNavigation);
   const pageParams = usePageParams(workbench, props.placement);
-  const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resource, pageParams });
+  const loadKey = createFileRendererLoadKey({
+    fileRendererId: contribution.id,
+    resource,
+    pageParams,
+    documentKey: contribution.documentKey?.(resource),
+  });
+  const manualSave = contribution.saveMode === "manual";
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [error, setError] = useState<{
     loadKey: string;
@@ -99,36 +110,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const controllerRef = useRef<FileEditController | null>(null);
   const retryReadRef = useRef<(() => void) | undefined>(undefined);
   const rendererRef = useRef<HTMLDivElement>(null);
-  const previousSectionNavigationRef = useRef<{
-    resourceKey?: string;
-    treeId: string;
-    anchorIds: string[];
-  } | null>(null);
-  useEffect(() => {
-    const previous = previousSectionNavigationRef.current;
-    const selectedNodeId =
-      previous && getWorkbenchRenderers(workbench).getTreeRenderer(previous.treeId)
-        ? getWorkbenchRenderers(workbench).getTreeState(previous.treeId).selectedNodeId
-        : undefined;
-    if (
-      shouldClearFileSectionSelection({
-        previous,
-        current: sectionNavigation,
-        currentResourceKey: resourceKey(resource),
-        selectedNodeId,
-      }) &&
-      previous
-    ) {
-      getWorkbenchRenderers(workbench).setSelectedNode(previous.treeId, undefined);
-    }
-    previousSectionNavigationRef.current = sectionNavigation
-      ? {
-          resourceKey: resourceKey(resource),
-          treeId: sectionNavigation.treeId,
-          anchorIds: sectionNavigation.anchors.map((anchor) => anchor.id),
-        }
-      : null;
-  }, [resource, sectionNavigation, workbench]);
+  useFileSectionSelection(workbench, resource, sectionNavigation);
   // Contribution refresh re-registers an identical contribution as a new
   // object, and a save that changes the document title produces a new resource
   // object with a fresh label. The load key uses resource values instead of
@@ -191,6 +173,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
             resourceKey: resourceKey(resourceRef.current),
           },
           debounceMs: SAVE_DEBOUNCE_MS,
+          saveMode: manualSave ? "manual" : "auto",
           load: () => load(),
           onStateChange: (state) => {
             if (!cancelled) setEditState(state);
@@ -226,14 +209,13 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       retryReadRef.current = undefined;
       refreshSubscription.dispose();
       removalSubscription.dispose();
-      // Flush the last keystrokes on unbind; the load callback above is
-      // cancelled, so a deferred refresh cannot resurrect the old binding.
-      controller?.flush();
+      // Only autosave files flush when their editor is unbound.
+      if (!manualSave) controller?.flush();
       if (controllerRef.current === controller) controllerRef.current = null;
     };
-  }, [contributionId, hasSave, workbench, loadKey, ownerKey, instanceId]);
-  // The last keystrokes are also flushed when the tab is hidden or closed.
+  }, [contributionId, hasSave, workbench, loadKey, ownerKey, instanceId, manualSave]);
   useEffect(() => {
+    if (manualSave) return;
     const flush = () => controllerRef.current?.flush();
     const onVisibility = () => {
       if (document.visibilityState === "hidden") flush();
@@ -244,7 +226,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       window.removeEventListener("beforeunload", flush);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, []);
+  }, [manualSave]);
   const handleChange = (value: string) => {
     controllerRef.current?.handleChange(value);
   };
@@ -277,8 +259,26 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     );
   }
   return (
-    <Flex direction="column" h="full" minH="0" bg="bg">
-      {currentLoaded && <FileRendererHeader file={currentLoaded} />}
+    <Flex
+      direction="column"
+      h="full"
+      minH="0"
+      bg="bg"
+      onKeyDownCapture={(event) => {
+        if (manualSave && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+          event.preventDefault();
+          event.stopPropagation();
+          controllerRef.current?.flush();
+        }
+      }}
+    >
+      {currentLoaded && (
+        <FileRendererHeader
+          file={currentLoaded}
+          dirty={manualSave && editState.dirty}
+          saving={manualSave && editState.saving}
+        />
+      )}
       <Box flex="1" minH="0">
         <FileRendererContentView
           content={currentLoaded}

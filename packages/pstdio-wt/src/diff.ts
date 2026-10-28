@@ -186,11 +186,14 @@ const buildFileDiffSummary = async (
   base: string,
   entry: ParsedEntry,
   statsByPath?: ReadonlyMap<string, { additions: number; deletions: number }>,
+  untracked = false,
 ): Promise<FileDiffSummary> => {
   const oldPath = entry.oldPath ?? entry.filePath;
   const newPath = entry.newPath ?? entry.filePath;
   const cachedStats = entry.oldPath ? undefined : statsByPath?.get(entry.filePath);
-  const stats = cachedStats ?? (await countAdditionsDeletions(worktreePath, base, newPath, entry.oldPath));
+  const stats = untracked
+    ? { additions: 0, deletions: 0 }
+    : (cachedStats ?? (await countAdditionsDeletions(worktreePath, base, newPath, entry.oldPath)));
   const additions =
     entry.change === "added" && stats.additions === 0
       ? countContentLines(await getWorkingContent(worktreePath, newPath))
@@ -252,10 +255,12 @@ export const getWorktreeDiffSummaryFiles = async (opts: {
   base: string;
 }): Promise<WorktreeDiffSummaryFiles> => {
   const { worktreePath, base } = opts;
-  const { fileMap } = await discoverChangedFiles(worktreePath, base);
+  const { fileMap, untrackedSet } = await discoverChangedFiles(worktreePath, base);
   const statsByPath = await getDiffStatsByPath(worktreePath, base);
   const files = await Promise.all(
-    [...fileMap.values()].map((entry) => buildFileDiffSummary(worktreePath, base, entry, statsByPath)),
+    [...fileMap.values()].map((entry) =>
+      buildFileDiffSummary(worktreePath, base, entry, statsByPath, untrackedSet.has(entry.filePath)),
+    ),
   );
 
   return { files, totals: buildTotals(files) };

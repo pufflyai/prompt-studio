@@ -10,7 +10,7 @@ const binding = {
   resourceKey: "pstdio://extension-resource/ticket/ticket-1",
 };
 
-const createHarness = (input?: { failSaves?: number; saveRevision?: string }) => {
+const createHarness = (input?: { failSaves?: number; saveRevision?: string; saveMode?: "manual" }) => {
   let failsLeft = input?.failSaves ?? 0;
   const saves: string[] = [];
   const operations: string[] = [];
@@ -20,6 +20,7 @@ const createHarness = (input?: { failSaves?: number; saveRevision?: string }) =>
   const controller = createFileEditController({
     binding,
     debounceMs: DEBOUNCE_MS,
+    saveMode: input?.saveMode,
     load: () => {
       loads += 1;
     },
@@ -37,6 +38,55 @@ const createHarness = (input?: { failSaves?: number; saveRevision?: string }) =>
   });
   return { controller, operations, saves, states, loads: () => loads };
 };
+
+describe("manual file editing", () => {
+  test("manual edits remain drafts until an explicit save, including edits during a save", async () => {
+    let finish!: () => void;
+    const saves: string[] = [];
+    const controller = createFileEditController({
+      binding,
+      debounceMs: DEBOUNCE_MS,
+      saveMode: "manual",
+      load: () => {},
+      save: async (value) => {
+        saves.push(value);
+        await new Promise<void>((resolve) => {
+          finish = resolve;
+        });
+      },
+    });
+    controller.setBaseline("loaded");
+    controller.handleChange("first");
+    await tick();
+    expect(saves).toEqual([]);
+    expect(controller.getState().dirty).toBe(true);
+    controller.flush();
+    controller.handleChange("second");
+    finish();
+    await tick();
+    expect(saves).toEqual(["first"]);
+    expect(controller.getDraft()).toBe("second");
+    expect(controller.getState().dirty).toBe(true);
+    controller.flush();
+    finish();
+    await tick();
+    expect(saves).toEqual(["first", "second"]);
+    expect(controller.getState().dirty).toBe(false);
+  });
+
+  test("an explicit manual save retries a failed save without losing the draft", async () => {
+    const { controller, saves } = createHarness({ saveMode: "manual", failSaves: 1 });
+    controller.setBaseline("loaded");
+    controller.handleChange("draft");
+    controller.flush();
+    await tick();
+    expect(controller.getDraft()).toBe("draft");
+    controller.flush();
+    await tick();
+    expect(saves).toEqual(["draft"]);
+    expect(controller.getState().dirty).toBe(false);
+  });
+});
 
 describe("file edit controller", () => {
   test("removal preserves a draft and prevents flush or refresh from saving it", async () => {
