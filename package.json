@@ -17,7 +17,7 @@
     "verify:lockfile": "bun run --cwd scripts verify:lockfile",
     "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" lerna run build",
     "analyze-bundle": "lerna run analyze-bundle --stream",
-    "test": "lerna run test --ignore e2e --ignore storybook-tests && bun run build -- --scope e2e --include-dependencies && bun run test:e2e && bun run test:canvas",
+    "test": "lerna run test --ignore e2e --ignore canvas-tests && bun run build -- --scope e2e --include-dependencies && bun run test:e2e && bun run test:canvas",
     "test:coverage": "lerna run test:coverage --stream -- --coverage-reporter=lcov",
     "test:e2e": "bun run --cwd packages/e2e test",
     "extension:bench:workbench": "bun run --cwd packages/pstdio-extension-testbench dev",

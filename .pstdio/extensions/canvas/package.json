@@ -19,7 +19,8 @@
     "catalog:build": "bun scripts/build-native-previews.ts",
     "catalog:inventory": "bun scripts/migration-ledger.ts",
     "catalog:coverage": "bun scripts/verify-migration-coverage.ts",
-    "catalog:verify": "bun scripts/verify-native-previews.ts"
+    "catalog:verify": "bun scripts/verify-native-previews.ts",
+    "build": "bun scripts/verify-migration-coverage.ts"
   },
   "dependencies": {
     "@chakra-ui/react": "3.32.0",
@@ -38,5 +39,11 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "typescript": "6.0.2"
+  },
+  "nx": {
+    "implicitDependencies": [
+      "@pstdio/ui",
+      "@pstdio/workbench"
+    ]
   }
 }

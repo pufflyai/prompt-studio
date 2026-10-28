@@ -1,6 +1,6 @@
 {
   "hashes": {
-    ".pstdio/extensions/canvas/package.json": "712d3bf38edb07c5a35cbc6c36f4e768dbc92317346ac6f2d41f0538b182540a",
+    ".pstdio/extensions/canvas/package.json": "9558e53ef8a0e4ef5927c97941125cc790ed29645e4f8013c89876eebf7fa94b",
     ".pstdio/extensions/canvas/scripts/build-native-previews.ts": "e3c95d07ca33dceae21729ecbec8422b93bda193db4e4e148e7df41f0c04389b",
     ".pstdio/extensions/canvas/scripts/native-build-output.ts": "e2c716f3be1e6b25e96a00c9eb1b80c84b527331849103560e2dfaa0e53a3e58",
     ".pstdio/extensions/canvas/scripts/frame-archive.ts": "30ec08048fbc835689941c70f2a8692e5f2b5dea001ce9745f4ca0752ebde451",
