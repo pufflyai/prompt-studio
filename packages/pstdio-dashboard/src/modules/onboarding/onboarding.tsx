@@ -113,7 +113,7 @@ export const Onboarding = (props: OnboardingProps) => {
             {error}
           </AlertMessage>
         )}
-        <Flex as="footer" pt="lg" borderTopWidth="1px" borderColor="border.subtle" gap="md" align="center">
+        <Flex as="footer" pt="lg" gap="md" align="center">
           {step === "work" && (
             <Button size="sm" variant="ghost" onClick={() => setStep("harnesses")}>
               <ArrowLeft />
