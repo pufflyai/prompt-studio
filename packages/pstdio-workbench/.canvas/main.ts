@@ -11,7 +11,7 @@ const rootDir = dirname(fileURLToPath(import.meta.url));
 const sourceDir = resolve(rootDir, "../src");
 
 const config: StorybookConfig = {
-  experimental_indexers: async (indexers) => {
+  experimental_indexers: async (indexers = []) => {
     const sourceIndexer = indexers.find((indexer) => indexer.test.test("example.stories.tsx"));
     if (!sourceIndexer) throw new Error("The preview test compiler has no source indexer");
     return [...indexers, { ...sourceIndexer, test: /\.canvas\.[tj]sx?$/ }];

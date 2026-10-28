@@ -82,6 +82,7 @@ const worker = async () => {
   while (!cancelled && next < targets.length) {
     const canvas = targets[next++];
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    page.setDefaultTimeout(30_000);
     await page.route("**/*", (route: PreviewRoute) => {
       const request = route.request();
       if (!["GET", "HEAD"].includes(request.method()) && !request.url().startsWith(server.url.origin))

@@ -164,7 +164,6 @@
     "@storybook/addon-docs": "^10.6.0",
     "@storybook/react": "^10.6.0",
     "@storybook/react-vite": "^10.6.0",
-    "@storybook/test-runner": "^0.24.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.2.0",
