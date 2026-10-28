@@ -3,9 +3,9 @@ import { useEffect } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { kilnFrameCount, kilnFrameRate, kilnTracks } from "./kiln-animation";
-import { kilnObjects, kilnPage, kilnResource } from "./kiln-data";
+import { kilnObjects } from "./kiln-data";
 import { kilnStore } from "./kiln-state";
-import { usePrimaryResource, useShowcaseStore } from "./showcase-store";
+import { usePageSelection, useShowcaseStore } from "./showcase-store";
 
 const ticks = [1, 24, 48, 72, 96, 120];
 const framePosition = (frame: number) => `${((frame - 1) / (kilnFrameCount - 1)) * 100}%`;
@@ -64,7 +64,7 @@ const KilnPlayback = () => {
 export const KilnTimeline = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const state = useShowcaseStore(kilnStore);
-  const selectedId = usePrimaryResource(workbench)?.id;
+  const selectedId = usePageSelection(workbench);
   const timecode = `${String(Math.floor((state.frame - 1) / kilnFrameRate)).padStart(2, "0")}:${String((state.frame - 1) % kilnFrameRate).padStart(2, "0")}`;
 
   return (
@@ -106,9 +106,7 @@ export const KilnTimeline = (props: { workbench: WorkbenchCore }) => {
                 px="md"
                 aria-label={`Select ${object.name} animation`}
                 aria-pressed={selectedId === object.id}
-                onClick={() =>
-                  workbench.pageLocations.navigate({ kind: "page", page: kilnPage, resource: kilnResource(object) })
-                }
+                onClick={() => workbench.pageLocations.updateParams({ selection: object.id })}
               >
                 <WorkbenchIcon name={object.icon} color={`${object.tint}.300`} size={13} />
                 <Text>{object.name}</Text>
@@ -202,11 +200,7 @@ export const KilnTimeline = (props: { workbench: WorkbenchCore }) => {
                       _focusVisible={{ outline: "2px solid", outlineColor: "border.accent", outlineOffset: "2px" }}
                       onClick={() => {
                         seek(key.frame);
-                        workbench.pageLocations.navigate({
-                          kind: "page",
-                          page: kilnPage,
-                          resource: kilnResource(object),
-                        });
+                        workbench.pageLocations.updateParams({ selection: object.id });
                       }}
                     />
                   ))}

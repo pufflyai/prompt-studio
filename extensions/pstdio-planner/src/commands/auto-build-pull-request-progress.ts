@@ -3,12 +3,12 @@ import { attemptEventsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { autoBuildPullRequestNotifications } from "../data/auto-build-dispatches";
 import { statusesCollection } from "../data/collections";
-import type { StoredTicket } from "../data/types";
+import type { Ticket } from "../data/types";
 import { parseWorkflowStatuses } from "../data/workflow-statuses";
 import { WorkspaceUnavailableError, workspaceHead } from "./change-requests";
 import { pullRequestRepairKey, pullRequestRepairReason, readPullRequestEvidence } from "./pull-request-evidence";
 
-export async function readPendingPullRequestRepair(ctx: CommandContext, ticket: StoredTicket, attempt: AttemptRecord) {
+export async function readPendingPullRequestRepair(ctx: CommandContext, ticket: Ticket, attempt: AttemptRecord) {
   const revision = attempt.revisions.at(-1);
   if (!revision || !ticket.reviewLinks?.some((link) => link.provider === "github" && link.kind === "pull_request"))
     return;

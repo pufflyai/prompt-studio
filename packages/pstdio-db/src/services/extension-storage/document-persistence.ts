@@ -5,7 +5,7 @@ import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_operations, storage_document_updates, storage_documents } from "../../db/schemas.pg";
 import { dataMigrationContext } from "./data-migration-context";
 import type { LoadedDocument } from "./document-cache";
-import { importOwnerDocument } from "./document-import";
+import type { StorageDiagnostics } from "./storage-diagnostics";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 export interface DocumentAddress {
@@ -31,8 +31,8 @@ const loadDocument = async (
   tx: Transaction,
   address: DocumentAddress,
   owner: StorageOwner,
-  environmentId: string,
   cached?: LoadedDocument,
+  diagnostics?: StorageDiagnostics,
 ) => {
   const inserted = await tx
     .insert(storage_documents)
@@ -49,10 +49,6 @@ const loadDocument = async (
     .select({ state: storage_documents.state })
     .from(storage_documents)
     .where(documentWhere(address));
-  if (inserted.length && address.document_id === "records") {
-    saved.state = await importOwnerDocument(tx, owner, environmentId);
-    await tx.update(storage_documents).set({ state: saved.state }).where(documentWhere(address));
-  }
   const document = new Y.Doc();
   Y.applyUpdate(document, saved.state);
   const updates = await tx
@@ -61,7 +57,12 @@ const loadDocument = async (
     .where(updatesWhere(address))
     .orderBy(storage_document_updates.revision);
   for (const update of updates) Y.applyUpdate(document, update.update);
-  return { row, document };
+  diagnostics?.({
+    phase: "document-loaded",
+    owner,
+    bytes: saved.state.length + updates.reduce((sum, update) => sum + update.update.length, 0),
+  });
+  return { row, document, initialize: inserted.length > 0 };
 };
 
 const localOperations = (tx: Transaction, address: DocumentAddress) => {
@@ -119,13 +120,13 @@ export const runDocumentTransaction = async <T>(
   input: {
     address: DocumentAddress;
     owner: StorageOwner;
-    environmentId: string;
     cached?: LoadedDocument;
+    diagnostics?: StorageDiagnostics;
   },
   action: (state: DocumentState) => Promise<T>,
 ) => {
   const { address } = input;
-  const { document, row } = await loadDocument(tx, address, input.owner, input.environmentId, input.cached);
+  const { document, row } = await loadDocument(tx, address, input.owner, input.cached, input.diagnostics);
   const operations = localOperations(tx, address);
   const key = JSON.stringify(address);
   const migration = dataMigrationContext.getStore();

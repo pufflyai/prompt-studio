@@ -1,4 +1,6 @@
 import type {
+  NavigationTargetViewer,
+  PlacementIdentity,
   NavigationTargetPage as SdkNavigationTargetPage,
   NavigationTargetPanel as SdkNavigationTargetPanel,
 } from "@pstdio/sdk/extensions";
@@ -51,6 +53,7 @@ export interface NavigationTargetHref {
 export type NavigationTargetItem =
   | NavigationTargetPage
   | NavigationTargetPanel
+  | NavigationTargetViewer
   | NavigationTargetCommand
   | NavigationTargetHref;
 
@@ -78,8 +81,22 @@ export interface NavigationDispatcherContext {
   prepareNavigation?(targets: readonly (NavigationTargetPage | NavigationTargetPanel)[]): { commit(): unknown };
   openPanelTarget?(target: NavigationTargetPanel): unknown;
   openPageTarget?(target: NavigationTargetPage): unknown;
-  executeCommand(commandId: string, args?: unknown, region?: WorkbenchPanelRegion): Promise<unknown> | unknown;
+  openViewerTarget?(target: NavigationTargetViewer, context?: NavigationInvocationContext): unknown;
+  executeCommand(
+    commandId: string,
+    args?: unknown,
+    region?: WorkbenchPanelRegion,
+    context?: NavigationInvocationContext,
+  ): Promise<unknown> | unknown;
   openHref?(href: string): Promise<unknown> | unknown;
+}
+export interface NavigationInvocationContext {
+  projectId?: string;
+  removalVersion?: number;
+  /** Host-owned lifetime guard. It is never read from an extension target. */
+  isViewerCurrent?(): boolean;
+  /** Captured by the host from the calling view, never accepted from extension payloads. */
+  viewer?: PlacementIdentity;
 }
 
 const byPriorityAndId = (left: { id: string; priority: number }, right: { id: string; priority: number }) =>
@@ -94,7 +111,7 @@ export interface NavigationRegistry {
   registerParser(parser: NavigationParser, metadata?: ContributionMetadata): Disposable;
   listParsers(): RegisteredNavigationParser[];
   resolveLocation(location: string): NavigationTarget;
-  openTarget(target: NavigationTarget): Promise<readonly unknown[]>;
+  openTarget(target: NavigationTarget, context?: NavigationInvocationContext): Promise<readonly unknown[]>;
   /** Opens a page location through the shared executor. */
   openPage(target: Omit<NavigationTargetPage, "kind">): Promise<readonly unknown[]>;
   /** Opens or activates an owned panel through the shared executor. */
@@ -104,16 +121,30 @@ export interface NavigationRegistry {
 }
 
 export interface CreateNavigationRegistryInput {
+  getProjectId?(): string | undefined;
   // Returns the presenters the dispatcher should call. Lazy so `createWorkbench`
   // can install the navigation registry before the rest of the core is ready.
   resolveDispatcher?(): NavigationDispatcherContext;
 }
 
+const invocationCurrent = (
+  context: NavigationInvocationContext | undefined,
+  getProjectId: CreateNavigationRegistryInput["getProjectId"],
+) => {
+  if (context?.projectId !== undefined && getProjectId && context.projectId !== getProjectId())
+    throw new Error("The calling view belongs to another project");
+  return context?.isViewerCurrent?.() !== false;
+};
+
 const noDispatcher = (): NavigationDispatcherContext => {
   throw new Error("navigation.openTarget: no dispatcher available (configure resolveDispatcher)");
 };
 
-const dispatchItem = async (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
+const dispatchItem = async (
+  target: NavigationTargetItem,
+  dispatcher: NavigationDispatcherContext,
+  context?: NavigationInvocationContext,
+) => {
   if (target.kind === "page") {
     if (!dispatcher.openPageTarget) throw new Error("navigation.openTarget: page target dispatcher is not configured");
     return dispatcher.openPageTarget(target);
@@ -123,11 +154,15 @@ const dispatchItem = async (target: NavigationTargetItem, dispatcher: Navigation
       throw new Error("navigation.openTarget: panel target dispatcher is not configured");
     return dispatcher.openPanelTarget(target);
   }
+  if (target.kind === "viewer") {
+    if (!dispatcher.openViewerTarget) throw new Error("Viewer navigation is not configured");
+    return dispatcher.openViewerTarget(target, context);
+  }
   if (target.kind === "href") {
     if (!dispatcher.openHref) throw new Error(`Cannot open navigation href target: ${target.href}`);
     return dispatcher.openHref(target.href);
   }
-  return dispatcher.executeCommand(target.commandId, target.args, target.region);
+  return dispatcher.executeCommand(target.commandId, target.args, target.region, context);
 };
 
 const validateItem = (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
@@ -191,7 +226,8 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
       return parser.parse(location);
     },
 
-    async openTarget(target) {
+    async openTarget(target, context) {
+      if (!invocationCurrent(context, input.getProjectId)) return [];
       const dispatcher = resolveDispatcher();
       const items = toItems(target);
       const results: unknown[] = [];
@@ -208,7 +244,7 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
         for (const listener of listeners) runWorkbenchEffect("navigation observer", () => listener(target));
         return result;
       }
-      for (const item of items) results.push(await dispatchItem(item, dispatcher));
+      for (const item of items) results.push(await dispatchItem(item, dispatcher, context));
       for (const listener of listeners) runWorkbenchEffect("navigation observer", () => listener(target));
       return results;
     },

@@ -51,8 +51,8 @@ const matchesDefault = (
   placementIdentityKey(actual.placementIdentity) === placementIdentityKey(expected.identity) &&
   actual.viewId === expected.viewId &&
   pageResourceContextKey(page, actual.resource) === pageResourceContextKey(page, expected.resource) &&
-  Boolean(actual.pinned) === (expected.open === "pin") &&
-  actual.tabRetention === (expected.open === "pin" ? "persistent" : expected.open) &&
+  Boolean(actual.pinned) === (expected.open !== "preview") &&
+  actual.tabRetention === (expected.open === "preview" ? "preview" : "persistent") &&
   JSON.stringify(actual.section) === JSON.stringify(expected.section);
 
 export const isDefaultPageMain = (
@@ -62,14 +62,16 @@ export const isDefaultPageMain = (
   resources = defaultPageResourceCodec,
 ) => {
   if (!page || (page.resource && !resource)) return false;
+  // Entering the page opens its independent landing, so any Main tray, including an empty one, is a saved choice.
+  if (page.main.kind === "panels" && typeof page.main.landing === "object") return false;
   const expected = defaultMain(page, resource, resources);
   const main = layout.regions.main;
   if (main.widgets.length !== expected.length) return false;
   if (!main.widgets.every((widget, index) => matchesDefault(widget, expected[index].value, page))) return false;
   const selected = main.widgets.find((widget) => widget.widgetId === main.activeWidgetId) ?? main.widgets[0];
   const primary = expected.find((placement) => placement.value.role === "primary") ?? expected[0];
-  // Main geometry belongs to the mode. Page overrides only own tray membership,
-  // ordering, pinning, and selection; live labels and contribution providers are derived.
+  // Mode geometry is independent of page tray membership, ordering, pinning,
+  // and selection. Header choices are checked separately by the page cache.
   return selected?.placementIdentity && primary
     ? placementIdentityKey(selected.placementIdentity) === placementIdentityKey(primary.identity)
     : !selected && !primary;

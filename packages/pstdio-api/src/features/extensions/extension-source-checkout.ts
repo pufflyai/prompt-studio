@@ -1,6 +1,10 @@
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { createRegistryClient } from "pstdio-extensions/distribution";
+import { requireGitExecutable } from "pstdio-wt";
+import { prepareBundledExtensionSource } from "./bundled-extension-source";
 import { findExtensionCatalogEntry, type GitExtensionOrigin, packagedExtensionCatalog } from "./extension-catalog";
 import { type CommandOptions, type CommandResult, runCommand } from "./install-extension-dependencies";
 
@@ -26,10 +30,11 @@ const cloneRepoSparse = async (
   ref?: string,
   signal?: AbortSignal,
 ) => {
+  const executable = requireGitExecutable();
   const target = `${repositoryUrl}${ref ? ` at ${ref}` : ""}`;
   const git = async (args: string[], failure: string) => {
     signal?.throwIfAborted();
-    const result = await run("git", args, { cwd: checkoutPath, ...(signal ? { signal } : {}) });
+    const result = await run(executable, args, { cwd: checkoutPath, ...(signal ? { signal } : {}) });
     signal?.throwIfAborted();
     if (result.exitCode !== 0) throw new Error(`${failure}: ${result.stderr.trim() || result.stdout.trim()}`);
     return result.stdout.trim();
@@ -74,7 +79,13 @@ export const prepareNamedSource = async (
 ) => {
   const entry = await findExtensionCatalogEntry(name);
   if (!entry) throw new Error(`No catalog entry for extension: ${name}`);
+  if (!explicitRef && hostReleaseRef?.startsWith("psx:") && entry.extensionId) {
+    const registry = createRegistryClient(hostReleaseRef.slice(4));
+    const release = await registry.latest(entry.extensionId, EXTENSION_API_VERSION, signal);
+    return registry.prepare(release, join(tempDir, "extension-source"), signal);
+  }
   const ref = originRef(entry.origin, explicitRef, hostReleaseRef);
+  if (!explicitRef) return prepareReleaseExtensionSource(entry.origin, tempDir, ref, signal);
   const checkoutPath = join(tempDir, "extension-source");
   const commit = await cloneRepoSparse(checkoutPath, [entry.origin.path], runCommand, entry.origin.url, ref, signal);
   return {
@@ -94,6 +105,17 @@ export const prepareGitExtensionSource = async (
   return { path: join(checkoutPath, origin.path), ref: namedSourceRef(commit, origin) };
 };
 
+export const prepareReleaseExtensionSource = async (
+  origin: GitExtensionOrigin,
+  tempDir: string,
+  ref: string,
+  signal?: AbortSignal,
+) => {
+  const bundled = await prepareBundledExtensionSource(origin, tempDir, ref, { signal });
+  if (bundled) return { path: bundled.path, ref: namedSourceRef(bundled.commit, origin) };
+  return prepareGitExtensionSource(origin, tempDir, ref, signal);
+};
+
 export const createSharedNamedSourceCheckout = async (
   names: string[],
   options: {
@@ -107,6 +129,20 @@ export const createSharedNamedSourceCheckout = async (
   const cleanup = () => rmSync(tempDir, { recursive: true, force: true });
 
   if (names.length === 0) return { prepareNamedSource, cleanup };
+  if (!options.ref && options.hostReleaseRef?.startsWith("psx:")) {
+    const prepared = new Map<string, ReturnType<typeof prepareNamedSource>>();
+    return {
+      cleanup,
+      prepareNamedSource: (name: string, _tempDir: string, ref?: string, signal?: AbortSignal) => {
+        let source = prepared.get(name);
+        if (!source) {
+          source = prepareNamedSource(name, join(tempDir, name), ref, signal, options.hostReleaseRef);
+          prepared.set(name, source);
+        }
+        return source;
+      },
+    };
+  }
 
   const entries = await Promise.all(
     names.map(async (name) => {
@@ -130,15 +166,28 @@ export const createSharedNamedSourceCheckout = async (
     for (const group of groups.values()) {
       const checkoutPath = join(tempDir, `extension-source-${index}`);
       index += 1;
+      const remaining: typeof entries = [];
+      for (const entry of group.entries) {
+        const bundled = options.ref
+          ? null
+          : await prepareBundledExtensionSource(entry.origin, checkoutPath, group.ref, options);
+        if (bundled)
+          preparedByName.set(entry.installName, {
+            path: bundled.path,
+            ref: namedSourceRef(bundled.commit, entry.origin),
+          });
+        else remaining.push(entry);
+      }
+      if (remaining.length === 0) continue;
       const commit = await cloneRepoSparse(
         checkoutPath,
-        group.entries.map((entry) => entry.origin.path),
+        remaining.map((entry) => entry.origin.path),
         options.runCommand ?? runCommand,
         group.url,
         group.ref,
         options.signal,
       );
-      for (const entry of group.entries) {
+      for (const entry of remaining) {
         preparedByName.set(entry.installName, {
           path: join(checkoutPath, entry.origin.path),
           ref: namedSourceRef(commit, entry.origin),

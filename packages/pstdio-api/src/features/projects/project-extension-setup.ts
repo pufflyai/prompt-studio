@@ -1,8 +1,9 @@
 import type { ExtensionSetupWarning } from "pstdio-api-contracts";
 import { apiLogger } from "../../lib/logger";
 import { traceSetupPhase } from "../../lib/setup-phase";
+import { AlwaysEnabledExtensionError } from "../extensions/always-on-extensions";
 import {
-  installDefaultExtensions,
+  installMissingDefaultExtensions,
   registerInstalledExtensionSources,
   syncInstalledExtensionsForProject,
 } from "../extensions/default-extensions";
@@ -11,8 +12,13 @@ import type { ProjectsRouteDeps } from "./deps";
 const enableSyncedProjectExtensions = async (deps: ProjectsRouteDeps, projectId: string, existingIds: Set<string>) => {
   const extensions = await deps.extensionService.listProjectExtensionInstances(projectId);
   for (const { instance } of extensions) {
-    if (!instance.enabled && !existingIds.has(instance.id))
+    if (instance.enabled || existingIds.has(instance.id)) continue;
+    try {
       await deps.extensionService.setProjectExtensionEnabled(instance.id, true);
+    } catch (error) {
+      // Discovery has already enabled the required provider. Leave alternate copies off.
+      if (!(error instanceof AlwaysEnabledExtensionError)) throw error;
+    }
   }
 };
 
@@ -36,32 +42,39 @@ const logExtensionWarning = (warning: ExtensionSetupWarning) => {
   );
 };
 
-export const setupProjectExtensions = async (
-  deps: ProjectsRouteDeps,
-  projectId: string,
-  installDefaults: boolean,
-  preservedInstanceIds = new Set<string>(),
-) => {
+export const prepareDefaultProjectExtensions = async (deps: ProjectsRouteDeps) => {
   const warnings: ExtensionSetupWarning[] = [];
   const addWarning = (warning: ExtensionSetupWarning) => {
     warnings.push(warning);
     logExtensionWarning(warning);
   };
 
-  if (installDefaults) {
-    try {
-      const installed = await installDefaultExtensions({
-        forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
-        onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
-        releaseRef: deps.extensionUpgradeService?.releaseRef,
-      });
-      await traceSetupPhase("project.extension_register", { project_id: projectId }, () =>
-        registerInstalledExtensionSources(deps.extensionService, installed),
-      );
-    } catch (error) {
-      addWarning(createExtensionWarning("default extensions", error));
-    }
+  try {
+    const installed = await installMissingDefaultExtensions({
+      forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
+      onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
+      releaseRef: deps.extensionUpgradeService?.releaseRef,
+    });
+    await traceSetupPhase("project.extension_register", {}, () =>
+      registerInstalledExtensionSources(deps.extensionService, installed),
+    );
+  } catch (error) {
+    addWarning(createExtensionWarning("default extensions", error));
   }
+  return warnings;
+};
+
+export const setupProjectExtensions = async (
+  deps: ProjectsRouteDeps,
+  projectId: string,
+  installDefaults: boolean,
+  preservedInstanceIds = new Set<string>(),
+) => {
+  const warnings = installDefaults ? await prepareDefaultProjectExtensions(deps) : [];
+  const addWarning = (warning: ExtensionSetupWarning) => {
+    warnings.push(warning);
+    logExtensionWarning(warning);
+  };
 
   await traceSetupPhase("project.extension_sync", { project_id: projectId }, () =>
     syncInstalledExtensionsForProject({

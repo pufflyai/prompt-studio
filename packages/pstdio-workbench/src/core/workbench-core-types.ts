@@ -4,6 +4,7 @@ import type { WorkbenchCommandPaletteController } from "./controllers/command-pa
 import type { WorkbenchCompositionController } from "./controllers/composition/composition-controller";
 import type { WorkbenchFocusController } from "./controllers/focus/focus-controller";
 import type { MainFullscreenController } from "./controllers/fullscreen/main-fullscreen";
+import type { WorkbenchKeyboardController } from "./controllers/keyboard/keyboard-controller";
 import type {
   WorkbenchPageLocationBrowser,
   WorkbenchPageLocationController,
@@ -13,6 +14,7 @@ import type {
   WorkbenchPanelMenuStateController,
   WorkbenchPanelMenuStatePersistenceAdapter,
 } from "./controllers/panel-menus/panel-menu-state-controller";
+import type { WorkbenchViewerController } from "./controllers/resource-viewers/resource-viewers";
 import type { WorkbenchShellController } from "./controllers/shell/shell-controller";
 import type {
   WorkbenchSidePanelController,
@@ -85,6 +87,7 @@ export type WorkbenchTreeViews = Pick<
 >;
 
 export interface WorkbenchCoreContributionContext {
+  viewers: WorkbenchViewerController;
   pinPlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity, pinned?: boolean): void;
   getPanelDestinations(instanceId: string): import("./registries/layout/layout-types").WorkbenchPanelRegion[];
   movePanel(
@@ -103,6 +106,7 @@ export interface WorkbenchCoreContributionContext {
   context: ContextKeyService;
   focus: WorkbenchFocusController;
   fullscreen: MainFullscreenController;
+  keyboard: WorkbenchKeyboardController;
   keybindings: KeybindingRegistry;
   layout: WorkbenchModuleLayoutModel;
   modes: WorkbenchModeRegistry;

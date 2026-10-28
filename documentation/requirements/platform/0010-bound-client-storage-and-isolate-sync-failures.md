@@ -90,6 +90,13 @@ describes the current code; the required column defines the remaining capacity a
 
 ## Required changes
 
+The recovery snapshot policy is owned by PRD 0014 R53, revised on 2026-10-22:
+at most three local recovery points (hourly, every 12 hours, and daily), with only
+the 12-hour point retained when space is insufficient. Recovery snapshots use
+available device storage without a fixed byte quota or free-space reserve. The
+budget selection and enforcement requirements below do not impose a quota or
+reserve on those snapshots. They still apply to the other storage classes.
+
 ### 1. Define storage classes and budgets
 
 Separate required local data from downloadable history and disposable caches. Pending operations,

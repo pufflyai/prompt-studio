@@ -7,6 +7,7 @@ import type {
   QuestionResponse,
 } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
+import { authenticateOpencode } from "./account-action";
 import { opencodeCommandState, prepareOpencodeOperation } from "./commands";
 import { detectOpencode } from "./detection";
 import { recoverOpencodeMessages } from "./history-reconciliation";
@@ -21,7 +22,7 @@ import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-
 
 const readOpencodeModels = async (ctx: HarnessContext) => {
   try {
-    const result = await ctx.process.run({ command: ["opencode", "models", "--verbose"] });
+    const result = await ctx.process.run({ command: [resolveOpencodeCommand(), "models", "--verbose"] });
     if (result.exitCode !== 0) return "";
     return result.stdout.trim();
   } catch {
@@ -188,9 +189,15 @@ export const createOpencodeHarness = (
 
     capabilities: () => ["SessionFork", "ContextUsage", "SessionReattach"],
     detect: (ctx) => deps.detect(ctx),
+    getAuthentication: (ctx, input) => services.run(ctx, async () => (await serviceFor(ctx)).getAuthentication(input)),
+    authenticate: async (ctx, input, channel) => {
+      await authenticateOpencode(ctx, input, channel, serviceOverrides);
+      await services.invalidateAuthentication();
+      modelCache = undefined;
+    },
 
     listModels,
-    getCommandState: async (ctx, input) => opencodeCommandState(input, await serviceFor(ctx)),
+    getCommandState: (ctx, input) => services.run(ctx, async () => opencodeCommandState(input, await serviceFor(ctx))),
     prepareOperation: async (ctx, input, operation) => {
       const prepared = prepareOpencodeOperation(input, operation, await serviceFor(ctx));
       return {
@@ -308,11 +315,14 @@ export const createOpencodeHarness = (
         );
       }),
 
-    getMessages: async (ctx, input) => {
-      const opencode = await serviceFor(ctx);
-      const messages = await opencode.getSessionMessages(input.agentSessionId, input.cwd);
-      return messages.map(normalizeOpencodeMessage);
-    },
+    getMessages: (ctx, input) =>
+      services.run(ctx, async () => {
+        const opencode = await serviceFor(ctx);
+        const messages = await opencode.getSessionMessages(input.agentSessionId, input.cwd);
+        return messages.map(normalizeOpencodeMessage);
+      }),
     recoverMessages: (_ctx, input) => recoverOpencodeMessages(input),
   };
 };
+
+import { resolveOpencodeCommand } from "./cli";

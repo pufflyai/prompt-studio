@@ -13,7 +13,10 @@ import { readTicketReviewRequests } from "../data/review-request-storage";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { isLiveSession } from "./auto-build-sessions";
 
-type ReadinessContext = Pick<CommandContext, "process" | "workspaces" | "sessions" | "settings" | "storage" | "logger">;
+type ReadinessContext = Pick<
+  CommandContext,
+  "process" | "workspaces" | "sessions" | "settings" | "storage" | "logger" | "resources"
+>;
 
 interface ReadinessParams {
   base?: string;
@@ -43,17 +46,16 @@ const loadDependencyInput = async (
   commandParams: ReadinessParams,
   deliveryReads?: DependencyDeliveryReads,
 ) => {
-  const [storedTickets, attempts, selections, statuses, home, providers, requests, events] = await Promise.all([
-    ticketsCollection(ctx.storage).list(),
+  const [storedTickets, attempts, selections, statuses, home, requests, events] = await Promise.all([
+    ticketsCollection(ctx).list(),
     listAttempts(ctx.storage),
     attemptSelectionsCollection(ctx.storage).list(),
     readWorkflowStatuses(ctx),
     ctx.workspaces.getDefault(),
-    ctx.workspaces.listProviders(),
     readTicketReviewRequests(ctx.storage),
     attemptEventsCollection(ctx.storage).list(),
   ]);
-  const storedTarget = await findTicket(ctx.storage, ticketRef);
+  const storedTarget = await findTicket(ctx, ticketRef);
   const target: AttemptReadinessTicket = storedTarget ?? {
     id: ticketRef,
     shorthand: ticketRef,
@@ -61,23 +63,21 @@ const loadDependencyInput = async (
     dependsOn: [],
   };
   const tickets = storedTarget ? storedTickets : [...storedTickets, target];
-  if (
-    !home?.root_path ||
-    home.execution_kind !== "local" ||
-    !providers.some((provider) => provider.id === "pstdio.worktree")
-  ) {
-    throw new Error(
-      "Planner attempts require a Git repository with a usable base commit. Tools and ordinary sessions remain available in the project folder.",
-    );
-  }
+  const gitRequirement =
+    "Planner attempts require a Git repository with a usable base commit. Tools and ordinary sessions remain available in the project folder.";
+  if (!home?.root_path || home.execution_kind !== "local") throw new Error(gitRequirement);
   const rootPath = home.root_path;
 
+  // Resolving the requested commit proves Git can supply the base. Provider form
+  // discovery also lists every branch and is unnecessary for this command.
   const mainHeadSha = await runGit(ctx, rootPath, [
     "rev-parse",
     "--verify",
     "--end-of-options",
     `${commandParams.base ?? "HEAD"}^{commit}`,
-  ]);
+  ]).catch((cause) => {
+    throw new Error(gitRequirement, { cause });
+  });
   const doneStatusIds = new Set(usableWorkflowStatuses(statuses).completedStatusIds);
   const owners = await Promise.all(
     attempts.map(async (attempt) => ({

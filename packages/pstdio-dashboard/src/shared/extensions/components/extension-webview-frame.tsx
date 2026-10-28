@@ -32,7 +32,7 @@ import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } f
 import { PausedExtensionView } from "./paused-extension-view";
 
 interface ExtensionWebviewFrameProps {
-  sizing?: "content-width";
+  sizing?: "content-width" | "content-height";
   extensionId: string;
   extensionInstanceId?: string;
   installName?: string;
@@ -98,6 +98,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
           clearError();
           return executeWebviewCommand({
             ...commandInput,
+            placement: props.placement?.placementIdentity,
             signal,
             resource: commandInput.resource ?? resource ?? props.placement?.resource,
             slot: webviewCommandSlot({ projectId, webviewId, slotKind: props.slotKind }),
@@ -178,6 +179,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     <>
       {errorNotice}
       <BridgedWebviewSurface
+        workbench={props.workbench}
         sizing={props.sizing}
         key={view.id}
         view={view}
@@ -188,6 +190,11 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
           lastCommand,
           resource,
           pageLocation,
+          viewLocation: {
+            section: props.placement?.section,
+            position: props.placement?.position,
+            pageContext: props.placement?.pageContext,
+          },
           pageParams,
           translations,
         }}

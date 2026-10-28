@@ -6,6 +6,7 @@ import type {
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import { AlertMessage, EmptyState, Switch, type SwitchProps } from "@pstdio/ui";
+import type { WorkbenchCore } from "@pstdio/workbench";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
 import { ArrowLeft, ArrowUpCircle, Blocks, Puzzle, RotateCw, SlidersHorizontal, Timer, Trash2 } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
@@ -22,6 +23,7 @@ import { settingsToParams } from "./extension-settings-params";
 
 export interface ExtensionDetailProps {
   projectId?: string;
+  workbench?: WorkbenchCore;
   extension: ProjectExtensionInstance;
   metadata: DashboardExtensionMetadata | undefined;
   automations: WorkbenchExtensionAutomationRecord[];
@@ -310,7 +312,12 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
 
         <Tabs.Content value="contributions">
           <Stack paddingX="lg">
-            <ExtensionContributions metadata={metadata} extensionId={extension.extensionId} automations={automations} />
+            <ExtensionContributions
+              workbench={props.workbench}
+              metadata={metadata}
+              extensionId={extension.extensionId}
+              automations={automations}
+            />
           </Stack>
         </Tabs.Content>
       </Tabs.Root>

@@ -31,25 +31,30 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     if (placement.placementIdentity) workbench.closePlacement(placement.placementIdentity);
     else workbench.layout.closePanel(placement.widgetId);
   };
-  const tabAction = (key: string, title: string, icon: string, onClick: () => void) => ({
+  const tabAction = (
+    key: string,
+    title: string,
+    icon: string,
+    action: Pick<ResourceContextAction, "onClick" | "onSelect">,
+  ) => ({
     key,
     label: title,
     icon: <WorkbenchIcon name={icon} size={14} />,
     group: { id: "tab", label: "Tab" },
-    onClick,
+    ...action,
   });
   const actions = [
-    ...createWorkbenchResourceMenu(workbench, placement.resource, { menu: groups }),
+    ...createWorkbenchResourceMenu(workbench, placement.resource, { menu: groups }, placement),
     ...(placement.tabRetention
-      ? [tabAction("pin", placement.tabRetention === "preview" ? "Pin tab" : "Unpin tab", "pin", pin)]
+      ? [tabAction("pin", placement.tabRetention === "preview" ? "Pin tab" : "Unpin tab", "pin", { onSelect: pin })]
       : []),
     ...destinations.map((region) =>
-      tabAction(`move-${region}`, `Move to ${getPanelLabel(region)}`, "ArrowRight", () =>
-        workbench.movePanel(placement.widgetId, region),
-      ),
+      tabAction(`move-${region}`, `Move to ${getPanelLabel(region)}`, "ArrowRight", {
+        onClick: () => workbench.movePanel(placement.widgetId, region),
+      }),
     ),
-    ...(placement.closable ? [tabAction("close", "Close tab", "x", close)] : []),
-    tabAction("reset-layout", "Reset layout", "RotateCcw", () => workbench.resetLayout()),
+    ...(placement.closable ? [tabAction("close", "Close tab", "x", { onClick: close })] : []),
+    tabAction("reset-layout", "Reset layout", "RotateCcw", { onClick: () => workbench.resetLayout() }),
   ];
   return (
     <Menu.RootProvider
@@ -60,8 +65,14 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
         const action = pending.current;
         pending.current = null;
         if (action) {
-          const triggerId = menu.api.getTriggerProps().id;
-          if (triggerId) document.getElementById(triggerId)?.focus({ preventScroll: true });
+          const contentId = menu.api.getContentProps().id;
+          const content = contentId ? document.getElementById(contentId) : null;
+          const focused = document.activeElement;
+          // A newer menu or input keeps the focus it received while this menu was closing.
+          if (focused === document.body || content?.contains(focused)) {
+            const triggerId = menu.api.getTriggerProps().id;
+            if (triggerId) document.getElementById(triggerId)?.focus({ preventScroll: true });
+          }
         }
         void action?.onClick?.();
       }}
@@ -70,12 +81,15 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
         <Menu.Positioner>
           <Menu.Content aria-labelledby={labelId}>
             <VisuallyHidden id={labelId}>{label} context menu</VisuallyHidden>
-            <ResourceMenuItems
-              actions={actions}
-              onSelect={(action) => {
-                pending.current = action;
-              }}
-            />
+            {menu.api.open ? (
+              <ResourceMenuItems
+                actions={actions}
+                onSelect={(action) => {
+                  pending.current = action;
+                  void action.onSelect?.();
+                }}
+              />
+            ) : null}
           </Menu.Content>
         </Menu.Positioner>
       </Portal>

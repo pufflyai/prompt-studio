@@ -12,6 +12,7 @@ import { updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { createDashboardWorkspaces } from "@/shared/workspaces/dashboard-workspaces";
+import { isProjectFolderMissing } from "@/shared/workspaces/workspace-state";
 import { registerWorkspaceDataTableView } from "./collections/workspace-data-table-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-widget";
@@ -35,6 +36,7 @@ const openCreateWorkspace = (ctx: WorkbenchModuleContext, options: CreateWorkspa
     ctx.modes.setActiveMode("project-selection");
     return;
   }
+  if (isProjectFolderMissing(projectId)) return ctx.commands.executeCommand(dashboardCommandIds.chooseProjectFolder);
   return ctx.overlays.openOverlay(dashboardWidgetIds.createWorkspace, {
     title: "Create workspace",
     resource: {
@@ -153,6 +155,7 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
     },
     main: {
       kind: "panels",
+      landing: "changes",
       empty: {
         kind: "view",
         id: dashboardWidgetIds.workspaceSummary,
@@ -271,8 +274,8 @@ export const createWorkspacesModule = () =>
       ctx.commands.registerCommand(
         {
           id: dashboardCommandIds.openWorkspaces,
-          label: "Open workspaces",
-          category: "Dashboard",
+          label: "Go to workspaces",
+          category: "Workspaces",
           icon: dashboardViews.workspaces.icon,
         },
         {
@@ -280,7 +283,7 @@ export const createWorkspacesModule = () =>
         },
       );
       ctx.commands.registerCommand(
-        { id: dashboardCommandIds.createWorkspace, label: "New workspace", category: "Dashboard", icon: "Plus" },
+        { id: dashboardCommandIds.createWorkspace, label: "New workspace", category: "Workspaces", icon: "Plus" },
         { execute: (options: CreateWorkspaceCommandParams | undefined) => openCreateWorkspace(ctx, options) },
       );
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
@@ -293,11 +296,15 @@ export const createWorkspacesModule = () =>
       });
       ctx.keybindings.registerKeybinding({
         action: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
-        keybinding: "Alt+Shift+W",
+        keybinding: "W",
+        layer: "go",
+        label: "Go to workspaces",
+        sticky: true,
       });
       ctx.keybindings.registerKeybinding({
         action: { kind: "command", commandId: dashboardCommandIds.createWorkspace },
-        keybinding: "Mod+Alt+W",
+        keybinding: "W",
+        layer: "create",
       });
       const unsubscribePage = ctx.pages.store.subscribeSelector(
         (state) => state.location,

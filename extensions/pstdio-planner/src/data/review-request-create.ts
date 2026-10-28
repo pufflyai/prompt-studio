@@ -55,7 +55,7 @@ const assertIncompleteTicket = async (ctx: CommandContext, statusId: string | nu
 };
 
 export const createReviewRequest = async (ctx: CommandContext, input: CreateReviewRequestInput) => {
-  const ticket = await findTicket(ctx.storage, input.ticket);
+  const ticket = await findTicket(ctx, input.ticket);
   if (!ticket) throw new Error(`Unknown ticket "${input.ticket}"`);
   await assertIncompleteTicket(ctx, ticket.statusId);
   if (input.expectedTicketStatusId !== undefined && ticket.statusId !== input.expectedTicketStatusId) {
@@ -73,7 +73,7 @@ export const createReviewRequest = async (ctx: CommandContext, input: CreateRevi
     if (existing) return existing;
   }
 
-  const requestId = crypto.randomUUID();
+  const requestId = ctx.storage.ids.create();
 
   const request: ReviewRequest = {
     id: requestId,

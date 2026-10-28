@@ -32,20 +32,36 @@ use it for that open, including reuse of an existing tab. Omit it on ordinary op
 to retain the live layout's placement. Extension command navigation
 results inherit the destination from the Add action.
 
+Main tabs and their selection persist separately for each tabbed page. Resource
+routes under a tabbed collection share that collection's Main tray. Side and
+Bottom stay shared within the mode. A static page browser declared in Main
+is offered only in that collection's Main. Resource viewers with an Add command
+remain available in other eligible pages. Independent panel views declared in
+Side or Bottom remain available across pages. These Add rules do not restrict
+where an existing tab can move.
+
+A resource binding with an Add command uses the command's label and icon in the
+**+** menu and default placeholder cards. The opened resource keeps the view's
+own tab presentation.
+
 Hover over a tab or focus it with the keyboard to see its full title in a tooltip.
 The tooltip appears below the tab after 300 ms.
 
-When a panel menu shows an opener in the header, the panel also shows its tab,
-even for a single fixed panel. The tab keeps its existing close behavior.
+Views in tab panels have closable tabs. A page with `main.presentation: "page"`
+owns Main content directly and has no tab header or tab strip. Tabbed pages keep their header.
+When a tabless page's view has a closed view menu, a minimal Main menu header holds only
+that menu's opener. It has no bottom border, tabs, or panel drag handle, and it is not a
+tab drop or panel placement target. Tabless pages without view menus have no Main header.
 
-Tabs can be dragged onto panel content, including webviews in panels without a
-tab strip. During a tab drag, the workbench catches pointer events over panels
+Tabs can be dragged onto other tab panels, including webview content. Tabless pages
+do not accept drops. During a tab drag, the workbench catches pointer events over panels
 so iframe content cannot interrupt the drop, even at a disallowed destination.
 Outside tab drags, webviews receive their normal pointer events and native file drops.
 
 ## Panel menus
 
-Closing an attached panel menu hides it until its header opener is selected. The
+Closing an attached panel menu hides it until its header opener is selected. On a
+tabless page, the opener sits in the minimal Main menu header. The
 opener attaches the menu directly when its panel is wider than 580 px and has room
 for the menu, other attached menus, resize handles, and at least 120 px of content.
 Menu minimum widths come from their contributions. Panels 580 px wide or narrower

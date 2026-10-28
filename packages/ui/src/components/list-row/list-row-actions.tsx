@@ -2,6 +2,7 @@ import { Box, HStack, IconButton, Menu, Portal, useRecipe } from "@chakra-ui/rea
 import { Fragment, type ReactElement } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowAction } from "./list-row.types";
+import { preventRowAccessoryDrag } from "./list-row-accessory-events";
 import { SearchableActionMenu } from "./searchable-action-menu";
 
 interface RowActionsProps {
@@ -31,6 +32,9 @@ export const RowActions = (props: RowActionsProps) => {
       gap="0"
       css={accessoryRecipe({ visibility: alwaysVisible ? "always" : "hover" })}
       onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
+      onMouseDown={preventRowAccessoryDrag}
+      onKeyDown={(event) => event.stopPropagation()}
     >
       {actions.map((action) => {
         if (action.menuItems && action.menuItems.length >= 8) {
@@ -42,7 +46,7 @@ export const RowActions = (props: RowActionsProps) => {
             action,
             <Menu.Root>
               <Menu.Trigger asChild>
-                <IconButton variant="ghost" size="2xs" aria-label={action.label}>
+                <IconButton variant="ghost" size="2xs" aria-label={action.label} disabled={action.disabled}>
                   {action.icon}
                 </IconButton>
               </Menu.Trigger>
@@ -84,6 +88,8 @@ export const RowActions = (props: RowActionsProps) => {
             variant="ghost"
             size="2xs"
             aria-label={action.label}
+            disabled={action.disabled}
+            aria-pressed={action.pressed}
             onClick={(event) => {
               event.stopPropagation();
               action.onAction?.(context);

@@ -78,9 +78,9 @@ export const saveStatusSettings = defineCommand({
     await Promise.all([
       ...next.map((status) => putStatus(ctx.storage, status)),
       ...removed.map((status) => statusesCollection(ctx.storage).delete(status.id)),
-      ...(await ticketsCollection(ctx.storage).list()).map((ticket) =>
+      ...(await ticketsCollection(ctx).list()).map((ticket) =>
         removed.some((status) => status.id === ticket.statusId)
-          ? putTicket(ctx.storage, { ...ticket, statusId: fallbackId })
+          ? putTicket(ctx, { ...ticket, statusId: fallbackId })
           : undefined,
       ),
     ]);

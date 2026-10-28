@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { basename, extname } from "node:path";
-import type { ArtifactMount, ExtensionStorageCollectionApi } from "@pstdio/sdk/extensions";
+import type { ArtifactMount, ExtensionStorageApi, ExtensionStorageCollectionApi } from "@pstdio/sdk/extensions";
 import { decodeHTML } from "entities";
 import { artifactIdFromUrl, artifactResource, artifactTarget, artifactUrl } from "./contracts";
 
@@ -20,6 +20,7 @@ export interface ArtifactRevision {
 
 interface ArtifactServiceInput {
   projectId: string;
+  ids: ExtensionStorageApi["ids"];
   artifacts: Pick<ExtensionStorageCollectionApi<{ id: string }>, "get" | "createIfAbsent" | "delete">;
   revisions: Pick<ExtensionStorageCollectionApi<ArtifactRevision>, "get" | "list" | "createIfAbsent" | "delete">;
   names: Pick<ExtensionStorageCollectionApi<{ title: string }>, "get" | "put" | "delete">;
@@ -117,10 +118,10 @@ export const createArtifactService = (input: ArtifactServiceInput) => {
     const size = Buffer.byteLength(value.html, "utf8");
     if (size > HTML_LIMIT_BYTES) throw new Error("The HTML page exceeds the 16 MiB limit.");
     const previous = value.url ? (await revisions(value.url))[0] : undefined;
-    const id = crypto.randomUUID();
+    const id = input.ids.create();
     const revision: ArtifactRevision = {
       id,
-      artifactId: previous?.artifactId ?? crypto.randomUUID(),
+      artifactId: previous?.artifactId ?? input.ids.create(),
       title: await titleFromHtml(value.html, value.file_path),
       favicon: value.favicon ?? previous?.favicon,
       label: value.label,

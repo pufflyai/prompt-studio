@@ -16,7 +16,7 @@ const terminalWebSocketUrl = apiToken
 const apiProxy = apiToken
   ? createApiProxy(apiProxyTarget, apiToken)
   : {
-      "/v1": apiProxyTarget,
+      "/v1": { target: apiProxyTarget, ws: true },
       "/healthz": apiProxyTarget,
     };
 

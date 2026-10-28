@@ -2,15 +2,19 @@
 
 Prompt Studio is a workbench where people and agents build and use tools through extensions. Core owns shared execution, workspaces, state, sync, trust, and workbench contracts. Planner, Notes, and Reports own their domain workflows. Read the [mission](../../MISSION.md) before changing product boundaries.
 
+The [design rules](../../design/DESIGN.md) guide interactions. The [nonfunctional requirements](../../NONFUNCTIONAL_REQUIREMENTS.md) describe resource and performance targets, nightly checks, and guidance on local benchmarks.
+
 ## Start here
 
 - [Install Prompt Studio](getting-started/0001-install.md)
 - [Set up repository development](development/0001-setup.md)
 - [Run tests and validate changes](development/0002-testing.md)
+- [Understand CI stages: PRs, merge queue, main, nightly and stable releases](development/0015-ci-stages.md)
 - [Build and smoke-test the relay](development/0006-relay.md)
 - [Develop private account authority](development/0007-account-manager.md)
 - [Device login development](development/0011-device-login.md)
 - [Test the relay with two dashboards](development/0008-two-dashboard-relay.md)
+- [Publish SDK and UI previews](development/0014-sdk-ui-previews.md)
 - [Configure private service diagnostics](development/0010-service-diagnostics.md)
 - [Write an extension](extensions/0001-authoring.md)
 - [Look up SDK methods](../references/sdk/0003-api.md)
@@ -36,6 +40,8 @@ Use topic folders within categories. References are grouped into `architecture/`
 
 Every file has a four-digit number within its own folder: `NNNN-kebab-case.md`. For example, `references/architecture/0001-adapters-and-features.md` and `references/sdk/0001-overview.md` belong to separate sequences. Avoid repeating a folder's topic in the filename. Keep published numbers stable and add the next number in that folder. ADRs and lessons retain their existing folders and identifiers; do not recycle removed numbers. Keep ADR proposal dates when their status changes. Package and extension READMEs, extension-owned product docs, and Pencil/design guidance stay beside their owners.
 
+Repository-wide governing documents keep their stable names and paths: `MISSION.md`, `NONFUNCTIONAL_REQUIREMENTS.md`, `AGENTS.md`, and `design/DESIGN.md`.
+
 Treat source-linked type declarations as the signature authority. Call requirements documents PRDs, not proposals. Mark unimplemented PRDs as proposed and delete superseded PRDs. Preserve the remaining numbers when a PRD is removed; gaps do not need to be filled.
 
 ## Publishing to prompt.studio/docs
@@ -44,7 +50,7 @@ The website publishes some folders as the Docs tab at [prompt.studio/docs](https
 
 - Guides: `guides/getting-started/`, `guides/concepts/`, `guides/extensions/`, and `guides/sdk/`
 - References: `references/cli/`, `references/extensions/`, `references/sdk/`, and `references/workbench/`
-- Extensions: `extensions/<name>/README.md` and the numbered files in `extensions/<name>/docs/` for Planner, Notes, Reports, Artifacts, Remote Workspaces, the Claude Code, Codex, and OpenCode harnesses, and Extension Lab
+- Extensions: `extensions/<name>/README.md` and the numbered files in `extensions/<name>/docs/` for Planner, Notes, Reports, Artifacts, Remote Workspaces, the Claude Code, Codex, OpenCode, and Pi harnesses, and Extension Lab
 
 Nothing else is published. This guide, `guides/development/`, `references/architecture/`, PRDs, ADRs, lessons learned, and `extensions/pstdio-planner/docs/superseded/` stay in the repository. The allow-list of published folders and their sidebar labels lives in `clients/landing-page/src/content/docs-topics.ts`. A folder that is not on that list is never published, so a new folder stays private until someone adds it.
 
@@ -186,6 +192,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0004 — Pull request area labels](development/0004-pull-request-labels.md)
 - [0005 — Extension conformance and regression coverage](development/0005-conformance.md)
 - [0012 — Portable relay and account manager deployment](development/0012-portable-cloud-deployment.md)
+- [0013 — Independent core extension releases](development/0013-independent-extension-releases.md)
 
 ### Build extensions
 
@@ -380,6 +387,10 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0065 — Stream command results over the shared client stream](../adrs/0065-stream-command-results-over-the-shared-client-stream.md)
 - [0076 — Separate account authority from content](../adrs/0076-separate-account-authority-from-content.md)
 - [0088 — Temporary tooltip hover reset](../adrs/0088-temporary-tooltip-hover-reset.md)
+- [0099 — Durable record query projections](../adrs/0099-durable-record-query-projections.md)
+- [0100 — One document per resource](../adrs/0100-one-document-per-resource.md)
+- [0106 — Deliver core extension releases independently through PSX](../adrs/0106-independent-core-extension-delivery.md)
+- [0107 — Publish SDK and UI previews without a host release](../adrs/0107-independent-sdk-ui-previews.md)
 
 ## Lessons learned
 

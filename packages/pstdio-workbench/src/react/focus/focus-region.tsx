@@ -12,15 +12,17 @@ interface WorkbenchFocusRegionProps extends BoxProps {
 
 export const WorkbenchFocusRegion = (props: WorkbenchFocusRegionProps) => {
   const { workbench, region, children, ...boxProps } = props;
+  const keyboardActive = useWorkbenchStore(workbench.keyboard.store, (state) => state.active);
   const activeRegion = useWorkbenchStore(workbench.focus.store, (state) => state.activeRegion);
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const element = ref.current;
-    if (!element || activeRegion !== region) return;
-    if (element.contains(document.activeElement)) return;
+    if (!element || activeRegion !== region || keyboardActive) return;
+    const panel = element.closest("[data-workbench-panel]") ?? element;
+    if (panel.contains(document.activeElement)) return;
     element.focus({ preventScroll: true });
-  }, [activeRegion, region]);
+  }, [activeRegion, region, keyboardActive]);
 
   return (
     <Box

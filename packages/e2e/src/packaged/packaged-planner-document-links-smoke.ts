@@ -9,9 +9,9 @@ export const expectPlannerDocumentLinks = async (
 ) => {
   const page = metadata.pages.find((page) => page.id === "pstdio.pstdio-planner.page.ticket");
   expect(page).toMatchObject({ document: { metadataKey: "documentId" } });
-  expect(
-    metadata.resourceKinds.find((kind) => kind.id === "ticket" && kind.extensionId === "pstdio.pstdio-planner"),
-  ).toMatchObject({ resolveManyCommand: "pstdio.pstdio-planner.command.resolve-ticket-resources" });
+  expect(metadata.resourceKinds.find((kind) => kind.id === "pstdio.pstdio-planner.ticket")).toMatchObject({
+    resolveManyCommand: "pstdio.pstdio-planner.command.resolve-ticket-resources",
+  });
   const navigation = metadata.views.find((view) => view.id === "pstdio.pstdio-planner.view.ticket-files");
   expect(navigation?.body).toMatchObject({
     kind: "tree",

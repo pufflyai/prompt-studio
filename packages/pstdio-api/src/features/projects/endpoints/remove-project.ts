@@ -27,6 +27,10 @@ export const removeProjectRoute = createRoute({
       description: "Project not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
     },
+    409: {
+      description: "The project syncs with the account. Make it local first.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
   },
 });
 
@@ -38,6 +42,13 @@ export const removeProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
     if (!project) {
       return c.json({ error: "Project not found" }, 404);
     }
+
+    // Every device of the account gets every cloud project, so the next account refresh would bring it back.
+    if ((await deps.accountService.status()).cloudProjects.includes(id))
+      return c.json(
+        { error: "This project syncs with your Cloud account. Make it local in Cloud settings before deleting it." },
+        409,
+      );
 
     const home = await deps.workspaceService.getDefault(id);
     return withFolderCreation(home?.root_path ?? null, async () => {

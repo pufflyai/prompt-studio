@@ -1,0 +1,283 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { OpenAPIHono } from "@hono/zod-openapi";
+import { createClient } from "@pstdio/sdk/client";
+import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
+import type { AppBindings } from "../../../types";
+import { testHarnessId } from "../../harnesses/test-harness-registry";
+
+let app: OpenAPIHono<AppBindings>;
+let closeApp: () => Promise<void>;
+let tempRoot: string;
+let projectId: string;
+let instanceId: string;
+let previousPstdioHome: string | undefined;
+let previousDefaultExtensions: string | undefined;
+let deps: Awaited<ReturnType<typeof createTestApp>>["deps"];
+
+const installName = "settings-lab";
+
+const writeSettingsExtension = (root: string) => {
+  const extensionRoot = join(root, "extensions", installName);
+  mkdirSync(extensionRoot, { recursive: true });
+  writeFileSync(
+    join(extensionRoot, "package.json"),
+    JSON.stringify({
+      name: installName,
+      version: "1.0.0",
+      displayName: "Settings Lab",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+    }),
+  );
+  writeFileSync(
+    join(extensionRoot, "extension.ts"),
+    `export default {
+      commands: [
+        { id: "branches", title: "Branches", ref: { kind: "command", id: "branches" }, run: async () => [] },
+        { id: "capacity", title: "Capacity", ref: { kind: "command", id: "capacity" }, run: async (ctx) => {
+          await ctx.settings.set("capacity", 7);
+          return ctx.settings.get("capacity");
+        } },
+      ],
+      settings: {
+        properties: {
+          "capacity": { type: "number", scope: "device", default: 2 },
+          "target.branch": {
+            type: "string",
+            scope: "project",
+            default: "",
+            options: { command: { kind: "command", id: "branches" }, valueField: "branch", labelField: "branch" },
+          },
+          "counter.step": { type: "number", scope: "project", default: 1 },
+          "counter.enabled": { type: "boolean", scope: "project", default: true },
+          "greeting.tone": {
+            type: "string",
+            scope: "global",
+            enum: ["friendly", "formal"],
+            default: "friendly",
+          },
+        },
+      },
+    };`,
+  );
+  return extensionRoot;
+};
+
+const postJson = async (path: string, body: unknown) => {
+  const response = await app.request(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return response.json();
+};
+
+const putJson = (path: string, body: unknown) =>
+  app.request(path, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+beforeEach(async () => {
+  tempRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-settings-test-"));
+  previousPstdioHome = process.env.PSTDIO_HOME;
+  previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  process.env.PSTDIO_HOME = join(tempRoot, "home");
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+
+  const created = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
+  });
+  app = created.app;
+  deps = created.deps;
+  closeApp = created.close;
+
+  const project = await postJson(
+    "/v1/projects",
+    folderProjectInput({ name: "Settings Project", agents: [testHarnessId("opencode")] }),
+  );
+  projectId = project.id;
+
+  const sourcePath = writeSettingsExtension(tempRoot);
+  const enableResponse = await app.request(`/v1/projects/${projectId}/extensions/installed/${installName}/enable`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      displayName: "Settings Lab",
+      extensionId: "pstdio.settings-lab",
+      manifest: { id: "pstdio.settings-lab", name: installName },
+      name: installName,
+      sourceHash: null,
+      sourceKind: "local_path",
+      sourcePath,
+      sourceRef: null,
+      version: null,
+    }),
+  });
+  expect(enableResponse.status).toBe(200);
+  const enabled = await enableResponse.json();
+  instanceId = enabled.instanceId;
+});
+
+afterEach(async () => {
+  await closeApp();
+  if (previousPstdioHome === undefined) {
+    delete process.env.PSTDIO_HOME;
+  } else {
+    process.env.PSTDIO_HOME = previousPstdioHome;
+  }
+  if (previousDefaultExtensions === undefined) {
+    delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  } else {
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensions;
+  }
+  rmSync(tempRoot, { recursive: true, force: true });
+});
+
+describe("extension settings endpoints", () => {
+  test("shares device values across projects and commands without syncing them", async () => {
+    const other = await postJson("/v1/projects", folderProjectInput({ name: "Other settings project" }));
+    const source = await deps.extensionService.getInstalledSource(installName);
+    if (!source) throw new Error("Settings source missing");
+    const enabled = await deps.extensionService.enableInstalledSourceForProject({
+      projectId: other.id,
+      installName,
+      extensionId: source.extension_id,
+      name: installName,
+      displayName: source.display_name,
+      manifest: {},
+      sourcePath: source.source_path,
+    });
+    const path = `/v1/projects/${projectId}/extensions/${instanceId}/settings/capacity`;
+    const otherPath = `/v1/projects/${other.id}/extensions/${enabled.instance.id}/settings/capacity`;
+    expect((await putJson(path, { value: 4 })).status).toBe(200);
+    expect(await (await app.request(otherPath)).json()).toMatchObject({ value: 4, scope: "device" });
+    const executed = await postJson(
+      `/v1/projects/${other.id}/extensions/commands/pstdio.settings-lab.command.capacity/execute`,
+      { source: "api" },
+    );
+    expect(executed.outcome).toMatchObject({ ok: true, value: 7 });
+    expect(await (await app.request(path)).json()).toMatchObject({ value: 7 });
+    const sync = await deps.syncService.getFullState();
+    expect(JSON.stringify(sync)).not.toContain('"value_json":7');
+    expect(sync).not.toHaveProperty("extension_settings");
+    expect((await app.request(path, { method: "DELETE" })).status).toBe(204);
+    expect(await (await app.request(otherPath)).json()).toMatchObject({ value: 2, source: "default" });
+  });
+  test("typed webview deletion restores the project fallback without a stored null", async () => {
+    const api = createClient({
+      baseUrl: "http://localhost",
+      fetch: ((url: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
+        app.request(url, init)) as unknown as typeof fetch,
+    });
+    const settings = { properties: { "counter.step": { type: "number", scope: "project", default: 1 } } } as const;
+    const host = {
+      extensionId: "pstdio.settings-lab",
+      async call(method: string, input: { key: string; value?: unknown }) {
+        if (method === "extension.settings.get")
+          return (await api.extensions.projectSettings.get(projectId, instanceId, input.key)).value;
+        if (method === "extension.settings.set")
+          return api.extensions.projectSettings.set(projectId, instanceId, input.key, input.value);
+        if (method === "extension.settings.delete")
+          return api.extensions.projectSettings.delete(projectId, instanceId, input.key);
+        throw new Error(`Unsupported test capability: ${method}`);
+      },
+    } as unknown as GuestHost;
+    const client = createWebviewClient<Record<string, never>, typeof settings>(host);
+    expect(await client.settings.set("counter.step", 5)).toBe(5);
+    expect(await client.settings.get("counter.step")).toBe(5);
+    await client.settings.delete("counter.step");
+    expect(await client.settings.get("counter.step")).toBe(1);
+    expect(await api.extensions.projectSettings.get(projectId, instanceId, "counter.step")).toMatchObject({
+      value: 1,
+      source: "default",
+    });
+    await client.settings.set("counter.step", 8);
+    await host.call("extension.settings.delete", { key: "counter.step" });
+    expect(await client.settings.get("counter.step")).toBe(1);
+  });
+
+  test("gets declared settings through validation", async () => {
+    const declared = await app.request(`/v1/projects/${projectId}/extensions/${instanceId}/settings/counter.step`);
+    expect(declared.status).toBe(200);
+    await expect(declared.json()).resolves.toMatchObject({ key: "counter.step", value: 1, source: "default" });
+
+    const unknown = await app.request(`/v1/projects/${projectId}/extensions/${instanceId}/settings/missing`);
+    expect(unknown.status).toBe(400);
+    await expect(unknown.json()).resolves.toMatchObject({ code: "extension_setting_unknown_key" });
+  });
+
+  test("lists defaults and stores settings by declared scope", async () => {
+    const projectList = await app.request(`/v1/projects/${projectId}/extensions/${instanceId}/settings`);
+    expect(projectList.status).toBe(200);
+    const projectBody = await projectList.json();
+    expect(projectBody.settings).toContainEqual(
+      expect.objectContaining({ key: "counter.step", value: 1, source: "default" }),
+    );
+    expect(projectBody.settings).toContainEqual(
+      expect.objectContaining({ key: "greeting.tone", value: "friendly", source: "default" }),
+    );
+
+    const projectUpdate = await putJson(`/v1/projects/${projectId}/extensions/${instanceId}/settings/counter.step`, {
+      value: 3,
+    });
+    expect(projectUpdate.status).toBe(200);
+    await putJson(`/v1/extensions/installed/${installName}/settings/greeting.tone`, { value: "formal" });
+
+    const updatedProjectList = await app.request(`/v1/projects/${projectId}/extensions/${instanceId}/settings`);
+    const updatedProjectBody = await updatedProjectList.json();
+    expect(updatedProjectBody.settings).toContainEqual(
+      expect.objectContaining({ key: "counter.step", value: 3, source: "stored" }),
+    );
+    expect(updatedProjectBody.settings).toContainEqual(
+      expect.objectContaining({ key: "greeting.tone", value: "formal", source: "stored" }),
+    );
+
+    const globalList = await app.request(`/v1/extensions/installed/${installName}/settings`);
+    const globalBody = await globalList.json();
+    expect(globalBody.settings).toEqual([
+      expect.objectContaining({ key: "greeting.tone", value: "formal", source: "stored" }),
+    ]);
+  });
+
+  test("lists the full command id that loads a setting's choices", async () => {
+    const list = await app.request(`/v1/projects/${projectId}/extensions/${instanceId}/settings`);
+    expect((await list.json()).settings).toContainEqual(
+      expect.objectContaining({
+        key: "target.branch",
+        options: {
+          commandId: "pstdio.settings-lab.command.branches",
+          valueField: "branch",
+          labelField: "branch",
+        },
+      }),
+    );
+  });
+
+  test("rejects unknown keys, invalid values, and scope mismatches", async () => {
+    const unknown = await putJson(`/v1/projects/${projectId}/extensions/${instanceId}/settings/missing`, {
+      value: true,
+    });
+    expect(unknown.status).toBe(400);
+    await expect(unknown.json()).resolves.toMatchObject({ code: "extension_setting_unknown_key" });
+
+    const invalid = await putJson(`/v1/projects/${projectId}/extensions/${instanceId}/settings/counter.enabled`, {
+      value: "yes",
+    });
+    expect(invalid.status).toBe(400);
+    await expect(invalid.json()).resolves.toMatchObject({ code: "extension_setting_invalid" });
+
+    const wrongScope = await putJson(`/v1/extensions/installed/${installName}/settings/counter.step`, { value: 2 });
+    expect(wrongScope.status).toBe(400);
+    await expect(wrongScope.json()).resolves.toMatchObject({ code: "extension_settings_scope_mismatch" });
+  });
+});

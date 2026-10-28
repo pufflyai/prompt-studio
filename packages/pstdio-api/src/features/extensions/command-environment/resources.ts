@@ -33,6 +33,12 @@ export const createResourcesApi = (
       throw new Error(`Resource kind "${kind}" is not owned by ${input.extensionId}.`);
     return deps.extensionResourceSequencesService.identity({ ...input, kind, id });
   },
+  identityMany: async ({ kind, ids }) => {
+    const { runtime } = await deps.extensionRuntimeCatalog.get(input.projectId);
+    if (!runtime.resourceKinds.some((record) => record.extensionId === input.extensionId && record.localId === kind))
+      throw new Error(`Resource kind "${kind}" is not owned by ${input.extensionId}.`);
+    return deps.extensionResourceSequencesService.identityMany({ ...input, kind, ids });
+  },
   findByShorthand: async ({ kind, shorthand }) => {
     const { runtime } = await deps.extensionRuntimeCatalog.get(input.projectId);
     if (!runtime.resourceKinds.some((record) => record.extensionId === input.extensionId && record.localId === kind))

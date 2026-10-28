@@ -19,6 +19,7 @@ import { fieldsetSlotRecipe } from "./recipes/form";
 import { inputRecipe } from "./recipes/input";
 import { kanbanBoardColumnSlotRecipe } from "./recipes/kanban-board-column";
 import { kbdRecipe } from "./recipes/kbd";
+import { keyboardBubbleSlotRecipe } from "./recipes/keyboard-bubble";
 import { linkRecipe } from "./recipes/link";
 import { listRowAccessoryRecipe } from "./recipes/list-row-accessory";
 import { menuSlotRecipe } from "./recipes/menu";
@@ -31,7 +32,6 @@ import {
 } from "./recipes/motion";
 import { numberInputSlotRecipe } from "./recipes/number-input";
 import { paletteSlotRecipe } from "./recipes/palette";
-import { panelHeaderEdgeRecipe } from "./recipes/panel-header-edge";
 import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
 import { queuedFollowUpRecipe } from "./recipes/queued-follow-up";
@@ -69,7 +69,6 @@ const config = defineConfig({
     textStyles,
     layerStyles,
     recipes: {
-      panelHeaderEdge: panelHeaderEdgeRecipe,
       bubbleLauncher: bubbleLauncherRecipe,
       bubblePanel: bubblePanelRecipe,
       streamingText: streamingTextRecipe,
@@ -120,6 +119,7 @@ const config = defineConfig({
       menu: menuSlotRecipe,
       numberInput: numberInputSlotRecipe,
       palette: paletteSlotRecipe,
+      keyboardBubble: keyboardBubbleSlotRecipe,
       editable: editableSlotRecipe,
       form: fieldsetSlotRecipe,
       dialog: dialogSlotRecipe,

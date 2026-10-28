@@ -29,6 +29,14 @@ export interface PersistedWorkbenchPageLocation {
   location: PageLocation;
   // The last location outside every Sidenav level. Users return here when a level hides the project rows.
   rootLevel?: PageLocation;
+  remembered?: readonly RememberedWorkbenchPageLocation[];
+}
+export interface RememberedWorkbenchPageLocation {
+  page: PageRef;
+  resource?: ResourceRef;
+  parent?: PageLocation;
+  modeId: string;
+  location: PageLocation;
 }
 
 export interface WorkbenchPageLocationPersistence {
@@ -48,6 +56,8 @@ export interface WorkbenchPageHistoryState {
   projectId: string;
   routeKey: string;
   location: PageLocation;
+  removalVersion?: number;
+  removalEpoch?: string;
 }
 
 export type WorkbenchPageNavigationResult =
@@ -61,6 +71,11 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
   modes: NavigationLevelModes;
   persistence: WorkbenchPageLocationPersistence;
   startPage: PageRef;
+  getResourceRemovalVersion?(): number;
+  getResourceRemovalEpoch?(): string;
+  restoreLocation?(location: PageLocation, projectId: string, removalVersion?: number): PageLocation;
+  focusResource?(location: PageLocation, open?: import("@pstdio/sdk/extensions").PageOpenIntent): boolean;
+  activateLocation?(): void;
   reportDiagnostic?(diagnostic: WorkbenchPageLocationDiagnostic): void;
 }
 
@@ -78,6 +93,8 @@ export interface WorkbenchPageLocationController {
   navigate(target: NavigationTargetPage): WorkbenchPageNavigationResult;
   updateParams(patch: Readonly<Record<string, PageParamValue | null>>): PageLocation;
   replay(location: PageLocation): WorkbenchPageNavigationResult;
+  /** Update Main's route after selecting a view already in its current tray. */
+  select(location: PageLocation): WorkbenchPageNavigationResult;
   navigateToParent(): WorkbenchPageNavigationResult;
   /** Opens the last location outside every Sidenav level, or the start page when there is none. */
   navigateToRootLevel(): WorkbenchPageNavigationResult;
@@ -98,4 +115,5 @@ export interface ResolvedPageLocation {
   location: PageLocation;
   open?: NavigationTargetPage["open"];
   pageStates?: Readonly<Record<string, WorkbenchPageRuntimeState>>;
+  consumeRemembered?: PageLocation;
 }

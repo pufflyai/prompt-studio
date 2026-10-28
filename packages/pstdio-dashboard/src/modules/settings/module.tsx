@@ -59,6 +59,17 @@ export const createSettingsModule = () =>
       registerSettingsSidenavs(ctx);
       ctx.keybindings.registerKeybinding({ action: createSettingsFooterNode().target, keybinding: "Mod+," });
 
+      for (const [key, panelId, label] of [
+        ["E", "extensions", "Extension settings"],
+        ["I", "appearance", "Appearance settings"],
+        ["S", "skills", "Inspect contributed skills"],
+      ])
+        ctx.keybindings.registerKeybinding({
+          action: { kind: "command", commandId: WORKBENCH_SETTINGS_OPEN_COMMAND_ID, args: { panelId } },
+          keybinding: key!,
+          label,
+          layer: "settings",
+        });
       // The surface registers the "Open settings" command itself; just surface it
       // in the dashboard's command palette menu.
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {

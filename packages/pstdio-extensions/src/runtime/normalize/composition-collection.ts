@@ -60,9 +60,7 @@ export const collectCompositionContributions = (
     if (!isRecord(menuSlots)) continue;
     runtime.resourceKinds.push({
       ...recordBase(ext, source, localId),
-      // A resource kind keeps the plain name it was declared with. See
-      // `resolveResourceKindReference` for why the host must not namespace it.
-      id: localId,
+      id: `${ext.id}.${localId}`,
       paths: contribution.paths?.map((path) => ({
         prefix: path.prefix,
         resolveCommand: contributionRefId(path.resolve, ext.id),

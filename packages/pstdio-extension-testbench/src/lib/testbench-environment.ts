@@ -1,10 +1,12 @@
-import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
-import { createMemoryResources, createMemoryStorage } from "@pstdio/sdk/testing";
+import type { ExtensionWorkspace, ResourceIdentity } from "@pstdio/sdk/extensions";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
+import { createBenchResources } from "./testbench-resources";
 
 export type BenchStorageSeed = {
   collections?: Record<string, Record<string, unknown>>;
   kv?: Record<string, unknown>;
+  resourceIdentities?: ResourceIdentity[];
   // Blob bytes keyed by id, base64-encoded. Lets the preview seed attachment
   // bytes that command-side getBytes can read (the webview file store is a
   // separate, client-side store, mirroring production's split).
@@ -84,7 +86,7 @@ export const createBenchEnvironment = (
   const environment: CommandRunnerEnvironment = {
     project: { id: "bench-project", name: "Bench Project", shorthand: "BP" },
     storage: createStorage(seed),
-    resources: createMemoryResources(prefixes),
+    resources: createBenchResources(prefixes, seed?.resourceIdentities),
     artifacts: { mount: () => ({}) as never },
     packageFiles: {
       exists: async () => false,

@@ -32,7 +32,7 @@ const workspaceResource = (input: {
     },
   );
 };
-const resolveWorkspace = (ctx: WorkbenchModuleContext, instance: WorkbenchPanelInstance) => {
+export const resolveSessionTabWorkspace = (ctx: WorkbenchModuleContext, instance: WorkbenchPanelInstance) => {
   const primary = ctx.getPrimaryResource();
   const view = resolveDashboardSessionViewForPlacement(instance);
   if (!view.workspaceId && primary?.type === "workspace") return primary;
@@ -51,9 +51,10 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
     const view = resolveDashboardSessionViewForPlacement(instance);
     const selected = findDashboardSession(view.sessionId);
     const status = sessionStatus(instance, selected?.status);
-    const workspace = resolveWorkspace(ctx, instance);
+    const workspace = resolveSessionTabWorkspace(ctx, instance);
     return {
       label: selected?.title ?? instance.resource?.label ?? "New session",
+      icon: "message-circle",
       indicator: createSessionIndicator(status),
       menu: [
         {
@@ -67,7 +68,7 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
               action: {
                 kind: "command",
                 commandId: dashboardCommandIds.createSession,
-                args: { workspace, replacePanel: instance.placementIdentity },
+                args: { workspace, replacePanel: instance.placementIdentity, from: instance.resource },
               },
             },
             {
@@ -77,14 +78,8 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
               action: {
                 kind: "command",
                 commandId: dashboardCommandIds.switchSession,
-                args: { placementIdentity: instance.placementIdentity },
+                args: { placementIdentity: instance.placementIdentity, from: instance.resource },
               },
-            },
-            {
-              id: "view-all-sessions",
-              label: "View all sessions",
-              icon: "ArrowUpRight",
-              action: { kind: "command", commandId: dashboardCommandIds.openSessions },
             },
           ],
         },

@@ -22,10 +22,9 @@ export const listFolders = async (mount: NotesMount) => {
   return folders.sort((a, b) => a.title.localeCompare(b.title));
 };
 
-export const createFolder = async (mount: NotesMount, name: string) => {
+export const createFolder = async (mount: NotesMount, id: string, name: string) => {
   const title = folderTitle(name);
   await requireUniqueFolderTitle(mount, title);
-  const id = crypto.randomUUID();
   await mount.writeText(folderPath(id), title);
   return { id, title };
 };

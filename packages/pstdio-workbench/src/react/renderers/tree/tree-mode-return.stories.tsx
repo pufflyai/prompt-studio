@@ -101,7 +101,7 @@ type Story = StoryObj<typeof meta>;
 export const Project: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    const button = await canvas.findByRole("button", { name: args.modeLabel });
+    const button = await canvas.findByRole("button", { name: `Back to ${args.modeLabel.toLocaleLowerCase()}` });
     await expect(button).toBeVisible();
     await expect(button.closest('[draggable="true"]')).toBeNull();
     if (args.showHeader) {
@@ -122,8 +122,31 @@ export const Project: Story = {
     await expect(firstBounds.top - bounds.bottom).toBe(secondBounds.top - firstBounds.bottom);
     await userEvent.click(button);
     await expect(await within(canvas.getByRole("main")).findByText("home", { exact: true })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: args.modeLabel })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: `Back to ${args.modeLabel.toLocaleLowerCase()}` })).toBeNull();
   },
 };
 export const RenamedMode: Story = { args: { modeLabel: "Workspace" }, play: Project.play };
 export const WithoutHeaderItems: Story = { args: { showHeader: false }, play: Project.play };
+
+export const KeyboardReturn: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByText("details", { exact: true }));
+    await userEvent.keyboard("{Alt>}{Shift>}{ArrowUp}{/Shift}{/Alt}");
+    await expect(await within(canvas.getByRole("main")).findByText("home", { exact: true })).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Back to project" })).toBeNull();
+  },
+};
+
+export const GoToProject: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByText("details", { exact: true }));
+    await userEvent.keyboard("{Alt>}{Shift>}[Space]{/Shift}{/Alt}gp");
+    await expect(await within(canvas.getByRole("main")).findByText("home", { exact: true })).toBeVisible();
+    await expect(
+      within(canvasElement.ownerDocument.body).getByRole("region", { name: "Keyboard shortcut mode" }),
+    ).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+  },
+};

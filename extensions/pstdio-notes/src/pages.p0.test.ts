@@ -1,0 +1,107 @@
+import { describe, expect, test } from "bun:test";
+import { createMemoryStorage as createIdStorage } from "@pstdio/sdk/testing";
+import { createNote, deleteNote, listNotes, renameNote } from "./notes";
+import { editor, notesPage } from "./pages";
+import { createNotesMount } from "./test-mount";
+
+const coreIds = createIdStorage().ids;
+
+const createContext = (files = "write") => {
+  const mount = createNotesMount();
+  return {
+    mount,
+    ctx: {
+      artifacts: { mount: () => mount },
+      events: { emit: async () => undefined },
+      workspaces: {
+        getDefault: async () => ({
+          execution_kind: "local",
+          provider_state: "ready",
+          root_path: "/notes",
+          provider_capabilities_json: { files },
+        }),
+      },
+    },
+  };
+};
+
+const load = (ctx: unknown, id?: string) =>
+  editor.body.load(
+    ctx as never,
+    { renderer: { rendererId: "notes", ...(id ? { resource: { type: "note", id } } : {}) } } as never,
+  );
+
+const save = (ctx: unknown, id: string, content: string) =>
+  editor.body.save?.(
+    ctx as never,
+    { renderer: { rendererId: "notes", resource: { type: "note", id } }, content } as never,
+  );
+
+describe("note editor", () => {
+  test("loads read-only note content without allowing edits", async () => {
+    const { ctx, mount } = createContext("read");
+    const note = await createNote(mount, coreIds.create(), "Read-only note");
+    expect(await load(ctx, note.id)).toMatchObject({ content: "", editable: false });
+  });
+
+  test("does not read unavailable note files", async () => {
+    const { ctx } = createContext("none");
+    ctx.artifacts.mount = () => {
+      throw new Error("Files unavailable");
+    };
+    expect(await load(ctx, "note-1")).toMatchObject({ emptyState: expect.any(Object) });
+  });
+  test("opens a new note with an empty body", async () => {
+    const { ctx, mount } = createContext();
+    const note = await createNote(mount, coreIds.create(), "Release checklist");
+    expect(await load(ctx, note.id)).toMatchObject({ mimeType: "text/markdown", content: "" });
+  });
+
+  test("asks for a note when the page has none open", async () => {
+    const { ctx } = createContext();
+    expect(await load(ctx)).toMatchObject({ emptyState: { title: "No note open" } });
+  });
+
+  test("keeps Markdown source intact across saves and reloads without changing the title", async () => {
+    const { ctx, mount } = createContext();
+    const note = await createNote(mount, coreIds.create(), "My title");
+    const content = "# A different heading\n\n- [ ] Try **bold** and `code`\n";
+    await save(ctx, note.id, content);
+    expect(await load(ctx, note.id)).toMatchObject({ content });
+    expect(await listNotes(mount)).toMatchObject([{ id: note.id, title: "My title" }]);
+  });
+
+  test("loads the current title for an open tab after a rename", async () => {
+    const { ctx, mount } = createContext();
+    const note = await createNote(mount, coreIds.create(), "Original");
+    await renameNote(mount, note.id, "Renamed");
+    const query = notesPage.slots[0].tab.query;
+    expect(
+      await query(ctx as never, {
+        renderer: { rendererId: "notes", resource: { type: "note", id: note.id, label: "Original" } },
+      }),
+    ).toMatchObject({
+      label: "Renamed",
+    });
+  });
+
+  test("handles a note removed between the existence check and editor read", async () => {
+    const { ctx, mount } = createContext();
+    const note = await createNote(mount, coreIds.create(), "Removing");
+    const readText = mount.readText;
+    mount.readText = async (path) => {
+      await deleteNote(mount, note.id);
+      return readText(path);
+    };
+    expect(await load(ctx, note.id)).toMatchObject({ emptyState: { title: "Note not found" } });
+  });
+
+  test("does not bring back a note that was deleted while its tab stayed open", async () => {
+    const { ctx, mount } = createContext();
+    const note = await createNote(mount, coreIds.create(), "Dropped");
+    await deleteNote(mount, note.id);
+    await expect(save(ctx, note.id, "# Dropped\n\nrestored?\n")).rejects.toThrow();
+    expect(await listNotes(mount)).toEqual([]);
+    expect(await load(ctx, note.id)).toMatchObject({ emptyState: { title: "Note not found" } });
+  });
+});

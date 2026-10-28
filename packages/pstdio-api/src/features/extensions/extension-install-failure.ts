@@ -1,6 +1,9 @@
 import { basename, dirname } from "node:path";
+import { ExtensionRegistryError } from "pstdio-extensions/distribution";
+import { GitUnavailableError } from "pstdio-wt";
 import { ExtensionNameConflictError, ProjectNotFoundError } from "../../services/extension-service";
 import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-unavailable-error";
+import { AlwaysEnabledExtensionError } from "./always-on-extensions";
 import { ExtensionNotInCatalogError } from "./extension-catalog";
 import { checkExtensionSource, hashExtensionSource } from "./extension-runtime";
 import {
@@ -27,6 +30,9 @@ const existingSource = async (targetPath: string) => {
 };
 
 export const extensionInstallFailure = async (error: unknown) => {
+  if (error instanceof GitUnavailableError)
+    return { body: { error: error.message, code: "git_unavailable" }, status: 409 as const };
+  if (error instanceof ExtensionRegistryError) return { body: { error: error.message }, status: 400 as const };
   if (error instanceof InvalidExtensionFolderError) return { body: { error: error.message }, status: 400 as const };
   if (error instanceof ProjectNotFoundError) return { body: { error: error.message }, status: 404 as const };
   if (error instanceof ExtensionNotInCatalogError)
@@ -50,7 +56,11 @@ export const extensionInstallFailure = async (error: unknown) => {
       body: { error: error.firstError, code: "extension_invalid", diagnostics: error.diagnostics },
       status: 422 as const,
     };
-  if (error instanceof ExtensionNameConflictError || error instanceof ExtensionUpgradeUnavailableError)
+  if (
+    error instanceof ExtensionNameConflictError ||
+    error instanceof ExtensionUpgradeUnavailableError ||
+    error instanceof AlwaysEnabledExtensionError
+  )
     return {
       body: { error: error.message },
       status: 409 as const,

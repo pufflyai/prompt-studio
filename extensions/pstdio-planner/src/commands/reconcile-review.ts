@@ -69,7 +69,7 @@ const attachReviewSession = async (
 const retryReview = async (ctx: CommandContext, attempt: AttemptRecord, review: AttemptReview) => {
   const revision = attempt.revisions.at(-1)!;
   const disconnected = { ...review, state: "disconnected" as const, completedAt: new Date().toISOString() };
-  const reviewId = crypto.randomUUID();
+  const reviewId = ctx.storage.ids.create();
   const retry: AttemptReview = {
     ...review,
     id: reviewId,

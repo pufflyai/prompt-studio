@@ -55,7 +55,7 @@ export const openSessionsInOneSidePanelTab = async (page: Page, request: APIRequ
   };
   if ((await header.getByRole("tab", { name: "New session", exact: true }).count()) === 0) {
     await header.getByRole("button", { name: "Add panel", exact: true }).click();
-    await page.getByRole("menuitem", { name: "Session", exact: true }).click();
+    await page.getByRole("menuitem", { name: "New session", exact: true }).click();
   }
   await switchTab("New session", "Session A");
   await switchTab("Session A", "Session B");

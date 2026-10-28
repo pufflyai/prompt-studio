@@ -1,6 +1,6 @@
 import { Box, Button, Dialog, Input, InputGroup, Text, useSlotRecipe } from "@chakra-ui/react";
 import { ArrowUp, FolderPlus, Home, Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { type FolderPickerDrive, FolderPickerDriveMenu } from "./folder-picker-drive-menu";
 import { FolderPickerList } from "./folder-picker-list";
 
@@ -41,6 +41,18 @@ export const FolderPicker = (props: FolderPickerProps) => {
   const [path, setPath] = useState(currentPath);
   const [previousPath, setPreviousPath] = useState(currentPath);
   const [query, setQuery] = useState("");
+  const [showHidden, setShowHidden] = useState(false);
+  useEffect(() => {
+    const toggleHidden = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat || event.altKey) return;
+      if (!(event.metaKey || event.ctrlKey) || !event.shiftKey || event.code !== "Period") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setShowHidden((visible) => !visible);
+    };
+    document.addEventListener("keydown", toggleHidden, true);
+    return () => document.removeEventListener("keydown", toggleHidden, true);
+  }, []);
   const [creating, setCreating] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -77,7 +89,7 @@ export const FolderPicker = (props: FolderPickerProps) => {
       <Dialog.Header css={styles.header}>
         <Dialog.Title>Open project folder</Dialog.Title>
       </Dialog.Header>
-      <Dialog.Body css={styles.body}>
+      <Dialog.Body css={styles.body} aria-keyshortcuts="Meta+Shift+. Control+Shift+.">
         <Box css={styles.navigation}>
           <Button
             size="sm"
@@ -169,7 +181,7 @@ export const FolderPicker = (props: FolderPickerProps) => {
           </Text>
         )}
         <FolderPickerList
-          entries={entries}
+          entries={entries.filter((entry) => showHidden || !entry.name.startsWith("."))}
           query={query}
           isLoading={isLoading}
           isUnavailable={isUnavailable}

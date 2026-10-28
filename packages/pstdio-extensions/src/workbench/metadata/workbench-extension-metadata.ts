@@ -1,7 +1,7 @@
 import type { ExtensionKeybindingRecord, ExtensionMenuContribution, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ContributionKind, ContributionRef, WhenExpression } from "@pstdio/sdk/extensions";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
-import { resourceKindReferences, serializeWhenExpression } from "../../runtime/normalize/references";
+import { serializeWhenExpression } from "../../runtime/normalize/references";
 import { toSettingDefinitionRecord } from "../../runtime/normalize/settings";
 import type { ExtensionRuntime } from "../../types/runtime";
 import {
@@ -63,15 +63,10 @@ const toMenuContributions = (runtime: ExtensionRuntime): ExtensionMenuContributi
       icon: menu.icon,
       presentation: menu.presentation,
       params: menu.params as Record<string, unknown> | undefined,
-      when: serializeWhenExpression(
-        menu.when,
-        command.extensionId,
-        resourceKindReferences(runtime.resourceKinds),
-      ) as ExtensionMenuContribution["when"],
+      when: serializeWhenExpression(menu.when, command.extensionId) as ExtensionMenuContribution["when"],
       disabledWhen: serializeWhenExpression(
         menu.disabledWhen,
         command.extensionId,
-        resourceKindReferences(runtime.resourceKinds),
       ) as ExtensionMenuContribution["disabledWhen"],
       disabledReason: menu.disabledReason,
     })),
@@ -105,6 +100,10 @@ export const toKeybindingRecord = (binding: ExtensionRuntime["keybindings"][numb
     extensionId: binding.extensionId,
     action: normalizeTarget(binding.action, binding.extensionId) as ExtensionKeybindingRecord["action"],
     key: binding.contribution.key,
+    layer: binding.contribution.layer,
+    targetScope: binding.contribution.targetScope,
+    sticky: binding.contribution.sticky,
+    allowInInputs: binding.contribution.allowInInputs,
     canonicalChord: binding.canonicalChord,
     parsed: binding.parsed,
     platformOverrides: Object.keys(overrides).length > 0 ? overrides : undefined,
@@ -148,6 +147,7 @@ export const createWorkbenchExtensionMetadata = (
     regions: [...mode.contribution.regions],
     regionSettings: mode.contribution.regionSettings,
     floatingPanels: mode.contribution.floatingPanels,
+    canFullscreen: mode.contribution.canFullscreen,
     defaultTheme: mode.contribution.defaultTheme
       ? normalizedRef(mode.contribution.defaultTheme, mode.extensionId)
       : undefined,
@@ -220,6 +220,7 @@ export const createWorkbenchExtensionMetadata = (
     id: item.id,
     extensionId: item.extensionId,
     view: normalizedRef(item.contribution.view, item.extensionId),
+    popover: item.contribution.popover ? normalizedRef(item.contribution.popover, item.extensionId) : undefined,
     slot: item.contribution.slot,
     order: item.contribution.order,
     when: normalizeWhen(item.contribution.when, item.extensionId),

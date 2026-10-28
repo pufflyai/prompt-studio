@@ -1,7 +1,7 @@
 import { Box, Button, Dialog, Icon, Menu, Portal, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { FolderGit2, GitBranch } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { ListRow } from "@/components/list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "@/components/overlays/searchable-menu";
@@ -212,45 +212,50 @@ export const PortalledInsideDialog: Story = {
   parameters: {
     layout: "fullscreen",
   },
-  render: () => (
-    <Dialog.Root open modal>
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content maxW="sm" overflow="hidden">
-            <Dialog.Header>
-              <Dialog.Title>Create workspace</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              <Stack alignItems="flex-start" gap="3">
-                <SearchableMenu
-                  open
-                  trigger={<Button variant="outline">Select workspace</Button>}
-                  items={branchItems}
-                  searchPlaceholder="Search workspaces..."
-                  emptyState={
-                    <Menu.Item value="empty" asChild>
-                      <ListRow
-                        asChild
-                        variant="full-width"
-                        label="No workspaces found"
-                        icon={<Icon as={GitBranch} boxSize="16px" />}
-                        disabled
-                      />
-                    </Menu.Item>
-                  }
-                />
-                <Button variant="primary">Create workspace</Button>
-              </Stack>
-            </Dialog.Body>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
-  ),
+  render: () => {
+    const dialogRef = useRef<HTMLDivElement>(null);
+    return (
+      <Dialog.Root open modal>
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content ref={dialogRef} maxW="sm" overflow="hidden">
+              <Dialog.Header>
+                <Dialog.Title>Create workspace</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Stack alignItems="flex-start" gap="3">
+                  <SearchableMenu
+                    portalContainer={dialogRef}
+                    positioning={{ strategy: "fixed", hideWhenDetached: true }}
+                    trigger={<Button variant="outline">Select workspace</Button>}
+                    items={branchItems}
+                    searchPlaceholder="Search workspaces..."
+                    emptyState={
+                      <Menu.Item value="empty" asChild>
+                        <ListRow
+                          asChild
+                          variant="full-width"
+                          label="No workspaces found"
+                          icon={<Icon as={GitBranch} boxSize="16px" />}
+                          disabled
+                        />
+                      </Menu.Item>
+                    }
+                  />
+                  <Button variant="primary">Create workspace</Button>
+                </Stack>
+              </Dialog.Body>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
+    );
+  },
   play: async () => {
     const body = within(document.body);
 
+    await userEvent.click(body.getByRole("button", { name: "Select workspace" }));
     await expect(body.getByRole("menuitem", { name: "main" })).toBeVisible();
   },
 };

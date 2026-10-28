@@ -1,3 +1,4 @@
+import type { StorageRecordQueries } from "pstdio-sync-contracts";
 import type * as Y from "yjs";
 import type { DocumentHistory } from "./document-history";
 import type { StorageObserver, StorageOwner } from "./types";
@@ -10,6 +11,7 @@ export interface DocumentState {
   remember(id: string, fingerprint: string): void;
 }
 export interface DocumentStore {
+  queries?: (owner: StorageOwner) => StorageRecordQueries;
   observer?: StorageObserver;
   transaction<T>(owner: StorageOwner, action: (state: DocumentState) => Promise<T>): Promise<T>;
 }

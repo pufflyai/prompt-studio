@@ -1,6 +1,12 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { buildPlaywrightEnv, createRunId, getPlaywrightCommand, sanitizeForwardedArgs } from "./run-playwright";
+import {
+  buildPlaywrightEnv,
+  createRunId,
+  getPlaywrightCommand,
+  runPlaywright,
+  sanitizeForwardedArgs,
+} from "./run-playwright";
 
 const getFreePort = () =>
   new Promise<number>((resolve, reject) => {
@@ -46,21 +52,13 @@ const run = async () => {
   const runId = process.env.E2E_RUN_ID ?? createRunId();
   const forwardedArgs = sanitizeForwardedArgs(process.argv.slice(2));
   const command = getPlaywrightCommand(["-c", "playwright.vite-terminal.config.ts", ...forwardedArgs]);
-  const child = spawn(command.cmd, command.args, {
-    env: {
-      ...buildPlaywrightEnv(process.env, { apiPort, dashboardPort: devPort }, runId),
-      E2E_VITE_DEV_PORT: String(devPort),
-      E2E_VITE_PREVIEW_PORT: String(previewPort),
-      E2E_RUN_ID: runId,
-    },
-    stdio: "inherit",
+  const { exitCode } = await runPlaywright(command, {
+    ...buildPlaywrightEnv(process.env, { apiPort, dashboardPort: devPort }, runId),
+    E2E_VITE_DEV_PORT: String(devPort),
+    E2E_VITE_PREVIEW_PORT: String(previewPort),
+    E2E_RUN_ID: runId,
   });
-
-  child.on("error", (error) => {
-    console.error(error);
-    process.exit(1);
-  });
-  child.on("exit", (code) => process.exit(code ?? 1));
+  process.exit(exitCode);
 };
 
 if (import.meta.main) {

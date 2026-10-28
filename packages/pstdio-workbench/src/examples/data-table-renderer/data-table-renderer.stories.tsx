@@ -3,6 +3,7 @@ import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../workbench-story";
 import { createDataTableRendererStoryModule } from "./module";
 import source from "./module.tsx?raw";
+import { createPagedTableStoryModule } from "./paged-module";
 
 const workbench = createWorkbench();
 workbench.registerModule(createDataTableRendererStoryModule());
@@ -46,3 +47,17 @@ export const MultipleSelection: Story = {
 const emptyWorkbench = createWorkbench();
 emptyWorkbench.registerModule(createDataTableRendererStoryModule(true));
 export const EmptyWithAction: Story = { name: "Empty table with primary action", args: { workbench: emptyWorkbench } };
+
+const discoveredWorkbench = createWorkbench();
+discoveredWorkbench.registerModule(createPagedTableStoryModule(true));
+export const DiscoveredPageColumns: Story = {
+  name: "Paged table with discovered columns",
+  args: { workbench: discoveredWorkbench },
+};
+
+const groupedWorkbench = createWorkbench();
+groupedWorkbench.registerModule(createPagedTableStoryModule(false));
+export const CollapsiblePageGroups: Story = {
+  name: "Paged groups retain expand controls",
+  args: { workbench: groupedWorkbench },
+};

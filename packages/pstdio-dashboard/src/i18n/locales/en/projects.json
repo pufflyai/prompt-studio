@@ -170,10 +170,55 @@
     }
   },
   "list": {
+    "settings": "Settings",
     "createProject": "Create project",
     "searchPlaceholder": "Search projects...",
     "noProjectsYet": "No projects yet",
     "noProjectsDescription": "Create your first project to get started.",
-    "noSearchResults": "No projects match your search."
+    "noSearchResults": "No projects match your search.",
+    "noFolder": "No folder on this device",
+    "cloudNotOnDevice": "Cloud · not on this device yet",
+    "cloudWaiting": "Cloud · waiting to download",
+    "cloudReady": "Cloud · ready offline · no folder yet",
+    "cloud": "Cloud",
+    "cloudNeedsAttention": "Cloud · needs attention",
+    "localPath": "{{path}} · local"
+  },
+  "folder": {
+    "title": "{{name}}'s files are not on this device",
+    "description": "Workspaces and file views need the project's folder. Choose how to get it.",
+    "clone": "Clone from {{remote}}",
+    "clonePath": "Folder to clone into",
+    "browse": "Browse",
+    "existing": "Use a folder that already has it",
+    "existingHint": "For a checkout you made yourself. Prompt Studio checks that it is the same repository.",
+    "existingHintNoRemote": "Choose the folder that holds this project's files.",
+    "notNow": "Not now",
+    "cloneAndContinue": "Clone and continue",
+    "chooseFolder": "Choose folder"
+  },
+  "harnessAccount": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "loginTitle": "Sign in to {{name}}",
+    "logoutTitle": "Sign out of {{name}}",
+    "instructions": "Complete sign-in here. Your provider may open a browser.",
+    "completed": "Account command completed",
+    "failed": "Account action failed",
+    "cancel": "Cancel",
+    "close": "Close",
+    "managed": "Credentials are managed by the runtime",
+    "unavailable": "Account setup is unavailable for this harness.",
+    "requiredDescription": "Sign in to send messages. You can also use /login in the chat.",
+    "noHarnessTitle": "No harness available",
+    "noHarnessDescription": "Enable an agent harness in Extensions to start chatting.",
+    "extensions": "Browse extensions",
+    "noArguments": "{{command}} does not accept arguments.",
+    "deviceInstructions": "Enter this code on the sign-in page.",
+    "starting": "Starting account action…",
+    "openPage": "Open sign-in page",
+    "waiting": "Waiting for sign-in to finish in your browser.",
+    "projectRequired": "Open a project before signing in.",
+    "continue": "Continue"
   }
 }

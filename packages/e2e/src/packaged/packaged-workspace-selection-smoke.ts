@@ -1,7 +1,7 @@
 import { expect } from "bun:test";
 import { chromium, expect as expectBrowser } from "@playwright/test";
 import { observeTreeRows } from "../helpers/tree-continuity";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { type RuntimeDescriptor, runtimeAuthorization, signInBrowser } from "./packaged-serve-helpers";
 
 export const expectPackagedWorkspaceSelection = async (descriptor: RuntimeDescriptor, projectId: string) => {
@@ -18,15 +18,14 @@ export const expectPackagedWorkspaceSelection = async (descriptor: RuntimeDescri
   expect(response.status).toBe(200);
   const { outcome } = await response.json();
   expect(outcome.ok).toBe(true);
-  const browser = await chromium.launch(PROVISIONED_CHROMIUM);
+  const browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
   try {
     const page = await browser.newPage();
     await page.addInitScript((projectId) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, projectId);
-    await signInBrowser(page, descriptor);
-    await page.goto(`${baseUrl}/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
+    await signInBrowser(page, descriptor, `/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Packaged workspace selection", { exact: true }).click();
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     const ticket = sidenav.getByRole("option", {

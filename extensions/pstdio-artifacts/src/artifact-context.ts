@@ -5,6 +5,7 @@ import { sites } from "./mounts";
 export const serviceFor = (ctx: ExtensionContextBase) =>
   createArtifactService({
     projectId: ctx.projectId,
+    ids: ctx.storage.ids,
     artifacts: ctx.storage.collection<{ id: string }>("artifacts"),
     revisions: ctx.storage.collection<ArtifactRevision>("revisions"),
     names: ctx.storage.collection<{ title: string }>("names"),

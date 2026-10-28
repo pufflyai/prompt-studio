@@ -18,6 +18,7 @@ import {
 } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
+import { useKeyboardTabStrip } from "../keybindings/use-keyboard-tab-strip";
 import type { WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { WorkbenchPanelAddMenu } from "./panel-add-menu";
@@ -69,6 +70,7 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
   const tabOverrides = tabStore.tabOverrides;
   const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(region, placement);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
+  useKeyboardTabStrip(workbench, panelRegion, showTabs, visiblePlacements, viewport);
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const menuActions = buildTabVisibilityMenuActions(
@@ -109,11 +111,17 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
   }, [viewport]);
   const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, regionState.activeWidgetId);
   useEffect(() => {
-    if (!activeWidgetId) return;
-    viewport?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.scrollIntoView({
-      block: "nearest",
-      inline: "nearest",
-    });
+    if (!activeWidgetId || !viewport) return;
+    const tab = viewport.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    if (!tab) return;
+    const left = viewport.getBoundingClientRect().left + viewport.clientLeft;
+    const right = left + viewport.clientWidth;
+    const bounds = tab.getBoundingClientRect();
+    const leftDelta = bounds.left - left;
+    const rightDelta = bounds.right - right;
+    // Revealing a tab must not scroll the split containers around its strip.
+    if (leftDelta < 0 && rightDelta < 0) viewport.scrollLeft += Math.max(leftDelta, rightDelta);
+    else if (leftDelta > 0 && rightDelta > 0) viewport.scrollLeft += Math.min(leftDelta, rightDelta);
   }, [activeWidgetId, viewport]);
   if (!showTabs && !hasActions) return null;
   const onSelectLeadingItem = (item: WorkbenchMenuItem) => {

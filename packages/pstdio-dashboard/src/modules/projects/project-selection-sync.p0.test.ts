@@ -1,0 +1,147 @@
+import { expect, test } from "bun:test";
+import { workbenchPages } from "@pstdio/sdk/extensions";
+import { createWorkbench } from "@pstdio/workbench";
+import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import { createBootstrapModule } from "../bootstrap";
+import { createExtensionsModule } from "../extensions/module";
+import { emptyAppearance, flushMicrotasks, metadataWithResourceExtension } from "../extensions/module-test-fixtures";
+import { createSessionsModule } from "../sessions/module";
+import { createStartModule } from "../start/module";
+import { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
+import { createProjectsModule } from "./module";
+
+test("opens the first created project without losing its active mode when the creation dialog closes", async () => {
+  const workbench = createWorkbench();
+  workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+  getWriter("projects")?.truncateAndWrite([]);
+  markInitialCollectionsSyncComplete();
+  const modules = [
+    createExtensionsModule({
+      loadAppearance: async () => emptyAppearance,
+      loadMetadata: async () => metadataWithResourceExtension,
+    }),
+    createProjectsModule(),
+    createStartModule(),
+    createBootstrapModule(),
+  ].map((module) => workbench.registerModule(module));
+  try {
+    await workbench.commands.executeCommand(dashboardCommandIds.createProject);
+    getWriter("projects")?.truncateAndWrite([{ id: "created-project", name: "Created project" }]);
+    await workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
+      project: { id: "created-project", name: "Created project" },
+    });
+    await flushMicrotasks();
+    await flushMicrotasks();
+
+    expect(workbench.context.get("dashboard.project.id")).toBe("created-project");
+    expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(workbench.pages.store.getState().projectId).toBe("created-project");
+    expect(workbench.pages.store.getState().location?.page.id).toBe("start");
+  } finally {
+    workbench.pageLocations.clearProject();
+    for (const module of modules.reverse()) module.dispose();
+    getWriter("projects")?.truncateAndWrite([]);
+    clearCachedDashboardExtensionMetadata("created-project");
+  }
+});
+
+test.each([
+  false,
+  true,
+])("project tabs preserve extension page context across switches (core child: %s)", async (coreChild) => {
+  const workbench = createWorkbench();
+  const tabs = new DesktopProjectTabsController([], async () => {});
+  workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+  getWriter("projects")?.truncateAndWrite([
+    { id: "first", name: "First" },
+    { id: "second", name: "Second" },
+  ]);
+  markInitialCollectionsSyncComplete();
+  const modules = [
+    createExtensionsModule({
+      loadAppearance: async () => emptyAppearance,
+      loadMetadata: async () => metadataWithResourceExtension,
+    }),
+    createProjectsModule({ projectTabs: tabs }),
+    createSessionsModule(),
+    createStartModule(),
+    createBootstrapModule(),
+  ].map((module) => workbench.registerModule(module));
+  const select = async (id: string) => {
+    await tabs.select(workbench, id);
+    await flushMicrotasks();
+    await flushMicrotasks();
+  };
+  const firstPage = { extensionId: "pstdio.extension-lab", kind: "page", id: "labPage" } as const;
+  const secondPage = { extensionId: "acme.issue-tracker", kind: "page", id: "issue" } as const;
+  try {
+    await select("first");
+    const firstTarget = coreChild
+      ? {
+          kind: "page" as const,
+          page: { extensionId: "pstdio", kind: "page" as const, id: "sessions" },
+          parent: { kind: "page" as const, page: firstPage },
+        }
+      : { kind: "page" as const, page: firstPage };
+    expect(workbench.pageLocations.navigate(firstTarget).ok).toBe(true);
+    const firstLocation = workbench.pages.store.getState().location;
+    await select("second");
+    expect(
+      workbench.pageLocations.navigate({
+        kind: "page",
+        page: secondPage,
+        resource: { type: "issue", id: "issue-2" },
+      }),
+    ).toMatchObject({ ok: true });
+    const secondLocation = workbench.pages.store.getState().location;
+    await select("first");
+    expect(workbench.pages.store.getState().location).toEqual(firstLocation);
+    await select("second");
+    expect(workbench.pages.store.getState().location).toEqual(secondLocation);
+    const sessionsPage = { extensionId: "pstdio", kind: "page", id: "sessions" } as const;
+    expect(workbench.pageLocations.navigate({ kind: "page", page: sessionsPage }).ok).toBe(true);
+    await select("first");
+    await select("second");
+    expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.sessionComposer);
+    expect(workbench.pageLocations.replay(secondLocation!).ok).toBe(true);
+    await tabs.close(workbench, "first");
+    await tabs.close(workbench, "second");
+    await select("second");
+    expect(workbench.pages.store.getState().location).toEqual(secondLocation);
+  } finally {
+    workbench.pageLocations.clearProject();
+    for (const module of modules.reverse()) module.dispose();
+    getWriter("projects")?.truncateAndWrite([]);
+    for (const id of ["first", "second"]) clearCachedDashboardExtensionMetadata(id);
+  }
+});
+
+test("selects the URL project before the persisted project when opening a document", () => {
+  const workbench = createWorkbench();
+  let persistedProjectId: string | undefined = "source";
+  getWriter("projects")?.truncateAndWrite([
+    { id: "source", name: "Source" },
+    { id: "destination", name: "Destination" },
+  ]);
+  markInitialCollectionsSyncComplete();
+  const projects = workbench.registerModule(
+    createProjectsModule({
+      initialProjectId: "destination",
+      projectSelectionPersistence: {
+        getSelectedProjectId: () => persistedProjectId,
+        setSelectedProjectId: (id) => {
+          persistedProjectId = id;
+        },
+      },
+    }),
+  );
+  try {
+    expect(workbench.context.get("dashboard.project.id")).toBe("destination");
+    expect(persistedProjectId).toBe("destination");
+  } finally {
+    projects.dispose();
+    getWriter("projects")?.truncateAndWrite([]);
+  }
+});

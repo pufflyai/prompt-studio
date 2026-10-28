@@ -1,4 +1,5 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
+import { isPageContent } from "./page-main";
 import type { WorkbenchPageRegistryStoreState, WorkbenchPageResourceCodec } from "./page-registry-types";
 import { pageStateKey } from "./page-state-key";
 
@@ -11,6 +12,7 @@ export const pinPagePlacement = <Value>(
   if (identity.kind !== "page" || state.activePageId !== identity.pageId)
     throw new Error("Only an active page placement can be pinned");
   const page = state.pages[identity.pageId]!;
+  if (isPageContent(page, identity)) throw new Error("Page content has no tab retention");
   const key = pageStateKey(page, state.location, resources);
   const current = state.pageStates[key]!;
   const instances = current.resourceInstances[identity.slotId] ?? [];

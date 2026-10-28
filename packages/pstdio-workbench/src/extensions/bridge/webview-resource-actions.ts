@@ -1,3 +1,4 @@
+import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WebviewHostCapabilityParams } from "pstdio-api-contracts/extension-kernel";
 import { RESOURCE_ACTIONS_EVENTS_SCOPE } from "pstdio-api-contracts/extension-kernel";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
@@ -34,12 +35,15 @@ export const createWebviewResourceActions = (
   workbench: WorkbenchCore,
   projectId: string | undefined,
   hostEvents: HostEventPublisher | undefined,
+  placement?: PlacementIdentity,
 ) => {
   const watchChanges = createChangeNotifier(workbench, hostEvents);
   return async (input: WebviewHostCapabilityParams["resources.actions"]) => {
     // The host owns the project scope; webviews cannot reach another project's resources.
     const menu = resolveResourceActionMenu(workbench, projectId ? { ...input.resource, projectId } : input.resource);
-    const entries = menu ? orderMenuEntries(resolveMenuEntries(menu)) : [];
+    const entries = menu
+      ? orderMenuEntries(resolveMenuEntries({ ...menu, context: { ...menu.context, placement, projectId } }))
+      : [];
     if (input.operation === "execute") {
       const entry = entries.find(({ id }) => id === input.key);
       if (!entry?.run || entry.disabled) throw new Error("This resource action is no longer available.");

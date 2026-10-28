@@ -1,0 +1,40 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { LoadedExtension } from "./extension-runtime";
+import { inspectManagedWebviewBuildInputs, prepareManagedWebviewBuildSource } from "./extension-webview-build-source";
+import { buildExtensionWebviewBatch } from "./extension-webview-builder";
+import { classifyWebviewEntry, collectExtensionWebviews, resolvePackageAssetFile } from "./extension-webviews";
+
+export const validateExtensionWebviews = async (
+  loaded: LoadedExtension,
+  packagePath: string,
+  installName: string,
+  signal = new AbortController().signal,
+) => {
+  const views = collectExtensionWebviews(loaded).filter((view) => classifyWebviewEntry(view.entry).kind === "managed");
+  if (!views.length) return;
+  const root = await mkdtemp(join(tmpdir(), "pstdio-extension-build-check-"));
+  try {
+    const entryPaths = views.map((view, index) => {
+      signal.throwIfAborted();
+      const input = {
+        entryPath: resolvePackageAssetFile(view.entry),
+        installName,
+        packageName: loaded.metadata.name,
+        packagePath,
+      };
+      const source = prepareManagedWebviewBuildSource({
+        ...input,
+        buildInputs: inspectManagedWebviewBuildInputs(input),
+        shellDir: join(root, String(index), "source"),
+      });
+      if (!source.success) throw new Error(`Extension webview ${view.id} cannot activate: ${source.details}`);
+      return source.entryPath;
+    });
+    const outcome = await buildExtensionWebviewBatch({ entryPaths, outdir: join(root, "dist"), signal });
+    if (!outcome.success) throw new Error(`Extension webviews cannot activate: ${outcome.details}`);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+};

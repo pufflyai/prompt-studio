@@ -39,13 +39,13 @@ A report starts as a local Markdown file. The agent fills it in, then saves it:
 
 There is no default template. If you leave out `--template`, the command fails and lists the templates you can use: `change-request` and `review`. Edit the templates in **Settings → Project → Templates**.
 
-Writing a report never overwrites an existing one. When a name is taken, the next report gets a number. For example, a second `review` report is named `review_01`. Its file is `.pstdio/extension-storage/pstdio-reports/reports/review/report_01.md`, and its supporting files go in `.pstdio/extension-storage/pstdio-reports/reports/review/files_01/`.
+Writing a report never overwrites an existing one. When a name is taken, the next report gets a number. For example, a second `review` report is named `review_01`. Its file is `.pstdio/extension-storage/pstdio.pstdio-reports/reports/review/report_01.md`, and its supporting files go in `.pstdio/extension-storage/pstdio.pstdio-reports/reports/review/files_01/`.
 
 ## Commands
 
 ```sh
 pst reports write [--workspace <workspace>] [--kind <kind>] [--name <name>] --template <template> [--source <source>]
-pst reports read --id <report-id>
+pst reports read --id <report-id-or-number>
 pst reports save [--workspace <workspace>] [--name <name>]
 pst reports delete --name <name> [--workspace <workspace>]
 ```
@@ -53,6 +53,8 @@ pst reports delete --name <name> [--workspace <workspace>]
 `--workspace` takes a workspace ID such as `WS-19`. Without it, the command uses the agent's current workspace, or the project folder.
 
 `save` needs `--name` when the workspace has no report or more than one. Use `delete` to discard a report that was created by mistake.
+
+Core assigns report numbers such as `RP-12`. Reports reads the current number from core instead of storing a copy. After devices sync offline reports, a number can change; its old number remains an alias. `read --id RP-12` accepts current numbers and aliases. When a number matches several reports, it returns all of them with their current numbers. Use the stable report ID to read one report.
 
 The same commands are also available under the extension's own name:
 

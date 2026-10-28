@@ -2,34 +2,34 @@
   "name": "extension-lab",
   "version": "0.45.0",
   "displayName": "Extension Lab",
-  "description": "Five complete example tools built with public extension pages, resources, modes, and themes.",
+  "description": "Six complete example tools built with public extension pages, resources, modes, and themes.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "exports": {
     "./contracts": "./src/contracts.ts"
   },
   "engines": {
-    "pstdio": "^0.1.0 || ^0.2.0"
+    "pstdio": "^0.2.1 || ^0.3.0"
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
-    "test:coverage": "bun test --coverage",
-    "typecheck": "tsc --noEmit"
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage",
+    "typecheck": "bun check"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "^0.35.0",
-    "@pstdio/ui": "0.26.0",
+    "@pstdio/sdk": "0.46.0-preview.sha-a593437a7f44586600c9791575aeef776dc8010b",
+    "@pstdio/ui": "0.46.0-preview.sha-a593437a7f44586600c9791575aeef776dc8010b",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.185.1",
     "lucide-react": "^0.556.0"
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "6.0.2",

@@ -57,6 +57,7 @@ export const exampleDefaults = {
 export type ExampleName = keyof typeof exampleDefaults;
 export const exampleNames = Object.keys(exampleDefaults) as ExampleName[];
 export const exampleResources = {
+  marmalade: [{ type: "marmalade.document", id: "great-wave", label: "Great Wave" }],
   scribble: scribbleDocuments.map((doc) => ({ type: "scribble.document", id: doc.id, label: doc.title })),
   boombox: boomboxTracks.map((track) => ({ type: "boombox.track", id: track.id, label: track.title })),
   zipline: ziplineIssues.map((issue) => ({ type: "zipline.issue", id: issue.id, label: issue.title })),

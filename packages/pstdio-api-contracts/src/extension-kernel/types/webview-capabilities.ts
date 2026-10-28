@@ -1,6 +1,11 @@
 import type { AgentInfo, AgentModel, HarnessParamsInfo } from "../../agents";
 import type { TerminalSessionOperation, TerminalSessionResult } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
+import type {
+  PerformanceControlRequest,
+  PerformanceReadRequest,
+  PerformanceReadResult,
+} from "../../performance-control";
 import type { ExtensionAccountApi } from "./account";
 import type { CommandNotice, CommandOutcome } from "./commands";
 import type { ExtensionBlobRef } from "./context";
@@ -42,6 +47,8 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "files.delete",
   "account.read",
   "account.manage",
+  "performance.read",
+  "performance.control",
 ] as const;
 
 // Capabilities that must be declared with a scope suffix (`name:scope`). Each
@@ -173,7 +180,7 @@ export type WebviewAccountReadParams =
 
 /** Changes mirror `ctx.account`. A missing project id means the webview's project. */
 export type WebviewAccountManageParams =
-  | { op: "login"; managerOrigin: string }
+  | { op: "login"; managerOrigin?: string }
   | { op: "cancelLogin"; id: string }
   | { op: "logout" }
   | { op: "renameDevice"; id: string; name: string }
@@ -193,9 +200,30 @@ export interface WebviewKeyboardEventParams {
   altKey?: boolean;
   shiftKey?: boolean;
   repeat?: boolean;
+  isComposing?: boolean;
+}
+
+/** A host-owned chord. Guests receive resolved keys, without parsing platform syntax. */
+export interface WebviewKeyboardShortcut {
+  id: string;
+  /** Only these host navigation intents may be relayed by untrusted nested content. */
+  entry?: "mode" | "tab" | "panel";
+  key: string;
+  ctrlKey?: boolean;
+  metaKey?: boolean;
+  altKey?: boolean;
+  shiftKey?: boolean;
+}
+
+export interface WebviewKeyboardShortcutRequest {
+  id: string;
+  repeat: boolean;
+  nested?: boolean;
 }
 
 export interface WebviewHostCapabilityParams {
+  "performance.read": PerformanceReadRequest;
+  "performance.control": PerformanceControlRequest;
   "harnesses.read": { harnessId?: string; model?: string };
   "resources.actions":
     | { operation: "list"; resource: ResourceRef }
@@ -233,6 +261,8 @@ export interface WebviewHostCapabilityParams {
 }
 
 export interface WebviewHostCapabilityResults {
+  "performance.read": PerformanceReadResult;
+  "performance.control": void;
   "harnesses.read": {
     harnesses: AgentInfo[];
     models: AgentModel[];

@@ -3,10 +3,13 @@ import { defaultRangeExtractor } from "@tanstack/react-virtual";
 import { type DragEvent, type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { useVirtualizer } from "@/utils/use-virtualizer";
+import { CollectionLoadMore } from "../collection-view/collection-load-more";
 import type { KanbanRendererBoardColumn } from "./kanban-renderer-board";
 import { BoardEntry, type BoardEntryData } from "./kanban-renderer-board-entry";
 
 interface BoardColumnCardsProps {
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
   column: KanbanRendererBoardColumn;
   selectedItemId: string | null;
   draggedKey: string | null;
@@ -40,6 +43,9 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
     : column.items.map((item) => ({ key: JSON.stringify(["row", column.id, item.id]), item }));
   const { virtualizer, virtualItems, totalSize } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: entries.length,
+    onChange: (instance, scrolling) => {
+      if (scrolling && instance.range && instance.range.endIndex >= entries.length - 1) props.onLoadMore?.();
+    },
     getScrollElement: () => viewport.current,
     getItemKey: (index) => entries[index].key,
     estimateSize: (index) => (entries[index].group ? 32 : 100),
@@ -96,7 +102,14 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
       minH="0"
       size="xs"
       viewportRef={viewport}
-      viewportProps={{ ...{ "data-board-column-viewport": column.id }, "aria-label": column.label }}
+      viewportProps={{
+        ...{ "data-board-column-viewport": column.id },
+        "aria-label": column.label,
+        onWheel: (event) => {
+          const viewport = event.currentTarget;
+          if (event.deltaY > 0 && viewport.scrollHeight <= viewport.clientHeight) props.onLoadMore?.();
+        },
+      }}
       verticalScrollbarProps={{ css: styles.scrollbar }}
     >
       {column.items.length === 0 && column.totalCount ? (
@@ -151,6 +164,9 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
           );
         })}
       </Box>
+      {props.onLoadMore && (column.count ?? 0) > column.items.length ? (
+        <CollectionLoadMore label="Load more cards" loading={props.loadingMore} onLoadMore={props.onLoadMore} />
+      ) : null}
     </ScrollArea>
   );
 };

@@ -46,7 +46,7 @@ const invalidSetting = (input: {
 const invalidScope = (ext: NormalizedExtension, source: LoadedExtensionSource, key: string) =>
   createDiagnostic({
     code: "extension_settings_scope_invalid",
-    message: `Extension setting "${key}" must declare scope "project" or "global"`,
+    message: `Extension setting "${key}" must declare scope "project", "global" or "device"`,
     extensionId: ext.id,
     sourcePath: source.sourcePath,
     metadata: { key },
@@ -59,7 +59,7 @@ const validateSetting = (
   setting: Record<string, unknown>,
   runtime: Accumulator,
 ) => {
-  if (setting.scope !== "project" && setting.scope !== "global") {
+  if (setting.scope !== "project" && setting.scope !== "global" && setting.scope !== "device") {
     runtime.diagnostics.push(invalidScope(ext, source, key));
     return false;
   }
@@ -161,7 +161,7 @@ export const registerSettings = (ext: NormalizedExtension, source: LoadedExtensi
     }
     if (!validateSetting(ext, source, key, setting, runtime)) continue;
     runtime.settings.push({
-      id: `${ext.name}.${key}`,
+      id: `${ext.id}.${key}`,
       key,
       extensionId: ext.id,
       name: ext.name,

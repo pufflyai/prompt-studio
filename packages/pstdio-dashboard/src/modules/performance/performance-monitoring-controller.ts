@@ -1,3 +1,4 @@
+import type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
 import { pausedExtensions } from "@/shared/extensions/paused-extensions";
 import { createFrameRateCounter } from "./frame-rate";
 import type { PerformanceHost } from "./performance-host";
@@ -12,7 +13,32 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
   let stopObserver: (() => void) | undefined;
   let stopStateReports: (() => void) | undefined;
   let disposed = false;
+  let releaseCapture: (() => Promise<void>) | undefined;
   const listeners = new Set<() => void>();
+  const snapshotListeners = new Set<(snapshot: PerformanceSnapshot | null) => void>();
+  let stopSnapshots: (() => void) | undefined;
+  const startSnapshots = () => {
+    let active = true;
+    let pending = false;
+    const poll = async () => {
+      if (pending) return;
+      pending = true;
+      try {
+        const snapshot = await host.snapshot();
+        if (active) for (const listener of snapshotListeners) listener(snapshot);
+      } finally {
+        pending = false;
+      }
+    };
+    const timer = setInterval(() => {
+      void poll().catch(() => {});
+    }, 2000);
+    void poll().catch(() => {});
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  };
 
   // The snapshot that people copy and agents read includes this window's state.
   const reportStateChanges = () => {
@@ -35,11 +61,15 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
     if (next) {
       stopObserver ??= observeSlowFrames(host.reportFrames);
       stopStateReports ??= reportStateChanges();
+      if (snapshotListeners.size) stopSnapshots ??= startSnapshots();
     } else {
       stopObserver?.();
       stopObserver = undefined;
       stopStateReports?.();
       stopStateReports = undefined;
+      stopSnapshots?.();
+      stopSnapshots = undefined;
+      for (const listener of snapshotListeners) listener(null);
       popoverOpen = false;
     }
     for (const listener of listeners) listener();
@@ -53,7 +83,15 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
       popoverOpen = open && enabled === true;
       for (const listener of listeners) listener();
     },
-    load: async () => apply(await host.isEnabled()),
+    retainCapture: async () => host.retainCapture?.() ?? (async () => {}),
+    load: async () => {
+      releaseCapture ??= await host.retainCapture?.();
+      if (disposed) {
+        await releaseCapture?.();
+        return;
+      }
+      apply(await host.isEnabled());
+    },
     getEnabled: () => enabled,
     setEnabled: async (next: boolean) => {
       // Stop observing before the host stops collecting, and start after it starts.
@@ -67,6 +105,17 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
       }
       if (next) apply(true);
     },
+    subscribeSnapshots: (listener: (snapshot: PerformanceSnapshot | null) => void) => {
+      snapshotListeners.add(listener);
+      if (enabled && !disposed) stopSnapshots ??= startSnapshots();
+      return () => {
+        snapshotListeners.delete(listener);
+        if (!snapshotListeners.size) {
+          stopSnapshots?.();
+          stopSnapshots = undefined;
+        }
+      };
+    },
     subscribe: (listener: () => void) => {
       listeners.add(listener);
       return () => {
@@ -75,10 +124,14 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
     },
     dispose: () => {
       disposed = true;
+      void releaseCapture?.().catch(() => {});
+      releaseCapture = undefined;
       if (enabled) frameRate.stop();
       stopStateReports?.();
       stopObserver?.();
       stopObserver = undefined;
+      stopSnapshots?.();
+      snapshotListeners.clear();
       listeners.clear();
     },
   };

@@ -2,14 +2,11 @@ import { expect, type Page } from "@playwright/test";
 
 export const verifyPanelInsertionTargets = async (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
-  const edge = page.getByLabel("Main header edge", { exact: true });
-  await expect(edge).toBeVisible();
-  await edge.focus();
-  await expect(edge).toBeFocused();
-  await edge.press("Shift+F10");
-  await expect(page.getByRole("menuitem", { name: "Show header", exact: true })).toBeVisible();
-  await page.getByRole("menuitem", { name: "Show header", exact: true }).click();
-  await expect(main.getByRole("tab", { name: "Start", exact: true })).toBeVisible();
+  const mainHeader = page.getByLabel("Main panel header", { exact: true });
+  await expect(mainHeader).toBeVisible();
+  await mainHeader.getByRole("button", { name: "Add panel", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
+  await expect(main.getByRole("tab", { selected: true })).toBeVisible();
   for (const [region, edge] of [
     ["side", "left"],
     ["secondary", "top"],
@@ -37,8 +34,14 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
     const fill = await target.evaluate((element) => getComputedStyle(element, "::after").backgroundColor);
     expect(fill).not.toBe("rgba(0, 0, 0, 0)");
     await page.mouse.up();
+    await expect
+      .poll(async () => {
+        const moved = (await page.locator(`[data-workbench-panel="${region}"]:visible`).boundingBox())!;
+        const content = (await main.boundingBox())!;
+        return region === "side" ? moved.x < content.x : moved.y < content.y;
+      })
+      .toBe(true);
   }
-  const mainHeader = page.getByLabel("Main panel header", { exact: true });
   await expect(main.locator('[data-workbench-panel-drag="main"]')).toBeVisible();
   const source = (await mainHeader.boundingBox())!;
   await expect(mainHeader).toHaveCSS("cursor", "grab");
@@ -49,6 +52,8 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
   await expect(page.locator("[data-workbench-edge-drop][data-drop-active]")).toHaveCount(0);
   await page.mouse.up();
   await page.reload();
+  // The collection must restore its tab policy before its placement menu is ready.
+  await expect(main.getByRole("tab", { selected: true })).toBeVisible();
   for (const region of ["side", "secondary"] as const) {
     const panel = page.locator(`[data-workbench-panel="${region}"]:visible`);
     await expect(panel).toBeVisible();
@@ -81,6 +86,7 @@ const verifyNearbyTabTargets = async (page: Page) => {
   await navToggle.click();
   await expect(navToggle).toHaveAccessibleName("Show Sidenav");
   await page.reload();
+  await expect(page.locator('[data-workbench-panel="main"]').getByRole("tab", { selected: true })).toBeVisible();
   await expect(navToggle).toHaveAccessibleName("Show Sidenav");
   await expect(navToggle.locator(".chakra-icon")).toHaveCSS("transform", "matrix(-1, 0, 0, 1, 0, 0)");
   await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
@@ -89,8 +95,10 @@ const verifyNearbyTabTargets = async (page: Page) => {
   await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
   const main = page.locator('[data-workbench-panel="main"]');
   await expect(page.getByLabel("Main panel header", { exact: true })).not.toHaveAttribute("data-panel-draggable");
+  const tab = main.getByRole("tab", { selected: true });
+  await tab.hover();
+  await main.hover();
   const bounds = (await main.boundingBox())!;
-  const tab = main.getByRole("tab", { name: "Start", exact: true });
   const source = (await tab.boundingBox())!;
   await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
   await page.mouse.down();
@@ -132,8 +140,7 @@ const verifyNearbyTabTargets = async (page: Page) => {
     ["side", "secondary", "bottom"],
   ]) {
     const sourceTab = page.locator(`[data-workbench-panel="${sourceRegion}"]:visible`).getByRole("tab", {
-      name: "Start",
-      exact: true,
+      selected: true,
     });
     await sourceTab.hover();
     const sourceBounds = (await sourceTab.boundingBox())!;
@@ -145,7 +152,7 @@ const verifyNearbyTabTargets = async (page: Page) => {
     await page.locator(`[data-workbench-edge-hit="${region}"][data-workbench-edge-position="${position}"]`).hover();
     await page.mouse.up();
     const moved = page.locator(`[data-workbench-panel="${region}"]:visible`);
-    await expect(moved.getByRole("tab", { name: "Start", exact: true })).toBeVisible();
+    await expect(moved.getByRole("tab", { selected: true })).toBeVisible();
     await expect
       .poll(async () => {
         const panel = (await moved.boundingBox())!;
@@ -157,16 +164,21 @@ const verifyNearbyTabTargets = async (page: Page) => {
   }
   await page.reload();
   const bottom = page.locator('[data-workbench-panel="secondary"]:visible');
-  await expect(bottom.getByRole("tab", { name: "Start", exact: true })).toBeVisible();
+  await expect(bottom.getByRole("tab", { selected: true })).toBeVisible();
+  // The closed Artifacts library stays closed after reload; its card can reopen it.
+  await expect(main.getByRole("tab")).toHaveCount(0);
+  await expect(
+    main.getByRole("group", { name: "Available tabs" }).getByRole("button", { name: "Artifacts", exact: true }),
+  ).toBeVisible();
   await expect.poll(async () => (await bottom.boundingBox())!.y < (await main.boundingBox())!.y).toBe(true);
 };
 
 const verifyLastTabPanelMove = async (page: Page, region: string, position: string) => {
   const panel = page.locator(`[data-workbench-panel="${region}"]:visible`);
-  const tab = panel.getByRole("tab", { name: "Start", exact: true });
+  const tab = panel.getByRole("tab", { selected: true });
   // Earlier checks leave a session in Bottom. Close it through its tab menu
   // only after the existing destination-content checks have completed.
-  const others = panel.getByRole("tab").filter({ hasNotText: "Start" });
+  const others = panel.getByRole("tab", { selected: false });
   for (let remaining = await others.count(); remaining > 0; remaining--) {
     await others.first().focus();
     await page.keyboard.press("Shift+F10");

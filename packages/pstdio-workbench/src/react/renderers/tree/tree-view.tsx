@@ -14,6 +14,7 @@ import { getWorkbenchRenderers } from "../../../core";
 import { reportUserActionError } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { WorkbenchIcon } from "../../shared/icon";
+import type { SidenavContextActionsChange } from "../../shared/sidenav-context-actions";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import { RendererReadNotice } from "../renderer-read-notice";
@@ -40,7 +41,7 @@ interface WorkbenchTreeViewProps {
   viewId?: string;
   renderParamField?: CommandParamFieldRenderer;
   onOpenResourceError?: (error: unknown) => void;
-  onSidenavContextActionsChange?: (actions: ResourceContextAction[]) => void;
+  onSidenavContextActionsChange?: SidenavContextActionsChange;
 }
 
 const EMPTY_TREE_STATE: TreeRendererState = { expandedNodeIds: [], expandedSectionIds: [] };
@@ -52,23 +53,24 @@ const treeCustomizationOptions = (body: TreeViewSection[], isSidenav: boolean) =
 });
 
 const useSidenavContextActions = (
+  ownerId: string,
   actions: ResourceContextAction[],
   revision: string,
-  onChange: ((actions: ResourceContextAction[]) => void) | undefined,
+  onChange: SidenavContextActionsChange | undefined,
 ) => {
   const actionsRef = useRef(actions);
   actionsRef.current = actions;
 
   useEffect(() => {
     void revision;
-    onChange?.(actionsRef.current);
-  }, [revision, onChange]);
+    onChange?.({ ownerId, actions: actionsRef.current });
+  }, [ownerId, revision, onChange]);
 
   useEffect(
     () => () => {
-      onChange?.([]);
+      onChange?.({ ownerId, actions: [] });
     },
-    [onChange],
+    [ownerId, onChange],
   );
 };
 
@@ -184,7 +186,12 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     },
     treeCustomizationOptions(body, isSidenav),
   );
-  useSidenavContextActions(backgroundContextActions, customizationRevision, onSidenavContextActionsChange);
+  useSidenavContextActions(
+    props.placement?.instanceId ?? treeViewId,
+    backgroundContextActions,
+    customizationRevision,
+    onSidenavContextActionsChange,
+  );
   const activeNodeSelection = useTreeSelection(workbench, treeViewId, {
     sections: [...header, ...body, ...footer],
     childrenByNodeId,

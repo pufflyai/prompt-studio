@@ -1,7 +1,8 @@
 # Local CRDT storage
 
-Extension records live in one Yjs document per extension and project. A declared text
-file uses its own document. The runtime owns merging and persistence. Extensions keep
+Each extension record is its own Yjs document ([ADR 0100](../../adrs/0100-one-document-per-resource.md)).
+A declared text file uses its own document. An extension's records sync together through one
+encrypted record stream ([ADR 0102](../../adrs/0102-record-stream-sync.md)). The runtime owns merging and persistence. Extensions keep
 using `storage.records`, the deprecated KV and collection methods, and the file APIs.
 [PRD 0014](../../requirements/platform/0014-local-first-sync.md) defines the requirements.
 
@@ -10,7 +11,7 @@ using `storage.records`, the deprecated KV and collection methods, and the file 
 | Package | Responsibility |
 | --- | --- |
 | `pstdio-sync` | Shape-based edits, document reads, shared primitives, checkpoint staging and legacy namespaces. |
-| `pstdio-db` | Durable document state, incremental updates, local retry identities, migration versions and the one-time journal import. |
+| `pstdio-db` | Durable document state, atomic current-record projections, query indexes, incremental updates, local retry identities, migration versions and the one-time journal import. |
 | `pstdio-api` | Public storage adapters, verified assets, file projection and notifications after local commits. |
 | `@pstdio/sdk/testing` | The same document engine with an in-memory store. |
 | Extensions | Domain data and validation, without merge rules or relay code. |
@@ -21,6 +22,51 @@ the functions in `packages/pstdio-sync/src/encryption/` and keys from the accoun
 transport and latest-state uploads run in `pstdio-sync/src/relay/`. The runtime starts
 encrypted document sync for each enabled extension. Local reads and saves do not wait
 for the relay.
+
+## Indexed current records
+
+[ADR 0099](../../adrs/0099-durable-record-query-projections.md) separates reads from
+merge-state loading. [ADR 0100](../../adrs/0100-one-document-per-resource.md) gives each
+record its own Yjs document. A commit loads only the documents of the records it names. In one
+durable transaction it writes their CRDT updates, their current rows and content revisions,
+the operation identity, and the owner revision. Only after that transaction commits does the
+service notify listeners.
+
+Normal queries, aggregates and batch reads never load a record document. Predicates, stable
+sorting, cursor seeks, field selection and limits run in SQL. A cursor rejects a changed owner
+revision. Owner metadata writes, such as data migration versions, do not change that revision.
+The public methods and typed field semantics are in the
+[storage reference](../sdk/0004-storage.md#indexed-queries).
+
+The owner document keeps owner metadata, such as data migration versions and the text document
+directory, and syncs as its own relay document. Records sync through the record stream below.
+Projection rows and record documents are removed with their workbench and cleared with an owner
+purge.
+
+Core resource numbers use one record each under the `pstdio` owner. Each record holds
+the resource ID, extension, kind, prefix, current number and number history. Allocation
+locks that owner and reads the highest numeric value from the prefix's identity and
+alias indexes. It loads and writes only the new record. History includes every assigned
+number, including the current one after repair; public identity reads filter the current
+number out of `aliases`.
+
+The same record transaction maintains the identity and alias indexes for local saves
+and incoming record-stream changes. It examines only collision keys touched by the save.
+The lower resource ID keeps a colliding number. Other resources receive the next free
+number, and retain both the old and newly assigned numbers in their history. This also
+preserves numbers shown during concurrent repairs with different allocation floors.
+Events are delivered after the transaction commits. The projection revision follows
+the core record owner revision; reads reject an incomplete projection.
+
+The first number operation moves an existing `resource-identities` document into records
+in one transaction. It rebuilds the old derived indexes and removes the old source only
+with the final record save. Failure leaves the source available for a later start.
+Before founding a new core record stream, a device also reads and imports the old relay
+document. This recovers remote-only numbers when older devices are offline. Once the
+records join a stream, the old source is no longer read. An empty project has no stream
+yet and rechecks the empty source on reconnect. An existing stream is authoritative;
+normal synchronization uses the record stream from
+[ADR 0102](../../adrs/0102-record-stream-sync.md).
 
 ## Scheduled automations
 
@@ -111,6 +157,55 @@ identity before replacing bytes downloaded while an editor was saving.
 Yjs text document even for single-line content. Binding native editor collaboration to
 that port is separate from this storage implementation; ordinary artifact files still
 use verified asset references.
+
+## Recovery points
+
+[Recovery points](../../../packages/pstdio-db/src/services/extension-storage/recovery-points.ts)
+let a person restore a cloud project, or one extension in it, after a mistake has synced. A
+point covers one project. For each extension with data it keeps:
+
+- the live records at one owner revision, read from `storage_current_records`;
+- the text of its text documents;
+- its data migration markers from the owner document.
+
+A point never encodes record documents. One transaction reads the whole project and holds the
+owners' projection rows, so every owner is captured at one revision. An owner whose revision has
+not changed since a kept point reuses those saved records. Capture and restore of one project run
+one at a time, so a point never holds a half-finished restore.
+
+`recovery_points` has one row per kept point and `recovery_point_owners` one row per extension
+in it. The slots are fixed: the last hour, 12 hours and day, so a project never has more than
+three points. A point is replaced when it is older than its period. When the free disk space
+cannot hold every due point, or a write fails because the disk is full, only the 12-hour point
+stays. There is no fixed quota or reserve. A cloud project gets its first point after its first
+full download. Projects with points keep rotating them while the device runs, even offline.
+
+A restore first checks that every saved file is still on the device, and changes nothing when one
+is missing. It then compares the saved records with the current projection and commits the difference
+with normal `records.commit` groups for each owner. These commits notify storage listeners and
+sync like any other edit. A record brought back after deletion gets a second pass, because its
+document keeps its old shared value. Text documents and migration markers are set back through
+their documents. Before it writes, the restore saves the current state in the hour point, or in
+the 12-hour point when there is no hour point, so the restore can be undone without a fourth
+point. A restore that would change nothing keeps every point. Purging an extension's data also removes it from recovery points.
+
+## Record stream
+
+Each extension owner syncs its records through one relay document, named
+`[extensionId, "record-stream"]` before hashing. The transport lives in
+`pstdio-sync/src/relay/record-stream.ts`; `pstdio-db` implements its store in
+`record-stream-store.ts`.
+
+| Part | Rule |
+| --- | --- |
+| Update | One local save: an encrypted frame with each changed record's Yjs update and the files those records use. A frame too large for one update is stored as a blob that the update names. |
+| Outbox | `storage_record_outbox` keeps a save's frame, written in the save's transaction. Only owners with a `storage_record_sync` row keep one. |
+| Download | A page of frames, the records they change, their query rows, the owner revision and the cursor in `storage_record_sync` commit in one transaction. |
+| Latest state | Encrypted chunks of record states, stored as blobs. The first one founds the stream. Later ones are built only by a device that has read every update and has an empty outbox, so they add nothing an update did not carry, and only once the updates outgrow the latest state. |
+| Joining | The first device with records founds the stream. A later device adopts each record's synced history and reapplies its own changes since it first saved the record; a history the stream already shares merges normally. |
+
+A save inside a data migration uses deterministic Yjs authors per record document, so two devices
+that run the same migration write identical updates.
 
 ## Encrypted document transport
 

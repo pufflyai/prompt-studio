@@ -152,6 +152,7 @@ const metadataString = (resource: ResourceRef | undefined, key: string) => {
 const createDraftSessionView = (resource: ResourceRef | undefined): DashboardSessionView => ({
   ...draftSessionView,
   draftKey: resource?.id ?? draftSessionViewId,
+  agent: metadataString(resource, "agent") ?? null,
   workspaceTitle: metadataString(resource, "workspaceTitle") ?? "",
   workspaceId: metadataString(resource, "workspaceId") ?? null,
   workspaceBranch: metadataString(resource, "workspaceBranch") ?? null,
@@ -188,9 +189,11 @@ export const resolveDashboardSessionView = (sessionId: string | undefined): Dash
     messages: [],
   };
 };
-export const resolveDashboardSessionViewForPlacement = (placement: Pick<WorkbenchPanelInstance, "resource">) => {
-  const sessionId = placement.resource?.type === "session" ? placement.resource.id : undefined;
+export const resolveDashboardSessionViewForResource = (resource: ResourceRef | undefined) => {
+  const sessionId = resource?.type === "session" ? resource.id : undefined;
   if (sessionId) return resolveDashboardSessionView(sessionId);
-  if (placement.resource?.type === "session-draft") return createDraftSessionView(placement.resource);
+  if (resource?.type === "session-draft") return createDraftSessionView(resource);
   return draftSessionView;
 };
+export const resolveDashboardSessionViewForPlacement = (placement: Pick<WorkbenchPanelInstance, "resource">) =>
+  resolveDashboardSessionViewForResource(placement.resource);

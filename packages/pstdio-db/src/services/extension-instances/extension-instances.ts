@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { extension_instances, installed_extension_sources } from "../../db/schemas.pg";
+import { type ActivationInput, activateProjectSources as activateProjectSourcesImpl } from "./activate-project-sources";
 
 type InstanceRow = typeof extension_instances.$inferSelect;
 type InstanceInsert = typeof extension_instances.$inferInsert;
@@ -111,10 +112,21 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
       .returning();
   };
 
+  const activateProjectSources = (inputs: ActivationInput[]) => activateProjectSourcesImpl(db, inputs);
+
   const remove = async (id: string) => {
     const [deleted] = await db.delete(extension_instances).where(eq(extension_instances.id, id)).returning();
     return deleted ?? null;
   };
 
-  return { list, get, findByScopeInstalledSource, create, update, claimProjectExtensionProvider, remove };
+  return {
+    list,
+    get,
+    findByScopeInstalledSource,
+    create,
+    update,
+    claimProjectExtensionProvider,
+    activateProjectSources,
+    remove,
+  };
 };

@@ -74,7 +74,7 @@ export interface ActivityItemContribution<TParams extends Struct = Struct>
 }
 
 export interface ModeRegionSettings {
-  /** Hide the panel header when the mode supplies its own controls. */
+  /** Legacy auxiliary-panel header visibility. Main follows the page's main.presentation. */
   readonly showHeader?: boolean;
   /** Permit explicit opening/revealing independently of closing. Defaults to true. */
   readonly canOpen?: boolean;
@@ -93,7 +93,7 @@ export interface ModeRegionSettings {
    * @deprecated For panel visibility use canOpen/canClose. Retained for menu collapse.
    */
   readonly collapsible?: boolean;
-  /** Keep a tab visible when this region has only one visible item. */
+  /** @deprecated Main follows main.presentation. Auxiliary panels may use showHeader. Every visible header shows tabs. */
   readonly alwaysShowTabs?: boolean;
 }
 
@@ -103,6 +103,8 @@ export interface ModeContribution extends ContributionDefinition<"mode"> {
   regions: readonly ExtensionPanelRegion[];
   /** Default theme for this mode. An explicit user choice for the mode takes precedence. */
   defaultTheme?: ThemeRef;
+  /** Allow Main fullscreen while this mode is active. Defaults to true. */
+  canFullscreen?: boolean;
   /** Whether side panels may float while this mode is active. Defaults to visible.
    * @deprecated Use regionSettings.side.floatable.
    */
@@ -168,7 +170,7 @@ export interface CommandPaletteResourceContribution extends ContributionDefiniti
   refreshEvents?: readonly RendererEventReference[];
 }
 
-export type ExtensionSettingScope = "global" | "project";
+export type ExtensionSettingScope = "global" | "project" | "device";
 export type ExtensionSettingValueType = "boolean" | "number" | "string" | "array" | "object";
 
 export type ExtensionSettingValueForType<TType extends ExtensionSettingValueType> = TType extends "boolean"
@@ -262,8 +264,25 @@ export interface FileIconThemeContribution extends ContributionDefinition<"file-
  * and display labels are all delegated to `@tanstack/hotkeys`.
  */
 export type KeybindingChord = string;
+export type ShortcutLayer =
+  | "view"
+  | "go"
+  | "create"
+  | "current"
+  | "settings"
+  | "help"
+  /** @deprecated Choose a shared action layer. Legacy bindings join Current view. */
+  | "extensions";
 
 export interface KeybindingContribution extends ContributionDefinition<"keybinding"> {
+  /** A sequence relative to Leader; sharing a key opens the common action/target chooser. */
+  layer?: ShortcutLayer;
+  /** Resource mutations deduplicate equal resources; panel actions retain presentation identity. */
+  targetScope?: "project" | "resource" | "panel";
+  /** @deprecated Completed actions close shortcut mode; only tab navigation retains it until Enter. */
+  sticky?: boolean;
+  /** Reserve this chord for the workbench even while editing in a view. */
+  allowInInputs?: boolean;
   /** Default chord. Used on every platform unless an override is provided. */
   key: KeybindingChord;
   /** macOS override. */

@@ -4,7 +4,7 @@ import { fileNameFromPath, ticketFilesDir } from "./draft-storage";
 import { validateTicketFileName } from "./ticket-file-name";
 import { readTicketImageCheckout, writeTicketImageCheckout } from "./ticket-image-checkout";
 import { ticketImagePaths } from "./ticket-image-paths";
-import type { StoredTicket } from "./types";
+import type { Ticket } from "./types";
 
 export const isImagePath = (path: string) => imageMimeType(path) !== null;
 
@@ -15,17 +15,17 @@ const sha256 = async (data: Uint8Array) => {
 
 // Images in the local files folder become ticket attachments, stored in the same
 // ticket scope as dashboard uploads. Save never removes an attachment: a dashboard
-// upload is not in the local folder until the next pull.
+// upload is not in the local folder until the next pull. Call it with the stored ticket
+// inside changeTicketFiles, which deletes the replaced images after the write.
 export const saveTicketImages = async (
   storage: ExtensionStorageApi,
   projectFiles: ArtifactMount,
-  ticket: StoredTicket,
+  ticket: Ticket,
   paths: string[],
 ) => {
   const files = storage.scope({ type: "resource", resource: { type: "ticket", id: ticket.id } }).files;
   const attachments = [...(ticket.attachments ?? [])];
   const checkout = await readTicketImageCheckout(projectFiles, ticket.shorthand);
-  const replacedIds: string[] = [];
 
   for (const path of paths) {
     const name = validateTicketFileName(fileNameFromPath(ticket.shorthand, path));
@@ -47,7 +47,6 @@ export const saveTicketImages = async (
     if (index === -1) {
       attachments.push(attachment);
     } else {
-      replacedIds.push(attachments[index].id);
       attachments[index] = attachment;
     }
     checkout[name] = attachment.id;
@@ -56,16 +55,11 @@ export const saveTicketImages = async (
   const ids = new Set(attachments.map(({ id }) => id));
   return {
     attachments,
-    replacedIds,
     checkout: Object.fromEntries(Object.entries(checkout).filter(([, id]) => ids.has(id))),
   };
 };
 
-export const pullTicketImages = async (
-  storage: ExtensionStorageApi,
-  projectFiles: ArtifactMount,
-  ticket: StoredTicket,
-) => {
+export const pullTicketImages = async (storage: ExtensionStorageApi, projectFiles: ArtifactMount, ticket: Ticket) => {
   const files = storage.scope({ type: "resource", resource: { type: "ticket", id: ticket.id } }).files;
   const checkout = await readTicketImageCheckout(projectFiles, ticket.shorthand);
   const images = ticketImagePaths(ticket, checkout);

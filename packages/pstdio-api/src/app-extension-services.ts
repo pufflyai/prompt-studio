@@ -1,6 +1,7 @@
 import {
   type createExtensionConnectionsDBService,
   type createExtensionInstancesDBService,
+  type createExtensionStorageDBService,
   createExtensionUserDataDBService,
   type createInstalledExtensionSourcesDBService,
   type DbClient,
@@ -33,6 +34,7 @@ interface WireExtensionServicesInput {
   dependencies: AppDependencies;
   eventBus: EventBus;
   extensionInstancesDBService: ReturnType<typeof createExtensionInstancesDBService>;
+  extensionStorageDBService: ReturnType<typeof createExtensionStorageDBService>;
   extensionConnectionsDBService: ReturnType<typeof createExtensionConnectionsDBService>;
   installedExtensionSourcesDBService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   projectService: ReturnType<typeof createProjectService>;
@@ -59,6 +61,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     extensionInstancesService: input.extensionInstancesDBService,
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionUserDataService: createExtensionUserDataDBService(input.db),
+    recovery: input.extensionStorageDBService.recovery,
     eventBus: input.eventBus,
     onInstalledSourcesChanged: refreshInstalledSources,
     projectService: input.projectService,
@@ -73,6 +76,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
   });
   const extensionRuntimeCatalog = createProjectExtensionRuntimeCatalog({
     extensionService,
+    extensionStorageService: input.extensionStorageDBService,
     projectService: input.projectService,
     workspaceService: input.workspaceService,
   });

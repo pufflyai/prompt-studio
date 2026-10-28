@@ -2,11 +2,14 @@ name: Service containers
 
 on:
   pull_request:
-    paths: ["services/**", "infra/**", "packages/pstdio-sync/**", "packages/pstdio-sync-contracts/**", "bun.lock", "package.json", ".dockerignore", ".github/workflows/service-containers.yml", ".github/workflows/release-packages.yml"]
+    paths: ["services/**", "infra/**", "packages/pstdio-sync/**", "packages/pstdio-sync-contracts/**", "packages/e2e/src/packaged/registry-*.fixture.ts", "packages/e2e/src/packaged/packaged-independent-extensions*", "bun.lock", "package.json", ".dockerignore", ".github/workflows/service-containers.yml", ".github/workflows/release-packages.yml"]
   workflow_call:
     inputs:
       ref:
         required: true
+        type: string
+      original_source_sha:
+        required: false
         type: string
       version:
         required: true
@@ -17,13 +20,60 @@ permissions:
   contents: read
 
 jobs:
+  psx_delivery:
+    # Temporary: Playwright's Chromium does not install on Ubuntu 26.04 yet (ADR 0105).
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - run: bun install --frozen-lockfile
+      - run: bun run --cwd services/psx test:integration
+      - run: docker build -f infra/psx/Dockerfile -t pstdio-psx-smoke .
+      - name: Build the packaged host for the delivery smoke
+        env:
+          PSTDIO_BUILD_PLATFORM_PKG: cli-linux-x64
+        run: bun run --cwd scripts build:all
+      - name: Check reproducible archives and upgrade an independently published extension
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio
+          PSTDIO_PSX_REAL_SERVICE: "1"
+          PSTDIO_PSX_TEST_IMAGE: pstdio-psx-smoke
+        run: bun run --cwd packages/e2e test:packaged:cli -- --test-name-pattern "independently published|identical archives across time"
+      - name: Provision Chromium for the UI delivery smoke
+        run: packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio extensions install-browser
+      - name: Upgrade through Settings
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio
+          PSTDIO_PSX_REAL_SERVICE: "1"
+          PSTDIO_PSX_TEST_IMAGE: pstdio-psx-smoke
+        run: bun run --cwd packages/e2e test:packaged:browser -- packaged-independent-extensions.p2.spec.ts
   build:
+    # A called release producer always supplies a version, even from a PR event.
+    if: github.event_name != 'pull_request' || inputs.version != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
+      fail-fast: false
       matrix:
-        service: [relay, account-manager]
+        include:
+          - service: relay
+            module: ./storage.js
+            export: createRelayStorage
+          - service: account-manager
+            module: ./dist/index.js
+            export: createAccountManager
+          - service: psx
+            module: ./dist/index.js
+            export: createPsx
     steps:
       - uses: actions/checkout@v5
         with:
@@ -44,11 +94,48 @@ jobs:
           labels: ${{ steps.metadata.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Check the built image and pinned Bun runtime
+        env:
+          SERVICE: ${{ matrix.service }}
+          SMOKE_MODULE: ${{ matrix.module }}
+          SMOKE_EXPORT: ${{ matrix.export }}
+        run: |
+          archive="/tmp/${SERVICE}.tar"
+          docker load --input "$archive"
+          image="$(tar -xOf "$archive" manifest.json | jq -er '.[0].RepoTags[0]')"
+          docker image inspect "$image" >/dev/null
+          expected_bun="$(node -p 'require("./package.json").packageManager.replace(/^bun@/, "")')"
+          actual_bun="$(docker run --rm --entrypoint bun "$image" --version)"
+          test "$actual_bun" = "$expected_bun"
+          docker run --rm --entrypoint bun -e SMOKE_MODULE -e SMOKE_EXPORT "$image" \
+            -e 'const module = await import(process.env.SMOKE_MODULE); if (typeof module[process.env.SMOKE_EXPORT] !== "function") throw new Error("Built service export is missing");'
+      - name: Record the exact built image bytes and source
+        if: inputs.version != ''
+        env:
+          SOURCE_SHA: ${{ inputs.original_source_sha || inputs.ref || github.sha }}
+        run: node scripts/ci/production-service-identity.ts /tmp/${{ matrix.service }}.tar /tmp/${{ matrix.service }}-identity.json
       - uses: actions/upload-artifact@v4
         if: inputs.version != ''
         with:
           name: service-container-${{ matrix.service }}
-          path: /tmp/${{ matrix.service }}.tar
+          path: |
+            /tmp/${{ matrix.service }}.tar
+            /tmp/${{ matrix.service }}-identity.json
+  contracts:
+    runs-on: ubuntu-latest
+    env:
+      CI_PRIORITY: P0
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun test infra/container-entrypoint.p0.test.ts infra/relay/portable-smoke-images.p0.test.ts
   plan:
     runs-on: ubuntu-latest
     steps:
@@ -68,6 +155,9 @@ jobs:
           SPACES_SECRET_ACCESS_KEY: validation-only
         run: terraform -chdir=infra/terraform/validation plan -refresh=false -input=false
   portable_smoke:
+    # Production validation consumes the exact archives in production-services.yml.
+    # This source rebuild is an explicit manual deployment diagnostic only.
+    if: github.event_name == 'workflow_dispatch' && inputs.version == ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -76,5 +166,4 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - run: bun test infra/container-entrypoint.test.ts
       - run: bun infra/relay/smoke-portable.ts

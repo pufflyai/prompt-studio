@@ -1,0 +1,21 @@
+{
+  "name": "pstdio-diagnostics",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun ../../scripts/ci/run-bun-tests.ts --silent",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage",
+    "typecheck": "bun check",
+    "lint": "bun run typecheck && biome check ."
+  },
+  "dependencies": {
+    "pstdio-api-contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "typescript": "6.0.2"
+  }
+}

@@ -24,6 +24,24 @@ The session composer shows the model menu only for harnesses that implement `lis
 
 `/v1/agents/info` returns each harness's `capabilities` and `supportsModels`. The `Attachments` capability marks a harness that accepts files. The host does not act on it yet; the composer and server will use it once the built-in harnesses declare it.
 
+## Installation and sign-in
+
+Provider extensions own CLI discovery and installation. Detection, model discovery, sessions, and sign-in must use the same executable and native credential storage.
+
+The unreleased extension API 0.3.0 adds optional `HarnessProvider.getAuthentication(ctx, { model })` and `authenticate(ctx, input, channel)`. Account state describes the selected model provider as `signed_in`, `signed_out`, `not_required`, or `unknown`, plus a catalog of providers and their native sign-in methods. Discovery never starts sign-in or returns credentials. Account status uses `GET /v1/agents/{agentId}/authentication`, separately from cached CLI availability.
+
+When no harness is available, the session background shows a warning and a link to Extensions, and hides the chat input. This checks all harnesses, rather than only the selected one. When the selected available harness reports that it is signed out, the background shows a sign-in empty state with a **Sign in** button. The input remains editable, but messages cannot be sent until sign-in is confirmed.
+
+`/login` and `/logout` are local chat commands. They appear before a conversation or model is ready and never become agent prompts. The dedicated authenticated WebSocket at `/v1/agents/authentication` carries browser links, provider choices, and masked input. Replies stay out of command lifecycle events and conversation history. The shared `chooseHarnessAuthentication` SDK helper selects a native provider and method, defaulting to the selected model provider. Environment and configuration credentials are not removable.
+
+Codex offers ChatGPT device authentication and API-key login through its native app-server. Claude offers subscription or Console login through the native CLI, with its browser link and code input shown in the session background. OpenCode discovers provider methods and plugin fields through its server API and saves credentials through native auth endpoints. Local and anonymous providers do not block sending. A credential for one provider does not authorize another. Browser links open on the dashboard device, including when the harness runs in Docker or remotely.
+
+Closing the channel cancels the account flow. Disabling or retiring the extension also cancels its flows and waits for worker cleanup. Completion refreshes account state and model queries. Native status, rather than a successful login action alone, determines readiness. Conversation history remains readable while setup is required.
+
+Probe failures remain unknown rather than reporting a signed-out account. See the [Codex CLI reference](https://developers.openai.com/codex/cli/reference/), [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference), and [OpenCode CLI reference](https://opencode.ai/docs/cli/).
+
+SDK/host support must ship before released extensions rely on `getAuthentication` and `authenticate`. An older host does not call these optional methods, so it cannot show the sign-in action.
+
 ## Supported CLI versions
 
 | Harness | Minimum | Why |
@@ -38,8 +56,8 @@ Below the minimum, or when `--version` fails, detection returns a `reason` that 
 
 Tests keep these versions supported:
 
-- `src/supported-versions.test.ts` in each harness replays real CLI output from the minimum and the latest version through the harness. Codex runs a shell command and reads it back from history. Claude Code keeps a run open until its background task finishes and answers a question. OpenCode shows a turn that runs a shell command. Each test requires a recording at the current `MINIMUM_VERSION`.
-- `src/installed-cli.test.ts` in each harness runs the harness against the installed CLI without a login: detection, model listing, and the Codex app-server thread and goal calls, the Claude Code session arguments, or the OpenCode server start and command API. It runs when `INSTALLED_CLI_TESTS=1`. Test and Build installs the minimum versions when a harness changes. Every release and nightly also installs the latest versions before publishing. The OpenCode test keeps OpenCode's data in temporary `XDG_*` folders.
+- `src/supported-versions.p0.test.ts` in each harness replays real CLI output from the minimum and the latest version through the harness. Codex runs a shell command and reads it back from history. Claude Code keeps a run open until its background task finishes and answers a question. OpenCode shows a turn that runs a shell command. Each test requires a recording at the current `MINIMUM_VERSION`.
+- `src/installed-cli.p0.test.ts` in each harness runs the harness against the installed CLI without a login: detection, model listing, and the Codex app-server thread and goal calls, the Claude Code session arguments, or the OpenCode server start and command API. It runs when `INSTALLED_CLI_TESTS=1`. Test and Build installs the minimum versions when a harness changes. Every release and nightly also installs the latest versions before publishing. The OpenCode test keeps OpenCode's data in temporary `XDG_*` folders.
 
 To change a minimum, update `MINIMUM_VERSION` in the harness's `src/detection.ts`. Record new output with `bun scripts/record-cli-output.ts <executable>` at the new minimum and the latest version, and delete recordings older than the minimum. Codex and Claude Code need a signed-in CLI. OpenCode records on a free model without a login. The scripts remove machine paths and account details.
 

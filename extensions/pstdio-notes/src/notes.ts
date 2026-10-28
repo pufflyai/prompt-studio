@@ -80,10 +80,9 @@ export const listNotes = async (mount: NotesMount) => {
   return sorted.sort((a, b) => (positions.get(a.id) ?? order.length) - (positions.get(b.id) ?? order.length));
 };
 
-export const createNote = async (mount: NotesMount, rawTitle?: string) => {
+export const createNote = async (mount: NotesMount, id: string, rawTitle?: string) => {
   // An empty title permits exactly one automatic rename on the first nonempty save.
   const title = rawTitle === undefined ? "" : noteTitle(rawTitle);
-  const id = crypto.randomUUID();
   await mount.writeText(notePath(id), buildNoteDocument("", title));
   return { id, title: title || "New note" };
 };

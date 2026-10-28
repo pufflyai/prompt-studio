@@ -46,6 +46,8 @@ export function normalizeTarget(target: NavigationTarget, extensionId: string): 
   if (target.kind === "command") {
     return { ...target, target: { ...target.target, command: commandRef(target.target.command, extensionId) } };
   }
+  if (target.kind === "viewer")
+    return { ...target, page: target.page ? normalizedRef(target.page, extensionId) : undefined };
   if (target.kind === "compound") {
     return {
       ...target,

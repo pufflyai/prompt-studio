@@ -1,6 +1,7 @@
 import { defineCommand, l10n } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
+import { withTicketTagIds } from "../data/ticket-tags";
 import { plannerTicketsChanged } from "../events";
 import { ticketMenuSlots } from "../resource-kinds";
 import { ticketRefFromCommandContext } from "./ticket-command-ref";
@@ -21,13 +22,13 @@ export const unarchiveTicketCommand = defineCommand({
     },
   ],
   async run(ctx, commandParams) {
-    const existing = await findTicket(ctx.storage, ticketRefFromCommandContext(ctx, commandParams));
+    const existing = await findTicket(ctx, ticketRefFromCommandContext(ctx, commandParams));
     if (!existing) return null;
-    if (!existing.archived) return existing;
+    if (!existing.archived) return withTicketTagIds(existing);
 
     const next = { ...existing, archived: false, updatedAt: new Date().toISOString() };
-    await ticketsCollection(ctx.storage).put(next.id, next);
+    await ticketsCollection(ctx).put(next.id, next);
     await ctx.events.emit(plannerTicketsChanged, { ticketId: next.id });
-    return next;
+    return withTicketTagIds(next);
   },
 });

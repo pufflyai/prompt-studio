@@ -1,1 +1,0 @@
-ALTER TABLE "ticket_statuses" DROP COLUMN "can_attempt_on_drop";

@@ -19,6 +19,11 @@ export const createMainFullscreen = (getCore: () => WorkbenchCore) => {
     initialState: { active: false, sideOpen: false },
   });
   const sidePolicy = () => getCore().shell.getPanelPolicy("side");
+  const canEnter = () => {
+    const modes = getCore().modes;
+    const id = modes.getActiveModeId();
+    return !id || modes.getMode(id)?.canFullscreen !== false;
+  };
   const exit = () => {
     if (!store.getState().active) return;
     store.setState({ active: false, sideOpen: false });
@@ -26,11 +31,13 @@ export const createMainFullscreen = (getCore: () => WorkbenchCore) => {
   };
   return {
     store: store as WorkbenchStore<MainFullscreenState>,
+    canEnter,
     canShowSide: () => {
       const policy = sidePolicy();
       return store.getState().active && policy.provided && policy.floatable && policy.canOpen;
     },
     enter() {
+      if (!canEnter()) throw new Error("Fullscreen is not available in this mode");
       if (store.getState().active) return;
       const policy = sidePolicy();
       store.setState({ active: true, sideOpen: policy.open && policy.floatable });
@@ -70,13 +77,33 @@ export const connectMainFullscreen = (core: WorkbenchCore) => {
       if ((closed || emptied) && core.shell.getPanelPolicy("side").canClose) core.fullscreen.hideSide();
     }),
   ];
+  const toggleId = "workbench.toggleMainFullscreen";
+  core.commands.registerCommand(
+    { id: toggleId, label: "Toggle Main fullscreen", category: "Panels and tabs", icon: "Maximize" },
+    {
+      isEnabled: () => core.fullscreen.store.getState().active || core.fullscreen.canEnter(),
+      execute: () => {
+        if (core.fullscreen.store.getState().active) core.fullscreen.exit();
+        else core.fullscreen.enter();
+      },
+    },
+  );
+  core.keybindings.registerKeybinding({
+    id: toggleId,
+    action: { kind: "command", commandId: toggleId },
+    keybinding: "Alt+Shift+Z",
+    allowInInputs: true,
+  });
   for (const [id, label, execute] of [
     ["enterMainFullscreen", "Enter Main fullscreen", core.fullscreen.enter],
     ["exitMainFullscreen", "Exit Main fullscreen", core.fullscreen.exit],
     ["showFullscreenSide", "Show fullscreen Side Panel", core.fullscreen.showSide],
     ["hideFullscreenSide", "Hide fullscreen Side Panel", core.fullscreen.hideSide],
   ] as const) {
-    core.commands.registerCommand({ id: `workbench.${id}`, label, category: "Workbench" }, { execute });
+    core.commands.registerCommand(
+      { id: `workbench.${id}`, label, category: "Workbench" },
+      { execute, isEnabled: id === "enterMainFullscreen" ? core.fullscreen.canEnter : undefined },
+    );
   }
   return () => {
     for (const unsubscribe of subscriptions) unsubscribe();

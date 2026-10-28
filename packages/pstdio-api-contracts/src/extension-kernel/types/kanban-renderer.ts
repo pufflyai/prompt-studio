@@ -1,9 +1,10 @@
 import type { Localizable } from "../l10n";
+import type { CollectionPage, CollectionPageRequest } from "./collection-page";
 import type { ViewFilterGroup, ViewSort } from "./collection-view";
 import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
 import type { Struct } from "./json";
-import type { NavigationTargetPage } from "./navigation-target";
+import type { NavigationTarget, NavigationTargetPage } from "./navigation-target";
 import type { ParamObjectSchema } from "./params";
 import type { RendererContributionBase, RendererEventReference } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
@@ -35,6 +36,8 @@ export interface CollectionBadgeItem {
   icon?: string;
   color?: string;
   tooltip?: string;
+  action?: NavigationTarget;
+  /** @deprecated Use action, which also supports panels and commands. */
   target?: NavigationTargetPage;
   resource?: ResourceRef;
 }
@@ -72,11 +75,13 @@ export interface KanbanRendererSavedView {
 }
 
 export interface KanbanRendererQueryParams {
+  /** Present for queryMode: "paged". Apply all view controls before selecting these rows. */
+  page?: CollectionPageRequest;
   renderer: RendererContext;
   settings: KanbanRendererSettings;
-  /** The view's full filter. Use it only to narrow what you load; the renderer applies it to the rows you return. */
+  /** The view's full filter. Paged providers apply it before pagination; legacy providers also get local filtering. */
   filter: ViewFilterGroup;
-  /** The view's sorts, first level first. The renderer applies them to the rows you return. */
+  /** The view's sorts, first level first. Paged providers apply them before pagination; legacy providers also get local sorting. */
   sorts: ViewSort[];
 }
 
@@ -108,6 +113,8 @@ export interface KanbanRendererBoardColumnConfig {
 }
 
 export interface KanbanRendererQueryResult {
+  /** Required for queryMode: "paged"; full-result providers omit it. */
+  page?: CollectionPage;
   rows: KanbanRendererRow[];
   attributes?: KanbanRendererAttributeDescriptor[];
   boardColumnConfigs?: Record<string, KanbanRendererBoardColumnConfig>;
@@ -152,6 +159,8 @@ export interface KanbanRendererMove {
 }
 
 export interface KanbanRendererContribution extends RendererContributionBase {
+  /** Opt in to bounded provider-owned filtering, sorting, search and paging. */
+  queryMode?: "paged";
   /** Saves the complete drop once. Takes precedence over legacy move callbacks. */
   onMove?: RendererCallback<KanbanRendererMove, unknown>;
   /** Events that change filter fields/options. Omit to retain content-event refresh. */

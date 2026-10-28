@@ -1,0 +1,332 @@
+import { describe, expect, test } from "bun:test";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
+import type { ExtensionLoggerApi, TerminalEvent } from "pstdio-api-contracts/extension-kernel";
+import { createTerminalSupervisor } from "./extension-terminal-runtime";
+
+interface LogRecord {
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
+const createRecordingLogger = () => {
+  const records: LogRecord[] = [];
+  const record = (message: string, metadata?: Record<string, unknown>) => records.push({ message, metadata });
+  const logger: ExtensionLoggerApi = { info: record, warn: record, error: record };
+  return { logger, records };
+};
+
+const decode = (events: TerminalEvent[]) =>
+  events
+    .filter((event): event is Extract<TerminalEvent, { kind: "data" }> => event.kind === "data")
+    .map((event) => new TextDecoder().decode(event.chunk))
+    .join("");
+
+const shellCommand = () => (process.platform === "win32" ? [process.env.ComSpec ?? "cmd.exe"] : ["/bin/sh"]);
+const line = (command: string) => `${command}${process.platform === "win32" ? "\r" : "\n"}`;
+const posixOnlyTest = process.platform === "win32" ? test.skip : test;
+
+const isAlive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const waitForExit = async (pid: number) => {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    if (!isAlive(pid)) return false;
+    await Bun.sleep(25);
+  }
+  return true;
+};
+
+const waitForInitialOutput = async (events: TerminalEvent[]) => {
+  if (process.platform !== "win32") return;
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (events.some((event) => event.kind === "data")) return;
+    await Bun.sleep(10);
+  }
+};
+
+test("stops accepting terminal input and resize when shutdown begins", async () => {
+  const { logger } = createRecordingLogger();
+  const supervisor = createTerminalSupervisor({ logger });
+  const handle = supervisor.api.openSession({ command: shellCommand(), cols: 80, rows: 24 });
+  const drained = (async () => {
+    for await (const _event of handle.events()) void _event;
+  })();
+  try {
+    const stopped = handle.kill("SIGKILL");
+    expect(() => handle.write(line("echo late-input"))).not.toThrow();
+    expect(() => handle.resize(100, 30)).not.toThrow();
+    await stopped;
+    await drained;
+    expect(() => handle.write(line("echo late-input"))).not.toThrow();
+    expect(() => handle.resize(100, 30)).not.toThrow();
+  } finally {
+    await supervisor.dispose();
+  }
+});
+
+describe("terminal supervisor", () => {
+  posixOnlyTest.each([
+    ["/bin/sh", "-lc", "sleep 5"],
+    ["/bin/bash", "-lc", "sleep 5; echo complete"],
+  ])("counts shell command flags as foreground work (%s)", async (shell, flag, script) => {
+    const command = [shell, flag, script];
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const terminal = supervisor.api.openSession({ command, cols: 80, rows: 24 });
+    try {
+      await Bun.sleep(100);
+      expect(await supervisor.activity()).toEqual([{ id: terminal.id, label: basename(command[0]) }]);
+    } finally {
+      await supervisor.dispose();
+    }
+  });
+
+  posixOnlyTest("counts a program that replaces the interactive shell", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const terminal = supervisor.api.openSession({ command: ["/bin/bash", "--norc", "-i"], cols: 80, rows: 24 });
+    try {
+      terminal.write("exec sleep 5\n");
+      await Bun.sleep(100);
+      expect(await supervisor.activity()).toEqual([{ id: terminal.id, label: "bash" }]);
+    } finally {
+      await supervisor.dispose();
+    }
+  });
+
+  posixOnlyTest("counts a directly launched foreground program as work", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const terminal = supervisor.api.openSession({ command: ["/bin/sleep", "5"], cols: 80, rows: 24 });
+    try {
+      expect(await supervisor.activity()).toEqual([{ id: terminal.id, label: "sleep" }]);
+    } finally {
+      await supervisor.dispose();
+    }
+  });
+
+  test("reports a missing working directory before spawning the shell", () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const missingDirectory = join(tmpdir(), `pstdio-missing-terminal-cwd-${crypto.randomUUID()}`);
+
+    expect(() =>
+      supervisor.api.openSession({ command: shellCommand(), cwd: missingDirectory, cols: 80, rows: 24 }),
+    ).toThrow(`Terminal working directory does not exist: ${missingDirectory}`);
+  });
+
+  posixOnlyTest("provides terminal metadata when the host environment omits it", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const previousTerm = process.env.TERM;
+    const previousColorTerm = process.env.COLORTERM;
+
+    delete process.env.TERM;
+    delete process.env.COLORTERM;
+
+    try {
+      const handle = supervisor.api.openSession({
+        command: ["/bin/sh", "-lc", 'printf \'%s|%s\\n\' "$TERM" "$COLORTERM"'],
+        cols: 80,
+        rows: 24,
+      });
+
+      const events: TerminalEvent[] = [];
+      for await (const event of handle.events()) events.push(event);
+
+      expect(decode(events)).toContain("xterm-256color|truecolor");
+    } finally {
+      if (previousTerm === undefined) {
+        delete process.env.TERM;
+      } else {
+        process.env.TERM = previousTerm;
+      }
+      if (previousColorTerm === undefined) {
+        delete process.env.COLORTERM;
+      } else {
+        process.env.COLORTERM = previousColorTerm;
+      }
+      await supervisor.dispose();
+    }
+  });
+
+  test("opens a session, echoes input, and exits cleanly", async () => {
+    const { logger, records } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const handle = supervisor.api.openSession({ command: shellCommand(), cols: 80, rows: 24 });
+
+    const events: TerminalEvent[] = [];
+    const consumed = (async () => {
+      for await (const event of handle.events()) events.push(event);
+    })();
+
+    await waitForInitialOutput(events);
+    handle.write(line("echo hi-marker"));
+    await Bun.sleep(25);
+    handle.write(line("exit"));
+    await consumed;
+
+    expect(decode(events)).toContain("hi-marker");
+    // On open the session reports its launched process name (deterministic across
+    // platforms) so the UI can title the tab; the live foreground is tracked after.
+    const expectedTitle = process.platform === "win32" ? "cmd.exe" : "sh";
+    expect(events.some((event) => event.kind === "title" && event.title === expectedTitle)).toBe(true);
+    const last = events.at(-1);
+    expect(last?.kind).toBe("exit");
+    expect(last).toMatchObject({ kind: "exit", code: 0 });
+
+    // Lifecycle is logged, but PTY content never is.
+    expect(records.some((entry) => entry.message === "terminal session opened")).toBe(true);
+    expect(JSON.stringify(records)).not.toContain("hi-marker");
+  });
+
+  posixOnlyTest("opens interactive bash with job control", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const handle = supervisor.api.openSession({ command: ["/bin/bash"], cols: 80, rows: 24 });
+
+    const events: TerminalEvent[] = [];
+    const consumed = (async () => {
+      for await (const event of handle.events()) events.push(event);
+    })();
+
+    handle.write("exit\n");
+    await consumed;
+
+    const output = decode(events);
+    expect(output).not.toContain("cannot set terminal process group");
+    expect(output).not.toContain("no job control in this shell");
+  });
+
+  posixOnlyTest("propagates resize to the child PTY geometry", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const handle = supervisor.api.openSession({ command: shellCommand(), cols: 80, rows: 24 });
+
+    const events: TerminalEvent[] = [];
+    const consumed = (async () => {
+      for await (const event of handle.events()) events.push(event);
+    })();
+
+    handle.resize(120, 40);
+    handle.write("stty size\n");
+    handle.write("exit\n");
+    await consumed;
+
+    // `stty size` reports "rows cols".
+    expect(decode(events)).toContain("40 120");
+  });
+
+  test("dispose force-kills live session children", async () => {
+    const { logger, records } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const handle = supervisor.api.openSession({ command: shellCommand(), cols: 80, rows: 24 });
+    // Drain events so the exit settles cleanly after the kill.
+    void (async () => {
+      for await (const _event of handle.events()) void _event;
+    })();
+
+    const opened = records.find((entry) => entry.message === "terminal session opened");
+    const pid = opened?.metadata?.pid as number;
+    expect(typeof pid).toBe("number");
+    expect(() => process.kill(pid, 0)).not.toThrow();
+
+    await supervisor.dispose();
+
+    expect(() => process.kill(pid, 0)).toThrow(/ESRCH/);
+  });
+
+  posixOnlyTest("reports foreground work with a stable id and clears activity at the prompt", async () => {
+    const { logger, records } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const handle = supervisor.api.openSession({ command: ["/bin/bash", "--norc", "-i"], cols: 80, rows: 24 });
+    void (async () => {
+      for await (const _event of handle.events()) void _event;
+    })();
+
+    try {
+      await Bun.sleep(100);
+      expect(await supervisor.activity()).toEqual([]);
+      handle.write(line("sleep 0.5"));
+      // Activity follows the shell's busy and prompt markers. Wait for each within the test's deadline;
+      // a loaded runner can read a marker late, which is not what this test checks.
+      while ((await supervisor.activity()).length === 0) await Bun.sleep(10);
+      expect(await supervisor.activity()).toEqual([{ id: handle.id, label: "bash" }]);
+      while ((await supervisor.activity()).length > 0) await Bun.sleep(10);
+      expect(await supervisor.activity()).toEqual([]);
+    } finally {
+      await handle.kill("SIGKILL");
+    }
+
+    expect(await supervisor.activity()).toEqual([]);
+    expect(records).toContainEqual({
+      message: "terminal session kill",
+      metadata: { id: handle.id, signal: "SIGKILL" },
+    });
+  });
+
+  posixOnlyTest("kill stops the shell and everything it started, and settles", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    // An interactive shell owning a PTY ignores SIGTERM, which is what used to hang kill().
+    const handle = supervisor.api.openSession({ command: ["/bin/bash", "--norc", "-i"], cols: 80, rows: 24 });
+    const events: TerminalEvent[] = [];
+    void (async () => {
+      for await (const event of handle.events()) events.push(event);
+    })();
+
+    // Wait for the prompt so the shell reads the background job instead of dropping it.
+    for (let attempt = 0; attempt < 40 && !events.some((event) => event.kind === "data"); attempt += 1) {
+      await Bun.sleep(25);
+    }
+
+    // The shell reports the pid of its background job, so the test can check that job directly.
+    handle.write("sleep 271 & printf 'PSTDIO_JOB:%s:\\n' $!\n");
+    let jobPid = 0;
+    for (let attempt = 0; attempt < 40 && jobPid === 0; attempt += 1) {
+      jobPid = Number(/PSTDIO_JOB:(\d+):/.exec(decode(events))?.[1] ?? 0);
+      if (jobPid === 0) await Bun.sleep(25);
+    }
+    expect(isAlive(jobPid)).toBe(true);
+
+    const settled = await Promise.race([handle.kill().then(() => "settled"), Bun.sleep(1500).then(() => "hung")]);
+    expect(settled).toBe("settled");
+
+    expect(await waitForExit(jobPid)).toBe(false);
+    expect(await supervisor.activity()).toEqual([]);
+  });
+
+  posixOnlyTest("kill stops a session child that ignores the stop signal", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    // Without job control the background job stays in the session's process group, so the
+    // shell can exit on the hangup while the job it started keeps running.
+    const handle = supervisor.api.openSession({
+      command: ["/bin/sh", "-c", "(trap '' HUP; sleep 271) & printf 'PSTDIO_JOB:%s:\\n' $!; wait"],
+      cols: 80,
+      rows: 24,
+    });
+    const events: TerminalEvent[] = [];
+    void (async () => {
+      for await (const event of handle.events()) events.push(event);
+    })();
+
+    let jobPid = 0;
+    for (let attempt = 0; attempt < 40 && jobPid === 0; attempt += 1) {
+      jobPid = Number(/PSTDIO_JOB:(\d+):/.exec(decode(events))?.[1] ?? 0);
+      if (jobPid === 0) await Bun.sleep(25);
+    }
+    expect(isAlive(jobPid)).toBe(true);
+
+    await handle.kill();
+
+    expect(await waitForExit(jobPid)).toBe(false);
+  });
+});

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { expectPackagedCollapsedMessage } from "./packaged-collapsed-message-smoke";
 
 export const expectPackagedChatComposer = async (baseUrl: string, headers: Record<string, string>, root: string) => {
@@ -23,7 +23,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
   });
   expect(response.ok).toBe(true);
   const project = (await response.json()) as { id: string };
-  const browser = await chromium.launch(PROVISIONED_CHROMIUM);
+  const browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
   try {
     const page = await browser.newPage({ extraHTTPHeaders: headers });
     await page.addInitScript((projectId) => {
@@ -114,6 +114,14 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(webReference).toHaveAttribute("href", "https://example.com");
     await expect(webReference).toHaveAttribute("target", "_blank");
     await expect(webReference.locator('[data-scope="tooltip"]')).toHaveCount(0);
+
+    await plainPath.click();
+    await expect(page.locator(".monaco-editor .view-lines")).toContainText("export");
+    await page.reload();
+    await expect(page.locator(".monaco-editor .view-lines")).toContainText("export");
+    await page.goBack();
+    await expect(plainPath).toBeVisible();
+    phase("conversation restored through file navigation, reload and Back");
 
     await editor.fill(
       "| Task | Details |\n| --- | --- |\n| Review | Read the changes and confirm that shared tools work together for people who never read code. |",

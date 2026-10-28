@@ -21,6 +21,7 @@ export const upgradeAttemptStorage = (storage: ExtensionStorageApi) =>
           (event) => event.workspaceId === record.workspaceId && event.type === "attempt_abandoned",
         )
       ) {
+        // Keep this established logical key so already-migrated copies merge with fresh imports.
         const id = `legacy-retirement:${record.workspaceId}`;
         await events.createIfAbsent(id, {
           id,

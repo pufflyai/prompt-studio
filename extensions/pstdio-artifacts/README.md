@@ -2,7 +2,7 @@
 
 Artifacts lets agents publish self-contained HTML pages, such as reports, charts, or small tools, and lets you browse every saved version in Prompt Studio.
 
-Keep draft HTML, prototype sources, and screenshots under `.pstdio/extension-storage/pstdio-artifacts/drafts/<name>/`. Published snapshots use this extension's storage too. See [extension file storage](../../documentation/guides/extensions/0008-extension-storage.md).
+Keep draft HTML, prototype sources, and screenshots under `.pstdio/extension-storage/pstdio.pstdio-artifacts/drafts/<name>/`. Published snapshots use this extension's storage too. See [extension file storage](../../documentation/guides/extensions/0008-extension-storage.md).
 
 Install Artifacts once for your user, then turn it on in each project that should use it. Installing from a project turns it on there. Each project has its own library. Published versions are snapshots; publishing again adds a version instead of changing an old one.
 
@@ -45,9 +45,9 @@ Open **Artifacts** in the project navigation. The library shows a grid of page p
 
 Artifacts are also searchable resources. Search by their current name to open them from global search or choose them in a resource picker. Each artifact appears once, opens its latest version, and disappears from search when deleted.
 
-When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio-artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens the artifact at its latest version instead of the raw file.
+When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio.pstdio-artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens the artifact at its latest version instead of the raw file.
 
-The library stays open as an **Artifacts** tab next to each artifact you open. Switching tabs keeps the state of each interactive preview. Click **Artifacts** in the breadcrumb to return to the library tab. A link to a published URL opens the matching artifact tab.
+The artifact list opens in a single Artifacts tab in Main. Opening an artifact adds its own tab, so you can return to the list without closing your previews. When the list is closed, Main's default placeholder and Add panel offer an Artifacts entry contributed by this page. Side and Bottom never offer the creation entry. The open list tab can move freely between Main, Side, and Bottom; while open anywhere, its singleton entry is omitted from all choices. Search can open another artifact while tabs are open. Switching tabs keeps each interactive preview's state. A link to a published URL opens the matching artifact tab.
 
 Use **Versions** in the reader header to pick a saved version. New versions appear in this menu without resetting the preview you are looking at. Use the action menu beside the breadcrumb to:
 

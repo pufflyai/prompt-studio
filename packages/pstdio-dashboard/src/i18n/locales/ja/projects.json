@@ -160,8 +160,33 @@
     }
   },
   "list": {
+    "settings": "設定",
     "createProject": "プロジェクトを作成",
     "noProjectsYet": "まだプロジェクトがありません",
     "noProjectsDescription": "最初のプロジェクトを作成して始めましょう。"
+  },
+  "harnessAccount": {
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "loginTitle": "{{name}} にログイン",
+    "logoutTitle": "{{name}} からログアウト",
+    "instructions": "ここでログインしてください。プロバイダーがブラウザーを開く場合があります。",
+    "completed": "アカウントのコマンドが完了しました",
+    "failed": "認証に失敗しました",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "managed": "認証情報は実行環境で管理されています",
+    "unavailable": "このハーネスではアカウントを設定できません。",
+    "requiredDescription": "メッセージを送信するにはログインしてください。チャットで /login も使えます。",
+    "noHarnessTitle": "利用可能なエージェントがありません",
+    "noHarnessDescription": "拡張機能でエージェントを有効にして、チャットを開始してください。",
+    "extensions": "拡張機能を見る",
+    "noArguments": "{{command}} は引数を受け付けません。",
+    "deviceInstructions": "ログインページでこのコードを入力してください。",
+    "starting": "処理を開始しています…",
+    "openPage": "ログインページを開く",
+    "waiting": "ブラウザーでのログイン完了を待っています。",
+    "projectRequired": "ログインする前にプロジェクトを開いてください。",
+    "continue": "続行"
   }
 }

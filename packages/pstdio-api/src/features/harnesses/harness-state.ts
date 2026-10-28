@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { HarnessStateApi } from "pstdio-api-contracts/extension-kernel";
+import { extensionStorageDirectory } from "pstdio-extensions";
 import { type PstdioPathsEnv, resolvePstdioStatePath } from "pstdio-paths";
 
 const writes = new Map<string, Promise<void>>();
@@ -34,7 +35,7 @@ const enqueue = (path: string, action: () => Promise<void>) => {
 };
 
 export const createHarnessStateApi = (extensionId: string, options: { env?: PstdioPathsEnv } = {}): HarnessStateApi => {
-  const path = join(resolvePstdioStatePath({ env: options.env }), `${extensionId}.json`);
+  const path = join(resolvePstdioStatePath({ env: options.env }), `${extensionStorageDirectory(extensionId)}.json`);
   return {
     get: async (key) => (await readValues(path))[key] as never,
     set: (key, value) =>

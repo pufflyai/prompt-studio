@@ -4,6 +4,8 @@ import { $ } from "bun";
 import { resolveBuildTargets } from "./build-targets";
 import { loadEmbedConfig, resolveEmbedFiles } from "./embed-manifest";
 import { buildPackageArtifacts } from "./package-artifacts";
+import { bundleExtensionSources } from "./bundle-extension-sources";
+import { assertCoreBinarySize } from "./core-binary-size";
 
 // Ensure we run from the repo root regardless of where the script is invoked
 process.chdir(join(import.meta.dirname, "..", ".."));
@@ -23,6 +25,7 @@ await $`bun run --cwd packages/pstdio-db vendor:pglite`;
 // 2. Resolve files to embed from the checked-in allowlist
 console.log("Resolving embed manifest from scripts/embed.json...");
 const config = loadEmbedConfig();
+await bundleExtensionSources(process.cwd());
 const allFiles = resolveEmbedFiles(config);
 console.log(
   `  Resolved ${allFiles.length} files to embed (${config.files.length} explicit + ${allFiles.length - config.files.length} from globs)`,
@@ -54,6 +57,7 @@ for (const { target, pkg, bin } of buildTargets) {
   const outfile = join(outDir, bin);
   console.log(`\nCompiling for ${target}...`);
   await $`bun build ${CLI_ENTRY} --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} --outfile ${outfile}`;
+  assertCoreBinarySize(outfile);
   console.log(`  → ${relative(".", outfile)}`);
 }
 

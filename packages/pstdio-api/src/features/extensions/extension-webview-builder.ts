@@ -25,17 +25,19 @@ export type ExtensionWebviewBuildResult = {
 
 export type ExtensionWebviewBuilder = (input: ExtensionWebviewBuildInput) => Promise<ExtensionWebviewBuildResult>;
 
-const buildArguments = (input: ExtensionWebviewBuildInput) => {
+export type ExtensionWebviewBatchBuildInput = Omit<ExtensionWebviewBuildInput, "entryPath"> & { entryPaths: string[] };
+
+const buildArguments = (input: ExtensionWebviewBatchBuildInput, entryNaming: string) => {
   const options = extensionWebviewBuildOptions;
   return [
     "build",
-    input.entryPath,
+    ...input.entryPaths,
     `--outdir=${input.outdir}`,
     `--target=${options.target}`,
     `--format=${options.format}`,
     ...(options.minify ? ["--minify"] : []),
     ...(options.splitting ? ["--splitting"] : []),
-    `--entry-naming=${options.naming.entry}`,
+    `--entry-naming=${entryNaming}`,
     `--chunk-naming=${options.naming.chunk}`,
     `--asset-naming=${options.naming.asset}`,
     ...Object.entries(options.define).map(([name, value]) => `--define=${name}=${value}`),
@@ -65,15 +67,15 @@ const releaseBuildSlot = () => {
 
 // A long-running Bun process keeps package resolutions it has already read, so an in-process
 // build cannot see a replaced extension folder. Each build runs in a new Bun process (ADR 0070).
-export const buildExtensionWebview: ExtensionWebviewBuilder = async (input) => {
+const runBuild = async (input: ExtensionWebviewBatchBuildInput, entryNaming: string) => {
   if (input.signal.aborted) return { success: false, details: "Build aborted." };
 
   await acquireBuildSlot();
   let result: Awaited<ReturnType<typeof runCommand>>;
   try {
     if (input.signal.aborted) return { success: false, details: "Build aborted." };
-    result = await runCommand(process.execPath, buildArguments(input), {
-      cwd: dirname(input.entryPath),
+    result = await runCommand(process.execPath, buildArguments(input, entryNaming), {
+      cwd: dirname(input.entryPaths[0]!),
       env: { ...process.env, NO_COLOR: "1", ...(isPackagedRuntime() ? { BUN_BE_BUN: "1" } : {}) },
       signal: input.signal,
     });
@@ -85,3 +87,13 @@ export const buildExtensionWebview: ExtensionWebviewBuilder = async (input) => {
   if (result.exitCode === 0) return { success: true, details: "" };
   return { success: false, details: result.stderr.trim() || result.stdout.trim() || "Webview build failed." };
 };
+
+export const buildExtensionWebview: ExtensionWebviewBuilder = (input) =>
+  runBuild(
+    { outdir: input.outdir, signal: input.signal, entryPaths: [input.entryPath] },
+    extensionWebviewBuildOptions.naming.entry,
+  );
+
+/** One fresh process validates the complete replacement and shares its common module graph. */
+export const buildExtensionWebviewBatch = (input: ExtensionWebviewBatchBuildInput) =>
+  runBuild(input, "[dir]/[name].[ext]");

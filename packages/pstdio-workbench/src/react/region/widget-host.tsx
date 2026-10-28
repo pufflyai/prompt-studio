@@ -6,6 +6,7 @@ import type {
   RegisteredWorkbenchView,
   WorkbenchCore,
   WorkbenchPanelContribution,
+  WorkbenchPanelRenderInput,
   WorkbenchRegion,
   WorkbenchWidgetPlacement,
 } from "../../core";
@@ -21,6 +22,7 @@ interface WorkbenchWidgetHostProps {
   placement: WorkbenchWidgetPlacement;
   widget?: RegisteredWidgetContribution | RegisteredPlaceholderContribution;
   region?: WorkbenchRegion;
+  sizing?: WorkbenchPanelRenderInput["sizing"];
 }
 
 const WorkbenchWidgetFallback = (props: { label: string }) => {
@@ -33,7 +35,7 @@ const WorkbenchWidgetFallback = (props: { label: string }) => {
   );
 };
 
-const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode; status: boolean }) => {
+const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode; status: boolean; contentHeight: boolean }) => {
   const { children } = props;
 
   return (
@@ -42,7 +44,7 @@ const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode; status: bool
       minW="0"
       minH="0"
       w="full"
-      h="full"
+      h={props.contentHeight ? "auto" : "full"}
       overflow="hidden"
       display={props.status ? "flex" : undefined}
       alignItems={props.status ? "center" : undefined}
@@ -100,6 +102,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
     // `flex: 1 0 auto` lets the host fill its region when the widget is short and
     // grow past it when the widget is tall, so the region's ScrollArea can scroll.
     <Box
+      data-workbench-presentation={placement.widgetId}
       data-workbench-view={view?.id ?? placement.contributionId}
       data-workbench-renderer={renderer ? "mounted" : "missing"}
       display="flex"
@@ -112,10 +115,13 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
     >
       <WorkbenchActionErrors workbench={workbench} target={placement.widgetId} />
       {renderer ? (
-        <WorkbenchRenderedWidgetFrame status={props.region === "status"}>
+        <WorkbenchRenderedWidgetFrame
+          status={props.region === "status"}
+          contentHeight={props.sizing === "content-height"}
+        >
           <WorkbenchWidgetContents
             renderer={renderer}
-            input={{ workbench, panel, instance, refresh }}
+            input={{ workbench, panel, instance, refresh, sizing: props.sizing }}
             // File views start an async read; their heavy editors load separately.
             defer={view?.body.kind !== "file" && ["main", "side", "bottom"].includes(panel.region)}
           />

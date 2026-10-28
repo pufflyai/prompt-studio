@@ -5,7 +5,7 @@ This project is a Bun + TypeScript monorepo using workspaces, Lerna, and Nx cach
 ## Prerequisites
 
 - Git. The isolated stack mounts the checkout's Git folder, and core extensions are downloaded with Git.
-- Bun `1.4.2`, matching the root `packageManager` pin, CI, and Docker images
+- Bun `1.4.4`, matching the root `packageManager` pin, CI, and Docker images
 - Node `24` for native build tooling, desktop development, and Storybook
 - Docker with the Compose v2 plugin (`docker compose version`). The isolated stack needs BuildKit and Compose 2.17 or newer, because its build uses an extra build context. Docker Desktop includes both.
 - Free disk space for Docker. See [Disk space](#disk-space).
@@ -129,6 +129,8 @@ The isolated stack, including `bun run dev:playwright`, runs agents inside its c
 Versions are pinned in [`infra/local/Dockerfile`](../../../infra/local/Dockerfile). OpenCode's free models need OpenCode 1.18.0 or newer.
 
 The launcher mounts each host login file only when it exists, and prints a `Not mounted, file is missing` line for each file it skips. The stack starts without any login. Docker would otherwise create a missing file path as an empty folder on the host, which breaks a later `codex login` or `opencode auth login`. Add a login later by signing in on the host and running the same `bun run dev:isolated -- --name <name>` command again, or by signing in inside the running container. An agent without a login stays installed but cannot start sessions. Use real logins for agent acceptance checks; empty placeholder files do not prove that sessions work.
+
+For a fresh sign-in trial, set `PSTDIO_ISOLATED_AGENT_CREDENTIALS=0` when starting the stack. This omits host login-file mounts and clears the forwarded Anthropic API key and Claude OAuth token. It does not change your host credentials. Use a new stack name so existing container credential volumes are not reused.
 
 **Codex.** Run `codex login` on the host. The container mounts `~/.codex/auth.json` when it exists. The seeded project uses Codex but does not pick a model. Sessions start with the model Codex marks as the default for your account. A ChatGPT account can use only the models Codex lists for it.
 

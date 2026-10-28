@@ -45,8 +45,7 @@ The outer setup prepares the workbench:
 - `workbench.modePlacements.registerPlacement(...)` places the tree. `id` is the registration identity. `ref` is the
   public placement reference. `modeId` names the owning mode, so the placement appears only while that mode is active
   and is removed when the mode changes. `item.kind: "view"` with `item.view` renders one static View.
-  `item.presence: "fixed"` keeps it open while the mode is active; the user cannot close it. `region: "sidenav"` and
-  `movableTo: ["sidenav"]` keep it in the Sidenav.
+  `item.presence: "fixed"` keeps it open while the mode is active; the user cannot close it. `region: "sidenav"` places this navigation chrome in the Sidenav.
 
 `registerPage` contributes each page and the Views it renders:
 

@@ -91,7 +91,7 @@ export const addReviewCommentCommand = defineCommand({
       if (!parent || parent.threadId !== thread.id) throw new Error("Reply target does not belong to this thread.");
     }
     const comment: ReviewComment = {
-      id: crypto.randomUUID(),
+      id: ctx.storage.ids.create(),
       reviewId: thread.reviewId,
       threadId: thread.id,
       author: actorFromSource(ctx.source, ctx.invocationId),
@@ -210,7 +210,7 @@ export const selectAttemptCommand = defineCommand({
     if (ctx.source === "schedule" || ctx.source === "automation" || ctx.source === "event") {
       throw new Error("Automation cannot select an attempt.");
     }
-    const ticket = await findTicket(ctx.storage, commandParams.ticket);
+    const ticket = await findTicket(ctx, commandParams.ticket);
     const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
     if (!ticket || !attempt || attempt.ticketId !== ticket.id)
       throw new Error("Workspace is not an attempt for this ticket.");

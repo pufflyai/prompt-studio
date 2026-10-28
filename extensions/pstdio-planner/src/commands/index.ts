@@ -17,6 +17,7 @@ import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { pauseAutoBuildCommand, resumeAutoBuildCommand } from "./auto-build-lifecycle";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { autoBuildScopeCommand } from "./auto-build-scope";
+import { stopAutoBuildCommand } from "./auto-build-stop";
 import { automationPolicyCommand } from "./automation-policy";
 import { submitChangeRequestCommand } from "./change-requests";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
@@ -32,7 +33,6 @@ import { linkReviewCommand } from "./link-review";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { listTicketTemplatesCommand } from "./list-ticket-templates";
 import { listTicketsCommand } from "./list-tickets";
-import { migrateTicketIdentitiesCommand } from "./migrate-ticket-identities";
 import { newTicketCommand } from "./new-ticket";
 import { nextTicketsCommand } from "./next-tickets";
 import { openTicketsCommand } from "./open-tickets";
@@ -130,6 +130,7 @@ export const plannerCommands = [
   autoBuildScopeCommand,
   pauseAutoBuildCommand,
   resumeAutoBuildCommand,
+  stopAutoBuildCommand,
   configureAutoBuildCommand,
   readAutoBuildCommand,
   checkAutoBuildCommand,
@@ -139,7 +140,6 @@ export const plannerCommands = [
   openTicketsCommand,
   linkTicketCommand,
   unlinkTicketCommand,
-  migrateTicketIdentitiesCommand,
   listTemplatesCommand,
   readTemplateCommand,
   saveTemplateCommand,

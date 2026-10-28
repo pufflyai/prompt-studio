@@ -1,5 +1,11 @@
-import { type ArtifactMount, defineCommand, params } from "@pstdio/sdk/extensions";
-import { reportsCollection } from "../data/collections";
+import {
+  type ArtifactMount,
+  defineCommand,
+  type ExtensionBlobInput,
+  type ExtensionStorageApi,
+  params,
+} from "@pstdio/sdk/extensions";
+import { putReport, reportsCollection } from "../data/collections";
 import {
   fileNameFromPath,
   readReportMarkdown,
@@ -9,6 +15,7 @@ import {
   requireReportDraftFiles,
 } from "../data/draft-storage";
 import { parseReportFrontmatter, stripFrontmatter } from "../data/frontmatter";
+import { reportBodyFile } from "../data/report-body";
 import { findReport, resolveWorkspace } from "../data/resolve";
 import type { StoredReport, StoredReportFile } from "../data/types";
 import { assertSafeReportFileName, assertSafeReportName } from "../data/validation";
@@ -30,7 +37,7 @@ const mimeTypeFor = (name: string) => {
   return null;
 };
 
-const readReportFiles = async (projectFiles: ArtifactMount, report: StoredReport) => {
+const readReportFiles = async (projectFiles: ArtifactMount, report: StoredReport, ids: ExtensionStorageApi["ids"]) => {
   const now = new Date().toISOString();
   const previous = new Map(report.files.map((file) => [file.name, file]));
   const entries = await projectFiles.list(reportFilesPattern(report));
@@ -44,7 +51,7 @@ const readReportFiles = async (projectFiles: ArtifactMount, report: StoredReport
       return {
         bytes,
         file: {
-          id: existing?.id ?? crypto.randomUUID(),
+          id: existing?.id ?? ids.create(),
           name,
           blobId: "",
           mimeType: mimeTypeFor(name),
@@ -90,34 +97,39 @@ export const saveReportCommand = defineCommand({
     if (raw === null) throw new Error(`No local report file for ${name}`);
     const frontmatter = parseReportFrontmatter(raw);
     const body = stripFrontmatter(raw).replace(/^\n+/, "");
-    const fileInputs = await readReportFiles(projectFiles, report);
+    const fileInputs = await readReportFiles(projectFiles, report, ctx.storage.ids);
     const blobs = reportsCollection(ctx.storage).attachments(report.id);
-    const uploadedFiles = await Promise.all(
-      fileInputs.map(async ({ bytes, file }) => {
-        const blob = await blobs.put({ name: file.name, data: bytes, mimeType: file.mimeType ?? undefined });
-        return { ...file, blobId: blob.id };
-      }),
-    );
-    const nextFiles = uploadedFiles;
-
-    const next: StoredReport = {
-      ...report,
-      kind: frontmatter.kind ?? report.kind,
-      source: frontmatter.source ?? report.source,
-      body,
-      files: nextFiles,
-      draft: false,
-      updatedAt: new Date().toISOString(),
+    const uploaded: string[] = [];
+    const upload = async (input: ExtensionBlobInput) => {
+      const blob = await blobs.put(input);
+      uploaded.push(blob.id);
+      return blob.id;
     };
+    let next: StoredReport;
     try {
-      await reportsCollection(ctx.storage).put(report.id, next);
+      const nextFiles: StoredReportFile[] = [];
+      for (const { bytes, file } of fileInputs)
+        nextFiles.push({
+          ...file,
+          blobId: await upload({ name: file.name, data: bytes, mimeType: file.mimeType ?? undefined }),
+        });
+      next = await putReport(ctx.storage, {
+        ...report,
+        kind: frontmatter.kind ?? report.kind,
+        source: frontmatter.source ?? report.source,
+        bodyBlobId: await upload(reportBodyFile(body)),
+        files: nextFiles,
+        draft: false,
+        updatedAt: new Date().toISOString(),
+      });
     } catch (error) {
-      await Promise.allSettled(nextFiles.map((file) => blobs.delete(file.blobId)));
+      await Promise.allSettled(uploaded.map((blobId) => blobs.delete(blobId)));
       throw error;
     }
-    const oldBlobIds = new Set(report.files.map((file) => file.blobId));
+    const nextFiles = next.files;
+    const oldBlobIds = new Set([report.bodyBlobId, ...report.files.map((file) => file.blobId)]);
     await Promise.allSettled([...oldBlobIds].map((blobId) => blobs.delete(blobId)));
-    await projectFiles.writeText(reportMarkdownPathFor(next), reportToMarkdown(next));
+    await projectFiles.writeText(reportMarkdownPathFor(next), reportToMarkdown(next, body));
 
     await ctx.events.emit("pstdio-reports.report.saved", {
       projectId: ctx.projectId,

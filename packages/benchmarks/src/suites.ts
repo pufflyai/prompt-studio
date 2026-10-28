@@ -107,7 +107,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "subnav",
     label: "Side navigation",
-    source: "packages/e2e/src/perf/subnav-benchmark.ts",
+    source: "packages/e2e/src/perf/subnav.p3.bench.ts",
     prepare: () => [
       {
         command: [
@@ -127,7 +127,7 @@ export const suites: BenchmarkSuite[] = [
     ],
     sample: (context) => [
       {
-        command: ["bun", "src/perf/subnav-benchmark.ts"],
+        command: ["bun", "src/perf/subnav.p3.bench.ts"],
         cwd: "packages/e2e",
         env: { ...packagedBinary(context), SUBNAV_SAMPLES: "5", SUBNAV_LABEL: context.sha },
       },
@@ -136,7 +136,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "planner",
     label: "Planner board",
-    source: "packages/e2e/src/perf/planner-board-cold-open.ts",
+    source: "packages/e2e/src/perf/planner-board-cold-open.p3.bench.ts",
     prepare: () => [
       {
         command: [
@@ -158,7 +158,7 @@ export const suites: BenchmarkSuite[] = [
       {
         command: [
           "bun",
-          "src/perf/planner-board-cold-open.ts",
+          "src/perf/planner-board-cold-open.p3.bench.ts",
           "--samples",
           "1",
           "--home",
@@ -174,8 +174,8 @@ export const suites: BenchmarkSuite[] = [
     label: "Storage",
     source: "packages/pstdio-db/src/services/**/*.bench.ts",
     sample: () => [
-      { command: ["bun", "packages/pstdio-db/src/services/extension-storage/document-storage.bench.ts"] },
-      { command: ["bun", "--conditions=source", "packages/pstdio-db/src/services/sessions/session-query.bench.ts"] },
+      { command: ["bun", "packages/pstdio-db/src/services/extension-storage/document-storage.p3.bench.ts"] },
+      { command: ["bun", "--conditions=source", "packages/pstdio-db/src/services/sessions/session-query.p3.bench.ts"] },
     ],
   },
   {
@@ -192,7 +192,7 @@ export const suites: BenchmarkSuite[] = [
         command: [
           "bun",
           "--conditions=source",
-          "packages/pstdio-api/src/features/workspaces/worktree-cleanup.bench.ts",
+          "packages/pstdio-api/src/features/workspaces/worktree-cleanup.p3.bench.ts",
         ],
         // Two workers matches the host's deletion queue.
         env: { BENCH_ROOT: `${context.cacheDir}/worktree-cleanup`, BENCH_REPEATS: "1", BENCH_LIMITS: "2" },
@@ -203,7 +203,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "relay",
     label: "Relay storage",
-    source: "services/relay/scripts/storage-bound.bench.ts",
+    source: "services/relay/scripts/storage-bound.p3.bench.ts",
     // Needs Docker for Postgres and object storage, which only the Linux runners provide.
     platforms: LINUX,
     sample: () => [{ command: ["bun", "run", "bench:storage-bound"], cwd: "services/relay" }],

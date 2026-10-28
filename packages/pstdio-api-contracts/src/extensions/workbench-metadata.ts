@@ -130,6 +130,7 @@ const workbenchExtensionModeRecordSchema = z.object({
   icon: z.string().optional(),
   regions: z.array(z.enum(extensionPanelRegions)),
   floatingPanels: z.enum(["visible", "hidden"]).optional(),
+  canFullscreen: z.boolean().optional(),
   regionSettings: z.partialRecord(z.enum(dockedWorkbenchRegions), regionSettingsSchema).optional(),
   defaultTheme: contributionRefSchema("theme").optional(),
   chrome: z
@@ -138,6 +139,7 @@ const workbenchExtensionModeRecordSchema = z.object({
 });
 
 const workbenchExtensionPlacementRecordSchema = workbenchPlacementPresentationSchema.extend({
+  replaces: z.array(z.object({ kind: z.literal("page-slot"), page: pageRefSchema, id: z.string() })).optional(),
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),
@@ -145,6 +147,7 @@ const workbenchExtensionPlacementRecordSchema = workbenchPlacementPresentationSc
   item: placementItemSchema,
   region: z.enum(extensionPanelRegions),
   order: z.number().optional(),
+  addableIn: z.array(z.enum(extensionPanelRegions)).optional(),
   movableTo: z.array(z.enum(extensionPanelRegions)).optional(),
 });
 
@@ -216,6 +219,7 @@ const workbenchExtensionStatusBarItemRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
   view: viewRefSchema,
+  popover: viewRefSchema.optional(),
   slot: z.object({ id: z.string() }),
   order: z.number().optional(),
   when: normalizedWhenSchema.optional(),

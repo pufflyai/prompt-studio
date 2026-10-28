@@ -62,6 +62,7 @@ export interface InternalWorkbenchExtensionMetadata {
     panelRegions: WorkbenchExtensionMetadata["modes"][number]["regions"];
     regionSettings?: WorkbenchExtensionMetadata["modes"][number]["regionSettings"];
     floatingPanels?: WorkbenchExtensionMetadata["modes"][number]["floatingPanels"];
+    canFullscreen?: boolean;
   }>;
   pages: WorkbenchPageContribution[];
   placements: Array<
@@ -69,9 +70,11 @@ export interface InternalWorkbenchExtensionMetadata {
       id: string;
       ref: { extensionId: string; kind: "placement"; id: string };
       modeId: string;
+      replaces?: WorkbenchExtensionMetadata["placements"][number]["replaces"];
       item: WorkbenchOwnedPlacementItem;
       region: "main" | "secondary" | "side";
       order?: number;
+      addableIn?: readonly ("main" | "secondary" | "side")[];
       movableTo?: readonly ("main" | "secondary" | "side")[];
     } & WorkbenchPlacementPresentation
   >;
@@ -94,6 +97,7 @@ export interface InternalWorkbenchExtensionMetadata {
     extensionId: string;
     viewId: string;
     slotId: string;
+    parentPanelId?: string;
     scope: "global" | "project";
     title: MetadataView["title"];
     icon?: string;
@@ -111,6 +115,7 @@ export interface InternalWorkbenchExtensionMetadata {
     id: string;
     extensionId: string;
     viewId: string;
+    popoverViewId?: string;
     slot: "leading" | "trailing";
     order?: number;
     when?: {

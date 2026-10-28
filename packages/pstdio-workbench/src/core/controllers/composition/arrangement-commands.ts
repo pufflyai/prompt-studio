@@ -1,5 +1,6 @@
 import type { WorkbenchPanelRegion, WorkbenchTabPosition } from "../../registries/layout/layout-types";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { getPageContentRecovery } from "../page-runtime/page-content-recovery";
 import { registerPanelCommands } from "../shell/panel-commands";
 
 import { registerPositionCommands } from "../shell/position-commands";
@@ -7,6 +8,10 @@ import { registerPositionCommands } from "../shell/position-commands";
 export const registerArrangementCommands = (core: WorkbenchCore) => {
   registerPanelCommands(core);
   registerPositionCommands(core);
+  core.commands.registerCommand(
+    { id: "workbench.reopenPageContent", label: "Restore page content to Main", category: "Workbench" },
+    { execute: () => getPageContentRecovery(core)?.open?.() },
+  );
   core.commands.registerCommand(
     {
       id: "workbench.resetLayout",

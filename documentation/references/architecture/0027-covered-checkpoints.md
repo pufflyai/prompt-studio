@@ -50,14 +50,11 @@ lost reply. Completing revision N never clears recovery revisions after N.
 
 [`captureCheckpoint`](../../../packages/pstdio-sync/src/checkpoint-capture.ts)
 coalesces captured storage writes with their first observed preconditions and final
-values. The host supplies the same storage observer used by ordinary saves. The
-[handler proof](../../../packages/pstdio-api/src/services/shared-files/checkpoint-handlers.integration.ts)
-runs unchanged Notes and Planner handlers through staging ports backed by real local
-storage and asset verification, then publishes their mutations and the document
-through one reference PostgreSQL transaction. It covers Notes frontmatter and sidecar
-deletion, Planner title derivation, lost replies, and a stale load revision that
-conflicts the whole group. It does not route production renderer calls yet. PS-776
-must connect these ports and defer events and disk projection until publication.
+values. The host supplies the same storage observer used by ordinary saves. Database
+storage keeps each record in its own document
+([ADR 0100](../../adrs/0100-one-document-per-resource.md)), so it no longer captures a whole
+owner document; its handler proof was removed with that model. PS-776 must connect staging
+ports and defer events and disk projection until publication.
 
 Live relay delivery is memory-only. A received frame is never a durable relay
 receipt. On reconnect, install durable catch-up and exchange peer state vectors to
@@ -156,8 +153,7 @@ bun run --cwd packages/pstdio-sync-contracts test
 bun run --cwd packages/pstdio-sync-contracts lint
 bun run --cwd packages/pstdio-sync test
 bun run --cwd packages/pstdio-sync lint
-bun run --cwd packages/pstdio-sync-contracts test:conformance
-bun run --cwd packages/pstdio-api test:conformance
+bun run --cwd packages/pstdio-sync-contracts test:integration
 ```
 
 The default reference entry includes coverage and POSIX document recovery cases.

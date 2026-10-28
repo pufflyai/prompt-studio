@@ -16,7 +16,8 @@ const extensionSettingsOrderBase = 1_000;
 const asPreferenceValue = (value: unknown): PreferenceValue | undefined =>
   value === undefined ? undefined : (value as PreferenceValue);
 
-const preferenceScope = (scope: "global" | "project"): PreferenceScope => (scope === "global" ? "user" : "project");
+const preferenceScope = (scope: "global" | "project" | "device"): PreferenceScope =>
+  scope === "project" ? "project" : "user";
 
 const createExtensionHostAdapters = (
   input: InternalRegisterWorkbenchExtensionContributionsInput,
@@ -45,6 +46,12 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
         body: {
           kind: "react",
           render: (renderInput) => {
+            const embedded = input.metadata.settingsPanels.some(
+              (settingsPanel) => settingsPanel.id === renderInput.instance.panelId && settingsPanel.parentPanelId,
+            );
+            let sizing = renderInput.sizing;
+            if (renderInput.panel.region === "status") sizing = "content-width";
+            if (embedded) sizing = "content-height";
             const slotKind = input.metadata.settingsPanels.some(
               (settingsPanel) => settingsPanel.id === renderInput.instance.panelId && settingsPanel.viewId === panel.id,
             )
@@ -53,7 +60,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
             return (
               input.renderWebview?.(renderInput) ??
               renderBridgeWebviewFrame({
-                sizing: renderInput.panel.region === "status" ? "content-width" : undefined,
+                sizing,
                 context: {
                   workbench: renderInput.workbench,
                   webviewId: panel.id,
@@ -150,6 +157,7 @@ export const registerSettings = (input: InternalRegisterWorkbenchExtensionContri
         order: extensionSettingsOrderBase + index,
         section: panel.section ?? sectionId,
         scope: panel.scope,
+        parentPanelId: panel.parentPanelId,
         viewId: panel.viewId,
       }),
     );

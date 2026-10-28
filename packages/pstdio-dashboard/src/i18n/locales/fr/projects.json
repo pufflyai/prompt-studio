@@ -162,8 +162,33 @@
     }
   },
   "list": {
+    "settings": "Paramètres",
     "createProject": "Créer un projet",
     "noProjectsYet": "Aucun projet pour le moment",
     "noProjectsDescription": "Créez votre premier projet pour commencer."
+  },
+  "harnessAccount": {
+    "login": "Se connecter",
+    "logout": "Se déconnecter",
+    "loginTitle": "Se connecter à {{name}}",
+    "logoutTitle": "Se déconnecter de {{name}}",
+    "instructions": "Connectez-vous ici. Votre fournisseur peut ouvrir un navigateur.",
+    "completed": "Commande de compte terminée",
+    "failed": "Échec de l’authentification",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "managed": "Identifiants gérés par l’environnement",
+    "unavailable": "La configuration du compte n’est pas disponible pour cet agent.",
+    "requiredDescription": "Connectez-vous pour envoyer des messages. Vous pouvez aussi saisir /login dans le chat.",
+    "noHarnessTitle": "Aucun agent disponible",
+    "noHarnessDescription": "Activez une extension d’agent pour commencer une conversation.",
+    "extensions": "Voir les extensions",
+    "noArguments": "{{command}} n’accepte pas d’arguments.",
+    "deviceInstructions": "Saisissez ce code sur la page de connexion.",
+    "starting": "Démarrage…",
+    "openPage": "Ouvrir la page de connexion",
+    "waiting": "En attente de la connexion dans votre navigateur.",
+    "projectRequired": "Ouvrez un projet avant de vous connecter.",
+    "continue": "Continuer"
   }
 }

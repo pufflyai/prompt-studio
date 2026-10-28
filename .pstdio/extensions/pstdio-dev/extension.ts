@@ -9,6 +9,7 @@ import {
   workspaceEvents,
   workspaceSlots,
 } from "@pstdio/sdk/extensions";
+import { repairRemovedCommand, repairRemovedSchedule } from "./merge-queue-repair";
 import { benchmarkCommands, syncCommandRef } from "./src/benchmarks/commands";
 import { navigationItems, navigationTrees, pages, views } from "./src/pages";
 
@@ -168,6 +169,7 @@ export default defineExtension({
     openInIsolationCommand,
     stopIsolationCommand,
     ...Object.values(benchmarkCommands),
+    repairRemovedCommand,
   ],
   views,
   pages,
@@ -204,6 +206,7 @@ export default defineExtension({
       schedule: "0 6 * * *",
       command: syncCommandRef,
     }),
+    repairRemovedSchedule,
   ],
   hooks: [
     // Install + build run in the background so session launch isn't blocked on them.

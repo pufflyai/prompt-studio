@@ -40,15 +40,15 @@
     }
   },
   "scripts": {
-    "bench:open-resources": "bun src/core/controllers/page-runtime/open-resource-inventory.bench.ts",
+    "bench:open-resources": "bun src/core/controllers/page-runtime/open-resource-inventory.p3.bench.ts",
     "build": "cross-env NODE_ENV=production vite build && rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist && bun ../../scripts/release/stage-package.ts .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun test --conditions production --silent",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --silent",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build",
-    "test:coverage": "bun test --conditions production --coverage",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --coverage",
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
@@ -61,6 +61,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@pstdio/sdk": "workspace:^",
     "@pstdio/ui": "workspace:^",
+    "@tanstack/hotkeys": "0.8.0",
     "@tanstack/react-hotkeys": "0.10.0",
     "lucide-react": "^0.557.0",
     "rimless": "0.8.3",
@@ -73,7 +74,7 @@
     "@storybook/addon-docs": "10.6.0",
     "@storybook/react": "^10.6.0",
     "@storybook/react-vite": "^10.6.0",
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/react": "19.2.3",
     "@types/react-dom": "19.2.3",
     "@types/three": "^0.185.4",

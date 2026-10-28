@@ -11,6 +11,8 @@ import {
 } from "./layout-types";
 
 type GetWidget = (contributionId: string) => RegisteredWidgetContribution | undefined;
+/** Main owners rendered outside the tab layout, such as tabless page content. */
+type GetDetachedOwners = () => readonly WorkbenchWidgetPlacement[];
 
 const menuRegions = Object.values(workbenchPanelMenuRegions).flatMap(
   (regions) => Object.values(regions) as WorkbenchPanelMenuRegion[],
@@ -22,12 +24,13 @@ const menuSide = (region: WorkbenchPanelMenuRegion): WorkbenchPanelMenuSide =>
 const ownerContributionId = (getWidget: GetWidget, contributionId: string) =>
   getWidget(contributionId)?.panelMenuOwner?.contributionId;
 
-const ownerPlacement = (layout: WorkbenchLayout, contributionId: string) => {
+const ownerPlacement = (layout: WorkbenchLayout, contributionId: string, detached: GetDetachedOwners) => {
   for (const region of workbenchPanelRegions) {
     const placement = layout.regions[region].widgets.find((candidate) => candidate.contributionId === contributionId);
     if (placement) return { region, placement };
   }
-  return undefined;
+  const placement = detached().find((candidate) => candidate.contributionId === contributionId);
+  return placement ? { region: "main" as const, placement } : undefined;
 };
 
 interface MenuResolution {
@@ -43,6 +46,7 @@ const resolveMenuPlacements = (
   layout: WorkbenchLayout,
   getWidget: GetWidget,
   region: WorkbenchPanelMenuRegion,
+  detached: GetDetachedOwners,
 ): MenuResolution & { moves: { placement: WorkbenchWidgetPlacement; target: WorkbenchPanelMenuRegion }[] } => {
   const placements: WorkbenchWidgetPlacement[] = [];
   const moves: { placement: WorkbenchWidgetPlacement; target: WorkbenchPanelMenuRegion }[] = [];
@@ -61,7 +65,7 @@ const resolveMenuPlacements = (
     }
     seen.add(placement.contributionId);
 
-    const found = ownerPlacement(layout, owner);
+    const found = ownerPlacement(layout, owner, detached);
     if (!found) {
       // Orphaned menu: its owner panel has no placement anywhere.
       changed = true;
@@ -90,14 +94,18 @@ const resolveMenuPlacements = (
 // owner currently occupies, stay bound to the owner's resource, and a menu whose
 // owner has no placement is an orphan. Menu identity (widget id, active state) is
 // preserved on a move; no second instance is created.
-export const reconcilePanelMenuOwnership = (layout: WorkbenchLayout, getWidget: GetWidget): WorkbenchLayout => {
+export const reconcilePanelMenuOwnership = (
+  layout: WorkbenchLayout,
+  getWidget: GetWidget,
+  detached: GetDetachedOwners = () => [],
+): WorkbenchLayout => {
   let changed = false;
   const regions = { ...layout.regions };
   const moves: { placement: WorkbenchWidgetPlacement; target: WorkbenchPanelMenuRegion }[] = [];
 
   for (const menuRegion of menuRegions) {
     if (layout.regions[menuRegion].widgets.length === 0) continue;
-    const resolved = resolveMenuPlacements(layout, getWidget, menuRegion);
+    const resolved = resolveMenuPlacements(layout, getWidget, menuRegion, detached);
     moves.push(...resolved.moves);
     if (!resolved.changed) continue;
 
@@ -123,6 +131,7 @@ export const reconcilePanelMenuOwnership = (layout: WorkbenchLayout, getWidget: 
 export interface CreateOwnedMenuMethodsInput {
   getLayout(): WorkbenchLayout;
   getWidget: GetWidget;
+  getDetachedOwners?: GetDetachedOwners;
   openWidget: LayoutModel["openWidget"];
   persistLayout(): void;
   setLayout(layout: WorkbenchLayout): void;
@@ -133,7 +142,7 @@ export interface CreateOwnedMenuMethodsInput {
 // instance of each menu it owns.
 export const createOwnedMenuMethods = (input: CreateOwnedMenuMethodsInput) => {
   const reconcilePanelMenus = () => {
-    const next = reconcilePanelMenuOwnership(input.getLayout(), input.getWidget);
+    const next = reconcilePanelMenuOwnership(input.getLayout(), input.getWidget, input.getDetachedOwners);
     if (next === input.getLayout()) return;
     input.setLayout(next);
     input.persistLayout();

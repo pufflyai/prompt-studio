@@ -38,7 +38,7 @@ anything.
 | Device | A client that a user has logged into the cloud from. The client's environment ID becomes its device ID. Each device belongs to one user. |
 | Cloud project | A project (workbench) that syncs through the relay. Local projects never leave the device. |
 | CRDT | A data type that merges edits made at the same time on different machines automatically, without a server. [Yjs](https://docs.yjs.dev/) is the CRDT library this PRD assumes. |
-| Document | One CRDT unit that syncs on its own, for example one extension's records in a project, or one session transcript. |
+| Document | One CRDT unit, for example one extension record or one session transcript. The records of one extension in a project travel together through one encrypted relay document, the record stream ([ADR 0102](../../adrs/0102-record-stream-sync.md)). |
 | Update | An encrypted change to one document, produced by a client. |
 | Latest state | An encrypted copy of one document's full current state, uploaded by a client. |
 | Blob | An encrypted file stored by the relay, such as an image or an extension package. |
@@ -71,7 +71,8 @@ anything.
 - R3. The relay is never the source of truth. If the relay loses its data, any device
   with a full copy can upload it again.
 - R4. A change that writes several records or files together is delivered and applied
-  as one unit on every client. A client never shows half of it.
+  as one unit on every client. A client never shows half of it. One save of an extension's
+  records is one update in its record stream.
 - R5. Merging cannot keep rules that span records, such as "only one ticket is in
   progress". Two offline edits can break such a rule, and the extension shows or repairs
   the result. Unique resource numbers, record IDs and hand-arranged order do not fall
@@ -239,9 +240,14 @@ anything.
 - R46. After resetting or replacing a device, or installing Prompt Studio on a new one, a
   user logs in with Google and gets every cloud project back. Their private project data
   comes back too once it syncs in phase 2.
-- R53. Each device keeps a daily snapshot of every cloud document for 30 days. A person
-  can restore a project, or one extension's data in it, to a snapshot. A restore is a
-  normal edit, so it syncs to every device.
+- R53. Each device keeps at most three recovery snapshots of every cloud project:
+  one captured hourly, one every 12 hours, and one daily. Show their actual capture
+  times. Use the disk capacity the device supports, with no fixed snapshot byte
+  quota or free-space reserve. If space cannot hold three snapshots, keep only the
+  12-hour snapshot. A project, or one extension's data in it, can be restored to a
+  snapshot through the CLI and API. The app has no restore screen (decided
+  2026-10-24). A restore is a normal edit, so it syncs to every device. This policy
+  was decided on 2026-10-22 and replaces daily snapshots retained for 30 days.
 
 ### Running the relay
 

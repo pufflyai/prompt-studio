@@ -68,7 +68,7 @@ It does not restore `VITE_API_BASE_URL`, alter REST routing, add credentials to 
 
 Future remote workspaces remain provider-neutral. Prompt Studio clients connect to a Prompt Studio server. A PocketCoder integration should live behind the extension-owned workspace provider contract described by PS-28 and the cloud direction in PS-86. The extension owns its PocketCoder SDK or CLI dependency; browser transport code does not know about PocketCoder.
 
-The repository now pins Bun 1.4.2 and still uses the direct terminal endpoint. The historical upstream status above is not a claim about the latest Bun release. Removal still requires the same-origin validation below.
+The repository now pins Bun 1.4.4 and still uses the direct terminal endpoint. The historical upstream status above is not a claim about the latest Bun release. Removal still requires the same-origin validation below.
 
 ## Removal
 

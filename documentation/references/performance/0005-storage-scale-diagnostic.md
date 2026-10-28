@@ -321,15 +321,32 @@ copies the closed fixture before its fresh worker and unchanged 60-second watchd
 The standalone database commands use the same boundary:
 
 ```sh
-bun packages/pstdio-db/src/services/extension-storage/document-scale.bench.ts small 100000 /absolute/disposable/owner-fixture prepare
-bun packages/pstdio-db/src/services/extension-storage/document-scale.bench.ts small 100000 /absolute/disposable/owner-sample-01 sample /absolute/disposable/owner-fixture
+bun packages/pstdio-db/src/services/extension-storage/document-scale.diagnostic.ts small 100000 /absolute/disposable/owner-fixture prepare
+bun packages/pstdio-db/src/services/extension-storage/document-scale.diagnostic.ts small 100000 /absolute/disposable/owner-sample-01 sample /absolute/disposable/owner-fixture
 ```
 
 Add `churn` to both commands for the separate create/edit/delete variant. Repeat
 samples with ten distinct destinations. Existing preparation or sample directories
-are rejected rather than overwritten. Verification checks all history receipts,
-source revisions, live/deleted counts and decoded final values. It runs only in
-preparation; the first resource access in a sample remains its measured write.
+are rejected rather than overwritten. Fixtures use production storage, one document
+per record ([ADR 0100](../../adrs/0100-one-document-per-resource.md)), with the shared
+`scaleStorageIndexes` installed before seeding as an extension runtime does. The
+frozen full workloads also seed the nine background owners. Verification checks all
+history receipts, the owner revision, one document per record, gap-free update tails,
+and that each rebuilt record matches the generator and its projection row. It runs only
+in preparation; the first resource access in a sample remains its measured write.
+
+`record-read-scale.diagnostic.ts` measures indexed reads on the same fixtures. It is a
+diagnostic and does not take the timing window. `PSTDIO_SCALE_READ_COLD` selects the first
+read in the fresh process: `view`, `second-page`, `point`, `aggregate` or `all-owner-burst`.
+A view is one 100-row page plus its selected and total counts. Each sample then records ten
+warm runs of every read, cursor navigation, the all-owner burst, views while another owner
+receives the contract's write rate, and views while a 100-row write and a compaction write
+hold the database. Every read reports the projection rows Postgres visited.
+
+```sh
+bun packages/pstdio-db/src/services/extension-storage/record-read-scale.diagnostic.ts small 100000 /absolute/disposable/read-fixture prepare
+PSTDIO_SCALE_READ_COLD=view bun packages/pstdio-db/src/services/extension-storage/record-read-scale.diagnostic.ts small 100000 /absolute/disposable/read-sample-01 sample /absolute/disposable/read-fixture
+```
 Preparation duration and memory are separate from sample measurements. A failed
 preparation cannot create the completion manifest, and mutable sample copies cannot
 be reused as prepared fixtures. Case events from database child controllers are
@@ -346,6 +363,28 @@ the baseline are explicit failures. Whole-owner materialization fails even when
 its wall time happens to be below 1,000 ms.
 
 ## Evidence and release interpretation
+
+Each application case now explicitly starts the same bounded performance collector
+as desktop before launching its observed runtime. It writes a separate capture
+artifact for every runtime lifetime, including restart cases. The artifact retains
+raw timestamped samples and reports response p50/p95/max, missed replies, process
+CPU time, and peak and settled memory. Missing required native readings, incomplete
+history and sampling gaps fail coverage. Container runtimes remain remote to the
+host sampler; local CPU or memory never substitutes for container evidence.
+
+CPU and memory summaries state whether they cover a process born during capture
+or only observed readings. The environment row records the compiled binary's
+version and SHA-256 alongside the source revision and runner details. Collection
+does not change the existing workload, operation boundaries, budgets or case cap.
+Database and sync layer diagnostics retain their existing phase telemetry; they
+do not claim application capture coverage.
+
+The normal completion path observes memory after one existing sampling interval
+of post-workload idle time. It exports the operation end and minimum idle interval;
+this does not assert heap stability or force garbage collection. Immediate crashes
+keep their kill boundary. Their missing exit or settling readings remain explicit
+coverage failures instead of fabricated memory values. Observation and cleanup
+still fit within the existing case cap.
 
 Save commands, environment, exact commit, fixture manifests, full compressed input
 files, stored-shape verification, raw JSONL, stderr, screenshots, pause evidence,

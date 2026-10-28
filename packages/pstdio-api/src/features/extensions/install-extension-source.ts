@@ -2,7 +2,13 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, statSync, unlinkSync 
 import { cp, rm } from "node:fs/promises";
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { readPackageManifest, readPackageManifestMetadata } from "pstdio-extensions";
+import {
+  extensionStorageDirectory,
+  readPackageManifest,
+  readPackageManifestMetadata,
+  remapPackageAssets,
+} from "pstdio-extensions";
+import { parseRegistrySourceRef, unpackExtension } from "pstdio-extensions/distribution";
 import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
 import {
@@ -20,12 +26,14 @@ import type {
 } from "./install-extension-source-types";
 import { prepareInstallDependencies } from "./prepare-extension-dependencies";
 import { ExtensionAlreadyInstalledError, promotePreparedSource } from "./promote-extension-source";
+import { validateExtensionWebviews } from "./validate-extension-webviews";
 
 export { dashboardExtensionHostCapabilities } from "pstdio-extensions";
 export {
   createSharedNamedSourceCheckout,
   namedSourceRef,
   prepareGitExtensionSource,
+  prepareReleaseExtensionSource,
 } from "./extension-source-checkout";
 export type {
   ExtensionEnableInput,
@@ -68,13 +76,18 @@ const checkFailed = (check: ExtensionsCheck) => {
   return new ExtensionValidationFailedError(report, first?.message ?? report, check.diagnostics);
 };
 
+const installedSourceKind = (installed: InstalledExtensionSource) => {
+  if (parseRegistrySourceRef(installed.source.ref)) return "registry" as const;
+  return installed.source.kind === "named" ? ("git" as const) : ("local_path" as const);
+};
+
 export const toExtensionEnableInput = (installed: InstalledExtensionSource): ExtensionEnableInput => ({
   displayName: installed.metadata.displayName,
   extensionId: installed.metadata.id,
   manifest: installed.manifest,
   name: installed.metadata.name,
   sourceHash: installed.sourceHash,
-  sourceKind: installed.source.kind === "named" ? "git" : "local_path",
+  sourceKind: installedSourceKind(installed),
   sourcePath: installed.targetPath,
   sourceRef: installed.source.ref ?? null,
   version: installed.metadata.version,
@@ -165,6 +178,11 @@ const resolveSource = async (input: InstallExtensionSourceInput, tempDir: string
   const homedir = input.homedir ?? osHomedir;
   if (isLocalSource(input.source)) {
     const path = resolve(expandsHome(input.source, homedir));
+    if (path.endsWith(".tgz")) {
+      const target = join(tempDir, "package");
+      await unpackExtension(await Bun.file(path).bytes(), target);
+      return { kind: "local" as const, path: target, ref: path };
+    }
     return { kind: "local" as const, path, ref: undefined };
   }
 
@@ -238,6 +256,12 @@ const validatePreparedInstall = async (
   return { check, loaded };
 };
 
+const resolveInstallName = (input: InstallExtensionSourceInput, source: Awaited<ReturnType<typeof resolveSource>>) => {
+  if (input.installName !== undefined) return input.installName;
+  if (source.ref?.endsWith(".tgz")) return sourceScope(source.path, false).manifest.id;
+  return source.kind === "named" ? source.name : basename(source.path);
+};
+
 export const installExtensionSource = async (input: InstallExtensionSourceInput) => {
   const pstdioHome = resolvePstdioHome(input);
   const tempDir = mkdtempSync(join(tmpdir(), "pstdio-extension-source-"));
@@ -250,11 +274,14 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     failIfInvalidSource(resolvedSource.path);
     const extensionsRoot = resolveExtensionsRoot(input, pstdioHome, resolvedSource.path);
 
-    const installName =
-      input.installName ?? (resolvedSource.kind === "named" ? resolvedSource.name : basename(resolvedSource.path));
+    const installName = resolveInstallName(input, resolvedSource);
     validateInstallName(installName);
 
-    const targetPath = join(extensionsRoot, installName);
+    const directoryName =
+      installName === sourceScope(resolvedSource.path, input.allowUnsupportedApiVersion === true).manifest.id
+        ? extensionStorageDirectory(installName)
+        : installName;
+    const targetPath = join(extensionsRoot, directoryName);
     const targetExists = existsSync(targetPath);
     const inPlace = targetExists && isSameDirectory(resolvedSource.path, targetPath);
     if (!inPlace) assertCanCopy(resolvedSource.path, targetPath);
@@ -269,7 +296,7 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     if (!reuseExisting) {
       mkdirSync(extensionsRoot, { recursive: true });
       stagingRoot = mkdtempSync(join(dirname(extensionsRoot), ".extension-install-"));
-      installPath = join(stagingRoot, installName);
+      installPath = join(stagingRoot, directoryName);
       await copyExtensionSource(resolvedSource.path, installPath);
     }
 
@@ -288,18 +315,23 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     );
     input.signal?.throwIfAborted();
 
+    // A replacement must activate every managed view before the working source is replaced.
+    if (targetExists && !reuseExisting) await validateExtensionWebviews(loaded, installPath, installName, input.signal);
     const sourceHash = hashExtensionSource(installPath);
+    let snapshot = { check, manifest: loaded.manifest };
     if (installPath !== targetPath) {
+      // Resolve asset bases while staging still exists, before its folder is promoted.
+      snapshot = remapPackageAssets(snapshot, installPath, targetPath) as typeof snapshot;
       const preserveDependencies = linkedInstalledDependencies;
       if (linkedInstalledDependencies) unlinkSync(join(installPath, "node_modules"));
       await promotePreparedSource(installPath, targetPath, Boolean(input.force), preserveDependencies);
-      for (const extension of check.extensions) extension.sourcePath = targetPath;
+      for (const extension of snapshot.check.extensions)
+        extension.sourcePath = join(targetPath, relative(installPath, extension.sourcePath));
     }
 
     return {
-      check,
+      ...snapshot,
       installName,
-      manifest: loaded.manifest,
       metadata: loaded.metadata,
       source:
         resolvedSource.kind === "named"

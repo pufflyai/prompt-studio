@@ -11,14 +11,14 @@ export interface StoredReportFile {
 
 export interface StoredReport {
   id: string;
-  shorthand?: string;
   workspaceShorthand: string;
   workspaceId: string | null;
   name: string;
   directoryName?: string;
   kind: string;
   source: string | null;
-  body: string;
+  /** Blob in the report attachments that holds the markdown body. */
+  bodyBlobId: string;
   files: StoredReportFile[];
   draft: boolean;
   createdAt: string;

@@ -17,23 +17,25 @@ export const resolveWorkspaceParams = async (
   let schema: ParamObjectSchema;
   if (providerId === rootProviderId) schema = { path: { type: "text", label: "Project folder" } };
   else if (providerId === worktreeProviderId) {
-    const provider = await findWorktreeProvider(deps, projectId);
-    if (!provider) throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
-    schema = provider.params;
-    const base = schema.base;
-    if (
-      base.type === "select" &&
-      Array.isArray(base.options) &&
-      typeof input.base === "string" &&
-      !base.options.some((option) => option.value === input.base)
-    ) {
+    if (typeof input.base === "string") {
+      schema = { base: { type: "text", label: "Base branch", required: true } };
+      validateWorkspaceParams(providerId, schema, input);
       const home = await deps.workspaceService.getDefault(projectId);
-      try {
-        await git(home!.root_path!, ["rev-parse", "--verify", "--end-of-options", `${input.base}^{commit}`]);
-        schema = { ...schema, base: { ...base, options: [...base.options, { label: input.base, value: input.base }] } };
-      } catch {
-        /* The declared options below describe valid branch choices. */
+      if (home?.execution_kind !== "local" || !home.root_path) {
+        throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
       }
+      try {
+        await git(home.root_path, ["rev-parse", "--verify", "--end-of-options", `${input.base}^{commit}`]);
+      } catch (cause) {
+        throw new InvalidWorkspaceParamsError(
+          `Invalid params for workspace provider "${providerId}": base "${input.base}" must resolve to a valid Git commit.`,
+          { cause },
+        );
+      }
+    } else {
+      const provider = await findWorktreeProvider(deps, projectId);
+      if (!provider) throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
+      schema = provider.params;
     }
   } else {
     const handle = await findWorkspaceProvider(deps, { projectId, providerId });

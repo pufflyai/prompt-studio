@@ -1,0 +1,135 @@
+import { expect } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
+import { uiOrigin as apiBase } from "../ui-server";
+import { test } from "./helpers/notification-settings";
+
+test.use({ notificationsEnabled: true });
+
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Extension Lab Pages" }, folderPath),
+  });
+  expect(response.ok()).toBe(true);
+  return (await response.json()) as { id: string; name: string };
+};
+
+const createSession = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  title: string,
+) => {
+  const response = await request.post(`${apiBase}/v1/sessions`, {
+    data: {
+      project_id: projectId,
+      title,
+      prompt: title,
+      agent: "pstdio.workbench-fixture.harness.fake",
+    },
+  });
+  expect(response.ok()).toBe(true);
+  return (await response.json()) as { id: string };
+};
+
+const prepareDashboard = async (page: import("@playwright/test").Page, projectId: string) => {
+  await page.addInitScript((selectedProjectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
+  }, projectId);
+};
+
+test("an extension page navigates through the public API and browser history", async ({ page, request }) => {
+  const project = await createProject(request);
+  await prepareDashboard(page, project.id);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/projects/${project.id}`);
+
+  await expect(page.getByTestId("start-page")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('[data-workbench-panel-header="sidenav"]')).toHaveCount(0);
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await expect(sidenav).toHaveCount(1);
+  await expect(sidenav.getByRole("option", { name: `${project.name} Switch project`, exact: true })).toHaveCount(0);
+  await expect(sidenav.getByRole("option", { name: "Workspaces", exact: true })).toHaveCount(0);
+  await expect(sidenav.getByRole("option")).toContainText(["Search", "Notifications", "Sessions", "Tickets", "Lab"]);
+  await sidenav.getByRole("option", { name: "Lab", exact: true }).click({ timeout: 30_000 });
+
+  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
+  const labFrame = page.frameLocator('iframe[title="Lab"]');
+  await expect(labFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible({ timeout: 30_000 });
+  await expect(sidenav.getByRole("option", { name: "Lab", exact: true })).toHaveCount(0);
+  const selectedTape = sidenav.getByRole("option", { name: /Session 1 — first contact/ });
+  await expect(selectedTape).toBeVisible();
+
+  const historyLength = await page.evaluate(() => window.history.length);
+  for (let click = 0; click < 20; click += 1) {
+    await selectedTape.click();
+  }
+  expect(await page.evaluate(() => window.history.length)).toBe(historyLength);
+
+  await page.goBack();
+
+  await expect(page).toHaveURL(`/projects/${project.id}`);
+  await expect(page.getByTestId("start-page")).toBeVisible();
+  await expect(page.locator('iframe[title="Lab"]')).toBeHidden();
+  await expect(sidenav.getByRole("option", { name: /Session 1 — first contact/ })).toHaveCount(0);
+  await expect(sidenav.getByRole("option", { name: "Lab", exact: true })).toBeVisible();
+
+  await page.goForward();
+
+  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
+  await expect(labFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: /Session 1 — first contact/ })).toBeVisible();
+});
+
+test("Tickets and Start remain exclusive page locations", async ({ page, request }) => {
+  const project = await createProject(request);
+  await prepareDashboard(page, project.id);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/projects/${project.id}`);
+
+  await expect(page.getByTestId("start-page")).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("option", { name: "Tickets", exact: true }).click({ timeout: 30_000 });
+
+  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  // Tickets is a tabless page: its board replaces Start in Main without a tab header.
+  await expect(page.locator('[data-workbench-panel-header="main"]')).toHaveCount(0);
+  await expect(page.getByTestId("start-page")).toBeHidden();
+  await expect(
+    page.locator('[data-workbench-region="main"]').getByRole("group", { name: "Ticket filter", exact: true }),
+  ).toBeVisible();
+
+  // The project button stays on a root-level page such as Tickets, so history leads back to Start.
+  await page.goBack();
+
+  await expect(page).toHaveURL(`/projects/${project.id}`);
+  await expect(page.getByTestId("start-page")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Ticket filter", exact: true })).toBeHidden();
+});
+
+test("Lab replaces an active session page in main", async ({ page, request }) => {
+  const project = await createProject(request);
+  const sessionTitle = "Session replaced by Lab";
+  await createSession(request, project.id, sessionTitle);
+  await prepareDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}`);
+
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await expect(page.getByTestId("start-page")).toBeVisible({ timeout: 30_000 });
+  await sidenav.getByRole("option", { name: "Sessions", exact: true }).click();
+  await expect(sidenav.getByRole("option", { name: sessionTitle, exact: true })).toBeVisible();
+  await sidenav.getByRole("option", { name: sessionTitle, exact: true }).click();
+  await expect(page.getByText(`Fake Agent: completed "${sessionTitle}"`).first()).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: new RegExp(`${project.name}$`) }).click();
+  await sidenav.getByRole("option", { name: "Lab", exact: true }).click({ timeout: 30_000 });
+
+  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
+  await expect(page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" })).toBeVisible({
+    timeout: 30_000,
+  });
+  const mainTabs = page.locator('[data-workbench-panel="main"]').getByRole("tab");
+  await expect(mainTabs).toHaveCount(1);
+  await expect(mainTabs.filter({ hasText: sessionTitle })).toHaveCount(0);
+  await expect(
+    page.locator('[data-workbench-region="main"]').getByText(sessionTitle).filter({ visible: true }),
+  ).toHaveCount(0);
+});

@@ -20,7 +20,7 @@ Do not edit versions by hand. Add new released workspace packages to the fixed g
 
 `.github/workflows/release-packages.yml` releases stable versions and nightlies with the same jobs, using Bun from the root `packageManager` field and Node 24. It builds and verifies every artifact from one commit, then publishes npm packages and desktop apps together. Nothing is published until every check passed. See [ADR 0072](../../adrs/0072-gate-merges-on-builds-and-publish-releases-all-or-nothing.md).
 
-1. **plan.** A stable release is pending while the GitHub release `pstdio@<version>` is missing or still a draft. `scripts/release/plan-release.ts` decides this and fails early when a public package was never published, because npm trusted publishing cannot create a package. It then places the tag `pstdio@<version>` on the commit to release. Packaged apps install core extensions from that tag, so it must exist before verification. A nightly instead versions, commits and tags `main` as described below.
+1. **plan.** A stable release is pending while the GitHub release `pstdio@<version>` is missing or still a draft. `scripts/release/plan-release.ts` decides this and fails early when a public package was never published, because npm trusted publishing cannot create a package. It then places the tag `pstdio@<version>` on the commit to release. Packaged apps include catalog extension sources from that checkout and record their source commit. A nightly instead versions, commits and tags `main` as described below.
 2. **Verify.** Every job builds from the planned commit:
    - `verify-packaged-toolchain.yml` checks the compiled CLI on native Linux, Intel macOS and Windows.
    - `harness-cli-support.yml` checks the native harnesses against the minimum and latest supported CLI versions.
@@ -160,6 +160,8 @@ Stable release notes start at the previous non-prerelease tag, so nightly tags n
 The desktop side of the nightly channel is described in [Desktop distribution](0002-desktop-distribution.md#update-channels).
 
 ## Validation
+
+The [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) describe advisory resource targets, nightly performance coverage, and when local benchmarks are useful. The existing 200 MB compiled-binary check runs during local builds, cross-platform builds, and prebuilt verification. Aggregate download size and the M5 startup and average-memory targets do not have dedicated automated checks yet.
 
 Run `bun run validate` and `bun run --cwd scripts verify:packages`. For changes to release logic, use a disposable Prompt Studio workspace to run `bun changeset status --verbose` and `bun run --cwd scripts release:version`. Check that all group versions agree, extension dependency ranges remain unchanged and `release:notes <version>` contains only actual entries. Do not publish from the disposable workspace.
 

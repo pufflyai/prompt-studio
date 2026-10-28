@@ -28,7 +28,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `modes`                                           | Typed Workbench mode contributions.                                                                |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                                                |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                                          |
-| `artifactMounts`                                  | Safe repo-local file access under `.pstdio/extension-storage/<package-name>/`. `watch: true` adds change events.   |
+| `artifactMounts`                                  | Safe repo-local file access under `.pstdio/extension-storage/<publisher>.<name>/`. `watch: true` adds change events. |
 | `workspaceTypes`, `harnesses`                     | Provider integrations owned by the extension runtime.                                             |
 | `connections`                                     | Host-managed HTTP access to a declared remote control plane.                                       |
 
@@ -69,6 +69,36 @@ Only `string` settings accept `options`; on other types the host ignores `option
 
 Extensions declare metadata and handlers; the host owns installation, project enablement, command routing, workbench chrome, trusted context keys, and layout primitives.
 
+## App-wide settings
+
+On `main` (planned extension API 0.3.0, after 0.45.0), a settings panel can target
+`workbenchSlots.globalSettings`. The host registers it with global scope in every
+project where the extension is enabled. Use `workbenchSlots.projectSettings` for
+project settings and `workbenchSlots.extensionSettings` for the owner's extension
+detail Settings tab. Panel placement does not change a setting's storage scope.
+
+```ts
+const panel = defineSettingsPanel({
+  id: "device",
+  view: deviceView.ref,
+  slot: workbenchSlots.globalSettings,
+});
+```
+
+Each property in `settings.properties` declares `scope: "project"`, `"global"`, or
+`"device"`. Project values belong to the project extension instance. Global values
+belong to the installed extension. Device values belong to the extension identity
+on this host, so they are shared across its projects and installed copies, persist
+across restarts, and never enter synced project data. Another device starts with
+the declared default. A remote host stores values on that host, not in the browser.
+Every installed copy with the same extension ID reads the same device values, so
+store only values that any copy of the extension may read.
+
+Commands use `ctx.settings.all()`, `get(key)`, `set(key, value)`, and `delete(key)`.
+Webviews use the same methods on `client.settings` and declare the matching
+`extension.settings.*` capabilities. The host selects storage from the property's
+declared scope. Deleting an override restores its default.
+
 Extension code should not:
 
 - define package identity inside `defineExtension()`
@@ -83,7 +113,9 @@ When extension UI needs dashboard placement, attach it to a host-owned target an
 
 Keybindings bind app-level keyboard shortcuts to a navigation `action`. The action is any navigation target: a command, a page, a panel, an href, or a compound target. Pages and panels bind directly; no wrapper command is needed. Chords use `@tanstack/hotkeys` syntax and are validated by the extension runtime. Invalid chords, modifier-only chords, and duplicate platform-aware chords are reported by extension checks and dropped from metadata.
 
-Help → Keyboard shortcuts lists assigned bindings, including bindings whose context is currently inactive. It groups extension actions by the extension display name from its package metadata. Menus, the command palette, and navigation items supply readable action labels. Repeated placements of the same target and parameters share one row. Different parameters remain separate. The reference updates when extensions change. Hidden row actions release label space; labels truncate only when visible content needs that space. Navigation rows do not show shortcut badges. Row actions use the existing hover fade and remain visible while keyboard focus is inside the row. Command shortcuts without supplied parameters open the shared parameter form before execution.
+Help → Keyboard shortcuts manages assigned, inactive, disabled, and unassigned actions. It supports personal bindings, disabling, resetting, Leader, and extension aliases. Menus, the command palette, and navigation items supply readable action labels. Repeated placements of the same target and parameters share one row. Different parameters remain separate. The reference updates when extensions change. Hidden row actions release label space; labels truncate only when visible content needs that space. Navigation rows show effective shortcut hints while keyboard mode is active. Row actions use the existing hover fade and remain visible while keyboard focus is inside the row. Command shortcuts without supplied parameters open the shared parameter form before execution.
+
+Layered bindings add `layer` (`view`, `go`, `create`, `current`, `extensions`, `settings`, or `help`) and `targetScope` (`project`, `resource`, or `panel`). Their keys are letters or numbers relative to the group. Shared keys open an action or target chooser. Completed actions exit shortcut mode; tab navigation remains active until Enter or Escape. The deprecated `sticky` field is accepted for older declarations but no longer retains mode after completion. Existing direct bindings can declare `allowInInputs`; use it only for explicit workbench chords that must be consumed before editors. See [Keyboard shortcuts](../workbench/0006-keyboard.md) for navigation, target rules, preferences, and nested webviews.
 
 The main destinations use `Alt+Shift`: Sessions `S`, Workspaces `W`, Notes `O`, Tickets `P`, and Artifacts `A`. Notes uses `O` because notifications already uses `N`. Creation uses `Mod+Alt`: session `S`, workspace `W`, note `N`, and ticket `P`. Settings uses `Mod+,`. Command palette placements use their source command and exact parameters to resolve shortcut hints. Sessions, Workspaces, and Tickets bind their existing open commands so the command palette shows their navigation shortcuts. These extension defaults live in their own contributions; the host does not assign shortcuts to third-party tools.
 
@@ -128,6 +160,7 @@ Dashboard UI contributions have one ownership model:
 
 - a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`
 - a page owns a route, mode, optional resource constraint, Main presentation, and extra slots
+- a non-rendering parent uses `main: { kind: "group", default: child.ref }`; the default child opens without a resource in the same mode, while the group remains a breadcrumb label and navigation-tree owner
 - a placement owns a shared mode panel with a static-view or resource-binding item
 - a navigation item uses a typed action instead of encoded route or command fields
 - a navigation tree adds a tree view to a mode or page in the shared Sidenav
@@ -187,7 +220,7 @@ Set `tooltip` to show text while the pointer rests on a row or the row has keybo
 
 Set `badge: { label: "3", color: "orange" }` for a trailing count beside a tree row. It uses the notification count badge style. Omit it when there is no count to show.
 
-Kanban attributes with `display: { kind: "badge-list", itemsAttributeId: "items" }` read their badges from the named row attribute. Each item has an `id`, `label`, and optional `icon`, `color`, `tooltip`, and page `target`. A target makes that badge a direct link without activating the card. Page and resource references are scoped to the contributing extension and project.
+Kanban attributes with `display: { kind: "badge-list", itemsAttributeId: "items" }` read their badges from the named row attribute. Each item has an `id`, `label`, and optional `icon`, `color`, `tooltip`, and `action`. The action accepts any navigation target, including a page-owned panel that opens beside the collection without changing its route. Page, panel, and resource references are scoped to the contributing extension and project. Actions run without activating the card. The older page-only `target` remains supported and is deprecated in favor of `action`; when both are present, `action` wins. This addition shares the planned extension API 0.3.0 release in Prompt Studio 0.46. Publish the SDK and host before extensions adopt it.
 
 Tree rows use `resource` as their action subject and `target` as their normal-click destination. Right-clicking
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
@@ -260,6 +293,9 @@ See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes
 Both `dataTable` and `kanban` bodies accept `toolbarActions`. These actions stay
 visible when a query returns no rows. Use them for commands such as creating a
 record or starting an experiment.
+
+The host renders visible actions as `xs` buttons, with one vertical separator
+before the action group. It omits the separator when no actions are visible.
 
 ```ts
 const experiments = defineView({
@@ -394,7 +430,7 @@ defineView({
 
 Data table columns can declare `type` (`"string"`, `"number"`, or `"date"`) and `groupable: true`. Without a type, a column whose values are all numbers is a number field and every other column is text. Columns are filterable by default. Declare `filterable: false` on a column to exclude it from Filter and reject saved rules for it. Query-returned columns use the same option and take precedence over declared columns. Disabling filtering keeps display, sorting, and grouping available. Only groupable columns appear under Grouping in the table's Display menu. Tables group by exact value; empty values form a last "No <column>" group.
 
-The query receives `filter`, `sorts`, and the display `settings`. Use them only to narrow what you load. The renderer always applies the full filter and sorts to the rows you return, so returning more rows than the view shows is always correct.
+The query receives `filter`, `sorts`, and the display `settings`. For default full-result providers, use them only to narrow what you load. The renderer applies the full filter and sorts to the returned rows, so returning more rows than the view shows is correct. Opt-in [paged providers](#paged-tables-and-boards) apply these controls before returning a bounded page.
 
 API 0.2.0 removes the fields deprecated in published package version 0.43.1. Migrate declarations and query handlers to the replacements below.
 
@@ -522,7 +558,9 @@ export default defineExtension({
 
 The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels.
 
-Inside a level, the shared Sidenav adds a fixed left-arrow button labeled with the current mode name, such as Project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
+Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
+
+The same action is available with **Alt+Shift+Up**, both outside and inside shortcut mode. Its shortcut hint appears on the return row in keyboard mode, and it is listed under the current mode's name in shortcut discovery and the command palette.
 
 Users can hide and reorder a level's labeled sections, but its rows keep the order their owner gives them.
 
@@ -544,3 +582,70 @@ The host provides these project-scoped `ctx.sessions` methods:
 An active `HarnessSession` may provide `steer({ deliveryId, prompt, attachments, signal })`. It must use native input without cancelling or starting a turn. Before returning accepted, emit exactly one normalized user message whose ID is `deliveryId`. Native history must preserve that correlation for recovery. A successful pipe write alone is insufficient. A transport failure after input may have been sent is uncertain. Only return rejected when native input was definitely refused. Older harnesses remain supported without this optional method.
 
 Publish the additive SDK before harness extensions adopt it. Codex native acceptance and persisted `clientUserMessageId` were verified on 0.160.0. Claude Code 2.1.294 validation is blocked by a weekly usage limit; OpenCode is unverified. This host change enables neither adapter by itself.
+
+## Paged tables and boards
+
+Set `queryMode: "paged"` on a `dataTable` or `kanban` view body to opt in. This is
+an additive API 0.2.2 change. Existing providers keep their full-result query and
+local filtering, sorting, and search.
+
+The host passes `params.page` with a limit of at most 100, a zero-based offset,
+optional cursor and expected revision, search text, selected field IDs, and
+collapsed table group keys. Fields include visible columns/properties and active
+grouping fields. Badge-list displays also request their companion item field.
+Apply `params.filter`, `params.sorts`, and search to the complete indexed collection
+before selecting a page. Return the requested fields and only the bounded rows.
+Do not load every record to calculate a page, group count, badge, or total.
+
+Preserve the controls' filter semantics. Scalar string `is` and `is-not` use
+locale-independent JavaScript lowercase matching, as do `contains` and
+`does-not-contain`. Map them to the public `equalsIgnoreCase`, `contains`, and
+`not` storage predicates. An empty text rule is incomplete and does not filter
+rows; use `empty` and `notEmpty` for the explicit empty-value controls.
+
+Search trims surrounding whitespace and uses the same locale-independent
+lowercase rule. It matches displayed text: visible table columns, or the board's
+title and displayed properties. A selected grouping field can still be hidden
+and must not become searchable only because it occurs in `page.fields`.
+`textContains` supports ordinary string, number, and boolean display text.
+Providers with date labels, custom display labels, diff summaries, or other
+formatted cells must translate searches to those display semantics before
+paging; matching their raw stored value is not equivalent.
+
+Return `{ rows, page }`, where `page` contains:
+
+- `revision`: the committed owner/query revision shared by rows and aggregates.
+- `cursor`: the next opaque cursor, or `null` at the end.
+- `total`: rows matching the view filter before search.
+- `filteredTotal`: rows matching filter and search, excluding collapsed table groups.
+- `groups`: complete grouping counts, each with `field`, `value`, and `count`.
+  Subgroups also identify their parent field/value. Missing values use `null`.
+- `statistics`: requested table column summaries, keyed by field ID, when a
+  visible statistics control requests them. Never calculate these from one page.
+
+Use declared `storageIndexes`, `ctx.storage.records.query`, and `aggregate` to
+serve these requests. Select the index matching the requested ordering, including
+a stable tie order. Check that every aggregate revision matches the selected page.
+When `page.cursor` is present, pass it to storage and omit `offset`; otherwise
+pass `offset`. Pass `page.revision` in either case. Direct page navigation therefore
+uses one indexed query, without visiting earlier cursors. See
+[direct page navigation](../sdk/0004-storage.md#direct-page-navigation).
+
+Resolve related records only for returned rows, using `readMany` or
+`ctx.resources.identityMany` batches of at most 100. Keep full bodies out of row
+responses unless those bodies are the explicitly selected content. Row and
+selection actions receive the selected row IDs and can read their details when
+the action runs. Selection retains explicitly chosen rows across table pages;
+Select all selects loaded rows, not unseen records.
+
+Table page controls and board scrolling request new pages. Board columns and
+lists also provide a keyboard-accessible Load more action. A column can have a
+positive complete count before any of its cards occur in the loaded page; the
+load action requests the next bounded page rather than fetching the whole group.
+During table navigation, the visible page label and row numbers stay with the
+accepted rows, while a loading status names the requested page. Changing search,
+filters, ordering, display fields, or grouping starts from the first page. An
+obsolete request is cancelled and cannot replace a newer page. Refresh events
+remain scoped to the renderer; after an edit they reset its page sequence while
+keeping the previous rows visible until the replacement arrives. A stale revision
+keeps those rows and shows Retry, which reloads from the first page.

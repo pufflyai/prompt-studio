@@ -1,4 +1,4 @@
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
 import { defaultPageResourceCodec } from "pstdio-api-contracts";
 import { createWorkbenchBreadcrumbController } from "./controllers/breadcrumbs/breadcrumb-registry";
 import { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
@@ -14,30 +14,37 @@ import {
   createMainFullscreen,
   isFullscreenRegionFocusable,
 } from "./controllers/fullscreen/main-fullscreen";
+import { registerKeyboardCommands } from "./controllers/keyboard/keyboard-registration";
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
 import { createWorkbenchPageLocationController } from "./controllers/page-location/page-location-controller";
 import {
   createMemoryWorkbenchPageLocationBrowser,
   createMemoryWorkbenchPageLocationPersistence,
 } from "./controllers/page-location/page-location-memory";
+import { validatePageLanding } from "./controllers/page-runtime/page-panel-view";
 import { createLiveWorkbenchPageRegistry } from "./controllers/page-runtime/page-runtime";
 import {
   createPageStateRestorer,
   loadWorkbenchLocationLayout,
 } from "./controllers/page-runtime/page-state-restoration";
-import { createWorkbenchLayoutCache } from "./controllers/page-runtime/workbench-layout-cache";
+import { createCoreLayoutCache } from "./controllers/page-runtime/workbench-layout-cache-input";
 import {
   connectModeLayoutCache,
   createPageLayoutCacheHandlers,
   createShellLayoutContext,
 } from "./controllers/page-runtime/workbench-layout-context";
 import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
+import { resourceViewerBinding } from "./controllers/resource-viewers/displayed-viewers";
+import {
+  createWorkbenchViewerController,
+  focusPageResource,
+  restorePageLocation,
+} from "./controllers/resource-viewers/resource-viewers";
 import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
 import { createModeSidePanel } from "./controllers/side-panel/mode-side-panel";
 import { createWorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
 import { createCommandPaletteResourceRegistry } from "./registries/command-palette-resources/command-palette-resource-registry";
 import { createCommandRegistry } from "./registries/commands/command-registry";
-import { createKeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel } from "./registries/layout/layout-model";
 import type { LayoutPersistenceAdapter } from "./registries/layout/layout-model-types";
 import { createMenuRegistry } from "./registries/menus/menu-registry";
@@ -47,6 +54,7 @@ import type { createNavigationTreeRegistry } from "./registries/navigation/navig
 import { actionErrorTarget } from "./registries/notifications/action-error-target";
 import { createNotificationRegistry } from "./registries/notifications/notification-registry";
 import { createWorkbenchOverlayRegistry } from "./registries/overlays/overlay-registry";
+import { pageContentOwners } from "./registries/pages/page-content";
 import { createWorkbenchPlaceholderRegistry } from "./registries/placeholders/placeholder-registry";
 import { createWorkbenchShellPlacementRegistry } from "./registries/placements/shell-placement-registry";
 import { createPreferenceRegistry } from "./registries/preferences/preference-registry";
@@ -62,6 +70,7 @@ import {
   connectWorkbenchCoreState,
   createCoreCompositionController,
   primaryWorkbenchResource,
+  subscribeActiveWorkbenchResource,
 } from "./workbench-core-connections";
 import { createCoreNavigationRegistry, revealPanelRegion } from "./workbench-core-navigation";
 import { createWorkbenchNavigationTrees } from "./workbench-core-navigation-trees";
@@ -71,6 +80,7 @@ import { createCoreViews } from "./workbench-core-views";
 import { createWorkbenchModuleRegistry } from "./workbench-module-registry";
 import { createPagePersistenceScopeHandler } from "./workbench-page-persistence";
 import { setWorkbenchRenderers } from "./workbench-renderers";
+import { createWorkbenchKeyboard } from "./workbench-shortcut-actions";
 
 export * from "./workbench-core-types";
 
@@ -79,6 +89,7 @@ const createPageLocations = (
   registry: ReturnType<typeof createLiveWorkbenchPageRegistry>,
   navigationTrees: ReturnType<typeof createNavigationTreeRegistry>,
   modes: ReturnType<typeof createWorkbenchModeRegistry>,
+  resolveCore: () => WorkbenchCore,
 ) =>
   createWorkbenchPageLocationController({
     registry,
@@ -87,6 +98,15 @@ const createPageLocations = (
     modes,
     persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
     startPage: input.startPage ?? workbenchPages.start,
+    getResourceRemovalVersion: () => resolveCore().resources.getRemovalVersion(),
+    getResourceRemovalEpoch: () => resolveCore().resources.getRemovalEpoch(),
+    restoreLocation: (location, projectId, removalVersion) =>
+      restorePageLocation(resolveCore(), location, projectId, removalVersion),
+    focusResource: (location, open) => focusPageResource(resolveCore(), location, open),
+    activateLocation: () => {
+      const core = resolveCore();
+      if (core.pages.getContent()) core.focus.setActiveRegion("main");
+    },
   });
 
 const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefined) => {
@@ -103,15 +123,10 @@ import { createWorkbenchHost } from "./workbench-core-host";
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
   let core: WorkbenchCore;
   const context = createContextKeyService();
-  const commands = createCommandRegistry({ context });
+  const commands = createCommandRegistry({ context, getProjectId: () => core?.pages.store.getState().projectId });
   const renderers = createCoreRenderers(input);
 
-  const layoutCache = createWorkbenchLayoutCache(
-    input,
-    () => core?.pages.store.getState().activeModeId,
-    (id) => core?.layout.getWidget(id)?.tab,
-    () => core?.pages.listPages() ?? [],
-  );
+  const layoutCache = createCoreLayoutCache(input, () => core);
   const cachedInput = { ...input, persistence: undefined, layoutPersistence: layoutCache.layout };
   const locationAwareLayout = createLayoutModel({
     defaultRegionVisibility: {
@@ -126,6 +141,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     },
     ...layoutPanelGuards(() => core),
     normalizeLayout: (layout) => restorePanelPolicy(core, layout),
+    getDetachedOwners: () => (core ? pageContentOwners(core.pages) : []),
     persistence: layoutCache.layout,
   });
 
@@ -146,6 +162,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const pageResources = input.pageResources ?? defaultPageResourceCodec;
 
   const modePlacements = createWorkbenchModePlacementRegistry({
+    resourceReferenceKey: (resource) => core?.pages.resourceReferenceKey(resource) ?? resourceKey(resource),
     loadLayout: (context) => layoutCache.readMode(context.projectId, context.modeId),
     validateOpen: (identity, region, options) => requirePanelOpen(core, region, { identity, ...options }),
     getProjectId: () => core?.pages.store.getState().projectId,
@@ -156,6 +173,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const shellPlacements = createWorkbenchShellPlacementRegistry({
+    resourceReferenceKey: (resource) => core?.pages.resourceReferenceKey(resource) ?? resourceKey(resource),
     views,
     viewMenus,
     getPanel: layout.getWidget,
@@ -209,11 +227,13 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const pages = createLiveWorkbenchPageRegistry({
+    isResourceViewer: (identity) => Boolean(core && resourceViewerBinding(core, identity)?.kind === "binding"),
     ...createPageLayoutCacheHandlers(layoutCache),
     loadModeLayout: layoutCache.readMode,
     saveModeLayout: layoutCache.saveMode,
     beforeApply: createPagePersistenceScopeHandler(input, layout, panelMenuState),
     restorePageState: createPageStateRestorer(cachedInput, layoutCache.loadPageLayout, layoutCache.hasPageMain),
+    validateLanding: (state, identity) => validatePageLanding(core, state, identity),
 
     revealRegion: (region) => revealPanelRegion(core, region),
     layout,
@@ -225,12 +245,20 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     resources: pageResources,
   });
 
-  const pageLocations = createPageLocations(input, pages, navigationTrees, modes);
+  const pageLocations = createPageLocations(input, pages, navigationTrees, modes, () => core);
 
   const composition = createCoreCompositionController(() => core);
+  const viewers = createWorkbenchViewerController(() => core);
 
   core = {
-    getOpenResources: () => layoutCache.listResources(layout.getLayout()),
+    viewers: viewers.controller,
+    getOpenResources: () => {
+      const resources = layoutCache.listResources(layout.getLayout());
+      const resource = pages.getContent()?.resource;
+      return resource
+        ? [...resources.filter((entry) => resourceKey(entry) !== resourceKey(resource)), resource]
+        : resources;
+    },
     closePlacement: createPlacementCloseController(() => core),
     pinPlacement: createPlacementPinController(() => core),
     ...createPanelArrangement(() => core),
@@ -242,8 +270,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     context,
     focus,
     fullscreen: createMainFullscreen(() => core),
-    host: createWorkbenchHost(layout, layoutCache),
-    keybindings: createKeybindingRegistry({ commands, context }),
+    host: createWorkbenchHost(layout, layoutCache, pages.getContent),
+    ...createWorkbenchKeyboard(() => core, commands, context),
     layout,
     modes,
     modePlacements,
@@ -281,18 +309,14 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     },
 
     async dispose() {
+      viewers.dispose();
       disposeFullscreen();
       disposeLayoutPersistence(layoutCache.layout);
       await Promise.all([views.reads.dispose(), core.terminal.dispose()]);
     },
 
     onDidChangeActiveResource(listener) {
-      return createDisposable(
-        core.layout.store.subscribeSelector(
-          (state) => state.layout.activeResourceKey,
-          () => listener(core.getActiveResource()),
-        ),
-      );
+      return subscribeActiveWorkbenchResource(core, listener);
     },
 
     getPrimaryResource() {
@@ -318,9 +342,10 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   setWorkbenchRenderers(core, renderers);
   const disposeFullscreen = connectMainFullscreen(core);
   registerArrangementCommands(core);
+  registerKeyboardCommands(core);
   connectModeLayoutCache(core, layoutCache);
   const breadcrumbSources = { breadcrumbs, locations: pageLocations, pages, navigationTrees, modes };
-  connectWorkbenchPageBreadcrumbs({ ...breadcrumbSources, resources: pageResources });
+  connectWorkbenchPageBreadcrumbs({ ...breadcrumbSources, layout, resources: pageResources });
   connectWorkbenchCoreState(core, input);
 
   return core;

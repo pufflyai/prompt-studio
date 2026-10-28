@@ -64,12 +64,15 @@ const registerCommands = (
           prepareCommandArgs(context, command.id, args, executionContext, onArgsChange),
         execute: (args, executionContext) =>
           executeWorkbenchExtensionCommand(context, command.id, {
+            ...executionContext,
             params: asParams(args),
             resource: executionContext?.resource,
             signal: executionContext?.signal,
             region: executionContext?.region,
+            placement: executionContext?.placement,
           }),
       },
+      { ownerId: command.extensionId, source: "extension" },
     ),
   );
 const menuCommandResource = (
@@ -98,6 +101,7 @@ const registerMenus = (
         prepareCommandArgs(context, registration.targetCommandId, args, executionContext, onArgsChange),
       execute: (args, executionContext) =>
         executeWorkbenchExtensionCommand(context, registration.targetCommandId, {
+          ...executionContext,
           params: { ...(registration.contribution.params ?? {}), ...(asParams(args) ?? {}) },
           resource: menuCommandResource(input, executionContext),
           slot: createExtensionSlot({
@@ -124,6 +128,7 @@ const registerCommandPaletteContributions = (
         prepareCommandArgs(context, registration.targetCommandId, args, executionContext, onArgsChange),
       execute: (args, executionContext) =>
         executeWorkbenchExtensionCommand(context, registration.targetCommandId, {
+          ...executionContext,
           params: { ...(registration.contribution.params ?? {}), ...(asParams(args) ?? {}) },
           resource: menuCommandResource(input, executionContext),
           slot: createExtensionSlot({
@@ -156,6 +161,7 @@ const registerStatusBarItems = (input: InternalRegisterWorkbenchExtensionContrib
     input.workbench.statusBar.registerItem({
       id: item.id,
       viewId: item.viewId,
+      popoverViewId: item.popoverViewId,
       slot: item.slot,
       order: item.order,
       isVisible: () =>
@@ -178,8 +184,8 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
       label: text(mode.label, mode.modeId),
       panels: mode.panelRegions,
       regionSettings: mode.regionSettings,
-      panelHeaders: "legacy",
       floatingPanels: mode.floatingPanels,
+      canFullscreen: mode.canFullscreen,
       defaultTheme: mode.defaultTheme,
       chrome: mode.chrome,
       activate: () => undefined,
@@ -191,6 +197,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,
     metadata: toInternalWorkbenchExtensionMetadata(sourceInput.metadata, {
+      projectId: sourceInput.projectId,
       createTab: (metadata) => createWorkbenchExtensionTabPresentation(sourceInput, metadata),
     }),
   };
@@ -201,6 +208,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(
       ...registerWorkbenchExtensionKeybindings({
         bindings: input.metadata.keybindings,
+        extensions: input.metadata.extensions,
         createWhenExpression: input.createKeybindingWhenExpression,
         workbench: input.workbench,
       }),
@@ -248,9 +256,9 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     }
     disposables.push(...registerStatusBarItems(input));
     disposables.push(...registerResourceKinds(input));
-    disposables.push(...registerPages(input));
     disposables.push(...registerModes(input));
     disposables.push(...registerModePlacements(input));
+    disposables.push(...registerPages(input));
     return {
       dispose() {
         disposeAll(disposables);

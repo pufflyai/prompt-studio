@@ -5,10 +5,11 @@
     "": {
       "name": "harness-codex",
       "dependencies": {
-        "@pstdio/sdk": "^0.45.0",
+        "@openai/codex": "0.162.0",
+        "@pstdio/sdk": "0.46.0-preview.sha-714def5a655f68a3dbc195afeea06ea134c88924",
       },
       "devDependencies": {
-        "@types/bun": "1.4.2",
+        "@types/bun": "1.4.4",
         "typescript": "6.0.2",
       },
     },
@@ -16,13 +17,27 @@
   "packages": {
     "@noble/hashes": ["@noble/hashes@2.4.0", "", {}, "sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA=="],
 
-    "@pstdio/sdk": ["@pstdio/sdk@0.45.0", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-sDXguoeSKmRhiWx8McyVyb3ywSnU3I7VFp3EfvbTFmnlgDYh6r/bpR63/upX4JpOq+zzA3b29P3FQb9alnS9dQ=="],
+    "@openai/codex": ["@openai/codex@0.162.0", "", { "optionalDependencies": { "@openai/codex-darwin-arm64": "npm:@openai/codex@0.162.0-darwin-arm64", "@openai/codex-darwin-x64": "npm:@openai/codex@0.162.0-darwin-x64", "@openai/codex-linux-arm64": "npm:@openai/codex@0.162.0-linux-arm64", "@openai/codex-linux-x64": "npm:@openai/codex@0.162.0-linux-x64", "@openai/codex-win32-arm64": "npm:@openai/codex@0.162.0-win32-arm64", "@openai/codex-win32-x64": "npm:@openai/codex@0.162.0-win32-x64" }, "bin": { "codex": "bin/codex.js" } }, "sha512-qWWckMfknyVym1lD5y2rTwPJA2sgHkzePF2l/Uevss4hVpqbt23rMIHKNTrqECdnv82denylHWEzrAmDnCYNIw=="],
 
-    "@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+    "@openai/codex-darwin-arm64": ["@openai/codex@0.162.0-darwin-arm64", "", { "os": "darwin", "cpu": "arm64" }, "sha512-hyiGlMCbZog7IY2TcSWzXbsmtUnynT93QA4utqGlVmFlmz8TurADk3LV28zqUIdgh9GLOzumDIdHQbYieo9Nqw=="],
+
+    "@openai/codex-darwin-x64": ["@openai/codex@0.162.0-darwin-x64", "", { "os": "darwin", "cpu": "x64" }, "sha512-4XzCUJgEDDdme6VWDEKvbWDA6f+470d4xhhorYUgNBZwY8Dq5NYqvWkO33rnc1vjxkqSj+SwkymHxRMxL6h1CA=="],
+
+    "@openai/codex-linux-arm64": ["@openai/codex@0.162.0-linux-arm64", "", { "os": "linux", "cpu": "arm64" }, "sha512-6NYWwy09FsZ+/0Dz/bvV/yz3aFhkNzj86fSiux9Ax9VMBOID5nPdwd51OySm7fy8TMRud4fgJFELSi3Enc1s7Q=="],
+
+    "@openai/codex-linux-x64": ["@openai/codex@0.162.0-linux-x64", "", { "os": "linux", "cpu": "x64" }, "sha512-qHWp6oKpf456PqjberGN8avs8zChv2oS+UuDiqVFYAuDOhq6vBc1drh8jEsnR7dBX+zcw03PN5VLtePGlMcC3w=="],
+
+    "@openai/codex-win32-arm64": ["@openai/codex@0.162.0-win32-arm64", "", { "os": "win32", "cpu": "arm64" }, "sha512-scdBHlUz4AfLOUWT4r4kwe3GFvjbBbWxreLDGoLSyMFf566e7sHSJvlJuV7uha2S7uRoQnMmWwmqYMJuT322UQ=="],
+
+    "@openai/codex-win32-x64": ["@openai/codex@0.162.0-win32-x64", "", { "os": "win32", "cpu": "x64" }, "sha512-W8kqHaqpW0qPz71E0rRT5dq+socGz1BbJyYN7o3SP1TWQt8Zl6ML74R9Hvt/xn1NNLVlDTRfXqNmaMkte6yEMQ=="],
+
+    "@pstdio/sdk": ["@pstdio/sdk@0.46.0-preview.sha-714def5a655f68a3dbc195afeea06ea134c88924", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-J3TT7JfsyI576D/21HO/mvwiteTLwBOjh97Vd2m2xLb/k4QUXJzmngkOIZ2s6JvdZEJAvk/FI1LeWDBG23t2+A=="],
+
+    "@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
     "@types/node": ["@types/node@26.6.3", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-dsqMQQoeTLqu9wynDD00q573mNzso3IdQOAfHRJqLCcmCFPoGo9A1bDpUcv/9tnKpErQWv9uKeGfl37EIS02Yg=="],
 
-    "bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+    "bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
 
     "mustache": ["mustache@4.2.0", "", { "bin": { "mustache": "bin/mustache" } }, "sha512-71ippSywq5Yb7/tVYyGbkBggbU8H3u5Rz56fH60jGFgr8uHwxs+aSKeqmluIVzM0m0kB7xQjKS6qPfd0b2ZoqQ=="],
 

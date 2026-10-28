@@ -1,0 +1,125 @@
+import { describe, expect, test } from "bun:test";
+import { findReservedKeybindingConflict } from "pstdio-extensions";
+import { getNavigationTargetKey } from "./registries/navigation/navigation-target-key";
+import { createWorkbench } from "./workbench-core";
+
+describe("workbench built-ins", () => {
+  test("each built-in action has one default shortcut", () => {
+    const workbench = createWorkbench();
+    const actions = workbench.keybindings.listKeybindings().map((binding) => getNavigationTargetKey(binding.action));
+    expect(actions.length).toBe(new Set(actions).size);
+  });
+  test("registers command-backed chrome actions and default keybindings", async () => {
+    const workbench = createWorkbench();
+
+    await workbench.commands.executeCommand("workbench.toggleSideBar");
+    expect(workbench.shell.getRegionState("sidenav").open).toBe(false);
+    expect(workbench.layout.getLayout().regions.sidenav.visible).toBe(false);
+
+    await workbench.commands.executeCommand("workbench.toggleCommandPalette");
+    expect(workbench.commandPalette.isOpen()).toBe(true);
+
+    await workbench.commands.executeCommand("workbench.action.changeTheme");
+    expect(workbench.commandPalette.getView()).toBe("theme");
+
+    await workbench.commands.executeCommand("workbench.action.showCommands");
+    expect(workbench.commandPalette.getInitialQuery()).toBe("> ");
+
+    const keybindings = workbench.keybindings
+      .listCommandKeybindings()
+      .filter((binding) => !binding.commandId.startsWith("workbench.keyboard."));
+
+    expect(keybindings.map((binding) => binding.commandId)).toEqual(
+      expect.arrayContaining([
+        "workbench.toggleSideBar",
+        "workbench.toggleCommandPalette",
+        "workbench.action.showCommands",
+        "workbench.action.changeTheme",
+        "workbench.action.navigateBack",
+        "workbench.action.navigateForward",
+        "workbench.action.navigateToRootLevel",
+        "workbench.toggleMainFullscreen",
+      ]),
+    );
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleCommandPalette")).toMatchObject({
+      commandId: "workbench.toggleCommandPalette",
+      keybinding: "Mod+P",
+    });
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.showCommands")).toMatchObject({
+      commandId: "workbench.action.showCommands",
+      keybinding: "Alt+Shift+K",
+    });
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleSideBar")).toMatchObject({
+      keybinding: "Alt+Shift+S",
+    });
+    expect(
+      workbench.keyboard
+        .catalog()
+        .filter(
+          (entry) =>
+            entry.binding.action.kind === "command" &&
+            entry.binding.action.commandId === "workbench.action.changeTheme",
+        )
+        .map((entry) => entry.keys),
+    ).toEqual([["ALT+SHIFT+T"]]);
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.navigateBack")).toMatchObject({
+      commandId: "workbench.action.navigateBack",
+      keybinding: "Alt+Shift+ArrowLeft",
+    });
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.navigateForward")).toMatchObject(
+      {
+        commandId: "workbench.action.navigateForward",
+        keybinding: "Alt+Shift+ArrowRight",
+      },
+    );
+  });
+
+  test("built-in chords avoid known reserved browser shortcuts on every platform", () => {
+    const workbench = createWorkbench();
+
+    for (const keybinding of workbench.keybindings.listCommandKeybindings()) {
+      if (keybinding.commandId === "workbench.toggleCommandPalette") continue;
+      // Only the first step of a sequence is typed in isolation, so it is the
+      // step that can collide with browser/OS chords. Later steps fire only
+      // after the workbench has captured the sequence prefix.
+      const firstStep = Array.isArray(keybinding.keybinding) ? keybinding.keybinding[0] : keybinding.keybinding;
+      if (!firstStep) continue;
+      for (const platform of ["mac", "linux", "win"] as const) {
+        expect({
+          commandId: keybinding.commandId,
+          chord: firstStep,
+          platform,
+          conflict: findReservedKeybindingConflict(firstStep, platform),
+        }).toMatchObject({ conflict: undefined });
+      }
+    }
+  });
+
+  test("built-in keybindings are not ambiguous sequence prefixes", () => {
+    const workbench = createWorkbench();
+    const keybindings = workbench.keybindings
+      .listCommandKeybindings()
+      .filter((binding) => !binding.commandId.startsWith("workbench.keyboard."));
+
+    for (const keybinding of keybindings) {
+      const sequence = Array.isArray(keybinding.keybinding) ? keybinding.keybinding : [keybinding.keybinding];
+      for (const otherKeybinding of keybindings) {
+        if (keybinding.commandId === otherKeybinding.commandId) continue;
+
+        const otherSequence = Array.isArray(otherKeybinding.keybinding)
+          ? otherKeybinding.keybinding
+          : [otherKeybinding.keybinding];
+        const isPrefix =
+          sequence.length < otherSequence.length && sequence.every((step, index) => step === otherSequence[index]);
+
+        expect({
+          commandId: keybinding.commandId,
+          keybinding: keybinding.keybinding,
+          ambiguousWith: otherKeybinding.commandId,
+          otherKeybinding: otherKeybinding.keybinding,
+          isPrefix,
+        }).toMatchObject({ isPrefix: false });
+      }
+    }
+  });
+});

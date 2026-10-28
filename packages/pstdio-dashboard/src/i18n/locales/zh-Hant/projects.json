@@ -160,8 +160,33 @@
     }
   },
   "list": {
+    "settings": "設定",
     "createProject": "建立專案",
     "noProjectsYet": "尚無專案",
     "noProjectsDescription": "建立您的第一個專案以開始使用。"
+  },
+  "harnessAccount": {
+    "login": "登入",
+    "logout": "登出",
+    "loginTitle": "登入 {{name}}",
+    "logoutTitle": "登出 {{name}}",
+    "instructions": "在此完成登入。供應商可能會開啟瀏覽器。",
+    "completed": "帳戶命令已完成",
+    "failed": "驗證失敗",
+    "cancel": "取消",
+    "close": "關閉",
+    "managed": "憑證由執行環境管理",
+    "unavailable": "此工具暫時無法設定帳戶。",
+    "requiredDescription": "登入後即可傳送訊息。您也可以在聊天中使用 /login。",
+    "noHarnessTitle": "沒有可用的代理",
+    "noHarnessDescription": "在擴充功能中啟用代理以開始聊天。",
+    "extensions": "瀏覽擴充功能",
+    "noArguments": "{{command}} 不接受參數。",
+    "deviceInstructions": "在登入頁面輸入此代碼。",
+    "starting": "正在啟動…",
+    "openPage": "開啟登入頁面",
+    "waiting": "等待在瀏覽器中完成登入。",
+    "projectRequired": "請先開啟專案再登入。",
+    "continue": "繼續"
   }
 }

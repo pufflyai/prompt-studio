@@ -48,6 +48,7 @@ Workspaces always live in `$PSTDIO_HOME/workspaces`.
 | Variable | Default | Purpose |
 | -------- | ------- | ------- |
 | `PSTDIO_API_TOKEN` | token from `runtime.json` | Bearer token for authenticated requests to the runtime. |
+| `PSTDIO_ACCOUNT_MANAGER_ORIGIN` | `https://base.prompt.studio/accounts` | HTTPS account service address used by `pst login`. Set it before starting the host. `--manager` overrides it for one login. |
 | `PSTDIO_EXTENSION_CATALOG` | packaged extension catalog | Local JSON path or HTTPS URL. Remote catalogs are cached under `$PSTDIO_HOME`. |
 | `PSTDIO_DEFAULT_EXTENSIONS` | catalog entries marked as defaults | JSON array, or `{ "defaultExtensions": [...] }`. Extensions to install and enable for new projects. Each one installs in the scope its `pstdio.scope` declares. `[]` installs none. |
 | `PSTDIO_AUTOMATION_RUNS_PER_MINUTE` | `60` | New automation runs accepted per minute, for each caller and project. |

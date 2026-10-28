@@ -30,6 +30,12 @@ pst extensions add pstdio-reports
 
 Use **Open tickets** in the dashboard command palette to open the current project's Tickets board.
 
+## Ticket numbers
+
+Core assigns ticket numbers. Planner reads the current number from core instead of storing its own copy. After devices reconnect, core repairs duplicate numbers and keeps old numbers as aliases. An old number that matches one ticket still opens that ticket. A shared alias shows every matching ticket in search and opens every match from a file link; `pst tickets panel --id <number>` returns all matches. Use the stable ticket ID when changing a ticket through a shared alias.
+
+Local ticket folders follow the current number. Planner preserves unsaved text and attached files when it moves an owned checkout after a renumber. Workspace links use ticket IDs, so an old branch number does not attach the workspace to a different ticket.
+
 ## Refinement options
 
 Open Settings → Project → Extensions → Project Planner, then the Settings tab. **Generate an artifact prototype for UX features** is enabled by default. It applies when refining a new feature with UX changes and Artifacts is installed and enabled for the project.
@@ -49,7 +55,7 @@ Open Settings → Project → Extensions → Project Planner, then the Settings 
 
 Choose **Auto Build** in Project Timeline to open its modal. Enter a prompt, choose the supervisor harness, model and run options, set **Eligible tickets**, and confirm with **Auto Build**. All options stay in the same modal. The information icon next to the title explains how it works. A supervisor uses your prompt to assign valid, unassigned tickets as dependencies and capacity allow. Completed tickets are excluded using your workflow settings. Each implementation uses the default agent and target branch.
 
-The supervisor ends its turn between checks and resumes when more work can run. The mode keeps running when the timeline is closed and resumes its checks after restarting Prompt Studio. Click the active **Auto Build** button to open its activity popover. Review requests appear above sessions, and the footer stays visible while the activity list scrolls. **Pause** suspends new dispatches and wake-ups while current agents continue. **Resume** continues the same supervisor and scope. The selected view, filters, and search only affect the display. A supervisor wake-up failure pauses the run and shows the error. Resolve it before resuming.
+The supervisor ends its turn between checks and resumes when more work can run. The mode keeps running when the timeline is closed and resumes its checks after restarting Prompt Studio. Click the active **Auto Build** button to open its activity popover. Review requests appear above sessions, and the footer stays visible while the activity list scrolls. **Pause** suspends new dispatches and wake-ups while current agents continue. **Resume** continues the same supervisor and scope. While paused, **Stop Auto Build** cancels all linked sessions, including queued follow-ups. The selected view, filters, and search only affect the display. A supervisor wake-up failure pauses the run and shows the error. Resolve it before resuming.
 
 Auto build leaves gates, blocked work, open human requests, and existing attempts for review. Agents that get stuck use Planner's **Request human input** action so the timeline shows Needs attention.
 
