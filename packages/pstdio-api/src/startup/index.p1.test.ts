@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { createOnboarding } from "../features/onboarding/onboarding";
 import { createTestApp } from "../test-utils/create-test-app";
 import { runBunScenario } from "../test-utils/run-bun-scenario";
 import { runStartupTasks } from ".";
@@ -195,6 +196,35 @@ describe("startup default extensions", () => {
     } finally {
       preparation.resolve();
     }
+  });
+
+  test("recovers sessions and prepares defaults when saved onboarding cannot be read", async () => {
+    const path = join(tempRoot, "invalid-onboarding.json");
+    writeFileSync(path, "{unfinished");
+    const recovered: string[] = [];
+    const background: Promise<void>[] = [];
+    const deps = {
+      onboarding: createOnboarding({ path, enqueue: () => {} }),
+      projectService: { list: async () => [] },
+    } as unknown as Parameters<typeof runStartupTasks>[0];
+    await runStartupTasks(deps, undefined, {
+      onBackgroundTask: (task) => background.push(task),
+      prepareDefaultExtensions: async () => {
+        recovered.push("defaults");
+      },
+      recoverQueuedSessions: async () => {
+        recovered.push("sessions");
+      },
+      recoverQueuedAutomation: async () => {
+        recovered.push("automation");
+      },
+      recoverOrphanedSessions: async () => {
+        recovered.push("orphans");
+      },
+    });
+    await Promise.all(background);
+    expect(recovered).toEqual(["defaults", "sessions", "orphans", "automation"]);
+    expect(await Bun.file(path).text()).toBe("{unfinished");
   });
 
   test("releases tracked default extension preparation when runtime startup is aborted", async () => {
