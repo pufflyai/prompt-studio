@@ -220,3 +220,19 @@ export const DismissPopovers: Story = {
   },
 };
 export const WindowsDark: Story = { ...Windows, globals: { theme: "pstdio-dark" } };
+
+export const EmbeddedNativeGeometry: Story = {
+  tags: ["!manifest"],
+  render: () => (
+    <Box css={{ "--pstdio-title-bar-area-x": "10%", "--pstdio-title-bar-area-width": "80%" }}>
+      <Example platform="linux" />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const bar = canvasElement.querySelector<HTMLElement>("[data-window-title-bar]")!.getBoundingClientRect();
+    const content = canvasElement.querySelector<HTMLElement>(".ps-window-title-bar__content")!.getBoundingClientRect();
+    await expect(content.left).toBeCloseTo(bar.left + bar.width * 0.1, 0);
+    await expect(content.width).toBeCloseTo(bar.width * 0.8, 0);
+    await checkAlignment(canvasElement, true);
+  },
+};

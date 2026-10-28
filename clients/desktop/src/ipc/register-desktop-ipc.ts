@@ -7,10 +7,12 @@ import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { registerPerformanceCaptureIpc } from "../performance/performance-ipc";
 import { isAllowedIpcSender } from "../security/ipc-security";
 import { type TitleBarAppearance, titleBarOverlayOptions } from "../windows/title-bar-appearance";
+import { registerTitleBarGeometryIpc } from "./title-bar-geometry-ipc";
 
 type DesktopIpcOptions = {
   isFullScreen: () => boolean;
   setTitleBarAppearance: (appearance: TitleBarAppearance) => Promise<void>;
+  titleBarGeometrySource: WebContents;
   appInfo: () => { platform: string; version: string };
   cancelQuit: () => Promise<void>;
   checkForUpdates: () => Promise<void>;
@@ -121,7 +123,14 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
     assertSender: (event) => assertSender(event, options),
     retain: () => options.performance.retainCapture?.() ?? Promise.resolve(async () => {}),
   });
+  const stopTitleBarGeometryIpc = registerTitleBarGeometryIpc({
+    ipcMain: options.ipcMain,
+    source: options.titleBarGeometrySource,
+    webContents: options.webContents,
+    assertSender: (event) => assertSender(event, options),
+  });
   return () => {
+    stopTitleBarGeometryIpc();
     stopCaptureIpc();
     for (const channel of Object.values(DESKTOP_CHANNELS)) options.ipcMain.removeHandler(channel);
   };
