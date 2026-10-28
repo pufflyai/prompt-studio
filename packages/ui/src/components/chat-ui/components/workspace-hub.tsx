@@ -71,8 +71,8 @@ export const ChatWorkspaceHub = (props: ChatWorkspaceHubProps) => {
   return (
     <Flex align="center" justify="space-between" gap="sm" minW="0" pl="xs" pr="2xs" py="2xs">
       <HStack gap="sm" minW="0">
-        {action ? <Flex flexShrink={0}>{action}</Flex> : null}
         {workspaceControl}
+        {action ? <Flex flexShrink={0}>{action}</Flex> : null}
         <HubStatus status={status} statusLabel={statusLabel} additions={additions} deletions={deletions} />
       </HStack>
     </Flex>

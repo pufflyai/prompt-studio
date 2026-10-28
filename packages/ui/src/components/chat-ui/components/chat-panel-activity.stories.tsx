@@ -62,11 +62,14 @@ const meta = {
     const open = canvas.getByRole("button", { name: "Open workspace" }).getBoundingClientRect();
     const identity = canvas.getByRole("button", { name: "main" }).getBoundingClientRect();
     const time = timer.getBoundingClientRect();
-    await expect(open.left).toBeLessThan(identity.left);
+    await expect(open.left).toBeGreaterThanOrEqual(identity.right);
+    await expect(open.left - identity.right).toBeLessThanOrEqual(12);
     await expect(time.left).toBeGreaterThan(identity.right);
     await expect(Math.abs(time.top - open.top)).toBeLessThan(open.height);
     const assistant = canvas.getByText("I will check the files.").closest(".ai-message__root")!;
     await expect(parseFloat(getComputedStyle(assistant).marginBottom)).toBeGreaterThan(0);
+    const paragraph = canvas.getByText("I will check the files.").closest("p")!;
+    await expect(parseFloat(getComputedStyle(paragraph).marginTop)).toBeGreaterThan(0);
     const indicator = canvasElement.querySelector(".chakra-timeline__indicator")!;
     await expect(getComputedStyle(indicator).backgroundColor).toBe("rgba(0, 0, 0, 0)");
   },
@@ -80,4 +83,25 @@ export const Narrow: Story = {
       <ChatPanel {...args} />
     </Box>
   ),
+};
+export const AnswerAfterActivity: Story = {
+  args: {
+    messages: [
+      { id: "user", role: "user", parts: [{ type: "text", text: "Check the workspace." }] },
+      {
+        id: "assistant",
+        role: "assistant",
+        parts: [
+          { type: "reasoning", text: "Review the available files." },
+          {
+            type: "tool",
+            tool: "Bash",
+            status: "completed",
+            state: { input: { command: "bun run typecheck" }, output: "All checks passed." },
+          },
+          { type: "text", text: "I will check the files." },
+        ],
+      },
+    ],
+  },
 };

@@ -16,7 +16,7 @@ const statuses: SessionCompletionStatus[] = [
 ];
 function SolarizedChat() {
   return (
-    <Stack p="md" maxW="chat-content" gap="md" bg="bg" color="fg">
+    <Stack p="md" maxW="chat-content" gap="md" bg="bg.panel" color="fg">
       <HStack flexWrap="wrap" data-testid="session-states">
         {statuses.map((status) => (
           <HStack key={status} gap="2xs">
@@ -68,12 +68,15 @@ const meta = {
   title: "Themes/Solarized chat",
   tags: ["solarized-chat"],
   component: SolarizedChat,
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, globals }) => {
     const canvas = within(canvasElement);
     const workspace = canvasElement.querySelector(".ps-chat-composer__workspace")!;
     const tag = canvas.getByText("Workspace tag").closest(".chakra-tag__root")!;
     const background = getComputedStyle(canvasElement.firstElementChild!).backgroundColor;
     await expect(getComputedStyle(tag).backgroundColor).toBe(getComputedStyle(workspace).backgroundColor);
+    if (globals.theme === "solarized-light") {
+      await expect(contrastRatio(getComputedStyle(workspace).backgroundColor, background)).toBeGreaterThan(1.2);
+    }
     for (const status of statuses) {
       const indicator = canvas.getByLabelText(status);
       await expect(contrastRatio(getComputedStyle(indicator).color, background)).toBeGreaterThanOrEqual(4.5);

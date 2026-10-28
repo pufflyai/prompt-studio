@@ -46,6 +46,7 @@ const recipe = defineSlotRecipe({
         content: {
           width: "full",
           px: "xs",
+          "& [data-chat-response] [data-lexical-editor] > .rich-text__p:first-child": { mt: "xs!" },
         },
       },
       developer: {
