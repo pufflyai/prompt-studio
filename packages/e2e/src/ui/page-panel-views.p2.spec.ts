@@ -76,7 +76,7 @@ test("an SDK-only viewer switches locally, reuses resources, replaces drafts and
     await mainReader.getByRole("button", { name: "Switch to A", exact: true }).click();
     await expect(mainReader.getByText("Viewing A", { exact: true })).toBeVisible();
     const mainUrl = page.url();
-    await openTool(page, "side", "Letter viewer");
+    await openTool(page, "side", "New letter viewer");
     const side = panel(page, "side");
     const sideReader = side.frameLocator('iframe[title="Letter viewer"]:visible');
     await sideReader.getByRole("button", { name: "Switch to B", exact: true }).click();
@@ -119,7 +119,7 @@ test("a reusable viewer moved into a collection stays in that collection when se
     await prepare(page);
     await page.goto(`/projects/${id}/extensions/pstdio.pstdio-artifacts/artifacts`);
     await expect(panel(page, "main").getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
-    await openTool(page, "side", "Letter viewer");
+    await openTool(page, "side", "New letter viewer");
     const side = panel(page, "side");
     const source = side.getByRole("tab", { name: /^Letter draft-/ });
     await expect(source).toBeVisible();
