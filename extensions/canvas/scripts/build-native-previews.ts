@@ -45,14 +45,15 @@ const buildPreviews = async (
   declarations.push(
     `const __UI_CANVAS_MODULES__={${files.map((file) => `${JSON.stringify(file)}:()=>import(${JSON.stringify(resolve(repoRoot, file))})`).join(",")}};`,
   );
+  const lookup = resolve(scratch, "catalog-lookup.ts");
+  await writeFile(lookup, declarations.map((code) => `export ${code}`).join("\n"));
+  declarations.length = 0;
+  declarations.push(`import {__UI_CANVAS_MODULES__,__UI_CANVAS_PROJECTS__} from ${JSON.stringify(lookup)};`);
   declarations.push(
-    (await readFile(resolve(repoRoot, "packages/canvas/src/native-preview-runtime.tsx"), "utf8")).replace(
-      '"./story-canvas-theme"',
-      JSON.stringify(resolve(import.meta.dir, "story-canvas-theme.tsx")),
-    ),
+    `import {createPreviewLoader} from ${JSON.stringify(resolve(repoRoot, "packages/canvas/src/native-preview-runtime.tsx"))};`,
   );
   declarations.push(
-    `import {mountPreviewRuntime} from ${JSON.stringify(resolve(import.meta.dir, "frame-runtime.tsx"))}; mountPreviewRuntime(loadPreview);`,
+    `import {mountPreviewRuntime} from ${JSON.stringify(resolve(import.meta.dir, "frame-runtime.tsx"))}; mountPreviewRuntime(createPreviewLoader(__UI_CANVAS_MODULES__,__UI_CANVAS_PROJECTS__));`,
   );
   const entry = resolve(scratch, "entry.tsx");
   await writeFile(entry, declarations.join("\n"));
@@ -155,7 +156,6 @@ const buildPreviews = async (
           return this.resolve(resolve(repoRoot, path, "src", id.slice(2)), importer, { skipSelf: true });
         },
         load(id: string) {
-          if (id.endsWith("/catalog/generated/frame-bundle.ts")) return 'export default "";';
           if (id === resolve(repoRoot, suites.website, "src/components/root-provider.tsx"))
             return 'import {ChakraProvider} from "@chakra-ui/react"; import {landingTheme} from "../theme/theme"; export const RootProvider = ({children}) => <ChakraProvider value={landingTheme}>{children}</ChakraProvider>;';
           if (id === resolve(repoRoot, suites.website, "src/services/analytics.ts"))
@@ -187,12 +187,27 @@ const buildPreviews = async (
       assetsInlineLimit: () => true,
       lib: { entry, name: "UICanvasPreview", formats: ["es"] },
       rollupOptions: {
-        output: { inlineDynamicImports: false },
+        output: {
+          inlineDynamicImports: false,
+          manualChunks: (id: string) => (id === lookup ? "canvas-catalog" : undefined),
+        },
       },
     },
   });
   const outputs = (Array.isArray(result) ? result : [result]).flatMap((result) => result.output) as NativeBuildOutput[];
-  await publishNativeBuild(outputs, { stories: stories.length, documents: documents.length });
+  await publishNativeBuild(
+    outputs,
+    { stories: stories.length, documents: documents.length },
+    {
+      repoRoot,
+      sources: files,
+      projects: Object.fromEntries(
+        Object.entries(suites).map(([name, path]) => [name, resolve(repoRoot, path, ".canvas/preview.tsx")]),
+      ),
+      nativeSource: resolve(repoRoot, "extensions/canvas/src/canvases/previews.tsx"),
+      catalogSource: lookup,
+    },
+  );
 };
 const catalog = await generateStoryCatalog();
 await buildPreviews(catalog.stories, catalog.documents);

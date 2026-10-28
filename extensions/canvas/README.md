@@ -31,7 +31,7 @@ Canvases use the diamond icon in navigation, resource search, breadcrumbs, and t
 - Use Ctrl/Meta + wheel or trackpad pinch to zoom around the pointer. Ordinary wheel input scrolls nested content while it can scroll, then pans the canvas.
 - Focus the canvas for arrow-key pan, `+`/`-` zoom, `F` to fit, and `0` to reset. Camera buttons stay fixed above the canvas. Reset keeps frame positions and preview drafts.
 
-Frames show a shared loading panel and spinner while their compiled preview starts.
+Frames show a shared loading panel and spinner while their compiled preview starts. Each canvas starts at most four frames at once, prioritizing selected and visible frames. A slot is released after module imports finish, before asynchronous fixture setup. Offscreen frames continue loading and loaded frames stay mounted to retain drafts.
 
 Each frame has a **Theme** menu: Follow app, Light, Dark, Solarized Light, Solarized Dark, Dracula, or Monokai. Its choice is saved independently. Theme changes preserve mounted inputs and local state. The canvas shell follows the workbench. Physical touch and trackpad behavior depends on the browser; automation does not prove those device behaviors.
 
@@ -73,7 +73,7 @@ UI Canvas indexes every current Canvas variant export and MDX document. Related 
 
 Each component has one frame. Its **Variant** menu, beside **Theme**, selects an original scenario’s predefined parameters. Selecting a variant resets that example’s local fixture state and keeps its frame theme and position. Every original scenario ID remains in the migration ledger and resource search.
 
-Scenarios render compiled original React components in individual preview documents. Each document owns its React, Chakra, theme, and application fixture state so several dialogs and store variants can be used together. Preview code is built into a compressed module archive; project storage cannot provide executable content. Application examples use local API and in-memory storage fixtures. Gallery token overrides stay local to each preview. Monaco uses its public worker factory to load the prebuilt classic workers from document-owned URLs, preserving TypeScript diagnostics inside the opaque sandbox. Website analytics is inert in previews. Examples contain rendering and fixture setup only. Critical behavioral assertions live in Playwright tests using the same preview renderer and sandbox. **Props and source** shows arguments, authored argument types, component references, the source hash, and complete source code.
+Scenarios render compiled original React components in individual preview documents. Each document owns its React, Chakra, theme, and application fixture state so several dialogs and store variants can be used together. Preview code is compiled into individually compressed modules; project storage cannot provide executable content. Application examples use local API and in-memory storage fixtures. Gallery token overrides stay local to each preview. Monaco uses its public worker factory to load the prebuilt classic workers from document-owned URLs, preserving TypeScript diagnostics inside the opaque sandbox. Website analytics is inert in previews. Examples contain rendering and fixture setup only. Critical behavioral assertions live in Playwright tests using the same preview renderer and sandbox. **Props and source** shows arguments, authored argument types, component references, the source hash, and complete source code.
 
 Documentation frames have content-driven heights. Resize observations and font completion refresh measured bounds. Fit and explicit reveal include a tall panel and its title. Fullscreen application examples retain a minimum viewport inside the documentation frame; lists and editors retain their own scrolling. Long prose, source listings, and API details have no inner vertical scroll area. The **IntrinsicDocumentation** verification story checks expansion and draft retention outside the canvas resource registry.
 
@@ -98,6 +98,12 @@ The extension's normal `build` command discovers current examples and reuses the
 `canvas:coverage` rejects stale builds or missing source destinations. It checks current live sources; it does not certify historical visual fidelity.
 
 Run `canvas:verify` inside the isolated Docker tooling container with Chromium installed. It checks representative critical interactions, documentation expansion, retained drafts, measured fit, and the unchanged populated 24-preview workload. It does not behaviorally test every variant. Failed cases retain Playwright traces and screenshots under `packages/canvas-tests/test-results/`. Browser interaction checks live in `packages/canvas-tests`; its static preview build is test-only. The live Canvas is the developer catalog. Physical touch, trackpad behavior, full visual fidelity, packaged verification, full tests, and CI remain separate checks.
+
+### Frame startup
+
+The extension loads each example's dependency graph through its private `preview.assets` command and the public package-file API. The viewer decodes shared immutable module bytes once and reuses them across frames. Each opaque sandbox still creates its own module URLs and owns its React, providers, theme, and fixture state. Reset and variant changes create a fresh sandbox. The catalog lookup table stays separate so one example does not download every other example. Syntax highlighting initializes only when a rendered component needs it.
+
+Run `bun run --cwd packages/canvas-tests perf:startup` for three cold-context repetitions of a button, a documentation frame, and the existing populated 24-frame workload. It reports navigation-to-first-ready and all-ready times, module counts, bytes, queue time, asset preparation, imports, setup, and commit time. Set `CANVAS_STARTUP_RESULTS` to a file path to retain raw JSON lines. The optional double-animation-frame paint marker can be absent for offscreen documents; it never gates readiness. This diagnostic benchmark preserves the normal test readiness allowance and does not replace the existing camera workload or budgets.
 
 ### Critical checks only
 

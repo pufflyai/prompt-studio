@@ -5,6 +5,7 @@
   "scripts": {
     "test": "bun ../../scripts/ci/run-ci-checks.ts --plan checks.json",
     "test:browser": "bun src/scripts/run-browser.ts",
+    "perf:startup": "bun x --no-install lerna run build:previews --scope canvas-tests && bun run test:browser --config playwright.startup-perf.config.ts",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "report": "playwright show-report",

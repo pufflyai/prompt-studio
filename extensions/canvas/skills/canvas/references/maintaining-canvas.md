@@ -50,6 +50,8 @@ The documentation frame must grow with prose, examples, source listings, and exp
 
 Keep source examples in colocated `*.canvas.tsx` files and suite providers in `.canvas/preview.tsx`. Preserve stable scenario IDs, exports, arguments, providers, and setup when moving sources. Behavioral assertions belong in critical Playwright checks, not example interaction functions. Do not add a second developer catalog. The private `@pstdio/canvas` package owns composition and authoring types. The Vite/Playwright harness in `packages/canvas-tests` uses the live preview renderer and sandbox. Keep behavioral assertions in critical browser checks.
 
+Frame startup loads the selected source and provider graph from packaged compressed modules. Share only immutable asset bytes between frames; keep each opaque sandbox and its module state independent. Prioritize selected and visible frames with at most four concurrent imports, release slots before asynchronous setup, and keep loaded frames mounted. Never gate readiness on animation frames in offscreen documents. Use `bun run --cwd packages/canvas-tests perf:startup` for cold-context startup measurements without changing existing workloads or allowances.
+
 Rebuild with `bun run --cwd scripts canvas:build`, regenerate source destinations with `canvas:inventory`, and run `canvas:coverage`. Run `canvas:verify` in the isolated Docker tools environment. Source and emitted-file hashes must match before claiming current coverage. Report gaps in live behavior or appearance honestly.
 
 ## Source handoff between workspaces

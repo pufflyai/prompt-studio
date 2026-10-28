@@ -85,6 +85,25 @@ test(
       const layout = cli(["canvas", "layout", "read", "--canvas", "shared-components"]);
       expect(layout.status).toBe(0);
       expect(JSON.parse(layout.stdout).camera.zoom).toBeGreaterThan(0);
+      // Critical: the installed package must supply the selected graph without a source checkout.
+      const assets = await fetch(`${url}/extensions/commands/pstdio.canvas.command.preview.assets/execute`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          source: "api",
+          params: { source: "packages/ui/src/components/primitives/button.canvas.tsx", cached: [] },
+        }),
+      });
+      expect(assets.status).toBe(200);
+      const result = await assets.json();
+      expect(result.outcome.ok).toBe(true);
+      const { entry, modules, files } = result.outcome.value;
+      expect(modules).toContain(entry);
+      expect(modules.length).toBeGreaterThan(0);
+      for (const name of modules) {
+        const code = Bun.gunzipSync(Buffer.from(files[name], "base64"));
+        expect(code.byteLength).toBeGreaterThan(0);
+      }
       const skills = await (await fetch(`${url}/skills`, { headers })).json();
       expect(skills).toContainEqual(
         expect.objectContaining({

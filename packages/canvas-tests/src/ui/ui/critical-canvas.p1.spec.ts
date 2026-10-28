@@ -39,3 +39,18 @@ test("the populated camera workload retains 24 previews and batches saves", asyn
   expect(result.saves).toBe(1);
   await info.attach("camera-workload", { body: JSON.stringify(result, null, 2), contentType: "application/json" });
 });
+
+// Critical: startup must stay responsive, and offscreen frames must not deadlock the queue waiting for paint.
+test("bounded startup reaches all 24 frames and reuses their immutable assets", async ({ page }) => {
+  const requested: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/preview-assets" && request.method() === "POST")
+      requested.push(request.postDataJSON().source);
+  });
+  const surface = await openSurface(page, "verification-populated");
+  await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(24);
+  const maximum = Number(await surface.locator("html").getAttribute("data-canvas-startup-maximum"));
+  expect(maximum).toBeGreaterThan(0);
+  expect(maximum).toBeLessThanOrEqual(4);
+  expect(requested).toEqual(["$runtime", "$native"]);
+});

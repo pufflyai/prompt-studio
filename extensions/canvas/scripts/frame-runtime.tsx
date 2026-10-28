@@ -1,31 +1,27 @@
 import "@pstdio/ui/style.css";
-import {
-  ChakraProvider,
-  installPrismGlobal,
-  psTheme,
-  type ThemePreferenceOption,
-  ThemePreferenceProvider,
-} from "@pstdio/ui";
+import { ChakraProvider, psTheme, type ThemePreferenceOption, ThemePreferenceProvider } from "@pstdio/ui";
 import { Component, type ComponentType, type ReactNode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { CanvasItem } from "../src/canvases/definitions";
-import { installFrameBootstrap } from "../src/frames/assets";
+import { createFrameAssetBridge } from "../src/frames/asset-bridge";
+import { installFrameAssetLoader } from "../src/frames/assets";
 import { type FrameMessage, type FrameRequest, frameProtocol } from "../src/frames/protocol";
 import { installFrameNavigation } from "./frame-navigation";
 import { FrameStory, inspect, type LoadedStory } from "./frame-story";
 
-const installBootstrap = (message: FrameRequest) => {
-  if (message.bootstrap) installFrameBootstrap(message.bootstrap);
-};
 const storage = { getItem: () => null, setItem: () => {} };
 export const mountPreviewRuntime = (
   load: (
     input: import("../src/catalog/definitions").StoryPreview | import("../src/catalog/definitions").DocumentPreview,
+    imported: () => void,
   ) => Promise<LoadedStory>,
 ) => {
+  const booted = performance.now();
   let nonce = "";
   const send = (message: Omit<FrameMessage, "protocol" | "nonce">) =>
     window.parent.postMessage({ protocol: frameProtocol, nonce, ...message }, "*");
+  const assets = createFrameAssetBridge(send);
+  const cleanupAssets = installFrameAssetLoader(assets.load);
   class Boundary extends Component<{ children: ReactNode }, { error?: string }> {
     state: { error?: string } = {};
     static getDerivedStateFromError(error: Error) {
@@ -41,15 +37,34 @@ export const mountPreviewRuntime = (
   const ReadyStory = (props: { loaded: LoadedStory; viewportHeight: number }) => {
     const { loaded, viewportHeight } = props;
     useEffect(() => {
+      let second = 0;
       const docs = loaded.parameters?.docs as { description?: { story?: string } } | undefined;
+      // Offscreen iframe animation frames can be suspended; readiness must not wait for paint.
       send({
         type: "loaded",
+        timings: {
+          ...loaded.timings,
+          bootstrapMs: booted - (performance.getEntriesByName("canvas:bootstrap-received")[0]?.startTime ?? 0),
+          committedMs: performance.now(),
+        },
         information: {
           args: inspect(loaded.args),
           argTypes: inspect(loaded.argTypes),
           description: docs?.description?.story,
         },
       });
+      const first = requestAnimationFrame(() => {
+        second = requestAnimationFrame(() =>
+          send({
+            type: "painted",
+            timings: { firstPaintMs: performance.now() },
+          }),
+        );
+      });
+      return () => {
+        cancelAnimationFrame(first);
+        cancelAnimationFrame(second);
+      };
     }, [loaded]);
     return (
       <FrameStory loaded={loaded} minimumHeight={loaded.parameters?.layout === "fullscreen" ? viewportHeight : 0} />
@@ -63,10 +78,14 @@ export const mountPreviewRuntime = (
       let active = true;
       let dispose: (() => void) | undefined;
       const loadContent = async () => {
-        await installPrismGlobal();
-        if (item.preview) return load(item.preview);
+        if (item.preview) return load(item.preview, () => send({ type: "imports-ready" }));
+        const started = performance.now();
         const { previews } = await import("../src/canvases/previews");
-        return { Component: previews[item.component!] as ComponentType<Record<string, unknown>> };
+        send({ type: "imports-ready" });
+        return {
+          Component: previews[item.component!] as ComponentType<Record<string, unknown>>,
+          timings: { importMs: performance.now() - started, setupMs: 0 },
+        };
       };
       void loadContent()
         .then((value) => {
@@ -106,8 +125,10 @@ export const mountPreviewRuntime = (
         if (nonce && message.nonce !== nonce) return;
         nonce = message.nonce;
         if (message.theme) setTheme(message.theme);
-        installBootstrap(message);
         switch (message.type) {
+          case "assets":
+            assets.receive(message);
+            break;
           case "render":
             setRequest(message);
             break;
@@ -167,6 +188,8 @@ export const mountPreviewRuntime = (
       mutationObserver.disconnect();
       document.fonts.removeEventListener("loadingdone", measure);
       reactRoot.unmount();
+      assets.dispose();
+      cleanupAssets();
     },
     { once: true },
   );

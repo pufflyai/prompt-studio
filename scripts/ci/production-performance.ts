@@ -13,6 +13,7 @@ const performanceChecks = (family: string) => {
   if (family === "browser")
     return [
       { id: "chat-rendering", command: ["bun", "run", "--cwd", "packages/ui", "perf:chat"] },
+      { id: "canvas-startup", command: ["bun", "run", "--cwd", "packages/canvas-tests", "perf:startup"] },
       {
         id: "frontend",
         command: [

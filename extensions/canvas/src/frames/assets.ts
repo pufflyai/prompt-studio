@@ -1,32 +1,17 @@
-import archive from "../catalog/generated/frame-bundle";
+import type { FrameBootstrap } from "./asset-loader";
 
-export interface FrameBootstrap {
-  scripts: Record<string, Blob>;
-  styles: Blob[];
-  entry: string;
-}
-let prepared: Promise<FrameBootstrap> | undefined;
-export const installFrameBootstrap = (bootstrap: FrameBootstrap) => {
-  prepared = Promise.resolve(bootstrap);
+export type { FrameBootstrap } from "./asset-loader";
+
+let load: ((source: string) => Promise<FrameBootstrap>) | undefined;
+export const installFrameAssetLoader = (loader: (source: string) => Promise<FrameBootstrap>) => {
+  load = loader;
+  return () => {
+    if (load === loader) load = undefined;
+  };
 };
-export const frameBootstrap = () => {
-  prepared ??= (async () => {
-    const bytes = Uint8Array.from(atob(archive), (character) => character.charCodeAt(0));
-    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-    const data = JSON.parse(await new Response(stream).text()) as {
-      scripts: Record<string, string>;
-      styles: string[];
-      entry: string;
-    };
-    return {
-      scripts: Object.fromEntries(
-        Object.entries(data.scripts).map(([name, source]) => [name, new Blob([source], { type: "text/javascript" })]),
-      ),
-      styles: data.styles.map((style) => new Blob([style], { type: "text/css" })),
-      entry: `canvas-preview:${data.entry}`,
-    };
-  })();
-  return prepared;
+export const frameBootstrap = (source: string) => {
+  if (!load) return Promise.reject(new Error("Preview asset loader is unavailable"));
+  return load(source);
 };
 
 // Each sandbox has an opaque origin. Transfer immutable blobs and create URLs in
@@ -38,6 +23,7 @@ const bootDocument = (protocol: string) => {
     if (event.source !== window.parent || message?.protocol !== protocol || message.type !== "bootstrap" || started)
       return;
     started = true;
+    performance.mark("canvas:bootstrap-received");
     const data: FrameBootstrap = message.bootstrap;
     const imports = Object.fromEntries(
       Object.entries(data.scripts).map(([name, blob]) => [`canvas-preview:${name}`, URL.createObjectURL(blob)]),
@@ -54,7 +40,7 @@ const bootDocument = (protocol: string) => {
     document.head.append(map);
     const entry = document.createElement("script");
     entry.type = "module";
-    entry.textContent = `import ${JSON.stringify(data.entry)};`;
+    entry.textContent = `import ${JSON.stringify(`canvas-preview:${data.entry}`)};`;
     document.body.append(entry);
   });
   window.parent.postMessage({ protocol, type: "bootstrap" }, "*");

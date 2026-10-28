@@ -10,6 +10,20 @@ import { readLayout } from "../src/layout";
 import { CanvasStage } from "../src/view/canvas-stage";
 import { verificationCanvases } from "./native-verification-fixtures";
 import "@pstdio/ui/style.css";
+import { createFrameAssetLoader } from "../src/frames/asset-loader";
+import { installFrameAssetLoader } from "../src/frames/assets";
+
+installFrameAssetLoader(
+  createFrameAssetLoader(async (request) => {
+    const response = await fetch(new URL("/preview-assets", location.href), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) throw new Error(await response.text());
+    return response.json();
+  }),
+);
 
 declare global {
   interface Window {
@@ -17,6 +31,16 @@ declare global {
   }
 }
 window.__CANVAS_VERIFICATION__ = { saves: 0, longTasks: [] };
+let maximumStarting = 0;
+new MutationObserver(() => {
+  maximumStarting = Math.max(maximumStarting, document.querySelectorAll('[data-frame-startup="loading"]').length);
+  document.documentElement.dataset.canvasStartupMaximum = String(maximumStarting);
+}).observe(document.body, {
+  subtree: true,
+  childList: true,
+  attributes: true,
+  attributeFilter: ["data-frame-startup"],
+});
 const longTasks = new PerformanceObserver((list) => {
   window.__CANVAS_VERIFICATION__.longTasks.push(...list.getEntries().map((entry) => entry.duration));
 });

@@ -1,8 +1,10 @@
 import { Box, Text } from "@chakra-ui/react";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { CanvasDefinition } from "../canvases/definitions";
 import { installItemMovement } from "../controller/item-movement";
 import type { CanvasRuntime } from "../controller/runtime";
+import { createFrameStartupQueue } from "../frames/startup-queue";
+import { FrameStartupContext } from "../frames/use-frame-startup";
 import { CanvasViewport } from "./canvas-viewport";
 import { ItemFrame } from "./item-frame";
 
@@ -14,6 +16,8 @@ export const CanvasStage = (props: StageProps) => {
   const { canvas, runtime } = props;
   const shell = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
+  const [startup] = useState(createFrameStartupQueue);
+  useLayoutEffect(() => () => startup.dispose(), [startup]);
   useLayoutEffect(() => {
     const container = shell.current!;
     runtime.mount(container, stage.current!);
@@ -41,17 +45,19 @@ export const CanvasStage = (props: StageProps) => {
     };
   }, [runtime]);
   return (
-    <CanvasViewport viewportRef={shell} name={canvas.name} runtime={runtime}>
-      <Text id="canvas-instructions" srOnly>
-        Select a frame before interacting with its contents. Click empty space or press Escape on the canvas to clear
-        selection. Drag empty space to pan. Use the move handle or its arrow keys to move a preview. Click a name to
-        copy it. Focus the canvas for arrow keys, plus and minus, F to fit, and 0 to reset the camera.
-      </Text>
-      <Box ref={stage} position="absolute" top="0" left="0" transformOrigin="0 0" data-canvas-stage>
-        {canvas.items.map((item) => (
-          <ItemFrame key={item.id} item={item} runtime={runtime} />
-        ))}
-      </Box>
-    </CanvasViewport>
+    <FrameStartupContext value={startup}>
+      <CanvasViewport viewportRef={shell} name={canvas.name} runtime={runtime}>
+        <Text id="canvas-instructions" srOnly>
+          Select a frame before interacting with its contents. Click empty space or press Escape on the canvas to clear
+          selection. Drag empty space to pan. Use the move handle or its arrow keys to move a preview. Click a name to
+          copy it. Focus the canvas for arrow keys, plus and minus, F to fit, and 0 to reset the camera.
+        </Text>
+        <Box ref={stage} position="absolute" top="0" left="0" transformOrigin="0 0" data-canvas-stage>
+          {canvas.items.map((item) => (
+            <ItemFrame key={item.id} item={item} runtime={runtime} />
+          ))}
+        </Box>
+      </CanvasViewport>
+    </FrameStartupContext>
   );
 };

@@ -103,7 +103,7 @@ export const ItemFrame = (props: ItemProps) => {
         data-canvas-preview={item.id}
       >
         <Box inert={!selected} pointerEvents={selected ? "auto" : "none"}>
-          <FramePreview key={variantId} item={selectedItem} runtime={runtime} />
+          <FramePreview key={variantId} item={selectedItem} runtime={runtime} container={wrapper} selected={selected} />
         </Box>
         {!selected && (
           <Button
