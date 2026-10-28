@@ -24,12 +24,13 @@ const readChannelFile = (home: string) =>
 // A switch in Settings starts an update check against the public feed. Switching to
 // nightly there could download a real nightly over the app under test, so the agent
 // moves to nightly and the person moves back to stable.
+// Update settings belong to the host; neither case needs default harness downloads.
 test("a person and an agent switch the same update channel", async () => {
   test.skip(process.platform === "win32", "Windows follows the stable channel only");
   let app: PackagedApp | null = null;
   try {
     const home = createPackagedHome();
-    app = await launchPackagedApp(home);
+    app = await launchPackagedApp(home, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
     const project = await createPackagedProject(app, "Update channel");
     await openPackagedProject(app.page, project);
 
@@ -55,7 +56,7 @@ test("Windows offers no update channel", async () => {
   let app: PackagedApp | null = null;
   try {
     const home = createPackagedHome();
-    app = await launchPackagedApp(home);
+    app = await launchPackagedApp(home, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
     const project = await createPackagedProject(app, "Stable only");
     await openPackagedProject(app.page, project);
 
