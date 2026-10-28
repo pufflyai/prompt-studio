@@ -36,7 +36,7 @@ for (const pid of JSON.parse(readFileSync(${JSON.stringify(pidFile)}, "utf8"))) 
         if (state === "Z" || state === "X") break;
       }
     } catch (error) {
-      if (error.code !== "ESRCH") throw error;
+      if (error.code !== "ESRCH" && error.code !== "ENOENT") throw error;
       break;
     }
     if (Date.now() >= deadline) { process.exitCode = 1; console.error("Leaked process", pid); break; }
