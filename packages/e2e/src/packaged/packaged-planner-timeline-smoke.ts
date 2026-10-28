@@ -237,7 +237,12 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
   expect(
     mixed.ticketRows.find((entry: { id: string }) => entry.id === ticket.id).attributes.reviewRequestItems,
   ).toMatchObject([
-    { label: "1", icon: "message-circle-warning", color: "orange", target: { page: { id: "ticket-requests" } } },
+    {
+      label: "1",
+      icon: "message-circle-warning",
+      color: "orange",
+      action: { kind: "panel", panel: { kind: "page-slot", page: { id: "timeline" }, id: "needs-attention" } },
+    },
   ]);
   const tree = await execute("ticket-files.tree.body", {
     renderer: { rendererId: "pstdio.pstdio-planner.view.ticket-files", resource: { type: "ticket", id: ticket.id } },

@@ -15,6 +15,7 @@ Each card shows the ticket's title and these properties:
 - The ID, such as `PS-12`. A sub-ticket also shows the IDs of its parent tickets.
 - The workspaces linked to the ticket, newest first. Each workspace badge shows the status of its running session, or of its last session when none is running. Select a badge to open the workspace.
 - The Type and Priority tags.
+- **Needs attention**, shown by default. Its count opens the ticket's request forms in the Side Panel while Tickets stays open. Orange counts show pending items; green counts show resolved items. Closing the panel keeps the board open.
 
 ### Create a ticket
 
@@ -39,6 +40,8 @@ You can also create tickets from a terminal with [`pst tickets create`](0004-cli
 The display menu switches between **Board** and **List**. It also sets the grouping, the sub-grouping, the ordering, and the properties shown on each card.
 
 Every view, including **All**, can be edited and renamed. Save your filter and display changes with **Save view**. Right-click a view to rename, duplicate, or delete it. At least one view must remain.
+
+Existing saved display choices are preserved. Enable **Needs attention** in Display settings if a saved view hides it. In Project Timeline, the attention count also opens the same Side Panel while keeping the timeline open. Selecting another ticket's count reuses that panel.
 
 The board starts with a **Ticket is Active** filter. Remove it to show both active and archived tickets, or choose **Archived** to show only archived tickets. Use the filter menu to filter by status, parent, or tag.
 

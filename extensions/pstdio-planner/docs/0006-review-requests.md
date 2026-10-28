@@ -34,7 +34,7 @@ Revising an answer does not undo actions already taken using the earlier answer.
 
 New requests need a ticket that is not done. Answers and cancellations still work after the ticket is done, because a merge can finish the ticket before its approval request is answered. Deleting a ticket deletes its requests.
 
-Answering or cancelling the last open request resolves pending input when no unreadable record remains. Board cards with pending input open the ticket's **Needs attention** page directly. The ticket sidebar stays beside the forms, so the ticket body is one click away. The forms use the same question controls as questions an agent asks in chat: one step tab per question, with radio buttons or checkboxes for choices. Generic UI and CLI tag edits cannot create a false blocker or hide a real request.
+Answering or cancelling the last open request resolves pending input when no unreadable record remains. In Tickets and Project Timeline, attention counts open the ticket's forms in the Side Panel without leaving the current view. Board cards with pending input open that panel too. Choosing another ticket's attention count reuses the panel and loads that ticket's requests. The ticket sidebar's **Needs attention** entry still opens the full page beside the ticket navigation. Both surfaces use the same question controls as questions an agent asks in chat: one step tab per question, with radio buttons or checkboxes for choices. Generic UI and CLI tag edits cannot create a false blocker or hide a real request.
 
 ## CLI
 
