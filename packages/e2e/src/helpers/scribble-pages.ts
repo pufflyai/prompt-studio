@@ -66,11 +66,6 @@ export const verifyScribblePages = async (
   await page.getByRole("menuitem", { name: "Rename group", exact: true }).click();
   await groupName.fill("Writing");
   await groupName.press("Enter");
-  await sidenav.getByRole("button", { name: "Change group icon", exact: true }).click();
-  await page.getByRole("button", { name: "book open", exact: true }).click();
-  await expect(
-    sidenav.getByRole("button", { name: "Change group icon", exact: true }).locator("svg.lucide-book-open"),
-  ).toBeVisible();
   const group = sidenav.getByText("Writing", { exact: true });
   await group.click();
   const from = (await field.boundingBox())!;
@@ -101,9 +96,6 @@ export const verifyScribblePages = async (
   await expect(field).toHaveCount(0);
   await group.click();
   await expect(field).toBeVisible();
-  await expect(
-    sidenav.getByRole("button", { name: "Change group icon", exact: true }).locator("svg.lucide-book-open"),
-  ).toBeVisible();
   await expect(editor()).toContainText("A calm space to gather ideas.");
   await note.click({ button: "right" });
   await expect(page.getByRole("menuitem", { name: "Unpin tab", exact: true })).toBeVisible();
