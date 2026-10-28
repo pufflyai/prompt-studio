@@ -1,6 +1,7 @@
 import { defineExtension, defineKeybinding } from "@pstdio/sdk/extensions";
 import { createNoteCommand, deleteNoteCommand, renameNoteCommand, resolveNoteCommand } from "./src/commands";
 import { createFolderCommand, deleteFolderCommand, moveNoteCommand, renameFolderCommand } from "./src/folder-commands";
+import { noteShortcuts } from "./src/keyboard";
 import { documents } from "./src/mounts";
 import { editor, note, notesPage } from "./src/pages";
 import { resolveNotePathCommand } from "./src/resolve-note-path";
@@ -25,11 +26,13 @@ export default defineExtension({
     moveNoteCommand,
   ],
   keybindings: [
-    defineKeybinding({ id: "open-notes", key: "Alt+Shift+O", action: { kind: "page", page: notesPage.ref } }),
+    ...noteShortcuts,
     defineKeybinding({
-      id: "new-note",
-      key: "Mod+Alt+N",
-      action: { kind: "command", target: { command: createNoteCommand.ref } },
+      id: "go-notes",
+      layer: "go",
+      key: "N",
+      sticky: true,
+      action: { kind: "page", page: notesPage.ref },
     }),
   ],
   navigationTrees: [notesTreeNavigation],

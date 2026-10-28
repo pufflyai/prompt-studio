@@ -1,6 +1,7 @@
 import {
   defineArtifactMount,
   defineExtension,
+  defineKeybinding,
   defineNavigationItem,
   definePage,
   defineSkill,
@@ -34,6 +35,38 @@ const fontEditorPage = definePage({
 });
 const extension = defineExtension({
   commands: fontCommands,
+  keybindings: [
+    defineKeybinding({
+      id: "keyboard-open",
+      layer: "go",
+      key: "F",
+      sticky: true,
+      action: { kind: "page", page: fontEditorPage.ref },
+    }),
+    defineKeybinding({
+      id: "create-glyph",
+      layer: "create",
+      key: "G",
+      action: { kind: "command", target: { command: fontCommands.find((command) => command.id === "glyph.add")!.ref } },
+    }),
+    ...(
+      [
+        ["glyph.rename", "R"],
+        ["glyph.codepoint", "C"],
+        ["build", "B"],
+        ["verify", "V"],
+      ] as const
+    ).map(([id, key]) =>
+      defineKeybinding({
+        id: `current-${id}`,
+        layer: "current",
+        key,
+        targetScope: "panel",
+        when: { view: fontEditor.ref },
+        action: { kind: "command", target: { command: fontCommands.find((command) => command.id === id)!.ref } },
+      }),
+    ),
+  ],
   views: [fontEditor],
   pages: [fontEditorPage],
   navigationItems: [

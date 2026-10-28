@@ -1,6 +1,7 @@
 import {
   defineExtension,
   defineHook,
+  defineKeybinding,
   defineSchedule,
   defineSkill,
   packageAsset,
@@ -14,6 +15,45 @@ import { channelResource, postMedia, runResource, settingsSection, threadMedia, 
 
 export default defineExtension({
   commands: Object.values(commands),
+  keybindings: [
+    defineKeybinding({ id: "keyboard-open", layer: "go", key: "R", sticky: true, action: navigationItems[0]!.action }),
+    defineKeybinding({
+      id: "create-thread",
+      layer: "create",
+      key: threadResource.ref.id[0]!.toUpperCase(),
+      action: { kind: "command", target: { command: commands["save-thread"].ref } },
+    }),
+    defineKeybinding({
+      id: "create-idea",
+      layer: "create",
+      key: "I",
+      targetScope: "resource",
+      when: { resourceType: [threadResource.ref] },
+      action: { kind: "command", target: { command: commands["save-current-idea"].ref } },
+    }),
+    ...(
+      [
+        ["run-daily", "R"],
+        ["list-digest", "D"],
+      ] as const
+    ).map(([id, key]) =>
+      defineKeybinding({
+        id: `current-${id}`,
+        layer: "current",
+        key,
+        targetScope: "project",
+        action: { kind: "command", target: { command: commands[id].ref } },
+      }),
+    ),
+    defineKeybinding({
+      id: "current-status",
+      layer: "current",
+      key: "S",
+      targetScope: "resource",
+      when: { resourceType: [threadResource.ref] },
+      action: { kind: "command", target: { command: commands["set-current-thread-status"].ref } },
+    }),
+  ],
   settings: { properties: settingProperties },
   views,
   pages,

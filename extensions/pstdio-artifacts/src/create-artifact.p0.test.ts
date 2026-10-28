@@ -2,6 +2,19 @@ import { expect, test } from "bun:test";
 import type { CommandContext, NavigationTarget } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
 import { commands } from "./commands";
+import { libraryTarget } from "./contracts";
+
+test("artifact creation opens the existing library creation choices", async () => {
+  const opened: NavigationTarget[] = [];
+  await commands["open-creation"].run(
+    ...makeCommandArgs({
+      storage: createMemoryStorage(),
+      params: {},
+      overrides: { navigation: { open: (target) => opened.push(target) } },
+    }),
+  );
+  expect(opened).toEqual([libraryTarget]);
+});
 
 test.each(["brief", "diagram"])("starts and opens a project creation session for %s", async (example) => {
   const started: Parameters<CommandContext["sessions"]["create"]>[0][] = [];

@@ -1,5 +1,6 @@
 import {
   defineExtension,
+  defineKeybinding,
   defineNavigationItem,
   definePage,
   defineSkill,
@@ -47,6 +48,37 @@ const version = definePage({
 
 export default defineExtension({
   commands: Object.values(commands),
+  keybindings: [
+    defineKeybinding({
+      id: "keyboard-open",
+      layer: "go",
+      key: "S",
+      sticky: true,
+      action: { kind: "page", page: home.ref },
+    }),
+    defineKeybinding({
+      id: "create-shader",
+      layer: "create",
+      key: shaderVersion.ref.id[0]!.toUpperCase(),
+      action: { kind: "command", target: { command: commands["shaders.add"].ref } },
+    }),
+    ...(
+      [
+        ["current.rename", "R"],
+        ["current.duplicate", "D"],
+        ["current.compare", "C"],
+      ] as const
+    ).map(([id, key]) =>
+      defineKeybinding({
+        id: `current-${id}`,
+        layer: "current",
+        key,
+        targetScope: "resource",
+        when: { resourceType: [shaderVersion.ref] },
+        action: { kind: "command", target: { command: commands[id].ref } },
+      }),
+    ),
+  ],
   resourceKinds: [shaderVersion],
   views: [preview, versionsTree, controls],
   pages: [home, version],
