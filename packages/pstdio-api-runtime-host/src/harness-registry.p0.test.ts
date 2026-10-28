@@ -59,6 +59,17 @@ const startInput: HarnessStartInput = {
 };
 
 describe("harness detection isolation", () => {
+  it("rejects a retired harness after preparation has already completed", async () => {
+    const detect = mock(() => ({ available: true }));
+    const registry = createHarnessRegistry([record({ prepare: async () => {}, detect })], buildContext);
+    const harness = registry.list()[0]!;
+    expect((await harness.detect()).available).toBe(true);
+    const pending = harness.detect();
+    const closing = registry.dispose();
+    await expect(pending).rejects.toThrow("disposed");
+    await closing;
+    expect(detect).toHaveBeenCalledTimes(1);
+  });
   it("finishes preparation before disposing provider resources", async () => {
     const started = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
