@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createNativeSourceKey } from "pstdio-api-contracts";
 import type { JsonObject } from "pstdio-api-contracts/extension-kernel";
@@ -49,8 +49,12 @@ test("a native workspace source preserves its UTF-8 byte-order mark", async () =
   expect(loaded.content.content).toBe("\ufeff# Source\r\n");
 });
 
-test("a workspace file removed before full-source validation is a recoverable source failure", async () => {
+test.each([
+  "missing",
+  "directory",
+])("a %s workspace source during full-source validation remains recoverable", async (kind) => {
   await rm(join(fixture.root, "notes.txt"));
+  if (kind === "directory") await mkdir(join(fixture.root, "notes.txt"));
   await expect(
     loadNativeMarkdownFile(fixture.deps, {
       ...target,
