@@ -174,6 +174,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           },
           debounceMs: SAVE_DEBOUNCE_MS,
           saveMode: manualSave ? "manual" : "auto",
+          saveKey: loadKey,
           load: () => load(),
           onStateChange: (state) => {
             if (!cancelled) setEditState(state);

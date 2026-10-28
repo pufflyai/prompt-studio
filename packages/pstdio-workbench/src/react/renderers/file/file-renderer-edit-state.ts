@@ -14,6 +14,7 @@ import type {
   FileRendererRefreshOrigin,
   FileRendererSaveResult,
 } from "../../../core/registries/renderers/file-renderer-registry";
+import { acquireFileSaveTurn } from "./file-renderer-save-queue";
 
 export interface FileEditControllerState {
   dirty: boolean;
@@ -26,6 +27,7 @@ export interface FileEditControllerInput {
   binding: Omit<FileRendererRefreshOrigin, "operationId"> & { resourceKey?: string };
   debounceMs: number;
   saveMode?: "auto" | "manual";
+  saveKey?: string;
   load: (event?: FileRendererRefreshEnvelope) => void;
   save: (value: string, origin: FileRendererRefreshOrigin) => Promise<FileRendererSaveResult | undefined>;
   createOperationId?: () => string;
@@ -41,6 +43,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
   let draft: string | null = null;
   let activeSave: { value: string; origin: FileRendererRefreshOrigin } | null = null;
   let pendingSave: string | null = null;
+  let saveTurn: ReturnType<typeof acquireFileSaveTurn> | undefined;
   let saveError: string | undefined;
   let deferredRevision: string | undefined;
   let genericRefreshDeferred = false;
@@ -108,7 +111,10 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     };
     activeSave = { value, origin };
     notify();
-    void Promise.resolve(input.save(value, origin))
+    if (input.saveKey) saveTurn ??= acquireFileSaveTurn(input.saveKey);
+    const save = () => input.save(value, origin);
+    const saving = saveTurn?.ready ? saveTurn.ready.then(save) : Promise.resolve(save());
+    void saving
       .then((result) => {
         if (activeSave?.origin.operationId !== origin.operationId) return;
         activeSave = null;
@@ -138,9 +144,13 @@ export const createFileEditController = (input: FileEditControllerInput) => {
       .finally(() => {
         const requested = pendingSave;
         pendingSave = null;
-        if (requested === null) return;
-        saveError = undefined;
-        runSave(requested);
+        if (requested !== null && !removed) {
+          saveError = undefined;
+          runSave(requested);
+          return;
+        }
+        saveTurn?.release();
+        saveTurn = undefined;
       });
   };
 

@@ -40,6 +40,47 @@ const createHarness = (input?: { failSaves?: number; saveRevision?: string; save
 };
 
 describe("manual file editing", () => {
+  test("reopening a file saves after the previous editor's requested writes", async () => {
+    let finishFirst!: () => void;
+    let content = "loaded";
+    const saves: string[] = [];
+    const createEditor = (saveKey: string) =>
+      createFileEditController({
+        binding,
+        saveKey,
+        debounceMs: DEBOUNCE_MS,
+        saveMode: "manual",
+        load: () => {},
+        save: async (value) => {
+          saves.push(value);
+          if (value === "first") await new Promise<void>((resolve) => (finishFirst = resolve));
+          content = value;
+        },
+      });
+    const oldEditor = createEditor("reopened-file");
+    oldEditor.setBaseline(content);
+    oldEditor.handleChange("first");
+    oldEditor.flush();
+    await tick(0);
+    oldEditor.handleChange("second");
+    oldEditor.flush();
+    const newEditor = createEditor("reopened-file");
+    newEditor.setBaseline(content);
+    newEditor.handleChange("newest");
+    newEditor.flush();
+    const otherEditor = createEditor("another-file");
+    otherEditor.setBaseline("other loaded");
+    otherEditor.handleChange("independent");
+    otherEditor.flush();
+    await tick(0);
+    expect(saves).toEqual(["first", "independent"]);
+    finishFirst();
+    await tick();
+    expect(saves).toEqual(["first", "independent", "second", "newest"]);
+    expect(content).toBe("newest");
+    expect(newEditor.getState()).toEqual({ dirty: false, saving: false });
+  });
+
   test.each(["third", "first"])("typing %s after a queued save remains unsaved", async (latest) => {
     let finishFirst!: () => void;
     let loads = 0;
