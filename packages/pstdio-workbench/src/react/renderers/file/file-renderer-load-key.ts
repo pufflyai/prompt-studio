@@ -6,6 +6,7 @@ interface FileRendererLoadKeyInput {
   fileRendererId: string;
   resource: ResourceRef | undefined;
   pageParams?: PageParams;
+  documentKey?: string;
 }
 const stableValue = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -18,6 +19,10 @@ const stableValue = (value: unknown): unknown => {
 };
 export const createFileRendererLoadKey = (input: FileRendererLoadKeyInput) => {
   const { fileRendererId, resource } = input;
+  if (input.documentKey !== undefined) {
+    const key = `${JSON.stringify(resourceKey(resource))}:${fileRendererId}:${input.documentKey}`;
+    return input.pageParams ? `${key}:${JSON.stringify(stableValue(input.pageParams))}` : key;
+  }
   const resourceValue = resource
     ? stableValue({
         id: resource.id,

@@ -1,13 +1,12 @@
 import { Box, Center, Flex, Image, Text } from "@chakra-ui/react";
 import type { FileSourcePosition } from "@pstdio/sdk/extensions";
 import { AlertMessage, EmptyState } from "@pstdio/ui";
+import { CodeEditor } from "@pstdio/ui/diff";
 import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
-import { lazy, type ReactNode, type RefObject, Suspense, useLayoutEffect } from "react";
+import { type ReactNode, type RefObject, Suspense, useLayoutEffect } from "react";
 import type { FileRendererContent } from "../../../core";
 import { FileRendererLoading } from "./file-renderer-loading";
 import { resolveFileRendererPresentation } from "./file-renderer-presentation";
-
-const CodeEditor = lazy(() => import("@pstdio/ui/diff").then((module) => ({ default: module.CodeEditor })));
 
 interface FileRendererContentViewProps {
   content: FileRendererContent | null;

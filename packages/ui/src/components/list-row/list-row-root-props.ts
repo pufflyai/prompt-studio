@@ -13,6 +13,7 @@ const isFixedHeightDenseVariant = (variant: ListRowProps["variant"]) =>
   variant === "compact" || variant === "full-width" || variant === "empty-state";
 
 export const resolveListRowSizing = (variant: ListRowProps["variant"], hasDescription: boolean) => {
+  if (variant === "file" && !hasDescription) return { rowHeight: "6", minHeight: undefined };
   if (variant === "collection" && !hasDescription) {
     return { rowHeight: "collection-row", minHeight: undefined };
   }

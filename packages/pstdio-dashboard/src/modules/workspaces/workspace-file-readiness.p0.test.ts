@@ -110,10 +110,7 @@ describe("workspace file readiness", () => {
     const sections = await load();
 
     expect(sections[0]?.nodes[0]?.id).toBe("notes.md");
-    expect([...requests].sort()).toEqual([
-      "/v1/workspaces/readiness-workspace/diff-files?mode=fork_point",
-      "/v1/workspaces/readiness-workspace/files?limit=500",
-    ]);
+    expect([...requests].sort()).toEqual(["/v1/workspaces/readiness-workspace/files?limit=500"]);
   });
 
   test.each([
@@ -185,6 +182,6 @@ describe("workspace file readiness", () => {
     writer.upsert({ ...row, initializing: false });
     const sections = await load();
     expect(sections[0]?.nodes[0]?.id).toBe("notes.md");
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(1);
   });
 });
