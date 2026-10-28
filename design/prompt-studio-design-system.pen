@@ -15329,7 +15329,7 @@
                       "type": "frame",
                       "id": "Uke3B",
                       "name": "cmp/WorkbenchNavChrome",
-                      "context": "Owns history, breadcrumbs, resource actions, and panel controls. Sidenav, Bottom Panel, and Side Panel controls stay together at the trailing right edge in that order, whether the Sidenav is open or closed. The compact 2xs icon-button size is shared by Kanban Filter and Display controls.",
+                      "context": "Owns history, breadcrumbs, resource actions, live presence across open tabs, and panel controls. Friendly-name presence sits after the flexible spacer and before trailing panel controls. The slot is empty when no remote editor is connected. IDs remain internal.",
                       "reusable": true,
                       "width": "fill_container",
                       "height": 40,
@@ -15512,6 +15512,41 @@
                           "name": "Nav Chrome spacer",
                           "width": "fill_container",
                           "height": 1
+                        },
+                        {
+                          "type": "frame",
+                          "id": "BNAPj",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Workbench presence service",
+                          "enabled": false,
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "MPHxJ",
+                              "type": "ref",
+                              "ref": "UjBEZ",
+                              "name": "Alex connected",
+                              "theme": {
+                                "palette": "blue"
+                              }
+                            },
+                            {
+                              "id": "V3vZx",
+                              "type": "ref",
+                              "ref": "UjBEZ",
+                              "name": "Sam connected",
+                              "theme": {
+                                "palette": "purple"
+                              },
+                              "descendants": {
+                                "gSxhT": {
+                                  "content": "Sam"
+                                }
+                              }
+                            }
+                          ]
                         },
                         {
                           "id": "kUCSG",
@@ -226948,7 +226983,7 @@
           "type": "frame",
           "id": "UjBEZ",
           "name": "cmp/DocumentParticipant",
-          "context": "Connection-bound presence. One chip per remote editor tab. Show account and device in the accessible tooltip. Remove on leave, disconnect or lease expiry; do not retain an offline participant.",
+          "context": "Connection-bound presence in the workbench header across all open tabs. Show friendly names only; keep device and session IDs internal. Remove when no open tab still reports the remote editor.",
           "theme": {
             "palette": "blue"
           },
@@ -226976,7 +227011,7 @@
               "id": "gSxhT",
               "name": "Participant label",
               "fill": "$ds-fg",
-              "content": "Alex · Laptop",
+              "content": "Alex",
               "fontFamily": "$font-body",
               "fontSize": "$chip-fs",
               "fontWeight": "normal"
@@ -227049,7 +227084,7 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "Typing and selections travel live. Offline edits stay available; remote carets and participants disappear when their connection ends.",
+          "content": "Presence belongs to the right side of the workbench breadcrumb header across open tabs. Show friendly names only. The document has no custom title header or local-save footer. Typing and selections stay live.",
           "lineHeight": 1.5,
           "fontFamily": "$font-body",
           "fontSize": 14,
@@ -227075,17 +227110,15 @@
         {
           "type": "frame",
           "id": "J8u5cu",
-          "name": "Native file header",
+          "name": "Workbench breadcrumb header",
           "width": "fill_container",
-          "height": 44,
+          "height": 40,
+          "fill": "$ds-bg-subtle",
           "stroke": "$ds-border",
-          "strokeWidth": {
-            "bottom": 1
-          },
           "gap": 12,
           "padding": [
             0,
-            16
+            10
           ],
           "justifyContent": "space_between",
           "alignItems": "center",
@@ -227093,9 +227126,9 @@
             {
               "type": "text",
               "id": "dCtfR",
-              "name": "File title",
+              "name": "Breadcrumb trail",
               "fill": "$ds-fg",
-              "content": "Project plan",
+              "content": "Notes  /  Project plan",
               "fontFamily": "$font-body",
               "fontSize": 14,
               "fontWeight": "normal"
@@ -227103,7 +227136,7 @@
             {
               "type": "frame",
               "id": "hrSDq",
-              "name": "Remote participants",
+              "name": "Workbench presence across open tabs",
               "gap": 6,
               "alignItems": "center",
               "children": [
@@ -227117,7 +227150,7 @@
                   },
                   "descendants": {
                     "gSxhT": {
-                      "content": "Alex · Laptop"
+                      "content": "Alex"
                     }
                   }
                 },
@@ -227131,7 +227164,7 @@
                   },
                   "descendants": {
                     "gSxhT": {
-                      "content": "Sam · Desktop"
+                      "content": "Sam"
                     }
                   }
                 }
@@ -227273,32 +227306,6 @@
               ]
             }
           ]
-        },
-        {
-          "type": "frame",
-          "id": "Xy29Q",
-          "name": "Local save and connection state",
-          "context": "Use the existing project sync status. Presence disappears offline; local editing continues.",
-          "width": "fill_container",
-          "height": 28,
-          "fill": "$ds-bg-subtle",
-          "padding": [
-            0,
-            16
-          ],
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "text",
-              "id": "gWJPO",
-              "name": "Sync state",
-              "fill": "$ds-fg-muted",
-              "content": "Synced",
-              "fontFamily": "$font-body",
-              "fontSize": 12,
-              "fontWeight": "normal"
-            }
-          ]
         }
       ]
     },
@@ -227320,17 +227327,15 @@
         {
           "type": "frame",
           "id": "XbXSl",
-          "name": "Native file header",
+          "name": "Workbench breadcrumb header",
           "width": "fill_container",
-          "height": 44,
+          "height": 40,
+          "fill": "$ds-bg-subtle",
           "stroke": "$ds-border",
-          "strokeWidth": {
-            "bottom": 1
-          },
           "gap": 12,
           "padding": [
             0,
-            16
+            10
           ],
           "justifyContent": "space_between",
           "alignItems": "center",
@@ -227338,9 +227343,9 @@
             {
               "type": "text",
               "id": "T3aGfr",
-              "name": "File title",
+              "name": "Breadcrumb trail",
               "fill": "$ds-fg",
-              "content": "Project plan",
+              "content": "Notes  /  Project plan",
               "fontFamily": "$font-body",
               "fontSize": 14,
               "fontWeight": "normal"
@@ -227348,7 +227353,7 @@
             {
               "type": "frame",
               "id": "NdQOL",
-              "name": "Remote participants",
+              "name": "Workbench presence across open tabs",
               "gap": 6,
               "alignItems": "center",
               "children": [
@@ -227362,7 +227367,7 @@
                   },
                   "descendants": {
                     "gSxhT": {
-                      "content": "Alex · Laptop"
+                      "content": "Alex"
                     }
                   }
                 },
@@ -227376,7 +227381,7 @@
                   },
                   "descendants": {
                     "gSxhT": {
-                      "content": "Sam · Desktop"
+                      "content": "Sam"
                     }
                   }
                 }
@@ -227518,32 +227523,6 @@
               ]
             }
           ]
-        },
-        {
-          "type": "frame",
-          "id": "bUwRU",
-          "name": "Local save and connection state",
-          "context": "Use the existing project sync status. Presence disappears offline; local editing continues.",
-          "width": "fill_container",
-          "height": 28,
-          "fill": "$ds-bg-subtle",
-          "padding": [
-            0,
-            16
-          ],
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "text",
-              "id": "y4H9Rg",
-              "name": "Sync state",
-              "fill": "$ds-fg-muted",
-              "content": "Synced",
-              "fontFamily": "$font-body",
-              "fontSize": 12,
-              "fontWeight": "normal"
-            }
-          ]
         }
       ]
     },
@@ -227565,17 +227544,15 @@
         {
           "type": "frame",
           "id": "nwmPv",
-          "name": "Native file header",
+          "name": "Workbench breadcrumb header",
           "width": "fill_container",
-          "height": 44,
+          "height": 40,
+          "fill": "$ds-bg-subtle",
           "stroke": "$ds-border",
-          "strokeWidth": {
-            "bottom": 1
-          },
           "gap": 12,
           "padding": [
             0,
-            16
+            10
           ],
           "justifyContent": "space_between",
           "alignItems": "center",
@@ -227583,9 +227560,9 @@
             {
               "type": "text",
               "id": "KFdvC",
-              "name": "File title",
+              "name": "Breadcrumb trail",
               "fill": "$ds-fg",
-              "content": "Project plan",
+              "content": "Notes  /  Project plan",
               "fontFamily": "$font-body",
               "fontSize": 14,
               "fontWeight": "normal"
@@ -227676,32 +227653,6 @@
               "lineHeight": 1.5,
               "fontFamily": "$font-body",
               "fontSize": 16,
-              "fontWeight": "normal"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "O8cWQB",
-          "name": "Local save and connection state",
-          "context": "Use the existing project sync status. Presence disappears offline; local editing continues.",
-          "width": "fill_container",
-          "height": 28,
-          "fill": "$ds-bg-subtle",
-          "padding": [
-            0,
-            16
-          ],
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "text",
-              "id": "rMBcH",
-              "name": "Sync state",
-              "fill": "$ds-fg-muted",
-              "content": "Saved locally · Offline",
-              "fontFamily": "$font-body",
-              "fontSize": 12,
               "fontWeight": "normal"
             }
           ]

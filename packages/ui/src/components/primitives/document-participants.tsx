@@ -17,7 +17,6 @@ export const documentParticipantColors = [
 export interface DocumentParticipant {
   id: string;
   label: string;
-  deviceName: string;
   color: (typeof documentParticipantColors)[number];
 }
 
@@ -34,7 +33,7 @@ export const DocumentParticipants = (props: DocumentParticipantsProps) => {
   return (
     <Box role="list" aria-label={label} css={styles.participants}>
       {participants.map((participant) => {
-        const identity = `${participant.label} · ${participant.deviceName}`;
+        const identity = participant.label;
         return (
           <Tooltip key={participant.id} content={identity}>
             <Box role="listitem" aria-label={identity} colorPalette={participant.color} css={styles.participant}>

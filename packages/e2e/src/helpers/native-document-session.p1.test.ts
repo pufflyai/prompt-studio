@@ -79,6 +79,84 @@ test("two browser sessions receive concurrent local edits through the host strea
   expect(peer.getSnapshot().pending).toBe(false);
 }, 5_000);
 
+test("a closed retained editor leaves presence while keeping its pending document and acknowledgement", async () => {
+  const f = await fixture();
+  const peer = createNativeDocumentSession(f);
+  cleanup.push(() => peer.close());
+  await peer.start();
+  const participants = (count: number) =>
+    new Promise<void>((resolve) => {
+      const check = () => {
+        if (peer.getSnapshot().participants.length !== count) return;
+        stop();
+        resolve();
+      };
+      const stop = peer.subscribe(check);
+      check();
+    });
+  await participants(1);
+  const document = f.session.getSnapshot().document!;
+  const gate = f.pauseNextAcknowledgement();
+  document.getText("content").insert(0, "RETAINED ");
+  const saving = f.session.flush();
+  await gate.entered.promise;
+  try {
+    f.session.setOpen(false);
+    expect(f.session.getSnapshot().document).toBe(document);
+    expect(f.session.getSnapshot().pending).toBe(true);
+    await participants(0);
+  } finally {
+    gate.release.resolve();
+  }
+  await saving;
+  f.session.setOpen(true);
+  await participants(1);
+  await waitFor(peer, "RETAINED first\nlast");
+  expect(f.session.getSnapshot().document).toBe(document);
+  expect(f.session.getSnapshot().pending).toBe(false);
+}, 5_000);
+
+test("a late initial stream cannot restore a closed retained editor's presence", async () => {
+  const host = await createNativeDocumentSessionFixture();
+  const first = createNativeDocumentSession(host);
+  const second = createNativeDocumentSession(host);
+  let gate: ReturnType<typeof host.pauseNextStream> | undefined;
+  const until = (session: typeof first, check: () => boolean) =>
+    new Promise<void>((resolve) => {
+      const listener = () => {
+        if (!check()) return;
+        stop();
+        resolve();
+      };
+      const stop = session.subscribe(listener);
+      listener();
+    });
+  try {
+    await first.start();
+    await until(first, () => first.getSnapshot().connected);
+    gate = host.pauseNextStream();
+    await second.start();
+    const document = second.getSnapshot().document;
+    await gate.entered.promise;
+    await until(first, () => first.getSnapshot().participants.length === 1);
+    second.setOpen(false);
+    gate.release.resolve();
+    await until(first, () => first.getSnapshot().participants.length === 0);
+    expect(second.getSnapshot().connected).toBe(false);
+    expect(second.getSnapshot().participants).toEqual([]);
+    expect(second.getSnapshot().document).toBe(document);
+    second.setOpen(true);
+    await until(first, () => first.getSnapshot().participants.length === 1);
+    await until(second, () => second.getSnapshot().connected);
+    expect(second.getSnapshot().document).toBe(document);
+  } finally {
+    gate?.release.resolve();
+    host.setOffline(false);
+    await Promise.allSettled([first.close(), second.close()]);
+    await host.close();
+  }
+}, 5_000);
+
 test("an edit arriving while its preceding acknowledgement waits is saved in the next batch", async () => {
   const f = await fixture();
   const gate = f.pauseNextAcknowledgement();

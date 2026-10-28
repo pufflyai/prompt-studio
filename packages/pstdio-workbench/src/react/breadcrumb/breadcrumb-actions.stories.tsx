@@ -5,6 +5,7 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { runResourceMutation } from "../../extensions/host/workbench-resource-mutation";
 import { PaletteParamsDialog } from "../command-palette/palette-params-dialog";
+import { WorkbenchActionErrors } from "../notifications/action-errors";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchBreadcrumbView } from "./breadcrumb-view";
 
@@ -158,6 +159,10 @@ const NoteBreadcrumb = (props: { optimistic?: boolean }) => {
   return (
     <Stack>
       <WorkbenchBreadcrumbView workbench={workbench} />
+      <WorkbenchActionErrors
+        workbench={workbench}
+        target={workbench.layout.getLayout().regions.main.activeWidgetId ?? "region:main"}
+      />
       <Text>{result}</Text>
       {optimistic ? (
         <Stack direction="row">
@@ -233,16 +238,18 @@ export const OptimisticResourceActions: Story = {
     await userEvent.clear(title);
     await userEvent.type(title, "Instant title");
     await userEvent.click(body.getByRole("button", { name: /^Run$/ }));
-    await expect(await canvas.findByText("Instant title", { exact: true })).toBeVisible();
+    await expect(canvas.getAllByText("Instant title", { exact: true })[0]).toBeVisible();
     await expect(canvas.getByText("No action run")).toBeVisible();
     await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
     await userEvent.click(canvas.getByRole("button", { name: "Fail save" }));
-    await expect(await canvas.findByText("Research note", { exact: true })).toBeVisible();
-    await userEvent.click(canvas.getByText("Research note", { exact: true }));
+    await expect(canvas.getAllByText("Research note", { exact: true })[0]).toBeVisible();
+    await expect(canvas.getByRole("alert")).toHaveTextContent("Rename note failed");
+    await expect(canvas.getByRole("alert")).toHaveTextContent("Save failed");
+    await userEvent.click(canvas.getAllByText("Research note", { exact: true })[0]!);
     await userEvent.keyboard("{Shift>}{F10}{/Shift}{End}{Enter}");
     await body.findByRole("button", { name: /^Delete$/ });
     await expect(canvas.getByText("Research note", { exact: true })).toBeVisible();
-    await userEvent.click(body.getByRole("button", { name: /^Close$/ }));
+    await userEvent.click(body.getAllByRole("button", { name: /^Close$/ })[0]!);
     await expect(canvas.getByText("Research note", { exact: true })).toBeVisible();
     await userEvent.click(canvas.getByText("Research note", { exact: true }));
     await userEvent.keyboard("{Shift>}{F10}{/Shift}{End}{Enter}");

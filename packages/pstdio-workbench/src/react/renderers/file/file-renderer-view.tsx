@@ -7,7 +7,7 @@ import {
   getFileSectionNavigation,
   resolveFileSectionTargetId,
 } from "../../../core/registries/renderers/file-section-navigation";
-import { usePlacementTab } from "../../shared/use-placement-tab";
+import { useOpenPlacementIds } from "../../shared/use-open-placement-ids";
 import { usePageParams } from "../use-page-params";
 import { FileRendererContentView } from "./file-renderer-content";
 import {
@@ -100,7 +100,8 @@ const getNativeMarkdownConnection = (
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
   const resource = props.placement?.resource;
-  const tab = usePlacementTab(props.placement, workbench);
+  const openPlacements = useOpenPlacementIds(workbench);
+  const open = !props.placement?.placementIdentity || openPlacements.has(props.placement.instanceId);
   const position = props.placement?.position;
   const sectionNavigation = getFileSectionNavigation(resource);
   const requestedSection = props.placement?.section;
@@ -300,6 +301,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       )}
       <Box flex="1" minH="0">
         <FileRendererContentView
+          presence={workbench.presence}
+          open={open}
           content={currentLoaded}
           position={position}
           editorKey={editorKey}
@@ -313,7 +316,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           onChange={handleChange}
           rendererRef={rendererRef}
           sectionNavigation={editorSectionNavigation}
-          title={tab.label ?? resource?.label ?? contribution.title}
+          title={resource?.label ?? contribution.title}
           connectDocument={connectDocument}
         />
       </Box>

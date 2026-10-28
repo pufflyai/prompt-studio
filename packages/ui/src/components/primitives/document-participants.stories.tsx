@@ -5,8 +5,8 @@ import { expect, userEvent, within } from "storybook/test";
 import { type DocumentParticipant, DocumentParticipants } from "./document-participants";
 
 const participants: DocumentParticipant[] = [
-  { id: "alex-laptop-tab", label: "Alex", deviceName: "Laptop", color: "blue" },
-  { id: "sam-desktop-tab", label: "Sam", deviceName: "Desktop", color: "purple" },
+  { id: "alex-laptop-tab", label: "Alex", color: "blue" },
+  { id: "sam-desktop-tab", label: "Sam", color: "purple" },
 ];
 const meta = { title: "Primitives/DocumentParticipants", component: DocumentParticipants } satisfies Meta<
   typeof DocumentParticipants
@@ -40,8 +40,8 @@ export const Leave: Story = {
   render: () => <LeavingParticipant />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("listitem", { name: "Alex · Laptop" })).toBeVisible();
-    await expect(canvas.getByRole("listitem", { name: "Sam · Desktop" })).toBeVisible();
+    await expect(canvas.getByRole("listitem", { name: "Alex" })).toBeVisible();
+    await expect(canvas.getByRole("listitem", { name: "Sam" })).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Disconnect" }));
     await expect(canvas.queryByRole("list", { name: "Other editors" })).not.toBeInTheDocument();
   },
