@@ -55,9 +55,12 @@ type Story = StoryObj<typeof meta>;
 
 export const ActivityLifecycle: Story = {
   play: async ({ canvas, canvasElement }) => {
+    const bar = canvasElement.querySelector('[data-workbench-region="status"]')!;
+    await waitFor(() => expect(bar.getBoundingClientRect().height).toBe(0));
     await expect(canvas.queryByRole("button", { name: "Installation progress" })).toBeNull();
     await userEvent.click(canvas.getByRole("button", { name: "Start installation" }));
     await waitFor(() => expect(canvas.getByRole("button", { name: "Installation progress" })).toBeVisible());
+    await expect(bar.getBoundingClientRect().height).toBeGreaterThan(0);
     await userEvent.click(canvas.getByRole("button", { name: "Installation progress" }));
     await waitFor(() =>
       expect(document.querySelector('[role="dialog"][aria-label="Installation details"]')).toBeVisible(),
@@ -68,6 +71,7 @@ export const ActivityLifecycle: Story = {
     await waitFor(() =>
       expect(document.querySelector('[role="dialog"][aria-label="Installation details"]')).toBeNull(),
     );
+    await waitFor(() => expect(bar.getBoundingClientRect().height).toBe(0));
     await userEvent.click(canvas.getByRole("button", { name: "Start installation" }));
     await waitFor(() => expect(canvas.getByRole("button", { name: "Installation progress" })).toBeVisible());
     canvasElement.dataset.statusContentChecked = "true";
