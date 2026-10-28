@@ -14,9 +14,15 @@ const statuses: SessionCompletionStatus[] = [
   "cancelled",
   "disconnected",
 ];
-function SolarizedChat() {
+interface SolarizedChatProps {
+  surface?: "bg" | "bg.panel";
+  width?: "chat-content" | "80";
+}
+
+function SolarizedChat(props: SolarizedChatProps) {
+  const { surface = "bg", width = "chat-content" } = props;
   return (
-    <Stack p="md" maxW="chat-content" gap="md" bg="bg" color="fg">
+    <Stack p="md" maxW={width} gap="md" bg={surface} color="fg">
       <HStack flexWrap="wrap" data-testid="session-states">
         {statuses.map((status) => (
           <HStack key={status} gap="2xs">
@@ -78,9 +84,12 @@ const meta = {
     await waitFor(() => expect(userText).toBeVisible());
     await waitFor(async () => {
       const background = getComputedStyle(canvasElement.firstElementChild!).backgroundColor;
+      const chatBackground = getComputedStyle(workspace.closest(".ps-chat-panel")!).backgroundColor;
+      await expect(chatBackground).not.toBe("rgba(0, 0, 0, 0)");
       await expect(getComputedStyle(tag).backgroundColor).toBe(getComputedStyle(workspace).backgroundColor);
       const userSurface = getComputedStyle(userText.closest(".ai-message__content")!).backgroundColor;
-      await expect(userSurface).not.toBe(background);
+      await expect(userSurface).not.toBe(chatBackground);
+      await expect(getComputedStyle(workspace).backgroundColor).not.toBe(chatBackground);
       await expect(contrastRatio(getComputedStyle(userText).color, userSurface)).toBeGreaterThanOrEqual(4.5);
       await expect(getComputedStyle(workspace.parentElement!).paddingTop).toBe("0px");
       for (const status of statuses) {
@@ -101,3 +110,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const Dark: Story = { globals: { theme: "solarized-dark" } };
 export const Light: Story = { globals: { theme: "solarized-light" } };
+export const DarkSidePanel: Story = {
+  args: { surface: "bg.panel", width: "80" },
+  globals: { theme: "solarized-dark" },
+};
+export const LightSidePanel: Story = {
+  args: { surface: "bg.panel", width: "80" },
+  globals: { theme: "solarized-light" },
+};

@@ -28490,7 +28490,7 @@
                       "type": "frame",
                       "id": "TlakR",
                       "name": "cmp/ChatToolTimeline",
-                      "context": "Tool indicators always have transparent fill with no outline or border. Never draw a connector line under or between tool indicators, including expanded calls and the last row. Titles show the command without a tooltip; expanding reveals the full command and output in code blocks.",
+                      "context": "Tool indicators have transparent fill, no outline or border. Collapsed tool calls have no connector. Expanded calls show a vertical border.subtle connector starting 4px below the icon, ending at the expanded content bottom, including the final row. Never draw it behind the icon. Titles show the command without a tooltip; expansion shows full command and output.",
                       "reusable": true,
                       "width": "fill_container",
                       "gap": 8,
@@ -28500,7 +28500,9 @@
                           "id": "A7AWad",
                           "name": "Rail",
                           "width": 16,
+                          "height": "fill_container",
                           "layout": "vertical",
+                          "gap": 4,
                           "alignItems": "center",
                           "children": [
                             {
@@ -28527,6 +28529,14 @@
                                   "fill": "$ds-fg-muted"
                                 }
                               ]
+                            },
+                            {
+                              "type": "rectangle",
+                              "id": "J2Onn",
+                              "name": "Expanded tool connector",
+                              "fill": "$ds-border-subtle",
+                              "width": 1,
+                              "height": "fill_container"
                             }
                           ]
                         },
@@ -187800,7 +187810,7 @@
       "x": 46942,
       "y": 0,
       "name": "ChatPanel · Content width and pane scrollbar · PS-656",
-      "context": "ChatPanel fills its parent pane in both main and side regions, with no placement-specific vertical padding. Transcript content and the composer share a centered maximum width of 832px (52rem), shrinking to the available pane width. Main and side composer bottom insets are equal. The vertical scrollbar remains at the trailing edge of the full pane. Implement with the shared chatContent layer style and chat-content size token. Empty states, notices, approvals, the working indicator, workspace hub, and queued messages use the same content column.",
+      "context": "ChatPanel fills its parent pane in both main and side regions, with no placement-specific vertical padding. Transcript content and the composer share a centered maximum width of 832px (52rem), shrinking to the available pane width. Main and side composer bottom insets are equal. The vertical scrollbar remains at the trailing edge of the full pane. Implement with the shared chatContent layer style and chat-content size token. Empty states, notices, approvals, the working indicator, workspace hub, and queued messages use the same content column. Every ChatPanel owns an opaque ds-bg canvas in both main and side regions. A side panel host may use ds-surface, but the conversation canvas stays ds-bg so user messages and the workspace keep their contrast.",
       "width": 1780,
       "fill": "$ds-bg",
       "layout": "vertical",

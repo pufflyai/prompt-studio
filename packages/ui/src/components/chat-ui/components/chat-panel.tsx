@@ -1,8 +1,9 @@
-import { Box, Flex } from "@chakra-ui/react";
+import { Box, Flex, useRecipe } from "@chakra-ui/react";
 import { MessageCircleIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { EmptyState } from "@/components/primitives/empty-state";
 import type { PromptCommand } from "@/components/rich-text";
+import { chatPanelRecipe } from "@/theme/recipes/chat-panel";
 import { ChatImageHistoryContext, indexChatImageSources } from "../links/chat-image-sources";
 import type { ChatLinkProps } from "../links/chat-link";
 import { ChatLinkProvider } from "../links/chat-link-context";
@@ -149,6 +150,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     chatInputCommands = [],
   } = props;
 
+  const panelStyles = useRecipe({ recipe: chatPanelRecipe })();
   const merged = normalizeChatMessagesForDisplay(messages, { streaming });
   const hasMessages = merged.length > 0;
   const messageListKey = conversationKey ?? merged[0]?.id;
@@ -204,7 +206,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     <ChatImageHistoryContext value={indexChatImageSources(messages, linkHandler)}>
       <ChatLinkProvider handler={linkHandler}>
         <ChatQuestionNavigationContext value={questionNavigation.value}>
-          <Flex position="relative" direction="column" w="full" h="full" overflow="hidden">
+          <Flex className="ps-chat-panel" css={panelStyles}>
             <ChatPrimitives.Root key={messageListKey}>
               <AutoScroll conversationKey={messageListKey ?? null} userMessageCount={userMessageCount} />
               <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>

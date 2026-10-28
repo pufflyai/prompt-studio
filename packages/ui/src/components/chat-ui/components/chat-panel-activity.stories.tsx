@@ -1,7 +1,7 @@
 import { Box, Button, IconButton } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ArrowUpRight, GitBranch } from "lucide-react";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ChatPanel } from "./chat-panel";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
@@ -82,6 +82,15 @@ const meta = {
     for (const separator of canvasElement.querySelectorAll(".chakra-timeline__separator")) {
       await expect(getComputedStyle(separator).display).toBe("none");
     }
+    const command = canvas.getByText("Run command", { exact: true });
+    await userEvent.click(command);
+    const expanded = canvasElement.querySelector<HTMLElement>(".chakra-timeline__separator[data-state=open]")!;
+    const icon = expanded.parentElement!.querySelector(".chakra-timeline__indicator")!;
+    await expect(getComputedStyle(expanded).display).toBe("block");
+    await expect(expanded.getBoundingClientRect().top).toBeGreaterThan(icon.getBoundingClientRect().bottom);
+    await waitFor(() => expect(expanded.getBoundingClientRect().height).toBeGreaterThan(0));
+    await userEvent.click(command);
+    await expect(getComputedStyle(expanded).display).toBe("none");
   },
 } satisfies Meta<typeof ChatPanel>;
 export default meta;
@@ -89,7 +98,7 @@ type Story = StoryObj<typeof meta>;
 export const WorkspaceActivity: Story = {};
 export const Narrow: Story = {
   render: (args) => (
-    <Box w="80" h="xl">
+    <Box w="80" h="xl" bg="bg.panel">
       <ChatPanel {...args} />
     </Box>
   ),

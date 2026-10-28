@@ -73,7 +73,11 @@ export const timelineSlotRecipe = defineSlotRecipe({
     variant: {
       tool: {
         indicator: { bg: "transparent", outline: "none", border: "none" },
-        separator: { display: "none" },
+        separator: {
+          display: "none",
+          insetBlockStart: "calc(var(--timeline-indicator-size) + {spacing.2xs})",
+          _open: { display: "block" },
+        },
         content: {
           minWidth: "0",
         },
