@@ -1,4 +1,4 @@
-const child = Bun.spawn(["bun", "../../.pstdio/extensions/canvas/scripts/build-verification.ts"], {
+const child = Bun.spawn(["bun", "../../extensions/canvas/scripts/build-verification.ts"], {
   stdout: "inherit",
   stderr: "inherit",
 });

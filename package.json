@@ -72,7 +72,6 @@
     ".pstdio/extensions/shader-lab",
     ".pstdio/extensions/shape-art",
     "services/telemetry",
-    ".pstdio/extensions/canvas",
     "services/psx"
   ],
   "devDependencies": {

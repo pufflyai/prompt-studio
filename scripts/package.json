@@ -34,10 +34,10 @@
     "verify:published-extensions": "bun --cwd .. ./scripts/verify/verify-published-extensions.ts",
     "verify:packages": "bun --cwd .. ./scripts/verify/verify-packages.ts",
     "verify:translations": "bun --cwd .. ./scripts/verify/verify-translations.ts",
-    "canvas:build": "bun run --cwd ../.pstdio/extensions/canvas catalog:build",
-    "canvas:inventory": "bun run --cwd ../.pstdio/extensions/canvas catalog:inventory",
-    "canvas:coverage": "bun run --cwd ../.pstdio/extensions/canvas catalog:coverage",
-    "canvas:verify": "bun run --cwd ../.pstdio/extensions/canvas catalog:verify"
+    "canvas:build": "bun run --cwd ../extensions/canvas catalog:build",
+    "canvas:inventory": "bun run --cwd ../extensions/canvas catalog:inventory",
+    "canvas:coverage": "bun run --cwd ../extensions/canvas catalog:coverage",
+    "canvas:verify": "bun run --cwd ../extensions/canvas catalog:verify"
   },
   "dependencies": {
     "pstdio-api-contracts": "workspace:*",

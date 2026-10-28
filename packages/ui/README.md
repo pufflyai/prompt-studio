@@ -14,7 +14,7 @@ Browse Design System in the Canvas extension. Open a component canvas and use Va
 bun run --cwd packages/ui build
 bun run --cwd scripts canvas:build
 bun run --cwd scripts canvas:coverage
-bun run --cwd .pstdio/extensions/canvas test
+bun run --cwd extensions/canvas test
 ```
 
 See [Canvas coverage](../../documentation/guides/development/0003-canvas-coverage.md) for authoring and isolated browser checks.

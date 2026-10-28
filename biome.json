@@ -15,7 +15,7 @@
       "!!**/.nx",
       "bun.lock",
       "!!packages/pstdio-dashboard/chakra-config.json",
-      "!!.pstdio/extensions/canvas/src/catalog/generated",
+      "!!extensions/canvas/src/catalog/generated",
       "!!packages/e2e/playwright-report",
       "!!packages/e2e/test-results",
       "!!packages/canvas-tests/playwright-report",

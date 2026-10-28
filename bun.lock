@@ -16,28 +16,6 @@
         "node-gyp": "12.2.0",
       },
     },
-    ".pstdio/extensions/canvas": {
-      "name": "canvas",
-      "version": "0.0.0",
-      "dependencies": {
-        "@chakra-ui/react": "3.32.0",
-        "@emotion/react": "^11.0.0",
-        "@pstdio/sdk": "0.46.0-nightly.20261026030503",
-        "@pstdio/ui": "0.46.0-nightly.20261026030503",
-        "react": "19.2.4",
-        "react-dom": "19.2.4",
-      },
-      "devDependencies": {
-        "@fontsource/jetbrains-mono": "^5.3.0",
-        "@mdx-js/mdx": "3.1.1",
-        "@playwright/test": "1.60.0",
-        "@pstdio/canvas": "workspace:*",
-        "@types/bun": "1.4.2",
-        "@types/react": "^19.2.0",
-        "@types/react-dom": "^19.2.0",
-        "typescript": "6.0.2",
-      },
-    },
     ".pstdio/extensions/font-editor": {
       "name": "font-editor",
       "version": "0.1.1",
@@ -230,6 +208,24 @@
         "@types/matter-js": "^0.20.2",
         "@types/react": "^19.2.0",
         "@types/react-dom": "^19.2.0",
+      },
+    },
+    "extensions/canvas": {
+      "name": "canvas",
+      "version": "0.0.0",
+      "dependencies": {
+        "@chakra-ui/react": "3.32.0",
+        "@emotion/react": "^11.0.0",
+        "@pstdio/sdk": "0.46.0-nightly.20261026030503",
+        "@pstdio/ui": "0.46.0-nightly.20261026030503",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/react": "^19.2.0",
+        "@types/react-dom": "^19.2.0",
+        "typescript": "6.0.2",
       },
     },
     "extensions/extension-lab": {
@@ -941,6 +937,7 @@
         "@chakra-ui/cli": "^3.30.0",
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "11.14.0",
+        "@mdx-js/mdx": "3.1.1",
         "@playwright/test": "^1.60.0",
         "@pstdio/canvas": "workspace:*",
         "@types/react": "^19.2.0",
@@ -1502,8 +1499,6 @@
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
     "@fontsource/inter": ["@fontsource/inter@5.2.8", "", {}, "sha512-P6r5WnJoKiNVV+zvW2xM13gNdFhAEpQ9dQJHt3naLvfg+LkF2ldgSLiF4T41lf1SQCM9QmkqPTn4TH568IRagg=="],
-
-    "@fontsource/jetbrains-mono": ["@fontsource/jetbrains-mono@5.3.0", "", {}, "sha512-fqDfB5I9f1p1TV486aUgB9t8zP84P0O1FtQR5Ol9vjwPy+S+EIGlVYm1cvj2W5shcZMTg2nZFdVMoH5wFu8a1A=="],
 
     "@fontsource/onest": ["@fontsource/onest@5.2.11", "", {}, "sha512-YDOHuJ+HFf4rl6+vBzEoAGul+GyEOIlziepq+7UDT4839LyiFU1clVZqNmqmCRjwWidPTMUJIv1k9e+5UtuQOw=="],
 
@@ -2763,7 +2758,7 @@
 
     "caniuse-lite": ["caniuse-lite@1.0.30001778", "", {}, "sha512-PN7uxFL+ExFJO61aVmP1aIEG4i9whQd4eoSCebav62UwDyp5OHh06zN4jqKSMePVgxHifCw1QJxdRkA1Pisekg=="],
 
-    "canvas": ["canvas@workspace:.pstdio/extensions/canvas"],
+    "canvas": ["canvas@workspace:extensions/canvas"],
 
     "canvas-tests": ["canvas-tests@workspace:packages/canvas-tests"],
 

@@ -12,14 +12,14 @@ Canvas owns UI designs, component state examples, and prop usage. Put source exa
 
 ## Authoring and checks
 
-Use the [Canvas skill](../../../.pstdio/extensions/canvas/skills/canvas/SKILL.md). Update the relevant live design before production UI work and link its page, exact preview names, and source paths in the ticket.
+Use the [Canvas skill](../../../extensions/canvas/skills/canvas/SKILL.md). Update the relevant live design before production UI work and link its page, exact preview names, and source paths in the ticket.
 
 ```sh
 bun run --cwd scripts canvas:build
 bun run --cwd scripts canvas:inventory
 bun run --cwd scripts canvas:coverage
-bun run --cwd .pstdio/extensions/canvas test
-bun run --cwd .pstdio/extensions/canvas typecheck
+bun run --cwd extensions/canvas test
+bun run --cwd extensions/canvas typecheck
 ```
 
 Open canvases with `pst canvas open --canvas <id>`. Inspect Theme, Variant, Props and source, and real interactions. The first click selects a frame; the next interacts with its contents. Verify only affected critical behavior in the isolated app. Routine copy, spacing, cosmetic, and documentation changes require no browser runs or screenshots.
