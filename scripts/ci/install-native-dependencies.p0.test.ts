@@ -68,7 +68,7 @@ try {
       exitCode: 0,
       output: "",
     });
-    const install = Bun.spawn(["node", join(import.meta.dirname, "install-native-dependencies.ts")], {
+    const install = Bun.spawn([process.execPath, join(import.meta.dirname, "install-native-dependencies.ts")], {
       cwd,
       env,
       stdout: "pipe",

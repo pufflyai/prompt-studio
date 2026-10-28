@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: "24"
       - name: Install dependencies
-        run: node scripts/ci/install-native-dependencies.ts
+        run: bun scripts/ci/install-native-dependencies.ts
       - uses: ./.github/actions/setup-windows-signing
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}

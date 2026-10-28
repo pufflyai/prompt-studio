@@ -25,7 +25,7 @@ Three alternating complete-process samples on macOS arm64 on 2026-10-25 produced
 
 Keep package type-check concurrency at two. For the same six scopes with two package processes, default checker threads took a median 1.514 s versus 1.900 s with two threads per checker. The default thread count remains in use.
 
-Native CI installs use `scripts/ci/install-native-dependencies.ts`. On Linux and macOS it gives node-gyp the headers already installed with Node. This removes another download from native addon builds. The setting applies only to dependency installation; Electron packaging selects the headers for Electron separately.
+Native CI installs run `bun scripts/ci/install-native-dependencies.ts`. On Linux and macOS the installer reuses headers beside the Node executable on `PATH` when they exist, following symlinks to the installation directory. An explicit `npm_config_nodedir` takes precedence. Without local headers, node-gyp uses its normal header resolution when a native build needs it; their absence does not block dependency installation. The setting applies only to dependency installation; Electron packaging selects the headers for Electron separately.
 
 Choose checks that cover the changed behavior and its affected callers. Start with one test file or one end-to-end spec. Run a package's tests, lint, type checks, or build when that is the smallest useful scope. After a failure, rerun only failed or affected checks. Do not repeat passing checks without a new change or unresolved concern.
 

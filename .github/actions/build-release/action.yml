@@ -5,7 +5,7 @@ runs:
   steps:
     - name: Install dependencies
       shell: bash
-      run: node scripts/ci/install-native-dependencies.ts
+      run: bun scripts/ci/install-native-dependencies.ts
 
     - name: Validate changesets
       shell: bash
