@@ -119,7 +119,7 @@ jobs:
           node-version: "24"
 
       - name: Install dependencies
-        run: node scripts/ci/install-native-dependencies.ts
+        run: bun scripts/ci/install-native-dependencies.ts
 
       - name: Test device performance lifecycle and file authorization
         run: bun test clients/desktop/src/performance

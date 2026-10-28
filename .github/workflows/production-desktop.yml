@@ -55,7 +55,7 @@ jobs:
         with:
           node-version: "24"
       - name: Install native dependencies
-        run: node scripts/ci/install-native-dependencies.ts
+        run: bun scripts/ci/install-native-dependencies.ts
       - name: Build desktop test dependencies
         run: bun run build -- --scope @pstdio/desktop --include-dependencies
       - name: Download the exact signed release app
