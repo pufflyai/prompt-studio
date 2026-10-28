@@ -140,7 +140,7 @@ describe("createWorkspacesModule", () => {
         },
       }),
     ]);
-    expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceDiffs);
+    expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceFiles);
     expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.viewId)).toEqual([
       dashboardWidgetIds.workspaceDiffs,
       dashboardWidgetIds.workspaceFiles,
@@ -192,7 +192,7 @@ describe("createWorkspacesModule", () => {
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     openWorkspacesPage(workbench, workspace);
-    expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceDiffs);
+    expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceFiles);
     openWorkspacesPage(workbench, fileResource);
     const layout = workbench.layout.getLayout();
     expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceFiles);

@@ -16,7 +16,6 @@ export const documentMarkdown = (document: (typeof scribbleDocuments)[number]) =
 
 export const exampleDefaults = {
   scribble: {
-    query: "",
     favoriteIds: ["north-star"],
     documents: scribbleDocuments,
     contentById: Object.fromEntries(scribbleDocuments.map((document) => [document.id, documentMarkdown(document)])),

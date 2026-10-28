@@ -18,12 +18,6 @@ export default defineExtension({
   keybindings: [
     defineKeybinding({ id: "keyboard-open", layer: "go", key: "R", sticky: true, action: navigationItems[0]!.action }),
     defineKeybinding({
-      id: "create-thread",
-      layer: "create",
-      key: threadResource.ref.id[0]!.toUpperCase(),
-      action: { kind: "command", target: { command: commands["save-thread"].ref } },
-    }),
-    defineKeybinding({
       id: "create-idea",
       layer: "create",
       key: "I",

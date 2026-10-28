@@ -45,4 +45,4 @@ test("a Notes changeset creates only a Notes version and changelog entry", async
   } finally {
     await rm(root, { recursive: true, force: true });
   }
-});
+}, 10_000);

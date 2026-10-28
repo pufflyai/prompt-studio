@@ -10,7 +10,7 @@ const binding = {
   resourceKey: "pstdio://extension-resource/ticket/ticket-1",
 };
 
-const createHarness = (input?: { failSaves?: number; saveRevision?: string }) => {
+const createHarness = (input?: { failSaves?: number; saveRevision?: string; saveMode?: "manual" }) => {
   let failsLeft = input?.failSaves ?? 0;
   const saves: string[] = [];
   const operations: string[] = [];
@@ -20,6 +20,7 @@ const createHarness = (input?: { failSaves?: number; saveRevision?: string }) =>
   const controller = createFileEditController({
     binding,
     debounceMs: DEBOUNCE_MS,
+    saveMode: input?.saveMode,
     load: () => {
       loads += 1;
     },
@@ -37,6 +38,166 @@ const createHarness = (input?: { failSaves?: number; saveRevision?: string }) =>
   });
   return { controller, operations, saves, states, loads: () => loads };
 };
+
+describe("manual file editing", () => {
+  test("reopening a file saves after the previous editor's requested writes", async () => {
+    let finishFirst!: () => void;
+    let content = "loaded";
+    const saves: string[] = [];
+    const createEditor = (saveKey: string) =>
+      createFileEditController({
+        binding,
+        saveKey,
+        debounceMs: DEBOUNCE_MS,
+        saveMode: "manual",
+        load: () => {},
+        save: async (value) => {
+          saves.push(value);
+          if (value === "first") await new Promise<void>((resolve) => (finishFirst = resolve));
+          content = value;
+        },
+      });
+    const oldEditor = createEditor("reopened-file");
+    oldEditor.setBaseline(content);
+    oldEditor.handleChange("first");
+    oldEditor.flush();
+    await tick(0);
+    oldEditor.handleChange("second");
+    oldEditor.flush();
+    const newEditor = createEditor("reopened-file");
+    newEditor.setBaseline(content);
+    newEditor.handleChange("newest");
+    newEditor.flush();
+    const otherEditor = createEditor("another-file");
+    otherEditor.setBaseline("other loaded");
+    otherEditor.handleChange("independent");
+    otherEditor.flush();
+    await tick(0);
+    expect(saves).toEqual(["first", "independent"]);
+    finishFirst();
+    await tick();
+    expect(saves).toEqual(["first", "independent", "second", "newest"]);
+    expect(content).toBe("newest");
+    expect(newEditor.getState()).toEqual({ dirty: false, saving: false });
+  });
+
+  test.each(["third", "first"])("typing %s after a queued save remains unsaved", async (latest) => {
+    let finishFirst!: () => void;
+    let loads = 0;
+    const saves: string[] = [];
+    const controller = createFileEditController({
+      binding,
+      debounceMs: DEBOUNCE_MS,
+      saveMode: "manual",
+      load: () => {
+        loads++;
+      },
+      save: async (value) => {
+        saves.push(value);
+        if (value === "first") await new Promise<void>((resolve) => (finishFirst = resolve));
+      },
+    });
+    controller.setBaseline("loaded");
+    controller.handleChange("first");
+    controller.flush();
+    controller.handleChange("second");
+    controller.flush();
+    controller.handleChange(latest);
+    controller.handleRefreshEvent({ revision: "remote" });
+    finishFirst();
+    await tick();
+    expect(saves).toEqual(["first", "second"]);
+    expect(controller.getBaseline()).toBe("second");
+    expect(controller.getDraft()).toBe(latest);
+    expect(controller.getState()).toEqual({ dirty: true, saving: false });
+    expect(loads).toBe(0);
+  });
+
+  for (const failFirst of [false, true]) {
+    test(`an explicit save during ${failFirst ? "a failing" : "an active"} save saves the pending edit without overlap`, async () => {
+      let finishFirst!: () => void;
+      let active = 0;
+      let maxActive = 0;
+      const saves: string[] = [];
+      const controller = createFileEditController({
+        binding,
+        debounceMs: DEBOUNCE_MS,
+        saveMode: "manual",
+        load: () => {},
+        save: async (value) => {
+          active++;
+          maxActive = Math.max(maxActive, active);
+          saves.push(value);
+          if (value === "first") await new Promise<void>((resolve) => (finishFirst = resolve));
+          active--;
+          if (value === "first" && failFirst) throw new Error("first save failed");
+        },
+      });
+      controller.setBaseline("loaded");
+      controller.handleChange("first");
+      controller.flush();
+      controller.handleChange("second");
+      controller.flush();
+      expect(saves).toEqual(["first"]);
+      finishFirst();
+      await tick();
+      expect(saves).toEqual(["first", "second"]);
+      expect(maxActive).toBe(1);
+      expect(controller.getBaseline()).toBe("second");
+      expect(controller.getState()).toEqual({ dirty: false, saving: false });
+      controller.handleChange("third");
+      await tick();
+      expect(saves).toEqual(["first", "second"]);
+    });
+  }
+
+  test("manual edits remain drafts until an explicit save, including edits during a save", async () => {
+    let finish!: () => void;
+    const saves: string[] = [];
+    const controller = createFileEditController({
+      binding,
+      debounceMs: DEBOUNCE_MS,
+      saveMode: "manual",
+      load: () => {},
+      save: async (value) => {
+        saves.push(value);
+        await new Promise<void>((resolve) => {
+          finish = resolve;
+        });
+      },
+    });
+    controller.setBaseline("loaded");
+    controller.handleChange("first");
+    await tick();
+    expect(saves).toEqual([]);
+    expect(controller.getState().dirty).toBe(true);
+    controller.flush();
+    controller.handleChange("second");
+    finish();
+    await tick();
+    expect(saves).toEqual(["first"]);
+    expect(controller.getDraft()).toBe("second");
+    expect(controller.getState().dirty).toBe(true);
+    controller.flush();
+    finish();
+    await tick();
+    expect(saves).toEqual(["first", "second"]);
+    expect(controller.getState().dirty).toBe(false);
+  });
+
+  test("an explicit manual save retries a failed save without losing the draft", async () => {
+    const { controller, saves } = createHarness({ saveMode: "manual", failSaves: 1 });
+    controller.setBaseline("loaded");
+    controller.handleChange("draft");
+    controller.flush();
+    await tick();
+    expect(controller.getDraft()).toBe("draft");
+    controller.flush();
+    await tick();
+    expect(saves).toEqual(["draft"]);
+    expect(controller.getState().dirty).toBe(false);
+  });
+});
 
 describe("file edit controller", () => {
   test("removal preserves a draft and prevents flush or refresh from saving it", async () => {

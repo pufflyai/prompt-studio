@@ -54,12 +54,15 @@ const loadFiles = (metadata: Record<string, unknown>) => {
 };
 
 describe("workspace file loading", () => {
+  test("loads Git workspace files without calculating diffs", async () => {
+    const sections = await loadFiles({ workspaceSupportsDiff: true });
+    expect(sections[0]?.nodes[0]?.id).toBe("notes.md");
+    expect(requests).toEqual(["/v1/workspaces/workspace-1/files?limit=500"]);
+  });
   test.each([false, undefined])("loads folder files when diff capability is %s", async (workspaceSupportsDiff) => {
     const sections = await loadFiles({ workspaceSupportsDiff });
 
-    expect(sections[0]?.nodes).toEqual([
-      expect.objectContaining({ id: "notes.md", label: "notes.md", endContent: undefined }),
-    ]);
+    expect(sections[0]?.nodes).toEqual([expect.objectContaining({ id: "notes.md", label: "notes.md" })]);
     expect(requests).toEqual(["/v1/workspaces/workspace-1/files?limit=500"]);
   });
 

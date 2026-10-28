@@ -9,6 +9,17 @@ const requireIdea = async (ctx: Parameters<typeof ideasOf>[0], id: string) => {
   return idea;
 };
 
+const persistIdea = async (ctx: Parameters<typeof ideasOf>[0], data: ReturnType<typeof saveIdea.parse>) => {
+  const thread = await requireThread(ctx, data.threadId);
+  if (isNewPost(thread)) throw new Error("A new post has no reply ideas; revise its draft instead.");
+  if (data.replyTo && !thread.snapshot?.comments.some((comment) => comment.id === data.replyTo))
+    throw new Error("replyTo must name a comment in the thread's snapshot.");
+  const id = crypto.randomUUID();
+  await ideasOf(ctx).put(id, { ...data, id, status: "new", createdAt: new Date().toISOString() });
+  await changed(ctx, thread.id);
+  return { id };
+};
+
 export const saveIdeaCommand = defineCommand({
   id: "save-idea",
   title: "Save a reply idea",
@@ -17,14 +28,7 @@ export const saveIdeaCommand = defineCommand({
   async run(ctx, { input }) {
     const data = saveIdea.parse(input);
     await requireRunning(ctx, data.runId);
-    const thread = await requireThread(ctx, data.threadId);
-    if (isNewPost(thread)) throw new Error("A new post has no reply ideas; revise its draft instead.");
-    if (data.replyTo && !thread.snapshot?.comments.some((comment) => comment.id === data.replyTo))
-      throw new Error("replyTo must name a comment in the thread's snapshot.");
-    const id = crypto.randomUUID();
-    await ideasOf(ctx).put(id, { ...data, id, status: "new", createdAt: new Date().toISOString() });
-    await changed(ctx, thread.id);
-    return { id };
+    return persistIdea(ctx, data);
   },
 });
 export const saveCurrentIdea = defineCommand({
@@ -38,14 +42,15 @@ export const saveCurrentIdea = defineCommand({
   },
   async run(ctx, input) {
     const thread = await requireThread(ctx, input.resource.id);
-    return saveIdeaCommand.run(ctx, {
-      input: {
+    return persistIdea(
+      ctx,
+      saveIdea.parse({
         runId: thread.runId,
         threadId: thread.id,
         body: input.body,
         ...(input.replyTo ? { replyTo: input.replyTo } : {}),
-      },
-    });
+      }),
+    );
   },
 });
 

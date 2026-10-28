@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { getWorktreeDiff, MAX_IMAGE_PREVIEW_BYTES } from "./diff";
+import { getWorktreeDiff, getWorktreeDiffFile, getWorktreeDiffSummaryFiles, MAX_IMAGE_PREVIEW_BYTES } from "./diff";
 import { git } from "./git";
 import { createTempRepo } from "./test-helpers";
 import { createWorktree } from "./worktree";
@@ -17,6 +17,16 @@ afterEach(async () => {
 });
 
 describe("getWorktreeDiff", () => {
+  test("summary files retain deletion stats when a tracked path becomes untracked", async () => {
+    await git(repo.dir, ["rm", "--cached", "README.md"]);
+    const options = { worktreePath: repo.dir, base: "HEAD" };
+    const summary = await getWorktreeDiffSummaryFiles(options);
+    const file = await getWorktreeDiffFile({ ...options, filePath: "README.md" });
+    expect(file).toMatchObject({ additions: 1, deletions: 1 });
+    expect(summary.files).toEqual([expect.objectContaining({ filePath: "README.md", additions: 1, deletions: 1 })]);
+    expect(summary.totals).toEqual({ additions: 1, deletions: 1, file_count: 1 });
+  });
+
   test("returns empty diff for clean worktree", async () => {
     const wtPath = join(repo.dir, "wt-diff-clean");
     await createWorktree({ repoRoot: repo.dir, branch: "task/clean", path: wtPath });
