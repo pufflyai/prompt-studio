@@ -12,7 +12,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { DropIndicator } from "@pstdio/ui";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { WorkbenchCore, WorkbenchStatusBarSlot, WorkbenchWidgetPlacement } from "../../core";
 import { useRetainedViewPlacements } from "../region/use-retained-view-placements";
 import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
@@ -47,15 +47,26 @@ interface WorkbenchStatusBarItemProps {
 
 const WorkbenchStatusBarItem = (props: WorkbenchStatusBarItemProps) => {
   const { workbench, placement, ids, visible, activeId, drop } = props;
+  const elementRef = useRef<HTMLDivElement | null>(null);
+  const [hasContent, setHasContent] = useState(false);
+  useEffect(() => {
+    const element = elementRef.current;
+    if (!element) return;
+    // Empty status views keep running so background activity can make them visible again.
+    const observer = new ResizeObserver(() => setHasContent(element.getBoundingClientRect().width > 0));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const id = placement.widgetId;
   const order = ids.indexOf(id);
-  const sortable = order >= 0 && ids.length > 1;
+  const sortable = hasContent && order >= 0 && ids.length > 1;
   const drag = useDraggable({ id, disabled: !sortable });
   const target = useDroppable({ id, disabled: !sortable });
   const title = placement.title ?? id;
   return (
     <Box
       ref={(node: HTMLDivElement | null) => {
+        elementRef.current = node;
         drag.setNodeRef(node);
         target.setNodeRef(node);
       }}
@@ -63,6 +74,7 @@ const WorkbenchStatusBarItem = (props: WorkbenchStatusBarItemProps) => {
       tabIndex={sortable ? 0 : undefined}
       role="group"
       aria-label={title}
+      aria-hidden={!hasContent || undefined}
       aria-describedby={sortable ? drag.attributes["aria-describedby"] : undefined}
       aria-keyshortcuts={sortable ? "Alt+ArrowLeft Alt+ArrowRight" : undefined}
       data-status-bar-item={id}
@@ -71,7 +83,7 @@ const WorkbenchStatusBarItem = (props: WorkbenchStatusBarItemProps) => {
       layerStyle="statusBarItem"
       alignItems="stretch"
       display={order < 0 ? "none" : "flex"}
-      inert={order < 0}
+      inert={order < 0 || !hasContent}
       order={order}
       touchAction={sortable ? "pan-y" : undefined}
       onKeyDown={(event) => {
@@ -85,7 +97,7 @@ const WorkbenchStatusBarItem = (props: WorkbenchStatusBarItemProps) => {
         }
       }}
     >
-      <StatusItemContent workbench={workbench} placement={placement} visible={visible && order >= 0} />
+      <StatusItemContent workbench={workbench} placement={placement} visible={visible && order >= 0 && hasContent} />
       {/* A drag must keep its pointer events in the host, even over an extension iframe. */}
       {activeId ? <Box position="absolute" inset="0" /> : null}
       {drop?.id === id ? (
