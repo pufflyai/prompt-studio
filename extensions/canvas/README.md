@@ -91,7 +91,7 @@ bun run --cwd scripts canvas:coverage
 
 `canvas:build` composes colocated `*.canvas.tsx` examples and MDX documents, then records source and output hashes. Generated modules are build output; edit the source and rebuild. The builder retains each scenario's existing ID, variant parameters, providers and asynchronous setup. `canvas:inventory` regenerates the source destination ledger. The original scenario inventory checks that every covered export still has a canvas destination.
 
-The extension's normal `build` command discovers current examples and reuses the compiled catalog while its inputs are unchanged. It regenerates stale output, including after release versioning changes its manifest or dependencies. Freshness verification stays separate from generation.
+The extension's normal `build` command discovers current examples and reuses the compiled catalog while its inputs are unchanged. It regenerates stale output, including after release versioning changes its manifest or dependencies. The release version command refreshes these assets before creating its version commit. Freshness verification stays separate from generation.
 
 `typecheck` checks the extension and examples across all owning workspaces. Published extension configurations exclude repository-only examples; the catalog checks them separately with the private authoring types.
 
