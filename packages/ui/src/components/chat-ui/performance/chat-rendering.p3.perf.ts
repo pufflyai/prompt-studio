@@ -15,7 +15,7 @@ for (const workload of workloads) {
       }).observe({ type: "longtask", buffered: true });
     });
     const preview = await openPerformancePreview(page, "patterns-chat-chat-panel-rendering--rendering-workloads");
-    const cdp = await page.context().newCDPSession(preview);
+    const cdp = browserSession;
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: Number(process.env.CPU_THROTTLE ?? "4") });
     await cdp.send("Performance.enable");
     await preview.getByRole("button", { name: workload, exact: true }).waitFor();

@@ -44,7 +44,7 @@ const shouldAssertBudgets = process.env.UI_PERF_ASSERT_BUDGETS === "1";
 // Records the scenario time and the heap the page keeps afterwards, after garbage collection.
 const recordScenario = async (page: Frame, timing: Omit<BenchmarkMeasurement, "unit">) => {
   recordMeasurement({ ...timing, unit: "ms" });
-  const session = await page.page().context().newCDPSession(page);
+  const session = await page.page().context().newCDPSession(page.page());
   await session.send("HeapProfiler.collectGarbage");
   await session.send("Performance.enable");
   const { metrics } = await session.send("Performance.getMetrics");
