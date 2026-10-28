@@ -2,11 +2,12 @@ import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type Browser, chromium, expect, test } from "@playwright/test";
+import { type Browser, chromium, expect } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { verifyNotesPageIsolation } from "../helpers/notes-page-isolation";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
+import { test } from "../scripts/playwright-test";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
