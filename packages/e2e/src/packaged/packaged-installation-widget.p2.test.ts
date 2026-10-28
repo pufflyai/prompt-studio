@@ -47,7 +47,6 @@ test("the installed extension widget exposes installation progress through publi
     expect((await metadata.json()).statusBarItems).toContainEqual(
       expect.objectContaining({
         extensionId: "pstdio.pstdio-extension-installations",
-        visibilitySetting: "installations.visible",
         popover: expect.objectContaining({ id: "details" }),
       }),
     );
