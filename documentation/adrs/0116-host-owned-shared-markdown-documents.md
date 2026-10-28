@@ -143,6 +143,14 @@ publication still serializes translated histories through latest-state CAS.
 Projection retains its own local source/anchor baseline. These local queues and
 baselines contain no presence.
 
+Acknowledgements and peer snapshots read durable text without waiting for file
+handlers. One background worker per source coalesces projection requests and
+flushes again when edits arrive during a save. File errors retain the room and
+pending projection, leave editor streams connected, and report the failed file
+work. Explicit flush and room close wait for the worker; close removes its room
+only after a successful flush. Shutdown drains admitted edits and file workers.
+Retained room rows also recover acknowledged edits after an interrupted worker.
+
 ## Bounded file access
 
 Opening a native artifact file must not enumerate its owner's other resources or
@@ -201,6 +209,12 @@ is transient: never write it to a database, file, update journal or latest state
 Remove it on leave, connection close or lease expiry. Existing ticket limits are
 4 KiB per update, 64-character labels, 32 joined rooms per connection, a 10-second
 heartbeat and a 30-second lease. Reconnect republishes current live state.
+
+Routine credential renewal preserves durable sync work and remote presence leases.
+It starts a fresh live connection without failure backoff and republishes current
+participants independently of durable sync completion. Crypto work admitted by the
+old socket is cancelled. Real disconnects and denied renewal clear remote presence
+and cancel the synchronization attempt.
 
 ## Alternatives rejected
 

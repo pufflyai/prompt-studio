@@ -25,6 +25,8 @@ interface RelaySocketInput {
   onError?: () => void;
   /** Runs when the connection opens or closes, or a synchronization run ends. */
   onStatusChange?: () => void;
+  onReady?: () => void;
+  onDisconnect?: (reason: "renewal" | "offline") => void;
 }
 
 const createRelaySocket = (input: RelaySocketInput) => {
@@ -36,6 +38,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
   let expiry: ReturnType<typeof setTimeout> | undefined;
   let retryDone: (() => void) | undefined;
   let connected = false;
+  let failSocket: (() => void) | undefined;
   let attempt: AbortController | undefined;
   let attemptSignal: AbortSignal;
   const drain = async () => {
@@ -47,7 +50,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
       }
     } catch {
       if (!signal.aborted) input.onError?.();
-      socket?.close();
+      failSocket?.();
     } finally {
       running = undefined;
       input.onStatusChange?.();
@@ -57,6 +60,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
     const changed = connected !== next;
     connected = next;
     if (changed) input.onStatusChange?.();
+    if (changed && next) input.onReady?.();
   };
   const wake = () => {
     dirty = true;
@@ -68,67 +72,98 @@ const createRelaySocket = (input: RelaySocketInput) => {
     retryDone?.();
     socket?.close();
     attempt?.abort();
+    input.onDisconnect?.("offline");
   };
   input.signal.addEventListener("abort", abort, { once: true });
+  const open = async (access: Awaited<ReturnType<typeof input.access>>, onReady: () => void) => {
+    let renewal = false;
+    const expiresAt = Date.parse(access.expiresAt);
+    if (!(expiresAt > Date.now())) throw new Error("Relay access has expired");
+    const url = serviceUrl(address, input.path);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    const closed = Promise.withResolvers<void>();
+    const connection = new NativeWebSocket(url, {
+      headers: { ...input.headers, authorization: `Bearer ${access.token}` },
+    });
+    socket = connection;
+    let ready = false;
+    let failed = false;
+    const fail = () => {
+      failed = true;
+      renewal = false;
+      connection.close();
+    };
+    failSocket = fail;
+    const endAccess = () => {
+      const remaining = Date.parse(access.expiresAt) - Date.now();
+      if (remaining <= 0) {
+        renewal = ready && !failed;
+        connection.close();
+        return;
+      }
+      expiry = setTimeout(endAccess, Math.min(remaining, 2_147_483_647));
+    };
+    endAccess();
+    connection.addEventListener("message", (event) => {
+      let body: unknown;
+      try {
+        body = JSON.parse(String(event.data));
+      } catch {
+        fail();
+        return;
+      }
+      let message: ReturnType<typeof input.message>;
+      try {
+        message = input.message(body);
+      } catch {
+        fail();
+        return;
+      }
+      if (message === "ready") {
+        ready = true;
+        setConnected(true);
+        onReady();
+      }
+      if (message) wake();
+    });
+    connection.addEventListener("error", () => {
+      fail();
+      closed.resolve();
+    });
+    connection.addEventListener("close", (event) => {
+      if (event.code === 1008 && ready && !failed && Date.now() >= expiresAt) renewal = true;
+      closed.resolve();
+    });
+    await closed.promise;
+    return renewal;
+  };
   const done = (async () => {
     let failures = 0;
     while (!input.signal.aborted) {
-      attempt = new AbortController();
-      attemptSignal = AbortSignal.any([input.signal, attempt.signal]);
+      if (!attempt) {
+        attempt = new AbortController();
+        attemptSignal = AbortSignal.any([input.signal, attempt.signal]);
+      }
+      let renewal = false;
       try {
         const access = await input.access();
         if (input.signal.aborted) break;
-        const url = serviceUrl(address, input.path);
-        url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-        const closed = Promise.withResolvers<void>();
-        const connection = new NativeWebSocket(url, {
-          headers: { ...input.headers, authorization: `Bearer ${access.token}` },
+        renewal = await open(access, () => {
+          failures = 0;
         });
-        socket = connection;
-        const endAccess = () => {
-          const remaining = Date.parse(access.expiresAt) - Date.now();
-          if (remaining <= 0) {
-            attempt?.abort();
-            connection.close();
-            return;
-          }
-          expiry = setTimeout(endAccess, Math.min(remaining, 2_147_483_647));
-        };
-        endAccess();
-        connection.addEventListener("message", (event) => {
-          let body: unknown;
-          try {
-            body = JSON.parse(String(event.data));
-          } catch {
-            connection.close();
-            return;
-          }
-          let message: ReturnType<typeof input.message>;
-          try {
-            message = input.message(body);
-          } catch {
-            connection.close();
-            return;
-          }
-          if (message === "ready") {
-            setConnected(true);
-            failures = 0;
-          }
-          if (message) wake();
-        });
-        connection.addEventListener("error", () => {
-          connection.close();
-          closed.resolve();
-        });
-        connection.addEventListener("close", () => closed.resolve());
-        await closed.promise;
       } catch {
         input.onError?.();
       }
       clearTimeout(expiry);
       setConnected(false);
+      if (!input.signal.aborted && renewal) {
+        input.onDisconnect?.("renewal");
+        continue;
+      }
+      input.onDisconnect?.("offline");
       attempt.abort();
       await running;
+      attempt = undefined;
       if (input.signal.aborted) break;
       await new Promise<void>((resolve) => {
         retryDone = resolve;
@@ -136,6 +171,8 @@ const createRelaySocket = (input: RelaySocketInput) => {
       });
       retryDone = undefined;
     }
+    attempt?.abort();
+    await running;
     input.signal.removeEventListener("abort", abort);
   })();
   return {

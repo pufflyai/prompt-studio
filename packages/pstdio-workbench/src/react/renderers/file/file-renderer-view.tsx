@@ -303,7 +303,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           onChange={handleChange}
           rendererRef={rendererRef}
           sectionNavigation={editorSectionNavigation}
-          title={contribution.title}
+          title={resource?.label ?? contribution.title}
           connectDocument={
             contribution.connectDocument ? () => contribution.connectDocument!(resource, pageParams) : undefined
           }

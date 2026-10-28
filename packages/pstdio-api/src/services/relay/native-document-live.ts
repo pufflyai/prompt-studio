@@ -47,6 +47,11 @@ export const createNativeDocumentLive = (input: {
     input.live.receive(input.projectId, message.deviceId, parsed.data);
     return true;
   };
+  const renewAccess = () => {
+    const space = active?.space;
+    active?.controller.abort();
+    active = space ? { space, controller: new AbortController() } : undefined;
+  };
   const clearSpace = () => {
     active?.controller.abort();
     active = undefined;
@@ -64,6 +69,10 @@ export const createNativeDocumentLive = (input: {
       active?.controller.abort();
       active = { space: next, controller: new AbortController() };
       input.live.republish(input.projectId);
+    },
+    renewAccess,
+    republish() {
+      if (active && !closed) input.live.republish(input.projectId);
     },
     clearSpace,
     receive(message: Extract<LiveServerMessage, { type: "live" }>) {

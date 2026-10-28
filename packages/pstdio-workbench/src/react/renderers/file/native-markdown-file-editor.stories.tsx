@@ -1,6 +1,6 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { StrictMode } from "react";
+import { StrictMode, useRef, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import * as Y from "yjs";
 import type {
@@ -8,6 +8,7 @@ import type {
   NativeDocumentSessionSnapshot,
 } from "../../../core/native-documents/native-document-session";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
+import { FileRendererContentView } from "./file-renderer-content";
 import { NativeMarkdownFileEditor } from "./native-markdown-file-editor";
 
 const createStorySession = (offline = false): NativeDocumentSession => {
@@ -99,4 +100,44 @@ export const StrictEffects: Story = {
     </StrictMode>
   ),
   tags: ["!manifest"],
+};
+
+const RenamedResource = () => {
+  const [title, setTitle] = useState("Planning note");
+  const rendererRef = useRef<HTMLDivElement>(null);
+  return (
+    <>
+      <Button onClick={() => setTitle("Renamed planning note")}>Rename note</Button>
+      <FileRendererContentView
+        content={{
+          fileName: "opaque-storage-id.md",
+          mimeType: "text/markdown",
+          content: "Text",
+          editable: true,
+          documentSource: { kind: "workspace", path: "note.md" },
+        }}
+        editorKey="same-source"
+        title={title}
+        rendererRef={rendererRef}
+        errorNotice={null}
+        contributionCanSave
+        onChange={() => {}}
+        connectDocument={() => createStorySession()}
+      />
+    </>
+  );
+};
+export const ResourceTitle: Story = {
+  args: { connect: () => createStorySession() },
+  render: () => <RenamedResource />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvasElement.querySelector('[contenteditable="true"]')).not.toBeNull());
+    const editor = canvasElement.querySelector('[contenteditable="true"]');
+    await expect(canvas.getByText("Planning note", { exact: true })).toBeVisible();
+    await expect(canvas.queryByText("opaque-storage-id.md")).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "Rename note" }));
+    await expect(canvas.getByText("Renamed planning note", { exact: true })).toBeVisible();
+    await expect(canvasElement.querySelector('[contenteditable="true"]')).toBe(editor);
+  },
 };
