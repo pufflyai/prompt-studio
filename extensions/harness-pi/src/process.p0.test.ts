@@ -4,6 +4,19 @@ import { createPiHarness } from "./harness";
 import { piRecords, piRequest, startPiProcess } from "./process";
 import { startPiTurn } from "./turn";
 
+const expectRejectedTurn = async (turn: ReturnType<typeof startPiTurn>) => {
+  // Settle pipe-dependent results before assertions; Bun promise assertions can nest the I/O loop.
+  const failures = await Promise.all(
+    [turn.session, turn.done].map((pending) =>
+      pending.then(
+        () => null,
+        (error: unknown) => error,
+      ),
+    ),
+  );
+  for (const failure of failures) expect(failure).toBeInstanceOf(Error);
+};
+
 test("decodes split UTF-8 and keeps Unicode separators inside JSON records", async () => {
   const bytes = Buffer.from(`${JSON.stringify({ text: "å\u2028inside\u2029" })}\r\n${JSON.stringify({ type: "end" })}`);
   async function* chunks() {
@@ -17,8 +30,7 @@ test("rejects a missing executable without leaving startup pending", async () =>
     { prompt: "hello", sessionId: "missing", events: { getMessages: () => [], push() {} } },
     { command: ["pstdio-pi-missing-executable"] },
   );
-  await expect(turn.session).rejects.toThrow();
-  await expect(turn.done).rejects.toThrow();
+  await expectRejectedTurn(turn);
   await turn.stop();
 });
 
@@ -28,16 +40,18 @@ test("rejects an early process exit and malformed protocol", async () => {
       { prompt: "hello", sessionId: "early", events: { getMessages: () => [], push() {} } },
       { command: [process.execPath, "-e", source, "--"] },
     );
-    await expect(turn.session).rejects.toThrow();
-    await expect(turn.done).rejects.toThrow();
+    await expectRejectedTurn(turn);
   }
 });
 
 test("RPC failures reject and terminate the process", async () => {
   const source = `process.stdin.on('data', () => console.log(JSON.stringify({type:'response', id:'request', success:false, error:'Rejected'})));`;
-  await expect(piRequest("get_messages", [], { command: [process.execPath, "-e", source, "--"] })).rejects.toThrow(
-    "Rejected",
+  const failure = await piRequest("get_messages", [], { command: [process.execPath, "-e", source, "--"] }).then(
+    () => null,
+    (error: unknown) => error,
   );
+  expect(failure).toBeInstanceOf(Error);
+  expect((failure as Error).message).toContain("Rejected");
 });
 
 test("disposal stops pending history requests immediately", async () => {
