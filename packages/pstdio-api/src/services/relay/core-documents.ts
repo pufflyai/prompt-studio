@@ -1,4 +1,4 @@
-import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync";
+import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync/records";
 import {
   createDocumentRelay,
   createDocumentRelayConnection,

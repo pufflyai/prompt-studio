@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { createMemoryDocumentStore, createSyncSpace, openUpdate } from "pstdio-sync";
+import { createMemoryDocumentStore } from "pstdio-sync";
+import { createSyncSpace, openUpdate } from "pstdio-sync/encryption";
 import type { DocumentRelay } from "pstdio-sync/relay";
 import type { StoredUpdate } from "pstdio-sync-contracts";
 import { createPersonalHistoryStore } from "./store";

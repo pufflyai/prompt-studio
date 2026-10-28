@@ -1,5 +1,5 @@
 import { nativePresenceLimits, nativePresenceLiveSchema } from "pstdio-api-contracts";
-import { openLive, type SyncSpace, sealLive } from "pstdio-sync";
+import { openLive, type SyncSpace, sealLive } from "pstdio-sync/encryption";
 import type { LiveClientMessage, LiveServerMessage } from "pstdio-sync-contracts";
 import type { createNativeSessionPresence } from "../native-documents/session-presence";
 

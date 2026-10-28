@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
-import { readTextDocumentSeed, type StorageOwner, saveTextDocument, seedTextDocument } from "pstdio-sync";
+import type { StorageOwner } from "pstdio-sync";
+import { readTextDocumentSeed, saveTextDocument, seedTextDocument } from "pstdio-sync/text";
 import * as Y from "yjs";
 import { storage_document_updates, storage_documents } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";

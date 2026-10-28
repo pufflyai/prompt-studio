@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { createMemoryDocumentStore, createSyncSpace } from "pstdio-sync";
+import { createMemoryDocumentStore } from "pstdio-sync";
+import { createSyncSpace } from "pstdio-sync/encryption";
 import { createDocumentSync } from "pstdio-sync/relay";
 import { createRelayDocumentJobs } from "./document-jobs";
 import { numberRelayFixture } from "./resource-number-sync.fixture";

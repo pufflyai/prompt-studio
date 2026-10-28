@@ -1,4 +1,4 @@
-import { initialTextDocumentState } from "pstdio-sync";
+import { initialTextDocumentState } from "pstdio-sync/text";
 import * as Y from "yjs";
 
 export const checkpointText = (state: Uint8Array) => {

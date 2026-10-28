@@ -1,20 +1,22 @@
 import { and, eq } from "drizzle-orm";
 import {
   type AssetStore,
-  createDocumentStorage,
-  createTextDocumentStorage,
   type DocumentStore,
   hasDocumentUserData,
   isEmptyDocument,
-  mergeTextDocuments,
   NativeSourcePendingError,
-  prepareTextDocumentAdoption,
-  readTextDocumentSeed,
   type StorageObserver,
   type StorageOwner,
+} from "pstdio-sync";
+import { createDocumentStorage } from "pstdio-sync/records";
+import {
+  createTextDocumentStorage,
+  mergeTextDocuments,
+  prepareTextDocumentAdoption,
+  readTextDocumentSeed,
   saveTextDocument,
   seedTextDocument,
-} from "pstdio-sync";
+} from "pstdio-sync/text";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records, storage_documents } from "../../db/schemas.pg";

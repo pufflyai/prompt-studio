@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createDb, createExtensionStorageDBService, projects } from "pstdio-db";
-import { createSyncSpace } from "pstdio-sync";
+import { createSyncSpace } from "pstdio-sync/encryption";
 import { syncRoute } from "pstdio-sync-contracts";
 import { createWorkspaceContextFixture } from "../../features/extensions/workspace-context.test-fixture";
 import { createExtensionDocumentSync } from "./documents";

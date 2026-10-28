@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { AssetOwner, AssetReference } from "pstdio-api-contracts";
-import { UnreadableSyncData } from "pstdio-sync";
+import { UnreadableSyncData } from "pstdio-sync/encryption";
 import { AssetTransferError, type createAssetTransferService } from "../../../services/asset-transfer-service";
 
 export const createRecordAssets = (

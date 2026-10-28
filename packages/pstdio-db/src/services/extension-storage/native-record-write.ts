@@ -1,10 +1,6 @@
-import {
-  prepareRecordTextEdit,
-  readNativeRecordSources,
-  readTextDocumentSeed,
-  type StorageOwner,
-  saveTextDocument,
-} from "pstdio-sync";
+import type { StorageOwner } from "pstdio-sync";
+import { prepareRecordTextEdit, readNativeRecordSources } from "pstdio-sync/records";
+import { readTextDocumentSeed, saveTextDocument } from "pstdio-sync/text";
 import type { StorageGroup } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";

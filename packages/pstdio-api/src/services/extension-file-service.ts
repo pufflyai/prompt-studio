@@ -5,7 +5,8 @@ import type {
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
 import type { StorageOwner } from "pstdio-sync";
-import { initialRecordRevision, NativeSourcePendingError, nativeTextAssetKey, storageRecordId } from "pstdio-sync";
+import { NativeSourcePendingError } from "pstdio-sync";
+import { initialRecordRevision, nativeTextAssetKey, storageRecordId } from "pstdio-sync/records";
 import { z } from "zod";
 import { createRecordAssets } from "../features/extensions/command-environment/record-assets";
 import type { createAssetTransferService } from "./asset-transfer-service";

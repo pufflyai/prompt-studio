@@ -1,5 +1,5 @@
 import { expect, spyOn, test } from "bun:test";
-import { createSyncSpace, openLive, sealLive } from "pstdio-sync";
+import { createSyncSpace, openLive, sealLive } from "pstdio-sync/encryption";
 import type { LiveClientMessage, SpaceKey } from "pstdio-sync-contracts";
 import { createNativeSessionPresence } from "../native-documents/session-presence";
 import { createNativeDocumentLive } from "./native-document-live";

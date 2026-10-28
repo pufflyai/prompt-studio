@@ -1,7 +1,6 @@
 import type { ReadResult, StateEnvelope, StateInfo, UpdateEnvelope, UpdateResult } from "pstdio-sync-contracts";
-import type { DocumentStore } from "../document-types";
 import type { SyncSpace } from "../encryption";
-import type { AssetStore, StorageOwner } from "../types";
+import type { AssetStore, DocumentStore, StorageOwner } from "../shared";
 
 export interface DocumentRelay {
   read(after: number): Promise<ReadResult>;

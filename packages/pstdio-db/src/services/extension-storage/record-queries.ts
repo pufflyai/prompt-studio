@@ -1,12 +1,12 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
+import type { StorageOwner } from "pstdio-sync";
 import {
   compareQueryValues,
   encodeQueryCursor,
   prepareRecordQuery,
-  type StorageOwner,
   validateIndexes,
   validatePredicate,
-} from "pstdio-sync";
+} from "pstdio-sync/records";
 import {
   fingerprint,
   type Json,

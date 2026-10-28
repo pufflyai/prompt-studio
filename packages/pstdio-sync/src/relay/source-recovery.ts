@@ -1,10 +1,9 @@
 import { assetSchema, fingerprint } from "pstdio-sync-contracts";
 import * as Y from "yjs";
-import { recordTypeName } from "../document-edits";
-import { encodeBytes } from "../encoding";
 import { type SyncSpace, sealUpdate } from "../encryption";
-import { NativeSourceRecoveryError } from "../native-source-recovery";
-import type { AssetStore } from "../types";
+import { recordTypeName } from "../records";
+import type { AssetStore } from "../shared";
+import { encodeBytes, NativeSourceRecoveryError } from "../shared";
 import type { SyncFailure } from "./document-sync-types";
 import { encodeRecordFrame, type RecordFrame } from "./record-frames";
 import type { RecordStreamInput } from "./record-stream-types";

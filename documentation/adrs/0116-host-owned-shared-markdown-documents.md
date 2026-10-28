@@ -29,6 +29,16 @@ or records. The host compares outside writes with the last projected source and
 applies their character changes to the current shared text. In particular, Notes
 keeps its load/save transformation and byte-exact front matter.
 
+## Module ownership
+
+The format-independent text engine and browser replica live in `pstdio-sync/text`.
+The structured record engine lives in `pstdio-sync/records`. Connection-owned live
+values live in `pstdio-sync/presence`; the native host adapter retains its wire
+validation, authorization and timers. Relay and encryption remain separate modules.
+The [sync module reference](../references/architecture/0026-synchronization-contracts.md#sync-modules)
+defines the enforced dependency graph. Markdown rendering remains in UI bindings;
+this refactor does not enable live code or raw JSON editor collaboration.
+
 ## Source ownership
 
 The user authorized explicit source declarations for PS-776 on 2026-10-27.

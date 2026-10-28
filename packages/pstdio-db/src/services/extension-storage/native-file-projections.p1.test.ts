@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { createNativeDocumentKey } from "pstdio-api-contracts";
-import { seedTextDocument } from "pstdio-sync";
+import { seedTextDocument } from "pstdio-sync/text";
 import * as Y from "yjs";
 import { createExtensionStorageDBService } from "./extension-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";

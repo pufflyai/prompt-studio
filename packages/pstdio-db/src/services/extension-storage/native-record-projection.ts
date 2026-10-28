@@ -1,11 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
-import {
-  isEmptyDocument,
-  type NativeRecordSources,
-  readTextDocumentSeed,
-  type StorageOwner,
-  setNativeFieldValue,
-} from "pstdio-sync";
+import { isEmptyDocument, type StorageOwner } from "pstdio-sync";
+import { type NativeRecordSources, setNativeFieldValue } from "pstdio-sync/records";
+import { readTextDocumentSeed } from "pstdio-sync/text";
 import { fingerprint, type Json, type StorageRecord } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";

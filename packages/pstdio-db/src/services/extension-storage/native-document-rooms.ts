@@ -1,6 +1,7 @@
 import { and, eq, gt } from "drizzle-orm";
 import { type NativeDocumentTarget, nativeDocumentTargetSchema } from "pstdio-api-contracts";
-import { applyTextEditorUpdate, readTextDocumentSeed, type StorageOwner } from "pstdio-sync";
+import type { StorageOwner } from "pstdio-sync";
+import { applyTextEditorUpdate, readTextDocumentSeed } from "pstdio-sync/text";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { native_document_room_updates, native_document_rooms, native_document_sources } from "../../db/schemas.pg";

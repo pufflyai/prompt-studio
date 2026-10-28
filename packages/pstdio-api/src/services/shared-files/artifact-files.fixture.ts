@@ -8,7 +8,7 @@ import {
   createProjectsDBService,
 } from "pstdio-db";
 import { createAssetBytesStorage } from "pstdio-storage";
-import { storageRecordId } from "pstdio-sync";
+import { storageRecordId } from "pstdio-sync/records";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import { createAssetTransferService } from "../asset-transfer-service";
 import { createSharedArtifactMount } from "./artifact-mount";

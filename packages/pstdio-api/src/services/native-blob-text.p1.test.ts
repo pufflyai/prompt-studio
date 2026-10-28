@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { storageRecordId } from "pstdio-sync";
+import { storageRecordId } from "pstdio-sync/records";
 import { blobFilesFixture } from "./shared-files/blob-files.fixture";
 
 test("updating a shared blob retains its identity and serves its current native text", async () => {

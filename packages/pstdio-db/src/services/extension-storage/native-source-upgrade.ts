@@ -1,5 +1,5 @@
 import { and, asc, eq, sql } from "drizzle-orm";
-import { recordLifetime } from "pstdio-sync";
+import { recordLifetime } from "pstdio-sync/records";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records as records } from "../../db/schemas.pg";

@@ -1,16 +1,18 @@
 import { createHash } from "node:crypto";
 import { and, eq, max } from "drizzle-orm";
 import {
-  importTextSource,
-  type NativeRecordSources,
   NativeSourcePendingError,
-  nativeAssetBindingBaseline,
-  nativeFieldValue,
-  recordTextBindingUpdate,
   type StorageObserver,
   type StorageOwner,
   StorageRevisionChangedError,
 } from "pstdio-sync";
+import {
+  type NativeRecordSources,
+  nativeAssetBindingBaseline,
+  nativeFieldValue,
+  recordTextBindingUpdate,
+} from "pstdio-sync/records";
+import { importTextSource } from "pstdio-sync/text";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_updates, storage_documents } from "../../db/schemas.pg";
 import { runDocumentTransaction } from "./document-persistence";

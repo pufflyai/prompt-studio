@@ -1,11 +1,6 @@
 import { and, eq } from "drizzle-orm";
-import {
-  type AssetStore,
-  editResourceDocument,
-  type StorageObserver,
-  type StorageOwner,
-  StorageRevisionChangedError,
-} from "pstdio-sync";
+import { type AssetStore, type StorageObserver, type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
+import { editResourceDocument } from "pstdio-sync/records";
 import {
   assertStorageLimits,
   fingerprint,

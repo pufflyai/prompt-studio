@@ -1,4 +1,5 @@
-import { editProjectedText, NativeSourceRecoveryError, type StorageOwner } from "pstdio-sync";
+import { NativeSourceRecoveryError, type StorageOwner } from "pstdio-sync";
+import { editProjectedText } from "pstdio-sync/text";
 import * as Y from "yjs";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { checkpointInitialState, checkpointText } from "./text-checkpoint";

@@ -1,13 +1,13 @@
 import { expect, test } from "bun:test";
 import type { ReadResult, StateEnvelope, StateInfo, StoredUpdate, UpdateEnvelope } from "pstdio-sync-contracts";
 import * as Y from "yjs";
-import { type DocumentStore, memoryDocumentState } from "../document-types";
-import { decodeBytes } from "../encoding";
-import { createSyncId, createSyncSpace, openState, openUpdate, sealState, sealUpdate } from "../encryption";
-import { createMemoryDocumentStore } from "../memory-document-store";
-import { mergeTextDocuments, prepareTextDocumentAdoption } from "../text-document-adoption";
-import { readTextDocumentSeed, seedTextDocument } from "../text-document-seed";
-import { importTextSource } from "../text-source-import";
+import { createSyncId, createSyncSpace, openState, openUpdate, sealState, sealUpdate } from "../encryption/index";
+import { type DocumentStore, memoryDocumentState } from "../shared/document-types";
+import { decodeBytes } from "../shared/encoding";
+import { createMemoryDocumentStore } from "../shared/memory-document-store";
+import { mergeTextDocuments, prepareTextDocumentAdoption } from "../text/text-document-adoption";
+import { readTextDocumentSeed, seedTextDocument } from "../text/text-document-seed";
+import { importTextSource } from "../text/text-source-import";
 import { createDocumentSync } from "./document-sync";
 import type { SyncFailure } from "./document-sync-types";
 

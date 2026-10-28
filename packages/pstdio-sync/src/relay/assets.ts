@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { assetSchema, fingerprint, type RelayOperation, relayAssetStatusSchema } from "pstdio-sync-contracts";
-import type { RelayAssets } from "../types";
+import type { RelayAssets } from "../shared";
 import { stageRelayPart, withRelaySpool } from "./asset-part";
 
 type Request = (operation: RelayOperation, init?: RequestInit) => Promise<Response>;

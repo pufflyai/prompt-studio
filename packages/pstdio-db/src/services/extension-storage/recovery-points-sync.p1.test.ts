@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { createSyncSpace } from "pstdio-sync";
+import { createSyncSpace } from "pstdio-sync/encryption";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import { createDb } from "../../db/connection.pglite";
 import { projects } from "../../db/schemas.pg";

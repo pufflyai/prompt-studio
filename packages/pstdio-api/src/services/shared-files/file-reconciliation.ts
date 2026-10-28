@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import type { AssetReference } from "pstdio-api-contracts";
-import { initialRecordRevision, nativeTextAssetKey } from "pstdio-sync";
+import { initialRecordRevision, nativeTextAssetKey } from "pstdio-sync/records";
 import type { StorageGroup } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import type { createSharedArtifactMount } from "./artifact-mount";

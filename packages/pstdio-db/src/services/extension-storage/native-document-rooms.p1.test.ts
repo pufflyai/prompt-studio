@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { createNativeDocumentKey } from "pstdio-api-contracts";
-import { saveTextDocument, seedTextDocument } from "pstdio-sync";
+import { saveTextDocument, seedTextDocument } from "pstdio-sync/text";
 import * as Y from "yjs";
 import { native_document_room_updates } from "../../db/schemas.pg";
 import { createExtensionStorageDBService } from "./extension-storage";
