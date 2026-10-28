@@ -24,7 +24,10 @@ const environment = defineExampleEnvironment({
   icon: "Feather",
   regions: ["main", "side"],
   chrome: { sidenav: scribbleTree.ref, activity: false },
-  regionSettings: { sidenav: { size: { defaultPx: 240, minPx: 200, maxPx: 320 }, canClose: false } },
+  regionSettings: {
+    main: { alwaysShowTabs: true },
+    sidenav: { size: { defaultPx: 240, minPx: 200, maxPx: 320 }, canClose: false },
+  },
 });
 const draftKind = defineResourceKind({
   id: scribbleDraftKind.id,
