@@ -67,3 +67,48 @@ test("plan review keeps its Markdown preview when native history omits the appro
     expect(result.messages.flatMap((message) => message.parts).filter((part) => part.type === "tool")).toHaveLength(1);
   }
 });
+
+test("a denied review without a preview recovers as a failed tool instead of an open question", async () => {
+  const entries: ClaudeCodeTranscriptEntry[] = [
+    {
+      uuid: "call",
+      type: "assistant",
+      message: {
+        role: "assistant",
+        content: [{ type: "tool_use", id: "empty-plan", name: "ExitPlanMode", input: {} }],
+      },
+    },
+    {
+      uuid: "result",
+      type: "user",
+      message: {
+        role: "user",
+        content: [
+          { type: "tool_result", tool_use_id: "empty-plan", content: "No plan preview was provided.", is_error: true },
+        ],
+      },
+    },
+  ];
+  const { recordingSink } = await import("./mocks/controlled-child");
+  const { sink, messages } = recordingSink();
+  const accumulator = createMessageAccumulator(sink);
+  async function* stream(): AsyncIterable<RawLogEvent> {
+    yield { type: "stdout", data: JSON.stringify(entries[0]) };
+    yield {
+      type: "stdout",
+      data: JSON.stringify({
+        type: "control_request",
+        request: { tool_name: "ExitPlanMode", tool_use_id: "empty-plan", input: {} },
+      }),
+    };
+    yield { type: "stdout", data: JSON.stringify(entries[1]) };
+  }
+  for await (const message of normalizeClaudeCodeStream(stream())) accumulator.push(message);
+  expect(messages).toHaveLength(1);
+  expect(messages[0].parts[0]).toMatchObject({ tool: "question", callId: "empty-plan", status: "failed" });
+  const nativeMessages = normalizeClaudeCodeMessages(entries);
+  expect(messages[0].parts).toEqual(nativeMessages[0].parts);
+  const recovered = recoverClaudeMessages({ knownMessages: messages, nativeMessages });
+  expect(recovered.kind).toBe("recovered");
+  if (recovered.kind === "recovered") expect(recovered.messages[0].parts[0]).toMatchObject({ status: "failed" });
+});

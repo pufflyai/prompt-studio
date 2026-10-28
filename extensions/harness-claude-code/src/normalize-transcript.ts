@@ -1,6 +1,7 @@
 import type { SessionMessage, SessionMessageRole } from "@pstdio/sdk/extensions";
 import { visibleClaudePrompt } from "./literal-prompt";
 import { apiErrorPart, mergeToolResultMessage, toolResultPart, toolUsePart } from "./message-parts";
+import { EXIT_PLAN_MODE } from "./plan-mode";
 import type { ClaudeCodeContentBlock, ClaudeCodeTranscriptEntry } from "./types";
 import { parseTimestamp } from "./utils";
 
@@ -39,7 +40,8 @@ const transcriptBlockToMessage = (
 
   if (block.type === "tool_use") {
     const part = toolUsePart(block);
-    toolMap.set(block.id, part.tool);
+    toolMap.set(block.id, block.name === EXIT_PLAN_MODE ? EXIT_PLAN_MODE : part.tool);
+    if (block.name === EXIT_PLAN_MODE) return null;
     return { id, role: "assistant", createdAt, parts: [part] };
   }
 

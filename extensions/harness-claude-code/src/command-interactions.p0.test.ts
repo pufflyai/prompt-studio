@@ -46,7 +46,7 @@ test.each([
   emit({
     type: "control_request",
     request_id: "plan",
-    request: { tool_name: "ExitPlanMode", tool_use_id: "plan-tool", input: {} },
+    request: { tool_name: "ExitPlanMode", tool_use_id: "plan-tool", input: { plan: "Add a greeting." } },
   });
   await waitForStreamIo();
   child.exit();

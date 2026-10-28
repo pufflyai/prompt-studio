@@ -231,3 +231,10 @@ test("plan preview and review question have consecutive stream positions", async
   ]);
   expect(messages.map((message) => message.index)).toEqual([0, 1]);
 });
+
+test("native history does not offer an interrupted plan call without its permission preview", () => {
+  const messages = normalizeClaudeCodeMessages([
+    transcriptEntry("plan", "assistant", [{ type: "tool_use", id: "plan-tool", name: "ExitPlanMode", input: {} }]),
+  ]);
+  expect(messages).toEqual([]);
+});

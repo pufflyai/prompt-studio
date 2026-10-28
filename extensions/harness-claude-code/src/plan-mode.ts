@@ -1,6 +1,18 @@
 import type { HarnessQuestionChannel } from "@pstdio/sdk/extensions";
 
 export const EXIT_PLAN_MODE = "ExitPlanMode";
+export const planPreview = (input: unknown) => {
+  const plan = (input as { plan?: unknown } | null)?.plan;
+  return typeof plan === "string" && plan.trim() ? plan : undefined;
+};
+
+export const missingPlanReply = () => ({
+  behavior: "deny",
+  message:
+    "No plan preview was provided. Stay in plan mode and present the complete plan before requesting approval again.",
+  interrupt: false,
+});
+
 const APPROVE = "Approve and implement";
 
 export const planQuestionInput = () => {

@@ -2,7 +2,7 @@ import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
 import type { ApprovalResponse, HarnessApprovalChannel, HarnessQuestionChannel } from "@pstdio/sdk/extensions";
 import { ASK_USER_QUESTION } from "./message-parts";
-import { EXIT_PLAN_MODE, reviewPlan } from "./plan-mode";
+import { EXIT_PLAN_MODE, missingPlanReply, planPreview, reviewPlan } from "./plan-mode";
 import { askPerson } from "./questions";
 import { type AskUserQuestionInput, parseStdoutLine, type RawLogEvent } from "./types";
 
@@ -54,8 +54,9 @@ const answerControlRequest = async (parsed: Record<string, unknown>, channels: C
     return askPerson(channels.questions, { id, toolUseId, input: toolInput as AskUserQuestionInput });
   }
 
-  if (toolName === EXIT_PLAN_MODE && channels.questions) {
-    return reviewPlan(channels.questions, { id, toolUseId, input: toolInput });
+  if (toolName === EXIT_PLAN_MODE) {
+    if (!planPreview(toolInput)) return missingPlanReply();
+    if (channels.questions) return reviewPlan(channels.questions, { id, toolUseId, input: toolInput });
   }
 
   const decision: ControlDecision = channels.approvals

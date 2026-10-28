@@ -62,10 +62,11 @@ export const toolUsePart = (block: ClaudeCodeToolUseBlock): ToolPart => {
   };
 };
 
-/** `tool` is the name `toolUsePart` gave the call, so a question result stays a question. */
+/** Hidden plan calls acquire the same question input in live output and native history once they finish. */
 export const toolResultPart = (tool: string, block: ClaudeCodeToolResultBlock, toolUseResult?: unknown): ToolPart => {
   const isError = block.is_error === true;
-  const isQuestion = tool === QUESTION_TOOL;
+  const isPlan = tool === EXIT_PLAN_MODE;
+  const isQuestion = tool === QUESTION_TOOL || isPlan;
   // Claude stores an answer as `{ questions, answers }`, which the question form cannot read as a
   // reply. Claude's own text says what the person chose, or that they skipped, so keep that instead.
   const output =
@@ -74,11 +75,11 @@ export const toolResultPart = (tool: string, block: ClaudeCodeToolResultBlock, t
 
   return {
     type: "tool",
-    tool,
+    tool: isPlan ? QUESTION_TOOL : tool,
     callId: block.tool_use_id,
     actionType: classifyToolAction(tool),
     status: isError ? "failed" : "completed",
-    state: { output, errorText: isError ? errorText : undefined },
+    state: { ...(isPlan ? { input: planQuestionInput() } : {}), output, errorText: isError ? errorText : undefined },
   };
 };
 

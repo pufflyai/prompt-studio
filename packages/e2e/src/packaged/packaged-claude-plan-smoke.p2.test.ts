@@ -10,7 +10,7 @@ import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
 setupPackagedSmokeTests();
 
-test("packaged Claude plan review answers the same live tool call", async () => {
+test.each([true, false])("packaged Claude plan review requires a visible preview (%s)", async (withPlan) => {
   const root = mkdtempSync(join(tmpdir(), "packaged-claude-plan-"));
   let child: ChildProcess | undefined;
   try {
@@ -46,7 +46,7 @@ test("packaged Claude plan review answers the same live tool call", async () => 
           const session = await pending;
           const tool = { type: "tool_use", id: "plan-tool", name: "ExitPlanMode", input: {} };
           fixture.emit({ type: "assistant", message: { role: "assistant", content: [tool] } });
-          fixture.emit({ type: "control_request", request_id: "plan", request: { subtype: "can_use_tool", tool_name: "ExitPlanMode", input: { plan: "# Greeting plan\\n\\nAdd a greeting and run tests." }, tool_use_id: tool.id } });
+          fixture.emit({ type: "control_request", request_id: "plan", request: { subtype: "can_use_tool", tool_name: "ExitPlanMode", input: input.prompt === "Missing plan" ? {} : { plan: "# Greeting plan\\n\\nAdd a greeting and run tests." }, tool_use_id: tool.id } });
           const timer = setInterval(() => {
             const reply = fixture.written().find(item => item.type === "control_response");
             if (!reply) return;
@@ -84,9 +84,28 @@ test("packaged Claude plan review answers the same live tool call", async () => 
     const session = await request("/sessions", "POST", {
       project_id: project.id,
       title: "Claude plan review",
-      prompt: "Plan a greeting",
+      prompt: withPlan ? "Plan a greeting" : "Missing plan",
       agent: "test.claude-plan-smoke.harness.worker",
     });
+    if (!withPlan) {
+      for (
+        let attempt = 0;
+        attempt < 100 && (await request(`/sessions/${session.id}`)).status !== "completed";
+        attempt++
+      )
+        await Bun.sleep(20);
+      expect((await request(`/sessions/${session.id}`)).status).toBe("completed");
+      const parts = (await request(`/sessions/${session.id}/conversation`)).messages.flatMap(
+        (message: { parts: Array<{ type: string; tool?: string; status?: string }> }) => message.parts,
+      );
+      expect(
+        parts.filter(
+          (part: { tool?: string; status?: string }) => part.tool === "question" && part.status === "pending",
+        ),
+      ).toEqual([]);
+      expect(parts).toContainEqual({ type: "text", text: "Revising the plan." });
+      return;
+    }
     for (
       let attempt = 0;
       attempt < 100 && (await request(`/sessions/${session.id}`)).status !== "awaiting_input";
