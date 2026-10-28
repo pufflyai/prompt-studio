@@ -19,9 +19,8 @@ export const verifyPackagedShortcutReference = async (
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
   const dialog = page.getByRole("dialog").filter({ has: page.getByText("Keyboard shortcuts", { exact: true }) });
   await expect(dialog.getByRole("group", { name: "Shortcut greeting", exact: true })).toHaveCount(1);
-  await expect(dialog.getByRole("group", { name: "Go to shortcut destination", exact: true })).toContainText(
-    "Shortcut reference",
-  );
+  await dialog.getByRole("group", { name: "Go to shortcut destination", exact: true }).scrollIntoViewIfNeeded();
+  await expect(dialog.getByRole("heading", { name: "Shortcut reference", exact: true })).toBeVisible();
   await expect(dialog.getByRole("group", { name: "Go to shortcut destination", exact: true })).toContainText(/J/i);
   await expect(dialog.getByText("https://example.com/shortcuts", { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "Close Keyboard shortcuts", exact: true }).click();
@@ -29,8 +28,8 @@ export const verifyPackagedShortcutReference = async (
   await page.getByText("Search", { exact: true }).first().click();
   const palette = page.getByRole("dialog").last();
   for (const [label, key] of [
-    ["Open workspaces", "W"],
-    ["Open sessions", "S"],
+    ["Go to workspaces", "W"],
+    ["Go to sessions", "S"],
     ["New workspace", "W"],
     ["Open settings", ","],
     ["Shortcut greeting", "g"],

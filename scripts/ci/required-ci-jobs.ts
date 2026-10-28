@@ -52,8 +52,11 @@ export const plannedCiJobs = (scope: Scope) => {
   if (scope.harnessCli)
     add(
       "harness_cli_support",
-      ["harness-codex", "harness-claude-code", "harness-open-code"].flatMap((harness) =>
-        ["minimum", "latest"].map((version) => `harness_cli_support / ${harness} (${version})`),
+      ["harness-codex", "harness-claude-code", "harness-open-code", "harness-pi"].flatMap((harness) =>
+        ["minimum", "latest"].flatMap((version) => [
+          `harness_cli_support / ${harness} (${version})`,
+          ...(harness === "harness-pi" ? [`harness_cli_support / ${harness} (${version}, Windows)`] : []),
+        ]),
       ),
       "P2",
     );

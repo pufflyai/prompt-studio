@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
-import cmdShim from "cmd-shim";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runPackagedAsync } from "./packaged-helpers";
@@ -32,7 +32,10 @@ test.each([false, true])(
         `#!/usr/bin/env bun\nimport ${JSON.stringify(join(import.meta.dir, "packaged-codex.fixture.ts"))};\n`,
       );
       chmodSync(launcher, 0o755);
-      if (process.platform === "win32") await cmdShim(launcher, join(bin, "codex"));
+      // The Windows harness prefers its managed native binary over a .cmd launcher.
+      // Give this protocol peer a native executable too, so PATH selects the fixture.
+      if (process.platform === "win32")
+        execFileSync(process.execPath, ["build", "--compile", launcher, "--outfile", join(bin, "codex.exe")]);
       else
         writeFileSync(
           join(bin, "codex"),
