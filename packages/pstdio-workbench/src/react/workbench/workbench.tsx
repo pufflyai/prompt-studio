@@ -74,6 +74,11 @@ const createSidePanelHost = () => {
   return host;
 };
 
+const statusVisibility = (fullscreen: boolean, hasWidgets: boolean, hasContent: boolean) => ({
+  allowed: !fullscreen && hasWidgets,
+  visible: !fullscreen && hasWidgets && hasContent,
+});
+
 const WorkbenchContent = (props: WorkbenchProps) => {
   const { workbench, renderParamField, sidePanelBubbleIcon, onOpenSidePanel, titleBar, panelControlsPlacement } = props;
   const arrangement = useWorkbenchArrangement(workbench);
@@ -110,7 +115,12 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasStatusWidgets,
   } = useWorkbenchLayoutFlags(workbench);
   const showActivity = !fullscreen.active && hasActivityBarWidgets;
-  const showStatus = !fullscreen.active && hasStatusWidgets;
+  const [hasStatusContent, setHasStatusContent] = useState(false);
+  const { allowed: statusAllowed, visible: showStatus } = statusVisibility(
+    fullscreen.active,
+    hasStatusWidgets,
+    hasStatusContent,
+  );
   const sidePolicy = usePanelPolicy(workbench, "side");
   const sidenavPolicy = usePanelPolicy(workbench, "sidenav");
   const hasSidePanel =
@@ -216,7 +226,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         >
           {contentFrame}
         </Flex>
-        <WorkbenchStatusBar workbench={workbench} visible={showStatus} />
+        <WorkbenchStatusBar workbench={workbench} visible={statusAllowed} onContentChange={setHasStatusContent} />
         <WorkbenchFloatingSidePanel
           workbench={workbench}
           available={hasSidePanel}
