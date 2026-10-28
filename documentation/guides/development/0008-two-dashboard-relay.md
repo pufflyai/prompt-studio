@@ -29,8 +29,10 @@ app. Check the saved text independently of presence: no participant, caret or
 selection data belongs in its database journal or source files.
 
 Native collaboration requires an explicit full-source `documentSource` declaration
-from the view. Notes declares its artifact; Planner declares its body field and
-stable file blobs. Other views retain their ordinary load/save behavior. See
+from the view. For Notes and Planner checks, first install the source declarations
+from [PR #1508](https://github.com/pufflyai/prompt-studio/pull/1508): Notes uses its
+artifact; Planner uses its body field and stable file blobs. Other views retain
+their ordinary load/save behavior. See
 [shared Markdown sources](../../references/extensions/0012-renderer-edit-refresh-lifecycle.md#shared-markdown-sources).
 
 ## Offline and restart checks

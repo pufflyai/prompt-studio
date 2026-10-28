@@ -165,10 +165,10 @@ export const ResourceTitle: Story = {
     const canvas = within(canvasElement);
     await waitFor(() => expect(canvasElement.querySelector('[contenteditable="true"]')).not.toBeNull());
     const editor = canvasElement.querySelector('[contenteditable="true"]');
-    await expect(canvas.getByText("Planning note", { exact: true })).toBeVisible();
+    await expect(canvas.getByRole("heading", { name: "Planning note" })).toBeVisible();
     await expect(canvas.queryByText("opaque-storage-id.md")).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "Rename note" }));
-    await expect(canvas.getByText("Renamed planning note", { exact: true })).toBeVisible();
+    await expect(canvas.getByRole("heading", { name: "Renamed planning note" })).toBeVisible();
     await expect(canvasElement.querySelector('[contenteditable="true"]')).toBe(editor);
   },
 };

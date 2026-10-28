@@ -56,6 +56,7 @@ export const createExtensionStorageDBService = (
       installRecordIndexes(db, owners, validate),
     recovery: createRecoveryPoints(db, documents, options),
     watch: documents.watch,
+    flushStatistics: documents.flushStatistics,
     documents: documents.documents,
     openTextDocument: documents.openTextDocument,
     openNativeTextDocument: documents.openNativeTextDocument,

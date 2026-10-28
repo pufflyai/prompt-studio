@@ -5,7 +5,7 @@ import type {
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
 import type { StorageOwner } from "pstdio-sync";
-import { initialRecordRevision, nativeTextAssetKey, storageRecordId } from "pstdio-sync";
+import { initialRecordRevision, NativeSourcePendingError, nativeTextAssetKey, storageRecordId } from "pstdio-sync";
 import { z } from "zod";
 import { createRecordAssets } from "../features/extensions/command-environment/record-assets";
 import type { createAssetTransferService } from "./asset-transfer-service";
@@ -56,11 +56,16 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
     const identity = JSON.parse(record.recordId) as string[];
     if (identity.length !== 2 || identity[0] !== "blob-file") throw new Error("Invalid blob file identity");
     const nativeDocumentKey = nativeTextAssetKey(record);
-    const content = nativeDocumentKey
-      ? new Blob([
+    let content: Blob | undefined;
+    if (nativeDocumentKey) {
+      try {
+        content = new Blob([
           await deps.extensionStorageService.openNativeTextDocument({ owner, fileId: nativeDocumentKey }).read(),
-        ])
-      : undefined;
+        ]);
+      } catch (error) {
+        if (!(error instanceof NativeSourcePendingError)) throw error;
+      }
+    }
     return {
       id: identity[1]!,
       project_id: owner.workbenchId,
@@ -74,6 +79,7 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
       updated_at: value.updatedAt,
       asset: record.asset,
       nativeContent: content,
+      nativeDocumentKey,
     };
   };
   const importFile = async (
@@ -213,6 +219,7 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
   const read = async (file: NonNullable<Awaited<ReturnType<typeof getOwnedFile>>>, signal?: AbortSignal) => {
     signal?.throwIfAborted();
     if (file.nativeContent) return file.nativeContent.stream();
+    if (file.nativeDocumentKey) throw new NativeSourcePendingError();
     return deps.assetTransferService.read(
       { workbenchId: file.project_id, extensionId: file.extension_id },
       file.asset,

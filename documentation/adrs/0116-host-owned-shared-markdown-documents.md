@@ -150,6 +150,13 @@ pending projection, leave editor streams connected, and report the failed file
 work. Explicit flush and room close wait for the worker; close removes its room
 only after a successful flush. Shutdown drains admitted edits and file workers.
 Retained room rows also recover acknowledged edits after an interrupted worker.
+Known unavailable-source failures retain their document and allow other recovery
+work to continue. Unexpected database failures remain errors. Background storage
+statistics must drain before the database closes, after its writers have stopped.
+
+Relay storage resets invalidate view reads, resource references, and tab title
+queries. The editor header uses that current title. A rename keeps the existing
+document identity, editor session, and pending local edits.
 
 ## Bounded file access
 

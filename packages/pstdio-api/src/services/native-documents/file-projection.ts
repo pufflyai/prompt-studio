@@ -3,6 +3,7 @@ import type { StorageOwner } from "pstdio-sync";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { createNativeFileCopy } from "./file-copy";
 import type { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
+import { NativeDocumentSourceError } from "./source-error";
 import { checkpointInitialState, checkpointText } from "./text-checkpoint";
 
 interface Address {
@@ -48,7 +49,11 @@ export const createNativeFileProjector = (deps: {
         const input: NativeDocumentTarget & { projectId: string } = { ...target, projectId: address.owner.workbenchId };
         const loaded = await deps.load(input);
         if (loaded.documentKey !== address.documentKey || loaded.owner.extensionId !== address.owner.extensionId)
-          throw new Error("Native document source changed its owner");
+          throw new NativeDocumentSourceError(
+            400,
+            "native_document_source_changed",
+            "Native document source changed its owner",
+          );
         await initialize(address, loaded);
         const saved = (await projections.read(address))!;
         const state = await canonical(address).exportUpdate();

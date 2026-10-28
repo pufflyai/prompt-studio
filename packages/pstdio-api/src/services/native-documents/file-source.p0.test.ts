@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createNativeSourceKey } from "pstdio-api-contracts";
 import type { JsonObject } from "pstdio-api-contracts/extension-kernel";
 import { createWorkspaceContextFixture } from "../../features/extensions/workspace-context.test-fixture";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
+import { resolveNativeLoadedSource } from "./source-binding";
 
 let fixture: Awaited<ReturnType<typeof createWorkspaceContextFixture>>;
 beforeEach(async () => {
@@ -41,6 +42,43 @@ const target = {
   resource: { extensionId: "example.context", projectId: "project-1", type: "document", id: "one" },
   pageParams: { section: "body" },
 };
+
+test("a native workspace source preserves its UTF-8 byte-order mark", async () => {
+  await writeFile(join(fixture.root, "notes.txt"), "\ufeff# Source\r\n");
+  const loaded = await loadNativeMarkdownFile(fixture.deps, { ...target, projectId: "project-1" });
+  expect(loaded.content.content).toBe("\ufeff# Source\r\n");
+});
+
+test("a workspace file removed before full-source validation is a recoverable source failure", async () => {
+  await rm(join(fixture.root, "notes.txt"));
+  await expect(
+    loadNativeMarkdownFile(fixture.deps, {
+      ...target,
+      projectId: "project-1",
+      resource: { ...target.resource, metadata: { content: "loaded before deletion" } },
+    }),
+  ).rejects.toMatchObject({ code: "native_document_source_unavailable" });
+});
+
+test("source validation preserves unexpected workspace database failures", async () => {
+  const failure = new Error("Database read failed");
+  const deps = {
+    ...fixture.deps,
+    workspaceService: {
+      ...fixture.deps.workspaceService,
+      getDefault: async () => {
+        throw failure;
+      },
+    },
+  };
+  const result = await resolveNativeLoadedSource(deps, {
+    owner: { workbenchId: "project-1", extensionId: "example.context" },
+    source: { kind: "workspace", path: "notes.txt" },
+    content: "",
+    versions: {},
+  }).catch((error) => error);
+  expect(result).toBe(failure);
+});
 
 test("native Markdown uses the declared load handler and the source identity shared by its views", async () => {
   const file = await loadNativeMarkdownFile(fixture.deps, { ...target, projectId: "project-1" });

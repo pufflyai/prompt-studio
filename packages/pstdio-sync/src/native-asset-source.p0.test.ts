@@ -22,20 +22,13 @@ test("equal independently imported native asset histories can first join their r
     await importTextSource(rightText, key, "abc");
     bindRecordTextAsset(first, "file", key, Y.encodeStateAsUpdate(leftText));
     bindRecordTextAsset(second, "file", key, Y.encodeStateAsUpdate(rightText));
-    let joined: Awaited<ReturnType<typeof adoptResourceDocument>> | undefined, rejected: unknown;
-    try {
-      joined = await adoptResourceDocument(
-        "file",
-        [Y.encodeStateAsUpdate(second)],
-        [Y.encodeStateAsUpdate(first)],
-        base,
-      );
-    } catch (error) {
-      rejected = error;
-    }
-    console.log("equal asset adoption failure:", String(rejected));
-    expect(rejected).toBeUndefined();
-    expect(joined?.record.nativeSources?.[key]).toBeDefined();
+    const joined = await adoptResourceDocument(
+      "file",
+      [Y.encodeStateAsUpdate(second)],
+      [Y.encodeStateAsUpdate(first)],
+      base,
+    );
+    expect(joined.record.nativeSources?.[key]).toBeDefined();
   } finally {
     first.destroy();
     second.destroy();

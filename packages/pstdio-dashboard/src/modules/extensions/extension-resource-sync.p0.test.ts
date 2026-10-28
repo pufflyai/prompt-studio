@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import { viewDataEvents } from "@pstdio/sdk/extensions";
 import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
-import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
+import { publishExtensionEvent, publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
 import { watchOpenExtensionResource } from "./extension-resource-sync";
 
 import { extensionId, openNoteWorkbench, page, projectId, settle } from "./extension-resource-sync.fixture";
@@ -12,6 +12,7 @@ describe("open extension resource sync", () => {
     `${extensionId}.event.notes.changed`,
     `${extensionId}.notes.changed`,
     viewDataEvents.workspacesChanged.id,
+    "reset",
   ])("refreshes all placements after %s", async (eventId) => {
     let writable = true;
     const { workbench, open } = openNoteWorkbench((resource) => ({
@@ -40,7 +41,8 @@ describe("open extension resource sync", () => {
     await settle();
     const selected = workbench.layout.getLayout().activeWidgetId;
     writable = false;
-    publishExtensionEvent({ id: eventId, projectId });
+    if (eventId === "reset") publishExtensionEventReset();
+    else publishExtensionEvent({ id: eventId, projectId });
     await settle();
     const duplicate = workbench.layout.getLayout().regions.side.widgets[0]?.resource;
     expect(duplicate).toMatchObject({ label: "Renamed", metadata: { writable: false } });

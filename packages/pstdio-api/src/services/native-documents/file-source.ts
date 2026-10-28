@@ -11,16 +11,9 @@ import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { executeProjectExtensionCommand } from "../../features/extensions/execute-project-extension-command";
 import { withNativeFileWrite } from "./file-write-context";
 import { resolveNativeLoadedSource } from "./source-binding";
+import { NativeDocumentSourceError } from "./source-error";
 
-export class NativeDocumentSourceError extends Error {
-  constructor(
-    readonly status: 400 | 404 | 502,
-    readonly code: string,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { NativeDocumentSourceError } from "./source-error";
 
 type FileTarget = NativeDocumentTarget & { projectId: string; signal?: AbortSignal };
 const resolveFile = async (deps: ExtensionsRouteDeps, input: FileTarget) => {

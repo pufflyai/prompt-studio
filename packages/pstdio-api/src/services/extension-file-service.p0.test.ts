@@ -1,6 +1,38 @@
 import { expect, test } from "bun:test";
+import { and, eq } from "drizzle-orm";
+import { storage_documents } from "pstdio-db";
+import { NativeSourcePendingError, storageRecordId } from "pstdio-sync";
 import { createExtensionFileService } from "./extension-file-service";
 import { blobFilesFixture } from "./shared-files/blob-files.fixture";
+
+test("pending native text keeps file metadata and deletion available without serving stale asset bytes", async () => {
+  const f = await blobFilesFixture();
+  try {
+    const file = (await f.service.upload({ ...f.scope, file_name: "note.md", data: Buffer.from("Bootstrap bytes") }))!;
+    const documentKey = "a".repeat(64);
+    await f.storage.records.bindText({
+      recordId: storageRecordId(["blob-file"], file.id),
+      documentKey,
+      content: "Bootstrap bytes",
+    });
+    await f.db
+      .delete(storage_documents)
+      .where(
+        and(
+          eq(storage_documents.workbench_id, f.owner.workbenchId),
+          eq(storage_documents.extension_id, f.owner.extensionId),
+          eq(storage_documents.document_id, JSON.stringify(["native-markdown", documentKey])),
+        ),
+      );
+    expect((await f.service.list(f.scope))?.map((file) => file.id)).toEqual([file.id]);
+    const found = (await f.service.getOwnedFile({ ...f.scope, file_id: file.id }))!;
+    expect(found.id).toBe(file.id);
+    await expect(f.service.read(found)).rejects.toBeInstanceOf(NativeSourcePendingError);
+    expect(await f.service.remove({ ...f.scope, file_id: file.id })).toBe(true);
+  } finally {
+    await f.close();
+  }
+});
 
 test("file ownership uses the workbench and canonical extension identity", async () => {
   const f = await blobFilesFixture();
