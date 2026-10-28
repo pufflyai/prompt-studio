@@ -2,7 +2,7 @@ import { Box, Button, HStack, IconButton, Stack, Tag, Text } from "@chakra-ui/re
 import { ListRow, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
 import { ChatPanel, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { contrastRatio } from "./contrast";
 
 const statuses: SessionCompletionStatus[] = [
@@ -16,7 +16,7 @@ const statuses: SessionCompletionStatus[] = [
 ];
 function SolarizedChat() {
   return (
-    <Stack p="md" maxW="chat-content" gap="md" bg="bg.panel" color="fg">
+    <Stack p="md" maxW="chat-content" gap="md" bg="bg" color="fg">
       <HStack flexWrap="wrap" data-testid="session-states">
         {statuses.map((status) => (
           <HStack key={status} gap="2xs">
@@ -39,7 +39,6 @@ function SolarizedChat() {
         <ChatPanel
           messages={[{ id: "user", role: "user", parts: [{ type: "text", text: "Check the workspace." }] }]}
           streaming
-          streamingStartedAt={Date.now() - 65_000}
           emptyStateTitle="No messages"
           emptyStateDescription="Start a conversation."
           chatInputPlaceholder="Reply..."
@@ -70,24 +69,32 @@ const meta = {
   component: SolarizedChat,
   play: async ({ canvasElement, globals }) => {
     const canvas = within(canvasElement);
+    await waitFor(() =>
+      expect(canvasElement.ownerDocument.documentElement).toHaveAttribute("data-theme", globals.theme),
+    );
     const workspace = canvasElement.querySelector(".ps-chat-composer__workspace")!;
     const tag = canvas.getByText("Workspace tag").closest(".chakra-tag__root")!;
-    const background = getComputedStyle(canvasElement.firstElementChild!).backgroundColor;
-    await expect(getComputedStyle(tag).backgroundColor).toBe(getComputedStyle(workspace).backgroundColor);
-    if (globals.theme === "solarized-light") {
-      await expect(contrastRatio(getComputedStyle(workspace).backgroundColor, background)).toBeGreaterThan(1.2);
-    }
-    for (const status of statuses) {
-      const indicator = canvas.getByLabelText(status);
-      await expect(contrastRatio(getComputedStyle(indicator).color, background)).toBeGreaterThanOrEqual(4.5);
-    }
-    const row = canvas.getByTestId("selected-row");
-    const description = canvas.getByText("Workspace description");
-    await expect(
-      contrastRatio(getComputedStyle(description).color, getComputedStyle(row).backgroundColor),
-    ).toBeGreaterThanOrEqual(4.5);
-    const selected = getComputedStyle(canvas.getByRole("button", { name: "Selected" }));
-    await expect(contrastRatio(selected.color, selected.backgroundColor)).toBeGreaterThanOrEqual(4.5);
+    const userText = await canvas.findByText("Check the workspace.");
+    await waitFor(() => expect(userText).toBeVisible());
+    await waitFor(async () => {
+      const background = getComputedStyle(canvasElement.firstElementChild!).backgroundColor;
+      await expect(getComputedStyle(tag).backgroundColor).toBe(getComputedStyle(workspace).backgroundColor);
+      const userSurface = getComputedStyle(userText.closest(".ai-message__content")!).backgroundColor;
+      await expect(userSurface).not.toBe(background);
+      await expect(contrastRatio(getComputedStyle(userText).color, userSurface)).toBeGreaterThanOrEqual(4.5);
+      await expect(getComputedStyle(workspace.parentElement!).paddingTop).toBe("0px");
+      for (const status of statuses) {
+        const indicator = canvas.getByLabelText(status);
+        await expect(contrastRatio(getComputedStyle(indicator).color, background)).toBeGreaterThanOrEqual(4.5);
+      }
+      const row = canvas.getByTestId("selected-row");
+      const description = canvas.getByText("Workspace description");
+      await expect(
+        contrastRatio(getComputedStyle(description).color, getComputedStyle(row).backgroundColor),
+      ).toBeGreaterThanOrEqual(4.5);
+      const selected = getComputedStyle(canvas.getByRole("button", { name: "Selected" }));
+      await expect(contrastRatio(selected.color, selected.backgroundColor)).toBeGreaterThanOrEqual(4.5);
+    });
   },
 } satisfies Meta<typeof SolarizedChat>;
 export default meta;

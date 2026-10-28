@@ -127,6 +127,7 @@
       "border.error": "#FFB3A8",
       "bg.active": "#486E75",
       "bg.muted": "#073642",
+      "bg.subtle": "#003847",
       "fg.success": "#B3C95A",
       "fg.error": "#FFB3A8",
       "bg.tag": "#073642"

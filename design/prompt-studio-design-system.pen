@@ -28490,7 +28490,7 @@
                       "type": "frame",
                       "id": "TlakR",
                       "name": "cmp/ChatToolTimeline",
-                      "context": "An expanded Shell tool call. The row title is always `Shell` followed by the command, so the most useful input remains readable while collapsed. Expanding reveals only the command output. Never repeat the command inside the expandable block and never add separate Input/Output labels.\n\nOutput is mono and does not wrap — long test lines run past the right edge and clip. The block clips; expand or scroll for the rest.\n\nColour carries only status: green checks on passing lines, $ds-error on failures. Everything else stays fg.muted so the block reads as a quiet transcript. See cmp/ChatToolDiff for the patch equivalent.",
+                      "context": "Tool indicators always have transparent fill with no outline or border. Never draw a connector line under or between tool indicators, including expanded calls and the last row. Titles show the command without a tooltip; expanding reveals the full command and output in code blocks.",
                       "reusable": true,
                       "width": "fill_container",
                       "gap": 8,
@@ -28735,7 +28735,7 @@
                       "type": "frame",
                       "id": "JGKK1",
                       "name": "cmp/ChatWorkspaceHub",
-                      "context": "Borderless workspace shell using ds-surface, matching selected tabs. Header places the workspace selector first, then its open action directly to the right, followed by diff or setup status. The compact elapsed time stays at the right. No gap between header and input.",
+                      "context": "Borderless workspace shell uses ds-surface, matching selected tabs. Restore Solarized Light surface #EEE8D5. Surrounding composer inset is 0px top and 8px on the other sides. Selector, then open action, then diff; compact time at the far right. No gap between header and input.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "$ds-surface",
@@ -32771,7 +32771,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -77446,7 +77446,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -98145,7 +98145,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -127149,7 +127149,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -153643,7 +153643,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153665,7 +153665,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154389,7 +154389,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154411,7 +154411,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -155025,7 +155025,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -155047,7 +155047,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -156392,7 +156392,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -156414,7 +156414,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -187959,6 +187959,12 @@
                               "ref": "JGKK1",
                               "name": "Workspace hub and composer",
                               "width": "fill_container",
+                              "padding": [
+                                0,
+                                8,
+                                8,
+                                8
+                              ],
                               "descendants": {
                                 "J3u0Q/m7n0s": {
                                   "width": 0
@@ -188108,6 +188114,12 @@
                               "ref": "JGKK1",
                               "name": "Workspace hub and composer",
                               "width": "fill_container",
+                              "padding": [
+                                0,
+                                8,
+                                8,
+                                8
+                              ],
                               "descendants": {
                                 "J3u0Q/m7n0s": {
                                   "width": 0
@@ -188266,6 +188278,12 @@
                               "ref": "JGKK1",
                               "name": "Workspace hub and composer",
                               "width": "fill_container",
+                              "padding": [
+                                0,
+                                8,
+                                8,
+                                8
+                              ],
                               "descendants": {
                                 "J3u0Q/m7n0s": {
                                   "width": 0
@@ -188415,6 +188433,12 @@
                               "ref": "JGKK1",
                               "name": "Workspace hub and composer",
                               "width": "fill_container",
+                              "padding": [
+                                0,
+                                8,
+                                8,
+                                8
+                              ],
                               "descendants": {
                                 "J3u0Q/m7n0s": {
                                   "width": 0
@@ -227151,7 +227175,7 @@
           }
         },
         {
-          "value": "#FDF6E3",
+          "value": "#EEE8D5",
           "theme": {
             "mode": "solarized-light"
           }
@@ -227198,7 +227222,7 @@
           }
         },
         {
-          "value": "#CFCEBE",
+          "value": "#EEE8D5",
           "theme": {
             "mode": "solarized-light"
           }

@@ -24,6 +24,12 @@ const meta = {
             status: "completed",
             state: { input: { command: "bun run typecheck" }, output: "All checks passed." },
           },
+          {
+            type: "tool",
+            tool: "Read",
+            status: "completed",
+            state: { input: { file_path: "package.json" } },
+          },
         ],
       },
     ],
@@ -58,6 +64,7 @@ const meta = {
     const workspace = canvasElement.querySelector(".ps-chat-composer__workspace")!;
     const timer = canvas.getByText(/^\d+[smh](?: \d+[sm])?$/);
     await expect(workspace).toContainElement(timer);
+    await expect(getComputedStyle(workspace.parentElement!).paddingTop).toBe("0px");
     const open = canvas.getByRole("button", { name: "Open workspace" }).getBoundingClientRect();
     const identity = canvas.getByRole("button", { name: "main" }).getBoundingClientRect();
     const time = timer.getBoundingClientRect();
@@ -69,8 +76,12 @@ const meta = {
     await expect(parseFloat(getComputedStyle(assistant).marginBottom)).toBeGreaterThan(0);
     const paragraph = canvas.getByText("I will check the files.").closest("p")!;
     await expect(parseFloat(getComputedStyle(paragraph).marginTop)).toBeGreaterThan(0);
-    const indicator = canvasElement.querySelector(".chakra-timeline__indicator")!;
-    await expect(getComputedStyle(indicator).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    for (const indicator of canvasElement.querySelectorAll(".chakra-timeline__indicator")) {
+      await expect(getComputedStyle(indicator).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    }
+    for (const separator of canvasElement.querySelectorAll(".chakra-timeline__separator")) {
+      await expect(getComputedStyle(separator).display).toBe("none");
+    }
   },
 } satisfies Meta<typeof ChatPanel>;
 export default meta;

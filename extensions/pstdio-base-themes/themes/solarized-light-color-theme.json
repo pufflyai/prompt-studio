@@ -126,10 +126,11 @@
       "border.success": "#3B5400",
       "border.error": "#991B1B",
       "bg.active": "#CFCEBE",
-      "bg.muted": "#CFCEBE",
+      "bg.muted": "#EEE8D5",
+      "bg.subtle": "#EEE8D5",
       "fg.success": "#3B5400",
       "fg.error": "#991B1B",
-      "bg.tag": "#CFCEBE"
+      "bg.tag": "#EEE8D5"
     }
   }
 }

@@ -22,9 +22,8 @@ export const expectPackagedThemeColors = async (
     expect(theme!.monacoTheme.colors).not.toHaveProperty("bg.button.primary.pressed");
     if (id.startsWith("solarized-")) {
       expect(tokens["colors.bg.tag"]).toBe(tokens["colors.bg.muted"]);
-      if (id === "solarized-light") {
-        expect(tokens["colors.bg.muted"]).not.toBe(tokens["colors.bg.panel"]);
-      } else {
+      expect(tokens["colors.bg.subtle"]).not.toBe(tokens["colors.bg"]);
+      if (id === "solarized-dark") {
         expect(theme!.monacoTheme.colors["editor.selectionBackground"]).not.toBe(tokens["colors.bg.active"]);
       }
       expect(tokens["colors.bg.active"]).toBe(tokens["colors.bg.menu-item.selected"]);
