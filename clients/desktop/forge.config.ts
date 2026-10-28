@@ -34,6 +34,10 @@ const config: ForgeConfig = {
     download: { checksums },
     appBundleId: "studio.prompt.desktop",
     appCategoryType: "public.app-category.developer-tools",
+    extendInfo: {
+      NSLocalNetworkUsageDescription:
+        "Prompt Studio and its agents connect to devices and services on your local network.",
+    },
     asar: true,
     name: desktopPackageName(process.platform),
     executableName: desktopPackageName(process.platform),

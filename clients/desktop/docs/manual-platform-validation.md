@@ -87,6 +87,23 @@ Run that executable with `--version`, then with `serve` while the desktop is ope
 
 Remote desktop video latency is not a startup measurement. Use the `benchmark-*.json` records in the native Playwright `packaged-benchmarks.json` report for cold workbench, startup-window, warm attachment, and recovery timing.
 
+## Check local-network access on macOS
+
+On macOS 15 or later, use a packaged app signed with an Apple-issued Developer ID, launched from Finder in a fresh macOS test account. An ad hoc signature cannot reliably test the app's privacy identity. Commands launched from Terminal are automatically allowed local-network access, so launching the app from Terminal does not test the desktop permission flow. Apple describes this distinction and how helper processes inherit their app's permission in [local-network privacy](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy).
+
+1. Confirm the packaged app declares its local-network use:
+
+   ```sh
+   /usr/libexec/PlistBuddy -c 'Print :NSLocalNetworkUsageDescription' '/Applications/Prompt Studio.app/Contents/Info.plist'
+   ```
+
+2. Choose a device and TCP service on the same local network. Confirm a connection succeeds from Terminal, for example `nc -vz DEVICE_IP 22` for an SSH server. Use the same address and port in the following steps.
+3. Start an agent session in the desktop app and ask it to run the same connection command. Approve the macOS local-network request. If that first command failed before the approval completed, run it again.
+4. Confirm the agent's connection succeeds and Prompt Studio appears as allowed under **System Settings → Privacy & Security → Local Network**. Record the app name displayed there, the command output, app version, and macOS version.
+5. Turn off local-network access for the test app and confirm a new connection from the agent fails. Turn access back on and confirm a new connection succeeds.
+
+Run these checks only in the test account. Do not change permissions or stop sessions in an account with active work. A generated Info.plist check alone does not prove the permission prompt or helper-process access works.
+
 ## Test the updater
 
 This requires two different, compatible signed versions on the target platform. A first Windows release has no earlier published Windows build, so a published-to-published check is possible only after a second Windows release exists. Record that gap explicitly; an unsigned package pair does not close it.
