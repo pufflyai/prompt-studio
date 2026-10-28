@@ -45,7 +45,20 @@ describe("shipped extension composition", () => {
         cardinality: "one",
       },
       panelView: { kind: "placement", id: "ticket-board" },
-      slots: [],
+      slots: [
+        {
+          id: "needs-attention",
+          region: "side",
+          item: {
+            kind: "binding",
+            binding: {
+              kinds: [{ id: "ticket" }],
+              view: { kind: "view", id: "ticket-requests" },
+              cardinality: "one",
+            },
+          },
+        },
+      ],
     });
     expect(runtime.pages.find((page) => page.localId === "ticket")?.contribution).toMatchObject({
       path: "ticket",
