@@ -4,6 +4,7 @@ import { uiOrigin } from "./src/ui-server";
 
 export default defineConfig({
   testDir: "./src/perf",
+  globalSetup: "./src/scripts/global-setup.ts",
   testMatch: "**/*.perf.ts",
   expect: { timeout: 10_000 },
   fullyParallel: false,

@@ -10,13 +10,13 @@ import {
 } from "pstdio-api-runtime-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import { apiLogger } from "../../lib/logger";
-import { installMissingDefaultExtensions } from "../extensions/default-extensions";
 import { createProcessApi, findFreePort } from "../extensions/extension-process-api";
 import { resolvePstdioHome } from "../extensions/install-extension-source";
 import { selectExistingSources } from "../extensions/installed-extension-runtime";
 import type { ProjectExtensionRuntimeCatalog } from "../extensions/project-extension-runtime-catalog";
 import type { ProjectExtensionRuntimeSnapshot } from "../extensions/project-extension-runtime-snapshot";
 import { ExtensionRuntimeProjectMissingError } from "../extensions/project-extension-runtime-snapshot";
+import type { createHarnessPackages } from "./harness-packages";
 import { createHarnessRegistryLifecycle } from "./harness-registry-lifecycle";
 import { createHarnessStateApi } from "./harness-state";
 
@@ -77,12 +77,12 @@ export const createHarnessRegistryService = (input: {
   extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "get" | "getSourcesRuntime" | "subscribeInvalidation">;
   /** Override the expensive host-scope load+normalize+build. Tests inject a counting fake. */
   buildRegistry?: (input: BuildRegistryInput) => Promise<HarnessRegistry>;
-  installDefaultExtensions?: typeof installMissingDefaultExtensions;
   /** Clock for the detect() TTL memo; defaults to Date.now. */
   now?: () => number;
   detectCacheTtlMs?: number;
   sessionResources?: HarnessSessionResources;
   createConnectionsApi?: (scope: { projectId: string; extensionId: string }) => ExtensionConnectionsApi;
+  packages?: ReturnType<typeof createHarnessPackages>;
 }): HarnessRegistryService => {
   const unavailableConnections: ExtensionConnectionsApi = {
     request: async () => {
@@ -104,6 +104,11 @@ export const createHarnessRegistryService = (input: {
         : unavailableConnections,
     logger: harnessLogger(record.extensionId),
     state: createHarnessStateApi(record.extensionId),
+    packages: input.packages?.forHarness({
+      extensionId: record.extensionId,
+      name: record.name,
+      displayName: resolveHarnessName({ label: record.provider.label, localId: record.localId }),
+    }),
   });
 
   // Sources registered in the DB only exist once a project synced them, but agents are
@@ -153,38 +158,8 @@ export const createHarnessRegistryService = (input: {
   };
 
   const buildRegistry = input.buildRegistry ?? defaultBuildRegistry;
-  const installDefaults = input.installDefaultExtensions ?? installMissingDefaultExtensions;
   const now = input.now ?? Date.now;
   const detectCacheTtlMs = input.detectCacheTtlMs ?? DETECT_CACHE_TTL_MS;
-  let defaultExtensionsInstall: Promise<void> | null = null;
-
-  const ensureDefaultExtensionsInstalled = async () => {
-    defaultExtensionsInstall ??= (async () => {
-      try {
-        await installDefaults({
-          forceSourceDefaults: false,
-          onInstallFailure: ({ error, installName, source }) => {
-            apiLogger.warn(
-              {
-                err: error,
-                event: "harness.default_extension_install.warning",
-                extension: installName,
-                source,
-              },
-              "Default extension install failed before harness listing",
-            );
-          },
-        });
-      } catch (err) {
-        apiLogger.warn(
-          { err, event: "harness.default_extension_install.error" },
-          "Default extension install failed before harness listing",
-        );
-      }
-    })();
-
-    await defaultExtensionsInstall;
-  };
 
   // Re-evaluate each handle's `detect()` at most once per TTL so polling endpoints
   // don't spawn `<cli> --version` on every request.
@@ -267,7 +242,6 @@ export const createHarnessRegistryService = (input: {
     for (;;) {
       ensureActive();
       const generation = resolutionGeneration;
-      await ensureDefaultExtensionsInstalled();
       const paths = await listHostPaths();
       const signature = hostSignatureOf(paths);
       if (hostCache && hostCache.signature === signature) return hostCache.registry;

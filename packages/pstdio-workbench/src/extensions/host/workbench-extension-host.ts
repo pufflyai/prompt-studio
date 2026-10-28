@@ -156,25 +156,35 @@ const matchesActiveMode = (
   const active = input.workbench.modes.getActiveModeId() ?? "";
   return Array.isArray(modes) ? modes.includes(active) : modes === active;
 };
-const registerStatusBarItems = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
-  (input.metadata.statusBarItems ?? []).map((item) =>
-    input.workbench.statusBar.registerItem({
-      id: item.id,
-      viewId: item.viewId,
-      popoverViewId: item.popoverViewId,
-      slot: item.slot,
-      order: item.order,
-      isVisible: () =>
-        matchesActiveMode(
-          input,
-          item.when as
-            | {
-                mode?: string | string[];
-              }
-            | undefined,
-        ),
-    }),
-  );
+const registerStatusBarItems = (input: InternalRegisterWorkbenchExtensionContributionsInput) => {
+  const items = input.metadata.statusBarItems ?? [];
+  const subscription = input.workbench.preferences.onDidChangeValue((name) => {
+    if (!items.some((item) => item.visibilitySetting === name)) return;
+    input.workbench.statusBar.refreshVisibility();
+  });
+  return [
+    subscription,
+    ...items.map((item) =>
+      input.workbench.statusBar.registerItem({
+        id: item.id,
+        viewId: item.viewId,
+        popoverViewId: item.popoverViewId,
+        slot: item.slot,
+        order: item.order,
+        isVisible: () =>
+          (!item.visibilitySetting || input.workbench.preferences.getValue(item.visibilitySetting) !== false) &&
+          matchesActiveMode(
+            input,
+            item.when as
+              | {
+                  mode?: string | string[];
+                }
+              | undefined,
+          ),
+      }),
+    ),
+  ];
+};
 const registerPages = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.pages.map((page) => input.workbench.pages.registerPage(page));
 const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>

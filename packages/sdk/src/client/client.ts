@@ -7,6 +7,7 @@ import { createExtensionClient, type ExtensionClient } from "./extensions";
 import { createFilesystemClient, type FilesystemClient } from "./filesystem";
 import { createLinkIconsClient, type LinkIconsClient } from "./link-icons";
 import { createNotificationsClient, type NotificationsClient } from "./notifications";
+import { createOnboardingClient } from "./onboarding";
 import { createProjectClient, type ProjectClient } from "./projects";
 import type { ClientOptions } from "./request";
 import { createRequest } from "./request";
@@ -20,6 +21,7 @@ import { createSyncClient, type SyncClient } from "./sync";
 import { createWorkspaceClient, type WorkspaceClient } from "./workspaces";
 
 export type PstdioClient = {
+  onboarding: ReturnType<typeof createOnboardingClient>;
   account: AccountClient;
   assets: AssetsClient;
   resources: ResourceAnchorsClient;
@@ -43,6 +45,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
   const request = createRequest(options);
   const streams = createSessionStreamTransport(request, options);
   return {
+    onboarding: createOnboardingClient(request),
     account: createAccountClient(request),
     assets: createAssetsClient(request),
     resources: createResourceAnchorsClient(request),

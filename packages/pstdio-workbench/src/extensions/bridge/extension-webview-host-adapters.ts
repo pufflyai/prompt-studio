@@ -58,6 +58,10 @@ export interface ExtensionWebviewFilesAdapter {
 }
 
 export interface ExtensionWebviewHostAdapters {
+  installations?: {
+    list(): MaybePromise<WebviewHostCapabilityResults["extensions.installations.read"]>;
+    retry(id: string): MaybePromise<WebviewHostCapabilityResults["extensions.installations.retry"]>;
+  };
   performance?: PerformanceDiagnosticsAdapter;
   harnesses?: {
     read(input: { harnessId?: string; model?: string }): MaybePromise<WebviewHostCapabilityResults["harnesses.read"]>;

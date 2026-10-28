@@ -13,6 +13,29 @@ The runtime is one background process that serves the API and the dashboard on t
 | `pst close` | Stop the runtime. It refuses while work is still running. |
 | `pst logs` | Print the end of the runtime log file, or its path. |
 
+## First-launch setup (0.46)
+
+The first project opens a setup flow for choosing harnesses and default extensions.
+You can choose several harnesses, continue without one, or choose **Skip setup**.
+**Settings → Customizations → Don’t show onboarding** hides the flow on this host.
+Extension installation continues in the background after setup closes.
+
+The unreleased 0.46 CLI exposes the same choices:
+
+~~~bash
+pst onboarding status
+pst onboarding harnesses --harness codex --harness claude-code
+pst onboarding complete --work coding --work planning
+pst onboarding skip
+pst onboarding hide
+pst onboarding show
+~~~
+
+`harnesses` with no `--harness` saves an empty selection. `complete` with no `--work`
+keeps only Base Themes and Prompt Studio Skills. `show` clears the visibility
+preference; it does not reset completed setup. Skipping does not install choices
+that have not been submitted. Jobs already accepted by the runtime continue.
+
 ## Automatic start
 
 Most commands need the runtime. Before they run, the CLI looks for a running runtime and starts one when none is found. `pst close`, `pst logs`, `pst serve`, `pst extensions install-browser`, and `pst extensions test` skip this step. `extensions add` first looks for a linked project: a folder with `.pstdio/config.json`, in the current folder or a parent folder. Without one, it fails before it starts or contacts the API. From the release after 0.43.x, that error prints the command to run from your project folder, with the source as an absolute path. Installed-scope `extensions check` does the same. `extensions check <path>` stays local and checks the source with the extension API version built into this CLI.

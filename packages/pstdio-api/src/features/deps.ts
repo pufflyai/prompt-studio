@@ -16,6 +16,7 @@ import type { createNativeAccount } from "../services/account/native-account";
 import type { createAssetTransferService } from "../services/asset-transfer-service";
 import type { createExtensionAutomationPreferencesService } from "../services/extension-automation-preferences-service";
 import type { createExtensionFileService } from "../services/extension-file-service";
+import type { ExtensionInstallations } from "../services/extension-installations";
 import type { createExtensionService } from "../services/extension-service";
 import type { createExtensionUpgradeService } from "../services/extension-upgrade-service";
 import type { createFileService } from "../services/file-service";
@@ -35,6 +36,7 @@ import type { createExtensionSettingsService } from "./extensions/extension-sett
 import type { ExtensionWebviewAccess } from "./extensions/extension-webview-access";
 import type { ProjectExtensionRuntimeCatalog } from "./extensions/project-extension-runtime-catalog";
 import type { HarnessRegistryService } from "./harnesses/harness-registry-service";
+import type { createOnboarding } from "./onboarding/onboarding";
 import type { RuntimeRouteDeps } from "./runtime/routes";
 import type { createSessionQueueLifecycle } from "./sessions/session-queue-lifecycle";
 import type { EventBus } from "./sync/event-bus";
@@ -49,6 +51,7 @@ export interface ReadinessChecks {
 // and handlers should accept the narrow per-feature deps so adding a service
 // here does not silently widen every feature's surface.
 export interface RouteDeps {
+  onboarding: ReturnType<typeof createOnboarding>;
   accountService: ReturnType<typeof createNativeAccount>;
   personalHistoryService: ReturnType<typeof createPersonalHistoryService>;
   assetTransferService: ReturnType<typeof createAssetTransferService>;
@@ -81,6 +84,7 @@ export interface RouteDeps {
   webviewPreferencesDBService: ReturnType<typeof createWebviewPreferencesDBService>;
   extensionService: ReturnType<typeof createExtensionService>;
   extensionUpgradeService: ReturnType<typeof createExtensionUpgradeService>;
+  extensionInstallations: ExtensionInstallations;
   ensureExtensionWebviews: (installedExtensionId: string, webviewId?: string) => Promise<void>;
   extensionRuntimeCatalog: ProjectExtensionRuntimeCatalog;
   extensionSettingsService: ReturnType<typeof createExtensionSettingsService>;

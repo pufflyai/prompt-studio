@@ -7,5 +7,28 @@
     "lost": "Connexion au serveur perdue. Reconnexion automatique en cours.",
     "connected": "Connecté au serveur.",
     "unavailable": "Serveur indisponible"
+  },
+  "onboarding": {
+    "onThisDevice": "Sur cet appareil",
+    "onThisMac": "Sur ce Mac",
+    "available": "Disponibles à installer",
+    "workAreas": "Domaines de travail",
+    "extensions": "Extensions à installer",
+    "coding": "Développement",
+    "planning": "Planification de projet",
+    "steps": "Étapes de configuration",
+    "harnesses": "Harnesses",
+    "work": "Travail",
+    "skip": "Ignorer la configuration",
+    "chooseHarnesses": "Choisissez vos harnesses",
+    "chooseWork": "Sur quoi souhaitez-vous travailler ?",
+    "subtitle": "Ce sont des extensions par défaut. Vous pouvez les installer plus tard ou créer les vôtres.",
+    "noHarness": "Vous pouvez toujours utiliser Prompt Studio, mais vous ne pourrez pas lancer de harnesses depuis l’application.",
+    "continue": "Continuer",
+    "finish": "Terminer",
+    "back": "Retour",
+    "saveError": "Impossible d’enregistrer la configuration",
+    "customizations": "Personnalisations",
+    "dontShow": "Ne pas afficher la configuration initiale"
   }
 }

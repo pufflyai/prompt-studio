@@ -7,5 +7,28 @@
     "lost": "서버 연결이 끊어졌습니다. 자동으로 다시 연결하는 중입니다.",
     "connected": "백엔드에 연결되었습니다.",
     "unavailable": "백엔드에 연결할 수 없음"
+  },
+  "onboarding": {
+    "onThisDevice": "이 기기",
+    "onThisMac": "이 Mac",
+    "available": "설치 가능",
+    "workAreas": "작업 분야",
+    "extensions": "설치할 확장 기능",
+    "coding": "코딩",
+    "planning": "프로젝트 계획",
+    "steps": "설정 단계",
+    "harnesses": "하네스",
+    "work": "작업",
+    "skip": "설정 건너뛰기",
+    "chooseHarnesses": "하네스 선택",
+    "chooseWork": "어떤 작업을 하시겠어요?",
+    "subtitle": "기본 확장 기능입니다. 나중에 설치하거나 직접 만들 수 있습니다.",
+    "noHarness": "Prompt Studio를 계속 사용할 수 있지만 앱에서 하네스를 실행할 수는 없습니다.",
+    "continue": "계속",
+    "finish": "완료",
+    "back": "뒤로",
+    "saveError": "설정을 저장하지 못했습니다",
+    "customizations": "사용자 지정",
+    "dontShow": "초기 설정 표시 안 함"
   }
 }

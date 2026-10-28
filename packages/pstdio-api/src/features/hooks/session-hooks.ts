@@ -41,6 +41,7 @@ export type SessionHookDeps = Pick<
   | "projectInfoService"
   | "resourceLinksService"
   | "extensionService"
+  | "extensionInstallations"
   | "extensionSettingsDBService"
   | "extensionSettingsService"
   | "extensionStorageService"

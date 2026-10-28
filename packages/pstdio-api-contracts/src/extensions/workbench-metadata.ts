@@ -220,6 +220,7 @@ const workbenchExtensionStatusBarItemRecordSchema = z.object({
   extensionId: z.string(),
   view: viewRefSchema,
   popover: viewRefSchema.optional(),
+  visibilitySetting: z.string().optional(),
   slot: z.object({ id: z.string() }),
   order: z.number().optional(),
   when: normalizedWhenSchema.optional(),

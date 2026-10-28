@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createExtensionInstallations } from "../../services/extension-installations";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
 import { loadExtensionSource } from "./extension-runtime";
@@ -40,6 +41,7 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
   const provisionProjectWorkspaces = mock(async () => {});
   return {
     deps: {
+      extensionInstallations: createExtensionInstallations(),
       eventBus: { emit: mock(() => {}) },
       extensionAutomationPreferencesService: { set: mock(async (row: unknown) => row) },
       extensionConnectionService: { removeExtension: mock(async () => {}) },
@@ -80,6 +82,18 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
 };
 
 describe("project extension lifecycle", () => {
+  test("releases the installation slot before workspace hooks acquire harness packages", async () => {
+    const { deps, provisionProjectWorkspaces } = createDeps({ skills: [{}] });
+    provisionProjectWorkspaces.mockImplementation(async () => {
+      expect(deps.extensionInstallations.list()[0]?.status).toBe("completed");
+      await deps.extensionInstallations.run({ installName: "example", displayName: "Example" }, async () => {});
+    });
+    await createProjectExtensionLifecycle(deps as never).install("project-1", {
+      source: { kind: "catalog", name: "example" },
+    });
+    expect(provisionProjectWorkspaces).toHaveBeenCalledTimes(1);
+    expect(deps.extensionInstallations.list().map((job) => job.status)).toEqual(["completed", "completed"]);
+  });
   test("installs without provisioning when the extension has no workspace contributions", async () => {
     const { deps, provisionProjectWorkspaces } = createDeps();
     const lifecycle = createProjectExtensionLifecycle(deps as never);
@@ -87,6 +101,9 @@ describe("project extension lifecycle", () => {
     const result = await lifecycle.install("project-1", { source: { kind: "catalog", name: "example" } });
 
     expect(result.extension).toMatchObject({ installName: "example", enabled: true });
+    expect(deps.extensionInstallations.list()).toMatchObject([
+      { projectId: "project-1", installName: "example", status: "completed" },
+    ]);
     expect(provisionProjectWorkspaces).not.toHaveBeenCalled();
   });
 

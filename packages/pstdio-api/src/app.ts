@@ -146,6 +146,8 @@ const buildApp = async (
   let deps!: RouteDeps;
   const {
     extensionConnectionService,
+    extensionInstallations,
+    onboarding,
     extensionRuntime,
     extensionStartup,
     extensionRuntimeCatalog,
@@ -244,6 +246,8 @@ const buildApp = async (
     extensionService,
     extensionUpgradeService,
     extensionSettingsService,
+    extensionInstallations,
+    onboarding,
     extensionStorageService: extensionStorageDBService,
     syncService,
     activityEventsService: activityEventsDBService,

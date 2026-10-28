@@ -19,6 +19,7 @@ import {
   type ProjectTemplateAsset,
   templateTypesForProject,
 } from "./data/template-provider-api";
+import { registerExtensionDetailPage } from "./extension-detail-page";
 
 const SkillViewer = lazy(() => import("./components/skill-viewer").then((module) => ({ default: module.SkillViewer })));
 
@@ -60,6 +61,7 @@ export const machineTokensSettingsPanel = {
 // settings registry. The unified surface (`createWorkbenchSettingsModule`) turns
 // these into the navigation tree and dispatching panel.
 export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContext) => {
+  registerExtensionDetailPage(ctx);
   ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10, scope: "global" });
   ctx.settings.registerSection({ id: "experimental", title: "Experimental", order: 30, scope: "global" });
   ctx.views.registerView({

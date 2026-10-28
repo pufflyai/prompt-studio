@@ -76,7 +76,6 @@ const createRegistry = (sourcePath: string) => {
   });
   const registry = createHarnessRegistryService({
     installedExtensionSourcesService: { list: async () => [] } as never,
-    installDefaultExtensions: async () => [],
     extensionRuntimeCatalog: catalog,
   });
   return { catalog, registry };

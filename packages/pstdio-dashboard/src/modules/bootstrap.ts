@@ -10,6 +10,7 @@ import {
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 
 interface CreateBootstrapModuleInput {
+  beforeOpenProject?: (resume: () => void, isCurrent: () => boolean) => Promise<boolean>;
   isInitialSyncComplete?: () => boolean;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
 }
@@ -67,35 +68,46 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
         }
 
         ctx.pageLocations.setProject(projectId);
-        ctx.modes.setActiveMode("project");
-        const boot = () => {
-          if (run !== generation || getDashboardSelectedProjectId(ctx) !== projectId) return false;
-          // A user can navigate through the core shell while an extension URL waits.
-          // That committed location takes precedence over the delayed restore.
-          if (ctx.pages.store.getState().location) {
+        const isCurrent = () => run === generation && getDashboardSelectedProjectId(ctx) === projectId;
+        const openProject = () => {
+          if (!isCurrent()) return;
+          ctx.modes.setActiveMode("project");
+          const boot = () => {
+            if (!isCurrent()) return false;
+            // A user can navigate through the core shell while an extension URL waits.
+            // That committed location takes precedence over the delayed restore.
+            if (ctx.pages.store.getState().location) {
+              readyUnsubscribe?.();
+              readyUnsubscribe = undefined;
+              return true;
+            }
+            // Registered extension pages may still belong to the previous project.
+            // Restore only core page paths before this project's metadata arrives,
+            // preserving extension URLs and saved parents until their pages register.
+            if (
+              getDashboardExtensionsReadyProjectId(ctx) !== projectId &&
+              !isCorePageLocation(ctx.pageLocations.getBootLocation(projectId))
+            ) {
+              return false;
+            }
             readyUnsubscribe?.();
             readyUnsubscribe = undefined;
+            ctx.pageLocations.boot(projectId);
             return true;
-          }
-          // Registered extension pages may still belong to the previous project.
-          // Restore only core page paths before this project's metadata arrives,
-          // preserving extension URLs and saved parents until their pages register.
-          if (
-            getDashboardExtensionsReadyProjectId(ctx) !== projectId &&
-            !isCorePageLocation(ctx.pageLocations.getBootLocation(projectId))
-          ) {
-            return false;
-          }
-          readyUnsubscribe?.();
-          readyUnsubscribe = undefined;
-          const result = ctx.pageLocations.boot(projectId);
-          if (!result.ok) return true;
-          return true;
-        };
+          };
 
-        if (!boot()) {
-          readyUnsubscribe = subscribeDashboardExtensionsReadyProject(ctx, boot);
-        }
+          if (!boot()) {
+            readyUnsubscribe = subscribeDashboardExtensionsReadyProject(ctx, boot);
+          }
+        };
+        if (input.beforeOpenProject) {
+          void input
+            .beforeOpenProject(openProject, isCurrent)
+            .then((open) => {
+              if (open) openProject();
+            })
+            .catch(openProject);
+        } else openProject();
       };
 
       bootSelectedProject();

@@ -7,5 +7,28 @@
     "lost": "與伺服器的連線已中斷，正在自動重新連線。",
     "connected": "已連線至後端。",
     "unavailable": "後端無法使用"
+  },
+  "onboarding": {
+    "onThisDevice": "此裝置上",
+    "onThisMac": "此 Mac 上",
+    "available": "可安裝",
+    "workAreas": "工作領域",
+    "extensions": "要安裝的擴充功能",
+    "coding": "程式設計",
+    "planning": "專案規劃",
+    "steps": "設定步驟",
+    "harnesses": "Harnesses",
+    "work": "工作",
+    "skip": "略過設定",
+    "chooseHarnesses": "選擇 harnesses",
+    "chooseWork": "你想做什麼？",
+    "subtitle": "這些是預設擴充功能。你可以稍後安裝，也可以自行建置。",
+    "noHarness": "你仍可使用 Prompt Studio，但無法從應用程式中執行 harnesses。",
+    "continue": "繼續",
+    "finish": "完成",
+    "back": "返回",
+    "saveError": "無法儲存設定",
+    "customizations": "自訂",
+    "dontShow": "不顯示初始設定"
   }
 }

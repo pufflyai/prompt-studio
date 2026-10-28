@@ -7,5 +7,28 @@
     "lost": "Backend connection lost. Reconnecting automatically.",
     "connected": "Connected to backend.",
     "unavailable": "Backend unavailable"
+  },
+  "onboarding": {
+    "onThisDevice": "On this device",
+    "onThisMac": "On this Mac",
+    "available": "Available to install",
+    "workAreas": "Work areas",
+    "extensions": "Extensions to install",
+    "coding": "Coding",
+    "planning": "Project planning",
+    "steps": "Setup steps",
+    "harnesses": "Harnesses",
+    "work": "Work",
+    "skip": "Skip setup",
+    "chooseHarnesses": "Choose your harnesses",
+    "chooseWork": "What do you want to work on?",
+    "subtitle": "These are default extensions. You can install them later or build your own.",
+    "noHarness": "You can still use Prompt Studio, but you won’t be able to run harnesses from the app.",
+    "continue": "Continue",
+    "finish": "Finish",
+    "back": "Back",
+    "saveError": "Could not save setup",
+    "customizations": "Customizations",
+    "dontShow": "Don’t show onboarding"
   }
 }

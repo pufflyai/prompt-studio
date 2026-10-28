@@ -89,6 +89,7 @@ describe("startup default extensions", () => {
     let prepareCalled = false;
     const backgroundTasks: Promise<void>[] = [];
     const deps = {
+      onboarding: { resume: async () => {} },
       projectService: { list: async () => [] },
       sessionService: { listActive: async () => [] },
     } as unknown as Parameters<typeof runStartupTasks>[0];
@@ -131,6 +132,7 @@ describe("startup default extensions", () => {
     let preparationSignal: AbortSignal | undefined;
     const backgroundTasks: Promise<void>[] = [];
     const deps = {
+      onboarding: { resume: async () => {} },
       projectService: { list: async () => [] },
       sessionService: { listActive: async () => [] },
     } as unknown as Parameters<typeof runStartupTasks>[0];

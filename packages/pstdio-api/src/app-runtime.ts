@@ -122,11 +122,14 @@ const createAppCloser = (input: {
   stopQueueReadiness: () => Promise<void>;
   sessionQueueLifecycle: RouteDeps["sessionQueueLifecycle"];
   harnessRegistry: RouteDeps["harnessRegistry"];
+  extensionInstallations: RouteDeps["extensionInstallations"];
 }) => {
   let closePromise: Promise<void> | null = null;
   return async () => {
     closePromise ??= (async () => {
       const hooksStopped = input.closeSessionHooks();
+      const installationsStopped = input.extensionInstallations.dispose();
+      installationsStopped.catch(() => {});
       try {
         input.startupAbort.abort();
         const queueStopped = input.sessionQueueLifecycle.close();
@@ -150,7 +153,7 @@ const createAppCloser = (input: {
       } finally {
         // A part that fails to stop must not leave PGlite open (lessons 0002 and 0011).
         try {
-          await hooksStopped;
+          await Promise.all([hooksStopped, installationsStopped]);
         } finally {
           await input.closeDb();
         }
@@ -216,6 +219,7 @@ export const startAppLifecycle = async (input: {
     stopQueueReadiness,
     sessionQueueLifecycle: input.deps.sessionQueueLifecycle,
     harnessRegistry: input.deps.harnessRegistry,
+    extensionInstallations: input.deps.extensionInstallations,
     startupDone,
     getStartupBackgroundDone: () => Promise.all(startupBackgroundTasks).then(() => undefined),
   });

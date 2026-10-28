@@ -25,7 +25,6 @@ test("a removed project releases its harness consumers during the next invalidat
       get: async (projectId) => ({ ...(await catalog.get(projectId)), runtime: { harnesses: [record] } }) as never,
     },
     installedExtensionSourcesService: { list: async () => [] } as never,
-    installDefaultExtensions: async () => [],
   });
   try {
     const handle = (await service.get(record.id, { projectId: "removed" }))!;

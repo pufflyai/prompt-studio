@@ -1,3 +1,4 @@
+import type { ExtensionInstallation } from "pstdio-api-contracts";
 import type {
   CommandDefinition,
   CommandNotice,
@@ -61,6 +62,10 @@ export type WebviewArtifactsClient = {
 };
 
 export type WebviewClient<TCommands, TSettings = undefined> = {
+  installations: {
+    list(): Promise<ExtensionInstallation[]>;
+    retry(id: string): Promise<ExtensionInstallation>;
+  };
   editing: WebviewEditingClient;
   files: WebviewFilesClient;
   page: WebviewPageClient;
@@ -188,6 +193,10 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
   };
   return {
     ...hostClient,
+    installations: {
+      list: () => host.call("extensions.installations.read", {}),
+      retry: (id) => host.call("extensions.installations.retry", { id }),
+    },
     editing: createWebviewEditingClient(host),
     files: createWebviewFilesClient(host),
     page: createWebviewPageClient(host),
