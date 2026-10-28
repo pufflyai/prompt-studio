@@ -68,6 +68,7 @@ export const createNativeDocumentService = (deps: {
   });
   const presence = createNativeSessionPresence({ deviceId: deps.deviceId, identity: deps.presenceIdentity });
   const rooms = new Map<string, Room>();
+  const sourceListeners = new Set<(owner: StorageOwner, name: string) => void>();
   const pending = new Set<Promise<unknown>>();
   let closed = false;
   const track = <T>(action: () => Promise<T>) => {
@@ -137,6 +138,25 @@ export const createNativeDocumentService = (deps: {
       return result;
     });
   return {
+    sources: {
+      current(owner: StorageOwner) {
+        return [
+          ...new Set(
+            [...rooms.values()]
+              .filter(
+                (room) => room.owner.workbenchId === owner.workbenchId && room.owner.extensionId === owner.extensionId,
+              )
+              .map((room) => JSON.stringify(["native-markdown", room.documentKey])),
+          ),
+        ];
+      },
+      watch(listener: (owner: StorageOwner, name: string) => void) {
+        sourceListeners.add(listener);
+        return () => {
+          sourceListeners.delete(listener);
+        };
+      },
+    },
     live: presence.live,
     presence: {
       join(input: RoomRequest & { seedId: string }) {
@@ -187,6 +207,8 @@ export const createNativeDocumentService = (deps: {
         await integrate(room.owner, roomId);
         const initial = await snapshot(room, roomId);
         rooms.set(roomId, room);
+        for (const listener of sourceListeners)
+          listener(room.owner, JSON.stringify(["native-markdown", room.documentKey]));
         return {
           roomId,
           owner: room.owner,

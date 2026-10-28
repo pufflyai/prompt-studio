@@ -21,6 +21,8 @@ export const startAutomationSync = (input: {
     projectId: owner.workbenchId,
     signal,
     access: input.access,
+    acceptsChange: documents.acceptsChange,
+    synchronizeChanged: documents.synchronizeChanged,
     synchronize: documents.synchronize,
     onStatusChange: input.statusChanged,
   });
@@ -33,7 +35,7 @@ export const startAutomationSync = (input: {
   return {
     done: connection.done.finally(() => {
       stop();
-      documents.close();
+      return documents.close();
     }),
     status: async () => ({ ...(await documents.status()), ...connection.status() }),
     close: () => controller.abort(),

@@ -13,12 +13,14 @@ import {
 import { serviceAddress, serviceUrl } from "./http";
 
 const NativeWebSocket = globalThis.WebSocket as { new (url: string | URL, options?: Bun.WebSocketOptions): WebSocket };
+type TargetedSync = (signal: AbortSignal) => Promise<boolean>;
+type DocumentChange = Extract<LiveServerMessage, { type: "changed" }>;
 
 interface RelaySocketInput {
   origin: string;
   path: string;
   headers?: Record<string, string>;
-  message: (body: unknown) => "ready" | "changed" | null;
+  message: (body: unknown) => "ready" | "changed" | TargetedSync | null;
   access: () => Promise<{ token: string; expiresAt: string }>;
   synchronize: (signal: AbortSignal) => Promise<unknown>;
   signal: AbortSignal;
@@ -34,6 +36,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
   let socket: WebSocket | undefined;
   let dirty = false;
   let running: Promise<void> | undefined;
+  const targeted = new Set<Promise<boolean>>();
   let retry: ReturnType<typeof setTimeout> | undefined;
   let expiry: ReturnType<typeof setTimeout> | undefined;
   let retryDone: (() => void) | undefined;
@@ -66,7 +69,32 @@ const createRelaySocket = (input: RelaySocketInput) => {
     if (changed) input.onStatusChange?.();
     if (changed && next) input.onReady?.();
   };
-  const wake = () => {
+  const wake = (synchronize?: TargetedSync) => {
+    if (synchronize && connected && !input.signal.aborted) {
+      const signal = attemptSignal;
+      const work = synchronize(signal);
+      if (targeted.has(work)) return;
+      targeted.add(work);
+      void work
+        .then(
+          (handled) => {
+            if (!handled && !signal.aborted) wake();
+          },
+          () => {
+            if (signal.aborted) return;
+            attempt?.abort();
+            input.onDisconnect?.("offline");
+            input.onError?.();
+            failSocket?.();
+          },
+        )
+        .finally(() => {
+          targeted.delete(work);
+          input.onStatusChange?.();
+        });
+      input.onStatusChange?.();
+      return;
+    }
     dirty = true;
     if (connected && !running && !input.signal.aborted) running = drain();
   };
@@ -128,7 +156,8 @@ const createRelaySocket = (input: RelaySocketInput) => {
         setConnected(true);
         onReady();
       }
-      if (message) wake();
+      if (typeof message === "function") wake(message);
+      else if (message) wake();
     });
     connection.addEventListener("error", () => {
       fail();
@@ -168,6 +197,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
       input.onDisconnect?.("offline");
       attempt.abort();
       await running;
+      await Promise.allSettled([...targeted]);
       attempt = undefined;
       if (input.signal.aborted) break;
       await new Promise<void>((resolve) => {
@@ -178,12 +208,13 @@ const createRelaySocket = (input: RelaySocketInput) => {
     }
     attempt?.abort();
     await running;
+    await Promise.allSettled([...targeted]);
     input.signal.removeEventListener("abort", abort);
   })();
   return {
     wake,
     done,
-    status: () => ({ connected, busy: dirty || !!running }),
+    status: () => ({ connected, busy: dirty || !!running || targeted.size > 0 }),
     send: (data: string) => {
       if (!connected || input.signal.aborted || socket?.readyState !== WebSocket.OPEN) return false;
       socket.send(data);
@@ -208,6 +239,9 @@ export const createDocumentRelayConnection = (
   input: Omit<RelaySocketInput, "path" | "message" | "headers"> & {
     projectId: string;
     onLive?: (message: Extract<LiveServerMessage, { type: "live" }>) => void;
+    acceptsChange?: (change: DocumentChange) => boolean;
+    synchronizeChanged?: (change: DocumentChange, signal: AbortSignal) => Promise<boolean>;
+    synchronizeDocument?: (name: string, signal: AbortSignal) => Promise<boolean>;
   },
 ) => {
   const connection = createRelaySocket({
@@ -221,11 +255,16 @@ export const createDocumentRelayConnection = (
         return "ready";
       }
       if (event.type === "live") input.onLive?.(event);
+      if (event.type === "changed" && input.acceptsChange && !input.acceptsChange(event)) return null;
+      if (event.type === "changed" && input.synchronizeChanged)
+        return (signal) => input.synchronizeChanged!(event, signal);
       return event.type === "changed" ? "changed" : null;
     },
   });
   return {
     ...connection,
+    wakeDocument: (name: string) =>
+      connection.wake(input.synchronizeDocument ? (signal) => input.synchronizeDocument!(name, signal) : undefined),
     send: (message: LiveClientMessage) => connection.send(JSON.stringify(liveClientMessageSchema.parse(message))),
   };
 };

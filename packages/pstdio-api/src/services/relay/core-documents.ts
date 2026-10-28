@@ -47,10 +47,13 @@ export const startCoreDocumentSync = (input: {
   let generation: number | undefined;
   // Each reconnect replaces the document syncs. The first download stays done.
   let firstDownloaded = false;
+  const documentIds = new Set<string>();
+  let summary = { downloaded: false, pending: false, needsAttention: false };
   const close = () => {
     for (const sync of syncs) sync.close();
     syncs = [];
     numbers = undefined;
+    documentIds.clear();
   };
   const live = createNativeDocumentLive({
     projectId: config.workbenchId,
@@ -63,6 +66,7 @@ export const startCoreDocumentSync = (input: {
     projectId: config.workbenchId,
     access,
     signal,
+    acceptsChange: (change) => change.spaceOwner === null && documentIds.has(change.documentId),
     synchronize: async (attemptSignal) => {
       const { project: space } = await fetchSyncSpaces({
         ...config,
@@ -70,14 +74,16 @@ export const startCoreDocumentSync = (input: {
         signal: attemptSignal,
       });
       live.setSpace(space);
-      const relay = (documentId: string) =>
-        createDocumentRelay({
+      const relay = (documentId: string) => {
+        documentIds.add(documentId);
+        return createDocumentRelay({
           origin: config.relayOrigin,
           space,
           documentId,
           signal: attemptSignal,
           token: async () => (await access()).token,
         });
+      };
       const quarantine = (documentId: string) =>
         createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
       if (!syncs.length || attempt !== attemptSignal || generation !== space.generation) {
@@ -105,8 +111,13 @@ export const startCoreDocumentSync = (input: {
         quarantine,
       });
       await numbers!.synchronize();
-      if (!(await Promise.all([...syncs, numbers!].map((sync) => sync.status()))).every((status) => status.downloaded))
-        return;
+      const statuses = await Promise.all([...syncs, numbers!].map((sync) => sync.status()));
+      summary = {
+        downloaded: statuses.every((status) => status.downloaded),
+        pending: statuses.some((status) => status.pending),
+        needsAttention: statuses.some((status) => status.needsAttention),
+      };
+      if (!summary.downloaded) return;
       firstDownloaded = true;
       await reconcileProjectInfo(deps, config.workbenchId, checkedFolders);
     },
@@ -127,6 +138,7 @@ export const startCoreDocumentSync = (input: {
   });
   const changed = (changed: { workbenchId: string }) => {
     if (changed.workbenchId !== owner.workbenchId) return;
+    summary = { ...summary, pending: true };
     connection.wake();
     input.statusChanged?.();
   };
@@ -140,16 +152,7 @@ export const startCoreDocumentSync = (input: {
       close();
       await live.close();
     }),
-    status: async () => {
-      const statuses = await Promise.all([...syncs, ...(numbers ? [numbers] : [])].map((sync) => sync.status()));
-      return {
-        firstDownloaded,
-        downloaded: !!numbers && statuses.length > 0 && statuses.every((status) => status.downloaded),
-        pending: statuses.some((status) => status.pending),
-        needsAttention: statuses.some((status) => status.needsAttention),
-        ...connection.status(),
-      };
-    },
+    status: async () => ({ firstDownloaded, ...summary, ...connection.status() }),
     close: () => controller.abort(),
   };
 };

@@ -76,7 +76,7 @@ export const createDocumentStorageDBService = (
   diagnostics?: StorageDiagnostics,
 ) => {
   const cache = createDocumentCache();
-  const listeners = new Set<(owner: StorageOwner) => void>();
+  const listeners = new Set<(owner: StorageOwner, documentId?: string) => void>();
   const documentListeners = new Map<string, Set<() => void>>();
   const numberListeners = new Set<(event: NumberChange) => void>();
   const numbersChanged = (events: NumberChange[]) => notifyNumbers(numberListeners, events);
@@ -104,7 +104,7 @@ export const createDocumentStorageDBService = (
         });
         cache.publish(key, result);
         if (result.changed) {
-          for (const listener of listeners) listener(owner);
+          for (const listener of listeners) listener(owner, documentId);
           for (const listener of documentListeners.get(key) ?? []) listener();
         }
         return result.value;
@@ -211,7 +211,7 @@ export const createDocumentStorageDBService = (
       }
       return false;
     },
-    watch(listener: (owner: StorageOwner) => void) {
+    watch(listener: (owner: StorageOwner, documentId?: string) => void) {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
@@ -229,7 +229,11 @@ export const createDocumentStorageDBService = (
           observer,
           assets: input.assets,
           diagnostics,
-          nativeChanged: (keys) => notifyNativeRecords(documentListeners, input.owner, keys),
+          nativeChanged: (keys) => {
+            notifyNativeRecords(documentListeners, input.owner, keys);
+            for (const key of keys)
+              for (const listener of listeners) listener(input.owner, JSON.stringify(["native-markdown", key]));
+          },
           changed: () => {
             for (const listener of listeners) listener(input.owner);
           },
