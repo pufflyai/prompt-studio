@@ -12,7 +12,7 @@ const manifest: FrameManifest = {
   catalog: "runtime.js",
   sources: { button: { script: "button.js", project: "provider.js" }, editor: { script: "editor.js" } },
   modules: {
-    "runtime.js": module("runtime", ["react.js"], ["button.js", "editor.js"]),
+    "runtime.js": { ...module("runtime", ["react.js"], ["button.js", "editor.js"]), css: ["theme.css"] },
     "react.js": module("react"),
     "button.js": module("button", ["react.js"], ["dialog.js"]),
     "dialog.js": module("dialog", ["react.js"]),
@@ -32,6 +32,23 @@ test("a frame receives its runtime, provider and reachable interactions without 
     "provider.js",
   ]);
   expect(selectFrameModules(manifest, "$runtime")).toEqual(["runtime.js", "react.js"]);
+});
+
+test("a preview loads only its dependency styles in catalog cascade order", async () => {
+  const graph = {
+    ...manifest,
+    styles: ["dialog.css", "theme.css", "editor.css"],
+    modules: {
+      ...manifest.modules,
+      "dialog.js": { ...module("dialog", ["react.js"]), css: ["dialog.css"] },
+      "editor.js": { ...module("editor"), css: ["editor.css"] },
+      "dialog.css": module("dialog-style"),
+      "editor.css": module("editor-style"),
+    },
+  };
+  const assets = await readFrameAssets(graph, { source: "button", cached: [] }, async (path) => path);
+  expect(assets.styles).toEqual(["dialog.css", "theme.css"]);
+  expect(Object.keys(assets.files)).not.toContain("editor.css");
 });
 
 test("immutable files already cached by the viewer are not read or sent again", async () => {

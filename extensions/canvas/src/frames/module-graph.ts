@@ -2,7 +2,7 @@ export interface FrameManifest {
   entry: string;
   catalog: string;
   sources: Record<string, { script: string; project?: string }>;
-  modules: Record<string, { file: string; imports: string[]; dynamicImports: string[]; bytes: number }>;
+  modules: Record<string, { file: string; imports: string[]; dynamicImports: string[]; bytes: number; css?: string[] }>;
   styles: string[];
 }
 export interface FrameAssetRequest {
@@ -46,9 +46,11 @@ export const readFrameAssets = async (
   if (!Array.isArray(request.cached) || request.cached.some((name) => typeof name !== "string"))
     throw new Error("Cached preview modules must be an array of names");
   const modules = selectFrameModules(manifest, request.source);
+  const requiredStyles = new Set(modules.flatMap((name) => manifest.modules[name].css ?? []));
+  const styles = manifest.styles.filter((name) => requiredStyles.has(name));
   const cached = new Set(request.cached);
   const files = await Promise.all(
-    [...modules, ...manifest.styles]
+    [...modules, ...styles]
       .filter((name) => !cached.has(name))
       .map(async (name) => {
         const module = manifest.modules[name];
@@ -56,5 +58,5 @@ export const readFrameAssets = async (
         return [name, await readText(module.file)] as const;
       }),
   );
-  return { entry: manifest.entry, modules, styles: manifest.styles, files: Object.fromEntries(files) };
+  return { entry: manifest.entry, modules, styles, files: Object.fromEntries(files) };
 };

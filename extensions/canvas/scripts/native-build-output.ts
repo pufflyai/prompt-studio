@@ -13,6 +13,7 @@ interface Chunk {
   modules?: Record<string, unknown>;
   imports?: string[];
   dynamicImports?: string[];
+  viteMetadata?: { importedCss: Set<string> };
 }
 interface Asset {
   type: "asset";

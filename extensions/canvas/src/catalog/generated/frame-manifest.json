@@ -1562,7 +1562,10 @@
       "dynamicImports": [
         "previews-Crz1Eim-.js"
       ],
-      "bytes": 11606
+      "bytes": 11606,
+      "css": [
+        "entry.css"
+      ]
     },
     "00-api.docs-CDShdmuq.js": {
       "file": "src/catalog/generated/frame-modules/d3c186e3826f415807a9f83ba2aa11f080ac7422808c8be7098d8a2870eaa6ff.txt",
@@ -1964,7 +1967,10 @@
         "katex-ThAliW52.js"
       ],
       "dynamicImports": [],
-      "bytes": 1667
+      "bytes": 1667,
+      "css": [
+        "katex.css"
+      ]
     },
     "EquationComponent-BtOgXA3g-DDbG9w5Y.js": {
       "file": "src/catalog/generated/frame-modules/b5ac53587b8e0ab3adecc0a7a0cd3cb5328dc2e822ebb938f6d0aa8073a970c4.txt",
@@ -1977,7 +1983,10 @@
         "katex-ThAliW52.js"
       ],
       "dynamicImports": [],
-      "bytes": 2082
+      "bytes": 2082,
+      "css": [
+        "katex.css"
+      ]
     },
     "FloatingTextFormatToolbarPlugin-B7LrLxfD.js": {
       "file": "src/catalog/generated/frame-modules/aca20da91e83b72d13cd3e78757752255d4c8c17d9f5033e3b49bba690f8abbf.txt",
@@ -2002,7 +2011,10 @@
         "tooltip-DMf2X1t2.js"
       ],
       "dynamicImports": [],
-      "bytes": 15148
+      "bytes": 15148,
+      "css": [
+        "FloatingTextFormatToolbarPlugin.css"
+      ]
     },
     "LexicalClickableLinkPlugin.prod-DmMUISGY.js": {
       "file": "src/catalog/generated/frame-modules/d42d6d1f60903dad1da5898345f00af8d0c2411c93b4705bef1d76338f8eee4c.txt",
@@ -6401,7 +6413,10 @@
       "dynamicImports": [
         "data-table-stat-chart-content-BOfSwW9T.js"
       ],
-      "bytes": 38361
+      "bytes": 38361,
+      "css": [
+        "data-table.css"
+      ]
     },
     "data-table-GrnLbS0p.js": {
       "file": "src/catalog/generated/frame-modules/cb7e47ad0747b2fb7830f25e1f4873250b3d9ffe15597e2bc5431bc31e500893.txt",
@@ -6588,7 +6603,10 @@
         "table-BzAM-iKy.js"
       ],
       "dynamicImports": [],
-      "bytes": 3105
+      "bytes": 3105,
+      "css": [
+        "data-table.css"
+      ]
     },
     "data-table-stat-chart-content-BOfSwW9T.js": {
       "file": "src/catalog/generated/frame-modules/f055f5ba6d860fdf6435014cd7dde8a96dca4af6367f2d16be84b3eed7ff9cc7.txt",
@@ -8010,7 +8028,10 @@
         "shim-Cq-IIXsw.js"
       ],
       "dynamicImports": [],
-      "bytes": 1195140
+      "bytes": 1195140,
+      "css": [
+        "esm.css"
+      ]
     },
     "eventmodeling-45OFAUF4-BuslWpa_.js": {
       "file": "src/catalog/generated/frame-modules/d80e87fa2003c6ee769a37863caec2e23aa4b4e6b386dcf608711001f4415257.txt",
@@ -9646,7 +9667,10 @@
         "trash-2-BPkz66pc.js"
       ],
       "dynamicImports": [],
-      "bytes": 19972
+      "bytes": 19972,
+      "css": [
+        "icon-options.css"
+      ]
     },
     "icon-picker-grid-0-aH4PeG.js": {
       "file": "src/catalog/generated/frame-modules/862dbfe798aa879bbfe05eb8f907ef50102785d6b885d2c0eb85b2210a69aab8.txt",
@@ -10869,7 +10893,10 @@
         "EquationComponent-BT0mCXYJ.js",
         "MermaidComponent-CsJJMWwb.js"
       ],
-      "bytes": 30961
+      "bytes": 30961,
+      "css": [
+        "list-marker-width-plugin.css"
+      ]
     },
     "list-row-CspatwmP-Dn6N6_Op.js": {
       "file": "src/catalog/generated/frame-modules/2bb14576066f936edc46fd4280717b070b46c6d4b34b9f43fe30fae76212399b.txt",
@@ -11244,7 +11271,10 @@
         "TreeViewPlugin-DX2KEjUb.js"
       ],
       "dynamicImports": [],
-      "bytes": 22074
+      "bytes": 22074,
+      "css": [
+        "markdown-editor.css"
+      ]
     },
     "markdown-editor-DoQ3ObBB-BGvfZW_h.js": {
       "file": "src/catalog/generated/frame-modules/1870199fc6a42778f2f79bf2128d908ac1c6c1da9d1e2f3b70307ecd892b08db.txt",
@@ -12077,7 +12107,10 @@
       "file": "src/catalog/generated/frame-modules/01a7a89b6be7de367efcc18ddd54bdd8f74010565b0572c9072bf82b6e33502e.txt",
       "imports": [],
       "dynamicImports": [],
-      "bytes": 29857877
+      "bytes": 29857877,
+      "css": [
+        "monaco.css"
+      ]
     },
     "monaco-browser-CJ3H7_0c-BxBBHpq4.js": {
       "file": "src/catalog/generated/frame-modules/00c12b1bd17eecb8cf80ee263f1827cb0dc8886cbec5b333ef4ae2708384bbd4.txt",
@@ -13523,7 +13556,10 @@
         "ui.js"
       ],
       "dynamicImports": [],
-      "bytes": 753
+      "bytes": 753,
+      "css": [
+        "preview.css"
+      ]
     },
     "preview-DJcTQxcz.js": {
       "file": "src/catalog/generated/frame-modules/f4bfe64dc2bb266b6d657c6baf01f5a06e23dc73531cf5a139108607ff4d89ef.txt",
@@ -13852,7 +13888,10 @@
         "TreeViewPlugin-DX2KEjUb.js"
       ],
       "dynamicImports": [],
-      "bytes": 13284
+      "bytes": 13284,
+      "css": [
+        "prompt-input.css"
+      ]
     },
     "prompt-input.canvas-Dqk8sJNN.js": {
       "file": "src/catalog/generated/frame-modules/cee45d94d974ef59242597e677ba65ba9ce42f4a274d1c6e37934e917216de67.txt",
@@ -14816,7 +14855,10 @@
         "scroll-area-DkVVuw3t.js"
       ],
       "dynamicImports": [],
-      "bytes": 3728
+      "bytes": 3728,
+      "css": [
+        "rich-text-theme.css"
+      ]
     },
     "rolldown-runtime-CGnMp29N-DlBK8E0g.js": {
       "file": "src/catalog/generated/frame-modules/485522f80c6646e1db58d5e7a35f8f72c78152f631984da7ee1bc7500ef606ca.txt",
@@ -15717,7 +15759,10 @@
         "workbench-story-oFCcUB18.js"
       ],
       "dynamicImports": [],
-      "bytes": 745144
+      "bytes": 745144,
+      "css": [
+        "showcases.css"
+      ]
     },
     "side-panel.canvas-9-fO6SCC.js": {
       "file": "src/catalog/generated/frame-modules/b99a2ed7fd0970c907a2b4a1ed1f7b0b065762a0ae4bc1f337ebe85b41273374.txt",
@@ -16652,7 +16697,10 @@
         "split-panel-motion-context-DiMnDwDg.js"
       ],
       "dynamicImports": [],
-      "bytes": 13722
+      "bytes": 13722,
+      "css": [
+        "terminal.css"
+      ]
     },
     "text-8uWvIPLb.js": {
       "file": "src/catalog/generated/frame-modules/b5c985416493a96948a6efa02e28a65827897745fd10a88cd51daa8288e3a318.txt",
@@ -19114,7 +19162,10 @@
         "rolldown-runtime-QGRDbDUS.js"
       ],
       "dynamicImports": [],
-      "bytes": 374941
+      "bytes": 374941,
+      "css": [
+        "xterm.css"
+      ]
     },
     "xychartDiagram-ELKLHX3M-DvNY_va-.js": {
       "file": "src/catalog/generated/frame-modules/4caa9a65e50ff002529ccaa7e9834eb854342c00c83ed53058262ad6187bd4fd.txt",
