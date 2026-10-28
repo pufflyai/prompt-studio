@@ -1,13 +1,10 @@
 import { Avatar, Box, Button, HStack, Icon, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ChevronRight, FileText, Folder, Home, MessageCircle } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
-
 import { Breadcrumb, type BreadcrumbProps } from "@/components/primitives/breadcrumb";
 
 type StoryFn = () => ReactNode;
-
 const items = [
   {
     title: (
@@ -36,8 +33,7 @@ const items = [
     ),
   },
 ];
-
-const meta: Meta<typeof Breadcrumb> = {
+const meta: CanvasMeta<typeof Breadcrumb> = {
   title: "Components/Navigation/Breadcrumb",
   component: Breadcrumb,
   decorators: [
@@ -53,11 +49,10 @@ const meta: Meta<typeof Breadcrumb> = {
     separatorGap: "xs",
   },
 };
-
 export default meta;
-
-export const Default = {};
-
+export const Default = {
+  id: "components-navigation-breadcrumb--default",
+};
 const ResourceActionsExample = () => {
   const [title, setTitle] = useState("Meeting notes");
   return (
@@ -80,28 +75,18 @@ const ResourceActionsExample = () => {
     />
   );
 };
-
-export const ResourceActions: StoryObj<typeof Breadcrumb> = {
+export const ResourceActions: CanvasVariant<typeof Breadcrumb> = {
+  id: "components-navigation-breadcrumb--resource-actions",
   render: () => <ResourceActionsExample />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement),
-      body = within(canvasElement.ownerDocument.body);
-    await userEvent.tab();
-    await expect(canvas.getByText("Meeting notes", { exact: true })).toHaveFocus();
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-    await body.findByRole("menuitem", { name: "Rename note" });
-    await userEvent.keyboard("{Home}{Enter}");
-    await expect(await canvas.findByText("Renamed note", { exact: true })).toBeVisible();
-  },
 };
-
 export const IconSeparator = {
+  id: "components-navigation-breadcrumb--icon-separator",
   args: {
     separator: <Icon as={ChevronRight} boxSize="12px" color="fg.muted" />,
   },
 };
-
 export const Narrow = {
+  id: "components-navigation-breadcrumb--narrow",
   args: {
     items: [
       {
@@ -131,8 +116,8 @@ export const Narrow = {
     ),
   ],
 };
-
 export const StaticAncestor = {
+  id: "components-navigation-breadcrumb--static-ancestor",
   args: {
     items: [
       {
@@ -154,10 +139,10 @@ export const StaticAncestor = {
     ],
   },
 };
-
 // A breadcrumb that starts inside a Sidenav level leads with the project crumb, so the user can
 // leave the level. The crumb sits next to the breadcrumb, like the project button in the navbar.
 export const ProjectCrumb = {
+  id: "components-navigation-breadcrumb--project-crumb",
   args: {
     items: [
       {

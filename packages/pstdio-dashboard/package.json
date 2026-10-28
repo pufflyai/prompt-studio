@@ -12,8 +12,7 @@
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --coverage --tsconfig-override tsconfig.app.json",
     "preview": "vite preview",
     "typegen:tokens": "chakra typegen ../ui/src/theme/theme.ts",
-    "visualize-bundle": "bunx vite-bundle-visualizer",
-    "build:preview-tests": "storybook build --config-dir .canvas --output-dir canvas-test-static"
+    "visualize-bundle": "bunx vite-bundle-visualizer"
   },
   "dependencies": {
     "@chakra-ui/react": "3.32.0",
@@ -34,8 +33,6 @@
   },
   "devDependencies": {
     "@chakra-ui/cli": "^3.30.0",
-    "@storybook/react": "^10.6.0",
-    "@storybook/react-vite": "^10.6.0",
     "@types/bun": "1.4.4",
     "@types/node": "^24.10.1",
     "@types/react": "19.2.3",
@@ -43,9 +40,9 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.2.0",
     "babel-plugin-react-compiler": "^1.0.0",
-    "storybook": "^10.6.0",
     "typescript": "6.0.2",
     "vite": "^8.3.1",
-    "ws": "^8.21.3"
+    "ws": "^8.21.3",
+    "@pstdio/canvas": "workspace:*"
   }
 }

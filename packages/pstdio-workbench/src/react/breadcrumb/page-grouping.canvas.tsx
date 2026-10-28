@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -78,46 +77,25 @@ const meta = {
   component: WorkbenchStory,
   parameters: { layout: "fullscreen" },
   tags: ["page-grouping"],
-} satisfies Meta<typeof WorkbenchStory>;
+} satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-const verify = async (canvasElement: HTMLElement, resourceIcon = "message-circle") => {
-  const canvas = within(canvasElement);
-  const breadcrumbs = within(canvas.getByRole("navigation", { name: "breadcrumb" }));
-  await expect(breadcrumbs.getByText("Messages", { exact: true })).toBeVisible();
-  await expect(breadcrumbs.queryByRole("button", { name: "Messages" })).toBeNull();
-  await expect(breadcrumbs.queryByRole("link", { name: "Messages" })).toBeNull();
-  await expect(canvasElement.querySelector("svg.lucide-messages-circle")).toBeVisible();
-  await expect(canvasElement.querySelector(`svg.lucide-${resourceIcon}`)).toBeVisible();
-};
+type Story = CanvasVariant<typeof meta>;
 export const Landing: Story = {
+  id: "pstdio-workbench-reference-core-api-page-grouping-breadcrumbs--landing",
   args: { workbench: fixture() },
-  play: async ({ canvasElement }) => verify(canvasElement),
 };
 export const SelectedResource: Story = {
+  id: "pstdio-workbench-reference-core-api-page-grouping-breadcrumbs--selected-resource",
   args: { workbench: fixture(true) },
-  play: async ({ canvasElement }) => verify(canvasElement),
 };
 export const RendererLabel: Story = {
+  id: "pstdio-workbench-reference-core-api-page-grouping-breadcrumbs--renderer-label",
   args: { workbench: fixture(true, "Rendered message") },
-  play: async ({ canvasElement }) => {
-    await verify(canvasElement, "book-open");
-    const breadcrumb = within(within(canvasElement).getByRole("navigation", { name: "breadcrumb" }));
-    await expect(breadcrumb.getByText("Rendered message", { exact: true })).toBeVisible();
-  },
 };
-
 export const BrowserParent: Story = {
+  id: "pstdio-workbench-reference-core-api-page-grouping-breadcrumbs--browser-parent",
   args: { workbench: browserFixture() },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const breadcrumb = within(canvas.getByRole("navigation", { name: "breadcrumb" }));
-    await userEvent.click(breadcrumb.getByRole("button", { name: "Library" }));
-    await expect(await canvas.findByText("Browser content", { exact: true })).toBeVisible();
-    await expect(breadcrumb.queryByRole("button", { name: "Library" })).toBeNull();
-  },
 };
-
 function browserFixture() {
   const workbench = createWorkbench();
   workbench.modes.registerMode({ id: "project", activate() {} });

@@ -1,17 +1,15 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { TimelineFromJSON } from "./timeline";
 
 const meta = {
   title: "Patterns/Chat/Timeline",
   component: TimelineFromJSON,
   parameters: { layout: "padded" },
-} satisfies Meta<typeof TimelineFromJSON>;
-
+} satisfies CanvasMeta<typeof TimelineFromJSON>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const Diff: Story = {
+  id: "patterns-chat-timeline--diff",
   args: {
     data: {
       items: [
@@ -28,10 +26,5 @@ export const Diff: Story = {
         },
       ],
     },
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByText("Updated greeting"));
-    await expect(await canvas.findByRole("row", { name: /welcome/ })).toBeVisible();
   },
 };

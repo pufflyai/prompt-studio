@@ -1,6 +1,6 @@
 import { Button, Stack } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ControlValueMap } from "@pstdio/sdk/extensions";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
@@ -36,7 +36,7 @@ function ApplyControlsPreview() {
     </Stack>
   );
 }
-const meta: Meta<typeof ApplyControlsPreview> = {
+const meta: CanvasMeta<typeof ApplyControlsPreview> = {
   title: "Workbench/Controls/Apply drafts",
   component: ApplyControlsPreview,
   decorators: [
@@ -48,9 +48,10 @@ const meta: Meta<typeof ApplyControlsPreview> = {
   ],
 };
 export default meta;
-type Story = StoryObj<typeof ApplyControlsPreview>;
-export const ApplyResetAndRefresh: Story = {};
-
+type Story = CanvasVariant<typeof ApplyControlsPreview>;
+export const ApplyResetAndRefresh: Story = {
+  id: "workbench-controls-apply-drafts--apply-reset-and-refresh",
+};
 function ImmediateControlsPreview() {
   const [fixture] = useState(() => {
     const workbench = createWorkbench();
@@ -85,5 +86,7 @@ function ImmediateControlsPreview() {
     />
   );
 }
-
-export const ImmediateChanges: Story = { render: () => <ImmediateControlsPreview /> };
+export const ImmediateChanges: Story = {
+  id: "workbench-controls-apply-drafts--immediate-changes",
+  render: () => <ImmediateControlsPreview />,
+};

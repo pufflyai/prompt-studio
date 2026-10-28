@@ -127,10 +127,14 @@ const buildPreviews = async (
             };
           }
           if (id.endsWith(".mdx")) {
-            const code = String(await compile(source)).replace(
-              "export default function MDXContent(",
-              "function MDXContent(",
-            );
+            const code = String(
+              await compile(
+                source.replace(
+                  /from ["']@pstdio\/canvas["']/g,
+                  `from ${JSON.stringify(resolve(import.meta.dir, "native-document-blocks.tsx"))}`,
+                ),
+              ),
+            ).replace("export default function MDXContent(", "function MDXContent(");
             return {
               code: `${code}\nimport {createElement as __createDocument} from "react";\nimport {Document as __Document} from ${JSON.stringify(resolve(import.meta.dir, "native-document-blocks.tsx"))};\nexport default function UICanvasDocument(){return __createDocument(__Document,{component:MDXContent,annotations:${source.match(/<Meta\s[^>]*of=\{(\w+)\}/)?.[1] ?? "{}"}.default});}`,
               map: null,
@@ -173,12 +177,7 @@ const buildPreviews = async (
     define: { "process.env.NODE_ENV": JSON.stringify("production"), global: "globalThis" },
     resolve: {
       dedupe: ["react", "react-dom", "@chakra-ui/react", "@emotion/react", "@pstdio/ui", "@pstdio/sdk"],
-      alias: [
-        { find: "@storybook/addon-docs/blocks", replacement: resolve(import.meta.dir, "native-document-blocks.tsx") },
-        { find: "@storybook/react", replacement: uiRequire.resolve("@storybook/react") },
-        ...workspaceAliases,
-        { find: "$fonts", replacement: resolve(packageRoot, "public/font") },
-      ],
+      alias: [...workspaceAliases, { find: "$fonts", replacement: resolve(packageRoot, "public/font") }],
     },
     esbuild: { jsx: "automatic" },
     build: {

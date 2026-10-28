@@ -1,9 +1,8 @@
 import { Badge, Box, HStack, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ListRow, Switch } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { Bot, FileCode, Shapes, Star } from "lucide-react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { landingStorySlotRecipe } from "./landing-story";
 import { landingToolDemoSlotRecipe } from "./landing-tool-demo";
 
@@ -115,27 +114,21 @@ const SharedFeatures = () => {
     </Box>
   );
 };
-
 const meta = {
   title: "Theme/Landing Services",
   component: SharedFeatures,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof SharedFeatures>;
+} satisfies CanvasMeta<typeof SharedFeatures>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Desktop: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const Desktop: Story = {
+  id: "theme-landing-services--desktop",
+};
 export const TogglePanels: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const toggle = canvas.getByRole("checkbox", { name: "Enable Icon set editor" });
-    await userEvent.click(toggle);
-    await expect(canvas.queryByRole("region", { name: "Icon set editor panel" })).not.toBeInTheDocument();
-    await expect(canvas.getByRole("region", { name: "Shader editor panel" })).toBeVisible();
-    await userEvent.click(toggle);
-    await expect(canvas.getByRole("region", { name: "Icon set editor panel" })).toBeVisible();
-  },
+  id: "theme-landing-services--toggle-panels",
 };
 export const NarrowPanel: Story = {
+  id: "theme-landing-services--narrow-panel",
   decorators: [
     (Story) => (
       <Box width="80">

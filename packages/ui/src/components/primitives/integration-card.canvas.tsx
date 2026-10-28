@@ -5,7 +5,6 @@ import { IntegrationCard } from "@/components/primitives/integration-card";
 
 type StoryFn = () => ReactNode;
 type IntegrationCardArgs = ComponentProps<typeof IntegrationCard>;
-
 const meta = {
   title: "Components/Data Display/Integration Card",
   component: IntegrationCard,
@@ -25,14 +24,13 @@ const meta = {
     active: false,
   },
 };
-
 export default meta;
-
 export const Default = {
+  id: "components-data-display-integration-card--default",
   render: (args: IntegrationCardArgs) => <IntegrationCard {...args} />,
 };
-
 export const Active = {
+  id: "components-data-display-integration-card--active",
   args: {
     icon: <Slack />,
     name: "Slack",
@@ -42,8 +40,8 @@ export const Active = {
   },
   render: (args: IntegrationCardArgs) => <IntegrationCard {...args} />,
 };
-
 export const Paid = {
+  id: "components-data-display-integration-card--paid",
   args: {
     icon: <Figma />,
     name: "Figma",

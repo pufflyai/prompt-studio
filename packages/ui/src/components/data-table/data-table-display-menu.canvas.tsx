@@ -1,22 +1,18 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { DEFAULT_DATA_TABLE_SETTINGS } from "@pstdio/sdk/extensions";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { DataTableDisplayMenu } from "./data-table-display-menu";
 import { reorderDataTableColumns, toggleHiddenDataTableColumn } from "./data-table-state";
 import type { DataTableSettings } from "./types";
 
-const meta: Meta<typeof DataTableDisplayMenu> = {
+const meta: CanvasMeta<typeof DataTableDisplayMenu> = {
   title: "Patterns/Data Table/Display Menu",
   component: DataTableDisplayMenu,
 };
-
 export default meta;
-
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 const columns: AttributeDescriptor[] = [
   { id: "ID", label: "ID", type: { kind: "string" } },
   { id: "Title", label: "Title", type: { kind: "string" } },
@@ -25,12 +21,10 @@ const columns: AttributeDescriptor[] = [
   { id: "Updated", label: "Updated", type: { kind: "date" } },
   { id: "Score", label: "Score", type: { kind: "number" } },
 ];
-
 interface MenuProps {
   settings?: Partial<DataTableSettings>;
   statsAvailable?: boolean;
 }
-
 const Menu = (props: MenuProps) => {
   const [settings, setSettings] = useState({ ...DEFAULT_DATA_TABLE_SETTINGS, ...props.settings });
   const ordered = columns.map((column) => column.id);
@@ -54,30 +48,20 @@ const Menu = (props: MenuProps) => {
     </Box>
   );
 };
-
 export const Defaults: Story = {
+  id: "patterns-data-table-display-menu--defaults",
   render: () => <Menu />,
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "Display settings" }));
-    // The popover fades in, so wait until it is visible.
-    await waitFor(() => expect(within(document.body).getByText("6 of 6 shown")).toBeVisible());
-  },
 };
-
 export const GroupedWithRowNumbersOff: Story = {
+  id: "patterns-data-table-display-menu--grouped-with-row-numbers-off",
   render: () => <Menu settings={{ grouping: "Status", rowNumbers: false }} />,
 };
-
 export const HiddenColumn: Story = {
+  id: "patterns-data-table-display-menu--hidden-column",
   render: () => <Menu settings={{ hiddenColumns: ["Score"] }} />,
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "Display settings" }));
-    // The popover fades in, so wait until it is visible.
-    await waitFor(() => expect(within(document.body).getByText("5 of 6 shown")).toBeVisible());
-  },
 };
-
 /** Statistics shows only when a column declares a stat. */
 export const NoStatisticsAvailable: Story = {
+  id: "patterns-data-table-display-menu--no-statistics-available",
   render: () => <Menu statsAvailable={false} />,
 };

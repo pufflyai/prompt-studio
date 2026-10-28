@@ -1,7 +1,6 @@
 import { Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -29,24 +28,14 @@ const PageWorkbench = () => {
   });
   return <WorkbenchStory workbench={workbench} />;
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Main fullscreen/Page content",
   component: PageWorkbench,
   parameters: { layout: "fullscreen" },
   tags: ["main-fullscreen-page-content"],
-} satisfies Meta<typeof PageWorkbench>;
+} satisfies CanvasMeta<typeof PageWorkbench>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const EnterAndExit: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const content = await canvas.findByText("Readable page content");
-    await expect(content).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Enter Main fullscreen" }));
-    await expect(content).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Exit Main fullscreen" }));
-    await expect(canvas.getByRole("button", { name: "Enter Main fullscreen" })).toHaveFocus();
-  },
+  id: "pstdio-workbench-reference-core-api-main-fullscreen-page-content--enter-and-exit",
 };

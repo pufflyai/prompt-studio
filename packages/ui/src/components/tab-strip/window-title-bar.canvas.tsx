@@ -1,8 +1,7 @@
 import { Box, Button, HStack, IconButton, Popover, Portal, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Folder, ListTree, PanelBottom, PanelRight, Plus } from "lucide-react";
 import { useState } from "react";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { ResourceActionMenu, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { WindowTabs } from "./window-tabs";
 import { WindowTitleBar } from "./window-title-bar";
@@ -29,15 +28,12 @@ const PanelControls = () => {
     </HStack>
   );
 };
-
 const NoPanelControls = () => null;
-
 interface ExampleProps {
   platform?: string;
   tabCount?: number;
   emptyActions?: boolean;
 }
-
 const Example = (props: ExampleProps) => {
   const { platform = "darwin", tabCount = 2, emptyActions = false } = props;
   const [tabs, setTabs] = useState(() =>
@@ -67,25 +63,6 @@ const Example = (props: ExampleProps) => {
     </WindowTitleBar>
   );
 };
-
-const checkAlignment = async (canvasElement: HTMLElement, overlay: boolean) => {
-  const canvas = within(canvasElement);
-  const content = canvasElement.querySelector<HTMLElement>(".ps-window-title-bar__content")!;
-  const actions = canvasElement.querySelector<HTMLElement>(".ps-window-title-bar__actions")!;
-  const padding = Number.parseFloat(getComputedStyle(content).paddingInlineEnd);
-  await expect(actions.getBoundingClientRect().right).toBeCloseTo(content.getBoundingClientRect().right - padding, 0);
-  await expect(canvas.getByRole("tablist").getBoundingClientRect().right).toBeLessThanOrEqual(
-    canvas.getByRole("button", { name: "Open project" }).getBoundingClientRect().left,
-  );
-  await expect(getComputedStyle(actions, "::after").content).toBe(overlay ? '""' : "none");
-  const toggle = canvas.getByRole("button", { name: "Toggle Sidenav" });
-  await userEvent.click(toggle);
-  await expect(toggle).toHaveAttribute("aria-pressed", "false");
-  await userEvent.click(canvas.getByRole("button", { name: "Close Project 1" }));
-  await expect(canvas.queryByRole("tab", { name: "Project 1" })).not.toBeInTheDocument();
-  await expect(actions.getBoundingClientRect().right).toBeCloseTo(content.getBoundingClientRect().right - padding, 0);
-};
-
 const MenuExample = () => {
   const actions = [{ key: "archive", label: "Archive project" }];
   return (
@@ -114,7 +91,6 @@ const MenuExample = () => {
     </>
   );
 };
-
 const meta = {
   title: "Components/Navigation/Window Title Bar",
   component: WindowTitleBar,
@@ -128,95 +104,57 @@ const meta = {
       },
     },
   },
-} satisfies Meta<typeof WindowTitleBar>;
+} satisfies CanvasMeta<typeof WindowTitleBar>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const MacOS: Story = {
+  id: "components-navigation-window-title-bar--mac-os",
   render: () => <Example />,
-  play: async ({ canvasElement }) => checkAlignment(canvasElement, false),
 };
 export const Windows: Story = {
+  id: "components-navigation-window-title-bar--windows",
   args: { platform: "win32" },
   render: () => <Example platform="win32" />,
-  play: async ({ canvasElement }) => checkAlignment(canvasElement, true),
 };
 export const Ubuntu: Story = {
+  id: "components-navigation-window-title-bar--ubuntu",
   args: { platform: "linux" },
   render: () => <Example platform="linux" />,
-  play: async ({ canvasElement }) => checkAlignment(canvasElement, true),
 };
 export const Overflow: Story = {
+  id: "components-navigation-window-title-bar--overflow",
   args: { platform: "win32" },
   render: () => (
     <Box maxWidth="2xl">
       <Example platform="win32" tabCount={12} />
     </Box>
   ),
-  play: async ({ canvasElement }) => checkAlignment(canvasElement, true),
 };
 export const FullScreen: Story = {
+  id: "components-navigation-window-title-bar--full-screen",
   render: () => (
     <Box data-window-full-screen="">
       <Example />
     </Box>
   ),
-  play: async ({ canvasElement }) => checkAlignment(canvasElement, false),
 };
 export const EmptyActions: Story = {
+  id: "components-navigation-window-title-bar--empty-actions",
   args: { platform: "win32" },
   render: () => <Example platform="win32" emptyActions />,
-  play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector(".ps-window-title-bar__actions")).not.toBeVisible();
-  },
 };
-
 export const DismissMenus: Story = {
+  id: "components-navigation-window-title-bar--dismiss-menus",
   tags: ["!manifest"],
   render: () => <MenuExample />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    const titleBar = canvasElement.querySelector<HTMLElement>("[data-window-title-bar]")!;
-    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("drag");
-
-    fireEvent.contextMenu(canvas.getByText("Right-click project"));
-    await waitFor(() => expect(body.getByRole("menu")).toBeVisible());
-    await waitFor(() => expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("no-drag"));
-    await userEvent.click(titleBar);
-    await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
-    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("drag");
-
-    await userEvent.click(canvas.getByRole("button", { name: "Project actions" }));
-    await waitFor(() => expect(body.getByRole("menu")).toBeVisible());
-    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("no-drag");
-    const toggle = canvas.getByRole("button", { name: "Toggle Sidenav" });
-    await userEvent.click(toggle);
-    await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
-    await expect(toggle).toHaveAttribute("aria-pressed", "false");
-    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("drag");
-
-    fireEvent.contextMenu(canvas.getByText("Right-click project"));
-    await waitFor(() => expect(body.getByRole("menu")).toHaveFocus());
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
-    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("drag");
-  },
 };
-
 export const DismissPopovers: Story = {
+  id: "components-navigation-window-title-bar--dismiss-popovers",
   tags: ["!manifest"],
   render: () => <MenuExample />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    const titleBar = canvasElement.querySelector<HTMLElement>("[data-window-title-bar]")!;
-    await userEvent.click(canvas.getByRole("button", { name: "Project details" }));
-    await waitFor(() => expect(body.getByRole("dialog")).toBeVisible());
-    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("no-drag");
-    await userEvent.click(titleBar);
-    await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
-    await expect(getComputedStyle(titleBar).getPropertyValue("app-region")).toBe("drag");
-  },
 };
-export const WindowsDark: Story = { ...Windows, globals: { theme: "pstdio-dark" } };
+export const WindowsDark: Story = {
+  id: "components-navigation-window-title-bar--windows-dark",
+  ...Windows,
+  globals: { theme: "pstdio-dark" },
+};

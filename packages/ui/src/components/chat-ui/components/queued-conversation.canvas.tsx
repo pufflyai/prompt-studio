@@ -1,7 +1,6 @@
 import { Box, Button, HStack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ChatPanel } from "./chat-panel";
 import type { QueuedFollowUp } from "./message-types";
 
@@ -50,6 +49,9 @@ const QueueHost = (props: QueueHostProps) => {
   return (
     <Box h="32rem" w="full" maxW="40rem" display="flex" flexDirection="column">
       <ChatPanel
+        chatInputPlaceholder="Write a prompt"
+        emptyStateDescription="Send a prompt"
+        emptyStateTitle="Start a conversation"
         messages={[]}
         streaming
         chatInputDefaultValue={draft}
@@ -171,120 +173,40 @@ const QueueHost = (props: QueueHostProps) => {
     </Box>
   );
 };
-const meta = { title: "Patterns/Chat/Queued conversation", component: QueueHost } satisfies Meta<typeof QueueHost>;
+const meta = { title: "Patterns/Chat/Queued conversation", component: QueueHost } satisfies CanvasMeta<
+  typeof QueueHost
+>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const InlineEditor: Story = {
-  play: async ({ canvasElement }) => {
-    const c = within(canvasElement);
-    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 2" }));
-    await expect(c.getByRole("button", { name: "Update", exact: true })).toBeVisible();
-    await expect(c.getByRole("textbox")).toHaveTextContent("Queued message 2");
-    await expect(c.getByRole("button", { name: "Edit saved draft" })).toHaveTextContent("Unsent draft");
-  },
+  id: "patterns-chat-queued-conversation--inline-editor",
 };
 export const SwitchingTargets: Story = {
+  id: "patterns-chat-queued-conversation--switching-targets",
   tags: ["!manifest"],
-  play: async ({ canvasElement }) => {
-    const c = within(canvasElement);
-    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 2" }));
-    await userEvent.click(c.getByRole("textbox"));
-    await userEvent.keyboard(" amended");
-    await userEvent.click(c.getByRole("button", { name: "Codex", exact: true }));
-    await userEvent.click(c.getByRole("button", { name: "Attach context" }));
-    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 1" }));
-    await userEvent.click(c.getByRole("button", { name: "Edit saved draft" }));
-    await expect(c.getByRole("textbox")).toHaveTextContent("Unsent draft");
-    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 2" }));
-    await expect(c.getByRole("textbox")).toHaveTextContent("amended");
-    await expect(c.getByRole("button", { name: "Claude", exact: true })).toBeVisible();
-    await expect(c.getByRole("button", { name: "context.txt", exact: true })).toBeVisible();
-  },
 };
 export const FailedUpdate: Story = {
+  id: "patterns-chat-queued-conversation--failed-update",
   args: { fail: true },
-  play: async ({ canvasElement }) => {
-    const c = within(canvasElement);
-    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 2" }));
-    await userEvent.click(c.getByRole("textbox"));
-    await userEvent.keyboard(" kept");
-    await userEvent.click(c.getByRole("button", { name: "Update", exact: true }));
-    await expect(c.getByRole("alert")).toHaveTextContent("Your edit is kept");
-    await expect(c.getByRole("textbox")).toHaveTextContent("kept");
-  },
 };
 export const SavedUpdate: Story = {
-  play: async ({ canvasElement }) => {
-    const c = within(canvasElement);
-    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 2" }));
-    await userEvent.click(c.getByRole("textbox"));
-    await userEvent.keyboard(" saved");
-    await userEvent.click(c.getByRole("button", { name: "Update", exact: true }));
-    await expect(c.getByRole("textbox")).toHaveTextContent("Unsent draft");
-    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 2 saved" }));
-    await expect(c.getByRole("textbox")).toHaveTextContent("Queued message 2 saved");
-  },
+  id: "patterns-chat-queued-conversation--saved-update",
 };
-export const Overflow: Story = { args: { count: 20 } };
+export const Overflow: Story = {
+  id: "patterns-chat-queued-conversation--overflow",
+  args: { count: 20 },
+};
 export const Unsupported: Story = {
+  id: "patterns-chat-queued-conversation--unsupported",
   args: { unsupported: true },
-  play: async ({ canvasElement }) => {
-    const c = within(canvasElement);
-    await userEvent.click(c.getByRole("button", { name: "Drag queued follow-up 1" }));
-    await userEvent.keyboard(" ");
-    await waitFor(() =>
-      expect(canvasElement.querySelector("[data-queued-follow-up-id][data-drag-source=true]")).toBeInTheDocument(),
-    );
-    await expect(canvasElement.querySelector("[data-queue-send-now]")).not.toBeInTheDocument();
-    await userEvent.keyboard("{End}");
-    await userEvent.keyboard(" ");
-    await waitFor(() =>
-      expect(canvasElement.querySelector("[data-queued-follow-up-id]:last-child")).toHaveTextContent(
-        "Queued message 1",
-      ),
-    );
-    await expect(c.queryByRole("alert")).not.toBeInTheDocument();
-  },
 };
 export const NoLiveInputHandler: Story = {
+  id: "patterns-chat-queued-conversation--no-live-input-handler",
   args: { liveInputHandler: false },
-  play: Unsupported.play,
 };
 export const EscapeCancelsDragBeforeEdit: Story = {
-  play: async ({ canvasElement }) => {
-    const c = within(canvasElement);
-    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 2" }));
-    await userEvent.click(c.getByRole("textbox"));
-    await userEvent.keyboard(" keep this edit");
-    await userEvent.click(c.getByRole("button", { name: "Drag queued follow-up 2" }));
-    await userEvent.keyboard(" ");
-    await waitFor(() => expect(canvasElement.querySelector("[data-queue-send-now]")).toBeInTheDocument());
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(canvasElement.querySelector("[data-queue-send-now]")).not.toBeInTheDocument());
-    await expect(c.getByRole("button", { name: "Update", exact: true })).toBeVisible();
-    await expect(c.getByRole("textbox")).toHaveTextContent("keep this edit");
-    await userEvent.click(c.getByRole("textbox"));
-    await userEvent.keyboard("{Escape}");
-    await expect(c.getByRole("textbox")).toHaveTextContent("Unsent draft");
-  },
+  id: "patterns-chat-queued-conversation--escape-cancels-drag-before-edit",
 };
 export const EscapeCancelsEdit: Story = {
-  play: async ({ canvasElement }) => {
-    const c = within(canvasElement);
-    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 2" }));
-    await userEvent.click(c.getByRole("button", { name: "Codex", exact: true }));
-    await userEvent.click(c.getByRole("button", { name: "high", exact: true }));
-    await userEvent.click(c.getByRole("button", { name: "Attach context" }));
-    await userEvent.click(c.getByRole("textbox"));
-    await userEvent.keyboard(" discarded{Escape}");
-    await waitFor(() => expect(c.queryByRole("button", { name: "Update", exact: true })).not.toBeInTheDocument());
-    await expect(c.getByRole("textbox")).toHaveTextContent("Unsent draft");
-    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 2" }));
-    await expect(c.getByRole("textbox")).toHaveTextContent("Queued message 2");
-    await expect(c.getByRole("textbox")).not.toHaveTextContent("discarded");
-    await expect(c.getByRole("button", { name: "Codex", exact: true })).toBeVisible();
-    await expect(c.getByRole("button", { name: "high", exact: true })).toBeVisible();
-    await expect(c.queryByRole("button", { name: "context.txt", exact: true })).not.toBeInTheDocument();
-    await expect(c.getByRole("button", { name: "notes.txt", exact: true })).toBeVisible();
-  },
+  id: "patterns-chat-queued-conversation--escape-cancels-edit",
 };

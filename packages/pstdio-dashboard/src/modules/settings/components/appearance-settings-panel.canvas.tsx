@@ -1,8 +1,7 @@
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { defaultThemePreferences, ThemePreferenceProvider } from "@pstdio/ui";
 import { createWorkbench } from "@pstdio/workbench";
 import { openRelatedResourcesPreference } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
 import { AppearanceSettingsPanel } from "./appearance-settings-panel";
 
 const themePreferences = [
@@ -10,7 +9,6 @@ const themePreferences = [
   { id: "lab.paper", title: "Paper", mode: "light" as const },
   { id: "lab.ember", title: "Ember", mode: "dark" as const },
 ];
-
 const AppearanceExample = () => {
   const workbench = createWorkbench();
   workbench.preferences.registerSchema({
@@ -28,16 +26,12 @@ const meta = {
       </ThemePreferenceProvider>
     ),
   ],
-} satisfies Meta<typeof AppearanceExample>;
+} satisfies CanvasMeta<typeof AppearanceExample>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Default: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const Default: Story = {
+  id: "settings-appearance--default",
+};
 export const RelatedResourcePreference: Story = {
-  play: async ({ canvasElement }) => {
-    const toggle = within(canvasElement).getByRole("checkbox", { name: "Open related resources" });
-    await expect(toggle).toBeChecked();
-    await userEvent.click(toggle);
-    await expect(toggle).not.toBeChecked();
-  },
+  id: "settings-appearance--related-resource-preference",
 };

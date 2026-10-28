@@ -1,4 +1,4 @@
-import { composeStory } from "@storybook/react";
+import { type CanvasMeta, type CanvasProject, type CanvasVariant, composePreview } from "@pstdio/canvas";
 import type { ComponentType } from "react";
 
 declare const __UI_CANVAS_MODULES__: Record<string, () => Promise<Record<string, unknown>>>;
@@ -18,18 +18,5 @@ export const loadPreview = async (input: PreviewInput) => {
   const project = (await __UI_CANVAS_PROJECTS__[input.suite]()).default;
   const exportName = input.exportName!;
   if (!module[exportName]) throw new Error(`Missing preview: ${input.source}#${exportName}`);
-  const story = composeStory(
-    module[exportName] as Parameters<typeof composeStory>[0],
-    module.default as Parameters<typeof composeStory>[1],
-    project,
-    exportName,
-  );
-  await story.load();
-  return {
-    Component: story as ComponentType,
-    args: story.args,
-    argTypes: story.argTypes,
-    parameters: story.parameters,
-    hasPlay: typeof story.play === "function",
-  };
+  return composePreview(module[exportName] as CanvasVariant, module.default as CanvasMeta, project as CanvasProject);
 };

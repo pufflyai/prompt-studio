@@ -1,7 +1,6 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { WorkbenchKanbanView } from "./kanban-view";
@@ -74,103 +73,29 @@ const DeferredMove = (props: { viewMode?: "board" | "list" }) => {
     </WorkbenchThemeProvider>
   );
 };
-
-const meta: Meta = { title: "Renderers/Kanban/Move Preview", tags: ["!manifest"] };
+const meta: CanvasMeta = { title: "Renderers/Kanban/Move Preview", tags: ["!manifest"] };
 export default meta;
-
-const dropIntoReady = async (canvasElement: HTMLElement) => {
-  const canvas = within(canvasElement);
-  const source = await canvas.findByTestId("renderer-card");
-  const target = canvas.getByTestId("board-column-ready");
-  const dataTransfer = new DataTransfer();
-  const event = (type: string) => new DragEvent(type, { dataTransfer, bubbles: true, cancelable: true });
-  source.dispatchEvent(event("dragstart"));
-  target.dispatchEvent(event("dragover"));
-  target.dispatchEvent(event("drop"));
-  source.dispatchEvent(event("dragend"));
-  await canvas.findByText("1 saves pending");
-  await waitFor(() => expect(within(target).getByText("Review ticket filters")).toBeVisible());
-  return canvas;
-};
-
-export const MoveBeforeSave: StoryObj = {
+export const MoveBeforeSave: CanvasVariant = {
+  id: "renderers-kanban-move-preview--move-before-save",
   render: () => <DeferredMove />,
-  play: async ({ canvasElement }) => {
-    const canvas = await dropIntoReady(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Finish save" }));
-    await canvas.findByText("0 saves pending");
-    await expect(within(canvas.getByTestId("board-column-ready")).getByText("Review ticket filters")).toBeVisible();
-  },
 };
-
-export const RestoreAfterFailure: StoryObj = {
+export const RestoreAfterFailure: CanvasVariant = {
+  id: "renderers-kanban-move-preview--restore-after-failure",
   render: () => <DeferredMove />,
-  play: async ({ canvasElement }) => {
-    const canvas = await dropIntoReady(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Reject save" }));
-    await waitFor(() =>
-      expect(within(canvas.getByTestId("board-column-backlog")).getByText("Review ticket filters")).toBeVisible(),
-    );
-  },
 };
-
-const changeStatus = async (canvasElement: HTMLElement) => {
-  const canvas = within(canvasElement);
-  const card = await canvas.findByLabelText("Review ticket filters");
-  await userEvent.click(within(card).getByText("Backlog"));
-  await userEvent.click(within(document.body).getByRole("menuitemradio", { name: /^Ready$/ }));
-  await canvas.findByText("1 saves pending");
-  return canvas;
-};
-
-export const PropertyBeforeSave: StoryObj = {
+export const PropertyBeforeSave: CanvasVariant = {
+  id: "renderers-kanban-move-preview--property-before-save",
   render: () => <DeferredMove />,
-  play: async ({ canvasElement }) => {
-    const canvas = await changeStatus(canvasElement);
-    const target = canvas.getByTestId("board-column-ready");
-    await expect(within(target).getByText("Review ticket filters")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Finish save" }));
-    await canvas.findByText("0 saves pending");
-    await expect(within(target).getByText("Review ticket filters")).toBeVisible();
-  },
 };
-
-export const PropertyFailure: StoryObj = {
+export const PropertyFailure: CanvasVariant = {
+  id: "renderers-kanban-move-preview--property-failure",
   render: () => <DeferredMove />,
-  play: async ({ canvasElement }) => {
-    const canvas = await changeStatus(canvasElement);
-    await expect(within(canvas.getByTestId("board-column-ready")).getByText("Review ticket filters")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Reject save" }));
-    await waitFor(() =>
-      expect(within(canvas.getByTestId("board-column-backlog")).getByText("Review ticket filters")).toBeVisible(),
-    );
-  },
 };
-
-export const ListPropertyBeforeSave: StoryObj = {
+export const ListPropertyBeforeSave: CanvasVariant = {
+  id: "renderers-kanban-move-preview--list-property-before-save",
   render: () => <DeferredMove viewMode="list" />,
-  play: async ({ canvasElement }) => {
-    const canvas = await changeStatus(canvasElement);
-    await expect(within(canvas.getByLabelText("Review ticket filters")).getByText("Ready")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Finish save" }));
-    await canvas.findByText("0 saves pending");
-    await expect(within(canvas.getByLabelText("Review ticket filters")).getByText("Ready")).toBeVisible();
-  },
 };
-
-export const LaterPropertySurvivesFailure: StoryObj = {
+export const LaterPropertySurvivesFailure: CanvasVariant = {
+  id: "renderers-kanban-move-preview--later-property-survives-failure",
   render: () => <DeferredMove />,
-  play: async ({ canvasElement }) => {
-    const canvas = await changeStatus(canvasElement);
-    await userEvent.click(within(canvas.getByLabelText("Review ticket filters")).getByText("Ready"));
-    await userEvent.click(within(document.body).getByRole("menuitemradio", { name: /^Done$/ }));
-    const target = canvas.getByTestId("board-column-done");
-    await expect(within(target).getByText("Review ticket filters")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Reject save" }));
-    await canvas.findByText("1 saves pending");
-    await expect(within(target).getByText("Review ticket filters")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Finish save" }));
-    await canvas.findByText("0 saves pending");
-    await expect(within(target).getByText("Review ticket filters")).toBeVisible();
-  },
 };

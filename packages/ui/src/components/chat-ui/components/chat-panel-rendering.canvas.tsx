@@ -1,30 +1,26 @@
 import { Box, Button, HStack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useRef, useState } from "react";
 import { updateStreamingTextPart } from "../performance/chat-performance-fixtures";
 import { defaultChatPanelProps, markAfterPaint, streamMessages } from "../performance/chat-performance-story-utils";
 import { chatRenderingFixtures, renderingStreamTail } from "../performance/chat-rendering-fixtures";
 import { ChatPanel } from "./chat-panel";
-import { validateContinuousChatScroll } from "./chat-panel-continuous-scroll.play";
-import { validateLongTurnRendering } from "./chat-panel-rendering.play";
 import type { SessionMessage } from "./message-types";
 
-const meta: Meta<typeof ChatPanel> = {
+const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel Rendering",
   component: ChatPanel,
   parameters: { layout: "fullscreen", controls: { disable: true } },
   tags: ["!manifest"],
 };
 export default meta;
-type Story = StoryObj<typeof ChatPanel>;
-
+type Story = CanvasVariant<typeof ChatPanel>;
 function RenderingBenchmark() {
   const [messages, setMessages] = useState<SessionMessage[]>([]);
   const [identity, setIdentity] = useState("primary");
   const [hidden, setHidden] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const streamCount = useRef(0);
-
   const mount = (name: string) => {
     setIdentity(name);
     setMessages(chatRenderingFixtures[name]);
@@ -46,7 +42,6 @@ function RenderingBenchmark() {
     setStreaming(false);
     markAfterPaint("chat-rendering:stream-complete");
   };
-
   return (
     <Box h="100vh" display="flex" flexDirection="column">
       <HStack flexWrap="wrap" p="sm">
@@ -69,15 +64,15 @@ function RenderingBenchmark() {
     </Box>
   );
 }
-
-export const RenderingWorkloads: Story = { render: () => <RenderingBenchmark /> };
-
-export const LongTurnScrolling: Story = {
-  render: RenderingWorkloads.render,
-  play: validateLongTurnRendering,
+export const RenderingWorkloads: Story = {
+  id: "patterns-chat-chat-panel-rendering--rendering-workloads",
+  render: () => <RenderingBenchmark />,
 };
-
-export const ContinuousScrolling: Story = {
+export const LongTurnScrolling: Story = {
+  id: "patterns-chat-chat-panel-rendering--long-turn-scrolling",
   render: RenderingWorkloads.render,
-  play: validateContinuousChatScroll,
+};
+export const ContinuousScrolling: Story = {
+  id: "patterns-chat-chat-panel-rendering--continuous-scrolling",
+  render: RenderingWorkloads.render,
 };

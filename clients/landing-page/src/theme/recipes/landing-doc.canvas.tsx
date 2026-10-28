@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import { BlogIndexView } from "../../components/blog/blog-index-view";
 import { PostView } from "../../components/blog/post-view";
@@ -22,7 +22,6 @@ import {
 } from "./landing-doc.fixtures";
 
 const noop = () => {};
-
 const meta = {
   title: "Landing/Docs and blog",
   decorators: [
@@ -32,12 +31,9 @@ const meta = {
       </Box>
     ),
   ],
-} satisfies Meta;
-
+} satisfies CanvasMeta;
 export default meta;
-
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 const TabBar = (props: { selected: SiteSection }) => (
   <ProjectTabsBar
     windowed={false}
@@ -50,11 +46,14 @@ const TabBar = (props: { selected: SiteSection }) => (
     onOpenActionMenu={noop}
   />
 );
-
-export const TabBarDocsSelected: Story = { render: () => <TabBar selected="docs" /> };
-
-export const TabBarBlogSelected: Story = { render: () => <TabBar selected="blog" /> };
-
+export const TabBarDocsSelected: Story = {
+  id: "landing-docs-and-blog--tab-bar-docs-selected",
+  render: () => <TabBar selected="docs" />,
+};
+export const TabBarBlogSelected: Story = {
+  id: "landing-docs-and-blog--tab-bar-blog-selected",
+  render: () => <TabBar selected="blog" />,
+};
 const ActionMenuTitleBar = () => {
   const [open, setOpen] = useState(false);
   return (
@@ -73,34 +72,36 @@ const ActionMenuTitleBar = () => {
     </>
   );
 };
-
-export const TabBarActionMenu: Story = { render: () => <ActionMenuTitleBar /> };
-
+export const TabBarActionMenu: Story = {
+  id: "landing-docs-and-blog--tab-bar-action-menu",
+  render: () => <ActionMenuTitleBar />,
+};
 export const MobileNavigation: Story = {
+  id: "landing-docs-and-blog--mobile-navigation",
   render: () => <CommandPaletteModal open pages={STORY_PAGES} onClose={noop} onNavigate={noop} />,
   globals: { viewport: { value: "mobile1", isRotated: false } },
   parameters: {
     docs: { description: { story: "Mobile navigation fills the screen without focusing search on open." } },
   },
 };
-
 export const TabBarActionMenuDark: Story = {
+  id: "landing-docs-and-blog--tab-bar-action-menu-dark",
   render: () => (
     <Box className="dark">
       <ActionMenuTitleBar />
     </Box>
   ),
 };
-
 export const DocsSidebar: Story = {
+  id: "landing-docs-and-blog--docs-sidebar",
   render: () => (
     <Box width="220px" height="full">
       <ResourceSidebar page={STORY_SESSIONS} pages={STORY_PAGES} onNavigate={noop} />
     </Box>
   ),
 };
-
 export const DocsSidebarShortWindow: Story = {
+  id: "landing-docs-and-blog--docs-sidebar-short-window",
   render: () => (
     <Box width="220px" height="320px">
       <ResourceSidebar page={STORY_SESSIONS} pages={STORY_PAGES} onNavigate={noop} />
@@ -112,55 +113,59 @@ export const DocsSidebarShortWindow: Story = {
     },
   },
 };
-
 export const BlogSidebar: Story = {
+  id: "landing-docs-and-blog--blog-sidebar",
   render: () => (
     <Box width="220px" height="full">
       <ResourceSidebar page={STORY_POST} pages={STORY_PAGES} onNavigate={noop} />
     </Box>
   ),
 };
-
-export const DocsHome: Story = { render: () => <DocsHomeView page={STORY_DOCS_HOME} pages={STORY_PAGES} /> };
-
+export const DocsHome: Story = {
+  id: "landing-docs-and-blog--docs-home",
+  render: () => <DocsHomeView page={STORY_DOCS_HOME} pages={STORY_PAGES} />,
+};
 export const DocsHomeMobile: Story = {
+  id: "landing-docs-and-blog--docs-home-mobile",
   ...DocsHome,
   parameters: {
     docs: { description: { story: "Mobile docs links fill their row and have a minimum 44-pixel touch target." } },
   },
 };
-
 export const DocsPageMobile: Story = {
+  id: "landing-docs-and-blog--docs-page-mobile",
   render: () => <DocsPageView page={STORY_SESSIONS} document={STORY_DOCUMENT} />,
   parameters: {
     docs: { description: { story: "Inline documentation links have added padding and height on mobile." } },
   },
 };
-
 /** Tables, code, and the outline. The outline appears from the `xl` breakpoint. */
 export const DocsPage: Story = {
+  id: "landing-docs-and-blog--docs-page",
   render: () => <DocsPageView page={STORY_SESSIONS} document={STORY_DOCUMENT} />,
 };
-
-export const BlogIndex: Story = { render: () => <BlogIndexView page={STORY_BLOG_HOME} pages={STORY_PAGES} /> };
-
+export const BlogIndex: Story = {
+  id: "landing-docs-and-blog--blog-index",
+  render: () => <BlogIndexView page={STORY_BLOG_HOME} pages={STORY_PAGES} />,
+};
 export const BlogIndexDark: Story = {
+  id: "landing-docs-and-blog--blog-index-dark",
   render: () => (
     <Box className="dark" height="full">
       <BlogIndexView page={STORY_BLOG_HOME} pages={STORY_PAGES} />
     </Box>
   ),
 };
-
 export const BlogIndexMobile: Story = {
+  id: "landing-docs-and-blog--blog-index-mobile",
   render: () => (
     <Box width="full" maxWidth="sm" height="full">
       <BlogIndexView page={STORY_BLOG_HOME} pages={STORY_PAGES} />
     </Box>
   ),
 };
-
 export const BlogIndexLongTitle: Story = {
+  id: "landing-docs-and-blog--blog-index-long-title",
   render: () => (
     <BlogIndexView
       page={STORY_BLOG_HOME}
@@ -168,44 +173,47 @@ export const BlogIndexLongTitle: Story = {
     />
   ),
 };
-
 export const PostOutline: Story = {
+  id: "landing-docs-and-blog--post-outline",
   render: () => <PostView page={STORY_POST} document={STORY_POST_OUTLINE_DOCUMENT} />,
 };
-
-export const PostHeader: Story = { render: () => <PostView page={STORY_POST} document={STORY_POST_DOCUMENT} /> };
-
+export const PostHeader: Story = {
+  id: "landing-docs-and-blog--post-header",
+  render: () => <PostView page={STORY_POST} document={STORY_POST_DOCUMENT} />,
+};
 const ReleasePost = () => (
   <PostView page={{ ...STORY_POST, label: "Prompt Studio 0.39", category: "release" }} document={STORY_POST_DOCUMENT} />
 );
-
-export const ReleaseAlphaNotice: Story = { render: () => <ReleasePost /> };
-
+export const ReleaseAlphaNotice: Story = {
+  id: "landing-docs-and-blog--release-alpha-notice",
+  render: () => <ReleasePost />,
+};
 export const ReleaseAlphaNoticeDark: Story = {
+  id: "landing-docs-and-blog--release-alpha-notice-dark",
   render: () => (
     <Box className="dark" height="full">
       <ReleasePost />
     </Box>
   ),
 };
-
 export const ReleaseAlphaNoticeMobile: Story = {
+  id: "landing-docs-and-blog--release-alpha-notice-mobile",
   render: () => (
     <Box width="full" maxWidth="sm" height="full">
       <ReleasePost />
     </Box>
   ),
 };
-
 export const PostHeaderDark: Story = {
+  id: "landing-docs-and-blog--post-header-dark",
   render: () => (
     <Box className="dark" height="full">
       <PostView page={STORY_POST} document={STORY_POST_DOCUMENT} />
     </Box>
   ),
 };
-
 export const PostHeaderLongTitle: Story = {
+  id: "landing-docs-and-blog--post-header-long-title",
   render: () => (
     <PostView
       page={{ ...STORY_POST, label: "Prompt Studio 0.39: tools that stay in sync" }}
@@ -213,8 +221,8 @@ export const PostHeaderLongTitle: Story = {
     />
   ),
 };
-
 export const PostHeaderMobile: Story = {
+  id: "landing-docs-and-blog--post-header-mobile",
   render: () => (
     <Box width="full" maxWidth="sm" height="full">
       <PostView page={STORY_POST} document={STORY_POST_DOCUMENT} />

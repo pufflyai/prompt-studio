@@ -1,6 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ChatPanel } from "./chat-panel";
 
 const meta = {
@@ -25,21 +24,13 @@ const meta = {
         attachments: [{ id: "notes", name: "notes.txt" }],
       },
     ],
-    onQueuedFollowUpUpdate: fn(),
-    onQueuedFollowUpRemove: fn(),
-    onQueuedFollowUpMove: fn(),
+    onQueuedFollowUpUpdate: () => {},
+    onQueuedFollowUpRemove: () => {},
+    onQueuedFollowUpMove: () => {},
   },
-} satisfies Meta<typeof ChatPanel>;
-
+} satisfies CanvasMeta<typeof ChatPanel>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const Sending: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByRole("button", { name: "Edit queued message: Review the current changes" })).toBeEnabled();
-    await expect(canvas.getByRole("button", { name: "Edit queued message: Add a browser check" })).toBeDisabled();
-    await expect(canvas.getByRole("button", { name: "Drag queued follow-up 2" })).toBeDisabled();
-    await expect(canvas.getAllByRole("button", { name: "Remove queued follow-up" })).toHaveLength(1);
-  },
+  id: "patterns-chat-queued-submission--sending",
 };

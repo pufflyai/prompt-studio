@@ -1,8 +1,8 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { TimelineDisplayMenu } from "./timeline-display-menu";
 import { TimelinePresentationProvider } from "./timeline-presentation";
 
-const meta: Meta<typeof TimelineDisplayMenu> = {
+const meta: CanvasMeta<typeof TimelineDisplayMenu> = {
   title: "Extensions/Planner/Timeline display",
   component: TimelineDisplayMenu,
   decorators: [
@@ -25,5 +25,7 @@ const meta: Meta<typeof TimelineDisplayMenu> = {
   },
 };
 export default meta;
-type Story = StoryObj<typeof TimelineDisplayMenu>;
-export const Properties: Story = {};
+type Story = CanvasVariant<typeof TimelineDisplayMenu>;
+export const Properties: Story = {
+  id: "extensions-planner-timeline-display--properties",
+};

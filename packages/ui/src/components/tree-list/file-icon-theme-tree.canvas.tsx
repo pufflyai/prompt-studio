@@ -1,19 +1,17 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import type { FileIconThemePreferenceOption } from "../../utils/apply-file-icon-theme-preference";
 import { resolveFileIconElement } from "../../utils/resolve-file-icon-element";
 import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
 
-const meta: Meta<typeof TreeList> = {
+const meta: CanvasMeta<typeof TreeList> = {
   title: "Components/Data Display/File Icon Theme Tree",
   component: TreeList,
 };
-
 export default meta;
-type Story = StoryObj<typeof TreeList>;
-
+type Story = CanvasVariant<typeof TreeList>;
 // A miniature Seti-like icon theme. Glyphs render once the contributed font is
 // loaded; this story focuses on the resolution + color wiring and Lucide fallback.
 const demoTheme: FileIconThemePreferenceOption = {
@@ -31,7 +29,6 @@ const demoTheme: FileIconThemePreferenceOption = {
   defaults: { file: "_file", folder: "_folder" },
   fonts: [{ fontFamily: "pstdio-base-themes.seti-seti", src: [{ url: "data:font/woff;base64,", format: "woff" }] }],
 };
-
 const files = [
   { id: "src", label: "src", isDirectory: true },
   { id: "src/index.ts", label: "index.ts" },
@@ -40,7 +37,6 @@ const files = [
   { id: "package.json", label: "package.json" },
   { id: "LICENSE", label: "LICENSE" },
 ];
-
 const buildSections = (theme: FileIconThemePreferenceOption | undefined): TreeListSection[] => [
   {
     id: "files",
@@ -52,7 +48,6 @@ const buildSections = (theme: FileIconThemePreferenceOption | undefined): TreeLi
     })),
   },
 ];
-
 const Demo = ({ theme }: { theme?: FileIconThemePreferenceOption }) => {
   const [activeNodeId, setActiveNodeId] = useState("src/index.ts");
   return (
@@ -66,8 +61,8 @@ const Demo = ({ theme }: { theme?: FileIconThemePreferenceOption }) => {
     </Stack>
   );
 };
-
 export const WithSetiTheme: Story = {
+  id: "components-data-display-file-icon-theme-tree--with-seti-theme",
   render: () => (
     <Stack gap="md">
       <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -77,8 +72,8 @@ export const WithSetiTheme: Story = {
     </Stack>
   ),
 };
-
 export const LucideFallback: Story = {
+  id: "components-data-display-file-icon-theme-tree--lucide-fallback",
   render: () => (
     <Stack gap="md">
       <Text textStyle="paragraph/S/regular" color="fg.muted">

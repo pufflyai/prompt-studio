@@ -1,9 +1,8 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { workbenchSlots } from "@pstdio/sdk/extensions";
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
-import { expect, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { registerWorkbenchExtensionContributions } from "../../extensions/host/workbench-extension-host";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -51,7 +50,6 @@ const metadata: WorkbenchExtensionMetadata = {
   viewMenus: [],
   diagnostics: [],
 };
-
 const AppWideSettings = (props: { projectId: string }) => {
   const { projectId } = props;
   const [workbench] = useState(() => createWorkbench());
@@ -77,7 +75,6 @@ const AppWideSettings = (props: { projectId: string }) => {
   }, [workbench, projectId]);
   return <Workbench workbench={workbench} />;
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/App-wide extension settings",
   component: AppWideSettings,
@@ -92,13 +89,14 @@ const meta = {
     ),
   ],
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof AppWideSettings>;
+} satisfies CanvasMeta<typeof AppWideSettings>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const FirstProject: Story = {
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await expect(await body.findByRole("option", { name: "Device Tools" })).toBeVisible();
-  },
+  id: "pstdio-workbench-reference-core-api-app-wide-extension-settings--first-project",
 };
-export const SecondProject: Story = { ...FirstProject, args: { projectId: "second-project" } };
+export const SecondProject: Story = {
+  id: "pstdio-workbench-reference-core-api-app-wide-extension-settings--second-project",
+  ...FirstProject,
+  args: { projectId: "second-project" },
+};

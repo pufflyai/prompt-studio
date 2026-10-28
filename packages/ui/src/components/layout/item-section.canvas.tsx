@@ -1,12 +1,10 @@
 import { Box, Icon, Menu, Stack } from "@chakra-ui/react";
 import { FileText, Folder, Settings, Star } from "lucide-react";
 import type { ReactNode } from "react";
-
 import { ItemSection } from "@/components/layout/item-section";
 import { ListRow } from "@/components/list-row/list-row";
 
 type StoryFn = () => ReactNode;
-
 const meta = {
   title: "Components/Layout/Item Section",
   component: ItemSection,
@@ -18,9 +16,7 @@ const meta = {
     ),
   ],
 };
-
 export default meta;
-
 interface SectionMenuItemProps {
   id: string;
   label: string;
@@ -28,7 +24,6 @@ interface SectionMenuItemProps {
   icon?: ReactNode;
   disabled?: boolean;
 }
-
 const SectionMenuItem = (props: SectionMenuItemProps) => {
   const { id, label, description, icon, disabled } = props;
   return (
@@ -37,8 +32,8 @@ const SectionMenuItem = (props: SectionMenuItemProps) => {
     </Menu.Item>
   );
 };
-
 export const Default = {
+  id: "components-layout-item-section--default",
   render: () => (
     <ItemSection title="Files">
       <Menu.Root>
@@ -51,8 +46,8 @@ export const Default = {
     </ItemSection>
   ),
 };
-
 export const MultipleSections = {
+  id: "components-layout-item-section--multiple-sections",
   render: () => (
     <Stack gap="sm">
       <ItemSection title="Favorites">
@@ -74,8 +69,8 @@ export const MultipleSections = {
     </Stack>
   ),
 };
-
 export const WithSecondaryLabels = {
+  id: "components-layout-item-section--with-secondary-labels",
   render: () => (
     <ItemSection title="Members">
       <Menu.Root>

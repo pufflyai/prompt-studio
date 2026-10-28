@@ -1,8 +1,7 @@
 import { Input, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { SlidersHorizontal } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../workbench-story";
 
@@ -70,36 +69,22 @@ const meta = {
   title: "pstdio-workbench/Reference/Core API/Side Panel",
   parameters: { layout: "fullscreen" },
   tags: ["autodocs"],
-} satisfies Meta;
+} satisfies CanvasMeta;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const AttachedOnly: Story = {
+  id: "pstdio-workbench-reference-core-api-side-panel--attached-only",
   parameters: {
     docs: { description: { story: "An attached-only panel opens from the navigation bar and has no bubble." } },
   },
   render: () => <SidePanelStory detachable={false} />,
 };
 export const DefaultBubble: Story = {
+  id: "pstdio-workbench-reference-core-api-side-panel--default-bubble",
   render: () => <SidePanelStory />,
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    const launcher = await body.findByRole("button", { name: "Open Side Panel" });
-    launcher.focus();
-    await userEvent.keyboard("{Enter}");
-    const panel = await body.findByRole("dialog", { name: "Side Panel" });
-    await waitFor(() => expect(launcher).not.toBeVisible());
-    await expect(launcher.parentElement).toHaveAttribute("inert");
-    const input = within(panel).getByRole("textbox", { name: "Object name" });
-    await userEvent.clear(input);
-    await userEvent.type(input, "Terracotta");
-    await userEvent.click(within(panel).getByRole("button", { name: "Close Side Panel" }));
-    await waitFor(() => expect(panel).not.toBeVisible());
-    await waitFor(() => expect(launcher).toBeVisible());
-    await userEvent.click(launcher);
-    await expect(input).toHaveValue("Terracotta");
-  },
 };
 export const CustomBubbleIcon: Story = {
+  id: "pstdio-workbench-reference-core-api-side-panel--custom-bubble-icon",
   parameters: {
     docs: { description: { story: "Pass sidePanelBubbleIcon to Workbench to replace the default chat icon." } },
   },

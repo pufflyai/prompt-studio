@@ -1,6 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { PerformancePopoverContent } from "./performance-popover-content";
 import {
   browserSnapshot,
@@ -31,36 +30,48 @@ const meta = {
       </Box>
     ),
   ],
-} satisfies Meta<typeof PerformancePopoverContent>;
+} satisfies CanvasMeta<typeof PerformancePopoverContent>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Smooth: Story = { args: { snapshot: smoothSnapshot } };
-export const UnderLoad: Story = { args: { snapshot: underLoadSnapshot, buckets: loadFrameRate } };
+type Story = CanvasVariant<typeof meta>;
+export const Smooth: Story = {
+  id: "settings-developer-tools-performance-popover--smooth",
+  args: { snapshot: smoothSnapshot },
+};
+export const UnderLoad: Story = {
+  id: "settings-developer-tools-performance-popover--under-load",
+  args: { snapshot: underLoadSnapshot, buckets: loadFrameRate },
+};
 export const ExtensionPaused: Story = {
+  id: "settings-developer-tools-performance-popover--extension-paused",
   args: { snapshot: smoothSnapshot, paused: new Set(["shader"]) },
 };
-export const ManyExtensions: Story = { args: { snapshot: manyExtensionsSnapshot } };
-export const AllExtensions: Story = {
+export const ManyExtensions: Story = {
+  id: "settings-developer-tools-performance-popover--many-extensions",
   args: { snapshot: manyExtensionsSnapshot },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByTestId("performance-more-extensions"));
-    await expect(canvas.getAllByTestId("performance-cpu-row")).toHaveLength(13);
-  },
+};
+export const AllExtensions: Story = {
+  id: "settings-developer-tools-performance-popover--all-extensions",
+  args: { snapshot: manyExtensionsSnapshot },
 };
 const openViews = new Map([
   ["notes", 1],
   ["shader", 1],
 ]);
-export const Collecting: Story = { args: { snapshot: collectingSnapshot, buckets: [], openViews } };
+export const Collecting: Story = {
+  id: "settings-developer-tools-performance-popover--collecting",
+  args: { snapshot: collectingSnapshot, buckets: [], openViews },
+};
 export const CpuUnavailable: Story = {
+  id: "settings-developer-tools-performance-popover--cpu-unavailable",
   args: { snapshot: undefined, error: "Rejected desktop IPC from an untrusted sender", openViews },
 };
-export const BrowserTab: Story = { args: { snapshot: browserSnapshot, openViews } };
-
+export const BrowserTab: Story = {
+  id: "settings-developer-tools-performance-popover--browser-tab",
+  args: { snapshot: browserSnapshot, openViews },
+};
 // A helper process, such as the GPU, can raise the warning too.
 export const GpuBusy: Story = {
+  id: "settings-developer-tools-performance-popover--gpu-busy",
   args: {
     snapshot: {
       ...smoothSnapshot,
@@ -70,8 +81,5 @@ export const GpuBusy: Story = {
           : process,
       ),
     },
-  },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText(/^GPU averaged 92% CPU/)).toBeVisible();
   },
 };

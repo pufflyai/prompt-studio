@@ -232,7 +232,12 @@ const checkSourceImports = (pkg: WorkspacePackage, workspace: Workspace, errors:
         `${relativeFile}: use relative request URLs or import the suite origin from src/ui-server.ts or src/vite-terminal-servers.ts instead of defining a browser test address`,
       );
     }
-    for (const specifier of sourceImports(source)) {
+    // Repository-only examples can reference authoring types without making a published
+    // extension depend on the private preview tool. Runtime imports still need declarations.
+    const importSource = relativeFile.endsWith(".canvas.tsx")
+      ? source.replace(/import\s+type\s+\{[^}]*\}\s+from\s+["']@pstdio\/canvas["'];?/g, "")
+      : source;
+    for (const specifier of sourceImports(importSource)) {
       checkSpecifier(specifier, { pkg, pkgRoot, file, relativeFile, workspace }, errors);
     }
   }

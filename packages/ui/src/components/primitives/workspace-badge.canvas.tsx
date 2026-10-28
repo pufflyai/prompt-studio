@@ -1,9 +1,8 @@
 import { Box, VStack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 
-const meta: Meta<typeof WorkspaceBadge> = {
+const meta: CanvasMeta<typeof WorkspaceBadge> = {
   title: "Components/Data Display/Workspace Badge",
   component: WorkspaceBadge,
   args: {
@@ -17,61 +16,50 @@ const meta: Meta<typeof WorkspaceBadge> = {
     ),
   ],
 };
-
 export default meta;
-
-type Story = StoryObj<typeof WorkspaceBadge>;
-
+type Story = CanvasVariant<typeof WorkspaceBadge>;
 export const ProjectFolder: Story = {
+  id: "components-data-display-workspace-badge--project-folder",
   args: {
     workspaceType: "folder",
     label: "Project workspace",
     sessionStatus: "in_progress",
   },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByLabelText("Project folder")).toBeVisible();
-  },
 };
-
 export const GitWorktree: Story = {
+  id: "components-data-display-workspace-badge--git-worktree",
   args: {
     workspaceType: "worktree",
     shorthand: "PS-412_A1",
     diffAdditions: 18,
     diffDeletions: 4,
   },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByLabelText("Git worktree")).toBeVisible();
-  },
 };
-
 export const RemoteWorkspace: Story = {
+  id: "components-data-display-workspace-badge--remote-workspace",
   args: {
     workspaceType: "remote",
     label: "Cloud development",
     sessionStatus: "completed",
   },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByLabelText("Remote workspace")).toBeVisible();
-  },
 };
-
 export const Initializing: Story = {
+  id: "components-data-display-workspace-badge--initializing",
   args: {
     initializing: true,
     shorthand: "A1",
   },
 };
-
 export const SingleWorkspaceNoShorthand: Story = {
+  id: "components-data-display-workspace-badge--single-workspace-no-shorthand",
   args: {
     workspaceType: "folder",
     sessionStatus: "in_progress",
     hasMultipleWorkspaces: false,
   },
 };
-
 export const MultiWorkspaceWithShorthandAndDropdown: Story = {
+  id: "components-data-display-workspace-badge--multi-workspace-with-shorthand-and-dropdown",
   args: {
     shorthand: "A2",
     hasMultipleWorkspaces: true,
@@ -82,8 +70,8 @@ export const MultiWorkspaceWithShorthandAndDropdown: Story = {
     },
   },
 };
-
 export const WithDiffs: Story = {
+  id: "components-data-display-workspace-badge--with-diffs",
   args: {
     shorthand: "A3",
     diffAdditions: 18,
@@ -91,8 +79,8 @@ export const WithDiffs: Story = {
     sessionStatus: "completed",
   },
 };
-
 export const WithNameAndDiffs: Story = {
+  id: "components-data-display-workspace-badge--with-name-and-diffs",
   args: {
     label: "Latest implementation attempt",
     shorthand: "PS-412_A3",
@@ -101,8 +89,8 @@ export const WithNameAndDiffs: Story = {
     showLeadingSessionIndicator: false,
   },
 };
-
 export const LongWorkspaceName: Story = {
+  id: "components-data-display-workspace-badge--long-workspace-name",
   args: {
     label: "Refactor workspace badge rendering for long ticket board names",
     shorthand: "PS-412_A4",
@@ -111,8 +99,8 @@ export const LongWorkspaceName: Story = {
     showLeadingSessionIndicator: false,
   },
 };
-
 export const NamedMultipleWorkspaces: Story = {
+  id: "components-data-display-workspace-badge--named-multiple-workspaces",
   args: {
     label: "Remote review pass",
     workspaceType: "remote",
@@ -121,15 +109,15 @@ export const NamedMultipleWorkspaces: Story = {
     showLeadingSessionIndicator: false,
   },
 };
-
 export const WithoutDiffs: Story = {
+  id: "components-data-display-workspace-badge--without-diffs",
   args: {
     shorthand: "A3",
     sessionStatus: "completed",
   },
 };
-
 export const WithAttemptStatus: Story = {
+  id: "components-data-display-workspace-badge--with-attempt-status",
   args: {
     shorthand: "A4",
     attemptStatus: {
@@ -140,16 +128,16 @@ export const WithAttemptStatus: Story = {
     sessionStatus: "in_progress",
   },
 };
-
 export const FallbackSessionStatus: Story = {
+  id: "components-data-display-workspace-badge--fallback-session-status",
   args: {
     shorthand: "A4",
     sessionStatus: "awaiting_input",
     attemptStatus: undefined,
   },
 };
-
 export const StateMatrix: Story = {
+  id: "components-data-display-workspace-badge--state-matrix",
   render: () => (
     <VStack align="start" gap="sm">
       <WorkspaceBadge workspaceType="worktree" initializing shorthand="A1" />

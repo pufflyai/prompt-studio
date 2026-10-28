@@ -1,11 +1,10 @@
 import "@pstdio/ui/style.css";
-
+import type { CanvasProject } from "@pstdio/canvas";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
-import type { Preview } from "@storybook/react-vite";
 import { I18nextProvider } from "react-i18next";
 import i18n from "../src/i18n/config";
 
-const preview: Preview = {
+const preview: CanvasProject = {
   parameters: {
     controls: {
       matchers: {
@@ -24,5 +23,4 @@ const preview: Preview = {
     ),
   ],
 };
-
 export default preview;

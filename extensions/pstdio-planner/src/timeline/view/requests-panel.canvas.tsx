@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
@@ -8,7 +8,6 @@ import { RequestsPanel } from "./requests-panel";
 const person = { type: "human" as const, id: "person", displayName: "Human" };
 const agent = { type: "agent" as const, id: "agent", displayName: "Agent" };
 const context = { reason: null, workspaceId: null, attemptRevision: null, sessionId: null, relatedSessionId: null };
-
 const task: ReviewRequestView = {
   id: "task",
   ticketId: "ticket",
@@ -22,7 +21,6 @@ const task: ReviewRequestView = {
   outcome: null,
   outcomeText: null,
 };
-
 const decision: ReviewRequestView = {
   ...task,
   id: "decision",
@@ -59,7 +57,6 @@ const decision: ReviewRequestView = {
     ],
   },
 };
-
 // The shape the create-proposal skill asks for: decisions, assumptions, and risks as readable options.
 const proposalReview: ReviewRequestView = {
   ...task,
@@ -107,7 +104,6 @@ const proposalReview: ReviewRequestView = {
     ],
   },
 };
-
 const handoff: ReviewRequestView = {
   ...task,
   id: "handoff",
@@ -119,21 +115,18 @@ const handoff: ReviewRequestView = {
   },
   context: { ...context, reason: "approved-revision", workspaceId: "workspace", attemptRevision: 2 },
 };
-
 const answered: ReviewRequestView = {
   ...task,
   state: "answered",
   outcome: { kind: "answered", at: "2026-10-10T10:00:00.000Z", by: person, response: { confirmed: true } },
   outcomeText: "Completion confirmed",
 };
-
 const cancelled: ReviewRequestView = {
   ...decision,
   state: "cancelled",
   outcome: { kind: "cancelled", at: "2026-10-10T10:00:00.000Z", by: person, reason: "The release scope changed." },
   outcomeText: "Cancelled: The release scope changed.",
 };
-
 const answeredDecision: ReviewRequestView = {
   ...decision,
   state: "answered",
@@ -145,7 +138,6 @@ const answeredDecision: ReviewRequestView = {
   },
   outcomeText: "Release scope: Preview\nPlatforms: macOS\nLimits: Internal project first.",
 };
-
 const row: PlanRow = {
   id: "ticket",
   shorthand: "PS-32",
@@ -167,8 +159,7 @@ const row: PlanRow = {
   instructions: "",
   target: ticketTarget({ id: "ticket", shorthand: "PS-32", title: "Ship the preview" }),
 };
-
-const meta: Meta<typeof RequestsPanel> = {
+const meta: CanvasMeta<typeof RequestsPanel> = {
   title: "Extensions/Planner/Needs attention",
   component: RequestsPanel,
   decorators: [
@@ -181,13 +172,25 @@ const meta: Meta<typeof RequestsPanel> = {
   args: { row, onAnswer: async () => {}, onOpenChat: async () => {} },
 };
 export default meta;
-type Story = StoryObj<typeof RequestsPanel>;
-
-export const NoRequests: Story = { args: { row } };
-export const Task: Story = { args: { row: { ...row, requests: [task] } } };
-export const Decision: Story = { args: { row: { ...row, requests: [decision] } } };
-export const EditableAnswer: Story = { args: { row: { ...row, requests: [answeredDecision] } } };
+type Story = CanvasVariant<typeof RequestsPanel>;
+export const NoRequests: Story = {
+  id: "extensions-planner-needs-attention--no-requests",
+  args: { row },
+};
+export const Task: Story = {
+  id: "extensions-planner-needs-attention--task",
+  args: { row: { ...row, requests: [task] } },
+};
+export const Decision: Story = {
+  id: "extensions-planner-needs-attention--decision",
+  args: { row: { ...row, requests: [decision] } },
+};
+export const EditableAnswer: Story = {
+  id: "extensions-planner-needs-attention--editable-answer",
+  args: { row: { ...row, requests: [answeredDecision] } },
+};
 export const UpdateError: Story = {
+  id: "extensions-planner-needs-attention--update-error",
   args: {
     row: { ...row, requests: [answeredDecision] },
     onAnswer: async () => {
@@ -195,14 +198,25 @@ export const UpdateError: Story = {
     },
   },
 };
-export const ProposalReview: Story = { args: { row: { ...row, requests: [proposalReview] } } };
-export const AttemptHandoff: Story = { args: { row: { ...row, requests: [handoff] } } };
-export const OpenSiblingAfterAnswer: Story = { args: { row: { ...row, requests: [answered, handoff] } } };
+export const ProposalReview: Story = {
+  id: "extensions-planner-needs-attention--proposal-review",
+  args: { row: { ...row, requests: [proposalReview] } },
+};
+export const AttemptHandoff: Story = {
+  id: "extensions-planner-needs-attention--attempt-handoff",
+  args: { row: { ...row, requests: [handoff] } },
+};
+export const OpenSiblingAfterAnswer: Story = {
+  id: "extensions-planner-needs-attention--open-sibling-after-answer",
+  args: { row: { ...row, requests: [answered, handoff] } },
+};
 export const Cancelled: Story = {
+  id: "extensions-planner-needs-attention--cancelled",
   args: { row: { ...row, requests: [cancelled] } },
 };
 // Drafts stay in the form when the server refuses the answer.
 export const SaveError: Story = {
+  id: "extensions-planner-needs-attention--save-error",
   args: {
     row: { ...row, requests: [decision] },
     onAnswer: async () => {
@@ -212,8 +226,10 @@ export const SaveError: Story = {
 };
 // A merge can finish the ticket before its approval request is answered.
 export const CompleteTicket: Story = {
+  id: "extensions-planner-needs-attention--complete-ticket",
   args: { row: { ...row, requests: [decision] } },
 };
 export const UnreadableRequest: Story = {
+  id: "extensions-planner-needs-attention--unreadable-request",
   args: { row: { ...row, requestErrors: ["Request broken: Request title is required."] } },
 };

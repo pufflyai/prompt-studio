@@ -1,12 +1,12 @@
 import { Box, Flex } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { mediaRules } from "../sites";
 import { RadarStory, storyIdeas, storyPost, storyThread } from "../webview/story-fixtures";
 import { Conversation } from "./conversation";
 import { PostInsights, ThreadInsights } from "./insights";
 import { NewPostDraft } from "./new-post";
 
-const meta: Meta = {
+const meta: CanvasMeta = {
   title: "Extensions/Social radar/Thread",
   decorators: [
     (Story) => (
@@ -19,9 +19,9 @@ const meta: Meta = {
   ],
 };
 export default meta;
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 export const ThreadMockup: Story = {
+  id: "extensions-social-radar-thread--thread-mockup",
   render: () => (
     <Flex gap="lg">
       <Box flex="1" maxW="3xl">
@@ -33,8 +33,8 @@ export const ThreadMockup: Story = {
     </Flex>
   ),
 };
-
 export const NewPost: Story = {
+  id: "extensions-social-radar-thread--new-post",
   render: () => (
     <Flex gap="lg">
       <Box flex="1" maxW="3xl">

@@ -1,11 +1,10 @@
 import { Dialog, Stack, Text } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import { createWorkbench } from "@pstdio/workbench";
 import type { CommandParamEntry, CommandParamValue } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { expect, waitFor, within } from "storybook/test";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { workspaceProvidersQueryKey } from "@/shared/workspaces/workspace-providers";
 import { WorkspaceParamField } from "./workspace-param-field";
@@ -13,7 +12,6 @@ import { WorkspaceParamField } from "./workspace-param-field";
 const projectId = "project-1";
 const workbench = createWorkbench();
 selectDashboardProject(workbench, { id: projectId, name: "Prompt Studio" });
-
 const providers: WorkspaceProviderDescriptor[] = [
   {
     id: "pstdio.worktree",
@@ -42,14 +40,11 @@ const providers: WorkspaceProviderDescriptor[] = [
     params: { image: { type: "text", label: "Environment image", required: true } },
   },
 ];
-
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: Number.POSITIVE_INFINITY } } });
 queryClient.setQueryData(workspaceProvidersQueryKey(projectId), providers);
-
 interface WorkspaceParamPreviewProps {
   providerIds?: string[];
 }
-
 const WorkspaceParamPreview = (props: WorkspaceParamPreviewProps) => {
   const { providerIds } = props;
   const [value, setValue] = useState<CommandParamValue>("");
@@ -90,22 +85,22 @@ const WorkspaceParamPreview = (props: WorkspaceParamPreviewProps) => {
     </QueryClientProvider>
   );
 };
-
 const meta = {
   title: "CommandParams/WorkspaceParamField",
   component: WorkspaceParamPreview,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof WorkspaceParamPreview>;
+} satisfies CanvasMeta<typeof WorkspaceParamPreview>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 // The dialog opens without a choice; the field commits the first type and its defaults.
 export const AllWorkspaceTypes: Story = {
-  play: async () => {
-    const value = await within(document.body).findByTestId("workspace-param-value");
-    await waitFor(() =>
-      expect(value.textContent).toBe(JSON.stringify({ providerId: "pstdio.worktree", params: { base: "main" } })),
-    );
-  },
+  id: "commandparams-workspaceparamfield--all-workspace-types",
 };
-export const GitWorktreeOnly: Story = { args: { providerIds: ["pstdio.worktree"] } };
-export const NoMatchingType: Story = { args: { providerIds: ["acme.missing"] } };
+export const GitWorktreeOnly: Story = {
+  id: "commandparams-workspaceparamfield--git-worktree-only",
+  args: { providerIds: ["pstdio.worktree"] },
+};
+export const NoMatchingType: Story = {
+  id: "commandparams-workspaceparamfield--no-matching-type",
+  args: { providerIds: ["acme.missing"] },
+};

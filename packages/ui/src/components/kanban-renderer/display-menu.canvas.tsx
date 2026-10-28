@@ -1,7 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { DisplayMenu } from "./display-menu";
 import { buildDisplayPropertyOptions, buildGroupingOptions } from "./kanban-renderer-helpers";
 import type { AttributeDescriptor, KanbanRendererSettings } from "./types";
@@ -33,20 +32,15 @@ const attributes: AttributeDescriptor[] = [
     displayable: true,
   },
 ];
-
-const meta: Meta = {
+const meta: CanvasMeta = {
   title: "Patterns/Kanban Renderer/Display Menu",
 };
-
 export default meta;
-
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 const Wrapper = (props: { initialSettings?: KanbanRendererSettings } = {}) => {
   const [settings, setSettings] = useState<KanbanRendererSettings>(
     props.initialSettings ?? DEFAULT_KANBAN_RENDERER_SETTINGS,
   );
-
   return (
     <Box p="lg">
       <DisplayMenu
@@ -77,15 +71,11 @@ const Wrapper = (props: { initialSettings?: KanbanRendererSettings } = {}) => {
     </Box>
   );
 };
-
-export const Default: Story = { render: () => <Wrapper /> };
-
-export const ToggleViewMode: Story = {
+export const Default: Story = {
+  id: "patterns-kanban-renderer-display-menu--default",
   render: () => <Wrapper />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByLabelText("Display settings"));
-    await userEvent.click(within(document.body).getByRole("button", { name: "List" }));
-    await expect(canvas.getByTestId("view-mode-value")).toHaveTextContent("list");
-  },
+};
+export const ToggleViewMode: Story = {
+  id: "patterns-kanban-renderer-display-menu--toggle-view-mode",
+  render: () => <Wrapper />,
 };

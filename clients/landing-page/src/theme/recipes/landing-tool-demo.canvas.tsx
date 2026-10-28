@@ -1,6 +1,6 @@
 import { Box, Button, HStack, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createGlyphIcon, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { landingStorySlotRecipe } from "./landing-story";
 import { landingToolDemoSlotRecipe } from "./landing-tool-demo";
@@ -16,7 +16,6 @@ const icons = [
   "component",
   "magicpen",
 ].map((name) => ({ name, icon: createGlyphIcon(name) }));
-
 const VisualTool = () => {
   const styles = useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});
   const story = useSlotRecipe({ recipe: landingStorySlotRecipe })({});
@@ -105,15 +104,16 @@ const VisualTool = () => {
     </Box>
   );
 };
-
 const meta = {
   title: "Theme/Landing Tool Demo",
   component: VisualTool,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof VisualTool>;
+} satisfies CanvasMeta<typeof VisualTool>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Desktop: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const Desktop: Story = {
+  id: "theme-landing-tool-demo--desktop",
+};
 const WorkflowPreviewStates = () => {
   const styles = useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});
   return (
@@ -132,8 +132,12 @@ const WorkflowPreviewStates = () => {
     </Box>
   );
 };
-export const PreviewStates: Story = { render: () => <WorkflowPreviewStates /> };
+export const PreviewStates: Story = {
+  id: "theme-landing-tool-demo--preview-states",
+  render: () => <WorkflowPreviewStates />,
+};
 export const NarrowPanel: Story = {
+  id: "theme-landing-tool-demo--narrow-panel",
   decorators: [
     (Story) => (
       <Box width="80">

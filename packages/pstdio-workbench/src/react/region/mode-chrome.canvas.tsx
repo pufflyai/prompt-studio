@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -15,7 +15,6 @@ const Counter = (props: { title: string }) => {
     </Stack>
   );
 };
-
 const RetainedModeViews = () => {
   const [example] = useState(() => {
     const workbench = createWorkbench();
@@ -56,10 +55,10 @@ const RetainedModeViews = () => {
     </WorkbenchThemeProvider>
   );
 };
-
 export default {
   title: "pstdio-workbench/Workbench/Mode view retention",
   render: () => <RetainedModeViews />,
-} satisfies Meta;
-
-export const NavigateAndReturn: StoryObj = {};
+} satisfies CanvasMeta;
+export const NavigateAndReturn: CanvasVariant = {
+  id: "pstdio-workbench-workbench-mode-view-retention--navigate-and-return",
+};

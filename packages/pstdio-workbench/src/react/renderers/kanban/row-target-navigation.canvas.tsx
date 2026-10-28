@@ -1,8 +1,7 @@
 import { Text } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { renderBadgeListDisplay } from "@pstdio/ui/kanban-renderer";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 import { collectionBadgeTarget } from "../../../extensions/contributions/collection-badge-navigation";
@@ -128,22 +127,12 @@ const meta = {
   title: "pstdio-workbench/Guides/Row target navigation",
   component: RowTargetNavigation,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof RowTargetNavigation>;
+} satisfies CanvasMeta<typeof RowTargetNavigation>;
 export default meta;
-export const ImmediatePage: StoryObj<typeof meta> = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByText("Ticket A", { exact: true }));
-    await expect(await canvas.findByText("Ticket opened")).toBeVisible();
-  },
+export const ImmediatePage: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-guides-row-target-navigation--immediate-page",
 };
-export const BadgeOpensSidePanel: StoryObj<typeof meta> = {
+export const BadgeOpensSidePanel: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-guides-row-target-navigation--badge-opens-side-panel",
   args: { panel: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "1 item needs attention" }));
-    await expect(await canvas.findByText("Ticket attention")).toBeVisible();
-    await expect(canvas.getByText("Ticket A", { exact: true })).toBeVisible();
-    expect(canvas.queryByText("Ticket opened")).toBeNull();
-  },
 };

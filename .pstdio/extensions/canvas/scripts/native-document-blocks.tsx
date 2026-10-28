@@ -1,5 +1,5 @@
 import { Box, Code, chakra, Heading, Stack, Text } from "@chakra-ui/react";
-import { composeStory } from "@storybook/react";
+import { type CanvasMeta, type CanvasVariant, composePreview } from "@pstdio/canvas";
 import {
   type ComponentType,
   createContext,
@@ -10,28 +10,30 @@ import {
   useState,
 } from "react";
 
-type Annotations = Parameters<typeof composeStory>[1];
+type Annotations = CanvasMeta;
 const DocumentAnnotations = createContext<Annotations>({});
 const emptyAnnotations: Annotations = {};
 export const Meta = () => null;
-export const Canvas = (props: { of: Parameters<typeof composeStory>[0] }) => {
+export const Canvas = (props: { of: CanvasVariant }) => {
   const { of } = props;
   const annotations = useContext(DocumentAnnotations);
   const [Story, setStory] = useState<ComponentType>();
   const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
-    const story = composeStory(of, annotations);
-    story
-      .load()
-      .then(() => {
-        if (active) setStory(() => story as ComponentType);
+    let dispose: (() => void) | undefined;
+    composePreview(of, annotations)
+      .then((preview) => {
+        if (!active) return preview.dispose();
+        dispose = preview.dispose;
+        setStory(() => preview.Component as ComponentType);
       })
       .catch((error) => {
         if (active) setError(String(error));
       });
     return () => {
       active = false;
+      dispose?.();
     };
   }, [of, annotations]);
   return (

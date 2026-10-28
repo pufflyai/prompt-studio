@@ -1,5 +1,5 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import {
   KanbanSquare,
   MessageCircle,
@@ -80,7 +80,6 @@ const baseEntries: PaletteEntry[] = [
     onActivate: () => undefined,
   },
 ];
-
 const themeEntries: PaletteEntry[] = [
   {
     id: "theme:pstdio-light",
@@ -108,7 +107,6 @@ const themeEntries: PaletteEntry[] = [
     onActivate: () => undefined,
   },
 ];
-
 const largeEntries: PaletteEntry[] = [
   ...Array.from({ length: 180 }, (_, index) => ({
     id: `ticket:PS-${index + 200}`,
@@ -130,9 +128,7 @@ const largeEntries: PaletteEntry[] = [
     onActivate: () => undefined,
   })),
 ];
-
 const commandResourceModes: PaletteMode[] = [{ id: "search" }, { id: "command", inputPrefix: ">" }];
-
 interface PaletteStoryProps {
   fullScreen?: boolean;
   searchAutoFocus?: boolean;
@@ -143,7 +139,6 @@ interface PaletteStoryProps {
   placeholder?: string;
   footerEnd?: string;
 }
-
 const PaletteStory = (props: PaletteStoryProps) => {
   const {
     fullScreen,
@@ -156,7 +151,6 @@ const PaletteStory = (props: PaletteStoryProps) => {
     footerEnd,
   } = props;
   const [open, setOpen] = useState(true);
-
   return (
     <Box bg="bg" minH="32rem" p="lg">
       <Palette
@@ -187,32 +181,29 @@ const PaletteStory = (props: PaletteStoryProps) => {
     </Box>
   );
 };
-
-const meta: Meta<typeof PaletteStory> = {
+const meta: CanvasMeta<typeof PaletteStory> = {
   title: "Components/Overlays/Palette",
   component: PaletteStory,
   parameters: {
     layout: "fullscreen",
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof PaletteStory>;
-
+type Story = CanvasVariant<typeof PaletteStory>;
 export const Default: Story = {
+  id: "components-overlays-palette--default",
   render: () => <PaletteStory />,
 };
-
 export const KeyboardSelection: Story = {
+  id: "components-overlays-palette--keyboard-selection",
   render: () => <PaletteStory initialActiveIndex={2} />,
 };
-
 export const ThemeMenu: Story = {
+  id: "components-overlays-palette--theme-menu",
   render: () => <PaletteStory entries={themeEntries} placeholder="Choose a theme" footerEnd="Preview theme" />,
 };
-
 export const FullScreenNavigation: Story = {
+  id: "components-overlays-palette--full-screen-navigation",
   render: () => <PaletteStory fullScreen searchAutoFocus={false} entries={largeEntries} />,
   parameters: {
     docs: {
@@ -222,8 +213,8 @@ export const FullScreenNavigation: Story = {
     },
   },
 };
-
 export const Modes: Story = {
+  id: "components-overlays-palette--modes",
   render: () => (
     <PaletteStory
       modes={commandResourceModes}
@@ -233,14 +224,12 @@ export const Modes: Story = {
     />
   ),
 };
-
 const slideResources = [
   { id: "intro", label: "Introduction" },
   { id: "architecture", label: "Architecture overview" },
   { id: "demo", label: "Live demo" },
   { id: "q-and-a", label: "Q&A" },
 ];
-
 const buildSlideEntries = (query: string): PaletteEntry[] => {
   const needle = query.trim().toLowerCase();
   return slideResources
@@ -253,13 +242,11 @@ const buildSlideEntries = (query: string): PaletteEntry[] => {
       onActivate: () => undefined,
     }));
 };
-
 // Demonstrates query-driven entries: `onQueryChange` lets a host re-fetch results
 // (e.g. from an extension provider) as the user types, instead of filtering a static list.
 const AsyncResultsPaletteStory = () => {
   const [open, setOpen] = useState(true);
   const [entries, setEntries] = useState<PaletteEntry[]>(() => buildSlideEntries(""));
-
   return (
     <Box bg="bg" minH="32rem" p="lg">
       <Palette
@@ -280,11 +267,11 @@ const AsyncResultsPaletteStory = () => {
     </Box>
   );
 };
-
 export const AsyncResults: Story = {
+  id: "components-overlays-palette--async-results",
   render: () => <AsyncResultsPaletteStory />,
 };
-
 export const LargeAssetSet: Story = {
+  id: "components-overlays-palette--large-asset-set",
   render: () => <PaletteStory entries={largeEntries} />,
 };

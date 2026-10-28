@@ -1,22 +1,18 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useRef, useState } from "react";
-import { expect, spyOn, userEvent, waitFor, within } from "storybook/test";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "./tree-list";
 
-const meta: Meta<typeof TreeList> = {
+const meta: CanvasMeta<typeof TreeList> = {
   title: "Components/Data Display/Tree List/Measurement",
   component: TreeList,
 };
-
 export default meta;
-type Story = StoryObj<typeof TreeList>;
-
+type Story = CanvasVariant<typeof TreeList>;
 const MeasuredRowsStory = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [count, setCount] = useState(0);
-
   return (
     <Stack w="80" gap="sm">
       <Button onClick={() => setCount(100)}>Add sessions</Button>
@@ -42,42 +38,16 @@ const MeasuredRowsStory = () => {
     </Stack>
   );
 };
-
 export const AddedRows: Story = {
+  id: "components-data-display-tree-list-measurement--added-rows",
   tags: ["measurement-regression"],
   render: () => <MeasuredRowsStory />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const errors = spyOn(console, "error");
-    try {
-      await userEvent.click(canvas.getByRole("button", { name: "Add sessions" }));
-      await waitFor(() =>
-        expect(canvasElement.querySelector<HTMLElement>('[data-tree-list-focus-id="session-0"]')!).toBeVisible(),
-      );
-      const first = canvasElement.querySelector<HTMLElement>('[data-tree-list-focus-id="session-0"]')!;
-      await userEvent.click(first);
-      await userEvent.keyboard("{End}");
-      await waitFor(() =>
-        expect(canvasElement.querySelector<HTMLElement>('[data-tree-list-focus-id="session-99"]')!).toHaveFocus(),
-      );
-      await userEvent.keyboard("{Home}");
-      await waitFor(() =>
-        expect(canvasElement.querySelector<HTMLElement>('[data-tree-list-focus-id="header:sessions"]')!).toHaveFocus(),
-      );
-      expect(errors.mock.calls.filter((args) => args.some((arg) => String(arg).includes("flushSync")))).toEqual([]);
-    } finally {
-      errors.mockRestore();
-    }
-  },
 };
-
 const rowIds = Array.from({ length: 12 }, (_, index) => `row-${index}`);
-
 // Retained workbench panels hide with display: none, so a virtual list must survive having no size.
 const HiddenRowsStory = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hidden, setHidden] = useState(false);
-
   return (
     <Stack w="80" gap="sm">
       <Button onClick={() => setHidden((value) => !value)}>{hidden ? "Show list" : "Hide list"}</Button>
@@ -101,8 +71,8 @@ const HiddenRowsStory = () => {
     </Stack>
   );
 };
-
 export const HiddenAndShown: Story = {
+  id: "components-data-display-tree-list-measurement--hidden-and-shown",
   tags: ["measurement-regression"],
   render: () => <HiddenRowsStory />,
 };

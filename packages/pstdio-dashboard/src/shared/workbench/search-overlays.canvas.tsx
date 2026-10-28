@@ -1,8 +1,7 @@
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { WorkbenchOverlayLayer } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { getCollection, getWriter } from "@/lib/sync/collections";
 import { createNotificationsModule } from "@/modules/notifications/module";
 import { ProjectStoryFixture } from "@/modules/projects/data/project-story-fixture";
@@ -15,7 +14,6 @@ interface SearchOverlayStoryProps {
   overlay: "Projects" | "Notifications";
   projectCount?: number;
 }
-
 const SearchOverlayStory = (props: SearchOverlayStoryProps) => {
   const { overlay, projectCount = 8 } = props;
   const [workbench] = useState(() => createWorkbench());
@@ -47,7 +45,6 @@ const SearchOverlayStory = (props: SearchOverlayStoryProps) => {
   }, [overlay, projectCount, workbench]);
   return <WorkbenchOverlayLayer workbench={workbench} />;
 };
-
 const meta = {
   title: "Dashboard/Search overlays",
   component: SearchOverlayStory,
@@ -67,64 +64,30 @@ const meta = {
       },
     },
   },
-  play: async ({ canvasElement, args }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    const close = await body.findByRole("button", { name: `Close ${args.overlay}` });
-    const dialog = close.closest('[role="dialog"]');
-    const search = dialog?.querySelector("input");
-    await waitFor(() => expect(search).toBeVisible());
-    await waitFor(() => {
-      const buttonRect = close.getBoundingClientRect();
-      const inputRect = search!.getBoundingClientRect();
-      const difference = Math.abs(buttonRect.y + buttonRect.height / 2 - inputRect.y - inputRect.height / 2);
-      expect(difference).toBeLessThanOrEqual(1);
-    });
-    await userEvent.click(close);
-    await waitFor(() => expect(body.queryByRole("button", { name: `Close ${args.overlay}` })).toBeNull());
-  },
-} satisfies Meta<typeof SearchOverlayStory>;
+} satisfies CanvasMeta<typeof SearchOverlayStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Projects: Story = { args: { overlay: "Projects" } };
-export const Notifications: Story = { args: { overlay: "Notifications" } };
-
-const expectProjectList = async (canvasElement: HTMLElement, count: number) => {
-  const body = within(canvasElement.ownerDocument.body);
-  const dialog = await body.findByRole("dialog");
-  await expect(within(dialog).queryByRole("textbox")).not.toBeInTheDocument();
-  await expect(within(dialog).getByRole("button", { name: "Create project" })).toBeVisible();
-  for (let index = 1; index <= count; index++) {
-    await expect(within(dialog).getByText(`Project ${index}`, { exact: true })).toBeVisible();
-  }
+type Story = CanvasVariant<typeof meta>;
+export const Projects: Story = {
+  id: "dashboard-search-overlays--projects",
+  args: { overlay: "Projects" },
 };
-
+export const Notifications: Story = {
+  id: "dashboard-search-overlays--notifications",
+  args: { overlay: "Notifications" },
+};
 export const NoProjects: Story = {
+  id: "dashboard-search-overlays--no-projects",
   args: { overlay: "Projects", projectCount: 0 },
-  play: async ({ canvasElement }) => expectProjectList(canvasElement, 0),
 };
-
 export const SmallProjectList: Story = {
+  id: "dashboard-search-overlays--small-project-list",
   args: { overlay: "Projects", projectCount: 7 },
-  play: async ({ canvasElement }) => expectProjectList(canvasElement, 7),
 };
-
 export const OneProject: Story = {
+  id: "dashboard-search-overlays--one-project",
   args: { overlay: "Projects", projectCount: 1 },
-  play: async ({ canvasElement }) => expectProjectList(canvasElement, 1),
 };
-
 export const FilterProjects: Story = {
+  id: "dashboard-search-overlays--filter-projects",
   args: { overlay: "Projects", projectCount: 8 },
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    const dialog = await body.findByRole("dialog");
-    const search = within(dialog).getByRole("textbox");
-    await userEvent.type(search, "Project 8");
-    await expect(within(dialog).getByText("Project 8", { exact: true })).toBeVisible();
-    await expect(within(dialog).queryByText("Project 1", { exact: true })).not.toBeInTheDocument();
-    await expect(search).toBeVisible();
-    await userEvent.clear(search);
-    await expect(within(dialog).getByText("Project 1", { exact: true })).toBeVisible();
-  },
 };

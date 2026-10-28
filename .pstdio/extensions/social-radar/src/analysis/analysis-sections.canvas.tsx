@@ -1,11 +1,11 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { buildAnalysis } from "../analysis";
 import { channelNames } from "../sites";
 import { storyAnalysis } from "../webview/story-fixtures";
 import { AnalysisSections } from "./analysis-sections";
 
-const meta: Meta<typeof AnalysisSections> = {
+const meta: CanvasMeta<typeof AnalysisSections> = {
   title: "Extensions/Social radar/Analysis",
   component: AnalysisSections,
   args: { analysis: storyAnalysis, channelNames: channelNames([]), onOpenMention: () => {} },
@@ -18,6 +18,11 @@ const meta: Meta<typeof AnalysisSections> = {
   ],
 };
 export default meta;
-type Story = StoryObj<typeof AnalysisSections>;
-export const FourteenDays: Story = {};
-export const NoThreadsYet: Story = { args: { analysis: buildAnalysis({ threads: [], days: 14 }) } };
+type Story = CanvasVariant<typeof AnalysisSections>;
+export const FourteenDays: Story = {
+  id: "extensions-social-radar-analysis--fourteen-days",
+};
+export const NoThreadsYet: Story = {
+  id: "extensions-social-radar-analysis--no-threads-yet",
+  args: { analysis: buildAnalysis({ threads: [], days: 14 }) },
+};

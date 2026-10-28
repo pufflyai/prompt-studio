@@ -1,6 +1,6 @@
 import { CloseButton, Dialog } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { WorkspaceProviderForm } from "./workspace-provider-form";
 
 const git = {
@@ -54,14 +54,26 @@ const meta = {
       </Dialog.Root>
     ),
   ],
-} satisfies Meta<typeof WorkspaceProviderForm>;
+} satisfies CanvasMeta<typeof WorkspaceProviderForm>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const GitAndRemote: Story = {};
-export const GitBranches: Story = { args: { providers: [git] } };
-export const RemoteParameters: Story = { args: { providers: [remote, git] } };
-export const NoProviders: Story = { args: { providers: [] } };
+type Story = CanvasVariant<typeof meta>;
+export const GitAndRemote: Story = {
+  id: "workspaces-provider-selection--git-and-remote",
+};
+export const GitBranches: Story = {
+  id: "workspaces-provider-selection--git-branches",
+  args: { providers: [git] },
+};
+export const RemoteParameters: Story = {
+  id: "workspaces-provider-selection--remote-parameters",
+  args: { providers: [remote, git] },
+};
+export const NoProviders: Story = {
+  id: "workspaces-provider-selection--no-providers",
+  args: { providers: [] },
+};
 export const TranslationTokens: Story = {
+  id: "workspaces-provider-selection--translation-tokens",
   args: {
     providers: [
       {
@@ -80,9 +92,16 @@ export const TranslationTokens: Story = {
     ],
   },
 };
-export const NoLocation: Story = { args: { providers: [] } };
-export const Provisioning: Story = { args: { providers: [remote], busy: true } };
+export const NoLocation: Story = {
+  id: "workspaces-provider-selection--no-location",
+  args: { providers: [] },
+};
+export const Provisioning: Story = {
+  id: "workspaces-provider-selection--provisioning",
+  args: { providers: [remote], busy: true },
+};
 export const ProviderFailure: Story = {
+  id: "workspaces-provider-selection--provider-failure",
   args: {
     providers: [git, remote],
     onSubmit: async () => {
@@ -90,7 +109,6 @@ export const ProviderFailure: Story = {
     },
   },
 };
-
 const machine: WorkspaceProviderDescriptor = {
   id: "example.cloud.workspace-type.machine",
   label: "Agent machine",
@@ -127,7 +145,6 @@ const machine: WorkspaceProviderDescriptor = {
     },
   },
 };
-
 const machineChoices = async (commandId: string, args: Record<string, unknown>) => {
   if (commandId.endsWith(".instances"))
     return [
@@ -142,17 +159,20 @@ const machineChoices = async (commandId: string, args: Record<string, unknown>) 
   if (!args.instance) return [];
   return [{ id: `${args.instance}-code`, name: `${args.instance} coding agent` }];
 };
-
 export const CommandBackedChoices: Story = {
+  id: "workspaces-provider-selection--command-backed-choices",
   args: { providers: [machine, git], executeOptionCommand: machineChoices },
 };
 export const LoadingChoices: Story = {
+  id: "workspaces-provider-selection--loading-choices",
   args: { providers: [machine], executeOptionCommand: () => new Promise(() => {}) },
 };
 export const EmptyChoices: Story = {
+  id: "workspaces-provider-selection--empty-choices",
   args: { providers: [machine], executeOptionCommand: async () => [] },
 };
 export const FailedChoices: Story = {
+  id: "workspaces-provider-selection--failed-choices",
   args: {
     providers: [machine],
     executeOptionCommand: async () => {
@@ -161,6 +181,7 @@ export const FailedChoices: Story = {
   },
 };
 export const RetryChoices: Story = {
+  id: "workspaces-provider-selection--retry-choices",
   args: {
     providers: [machine],
     executeOptionCommand: (() => {

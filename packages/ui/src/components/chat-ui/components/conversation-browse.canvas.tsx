@@ -1,5 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ConversationBrowse, type ConversationBrowseItem } from "./conversation-browse";
 
 const items: ConversationBrowseItem[] = [
@@ -31,34 +31,31 @@ const items: ConversationBrowseItem[] = [
   },
   { id: "7", message: "Ship it once validation passes." },
 ];
-
-const meta: Meta<typeof ConversationBrowse> = {
+const meta: CanvasMeta<typeof ConversationBrowse> = {
   title: "Patterns/Chat/Conversation Browse",
   component: ConversationBrowse,
   parameters: { layout: "centered" },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ConversationBrowse>;
-
+type Story = CanvasVariant<typeof ConversationBrowse>;
 export const Gutter: Story = {
+  id: "patterns-chat-conversation-browse--gutter",
   render: () => (
     <Box h="360px" display="flex" alignItems="center">
       <ConversationBrowse items={items} onSelect={(id) => console.log("scroll to", id)} />
     </Box>
   ),
 };
-
 export const ClippedContainer: Story = {
+  id: "patterns-chat-conversation-browse--clipped-container",
   render: () => (
     <Box w="10" h="360px" display="flex" alignItems="center" overflow="hidden">
       <ConversationBrowse items={items} onSelect={(id) => console.log("scroll to", id)} />
     </Box>
   ),
 };
-
 export const Floating: Story = {
+  id: "patterns-chat-conversation-browse--floating",
   render: () => (
     <Box position="relative" w="360px" h="360px" bg="bg" borderWidth="1px" borderColor="border" borderRadius="lg" p="3">
       <Stack gap="3">

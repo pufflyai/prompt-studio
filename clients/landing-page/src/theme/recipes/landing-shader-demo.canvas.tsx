@@ -1,6 +1,6 @@
 import { Box, Button, HStack, Stack, Text, Textarea, useSlotRecipe } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createGlyphIcon, ScrollArea, Slider } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { landingStorySlotRecipe } from "./landing-story";
 import { landingToolDemoSlotRecipe } from "./landing-tool-demo";
@@ -9,7 +9,6 @@ const icons = ["star", "cloud-add", "global", "grid-4", "code", "component"].map
   name,
   icon: createGlyphIcon(name),
 }));
-
 const ShaderDemo = (props: { withControls: boolean; connected: boolean }) => {
   const { withControls, connected } = props;
   const styles = useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});
@@ -131,18 +130,23 @@ const ShaderDemo = (props: { withControls: boolean; connected: boolean }) => {
     </Box>
   );
 };
-
 const meta = {
   title: "Theme/Landing Shader Demo",
   component: ShaderDemo,
   args: { withControls: false, connected: true },
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof ShaderDemo>;
+} satisfies CanvasMeta<typeof ShaderDemo>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Editor: Story = {};
-export const WithControls: Story = { args: { withControls: true, connected: false } };
+type Story = CanvasVariant<typeof meta>;
+export const Editor: Story = {
+  id: "theme-landing-shader-demo--editor",
+};
+export const WithControls: Story = {
+  id: "theme-landing-shader-demo--with-controls",
+  args: { withControls: true, connected: false },
+};
 export const NarrowPanel: Story = {
+  id: "theme-landing-shader-demo--narrow-panel",
   args: { withControls: true, connected: false },
   decorators: [
     (Story) => (

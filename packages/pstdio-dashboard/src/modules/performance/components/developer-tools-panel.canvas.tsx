@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID, Workbench } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { receiveSettings } from "@/shared/settings/synced-settings";
@@ -20,16 +20,28 @@ const meta = {
     onConnectionStatusChange: () => undefined,
     onDismissError: () => undefined,
   },
-} satisfies Meta<typeof DeveloperToolsContent>;
+} satisfies CanvasMeta<typeof DeveloperToolsContent>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Off: Story = {};
-export const OnDesktop: Story = { args: { performanceEnabled: true, connectionStatusEnabled: true } };
-export const OnBrowser: Story = { args: { performanceEnabled: true, host: "browser" } };
-export const Loading: Story = { args: { performanceEnabled: undefined } };
-export const SaveFailure: Story = { args: { error: "Could not change performance monitoring." } };
-
+type Story = CanvasVariant<typeof meta>;
+export const Off: Story = {
+  id: "settings-developer-tools--off",
+};
+export const OnDesktop: Story = {
+  id: "settings-developer-tools--on-desktop",
+  args: { performanceEnabled: true, connectionStatusEnabled: true },
+};
+export const OnBrowser: Story = {
+  id: "settings-developer-tools--on-browser",
+  args: { performanceEnabled: true, host: "browser" },
+};
+export const Loading: Story = {
+  id: "settings-developer-tools--loading",
+  args: { performanceEnabled: undefined },
+};
+export const SaveFailure: Story = {
+  id: "settings-developer-tools--save-failure",
+  args: { error: "Could not change performance monitoring." },
+};
 // The real modules with a browser host: the panel opens under Workbench in the settings navigation.
 const DeveloperToolsNavigation = () => {
   const [client] = useState(() => {
@@ -45,7 +57,6 @@ const DeveloperToolsNavigation = () => {
     void next.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "developer-tools" });
     return next;
   });
-
   return (
     <QueryClientProvider client={client}>
       <Box h="100dvh" w="full">
@@ -54,8 +65,8 @@ const DeveloperToolsNavigation = () => {
     </QueryClientProvider>
   );
 };
-
 export const SettingsNavigation: Story = {
+  id: "settings-developer-tools--settings-navigation",
   parameters: { layout: "fullscreen" },
   render: () => <DeveloperToolsNavigation />,
 };

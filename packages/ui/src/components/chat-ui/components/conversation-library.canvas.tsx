@@ -1,11 +1,10 @@
 import { Box, HStack, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { type ConversationFixture, fixtures, fixturesById } from "../mocks/library";
 import { ChatPanel } from "./chat-panel";
 
 const fixtureOptions = fixtures.map((f) => f.id);
-
-const meta: Meta<typeof FixtureRenderer> = {
+const meta: CanvasMeta<typeof FixtureRenderer> = {
   title: "Patterns/Chat/Conversation Library",
   component: FixtureRenderer,
   tags: ["!manifest"],
@@ -26,18 +25,13 @@ const meta: Meta<typeof FixtureRenderer> = {
     },
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof FixtureRenderer>;
-
+type Story = CanvasVariant<typeof FixtureRenderer>;
 interface FixtureRendererProps {
   fixtureId: string;
 }
-
 function FixtureRenderer({ fixtureId }: FixtureRendererProps) {
   const fixture = fixturesById.get(fixtureId) ?? fixtures[0];
-
   return (
     <Stack gap="sm" w="full" maxW="1024px">
       <FixtureHeader fixture={fixture} />
@@ -52,11 +46,9 @@ function FixtureRenderer({ fixtureId }: FixtureRendererProps) {
     </Stack>
   );
 }
-
 interface FixtureHeaderProps {
   fixture: ConversationFixture;
 }
-
 function FixtureHeader({ fixture }: FixtureHeaderProps) {
   return (
     <Stack gap="xs">
@@ -76,8 +68,8 @@ function FixtureHeader({ fixture }: FixtureHeaderProps) {
     </Stack>
   );
 }
-
 export const Library: Story = {
+  id: "patterns-chat-conversation-library--library",
   args: {
     fixtureId: fixtures[0].id,
   },

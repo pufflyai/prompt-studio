@@ -1,30 +1,27 @@
 import { Box, Button, IconButton, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { PaperclipIcon } from "lucide-react";
 import { useState } from "react";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
 import { ChatPanel } from "./chat-panel";
 import type { QueuedFollowUp } from "./message-types";
 
-const meta: Meta<typeof ChatPanel> = {
+const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Question interruptions",
   component: ChatPanel,
   parameters: { layout: "centered" },
 };
 export default meta;
-type Story = StoryObj<typeof ChatPanel>;
-
+type Story = CanvasVariant<typeof ChatPanel>;
 const questionPrompt: ChatInputQuestionPrompt = {
   questions: [{ id: "choice", question: "Choose a greeting", options: [{ label: "Hello" }], required: true }],
 };
-
 interface QuestionPanelProps {
   prompt?: ChatInputQuestionPrompt;
   queued?: boolean;
   rejectFirst?: boolean;
   draft?: string;
 }
-
 function QuestionPanel(props: QuestionPanelProps) {
   const { prompt, queued = false, rejectFirst = false, draft } = props;
   const [rejectNextReply, setRejectNextReply] = useState(rejectFirst);
@@ -33,7 +30,6 @@ function QuestionPanel(props: QuestionPanelProps) {
   const [items, setItems] = useState<QueuedFollowUp[]>(
     queued ? [{ id: "queued-message", prompt: "Review the release notes", position: 1 }] : [],
   );
-
   return (
     <Stack w="32rem" gap="sm">
       {queued ? <Button onClick={() => setActivePrompt(questionPrompt)}>Ask a question</Button> : null}
@@ -75,20 +71,20 @@ function QuestionPanel(props: QuestionPanelProps) {
     </Stack>
   );
 }
-
 export const QueuedEditInterruptedByQuestion: Story = {
+  id: "patterns-chat-question-interruptions--queued-edit-interrupted-by-question",
   render: () => <QuestionPanel queued />,
 };
-
 export const QueuedEditRejectedQuestionReply: Story = {
+  id: "patterns-chat-question-interruptions--queued-edit-rejected-question-reply",
   render: () => <QuestionPanel queued rejectFirst />,
 };
-
 export const AttachmentControlsDuringQuestion: Story = {
+  id: "patterns-chat-question-interruptions--attachment-controls-during-question",
   render: () => <QuestionPanel prompt={questionPrompt} />,
 };
-
 export const DraftSelectionAfterQuestion: Story = {
+  id: "patterns-chat-question-interruptions--draft-selection-after-question",
   tags: ["!manifest"],
   render: () => <QuestionPanel queued draft="Keep my draft" />,
   parameters: {
@@ -100,8 +96,8 @@ export const DraftSelectionAfterQuestion: Story = {
     },
   },
 };
-
 export const InheritedQuestionIds: Story = {
+  id: "patterns-chat-question-interruptions--inherited-question-ids",
   render: () => (
     <QuestionPanel
       prompt={{
@@ -116,8 +112,8 @@ export const InheritedQuestionIds: Story = {
     />
   ),
 };
-
 export const ListedOtherValue: Story = {
+  id: "patterns-chat-question-interruptions--listed-other-value",
   render: () => (
     <QuestionPanel
       prompt={{
@@ -133,8 +129,8 @@ export const ListedOtherValue: Story = {
     />
   ),
 };
-
 export const ListedOtherValueWithCustomAnswer: Story = {
+  id: "patterns-chat-question-interruptions--listed-other-value-with-custom-answer",
   render: () => (
     <QuestionPanel
       prompt={{

@@ -1,9 +1,8 @@
 import "@pstdio/ui/style.css";
-
+import type { CanvasProject } from "@pstdio/canvas";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
-import type { Preview } from "@storybook/react-vite";
 
-const preview: Preview = {
+const preview: CanvasProject = {
   decorators: [
     (Story) => (
       <ChakraProvider value={psTheme}>
@@ -12,5 +11,4 @@ const preview: Preview = {
     ),
   ],
 };
-
 export default preview;

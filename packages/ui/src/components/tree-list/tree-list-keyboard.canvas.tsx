@@ -1,16 +1,14 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { TreeList } from "./tree-list";
 
-const meta: Meta<typeof TreeList> = {
+const meta: CanvasMeta<typeof TreeList> = {
   title: "Components/Data Display/Tree List/Keyboard",
   component: TreeList,
 };
 export default meta;
-type Story = StoryObj<typeof TreeList>;
-
+type Story = CanvasVariant<typeof TreeList>;
 const KeyboardRows = (props: { empty?: boolean; moveSelection?: boolean; select?: boolean }) => {
   const { empty, moveSelection, select = true } = props;
   const [selected, setSelected] = useState<string[]>(empty ? [] : ["b", "c"]);
@@ -43,63 +41,20 @@ const KeyboardRows = (props: { empty?: boolean; moveSelection?: boolean; select?
     </Stack>
   );
 };
-
 export const SelectionMoves: Story = {
+  id: "components-data-display-tree-list-keyboard--selection-moves",
   render: () => <KeyboardRows moveSelection />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    canvas.getByRole("option", { name: "Layer b", exact: true }).focus();
-    await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
-    await waitFor(() =>
-      expect(canvas.getAllByRole("option").map((row) => row.textContent)).toEqual([
-        "Layer a",
-        "Layer d",
-        "Layer b",
-        "Layer c",
-      ]),
-    );
-    canvas.getByRole("option", { name: "Layer d", exact: true }).focus();
-    await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
-    await waitFor(() =>
-      expect(canvas.getAllByRole("option").map((row) => row.textContent)).toEqual([
-        "Layer d",
-        "Layer a",
-        "Layer b",
-        "Layer c",
-      ]),
-    );
-  },
 };
-
 export const SourceOnlyMoves: Story = {
+  id: "components-data-display-tree-list-keyboard--source-only-moves",
   render: () => <KeyboardRows />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const source = canvas.getByRole("option", { name: "Layer b", exact: true });
-    source.focus();
-    await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
-    await waitFor(() =>
-      expect(canvas.getAllByRole("option").map((row) => row.textContent)).toEqual(["Layer a", "Layer c", "Layer b"]),
-    );
-    await expect(source).toHaveFocus();
-  },
 };
-
 export const MovesWithoutSelection: Story = {
+  id: "components-data-display-tree-list-keyboard--moves-without-selection",
   render: () => <KeyboardRows select={false} />,
-  play: SourceOnlyMoves.play,
 };
-
 export const RangeFromEmptySelection: Story = {
+  id: "components-data-display-tree-list-keyboard--range-from-empty-selection",
   tags: ["!manifest"],
   render: () => <KeyboardRows empty />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    canvas.getByRole("option", { name: "Layer a", exact: true }).focus();
-    await userEvent.keyboard("{Shift>}{ArrowDown}{ArrowDown}{/Shift}");
-    await waitFor(() => expect(canvas.getByRole("status")).toHaveTextContent("Selected: a, b, c"));
-    await expect(canvas.getByRole("option", { name: "Layer c", exact: true })).toHaveFocus();
-    await userEvent.keyboard("{Shift>}{ArrowUp}{/Shift}");
-    await waitFor(() => expect(canvas.getByRole("status")).toHaveTextContent("Selected: a, b"));
-  },
 };

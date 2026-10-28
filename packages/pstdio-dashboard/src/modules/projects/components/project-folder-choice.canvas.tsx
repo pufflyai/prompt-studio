@@ -1,6 +1,5 @@
 import { Dialog } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, screen, userEvent } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ProjectFolderChoice } from "./project-folder-choice";
 
 const meta = {
@@ -23,32 +22,30 @@ const meta = {
     method: "clone",
     clonePath: "~/Projects/prompt-studio",
     pending: false,
-    onMethodChange: fn(),
-    onClonePathChange: fn(),
-    onBrowse: fn(),
-    onNotNow: fn(),
-    onContinue: fn(),
+    onMethodChange: () => {},
+    onClonePathChange: () => {},
+    onBrowse: () => {},
+    onNotNow: () => {},
+    onContinue: () => {},
   },
-} satisfies Meta<typeof ProjectFolderChoice>;
+} satisfies CanvasMeta<typeof ProjectFolderChoice>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 /** A recorded git remote makes cloning the default. */
 export const CloneRemote: Story = {
-  play: async ({ args }) => {
-    await userEvent.click(await screen.findByRole("button", { name: "Clone and continue" }));
-    await expect(args.onContinue).toHaveBeenCalledOnce();
-    await userEvent.click(screen.getByRole("radio", { name: "Use a folder that already has it" }));
-    await expect(args.onMethodChange).toHaveBeenCalledWith("existing");
-  },
+  id: "projects-project-folder--clone-remote",
 };
-
-export const UseExistingFolder: Story = { args: { method: "existing" } };
-
+export const UseExistingFolder: Story = {
+  id: "projects-project-folder--use-existing-folder",
+  args: { method: "existing" },
+};
 /** Without a recorded remote, only an existing folder can be chosen. */
-export const NoGitRemote: Story = { args: { gitRemote: null, method: "existing", clonePath: "" } };
-
+export const NoGitRemote: Story = {
+  id: "projects-project-folder--no-git-remote",
+  args: { gitRemote: null, method: "existing", clonePath: "" },
+};
 export const CloneFailed: Story = {
+  id: "projects-project-folder--clone-failed",
   args: {
     error: "Could not clone git@github.com:pstdio/prompt-studio.git: Permission denied (publickey).",
   },

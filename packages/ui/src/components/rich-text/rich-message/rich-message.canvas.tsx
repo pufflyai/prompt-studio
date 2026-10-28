@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { RichMessage } from "./rich-message";
 
@@ -117,8 +117,7 @@ def fib(n: int):
 print(list(fib(10)))
 \`\`\`
 `;
-
-const meta: Meta<typeof RichMessage> = {
+const meta: CanvasMeta<typeof RichMessage> = {
   title: "Patterns/Chat/Rich Message",
   component: RichMessage,
   parameters: {
@@ -139,12 +138,10 @@ const meta: Meta<typeof RichMessage> = {
     },
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof RichMessage>;
-
+type Story = CanvasVariant<typeof RichMessage>;
 export const Basic: Story = {
+  id: "patterns-chat-rich-message--basic",
   render: (args) => (
     <ScrollArea
       maxH="36rem"
@@ -158,14 +155,13 @@ export const Basic: Story = {
     </ScrollArea>
   ),
 };
-
 const longNumberedList = [
   Array.from({ length: 120 }, (_, index) => `${index + 1}. City number ${index + 1} has a river.`).join("\n"),
   "A list that starts at a high number:",
   "998. Almost there\n999. Nearly done\n1000. Four-digit marker",
 ].join("\n\n");
-
 export const LongNumberedList: Story = {
+  id: "patterns-chat-rich-message--long-numbered-list",
   args: { defaultState: longNumberedList, fullWidth: true },
   render: Basic.render,
 };

@@ -1,7 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench, type TreeViewSection } from "../../../core";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { previewTreeMove } from "./tree-move-preview";
@@ -87,49 +86,9 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof InstantMoves>;
+} satisfies CanvasMeta<typeof InstantMoves>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const DeferredPersistence: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const move = (after: boolean) => {
-      const source = canvas.getByRole("option", { name: "Research" }).parentElement!;
-      const target = canvas.getByRole("option", { name: "Meeting" }).parentElement!;
-      const transfer = new DataTransfer();
-      const y = after ? target.getBoundingClientRect().bottom - 1 : target.getBoundingClientRect().top + 1;
-      for (const [type, element] of [
-        ["dragstart", source],
-        ["drop", target],
-      ] as const)
-        fireEvent(
-          element,
-          new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: transfer, clientY: y }),
-        );
-    };
-    const after = () =>
-      Boolean(
-        canvas
-          .getByRole("option", { name: "Meeting" })
-          .compareDocumentPosition(canvas.getByRole("option", { name: "Research" })) & Node.DOCUMENT_POSITION_FOLLOWING,
-      );
-    await canvas.findByRole("option", { name: "Research" });
-    move(true);
-    await waitFor(() => expect(after()).toBe(true));
-    await expect(canvas.getByTestId("saved-order")).toHaveTextContent("folder, first, second");
-    await userEvent.click(canvas.getByRole("button", { name: "Reject save" }));
-    await waitFor(() => expect(after()).toBe(false));
-    await expect(canvas.getByText("Error: Save failed")).toBeVisible();
-    move(true);
-    await waitFor(() => expect(after()).toBe(true));
-    move(false);
-    await waitFor(() => expect(after()).toBe(false));
-    await userEvent.click(canvas.getByRole("button", { name: "Finish save" }));
-    await waitFor(() => expect(canvas.getByRole("button", { name: "Finish save" })).toBeEnabled());
-    await expect(after()).toBe(false);
-    await userEvent.click(canvas.getByRole("button", { name: "Finish save" }));
-    await waitFor(() => expect(canvas.getByRole("button", { name: "Finish save" })).toBeDisabled());
-    await expect(canvas.getByTestId("saved-order")).toHaveTextContent("folder, first, second");
-    await expect(after()).toBe(false);
-  },
+  id: "pstdio-workbench-tree-instant-resource-moves--deferred-persistence",
 };

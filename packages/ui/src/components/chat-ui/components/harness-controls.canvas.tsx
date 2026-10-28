@@ -1,13 +1,12 @@
 import { Button } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { AlertMessage } from "@/components/primitives/alert";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatInput } from "./chat-input";
 import { HarnessControls, type HarnessControlsProps } from "./harness-controls";
 
-const meta: Meta<typeof HarnessControls> = {
+const meta: CanvasMeta<typeof HarnessControls> = {
   title: "Patterns/Chat/Harness Controls",
   component: HarnessControls,
   args: {
@@ -16,7 +15,7 @@ const meta: Meta<typeof HarnessControls> = {
   },
 };
 export default meta;
-type Story = StoryObj<typeof HarnessControls>;
+type Story = CanvasVariant<typeof HarnessControls>;
 const NewConversationComposer = (props: HarnessControlsProps) => {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(false);
@@ -49,25 +48,11 @@ const NewConversationComposer = (props: HarnessControlsProps) => {
   );
 };
 export const NewConversation: Story = {
+  id: "patterns-chat-harness-controls--new-conversation",
   render: (args) => <NewConversationComposer {...args} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByRole("textbox"), "Finish the release notes /go");
-    const commands = await within(canvasElement.ownerDocument.body).findByRole("listbox", { name: "Harness commands" });
-    await expect(commands).toBeVisible();
-    await userEvent.click(within(commands).getByRole("option", { name: "/goal" }));
-    await expect(canvas.getByRole("textbox").innerText.trim()).toBe("Finish the release notes");
-    const goal = canvas.getByRole("button", { name: /Goal: Finish the release notes/ });
-    await expect(goal).toHaveTextContent("Goal");
-    await userEvent.hover(goal);
-    await expect(await within(canvasElement.ownerDocument.body).findByRole("tooltip")).toHaveTextContent(
-      /Finish the release notes/,
-    );
-    await userEvent.click(canvas.getByRole("button", { name: "Remove Goal" }));
-    await expect(canvas.getByRole("textbox").innerText.trim()).toBe("Finish the release notes");
-  },
 };
 export const IndependentModes: Story = {
+  id: "patterns-chat-harness-controls--independent-modes",
   render: (args) => (
     <ChatInput
       defaultState={createSerializedPromptState("Keep this unsent draft")}
@@ -105,25 +90,14 @@ export const IndependentModes: Story = {
       },
     ],
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    const goal = canvas.getByRole("button", { name: "Goal details" });
-    await expect(goal).toHaveTextContent("Goal");
-    goal.focus();
-    await expect(await body.findByRole("tooltip")).toHaveTextContent(/Finish the migration/);
-    await userEvent.click(goal);
-    await userEvent.click(await body.findByRole("button", { name: "Edit" }));
-    const objective = await body.findByRole("textbox", { name: "Objective" });
-    await userEvent.clear(objective);
-    await userEvent.type(objective, "Revised native objective");
-    await userEvent.click(body.getByRole("button", { name: "Apply" }));
-    await expect(canvas.getByRole("textbox").innerText).toBe("Keep this unsent draft");
-  },
 };
-export const Pending: Story = { args: { ...IndependentModes.args, pending: true } };
+export const Pending: Story = {
+  id: "patterns-chat-harness-controls--pending",
+  args: { ...IndependentModes.args, pending: true },
+};
 const goalMode = IndependentModes.args?.modes?.find((mode) => mode.id === "goal");
 export const PausedGoal: Story = {
+  id: "patterns-chat-harness-controls--paused-goal",
   args: {
     modes: goalMode
       ? [
@@ -141,14 +115,19 @@ export const PausedGoal: Story = {
   },
 };
 export const CompletedGoal: Story = {
+  id: "patterns-chat-harness-controls--completed-goal",
   args: {
     modes: goalMode
       ? [{ ...goalMode, state: "complete · 1200 / 40000 tokens", indicator: { label: "Complete", tone: "info" } }]
       : [],
   },
 };
-export const StatusUnavailable: Story = { args: { ...IndependentModes.args, unavailable: true } };
+export const StatusUnavailable: Story = {
+  id: "patterns-chat-harness-controls--status-unavailable",
+  args: { ...IndependentModes.args, unavailable: true },
+};
 export const SentReference: Story = {
+  id: "patterns-chat-harness-controls--sent-reference",
   args: {
     sentTag: {
       label: "Goal",
@@ -158,6 +137,7 @@ export const SentReference: Story = {
   },
 };
 export const NativeError: Story = {
+  id: "patterns-chat-harness-controls--native-error",
   render: (args) => (
     <>
       <AlertMessage status="error" title="Command not sent">

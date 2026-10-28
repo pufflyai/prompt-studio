@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { DownloadPanel } from "../downloads/download-panel";
 import { AssemblyFrame } from "./assembly-frame";
@@ -25,12 +25,14 @@ const meta = {
       );
     },
   ],
-} satisfies Meta<typeof AssemblyFrame>;
-
+} satisfies CanvasMeta<typeof AssemblyFrame>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const BeforeJavaScript: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const BeforeJavaScript: Story = {
+  id: "landing-initial-editor-frame--before-java-script",
+};
 export const Narrow: Story = {
+  id: "landing-initial-editor-frame--narrow",
   parameters: {
     docs: { description: { story: "Narrow editors use 95% of the fitted space, aligning with the mobile copy." } },
   },

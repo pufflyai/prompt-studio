@@ -5,7 +5,6 @@ import { DeleteConfirmationModal } from "@/components/overlays/delete-confirmati
 import { Checkbox } from "@/components/primitives/checkbox";
 
 type StoryFn = () => ReactNode;
-
 const meta = {
   title: "Components/Overlays/Delete Confirmation Modal",
   component: DeleteConfirmationModal,
@@ -17,13 +16,11 @@ const meta = {
     ),
   ],
 };
-
 export default meta;
-
 export const Default = {
+  id: "components-overlays-delete-confirmation-modal--default",
   render: () => {
     const [isOpen, setIsOpen] = useState(true);
-
     return (
       <Stack gap="md">
         <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -44,12 +41,11 @@ export const Default = {
     );
   },
 };
-
 export const WithOptInCheckbox = {
+  id: "components-overlays-delete-confirmation-modal--with-opt-in-checkbox",
   render: () => {
     const [isOpen, setIsOpen] = useState(true);
     const [deleteData, setDeleteData] = useState(false);
-
     return (
       <Stack gap="md">
         <Button size="sm" variant="outline" onClick={() => setIsOpen(true)}>

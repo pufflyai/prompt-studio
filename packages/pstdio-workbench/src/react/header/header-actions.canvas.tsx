@@ -1,6 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench, resourceContextMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -66,16 +65,15 @@ const createHeaderWorkbench = () => {
   workbench.pageLocations.navigate({ kind: "page", page });
   return workbench;
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Header actions",
   component: WorkbenchStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof WorkbenchStory>;
+} satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const FocusedResourceInLibrary: Story = {
+  id: "pstdio-workbench-reference-core-api-header-actions--focused-resource-in-library",
   args: { workbench: createHeaderWorkbench() },
   render: (args) => (
     <WorkbenchThemeProvider>
@@ -85,27 +83,9 @@ export const FocusedResourceInLibrary: Story = {
       </Stack>
     </WorkbenchThemeProvider>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.queryByRole("button", { name: "Publish artifact" })).toBeNull();
-    await userEvent.click(canvas.getByRole("button", { name: "Open artifact tab" }));
-    await expect(await canvas.findByRole("button", { name: "Publish artifact" })).toBeVisible();
-    const library = canvas.getAllByRole("tab", { name: "Library" })[0];
-    await userEvent.click(library!);
-    await expect(canvas.queryByRole("button", { name: "Publish artifact" })).toBeNull();
-  },
 };
-
 export const BreadcrumbActionsForFocusedResource: Story = {
+  id: "pstdio-workbench-reference-core-api-header-actions--breadcrumb-actions-for-focused-resource",
   ...FocusedResourceInLibrary,
   args: { workbench: createHeaderWorkbench() },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Open artifact tab" }));
-    await userEvent.click(await canvas.findByRole("button", { name: "Actions for prototype" }));
-    await expect(await within(document.body).findByRole("menuitem", { name: "Rename artifact" })).toBeVisible();
-    await userEvent.keyboard("{Escape}");
-    await userEvent.click(canvas.getAllByRole("tab", { name: "Library" })[0]!);
-    await expect(canvas.queryByRole("button", { name: "Actions for prototype" })).toBeNull();
-  },
 };

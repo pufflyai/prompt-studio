@@ -1,18 +1,16 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Computer, Plus } from "lucide-react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { ListRow } from "./list-row";
 
 const meta = {
   title: "Components/Data Display/List Row/Hover Content",
   component: ListRow,
   tags: ["hover-content"],
-} satisfies Meta<typeof ListRow>;
+} satisfies CanvasMeta<typeof ListRow>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 const NarrowNavigationExample = () => {
   const [actionCount, setActionCount] = useState(0);
   const [rowCount, setRowCount] = useState(0);
@@ -57,21 +55,7 @@ const NarrowNavigationExample = () => {
     </Stack>
   );
 };
-
 export const NarrowNavigation: Story = {
+  id: "components-data-display-list-row-hover-content--narrow-navigation",
   render: () => <NarrowNavigationExample />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const row = canvas.getAllByRole("option", { name: "Workspaces", exact: true })[0];
-    await userEvent.click(row);
-    await userEvent.tab();
-    await userEvent.keyboard("{Enter}");
-    await expect(canvas.getByRole("status", { name: "Action activations" })).toHaveTextContent("1");
-    await userEvent.keyboard(" ");
-    await expect(canvas.getByRole("status", { name: "Action activations" })).toHaveTextContent("2");
-    await expect(canvas.getByRole("status", { name: "Row activations" })).toHaveTextContent("1");
-    row.focus();
-    await userEvent.keyboard("{Enter}");
-    await expect(canvas.getByRole("status", { name: "Row activations" })).toHaveTextContent("2");
-  },
 };

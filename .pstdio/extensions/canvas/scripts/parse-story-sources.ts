@@ -8,7 +8,7 @@ export const parseStorySources = async (files: StorySource[], manifest: string) 
     batches[target].push(file);
     sizes[target] += file.text.length;
   }
-  // Parse all sources with the real Storybook parser while bounding CPU and memory use.
+  // Index all sources with the Canvas TypeScript parser while bounding CPU and memory use.
   const parsed = await Promise.all(
     batches
       .filter((batch) => batch.length)

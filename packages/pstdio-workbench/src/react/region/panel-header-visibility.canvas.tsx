@@ -1,6 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench, headerTrailingMenuPath } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -77,60 +76,36 @@ const createPanelWorkbench = (
   }
   return workbench;
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Panel header visibility",
   component: WorkbenchStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof WorkbenchStory>;
+} satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const SingleAvailableFixedPanel: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-header-visibility--single-available-fixed-panel",
   args: { workbench: createPanelWorkbench() },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Files content")).toBeVisible();
-    await expect(canvas.getByText("File tree content")).toBeVisible();
-    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
-    await expect(canvasElement.querySelector('[data-workbench-panel-header="main"]')).not.toBeVisible();
-  },
 };
-
 export const MultipleAvailableFixedPanels: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-header-visibility--multiple-available-fixed-panels",
   args: { workbench: createPanelWorkbench({ changes: true }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("tab", { name: "Files" })).toBeVisible();
-    await expect(canvas.getByRole("tab", { name: "Changes" })).toBeVisible();
-  },
 };
-
 export const CollapsedMenuWithTab: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-header-visibility--collapsed-menu-with-tab",
   args: { workbench: createPanelWorkbench({ collapsed: true }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("button", { name: "Open Main left menu" })).toBeVisible();
-    await expect(canvas.getByRole("tab", { name: "Files" })).toBeVisible();
-    await expect(canvas.getByRole("button", { name: "Close Files" })).toBeVisible();
-  },
 };
-
 export const HeaderActionWithoutTabs: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-header-visibility--header-action-without-tabs",
   args: { workbench: createPanelWorkbench({ action: true }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("button", { name: "Refresh files" })).toBeVisible();
-    await expect(canvas.getByRole("tab", { name: "Files" })).toBeVisible();
-  },
 };
-
 export const HeaderActionForPanelResource: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-header-visibility--header-action-for-panel-resource",
   ...HeaderActionWithoutTabs,
   args: { workbench: createPanelWorkbench({ action: true, panelResource: true }) },
 };
-
 export const SinglePageHeader: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-header-visibility--single-page-header",
   args: {
     workbench: (() => {
       const page = { kind: "page", extensionId: "storybook", id: "start" } as const;

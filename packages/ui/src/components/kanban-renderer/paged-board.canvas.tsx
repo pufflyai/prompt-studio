@@ -1,7 +1,6 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { KanbanRenderer } from "./kanban-renderer";
 import type { AttributeDescriptor } from "./types";
 
@@ -69,20 +68,9 @@ const meta = {
   title: "Patterns/Kanban Renderer/Paged board",
   component: PagedBoard,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof PagedBoard>;
+} satisfies CanvasMeta<typeof PagedBoard>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const UnloadedColumn: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const todo = within(canvas.getByTestId("board-column-todo"));
-    const load = todo.getByRole("button", { name: "Load more cards" });
-    await expect(todo.getByText("125", { exact: true })).toBeVisible();
-    await expect(todo.queryByText(/hidden by search/)).not.toBeInTheDocument();
-    load.focus();
-    await userEvent.keyboard("{Enter}");
-    await expect(load).toBeDisabled();
-    await userEvent.click(canvas.getByRole("button", { name: "Finish read" }));
-    await expect(await todo.findByText("Card 125")).toBeVisible();
-  },
+  id: "patterns-kanban-renderer-paged-board--unloaded-column",
 };

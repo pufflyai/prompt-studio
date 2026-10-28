@@ -1,14 +1,19 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 
-const meta: Meta<typeof ChatPanel> = { title: "Chat/ChatPanel/Async questions", component: ChatPanel };
+const meta: CanvasMeta<typeof ChatPanel> = { title: "Chat/ChatPanel/Async questions", component: ChatPanel };
 export default meta;
-type Story = StoryObj<typeof ChatPanel>;
-
-const request = (callId: string, questions: Array<{ question: string; options: string[] }>): SessionMessage => ({
+type Story = CanvasVariant<typeof ChatPanel>;
+const request = (
+  callId: string,
+  questions: Array<{
+    question: string;
+    options: string[];
+  }>,
+): SessionMessage => ({
   id: callId,
   role: "assistant",
   parts: [
@@ -45,7 +50,6 @@ const initialMessages: SessionMessage[] = [
     parts: [{ type: "text", text: "I can review the changed files while you choose." }],
   },
 ];
-
 const longQuestionMessages = [
   initialMessages[0],
   request("long", [
@@ -59,7 +63,6 @@ const longQuestionMessages = [
   ]),
   initialMessages[3],
 ];
-
 function AsyncQuestions(props: { decision?: boolean; terminal?: boolean; long?: boolean }) {
   const { decision, terminal, long } = props;
   const [messages, setMessages] = useState(() => {
@@ -131,8 +134,19 @@ function AsyncQuestions(props: { decision?: boolean; terminal?: boolean; long?: 
     </Stack>
   );
 }
-
-export const PendingAndAnswered: Story = { render: () => <AsyncQuestions /> };
-export const WithPlanDecision: Story = { render: () => <AsyncQuestions decision /> };
-export const QuestionOnlyTail: Story = { render: () => <AsyncQuestions terminal /> };
-export const LongMultilineQuestion: Story = { render: () => <AsyncQuestions long /> };
+export const PendingAndAnswered: Story = {
+  id: "chat-chatpanel-async-questions--pending-and-answered",
+  render: () => <AsyncQuestions />,
+};
+export const WithPlanDecision: Story = {
+  id: "chat-chatpanel-async-questions--with-plan-decision",
+  render: () => <AsyncQuestions decision />,
+};
+export const QuestionOnlyTail: Story = {
+  id: "chat-chatpanel-async-questions--question-only-tail",
+  render: () => <AsyncQuestions terminal />,
+};
+export const LongMultilineQuestion: Story = {
+  id: "chat-chatpanel-async-questions--long-multiline-question",
+  render: () => <AsyncQuestions long />,
+};

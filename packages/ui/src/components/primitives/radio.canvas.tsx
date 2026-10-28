@@ -1,5 +1,5 @@
 import { Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import { Radio, RadioGroup } from "@/components/primitives/radio";
 
@@ -15,28 +15,26 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof Radio>;
-
+} satisfies CanvasMeta<typeof Radio>;
 export default meta;
-
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const WithLabel: Story = {
+  id: "components-inputs-radio--with-label",
   args: {
     value: "selected",
     children: "Use project template",
   },
 };
-
 export const Disabled: Story = {
+  id: "components-inputs-radio--disabled",
   args: {
     value: "disabled",
     disabled: true,
     children: "Unavailable",
   },
 };
-
 export const Options: Story = {
+  id: "components-inputs-radio--options",
   args: {
     value: "selected",
   },

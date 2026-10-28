@@ -1,18 +1,17 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import { RichMessage } from "./rich-message";
 
 const source =
   'Keep **source** spelling.\n\n[Notes][notes]\n\n[notes]: https://example.com "Title"\n\n~~~ts\nconst value = 1;\n~~~';
-const meta: Meta<typeof RichMessage> = {
+const meta: CanvasMeta<typeof RichMessage> = {
   title: "Patterns/Chat/Rich Message Editing",
   component: RichMessage,
   tags: ["!manifest"],
 };
 export default meta;
-type Story = StoryObj<typeof RichMessage>;
-
+type Story = CanvasVariant<typeof RichMessage>;
 function EditingTransition() {
   const [editable, setEditable] = useState(false);
   const [value, setValue] = useState(source);
@@ -26,7 +25,7 @@ function EditingTransition() {
     </Stack>
   );
 }
-
 export const EnableEditing: Story = {
+  id: "patterns-chat-rich-message-editing--enable-editing",
   render: () => <EditingTransition />,
 };

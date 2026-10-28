@@ -1,5 +1,3 @@
-import "../theme/rich-text-theme.css";
-
 import { Box, Flex, Heading, VStack } from "@chakra-ui/react";
 import { LexicalCollaboration } from "@lexical/react/LexicalCollaborationContext";
 import { CollaborationPlugin } from "@lexical/react/LexicalCollaborationPlugin";
@@ -10,7 +8,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import type { Provider } from "@lexical/yjs";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from "y-protocols/awareness";
 import * as Y from "yjs";
@@ -21,55 +19,45 @@ import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPl
 import { CodeHighlightingPlugin } from "../shared/plugins/CodePlugin/CodeHighlightingPlugin";
 import { EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin";
 import { FloatingTextFormatToolbarPlugin } from "../shared/plugins/FloatingTextFormatToolbarPlugin";
+import "../theme/rich-text-theme.css";
 import { AwarenessCursorsCSS } from "./awareness-cursors";
 import { CollaborativeMarkdownEditor } from "./collaborative-markdown-editor";
 
 // --- In-memory provider for self-contained demos (no WS server needed) ---
-
 type Listener = (...args: unknown[]) => void;
-
 class InMemoryProvider {
   awareness: Awareness;
   private cbs: Record<string, Set<Listener>> = {};
-
   constructor(doc: Y.Doc) {
     this.awareness = new Awareness(doc);
   }
-
   connect() {
     queueMicrotask(() => {
       this.emit("sync", true);
       this.emit("status", { status: "connected" });
     });
   }
-
   disconnect() {}
-
   on(type: string, cb: Listener) {
     if (!this.cbs[type]) this.cbs[type] = new Set();
     this.cbs[type].add(cb);
   }
-
   off(type: string, cb: Listener) {
     this.cbs[type]?.delete(cb);
   }
-
   private emit(type: string, ...args: unknown[]) {
     for (const cb of this.cbs[type] ?? []) cb(...args);
   }
 }
-
 /** Bridge Y.Doc updates between two docs so edits in one appear in the other. */
 function bridgeDocs(docA: Y.Doc, docB: Y.Doc) {
   let syncing = false;
-
   docA.on("update", (update: Uint8Array) => {
     if (syncing) return;
     syncing = true;
     Y.applyUpdate(docB, update);
     syncing = false;
   });
-
   docB.on("update", (update: Uint8Array) => {
     if (syncing) return;
     syncing = true;
@@ -77,22 +65,18 @@ function bridgeDocs(docA: Y.Doc, docB: Y.Doc) {
     syncing = false;
   });
 }
-
 /** Bridge awareness so cursors from one editor show in the other. */
 function bridgeAwareness(a: Awareness, b: Awareness) {
   a.on("update", ({ added, updated, removed }: { added: number[]; updated: number[]; removed: number[] }) => {
     const update = encodeAwarenessUpdate(a, [...added, ...updated, ...removed]);
     applyAwarenessUpdate(b, update, a);
   });
-
   b.on("update", ({ added, updated, removed }: { added: number[]; updated: number[]; removed: number[] }) => {
     const update = encodeAwarenessUpdate(b, [...added, ...updated, ...removed]);
     applyAwarenessUpdate(a, update, b);
   });
 }
-
 // --- Editor pane (raw Lexical + CollaborationPlugin, no WebSocket) ---
-
 interface EditorPaneProps {
   label: string;
   roomId: string;
@@ -101,15 +85,12 @@ interface EditorPaneProps {
   provider: InMemoryProvider;
   doc: Y.Doc;
 }
-
 function EditorPane({ label, roomId, userName, userColor, provider, doc }: EditorPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [toolbarAnchor, setToolbarAnchor] = useState<HTMLElement | null>(null);
-
   useEffect(() => {
     setToolbarAnchor(containerRef.current);
   }, []);
-
   const initialConfig = {
     namespace: `COLLAB_${label}`,
     nodes: editorNodes,
@@ -118,12 +99,10 @@ function EditorPane({ label, roomId, userName, userColor, provider, doc }: Edito
     editable: true,
     theme: editorTheme,
   };
-
   const providerFactory = (_id: string, yjsDocMap: Map<string, Y.Doc>) => {
     yjsDocMap.set(_id, doc);
     return provider as unknown as Provider;
   };
-
   return (
     <VStack align="stretch" flex="1" minW="0">
       <Heading size="sm" px="2" py="1" borderBottom="1px solid" borderColor="border">
@@ -172,26 +151,18 @@ function EditorPane({ label, roomId, userName, userColor, provider, doc }: Edito
     </VStack>
   );
 }
-
 // --- Split-view story: two editors syncing via in-memory Yjs ---
-
 function SplitViewDemo() {
   const roomId = "demo-room";
-
   const [{ docA, docB, providerA, providerB }] = useState(() => {
     const docA = new Y.Doc();
     const docB = new Y.Doc();
-
     bridgeDocs(docA, docB);
-
     const providerA = new InMemoryProvider(docA);
     const providerB = new InMemoryProvider(docB);
-
     bridgeAwareness(providerA.awareness, providerB.awareness);
-
     return { docA, docB, providerA, providerB };
   });
-
   return (
     <Flex gap="4" h="500px">
       <AwarenessCursorsCSS />
@@ -202,28 +173,24 @@ function SplitViewDemo() {
     </Flex>
   );
 }
-
 // --- Stories ---
-
-const meta: Meta<typeof CollaborativeMarkdownEditor> = {
+const meta: CanvasMeta<typeof CollaborativeMarkdownEditor> = {
   title: "Patterns/Editors/Collaborative Markdown Editor",
   component: CollaborativeMarkdownEditor,
   parameters: {
     layout: "padded",
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof CollaborativeMarkdownEditor>;
-
+type Story = CanvasVariant<typeof CollaborativeMarkdownEditor>;
 /** Two editors syncing in real-time via in-memory Yjs. Type in one pane to see changes in the other. */
-export const SplitView: StoryObj = {
+export const SplitView: CanvasVariant = {
+  id: "patterns-editors-collaborative-markdown-editor--split-view",
   render: () => <SplitViewDemo />,
 };
-
 /** Single editor connecting to a WebSocket server. Requires a running API with WS support. */
 export const SingleEditor: Story = {
+  id: "patterns-editors-collaborative-markdown-editor--single-editor",
   args: {
     roomId: "todo:story-demo",
     wsUrl: "ws://localhost:3000/v1/docs",

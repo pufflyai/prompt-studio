@@ -1,10 +1,9 @@
 import { Box, Button } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -203,54 +202,70 @@ const meta = {
   title: "Modules/Workspaces/Files and Changes",
   component: WorkspaceFilesStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof WorkspaceFilesStory>;
+} satisfies CanvasMeta<typeof WorkspaceFilesStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const ChangesSelected: Story = { args: { state: "diffs" } };
-export const FixedWorkspacePanels: Story = {
+type Story = CanvasVariant<typeof meta>;
+export const ChangesSelected: Story = {
+  id: "modules-workspaces-files-and-changes--changes-selected",
   args: { state: "diffs" },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("tab", { name: "Changes" })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Close Changes" })).not.toBeInTheDocument();
-    await expect(canvas.queryByRole("button", { name: "Close Files" })).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("tab", { name: "Files" }));
-    await expect(canvas.getByRole("tab", { name: "Files" })).toBeVisible();
-    await expect(canvas.getByRole("tab", { name: "Files" })).toHaveAttribute("aria-selected", "true");
-    await userEvent.click(canvas.getByRole("tab", { name: "Changes" }));
-    await expect(canvas.getByRole("tab", { name: "Changes" })).toHaveAttribute("aria-selected", "true");
-  },
 };
-export const FilesNoSelection: Story = { args: { state: "files" } };
-export const MonacoTextFile: Story = { args: { state: "text" } };
-export const ImagePreview: Story = { args: { state: "image" } };
-export const DefaultWorkspace: Story = { args: { state: "default" } };
-export const CollapsedFilesMenu: Story = { args: { state: "collapsed" } };
+export const FixedWorkspacePanels: Story = {
+  id: "modules-workspaces-files-and-changes--fixed-workspace-panels",
+  args: { state: "diffs" },
+};
+export const FilesNoSelection: Story = {
+  id: "modules-workspaces-files-and-changes--files-no-selection",
+  args: { state: "files" },
+};
+export const MonacoTextFile: Story = {
+  id: "modules-workspaces-files-and-changes--monaco-text-file",
+  args: { state: "text" },
+};
+export const ImagePreview: Story = {
+  id: "modules-workspaces-files-and-changes--image-preview",
+  args: { state: "image" },
+};
+export const DefaultWorkspace: Story = {
+  id: "modules-workspaces-files-and-changes--default-workspace",
+  args: { state: "default" },
+};
+export const CollapsedFilesMenu: Story = {
+  id: "modules-workspaces-files-and-changes--collapsed-files-menu",
+  args: { state: "collapsed" },
+};
 export const RemoteWithoutFileViews: Story = {
+  id: "modules-workspaces-files-and-changes--remote-without-file-views",
   args: { state: "remote" },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Workspace state: Ready")).toBeVisible();
-    await expect(canvas.getByRole("button", { name: "Rename workspace" })).toBeVisible();
-    await expect(canvas.getByRole("button", { name: "Delete workspace" })).toBeVisible();
-    await expect(canvas.queryByRole("region", { name: "Files" })).not.toBeInTheDocument();
-    await expect(canvas.queryByRole("tab", { name: "Files" })).not.toBeInTheDocument();
-    await expect(canvas.queryByText("Select a file")).not.toBeInTheDocument();
-    await expect(canvas.queryByRole("button", { name: "Open terminal" })).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Rename workspace" }));
-    await waitFor(() => expect(within(document.body).getByRole("dialog", { name: "Rename workspace" })).toBeVisible());
-    await userEvent.click(within(document.body).getByRole("button", { name: "Cancel" }));
-  },
 };
-
-export const PreparingWorkspace: Story = { args: { state: "preparing" } };
-
-export const FailedWorkspaceSetup: Story = { args: { state: "failed" } };
-
-export const FailedWorkspaceProvider: Story = { args: { state: "provider-failed" } };
-
-export const ChangesSetupFailure: Story = { args: { state: "changes-setup-failed" } };
-export const ChangesProviderFailure: Story = { args: { state: "changes-provider-failed" } };
-export const ChangesUnavailable: Story = { args: { state: "changes-unavailable" } };
-export const ChangesPreparing: Story = { args: { state: "changes-preparing" } };
-export const ChangesRecovery: Story = { args: { state: "changes-recovery" } };
+export const PreparingWorkspace: Story = {
+  id: "modules-workspaces-files-and-changes--preparing-workspace",
+  args: { state: "preparing" },
+};
+export const FailedWorkspaceSetup: Story = {
+  id: "modules-workspaces-files-and-changes--failed-workspace-setup",
+  args: { state: "failed" },
+};
+export const FailedWorkspaceProvider: Story = {
+  id: "modules-workspaces-files-and-changes--failed-workspace-provider",
+  args: { state: "provider-failed" },
+};
+export const ChangesSetupFailure: Story = {
+  id: "modules-workspaces-files-and-changes--changes-setup-failure",
+  args: { state: "changes-setup-failed" },
+};
+export const ChangesProviderFailure: Story = {
+  id: "modules-workspaces-files-and-changes--changes-provider-failure",
+  args: { state: "changes-provider-failed" },
+};
+export const ChangesUnavailable: Story = {
+  id: "modules-workspaces-files-and-changes--changes-unavailable",
+  args: { state: "changes-unavailable" },
+};
+export const ChangesPreparing: Story = {
+  id: "modules-workspaces-files-and-changes--changes-preparing",
+  args: { state: "changes-preparing" },
+};
+export const ChangesRecovery: Story = {
+  id: "modules-workspaces-files-and-changes--changes-recovery",
+  args: { state: "changes-recovery" },
+};

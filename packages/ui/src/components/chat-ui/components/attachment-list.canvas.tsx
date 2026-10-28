@@ -1,21 +1,18 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { AttachmentList } from "./attachment-list";
 
-const meta: Meta<typeof AttachmentList> = {
+const meta: CanvasMeta<typeof AttachmentList> = {
   title: "Patterns/Chat/Attachment List",
   component: AttachmentList,
   parameters: {
     layout: "padded",
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof AttachmentList>;
-
+type Story = CanvasVariant<typeof AttachmentList>;
 const sampleAttachments = ["workspace/analysis/report.md", "workspace/data/users.csv"];
-
 export const Default: Story = {
+  id: "patterns-chat-attachment-list--default",
   args: {
     attachments: sampleAttachments,
     onSelect: (resourceId) => console.log("Selected:", resourceId),

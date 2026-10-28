@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { CommandParamsDialog } from "./command-params-dialog";
@@ -52,10 +52,11 @@ const ResourceOptionsExample = () => {
     </WorkbenchThemeProvider>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Guides/Command resource options",
   component: ResourceOptionsExample,
-} satisfies Meta<typeof ResourceOptionsExample>;
+} satisfies CanvasMeta<typeof ResourceOptionsExample>;
 export default meta;
-export const HiddenResourceDependency: StoryObj<typeof meta> = {};
+export const HiddenResourceDependency: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-guides-command-resource-options--hidden-resource-dependency",
+};

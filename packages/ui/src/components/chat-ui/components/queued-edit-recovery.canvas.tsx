@@ -1,7 +1,6 @@
 import { Box, Button } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ChatPanel } from "./chat-panel";
 import type { QueuedFollowUp } from "./message-types";
 
@@ -46,6 +45,9 @@ const RecoveryHost = (props: RecoveryHostProps) => {
         Change saved revision
       </Button>
       <ChatPanel
+        chatInputPlaceholder="Write a prompt"
+        emptyStateDescription="Send a prompt"
+        emptyStateTitle="Start a conversation"
         messages={[]}
         chatInputDefaultValue={draft}
         onChatInputChange={draftWritable ? setDraft : undefined}
@@ -71,106 +73,38 @@ const RecoveryHost = (props: RecoveryHostProps) => {
     </Box>
   );
 };
-const meta = { title: "Patterns/Chat/Queued edit recovery", component: RecoveryHost } satisfies Meta<
+const meta = { title: "Patterns/Chat/Queued edit recovery", component: RecoveryHost } satisfies CanvasMeta<
   typeof RecoveryHost
 >;
 export default meta;
-type Story = StoryObj<typeof meta>;
-const editAndSend = async (canvasElement: HTMLElement) => {
-  const c = within(canvasElement);
-  await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued request" }));
-  await userEvent.click(c.getByRole("textbox"));
-  await userEvent.keyboard(" amended");
-  const cancel = c.getByRole("button", { name: "Cancel", exact: true });
-  await expect(cancel.nextElementSibling).toBe(c.getByRole("button", { name: "Update", exact: true }));
-  await userEvent.click(c.getByRole("button", { name: "Send selected request" }));
-  return c;
-};
+type Story = CanvasVariant<typeof meta>;
 export const EmptyDraft: Story = {
-  play: async ({ canvasElement }) => {
-    const c = await editAndSend(canvasElement);
-    await expect(c.queryByRole("button", { name: "Update", exact: true })).not.toBeInTheDocument();
-    await expect(c.queryByRole("button", { name: "Edit saved draft" })).not.toBeInTheDocument();
-    await expect(c.getByRole("textbox")).toHaveTextContent("Queued request amended");
-    await expect(c.getByRole("status", { name: "Queued edit notice" })).toHaveTextContent("moved to the draft");
-    await userEvent.click(c.getByRole("textbox"));
-    await userEvent.keyboard(" changed");
-    await expect(c.queryByRole("status", { name: "Queued edit notice" })).not.toBeInTheDocument();
-  },
+  id: "patterns-chat-queued-edit-recovery--empty-draft",
 };
 export const OccupiedDraft: Story = {
+  id: "patterns-chat-queued-edit-recovery--occupied-draft",
   args: { draft: "Independent draft" },
-  play: async ({ canvasElement }) => {
-    const c = await editAndSend(canvasElement);
-    const create = c.getByRole("button", { name: "Create new queue item", exact: true });
-    await expect(create).toBeEnabled();
-    await expect(c.getByRole("status", { name: "Queued edit notice" })).toHaveTextContent("sent");
-    await expect(c.getByRole("button", { name: "Edit saved draft" })).toHaveTextContent("Independent draft");
-    await userEvent.click(create);
-    await expect(c.getByRole("textbox")).toHaveTextContent("Independent draft");
-    await expect(c.getByRole("button", { name: "Edit queued message: Queued request amended" })).toBeVisible();
-  },
 };
 export const RemainingQueue: Story = {
+  id: "patterns-chat-queued-edit-recovery--remaining-queue",
   args: { remaining: true },
-  play: async ({ canvasElement }) => {
-    const c = await editAndSend(canvasElement);
-    await expect(c.getByRole("button", { name: "Create new queue item", exact: true })).toBeEnabled();
-    await expect(c.getByRole("button", { name: "Edit queued message: Other request" })).toBeVisible();
-  },
 };
 export const DraftWithAttachments: Story = {
+  id: "patterns-chat-queued-edit-recovery--draft-with-attachments",
   args: { draftHasFiles: true },
-  play: async ({ canvasElement }) => {
-    const c = await editAndSend(canvasElement);
-    await expect(c.getByRole("button", { name: "Create new queue item", exact: true })).toBeEnabled();
-    await expect(c.getByRole("button", { name: "Edit saved draft" })).toBeVisible();
-  },
 };
 export const FailedCreate: Story = {
+  id: "patterns-chat-queued-edit-recovery--failed-create",
   args: { draft: "Independent draft", fail: true },
-  play: async ({ canvasElement }) => {
-    const c = await editAndSend(canvasElement);
-    await userEvent.click(c.getByRole("button", { name: "Create new queue item", exact: true }));
-    await expect(c.getByRole("alert")).toHaveTextContent("Your edit is kept");
-    await expect(c.getByRole("textbox")).toHaveTextContent("amended");
-    await userEvent.click(c.getByRole("button", { name: "Cancel", exact: true }));
-    await expect(c.getByRole("textbox")).toHaveTextContent("Independent draft");
-  },
 };
 export const ChangedRevision: Story = {
-  play: async ({ canvasElement }) => {
-    const c = within(canvasElement);
-    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued request" }));
-    await userEvent.click(c.getByRole("textbox"));
-    await userEvent.keyboard(" kept");
-    await userEvent.click(c.getByRole("button", { name: "Change saved revision" }));
-    await expect(c.getByRole("button", { name: "Update", exact: true })).toBeDisabled();
-    await expect(c.getByRole("alert")).toHaveTextContent("request changed");
-    await expect(c.queryByRole("button", { name: "Create new queue item", exact: true })).not.toBeInTheDocument();
-    await expect(c.getByRole("textbox")).toHaveTextContent("kept");
-  },
+  id: "patterns-chat-queued-edit-recovery--changed-revision",
 };
 export const NoDraftWriter: Story = {
+  id: "patterns-chat-queued-edit-recovery--no-draft-writer",
   args: { draftWritable: false },
-  play: async ({ canvasElement }) => {
-    const c = await editAndSend(canvasElement);
-    await expect(c.getByRole("textbox")).toHaveTextContent("Queued request amended");
-    await expect(c.getByRole("button", { name: "Create new queue item", exact: true })).toBeEnabled();
-  },
 };
 export const ReorderAfterSending: Story = {
+  id: "patterns-chat-queued-edit-recovery--reorder-after-sending",
   args: { remaining: true, remainingCount: 2 },
-  play: async ({ canvasElement }) => {
-    const c = await editAndSend(canvasElement);
-    await expect(c.queryByRole("button", { name: "Drag queued follow-up 3" })).not.toBeInTheDocument();
-    await userEvent.click(c.getByRole("button", { name: "Drag queued follow-up 1" }));
-    await userEvent.keyboard(" ");
-    await userEvent.keyboard("{End} ");
-    await waitFor(() =>
-      expect(canvasElement.querySelector("[data-queued-follow-up-id]:last-child")).toHaveTextContent("Other request"),
-    );
-    await expect(c.queryByRole("alert")).not.toBeInTheDocument();
-    await expect(c.getByRole("button", { name: "Create new queue item", exact: true })).toBeEnabled();
-  },
 };

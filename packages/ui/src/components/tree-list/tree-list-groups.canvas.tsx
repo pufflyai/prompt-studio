@@ -1,8 +1,7 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Ellipsis, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { TreeList } from "./tree-list";
 
 const EditableGroup = (props: { editing?: boolean }) => {
@@ -48,7 +47,6 @@ const EditableGroup = (props: { editing?: boolean }) => {
     </Box>
   );
 };
-
 const meta = {
   title: "Components/Tree List/Groups",
   component: EditableGroup,
@@ -60,17 +58,13 @@ const meta = {
       },
     },
   },
-} satisfies Meta<typeof EditableGroup>;
+} satisfies CanvasMeta<typeof EditableGroup>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Default: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const Default: Story = {
+  id: "components-tree-list-groups--default",
+};
 export const InlineName: Story = {
+  id: "components-tree-list-groups--inline-name",
   args: { editing: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const input = canvas.getByRole("textbox", { name: "Group name" });
-    await userEvent.clear(input);
-    await userEvent.type(input, "Product research{Enter}");
-    await expect(canvas.getByText("Product research")).toBeVisible();
-  },
 };

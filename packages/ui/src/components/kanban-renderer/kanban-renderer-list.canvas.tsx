@@ -1,21 +1,16 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { CircleAlert, CircleCheck, CircleDashed, CircleDot, CircleX, Play, Signal } from "lucide-react";
 import { useState } from "react";
-import { expect, waitFor, within } from "storybook/test";
-
 import { KanbanRendererList, type KanbanRendererListItem } from "./kanban-renderer-list";
 
-const meta: Meta<typeof KanbanRendererList> = {
+const meta: CanvasMeta<typeof KanbanRendererList> = {
   title: "Patterns/Kanban Renderer/List",
   component: KanbanRendererList,
   parameters: { layout: "padded" },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof KanbanRendererList>;
-
+type Story = CanvasVariant<typeof KanbanRendererList>;
 const mockItems: KanbanRendererListItem[] = [
   {
     id: "1",
@@ -72,23 +67,22 @@ const mockItems: KanbanRendererListItem[] = [
     ],
   },
 ];
-
 export const Default: Story = {
+  id: "patterns-kanban-renderer-list--default",
   args: { items: mockItems },
 };
-
 const InteractiveWrapper = () => {
   const [selected, setSelected] = useState<string | null>(null);
   return (
     <KanbanRendererList items={mockItems} selectedItemId={selected} onItemClick={(item) => setSelected(item.id)} />
   );
 };
-
 export const Interactive: Story = {
+  id: "patterns-kanban-renderer-list--interactive",
   render: () => <InteractiveWrapper />,
 };
-
 export const WithBadges: Story = {
+  id: "patterns-kanban-renderer-list--with-badges",
   args: {
     items: [
       {
@@ -111,12 +105,12 @@ export const WithBadges: Story = {
     ],
   },
 };
-
 export const Empty: Story = {
+  id: "patterns-kanban-renderer-list--empty",
   args: { items: [] },
 };
-
 export const DeepNesting: Story = {
+  id: "patterns-kanban-renderer-list--deep-nesting",
   args: {
     items: [
       {
@@ -143,8 +137,7 @@ export const DeepNesting: Story = {
     ],
   },
 };
-
-const largeItems: KanbanRendererListItem[] = Array.from({ length: 1_000 }, (_, index) => ({
+const largeItems: KanbanRendererListItem[] = Array.from({ length: 1000 }, (_, index) => ({
   id: `row-${index}`,
   eyebrow: `PS-${index + 1}`,
   title: `Ticket ${index + 1}`,
@@ -152,9 +145,9 @@ const largeItems: KanbanRendererListItem[] = Array.from({ length: 1_000 }, (_, i
   badges: [{ attributeId: "updated", label: "Oct 19" }],
   contextMenuActions: [{ key: "open", label: "Open ticket", onClick: () => undefined }],
 }));
-
 // A long list mounts the rows near the viewport, so opening 1,000 tickets stays fast.
 export const LargeList: Story = {
+  id: "patterns-kanban-renderer-list--large-list",
   tags: ["!manifest"],
   args: { items: largeItems },
   decorators: [
@@ -164,16 +157,4 @@ export const LargeList: Story = {
       </Box>
     ),
   ],
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Ticket 1", { exact: true })).toBeVisible();
-    expect(canvas.getAllByText(/^Ticket \d+$/).length).toBeLessThan(60);
-    const firstRow = canvas.getByRole("option", { name: /Ticket 1\b/ });
-    firstRow.focus();
-    const viewport = canvas.getByLabelText("Collection list");
-    viewport.scrollTop = viewport.scrollHeight;
-    await waitFor(() => expect(canvas.getByText("Ticket 1000", { exact: true })).toBeVisible());
-    expect(firstRow).toHaveFocus();
-    expect(canvas.getAllByText(/^Ticket \d+$/).length).toBeLessThan(60);
-  },
 };

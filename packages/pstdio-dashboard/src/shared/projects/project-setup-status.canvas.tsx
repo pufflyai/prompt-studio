@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ProjectSetupStatus } from "./project-setup-status";
 
 const meta = {
@@ -9,16 +9,22 @@ const meta = {
       "default extensions: Failed to clone https://github.com/pufflyai/prompt-studio.git at pstdio@0.40.0: spawn git ENOENT",
     onRetry: () => {},
   },
-} satisfies Meta<typeof ProjectSetupStatus>;
+} satisfies CanvasMeta<typeof ProjectSetupStatus>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 /** First run without Git or a network: the default extensions, including every agent harness, did not install. */
-export const MissingGit: Story = {};
-export const Retrying: Story = { args: { retrying: true } };
+export const MissingGit: Story = {
+  id: "projects-project-setup-status--missing-git",
+};
+export const Retrying: Story = {
+  id: "projects-project-setup-status--retrying",
+  args: { retrying: true },
+};
 export const FolderNotWritable: Story = {
+  id: "projects-project-setup-status--folder-not-writable",
   args: { error: "EACCES: permission denied, mkdir '/Users/alex/tools/.pstdio'" },
 };
 export const ProviderPending: Story = {
+  id: "projects-project-setup-status--provider-pending",
   args: { error: "The workspace provider has not finished setup. Retry to check its progress." },
 };

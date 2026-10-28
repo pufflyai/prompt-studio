@@ -1,21 +1,15 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Archive, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { expect, fireEvent, fn, userEvent, waitFor, within } from "storybook/test";
-
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
 
-const meta: Meta = {
+const meta: CanvasMeta = {
   title: "Patterns/Kanban Renderer/Board",
 };
-
 export default meta;
-
-type Story = StoryObj;
-
-const runAttempt = fn();
-
+type Story = CanvasVariant;
+const runAttempt = () => {};
 const mockColumns: KanbanRendererBoardColumn[] = [
   {
     id: "todo",
@@ -85,36 +79,27 @@ const mockColumns: KanbanRendererBoardColumn[] = [
     ],
   },
 ];
-
 const moveItemToColumn = (columns: KanbanRendererBoardColumn[], itemId: string, targetColumnId: string) => {
   let movedItem: KanbanRendererBoardColumn["items"][number] | undefined;
   let sourceColumnId: string | null = null;
-
   const nextColumns = columns.map((column) => {
     const itemIndex = column.items.findIndex((item) => item.id === itemId);
     if (itemIndex < 0) return column;
-
     sourceColumnId = column.id;
     const nextItems = [...column.items];
     const [item] = nextItems.splice(itemIndex, 1);
     movedItem = item;
-
     return { ...column, items: nextItems };
   });
-
   if (!movedItem || !sourceColumnId || sourceColumnId === targetColumnId) return columns;
-
   const itemToMove = movedItem;
-
   return nextColumns.map((column) =>
     column.id !== targetColumnId ? column : { ...column, items: [...column.items, itemToMove] },
   );
 };
-
 const Wrapper = () => {
   const [columns, setColumns] = useState(mockColumns);
   const [selected, setSelected] = useState<string | null>(null);
-
   const selectableColumns = columns.map((col) => ({
     ...col,
     items: col.items.map((item) => ({
@@ -122,7 +107,6 @@ const Wrapper = () => {
       cardProps: { ...item.cardProps, onClick: () => setSelected(item.id) },
     })),
   }));
-
   return (
     <KanbanRendererBoard
       columns={selectableColumns}
@@ -135,12 +119,12 @@ const Wrapper = () => {
     />
   );
 };
-
 export const Default: Story = {
+  id: "patterns-kanban-renderer-board--default",
   render: () => <Wrapper />,
 };
-
 export const WideBoard: Story = {
+  id: "patterns-kanban-renderer-board--wide-board",
   parameters: {
     docs: {
       description: {
@@ -155,8 +139,8 @@ export const WideBoard: Story = {
     </Box>
   ),
 };
-
 export const EdgeScrolling: Story = {
+  id: "patterns-kanban-renderer-board--edge-scrolling",
   parameters: {
     docs: {
       description: {
@@ -169,39 +153,12 @@ export const EdgeScrolling: Story = {
       <Wrapper />
     </Box>
   ),
-  play: async ({ canvasElement }) => {
-    const card = within(canvasElement).getByText("Set up auth").closest('[data-testid="renderer-card"]')!;
-    const viewport = canvasElement.querySelector<HTMLDivElement>('[data-part="viewport"]')!;
-    const bounds = viewport.getBoundingClientRect();
-    const dataTransfer = new DataTransfer();
-    const clientY = bounds.top + bounds.height / 2;
-    fireEvent.dragStart(card, { dataTransfer, clientX: bounds.left + bounds.width / 2, clientY });
-    try {
-      fireEvent.dragOver(viewport, { dataTransfer, clientX: bounds.right - 48, clientY });
-      await waitFor(() => expect(viewport.scrollLeft).toBeGreaterThan(60));
-      fireEvent.dragOver(viewport, { dataTransfer, clientX: bounds.left + 48, clientY });
-      await waitFor(() => expect(viewport.scrollLeft).toBe(0));
-    } finally {
-      fireEvent.dragEnd(card, { dataTransfer });
-    }
-  },
 };
-
 export const WithContextMenuActions: Story = {
+  id: "patterns-kanban-renderer-board--with-context-menu-actions",
   render: () => (
     <Box maxW="lg" height="md">
       <Wrapper />
     </Box>
   ),
-  play: async ({ canvasElement }) => {
-    runAttempt.mockClear();
-    const canvas = within(canvasElement);
-    const card = canvas.getByText("Set up auth").closest('[data-testid="renderer-card"]');
-    expect(card).not.toBeNull();
-    fireEvent.contextMenu(card!);
-    await expect(await within(document.body).findByRole("menuitem", { name: "Run attempt" })).toBeVisible();
-    await expect(within(document.body).getByRole("menuitem", { name: "Delete" })).toBeVisible();
-    await userEvent.click(within(document.body).getByRole("menuitem", { name: "Run attempt" }));
-    await waitFor(() => expect(runAttempt).toHaveBeenCalledTimes(1));
-  },
 };

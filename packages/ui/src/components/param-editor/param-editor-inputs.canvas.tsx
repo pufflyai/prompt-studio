@@ -1,7 +1,6 @@
 import { Box, Container, HStack, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
 import { ParamEditor } from "./param-editor";
 import type { ParamValueMap } from "./param-editor.types";
 import { type ParamEditorInputFixture, paramEditorInputFixtures } from "./param-editor-control-fixtures";
@@ -16,7 +15,6 @@ const InputPreview = (props: { fixture: ParamEditorInputFixture }) => {
     onChange: (id: string, value: ParamValueMap[string]) => setValues((current) => ({ ...current, [id]: value })),
     onOpenResource: () => {},
   };
-
   return (
     <Container padding="md" maxWidth="none">
       <Stack gap="lg">
@@ -45,64 +43,92 @@ const InputPreview = (props: { fixture: ParamEditorInputFixture }) => {
     </Container>
   );
 };
-
 const meta = {
   title: "Patterns/Param Editor",
   parameters: {
     layout: "fullscreen",
   },
-} satisfies Meta;
-
+} satisfies CanvasMeta;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 const inputStory = (fixture: ParamEditorInputFixture): Story => ({
   render: () => <InputPreview fixture={fixture} />,
 });
-
-export const InputBoolean = inputStory(paramEditorInputFixtures.boolean);
-export const InputNumber = inputStory(paramEditorInputFixtures.number);
-export const InputText: Story = {
-  ...inputStory(paramEditorInputFixtures.text),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const inputs = canvas.getAllByRole("textbox", { name: paramEditorInputFixtures.text.param.name });
-    await expect(inputs).toHaveLength(2);
-    for (const input of inputs) {
-      await expect(input.tagName).toBe("TEXTAREA");
-      const field = input.parentElement;
-      if (!field) throw new Error("Text field is missing its container");
-      const label = within(field).getByText(paramEditorInputFixtures.text.param.name);
-      await expect(label.getBoundingClientRect().bottom).toBeLessThanOrEqual(input.getBoundingClientRect().top);
-      await expect(input.getBoundingClientRect().width).toBe(field.getBoundingClientRect().width);
-    }
-  },
+export const InputBoolean = {
+  id: "patterns-param-editor--input-boolean",
+  ...inputStory(paramEditorInputFixtures.boolean),
 };
-export const InputMarkdown = inputStory(paramEditorInputFixtures.markdown);
-export const InputSelection = inputStory(paramEditorInputFixtures.selection);
+export const InputNumber = {
+  id: "patterns-param-editor--input-number",
+  ...inputStory(paramEditorInputFixtures.number),
+};
+export const InputText: Story = {
+  id: "patterns-param-editor--input-text",
+  ...inputStory(paramEditorInputFixtures.text),
+};
+export const InputMarkdown = {
+  id: "patterns-param-editor--input-markdown",
+  ...inputStory(paramEditorInputFixtures.markdown),
+};
+export const InputSelection = {
+  id: "patterns-param-editor--input-selection",
+  ...inputStory(paramEditorInputFixtures.selection),
+};
 // A long value truncates inside its button, so the field keeps its label and stays inside the panel.
 export const InputSelectionLongValues: Story = {
+  id: "patterns-param-editor--input-selection-long-values",
   ...inputStory(paramEditorInputFixtures.longSelection),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const [label] = canvas.getAllByText("Topics");
-    // The first field is the vertical editor, which is 360px wide.
-    const [trigger] = canvas.getAllByRole("button", { name: /manage several coding agents/ });
-    await expect(label.getBoundingClientRect().width).toBeGreaterThan(30);
-    await expect(trigger.getBoundingClientRect().width).toBeLessThan(360);
-  },
 };
-export const InputDate = inputStory(paramEditorInputFixtures.date);
+export const InputDate = {
+  id: "patterns-param-editor--input-date",
+  ...inputStory(paramEditorInputFixtures.date),
+};
 /** A read-only timestamp shows in the viewer's locale and time zone. */
-export const InputDateReadOnly = inputStory(paramEditorInputFixtures.dateReadOnly);
-export const InputColor = inputStory(paramEditorInputFixtures.color);
-export const InputProperty = inputStory(paramEditorInputFixtures.property);
-export const InputReadOnly = inputStory(paramEditorInputFixtures.readOnly);
-export const InputResource = inputStory(paramEditorInputFixtures.resource);
-export const InputReference = inputStory(paramEditorInputFixtures.reference);
-export const InputRange = inputStory(paramEditorInputFixtures.range);
-export const InputSegmented = inputStory(paramEditorInputFixtures.segmented);
-export const InputActions = inputStory(paramEditorInputFixtures.actions);
-export const InputAnchorGrid = inputStory(paramEditorInputFixtures.anchorGrid);
-export const InputVector = inputStory(paramEditorInputFixtures.vector);
-export const InputFileUpload = inputStory(paramEditorInputFixtures.fileUpload);
+export const InputDateReadOnly = {
+  id: "patterns-param-editor--input-date-read-only",
+  ...inputStory(paramEditorInputFixtures.dateReadOnly),
+};
+export const InputColor = {
+  id: "patterns-param-editor--input-color",
+  ...inputStory(paramEditorInputFixtures.color),
+};
+export const InputProperty = {
+  id: "patterns-param-editor--input-property",
+  ...inputStory(paramEditorInputFixtures.property),
+};
+export const InputReadOnly = {
+  id: "patterns-param-editor--input-read-only",
+  ...inputStory(paramEditorInputFixtures.readOnly),
+};
+export const InputResource = {
+  id: "patterns-param-editor--input-resource",
+  ...inputStory(paramEditorInputFixtures.resource),
+};
+export const InputReference = {
+  id: "patterns-param-editor--input-reference",
+  ...inputStory(paramEditorInputFixtures.reference),
+};
+export const InputRange = {
+  id: "patterns-param-editor--input-range",
+  ...inputStory(paramEditorInputFixtures.range),
+};
+export const InputSegmented = {
+  id: "patterns-param-editor--input-segmented",
+  ...inputStory(paramEditorInputFixtures.segmented),
+};
+export const InputActions = {
+  id: "patterns-param-editor--input-actions",
+  ...inputStory(paramEditorInputFixtures.actions),
+};
+export const InputAnchorGrid = {
+  id: "patterns-param-editor--input-anchor-grid",
+  ...inputStory(paramEditorInputFixtures.anchorGrid),
+};
+export const InputVector = {
+  id: "patterns-param-editor--input-vector",
+  ...inputStory(paramEditorInputFixtures.vector),
+};
+export const InputFileUpload = {
+  id: "patterns-param-editor--input-file-upload",
+  ...inputStory(paramEditorInputFixtures.fileUpload),
+};

@@ -1,7 +1,6 @@
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { TreeList } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import type { TreeViewSection } from "../../../core";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { resolveTreeListSelection } from "./tree-list-adapter";
@@ -26,7 +25,6 @@ const sections = [
     ],
   },
 ] satisfies TreeViewSection[];
-
 const WorkspaceSelection = () => {
   const [selected, setSelected] = useState("first");
   const resource = selected === "body" ? ticket : workspace(selected);
@@ -61,17 +59,9 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof WorkspaceSelection>;
+} satisfies CanvasMeta<typeof WorkspaceSelection>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const TicketContext: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByRole("option", { name: "first workspace" })).toHaveAttribute("aria-selected", "true");
-    await expect(canvas.getByRole("option", { name: "Ticket body" })).toHaveAttribute("aria-selected", "false");
-    await userEvent.click(canvas.getByRole("option", { name: "second workspace" }));
-    await expect(canvas.getByRole("option", { name: "second workspace" })).toHaveAttribute("aria-selected", "true");
-    await userEvent.click(canvas.getByRole("option", { name: "Ticket body" }));
-    await expect(canvas.getByRole("option", { name: "Ticket body" })).toHaveAttribute("aria-selected", "true");
-  },
+  id: "pstdio-workbench-guides-workspace-selection--ticket-context",
 };

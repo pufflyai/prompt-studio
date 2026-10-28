@@ -1,5 +1,5 @@
 import { Box, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { ChatMessage } from "./ai-message";
 import { MessagePartsRenderer } from "./message-parts-renderer";
@@ -7,32 +7,25 @@ import type { SessionMessage } from "./message-types";
 import { getMessageOrigin } from "./message-types";
 
 const conversationMessages = rawConversationMessages as unknown as SessionMessage[];
-
 const hasTextPart = (message: SessionMessage) =>
   (message.parts ?? []).some((part) => part.type === "text" && "text" in part);
-
 const hasReasoningOrToolPart = (message: SessionMessage) =>
   (message.parts ?? []).some((part) => part.type === "reasoning" || part.type === "tool");
-
 const assistantMessageWithRichParts =
   conversationMessages.find((message) => message.role === "assistant" && hasReasoningOrToolPart(message)) ??
   conversationMessages[0];
-
 const userMessageWithText =
   conversationMessages.find((message) => message.role === "user" && hasTextPart(message)) ?? conversationMessages[0];
-
 const assistantMessageWithHiddenTokenUsage: SessionMessage = {
   id: "assistant-token-usage",
   role: "assistant",
   parts: [
     { type: "text", text: "Request completed without exposing provider token metadata." },
-    { type: "token_usage", inputTokens: 12_840, outputTokens: 912, cacheReadTokens: 6_400 },
+    { type: "token_usage", inputTokens: 12840, outputTokens: 912, cacheReadTokens: 6400 },
   ],
 };
-
 const sampleImageDataUrl =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
-
 const userMessageWithAttachments: SessionMessage = {
   id: "user-with-attachments",
   role: "user",
@@ -42,23 +35,18 @@ const userMessageWithAttachments: SessionMessage = {
     { type: "file", fileId: "doc-1", filename: "notes.txt", mediaType: "text/plain", url: "/files/notes.txt" },
   ],
 };
-
-const meta: Meta<typeof MessagePartsRenderer> = {
+const meta: CanvasMeta<typeof MessagePartsRenderer> = {
   title: "Patterns/Chat/Message Parts Renderer",
   component: MessagePartsRenderer,
   parameters: {
     layout: "padded",
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof MessagePartsRenderer>;
-
+type Story = CanvasVariant<typeof MessagePartsRenderer>;
 const MessagePreview = (props: { message: SessionMessage }) => {
   const { message } = props;
   const from = getMessageOrigin(message.role);
-
   return (
     <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
       <Stack gap="sm">
@@ -71,24 +59,24 @@ const MessagePreview = (props: { message: SessionMessage }) => {
     </Box>
   );
 };
-
 export const AssistantReasoningAndToolParts: Story = {
+  id: "patterns-chat-message-parts-renderer--assistant-reasoning-and-tool-parts",
   render: () => <MessagePreview message={assistantMessageWithRichParts} />,
 };
-
 export const UserTextParts: Story = {
+  id: "patterns-chat-message-parts-renderer--user-text-parts",
   render: () => <MessagePreview message={userMessageWithText} />,
 };
-
 export const HiddenTokenUsageParts: Story = {
+  id: "patterns-chat-message-parts-renderer--hidden-token-usage-parts",
   render: () => <MessagePreview message={assistantMessageWithHiddenTokenUsage} />,
 };
-
 export const UserAttachmentParts: Story = {
+  id: "patterns-chat-message-parts-renderer--user-attachment-parts",
   render: () => <MessagePreview message={userMessageWithAttachments} />,
 };
-
 export const ErrorParts: Story = {
+  id: "patterns-chat-message-parts-renderer--error-parts",
   render: () => (
     <Stack gap="sm">
       <MessagePreview

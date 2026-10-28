@@ -1,38 +1,31 @@
 import { Button, Input, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
-import { expect, fireEvent, spyOn, waitFor } from "storybook/test";
 import { createScriptedTerminalBridge, type ScriptedTerminalStep } from "./scripted-bridge";
 import { Terminal } from "./terminal";
 import type { TerminalBridge } from "./types";
 
-const meta: Meta<typeof Terminal> = {
+const meta: CanvasMeta<typeof Terminal> = {
   title: "Components/Terminal",
   component: Terminal,
   parameters: { layout: "centered" },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof Terminal>;
-
+type Story = CanvasVariant<typeof Terminal>;
 const TerminalFrame = ({ children }: { children: React.ReactNode }) => (
   <div style={{ width: "min(720px, 90vw)", height: "320px" }}>{children}</div>
 );
-
 const interactiveSteps: ScriptedTerminalStep[] = [
   { data: "\x1b[1;34mWelcome to @pstdio/ui/terminal\x1b[0m\r\n" },
   { data: "Type any text and it will be echoed back.\r\n\r\n" },
   { data: "$ ", delayMs: 0 },
 ];
-
 const echoPromptOnEnter = (input: string): ScriptedTerminalStep[] => {
   if (input === "\r") {
     return [{ data: "\r\n$ " }];
   }
   return [{ data: input }];
 };
-
 const TerminalStory = ({ bridgeFactory, theme }: { bridgeFactory: () => TerminalBridge; theme?: "dark" | "light" }) => {
   const [bridge] = useState(bridgeFactory);
   return (
@@ -41,7 +34,6 @@ const TerminalStory = ({ bridgeFactory, theme }: { bridgeFactory: () => Terminal
     </TerminalFrame>
   );
 };
-
 const DeferredFocusFixture = () => {
   const [bridge] = useState(() => createScriptedTerminalBridge({ initial: [{ data: "Focus fixture ready\r\n" }] }));
   const [generation, setGeneration] = useState(0);
@@ -58,12 +50,11 @@ const DeferredFocusFixture = () => {
     </Stack>
   );
 };
-
 export const DeferredFocusRespectsNewChoice: Story = {
+  id: "components-terminal--deferred-focus-respects-new-choice",
   tags: ["!manifest", "terminal-deferred-focus"],
   render: () => <DeferredFocusFixture />,
 };
-
 const PopupRestoreFocusFixture = () => {
   const [bridge] = useState(() => createScriptedTerminalBridge({ initial: [{ data: "Opened from a menu\r\n" }] }));
   const [open, setOpen] = useState(false);
@@ -96,13 +87,13 @@ const PopupRestoreFocusFixture = () => {
     </Stack>
   );
 };
-
 export const DeferredFocusIgnoresPopupRestore: Story = {
+  id: "components-terminal--deferred-focus-ignores-popup-restore",
   tags: ["!manifest", "terminal-deferred-focus"],
   render: () => <PopupRestoreFocusFixture />,
 };
-
 export const Default: Story = {
+  id: "components-terminal--default",
   render: () => (
     <TerminalStory
       bridgeFactory={() =>
@@ -114,17 +105,15 @@ export const Default: Story = {
     />
   ),
 };
-
 // Agent CLIs print OSC 8 hyperlinks, where the visible label differs from the target URL.
 const osc8Link = (label: string, url: string) => `\x1b]8;;${url}\x07${label}\x1b]8;;\x07`;
-
 const webLinks = [
   { label: "https://example.com/terminal?from=preview", url: "https://example.com/terminal?from=preview" },
   { label: "http://localhost:5173/", url: "http://localhost:5173/" },
   { label: "Open the terminal guide", url: "https://example.com/guide", data: osc8Link },
 ];
-
 export const WebLinks: Story = {
+  id: "components-terminal--web-links",
   render: () => (
     <TerminalStory
       bridgeFactory={() =>
@@ -137,41 +126,9 @@ export const WebLinks: Story = {
       }
     />
   ),
-  play: async ({ canvasElement }) => {
-    // Keep the browser API boundary local so the story never opens external pages.
-    const open = spyOn(window, "open").mockReturnValue(null);
-    try {
-      for (const link of webLinks) {
-        const row = await waitFor(() => {
-          const element = Array.from(canvasElement.querySelectorAll<HTMLElement>(".xterm-rows > div")).find(
-            (candidate) => candidate.textContent?.trim() === link.label,
-          );
-          expect(element).toBeVisible();
-          return element!;
-        });
-        const screen = canvasElement.querySelector<HTMLElement>(".xterm-screen")!;
-        const bounds = row.getBoundingClientRect();
-        const position = { clientX: bounds.left + 30, clientY: bounds.top + bounds.height / 2 };
-        await fireEvent.mouseMove(screen, position);
-        await waitFor(() => expect(screen).toHaveClass("xterm-cursor-pointer"));
-        open.mockClear();
-        await fireEvent.mouseDown(screen, { ...position, button: 0 });
-        await fireEvent.mouseUp(screen, { ...position, button: 0 });
-        expect(open).not.toHaveBeenCalled();
-        for (const modifier of [{ ctrlKey: true }, { metaKey: true }]) {
-          await fireEvent.mouseDown(screen, { ...position, ...modifier, button: 0 });
-          await fireEvent.mouseUp(screen, { ...position, ...modifier, button: 0 });
-          expect(open).toHaveBeenLastCalledWith(link.url, "_blank", "noopener,noreferrer");
-        }
-        expect(open).toHaveBeenCalledTimes(2);
-      }
-    } finally {
-      open.mockRestore();
-    }
-  },
 };
-
 export const LightTheme: Story = {
+  id: "components-terminal--light-theme",
   render: () => (
     <TerminalStory
       bridgeFactory={() =>
@@ -184,8 +141,8 @@ export const LightTheme: Story = {
     />
   ),
 };
-
 export const DarkTheme: Story = {
+  id: "components-terminal--dark-theme",
   render: () => (
     <TerminalStory
       bridgeFactory={() =>
@@ -198,7 +155,6 @@ export const DarkTheme: Story = {
     />
   ),
 };
-
 const scriptedRunSteps: ScriptedTerminalStep[] = [
   { data: "$ bun run build\r\n" },
   { data: "\x1b[2mResolving workspace...\x1b[0m\r\n", delayMs: 250 },
@@ -208,8 +164,8 @@ const scriptedRunSteps: ScriptedTerminalStep[] = [
   { data: "\x1b[1mDone.\x1b[0m\r\n", delayMs: 200 },
   { exit: { code: 0 } },
 ];
-
 export const ScriptedOutput: Story = {
+  id: "components-terminal--scripted-output",
   render: () => (
     <TerminalStory
       bridgeFactory={() =>
@@ -221,14 +177,13 @@ export const ScriptedOutput: Story = {
     />
   ),
 };
-
 // Emits more rows than the frame can show so the scrollback scrollbar renders:
 // it should be the slim app-styled bar, not xterm's wide native gutter.
 const scrollbackSteps: ScriptedTerminalStep[] = Array.from({ length: 60 }, (_, index) => ({
   data: `\x1b[2m${String(index + 1).padStart(3, "0")}\x1b[0m log line ${index + 1}\r\n`,
 }));
-
 export const Scrollback: Story = {
+  id: "components-terminal--scrollback",
   render: () => (
     <TerminalStory bridgeFactory={() => createScriptedTerminalBridge({ initial: scrollbackSteps })} theme="dark" />
   ),

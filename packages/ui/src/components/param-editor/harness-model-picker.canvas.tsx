@@ -1,8 +1,8 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import { HarnessModelPicker } from "./harness-model-picker";
 
-const meta: Meta<typeof HarnessModelPicker> = {
+const meta: CanvasMeta<typeof HarnessModelPicker> = {
   title: "Components/Param Editor/Harness model picker",
   component: HarnessModelPicker,
   args: {
@@ -35,10 +35,16 @@ const meta: Meta<typeof HarnessModelPicker> = {
   },
 };
 export default meta;
-type Story = StoryObj<typeof HarnessModelPicker>;
-export const Default: Story = {};
-export const Loading: Story = { args: { models: [], loadingModels: true } };
+type Story = CanvasVariant<typeof HarnessModelPicker>;
+export const Default: Story = {
+  id: "components-param-editor-harness-model-picker--default",
+};
+export const Loading: Story = {
+  id: "components-param-editor-harness-model-picker--loading",
+  args: { models: [], loadingModels: true },
+};
 export const UnavailableHarness: Story = {
+  id: "components-param-editor-harness-model-picker--unavailable-harness",
   args: {
     harnesses: [
       { id: "codex", name: "Codex" },

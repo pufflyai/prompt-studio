@@ -121,7 +121,6 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
             {item.preview.source}
             {item.preview.kind === "story" && `#${item.preview.exportName}`}
           </Text>
-          {information?.hasPlay && <Text>Interaction validation: the source export's play function.</Text>}
           {information?.description && <Text>{information.description}</Text>}
           {information?.args && (
             <Box as="pre" whiteSpace="pre-wrap" overflowWrap="anywhere">

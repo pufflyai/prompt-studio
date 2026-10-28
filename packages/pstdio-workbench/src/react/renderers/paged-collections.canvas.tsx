@@ -1,16 +1,13 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { CollectionPageRequest } from "@pstdio/sdk/extensions";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench, type DataTableRendererQueryContext } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { Workbench } from "../workbench/workbench";
 
 const sortDirection = (input: DataTableRendererQueryContext) => (input.sorts[0]?.direction === "desc" ? -1 : 1);
-
 const pageOffset = (page: CollectionPageRequest) => (page.cursor === undefined ? page.offset : Number(page.cursor));
-
 const createFixture = (initiallyHeld: boolean, withOtherTable: boolean) => {
   const workbench = createWorkbench();
   let held = initiallyHeld;
@@ -127,7 +124,6 @@ const createFixture = (initiallyHeld: boolean, withOtherTable: boolean) => {
     },
   };
 };
-
 const PagedCollections = (props: { initiallyHeld?: boolean; withOtherTable?: boolean }) => {
   const [fixture] = useState(() => createFixture(Boolean(props.initiallyHeld), Boolean(props.withOtherTable)));
   return (
@@ -153,100 +149,29 @@ const meta = {
   component: PagedCollections,
   tags: ["!manifest"],
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof PagedCollections>;
+} satisfies CanvasMeta<typeof PagedCollections>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const HiddenPageState: Story = {
+  id: "pstdio-workbench-guides-paged-collections--hidden-page-state",
   args: { withOtherTable: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByText("Row 000");
-    await userEvent.click(canvas.getByRole("button", { name: "Go to next page" }));
-    const row = (await canvas.findByText("Row 100")).closest("tr")!;
-    await userEvent.click(within(row).getByRole("checkbox", { name: "Select row" }));
-    await userEvent.click(canvas.getByRole("tab", { name: /^Other table$/ }));
-    await expect(await canvas.findByText("Another collection")).toBeVisible();
-    await userEvent.click(canvas.getByRole("tab", { name: /^Paged rows$/ }));
-    const restored = await canvas.findByText("Row 100");
-    await expect(restored).toBeVisible();
-    await expect(within(restored.closest("tr")!).getByRole("checkbox", { name: "Select row" })).toBeChecked();
-    await expect(canvas.getByRole("spinbutton")).toHaveValue("2");
-  },
 };
 export const Loading: Story = {
+  id: "pstdio-workbench-guides-paged-collections--loading",
   args: { initiallyHeld: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Finish read" }));
-    await expect(await canvas.findByText("Row 000")).toBeVisible();
-  },
 };
 export const RefreshAndPageBoundary: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByText("Row 000");
-    await userEvent.click(canvas.getByRole("button", { name: "Go to next page" }));
-    await canvas.findByText("Row 100");
-    await userEvent.click(canvas.getByRole("button", { name: "Hold next read" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Move first row" }));
-    await expect(canvas.getByText("Row 100")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Finish read" }));
-    await expect(await canvas.findByText("Row 001")).toBeVisible();
-    await expect(canvas.queryByText("Row 000")).not.toBeInTheDocument();
-  },
+  id: "pstdio-workbench-guides-paged-collections--refresh-and-page-boundary",
 };
 export const EmptyResults: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByText("Row 000");
-    await userEvent.click(canvas.getByRole("button", { name: "Toggle empty results" }));
-    await expect(await canvas.findByText("No rows")).toBeVisible();
-  },
+  id: "pstdio-workbench-guides-paged-collections--empty-results",
 };
 export const FiltersAndSorts: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByText("Row 000");
-    await userEvent.click(canvas.getByRole("button", { name: "Search this view" }));
-    await userEvent.type(canvas.getByRole("textbox", { name: "Search this view" }), "Row 24");
-    await expect(await canvas.findByText("Row 240")).toBeVisible();
-    await expect(canvas.queryByText("Row 000")).not.toBeInTheDocument();
-    const rank = canvas.getByRole("columnheader", { name: /Rank/ });
-    await userEvent.click(within(rank).getByRole("button", { name: "Sorted asc" }));
-    await userEvent.click(within(document.body).getByText("Sort descending", { exact: true }));
-    await expect(await canvas.findByText("Row 249")).toBeVisible();
-  },
+  id: "pstdio-workbench-guides-paged-collections--filters-and-sorts",
 };
-
 export const RapidNavigation: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByText("Row 000");
-    await userEvent.click(canvas.getByRole("button", { name: "Hold next read" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Go to next page" }));
-    await expect(canvas.getByRole("spinbutton")).toHaveValue("1");
-    await expect(canvas.getByRole("status")).toHaveTextContent("Loading page 2");
-    await expect(canvas.getByText("Row 000")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Go to next page" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Finish read" }));
-    await expect(await canvas.findByText("Row 200")).toBeVisible();
-    await expect(canvas.queryByText("Row 100")).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Go to first page" }));
-    await expect(await canvas.findByText("Row 000")).toBeVisible();
-  },
+  id: "pstdio-workbench-guides-paged-collections--rapid-navigation",
 };
-
 export const SearchStartsFromFirstPage: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByText("Row 000");
-    await userEvent.click(canvas.getByRole("button", { name: "Go to next page" }));
-    await canvas.findByText("Row 100");
-    await userEvent.click(canvas.getByRole("button", { name: "Search this view" }));
-    await userEvent.type(canvas.getByRole("textbox", { name: "Search this view" }), "Row 24");
-    await canvas.findByText("Row 240");
-    await userEvent.click(canvas.getByRole("button", { name: "Close search" }));
-    await expect(await canvas.findByText("Row 000")).toBeVisible();
-    await expect(canvas.getByRole("spinbutton")).toHaveValue("1");
-  },
+  id: "pstdio-workbench-guides-paged-collections--search-starts-from-first-page",
 };

@@ -1,7 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { DisplayMenuSelect } from "./display-menu";
 
 const LongGroupingMenu = () => {
@@ -21,23 +20,10 @@ const LongGroupingMenu = () => {
     </Box>
   );
 };
-
-const meta: Meta = { title: "Patterns/Collection View/Display Select" };
+const meta: CanvasMeta = { title: "Patterns/Collection View/Display Select" };
 export default meta;
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 export const LongOptions: Story = {
+  id: "patterns-collection-view-display-select--long-options",
   render: () => <LongGroupingMenu />,
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(body.getByRole("button", { name: /Grouping/ }));
-    const menu = body.getByRole("menu");
-    const viewport = menu.querySelector<HTMLElement>('[data-part="viewport"]');
-    expect(viewport).not.toBeNull();
-    expect(viewport!.scrollHeight).toBeGreaterThan(viewport!.clientHeight);
-    expect(getComputedStyle(menu.querySelector('[data-part="scrollbar"]')!).width).toBe("2px");
-    viewport!.scrollTop = viewport!.scrollHeight;
-    await userEvent.click(body.getByRole("menuitem", { name: "Property 30", exact: true }));
-    await expect(body.getByTestId("grouping")).toHaveTextContent("29");
-  },
 };

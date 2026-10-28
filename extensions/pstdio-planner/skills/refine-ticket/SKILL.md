@@ -32,3 +32,7 @@ Refine a Planner ticket by adding researched detail and applying a template when
 ## Status
 
 Refinement does not change ticket status. Run `pst tickets update --status` only when the user asks for a status change.
+
+## Critical UI verification
+
+Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies. Keep Canvas examples for exploration. A visual example does not require a matching automated test. Name the critical risk covered by any new browser check. Ordinary relevant unit, type, and build checks still apply.

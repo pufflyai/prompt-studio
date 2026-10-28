@@ -1,7 +1,7 @@
-import type { Preview } from "@storybook/react-vite";
+import type { CanvasProject } from "@pstdio/canvas";
 import { RootProvider } from "../src/components/root-provider";
 
-const preview: Preview = {
+const preview: CanvasProject = {
   decorators: [
     (Story) => (
       <RootProvider>
@@ -10,5 +10,4 @@ const preview: Preview = {
     ),
   ],
 };
-
 export default preview;

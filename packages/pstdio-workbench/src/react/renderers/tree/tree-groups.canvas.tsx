@@ -1,8 +1,7 @@
 import { Text } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { HostStorageProvider } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
@@ -95,64 +94,28 @@ const TreeGroups = (props: { counts?: boolean; chrome?: boolean }) => {
     </HostStorageProvider>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Guides/Tree groups",
   component: TreeGroups,
   parameters: { layout: "fullscreen" },
   tags: ["tree-groups"],
-} satisfies Meta<typeof TreeGroups>;
+} satisfies CanvasMeta<typeof TreeGroups>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Default: Story = {};
-export const CountBadges: Story = { args: { counts: true } };
-export const CreateAndRename: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const document = within(canvasElement.ownerDocument.body);
-    fireEvent.contextMenu(await canvas.findByRole("option", { name: "Search" }));
-    await userEvent.click(await document.findByRole("menuitem", { name: "New group" }));
-    await userEvent.type(await canvas.findByRole("textbox", { name: "Group name" }), "Research{Enter}");
-    fireEvent.contextMenu(await canvas.findByText("Research"));
-    await userEvent.click(await document.findByRole("menuitem", { name: "Rename group" }));
-    const input = await canvas.findByRole("textbox", { name: "Group name" });
-    await userEvent.clear(input);
-    await userEvent.type(input, "Product research{Enter}");
-    await expect(canvas.getByText("Product research")).toBeVisible();
-    const header = canvas.getByText("Product research").closest("[aria-expanded]");
-    await expect(header).toHaveAttribute("aria-expanded", "false");
-    await userEvent.click(canvas.getByText("Product research"));
-    await expect(header).toHaveAttribute("aria-expanded", "true");
-    await userEvent.click(canvas.getByText("Product research"));
-    await expect(header).toHaveAttribute("aria-expanded", "false");
-  },
+type Story = CanvasVariant<typeof meta>;
+export const Default: Story = {
+  id: "pstdio-workbench-guides-tree-groups--default",
 };
-export const ModeChromeGroups: Story = { args: { chrome: true }, play: CreateAndRename.play };
-
+export const CountBadges: Story = {
+  id: "pstdio-workbench-guides-tree-groups--count-badges",
+  args: { counts: true },
+};
+export const CreateAndRename: Story = {
+  id: "pstdio-workbench-guides-tree-groups--create-and-rename",
+};
+export const ModeChromeGroups: Story = {
+  id: "pstdio-workbench-guides-tree-groups--mode-chrome-groups",
+  args: { chrome: true },
+};
 export const ReorderGroups: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const document = within(canvasElement.ownerDocument.body);
-    for (const name of ["Research", "Product"]) {
-      fireEvent.contextMenu(await canvas.findByRole("option", { name: "Search" }));
-      await userEvent.click(await document.findByRole("menuitem", { name: "New group" }));
-      await userEvent.type(await canvas.findByRole("textbox", { name: "Group name" }), `${name}{Enter}`);
-    }
-    const source = canvas.getByText("Product", { exact: true });
-    const target = canvas.getByText("Research", { exact: true });
-    const from = source.getBoundingClientRect();
-    const to = target.getBoundingClientRect();
-    const x = from.x + from.width / 2;
-    const y = from.y + from.height / 2;
-    const pointer = userEvent.setup();
-    await pointer.pointer([
-      { target: source, keys: "[MouseLeft>]", coords: { clientX: x, clientY: y } },
-      { target: source, coords: { clientX: x, clientY: y - 8 } },
-      { target, coords: { clientX: x, clientY: to.y } },
-    ]);
-    await expect(canvasElement.querySelector("[data-panel-dragging]")).toBeNull();
-    await expect(canvasElement.querySelector("[data-workbench-edge-drop]")).toBeNull();
-    await pointer.pointer({ target, keys: "[/MouseLeft]", coords: { clientX: x, clientY: to.y } });
-    await waitFor(() => expect(source.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy());
-  },
+  id: "pstdio-workbench-guides-tree-groups--reorder-groups",
 };

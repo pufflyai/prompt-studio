@@ -1,13 +1,11 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import type { Diff } from "./diff-drawer";
 import { DiffDrawer } from "./lazy-diff";
 
 type StoryFn = () => ReactNode;
-
 const waitForDiff = () => new Promise<void>(() => undefined);
-
 const loadingDiffs: Diff[] = [
   {
     change: "modified",
@@ -17,8 +15,7 @@ const loadingDiffs: Diff[] = [
     deletions: 2,
   },
 ];
-
-const meta: Meta<typeof DiffDrawer> = {
+const meta: CanvasMeta<typeof DiffDrawer> = {
   title: "Patterns/Diff/Diff Panel/Loading",
   component: DiffDrawer,
   parameters: {
@@ -32,12 +29,10 @@ const meta: Meta<typeof DiffDrawer> = {
     ),
   ],
 };
-
 export default meta;
-
-type Story = StoryObj<typeof DiffDrawer>;
-
+type Story = CanvasVariant<typeof DiffDrawer>;
 export const DeferredContent: Story = {
+  id: "patterns-diff-diff-panel-loading--deferred-content",
   render: (args) => <DiffDrawer {...args} />,
   args: {
     diffs: loadingDiffs,

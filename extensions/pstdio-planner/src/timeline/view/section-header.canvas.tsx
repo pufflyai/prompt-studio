@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent } from "storybook/test";
 import { DEFAULT_STATUSES, DEFAULT_TAGS } from "../../data/seed";
 import { emptyWorkflowStatuses } from "../../data/workflow-statuses";
 import { buildPlan } from "../model/build-plan";
@@ -19,7 +18,6 @@ const host: GuestHost = {
   onEvent: () => () => {},
 };
 const client = createWebviewClient(host) as PlanClient;
-
 function MilestoneHeaderStory(props: {
   state: "forecast" | "learning" | "complete" | "unstarted";
   visible?: string[];
@@ -96,56 +94,37 @@ function MilestoneHeaderStory(props: {
     </Box>
   );
 }
-
-const meta: Meta<typeof MilestoneHeaderStory> = {
+const meta: CanvasMeta<typeof MilestoneHeaderStory> = {
   title: "Extensions/Planner/Milestone header",
   component: MilestoneHeaderStory,
   args: { state: "forecast" },
 };
 export default meta;
-type Story = StoryObj<typeof MilestoneHeaderStory>;
+type Story = CanvasVariant<typeof MilestoneHeaderStory>;
 export const Forecast: Story = {
-  play: async ({ canvas }) => {
-    const estimate = canvas.getByLabelText("Milestone estimate");
-    const progress = canvas.getByRole("progressbar", { name: "Milestone progress" });
-    await expect(estimate).toHaveTextContent("ETA ~8h");
-    await expect(estimate.getBoundingClientRect().right).toBeLessThanOrEqual(progress.getBoundingClientRect().left);
-  },
+  id: "extensions-planner-milestone-header--forecast",
 };
-export const Learning: Story = { args: { state: "learning" } };
-export const Complete: Story = { args: { state: "complete" } };
+export const Learning: Story = {
+  id: "extensions-planner-milestone-header--learning",
+  args: { state: "learning" },
+};
+export const Complete: Story = {
+  id: "extensions-planner-milestone-header--complete",
+  args: { state: "complete" },
+};
 export const Filtered: Story = {
+  id: "extensions-planner-milestone-header--filtered",
   args: { visible: ["done", "open"] },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByLabelText("Milestone estimate")).toHaveTextContent("ETA ~6h");
-    await expect(canvas.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "2");
-    await expect(canvas.getByRole("button", { name: "Review 1 tickets that need a person in Preview" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Review 1 tickets that need a person in Preview" }));
-    await expect(canvas.getByRole("status")).toHaveTextContent("Complex work · 1 tickets to review");
-  },
 };
 export const Remaining: Story = {
+  id: "extensions-planner-milestone-header--remaining",
   args: { visible: ["open"] },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByLabelText("Milestone estimate")).toHaveTextContent("ETA ~6h");
-    await expect(canvas.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "1");
-    await expect(canvas.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
-    await expect(canvas.getByRole("button", { name: "Review 1 tickets that need a person in Preview" })).toBeVisible();
-  },
 };
 export const CompletedOnly: Story = {
+  id: "extensions-planner-milestone-header--completed-only",
   args: { visible: ["done"] },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByLabelText("Milestone estimate")).toHaveTextContent("Done");
-    await expect(canvas.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "1");
-    await expect(canvas.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
-    await expect(canvas.queryByRole("button", { name: /tickets that need a person/ })).toBeNull();
-  },
 };
 export const Unstarted: Story = {
+  id: "extensions-planner-milestone-header--unstarted",
   args: { state: "unstarted" },
-  play: async (context) => {
-    await Forecast.play!(context);
-    await expect(context.canvas.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
-  },
 };

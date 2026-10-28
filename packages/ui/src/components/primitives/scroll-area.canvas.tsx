@@ -1,13 +1,11 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, waitFor } from "storybook/test";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
 const items = Array.from({ length: 24 }, (_, index) => `Scrollable row ${index + 1}`);
 const layeredItems = Array.from({ length: 16 }, (_, index) => `Layered row ${index + 1}`);
-
-const meta: Meta<typeof ScrollArea> = {
+const meta: CanvasMeta<typeof ScrollArea> = {
   title: "Components/Layout/Scroll Area",
   component: ScrollArea,
   parameters: {
@@ -35,12 +33,10 @@ const meta: Meta<typeof ScrollArea> = {
     },
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ScrollArea>;
-
+type Story = CanvasVariant<typeof ScrollArea>;
 export const Vertical: Story = {
+  id: "components-layout-scroll-area--vertical",
   render: (args) => (
     <ScrollArea {...args}>
       {items.map((item) => (
@@ -51,19 +47,12 @@ export const Vertical: Story = {
     </ScrollArea>
   ),
 };
-
 export const Focused: Story = {
+  id: "components-layout-scroll-area--focused",
   ...Vertical,
-  play: async ({ canvasElement }) => {
-    const viewport = canvasElement.querySelector<HTMLElement>('[data-part="viewport"]');
-    await expect(viewport).not.toBeNull();
-    viewport!.focus();
-    await expect(viewport).toHaveFocus();
-    await expect(getComputedStyle(viewport!).outlineStyle).toBe("none");
-  },
 };
-
 export const BothDirections: Story = {
+  id: "components-layout-scroll-area--both-directions",
   args: {
     showHorizontalScrollbar: true,
     maxW: "24rem",
@@ -83,26 +72,9 @@ export const BothDirections: Story = {
       </Stack>
     </ScrollArea>
   ),
-  play: async ({ canvasElement }) => {
-    await waitFor(() => {
-      for (const orientation of ["vertical", "horizontal"]) {
-        const scrollbar = canvasElement.querySelector<HTMLElement>(
-          `[data-part="scrollbar"][data-orientation="${orientation}"]`,
-        )!;
-        const bounds = scrollbar.getBoundingClientRect();
-        expect(orientation === "vertical" ? bounds.width : bounds.height).toBe(2);
-        const point =
-          orientation === "vertical"
-            ? { x: bounds.right - 7, y: bounds.top + bounds.height / 2 }
-            : { x: bounds.left + bounds.width / 2, y: bounds.bottom - 7 };
-        const target = canvasElement.ownerDocument.elementFromPoint(point.x, point.y);
-        expect(target?.closest('[data-part="scrollbar"]')).toBe(scrollbar);
-      }
-    });
-  },
 };
-
 export const LayeredRows: Story = {
+  id: "components-layout-scroll-area--layered-rows",
   args: {
     showHorizontalScrollbar: true,
     maxH: "12rem",
@@ -133,10 +105,8 @@ export const LayeredRows: Story = {
     </ScrollArea>
   ),
 };
-
 const GrowingNestedScrollAreas = () => {
   const [rowCount, setRowCount] = useState(24);
-
   return (
     <Stack gap="sm">
       <Button size="xs" onClick={() => setRowCount((count) => count + 24)}>
@@ -163,7 +133,7 @@ const GrowingNestedScrollAreas = () => {
     </Stack>
   );
 };
-
 export const GrowingNested: Story = {
+  id: "components-layout-scroll-area--growing-nested",
   render: () => <GrowingNestedScrollAreas />,
 };

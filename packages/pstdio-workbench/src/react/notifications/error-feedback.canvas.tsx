@@ -1,8 +1,7 @@
 import { Box, Button, HStack, Stack } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Toaster } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { Workbench } from "../workbench/workbench";
@@ -95,92 +94,33 @@ const ErrorFeedback = (props: { errorCount?: number; longMessages?: boolean; sta
     </WorkbenchThemeProvider>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Error feedback",
   component: ErrorFeedback,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof ErrorFeedback>;
+} satisfies CanvasMeta<typeof ErrorFeedback>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const SystemAndActionErrors: Story = {
-  play: async ({ canvas }) => {
-    await userEvent.click(canvas.getByRole("button", { name: "Save file" }));
-    await expect(canvas.getByRole("alert")).toHaveTextContent("You do not have permission");
-    await expect(canvas.queryByRole("button", { name: /^System errors:/ })).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Report system error" }));
-    await expect(canvas.getByRole("button", { name: "System errors: Extension stopped" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Recover system" }));
-    await expect(canvas.queryByRole("button", { name: /^System errors:/ })).not.toBeInTheDocument();
-    await expect(canvas.getByRole("alert")).toHaveTextContent("You do not have permission");
-  },
+  id: "pstdio-workbench-reference-core-api-error-feedback--system-and-action-errors",
 };
-
 export const TwelveSystemErrors: Story = {
+  id: "pstdio-workbench-reference-core-api-error-feedback--twelve-system-errors",
   args: { errorCount: 12 },
-  play: async ({ canvas, canvasElement }) => {
-    await userEvent.click(canvas.getByRole("button", { name: /^System errors:/ }));
-    const body = within(canvasElement.ownerDocument.body);
-    const list = await body.findByRole("region", { name: "System error list" });
-    await expect(within(list).getAllByRole("button", { name: /^Dismiss / })).toHaveLength(12);
-    await expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
-    await expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth);
-  },
 };
-
 export const RecoveryActions: Story = {
+  id: "pstdio-workbench-reference-core-api-error-feedback--recovery-actions",
   args: { errorCount: 1 },
-  play: async ({ canvas, canvasElement }) => {
-    await userEvent.click(canvas.getByRole("button", { name: /^System errors:/ }));
-    const body = within(canvasElement.ownerDocument.body);
-    const list = await body.findByRole("region", { name: "System error list" });
-    await userEvent.click(within(list).getByRole("button", { name: "Restart service" }));
-    await expect(
-      within(list).getByText("The service could not be restarted. Try again when the connection recovers."),
-    ).toBeVisible();
-    await expect(body.getByText("System errors (1)", { exact: true })).toBeVisible();
-  },
 };
-
 export const LongSystemErrors: Story = {
+  id: "pstdio-workbench-reference-core-api-error-feedback--long-system-errors",
   args: { errorCount: 12, longMessages: true },
-  play: async (context) => {
-    await TwelveSystemErrors.play?.(context);
-    const body = within(context.canvasElement.ownerDocument.body);
-    const list = body.getByRole("region", { name: "System error list" });
-    await userEvent.click(within(list).getAllByRole("button", { name: /^Restart / })[0]);
-    await expect(
-      within(list).getByText("The service could not be restarted. Try again when the connection recovers."),
-    ).toBeVisible();
-    await expect(body.getByText("System errors (12)", { exact: true })).toBeVisible();
-  },
 };
-
 export const HundredSystemErrors: Story = {
+  id: "pstdio-workbench-reference-core-api-error-feedback--hundred-system-errors",
   args: { errorCount: 100 },
-  play: async ({ canvas, canvasElement }) => {
-    await userEvent.click(canvas.getByRole("button", { name: /^System errors:/ }));
-    const body = within(canvasElement.ownerDocument.body);
-    const list = await body.findByRole("region", { name: "System error list" });
-    await expect(within(list).getAllByRole("button", { name: /^Dismiss / })).toHaveLength(100);
-    list.scrollTop = list.scrollHeight;
-    await expect(within(list).getByText("System error 1", { exact: true })).toBeVisible();
-  },
 };
-
 export const HiddenStatusBar: Story = {
+  id: "pstdio-workbench-reference-core-api-error-feedback--hidden-status-bar",
   args: { statusHidden: true },
-  play: async ({ canvas, canvasElement }) => {
-    const bar = canvasElement.querySelector<HTMLElement>('[data-workbench-region="status"]')!;
-    await expect(bar).not.toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Save file" }));
-    await expect(canvas.getByRole("alert")).toHaveTextContent("You do not have permission");
-    await expect(bar).not.toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Report system error" }));
-    await expect(bar).toBeVisible();
-    await expect(canvas.getByRole("button", { name: "System errors: Extension stopped" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Recover system" }));
-    await expect(bar).not.toBeVisible();
-  },
 };

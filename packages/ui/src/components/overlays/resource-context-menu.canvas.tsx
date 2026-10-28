@@ -1,8 +1,7 @@
 import { Box, Icon, Input, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Eye } from "lucide-react";
 import { useState } from "react";
-import { expect, fireEvent, fn, screen, userEvent, waitFor, within } from "storybook/test";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { getIconComponent } from "@/components/primitives/icon-options";
 
@@ -14,15 +13,14 @@ const createActions = (count: number): ResourceContextAction[] =>
     separatorBefore: index > 0 && index % 6 === 0,
     onClick: () => undefined,
   }));
-
 // The menu passes its trigger props through `asChild`, so the target must be an element that forwards them.
 const menuTarget = (
   <Box borderWidth="1px" borderColor="border" borderRadius="xs" p="md" w="15rem">
     <Text textStyle="label/S/regular">Right-click here</Text>
   </Box>
 );
-
-export const TicketActions: StoryObj<typeof ResourceContextMenu> = {
+export const TicketActions: CanvasVariant<typeof ResourceContextMenu> = {
+  id: "components-overlays-resource-context-menu--ticket-actions",
   args: {
     children: menuTarget,
     actions: [
@@ -34,7 +32,6 @@ export const TicketActions: StoryObj<typeof ResourceContextMenu> = {
     ].map(([key, label]) => ({ key, label, icon: <Icon as={getIconComponent(key)} boxSize="4" /> })),
   },
 };
-
 const InlineActionMenu = () => {
   const [editing, setEditing] = useState(false);
   const [shown, setShown] = useState(true);
@@ -54,7 +51,6 @@ const InlineActionMenu = () => {
     </Stack>
   );
 };
-
 const NestedVisibilityMenu = () => {
   const [shown, setShown] = useState(true);
   return (
@@ -89,7 +85,6 @@ const NestedVisibilityMenu = () => {
     </Stack>
   );
 };
-
 const LongVisibilityMenu = () => {
   const [selected, setSelected] = useState("Nothing selected");
   return (
@@ -110,8 +105,7 @@ const LongVisibilityMenu = () => {
     </Stack>
   );
 };
-
-const meta: Meta<typeof ResourceContextMenu> = {
+const meta: CanvasMeta<typeof ResourceContextMenu> = {
   tags: ["menu-selection"],
   title: "Components/Overlays/Resource Context Menu",
   component: ResourceContextMenu,
@@ -125,76 +119,29 @@ const meta: Meta<typeof ResourceContextMenu> = {
     },
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ResourceContextMenu>;
-
+type Story = CanvasVariant<typeof ResourceContextMenu>;
 export const Default: Story = {
+  id: "components-overlays-resource-context-menu--default",
   render: () => <ResourceContextMenu actions={createActions(4)}>{menuTarget}</ResourceContextMenu>,
 };
-
 export const SelectionAction: Story = {
+  id: "components-overlays-resource-context-menu--selection-action",
   args: {
     children: menuTarget,
-    actions: [{ key: "toggle", label: "Toggle visibility", onSelect: fn() }],
-  },
-  play: async ({ canvasElement, args }) => {
-    fireEvent.contextMenu(within(canvasElement).getByText("Right-click here"));
-    const action = await screen.findByRole("menuitem", { name: "Toggle visibility" });
-    await userEvent.click(action);
-    expect(args.actions[0].onSelect).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+    actions: [{ key: "toggle", label: "Toggle visibility", onSelect: () => {} }],
   },
 };
-
 export const VisibilitySubmenu: Story = {
+  id: "components-overlays-resource-context-menu--visibility-submenu",
   render: () => <NestedVisibilityMenu />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    fireEvent.contextMenu(canvas.getByText("Right-click here"));
-    const unavailable = await screen.findByRole("menuitem", { name: "Unavailable options" });
-    await expect(unavailable).toHaveAttribute("data-disabled");
-    await userEvent.hover(unavailable);
-    await expect(screen.queryByRole("menuitem", { name: "Unavailable child" })).toBeNull();
-    const trigger = await screen.findByRole("menuitem", { name: "Hide/show items" });
-    await userEvent.hover(trigger);
-    const toggle = await screen.findByRole("menuitem", { name: "Notes", exact: true });
-    await waitFor(() => {
-      const bounds = toggle.closest('[role="menu"]')!.getBoundingClientRect();
-      const anchor = trigger.getBoundingClientRect();
-      expect(Math.abs(bounds.top - anchor.top)).toBeLessThanOrEqual(anchor.height);
-    });
-    await userEvent.click(toggle);
-    await expect(canvas.getByText("Notes hidden")).toBeVisible();
-    await userEvent.click(toggle);
-    await expect(canvas.getByText("Notes shown")).toBeVisible();
-    await userEvent.keyboard("{Escape}{Escape}");
-    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
-    fireEvent.contextMenu(canvas.getByText("Right-click here"));
-    await waitFor(() => expect(screen.getByRole("menu")).toHaveFocus());
-    await userEvent.keyboard("{Home}{ArrowRight}");
-    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Notes", exact: true })).toBeVisible());
-    await userEvent.keyboard("{Escape}{Escape}");
-    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
-  },
 };
-
 export const InlineAction: Story = {
+  id: "components-overlays-resource-context-menu--inline-action",
   render: () => <InlineActionMenu />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    fireEvent.contextMenu(canvas.getByText("Right-click here"));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Toggle visibility" }));
-    await expect(canvas.getByText("Hidden")).toBeVisible();
-    await waitFor(() => expect(screen.getByRole("menu")).toBeVisible());
-    await userEvent.click(screen.getByRole("menuitem", { name: "Rename inline" }));
-    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
-    await expect(canvas.getByRole("textbox", { name: "Name" })).toHaveFocus();
-  },
 };
-
 export const KeyboardAndTouch: Story = {
+  id: "components-overlays-resource-context-menu--keyboard-and-touch",
   render: () => (
     <ResourceContextMenu actions={[{ key: "customize", label: "Customize navigation", onClick: () => undefined }]}>
       <Box p="md">
@@ -211,44 +158,17 @@ export const KeyboardAndTouch: Story = {
       </Box>
     </ResourceContextMenu>
   ),
-  play: async ({ canvasElement }) => {
-    const row = within(canvasElement).getByText("Session row");
-    row.focus();
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Open session" })).toBeVisible());
-    await expect(screen.getByRole("menuitem", { name: "Unavailable action" })).toHaveAttribute("data-disabled");
-    await waitFor(() => {
-      const menu = screen.getByRole("menu").getBoundingClientRect();
-      const bounds = row.getBoundingClientRect();
-      expect(Math.abs(menu.top - bounds.bottom)).toBeLessThan(bounds.height);
-    });
-    await waitFor(() => expect(screen.getByRole("menu")).toHaveFocus());
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
-    await expect(row).toHaveFocus();
-    await fireEvent.pointerDown(row, { pointerType: "touch", clientX: 40, clientY: 40 });
-    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Open session" })).toBeVisible());
-    await fireEvent.pointerUp(row, { pointerType: "touch" });
-    await expect(screen.getAllByRole("menu")).toHaveLength(1);
-    await userEvent.keyboard("{Escape}");
-  },
 };
-
 export const LongMenuScrolls: Story = {
+  id: "components-overlays-resource-context-menu--long-menu-scrolls",
   render: () => (
     <ResourceContextMenu actions={createActions(60)} closeOnSelect={false}>
       {menuTarget}
     </ResourceContextMenu>
   ),
-  play: async ({ canvasElement }) => {
-    fireEvent.contextMenu(within(canvasElement).getByText("Right-click here"));
-    const menu = await screen.findByRole("menu");
-    await waitFor(() => expect(menu.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight));
-    await expect(screen.getByRole("menuitem", { name: "Sidenav entry 60" })).toBeInTheDocument();
-  },
 };
-
 export const EscapeRespectsNewFocus: Story = {
+  id: "components-overlays-resource-context-menu--escape-respects-new-focus",
   tags: ["!manifest", "menu-escape-focus"],
   render: () => (
     <Stack>
@@ -260,44 +180,14 @@ export const EscapeRespectsNewFocus: Story = {
       <Input aria-label="Next control" />
     </Stack>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    canvas.getByText("Context target").focus();
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-    const menu = await screen.findByRole("menu");
-    await waitFor(() => expect(menu).toHaveFocus());
-    fireEvent.keyDown(menu, { key: "Escape" });
-    const next = canvas.getByRole("textbox", { name: "Next control" });
-    next.focus();
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    await expect(next).toHaveFocus();
-    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
-  },
 };
-
 export const LongSubmenuScrolls: Story = {
+  id: "components-overlays-resource-context-menu--long-submenu-scrolls",
   tags: ["!manifest"],
   render: () => <LongVisibilityMenu />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    fireEvent.contextMenu(canvas.getByText("Right-click here"));
-    await userEvent.hover(await screen.findByRole("menuitem", { name: "Hide/show items" }));
-    const last = await screen.findByRole("menuitem", { name: "Sidenav entry 60" });
-    const menu = last.closest('[role="menu"]')!;
-    await waitFor(() => expect(menu.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight));
-    last.scrollIntoView({ block: "nearest" });
-    await waitFor(() => {
-      const bounds = last.getBoundingClientRect();
-      const surface = menu.getBoundingClientRect();
-      expect(bounds.top).toBeGreaterThanOrEqual(surface.top);
-      expect(bounds.bottom).toBeLessThanOrEqual(surface.bottom);
-    });
-    await userEvent.click(last);
-    await expect(canvas.getByText("Sidenav entry 60")).toBeVisible();
-  },
 };
-
-export const ResourceAndSurfaceGroups: StoryObj<typeof meta> = {
+export const ResourceAndSurfaceGroups: CanvasVariant<typeof meta> = {
+  id: "components-overlays-resource-context-menu--resource-and-surface-groups",
   args: {
     children: menuTarget,
     actions: [

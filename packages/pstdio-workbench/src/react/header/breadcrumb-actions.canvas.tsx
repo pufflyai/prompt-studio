@@ -1,6 +1,5 @@
 import { Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, screen, userEvent, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench, resourceContextMenuPath, workbenchBreadcrumbLocationMenuPath } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -8,7 +7,6 @@ import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 const boardPage = { kind: "page", extensionId: "storybook", id: "board" } as const;
 const ticketPage = { kind: "page", extensionId: "storybook", id: "ticket" } as const;
 const ticket = { type: "ticket", id: "PS-1", label: "PS-1 Fix header", extensionId: "storybook" };
-
 const createBreadcrumbWorkbench = (target: {
   page: typeof boardPage | typeof ticketPage;
   resource?: typeof ticket;
@@ -89,7 +87,6 @@ const createBreadcrumbWorkbench = (target: {
   if (target.contributed) workbench.pages.openSlot({ pageId: "ticket", slotId: "panel", resource: ticket });
   return workbench;
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Breadcrumb actions",
   component: WorkbenchStory,
@@ -99,35 +96,18 @@ const meta = {
       <WorkbenchStory {...args} />
     </WorkbenchThemeProvider>
   ),
-} satisfies Meta<typeof WorkbenchStory>;
+} satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-const menuLabels = async () => (await screen.findAllByRole("menuitem")).map((item) => item.textContent);
-
+type Story = CanvasVariant<typeof meta>;
 export const ResourcePage: Story = {
+  id: "pstdio-workbench-reference-core-api-breadcrumb-actions--resource-page",
   args: { workbench: createBreadcrumbWorkbench({ page: ticketPage, resource: ticket }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "Actions for PS-1 Fix header" }));
-    await expect(await menuLabels()).toEqual(["Archive", "Copy link"]);
-  },
 };
-
 export const PlainPage: Story = {
+  id: "pstdio-workbench-reference-core-api-breadcrumb-actions--plain-page",
   args: { workbench: createBreadcrumbWorkbench({ page: boardPage }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "Page actions" }));
-    await expect(await menuLabels()).toEqual(["Copy link"]);
-  },
 };
-
 export const ContributedPanelActions: Story = {
+  id: "pstdio-workbench-reference-core-api-breadcrumb-actions--contributed-panel-actions",
   args: { workbench: createBreadcrumbWorkbench({ page: ticketPage, resource: ticket, contributed: true }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "Actions for PS-1 Fix header" }));
-    await expect(await menuLabels()).toEqual(["Archive", "Panel details", "Copy link"]);
-  },
 };

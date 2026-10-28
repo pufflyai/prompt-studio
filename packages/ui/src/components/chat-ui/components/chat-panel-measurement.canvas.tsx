@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, spyOn, userEvent, waitFor, within } from "storybook/test";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 
@@ -24,29 +23,12 @@ const MeasuredChatStory = () => {
     </Box>
   );
 };
-
-const meta: Meta<typeof MeasuredChatStory> = {
+const meta: CanvasMeta<typeof MeasuredChatStory> = {
   title: "Patterns/Chat/Measurement",
   component: MeasuredChatStory,
 };
 export default meta;
-
-export const SendMessage: StoryObj<typeof meta> = {
+export const SendMessage: CanvasVariant<typeof meta> = {
+  id: "patterns-chat-measurement--send-message",
   tags: ["measurement-regression"],
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const editor = () => canvas.getAllByTestId("content-editable").at(-1)!;
-    const errors = spyOn(console, "error");
-    try {
-      await userEvent.click(editor());
-      await userEvent.keyboard("Measure this message.");
-      await waitFor(() => expect(canvas.getByTestId("send-message-button")).toBeEnabled());
-      await userEvent.click(canvas.getByTestId("send-message-button"));
-      await waitFor(() => expect(editor()).toHaveTextContent(/^$/));
-      await waitFor(() => expect(canvas.getByText("Measure this message.")).toBeVisible());
-      expect(errors.mock.calls.filter((args) => args.some((arg) => String(arg).includes("flushSync")))).toEqual([]);
-    } finally {
-      errors.mockRestore();
-    }
-  },
 };

@@ -1,6 +1,6 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ThemePreferenceProvider, useThemePreference } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { HtmlPreview } from "./html-preview";
 
 const meta = {
@@ -17,12 +17,14 @@ const meta = {
     title: "Interactive artifact",
     html: "<h1>Release checklist</h1><p>An interactive, self-contained page.</p><button onclick=\"this.textContent = 'Complete'\">Mark complete</button>",
   },
-} satisfies Meta<typeof HtmlPreview>;
-
+} satisfies CanvasMeta<typeof HtmlPreview>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Interactive: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const Interactive: Story = {
+  id: "extensions-artifacts-htmlpreview--interactive",
+};
 export const NavigationIsolation: Story = {
+  id: "extensions-artifacts-htmlpreview--navigation-isolation",
   tags: ["!manifest"],
   args: {
     title: "Navigation isolation",
@@ -34,11 +36,11 @@ export const NavigationIsolation: Story = {
   },
 };
 export const LongContent: Story = {
+  id: "extensions-artifacts-htmlpreview--long-content",
   args: {
     html: `<h1>Release notes</h1>${"<p>A saved update that remains available after the workspace is removed.</p>".repeat(30)}`,
   },
 };
-
 const ThemeExample = () => {
   const { toggleThemePreference } = useThemePreference();
   return (
@@ -51,8 +53,8 @@ const ThemeExample = () => {
     </Stack>
   );
 };
-
 export const ThemeAware: Story = {
+  id: "extensions-artifacts-htmlpreview--theme-aware",
   render: () => (
     <ThemePreferenceProvider initialPreference="pstdio-light">
       <ThemeExample />

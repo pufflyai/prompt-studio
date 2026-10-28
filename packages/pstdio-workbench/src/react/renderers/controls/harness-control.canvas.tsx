@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ParamEditor } from "@pstdio/ui/param-editor";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import type { CommandParamFieldProps } from "../../command-palette/command-param-field";
 import { HarnessControl } from "./harness-control";
@@ -58,10 +58,15 @@ const ResearchAgent = (props: { readOnly?: boolean }) => {
     </Box>
   );
 };
-const meta = { title: "pstdio-workbench/Controls/Research agent", component: ResearchAgent } satisfies Meta<
+const meta = { title: "pstdio-workbench/Controls/Research agent", component: ResearchAgent } satisfies CanvasMeta<
   typeof ResearchAgent
 >;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Editable: Story = {};
-export const ReadOnly: Story = { args: { readOnly: true } };
+type Story = CanvasVariant<typeof meta>;
+export const Editable: Story = {
+  id: "pstdio-workbench-controls-research-agent--editable",
+};
+export const ReadOnly: Story = {
+  id: "pstdio-workbench-controls-research-agent--read-only",
+  args: { readOnly: true },
+};

@@ -1,6 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchBreadcrumbView } from "./breadcrumb-view";
@@ -73,21 +72,12 @@ const DocumentBreadcrumb = () => {
     </WorkbenchThemeProvider>
   );
 };
-
-const meta = { title: "pstdio-workbench/Guides/Document breadcrumb", component: DocumentBreadcrumb } satisfies Meta<
-  typeof DocumentBreadcrumb
->;
+const meta = {
+  title: "pstdio-workbench/Guides/Document breadcrumb",
+  component: DocumentBreadcrumb,
+} satisfies CanvasMeta<typeof DocumentBreadcrumb>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const ParentResourceAndDocument: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.pointer({ target: canvas.getByText("PS-1", { exact: true }), keys: "[MouseRight]" });
-    await expect(body.queryByRole("menuitem", { name: "Document controls" })).not.toBeInTheDocument();
-    await userEvent.keyboard("{Escape}");
-    await userEvent.pointer({ target: canvas.getByText("Brief", { exact: true }), keys: "[MouseRight]" });
-    await expect(await body.findByRole("menuitem", { name: "Document controls" })).toBeVisible();
-  },
+  id: "pstdio-workbench-guides-document-breadcrumb--parent-resource-and-document",
 };

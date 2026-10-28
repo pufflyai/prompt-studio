@@ -2,6 +2,9 @@
 // Workspace-internal dependencies each package may declare. Additions here are
 // intentional architecture changes — update the docs when this map changes.
 export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
+  "@pstdio/canvas": [],
+  canvas: ["@pstdio/sdk", "@pstdio/ui", "@pstdio/canvas"],
+  "social-radar": ["@pstdio/sdk", "@pstdio/ui", "@pstdio/canvas"],
   "pstdio-service-telemetry": [],
   "pstdio-account-manager": ["pstdio-sync-contracts", "pstdio-service-telemetry"],
   "pstdio-psx": ["pstdio-extensions"],
@@ -61,15 +64,23 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-paths",
     "pstdio-wt",
   ],
-  "@pstdio/ui": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-file-types"],
+  "@pstdio/ui": ["@pstdio/canvas", "@pstdio/sdk", "pstdio-api-contracts", "pstdio-file-types"],
   "@pstdio/workbench": [
+    "@pstdio/canvas",
     "@pstdio/sdk",
     "@pstdio/ui",
     "pstdio-api-contracts",
     "pstdio-extensions",
     "pstdio-sync-contracts",
   ],
-  "pstdio-dashboard": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions", "@pstdio/workbench"],
+  "pstdio-dashboard": [
+    "@pstdio/canvas",
+    "@pstdio/sdk",
+    "@pstdio/ui",
+    "pstdio-api-contracts",
+    "pstdio-extensions",
+    "@pstdio/workbench",
+  ],
   // The testbench also declares the extensions its tests load from source,
   // so changing one marks the testbench as affected.
   "pstdio-extension-testbench": [
@@ -112,6 +123,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "canvas-tests": ["@pstdio/ui", "@pstdio/workbench", "pstdio-dashboard"],
   "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],
   "@pstdio/desktop": [
+    "@pstdio/canvas",
     "@pstdio/ui",
     "pstdio",
     "pstdio-api-contracts",
@@ -121,7 +133,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "workbench-fixture",
     "pstdio-scripts",
   ],
-  "@pstdio/landing-page": ["@pstdio/ui"],
+  "@pstdio/landing-page": ["@pstdio/canvas", "@pstdio/ui"],
   "motion-lab": ["@pstdio/sdk", "@pstdio/ui"],
 };
 

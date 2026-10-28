@@ -1,21 +1,18 @@
 import { Box, Button, Icon, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
-const meta: Meta<typeof ChatPanel> = {
+const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel/Alerts",
   component: ChatPanel,
   parameters: { layout: "padded" },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ChatPanel>;
-
+type Story = CanvasVariant<typeof ChatPanel>;
 const container = {
   w: "960px",
   maxW: "100%",
@@ -26,14 +23,12 @@ const container = {
   borderRadius: "lg",
   p: "md",
 } as const;
-
 const baseArgs = {
   streaming: false,
   emptyStateTitle: "",
   emptyStateDescription: "",
   chatInputPlaceholder: "Type a message...",
 };
-
 const workspaceControl = (
   <Button size="xs" variant="ghost" px="2xs">
     <GitBranch size={14} />
@@ -43,7 +38,6 @@ const workspaceControl = (
     <ChevronDown size={14} />
   </Button>
 );
-
 const alertVariantsMessages: SessionMessage[] = [
   {
     id: "user-1",
@@ -97,8 +91,8 @@ const alertVariantsMessages: SessionMessage[] = [
     ],
   },
 ];
-
 export const AlertVariants: Story = {
+  id: "patterns-chat-chat-panel-alerts--alert-variants",
   render: (args) => (
     <Box {...container}>
       <ChatPanel {...args} />
@@ -106,7 +100,6 @@ export const AlertVariants: Story = {
   ),
   args: { ...baseArgs, messages: alertVariantsMessages },
 };
-
 const workspaceSetupMessages: SessionMessage[] = [
   {
     id: "user-prompt",
@@ -114,8 +107,8 @@ const workspaceSetupMessages: SessionMessage[] = [
     parts: [{ type: "text", text: "/implement PS-104" }],
   },
 ];
-
 export const WorkspaceInitializing: Story = {
+  id: "patterns-chat-chat-panel-alerts--workspace-initializing",
   render: (args) => (
     <Box {...container}>
       <ChatPanel {...args} />
@@ -138,7 +131,6 @@ export const WorkspaceInitializing: Story = {
     ),
   },
 };
-
 const workspaceReadyMessages: SessionMessage[] = [
   {
     id: "user-prompt",
@@ -156,8 +148,8 @@ const workspaceReadyMessages: SessionMessage[] = [
     ],
   },
 ];
-
 export const WorkspaceReady: Story = {
+  id: "patterns-chat-chat-panel-alerts--workspace-ready",
   render: (args) => (
     <Box {...container}>
       <ChatPanel {...args} />
@@ -181,7 +173,6 @@ export const WorkspaceReady: Story = {
     ),
   },
 };
-
 const errorAfterSetupMessages: SessionMessage[] = [
   {
     id: "user-prompt",
@@ -189,8 +180,8 @@ const errorAfterSetupMessages: SessionMessage[] = [
     parts: [{ type: "text", text: "/implement PS-104" }],
   },
 ];
-
 export const WorkspaceSetupFailed: Story = {
+  id: "patterns-chat-chat-panel-alerts--workspace-setup-failed",
   render: (args) => (
     <Box {...container}>
       <ChatPanel {...args} />
@@ -217,16 +208,14 @@ export const WorkspaceSetupFailed: Story = {
     ),
   },
 };
-
 const retry = <Button>Retry</Button>;
-
 const sentConversation: SessionMessage[] = [
-  { id: "user-sent", role: "user", parts: [{ type: "text", text: "Check the board" }], createdAt: Date.now() - 60_000 },
+  { id: "user-sent", role: "user", parts: [{ type: "text", text: "Check the board" }], createdAt: Date.now() - 60000 },
   { id: "assistant-reply", role: "assistant", parts: [{ type: "text", text: "The board has 32 active tickets." }] },
 ];
-
 // The chat has no banners: problems appear in the conversation, where the user is looking.
 export const MessageNotSent: Story = {
+  id: "patterns-chat-chat-panel-alerts--message-not-sent",
   render: (args) => (
     <Box {...container}>
       <ChatPanel {...args} />
@@ -250,8 +239,8 @@ export const MessageNotSent: Story = {
     ),
   },
 };
-
 export const ConversationCouldNotLoad: Story = {
+  id: "patterns-chat-chat-panel-alerts--conversation-could-not-load",
   render: (args) => (
     <Box {...container}>
       <ChatPanel {...args} />
@@ -267,8 +256,8 @@ export const ConversationCouldNotLoad: Story = {
     ),
   },
 };
-
 export const ConversationGone: Story = {
+  id: "patterns-chat-chat-panel-alerts--conversation-gone",
   render: (args) => (
     <Box {...container}>
       <ChatPanel {...args} />

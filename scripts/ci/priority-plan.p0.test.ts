@@ -28,7 +28,7 @@ test("local commands select exactly one priority while preserving owning package
   expect(plan.every((run) => run.priority === "P1")).toBe(true);
 });
 
-test("component runs infer the Storybook owner from their directory", () => {
+test("component runs infer the Canvas preview owner from their directory", () => {
   const plan = createPriorityPlan(
     [
       "packages/canvas-tests/src/ui/ui/menu.p1.spec.ts",
@@ -38,7 +38,7 @@ test("component runs infer the Storybook owner from their directory", () => {
     packages,
     "P1",
   );
-  expect(plan.map((run) => run.storybook)).toEqual(["pstdio-workbench", "ui"]);
+  expect(plan.map((run) => run.componentOwner)).toEqual(["pstdio-workbench", "ui"]);
   expect(plan.every((run) => run.files.length === 1)).toBe(true);
   expect(
     createPriorityPlan(

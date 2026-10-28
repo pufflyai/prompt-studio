@@ -1,10 +1,9 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
 import { createStartModule } from "./module";
 
 const StartPageLayout = () => {
@@ -22,20 +21,13 @@ const StartPageLayout = () => {
     </Box>
   );
 };
-
 const meta = {
   title: "Start/Page layout",
   component: StartPageLayout,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof StartPageLayout>;
+} satisfies CanvasMeta<typeof StartPageLayout>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const Default: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByTestId("start-page")).toBeVisible();
-    await expect(canvas.queryByLabelText("Main panel header")).not.toBeInTheDocument();
-    await expect(canvas.queryByRole("tab", { name: "Start" })).toBeNull();
-  },
+  id: "start-page-layout--default",
 };

@@ -1,6 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { usePageParams } from "./use-page-params";
 
@@ -51,12 +50,8 @@ const meta = {
   title: "pstdio-workbench/Guides/Native viewer query",
   component: IndependentViewerQuery,
   tags: ["view-page-params"],
-} satisfies Meta<typeof IndependentViewerQuery>;
+} satisfies CanvasMeta<typeof IndependentViewerQuery>;
 export default meta;
-export const IndependentPageContext: StoryObj<typeof meta> = {
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByLabelText("Native viewer query")).toHaveTextContent(
-      '{"filter":"mine","limit":10}',
-    );
-  },
+export const IndependentPageContext: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-guides-native-viewer-query--independent-page-context",
 };

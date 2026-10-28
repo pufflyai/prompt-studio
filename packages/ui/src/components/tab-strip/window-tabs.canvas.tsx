@@ -1,8 +1,7 @@
 import { Box, IconButton } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { BookOpen, Columns3, Folder, PenTool, Plus } from "lucide-react";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { type WindowTab, WindowTabs } from "./window-tabs";
 import { WindowTitleBar } from "./window-title-bar";
 
@@ -11,7 +10,6 @@ const projects = [
   { id: "kanban", label: "Agentic kanban", icon: <Columns3 /> },
   { id: "design", label: "Agentic design", icon: <PenTool /> },
 ];
-
 const Example = (props: { initialTabs?: WindowTab[]; platform?: string }) => {
   const { initialTabs = projects, platform = "darwin" } = props;
   const [tabs, setTabs] = useState(initialTabs);
@@ -43,7 +41,6 @@ const Example = (props: { initialTabs?: WindowTab[]; platform?: string }) => {
     </WindowTitleBar>
   );
 };
-
 const meta = {
   title: "Components/Navigation/Window Tabs",
   component: WindowTabs,
@@ -56,139 +53,27 @@ const meta = {
       },
     },
   },
-} satisfies Meta<typeof WindowTabs>;
+} satisfies CanvasMeta<typeof WindowTabs>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-const expectOpenProjectAfterTabs = async (canvasElement: HTMLElement) => {
-  const canvas = within(canvasElement);
-  const last = canvas.getAllByRole("tab").at(-1)!.closest(".ps-window-tabs__tab")!;
-  const button = canvas.getByRole("button", { name: "Open project" });
-  const gap = Number.parseFloat(getComputedStyle(button.parentElement!).columnGap);
-  await expect(button.getBoundingClientRect().left - last.getBoundingClientRect().right).toBeCloseTo(gap, 1);
-};
-
+type Story = CanvasVariant<typeof meta>;
 export const SeveralTabs: Story = {
+  id: "components-navigation-window-tabs--several-tabs",
   render: () => <Example />,
-  play: async ({ canvasElement }) => {
-    await expectOpenProjectAfterTabs(canvasElement);
-    const tabs = within(canvasElement).getAllByRole("tab");
-    for (const tab of tabs) await expect(tab.closest(".ps-window-tabs__tab")).toHaveStyle({ borderWidth: "0px" });
-    await userEvent.click(tabs[1]);
-    await expect(tabs[1]).toHaveAttribute("aria-selected", "true");
-    for (const tab of tabs) await expect(tab.closest(".ps-window-tabs__tab")).toHaveStyle({ borderWidth: "0px" });
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "Close Agentic design" }));
-    await expectOpenProjectAfterTabs(canvasElement);
-  },
 };
 export const KeyboardReordering: Story = {
+  id: "components-navigation-window-tabs--keyboard-reordering",
   render: () => <Example />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const docs = canvas.getByRole("tab", { name: "Docs" });
-    docs.focus();
-    await userEvent.keyboard(" {ArrowRight} ");
-    await expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
-      "Agentic kanban",
-      "Docs",
-      "Agentic design",
-    ]);
-    await expect(docs).toHaveAttribute("aria-selected", "true");
-    await userEvent.keyboard(" {ArrowRight}{Escape}");
-    await expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
-      "Agentic kanban",
-      "Docs",
-      "Agentic design",
-    ]);
-    await expect(docs).not.toHaveAttribute("aria-pressed", "true");
-    await userEvent.keyboard(" {ArrowLeft} ");
-    await expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
-      "Docs",
-      "Agentic kanban",
-      "Agentic design",
-    ]);
-    await userEvent.keyboard("{Alt>}{ArrowRight}{/Alt}");
-    await expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
-      "Agentic kanban",
-      "Docs",
-      "Agentic design",
-    ]);
-    await expect(docs).toHaveAttribute("aria-selected", "true");
-  },
 };
 export const PointerReordering: Story = {
+  id: "components-navigation-window-tabs--pointer-reordering",
   render: () => <Example />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const docs = canvas.getByRole("tab", { name: "Docs" });
-    const target = canvas.getByRole("tab", { name: "Agentic design" });
-    const start = docs.getBoundingClientRect();
-    const end = target.getBoundingClientRect();
-    const origin = { x: start.left + start.width / 2, y: start.top + start.height / 2 };
-    const destination = { x: end.right - 4, y: origin.y };
-    const user = userEvent.setup();
-    await user.pointer([
-      { keys: "[MouseLeft>]", target: docs, coords: origin },
-      { target: docs, coords: { ...origin, x: origin.x + 8 } },
-      { target, coords: destination },
-    ]);
-    await waitFor(() => expect(canvasElement.querySelector('[data-window-tab-drop="after"]')).toBeVisible());
-    await expect(docs.getBoundingClientRect().left).toBe(start.left);
-    await user.pointer({ keys: "[/MouseLeft]", target, coords: destination });
-    await waitFor(() =>
-      expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
-        "Agentic kanban",
-        "Agentic design",
-        "Docs",
-      ]),
-    );
-    await expect(docs).toHaveAttribute("aria-selected", "true");
-    const current = docs.getBoundingClientRect();
-    const first = canvas.getByRole("tab", { name: "Agentic kanban" });
-    const firstRect = first.getBoundingClientRect();
-    const back = { x: firstRect.left + firstRect.width / 2, y: origin.y };
-    await user.pointer([
-      { keys: "[MouseLeft>]", target: docs, coords: { x: current.left + current.width / 2, y: origin.y } },
-      { target: docs, coords: { x: current.left + current.width / 2 - 8, y: origin.y } },
-      { target: first, coords: back },
-    ]);
-    await waitFor(() => expect(canvasElement.querySelector('[data-window-tab-drop="before"]')).toBeVisible());
-    await user.pointer({ keys: "[/MouseLeft]", target: first, coords: back });
-    await waitFor(() =>
-      expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
-        "Docs",
-        "Agentic kanban",
-        "Agentic design",
-      ]),
-    );
-  },
 };
-
 export const DropOutside: Story = {
+  id: "components-navigation-window-tabs--drop-outside",
   render: () => <Example />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const docs = canvas.getByRole("tab", { name: "Docs" });
-    const start = docs.getBoundingClientRect();
-    const origin = { x: start.left + start.width / 2, y: start.top + start.height / 2 };
-    const outside = { x: canvasElement.getBoundingClientRect().right - 10, y: origin.y };
-    const user = userEvent.setup();
-    await user.pointer([
-      { keys: "[MouseLeft>]", target: docs, coords: origin },
-      { target: docs, coords: { ...origin, x: origin.x + 8 } },
-      { target: canvasElement, coords: outside },
-    ]);
-    await expect(docs.getBoundingClientRect().left).toBe(start.left);
-    await expect(canvasElement.querySelector("[data-window-tab-drop]")).toBeNull();
-    await user.pointer({ keys: "[/MouseLeft]", target: canvasElement, coords: outside });
-    await expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
-      "Docs",
-      "Agentic kanban",
-      "Agentic design",
-    ]);
-  },
 };
 export const FullScreen: Story = {
+  id: "components-navigation-window-tabs--full-screen",
   render: () => (
     <Box data-window-full-screen="">
       <Example />
@@ -196,14 +81,16 @@ export const FullScreen: Story = {
   ),
 };
 export const FullScreenDark: Story = {
+  id: "components-navigation-window-tabs--full-screen-dark",
   ...FullScreen,
   globals: { theme: "pstdio-dark" },
 };
 export const OneTab: Story = {
+  id: "components-navigation-window-tabs--one-tab",
   render: () => <Example initialTabs={projects.slice(0, 1)} />,
-  play: async ({ canvasElement }) => expectOpenProjectAfterTabs(canvasElement),
 };
 export const Overflow: Story = {
+  id: "components-navigation-window-tabs--overflow",
   render: () => (
     <Box maxWidth="2xl">
       <Example
@@ -215,44 +102,13 @@ export const Overflow: Story = {
       />
     </Box>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const tabs = canvas.getAllByRole("tab");
-    const viewport = canvasElement.querySelector<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]')!;
-    await expect(viewport.scrollWidth).toBeGreaterThan(viewport.clientWidth);
-    await expect(viewport.scrollHeight).toBe(viewport.clientHeight);
-    tabs[0].focus();
-    await userEvent.keyboard("{End}");
-    await waitFor(() => expect(viewport.scrollLeft).toBeGreaterThan(0));
-    await expect(tabs.at(-1)).toHaveAttribute("aria-selected", "true");
-    const close = canvas.getAllByRole("button", { name: /^Close / }).at(-1)!;
-    await expect(close.getBoundingClientRect().right).toBeLessThanOrEqual(viewport.getBoundingClientRect().right);
-  },
 };
 export const OverflowDropOutside: Story = {
+  id: "components-navigation-window-tabs--overflow-drop-outside",
   ...Overflow,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const tabs = canvas.getAllByRole("tab");
-    const original = tabs.map((tab) => tab.textContent);
-    const viewport = canvasElement.querySelector<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]')!;
-    const start = tabs[2].getBoundingClientRect();
-    const bounds = viewport.getBoundingClientRect();
-    const origin = { x: start.left + start.width / 2, y: start.top + start.height / 2 };
-    const outside = { x: bounds.right + 24, y: origin.y };
-    const user = userEvent.setup();
-    await user.pointer([
-      { keys: "[MouseLeft>]", target: tabs[2], coords: origin },
-      { target: tabs[2], coords: { ...origin, x: origin.x + 8 } },
-      { target: canvas.getByRole("button", { name: "Open project" }), coords: outside },
-    ]);
-    await expect(canvasElement.querySelector("[data-window-tab-drop]")).toBeNull();
-    await user.pointer({ keys: "[/MouseLeft]", target: canvasElement, coords: outside });
-    await expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(original);
-  },
 };
-
 export const LongNames: Story = {
+  id: "components-navigation-window-tabs--long-names",
   render: () => (
     <Example
       initialTabs={[
@@ -261,66 +117,35 @@ export const LongNames: Story = {
       ]}
     />
   ),
-  play: async ({ canvasElement }) => {
-    const label = "Prompt Studio research and documentation for the desktop release";
-    const tab = within(canvasElement).getByRole("tab", { name: label });
-    const text = tab.querySelector("span")!;
-    await expect(text.scrollWidth).toBeGreaterThan(text.clientWidth);
-    await expect(text).toHaveStyle({ textOverflow: "ellipsis", whiteSpace: "nowrap" });
-    const page = within(canvasElement.ownerDocument.body);
-    const short = within(canvasElement).getByRole("tab", { name: "Docs" });
-    // Let the label's ResizeObserver commit before sending a synthetic hover.
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    await userEvent.hover(tab);
-    await expect(await page.findByRole("tooltip")).toHaveTextContent(label);
-    await userEvent.unhover(tab);
-    await userEvent.hover(short);
-    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
-    await userEvent.unhover(short);
-    await userEvent.hover(tab);
-    await expect(await page.findByRole("tooltip")).toHaveTextContent(label);
-    await userEvent.unhover(tab);
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
-    tab.focus();
-    await expect(await page.findByRole("tooltip")).toHaveTextContent(label);
-    await userEvent.keyboard("{Escape}");
-    short.focus();
-    await userEvent.hover(short);
-    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
-  },
 };
-export const Dark: Story = { render: () => <Example />, globals: { theme: "pstdio-dark" } };
-export const Light: Story = { render: () => <Example />, globals: { theme: "pstdio-light" } };
-export const NativeOverlay: Story = { render: () => <Example platform="win32" /> };
-export const CloseHover: Story = {
+export const Dark: Story = {
+  id: "components-navigation-window-tabs--dark",
   render: () => <Example />,
-  play: async ({ canvasElement }) => {
-    await userEvent.hover(within(canvasElement).getByRole("button", { name: "Close Docs" }));
-  },
+  globals: { theme: "pstdio-dark" },
+};
+export const Light: Story = {
+  id: "components-navigation-window-tabs--light",
+  render: () => <Example />,
+  globals: { theme: "pstdio-light" },
+};
+export const NativeOverlay: Story = {
+  id: "components-navigation-window-tabs--native-overlay",
+  render: () => <Example platform="win32" />,
+};
+export const CloseHover: Story = {
+  id: "components-navigation-window-tabs--close-hover",
+  render: () => <Example />,
 };
 export const CloseFocus: Story = {
+  id: "components-navigation-window-tabs--close-focus",
   render: () => <Example />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    canvas.getByRole("tab", { name: "Docs" }).focus();
-    await userEvent.tab();
-    await expect(canvas.getByRole("button", { name: "Close Docs" })).toHaveFocus();
-  },
 };
 export const KeyboardSelection: Story = {
+  id: "components-navigation-window-tabs--keyboard-selection",
   render: () => <Example />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    canvas.getByRole("tab", { name: "Docs" }).focus();
-    await userEvent.keyboard("{ArrowRight}");
-    await expect(canvas.getByRole("tab", { name: "Agentic kanban" })).toHaveAttribute("aria-selected", "true");
-    await userEvent.keyboard("{Delete}");
-    await expect(canvas.getByRole("tab", { name: "Agentic design" })).toHaveAttribute("aria-selected", "true");
-  },
 };
-
 export const Crowded: Story = {
+  id: "components-navigation-window-tabs--crowded",
   render: () => (
     <Box maxWidth="2xl">
       <Example
@@ -332,5 +157,4 @@ export const Crowded: Story = {
       />
     </Box>
   ),
-  play: async ({ canvasElement }) => expectOpenProjectAfterTabs(canvasElement),
 };

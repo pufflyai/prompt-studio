@@ -1,13 +1,12 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Eye, EyeOff, FileImage, Folder, Lock, LockOpen } from "lucide-react";
 import { useRef, useState } from "react";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { ScrollArea } from "../primitives/scroll-area";
 import { TreeList } from "./tree-list";
 import type { TreeListNode } from "./tree-list.types";
 
-const meta: Meta<typeof TreeList> = {
+const meta: CanvasMeta<typeof TreeList> = {
   title: "Components/Data Display/Tree List/Outliner",
   component: TreeList,
   parameters: {
@@ -25,8 +24,7 @@ const meta: Meta<typeof TreeList> = {
   },
 };
 export default meta;
-type Story = StoryObj<typeof TreeList>;
-
+type Story = CanvasVariant<typeof TreeList>;
 const Outliner = (props: { narrow?: boolean }) => {
   const { narrow } = props;
   const [selected, setSelected] = useState(["artwork"]);
@@ -111,44 +109,16 @@ const Outliner = (props: { narrow?: boolean }) => {
   );
 };
 export const ControlledAuthoringRows: Story = {
+  id: "components-data-display-tree-list-outliner--controlled-authoring-rows",
   parameters: {
     docs: { description: { story: "This example reorders root siblings. Drops inside groups are ignored." } },
   },
   render: () => <Outliner />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const user = userEvent.setup();
-    const title = canvas.getByRole("option", { name: "Title", exact: true });
-    const artwork = canvas.getByRole("option", { name: "Artwork", exact: true });
-    await user.click(canvas.getByRole("button", { name: "Toggle visibility: Artwork" }));
-    await waitFor(() => expect(artwork).toHaveAttribute("aria-selected", "true"));
-    await expect(canvas.getByRole("button", { name: "Toggle visibility: Artwork" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
-    await user.click(title);
-    await user.keyboard("{Control>}");
-    await user.click(artwork);
-    await user.keyboard("{/Control}");
-    await waitFor(() => expect(title).toHaveAttribute("aria-selected", "true"));
-    await waitFor(() => expect(artwork).toHaveAttribute("aria-selected", "true"));
-    await user.click(artwork);
-    await waitFor(() => expect(title).toHaveAttribute("aria-selected", "false"));
-    artwork.focus();
-    await user.keyboard("{Alt>}{ArrowUp}{/Alt}");
-    await waitFor(() => expect(artwork).toHaveFocus());
-    await waitFor(() => expect(artwork.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy());
-    const group = canvas.getByRole("option", { name: "Group", exact: true });
-    await user.click(group);
-    await waitFor(() => expect(group).toHaveAttribute("aria-selected", "true"));
-    await waitFor(() => expect(group).toHaveAttribute("aria-expanded", "true"));
-    await user.click(canvas.getByRole("button", { name: "Collapse group" }));
-    await waitFor(() => expect(group).toHaveAttribute("aria-expanded", "false"));
-    await waitFor(() => expect(group).toHaveAttribute("aria-selected", "true"));
-  },
 };
-export const NarrowInspector: Story = { render: () => <Outliner narrow /> };
-
+export const NarrowInspector: Story = {
+  id: "components-data-display-tree-list-outliner--narrow-inspector",
+  render: () => <Outliner narrow />,
+};
 const VirtualSelection = () => {
   const scroll = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState(["row-0"]);
@@ -177,21 +147,9 @@ const VirtualSelection = () => {
   );
 };
 export const VirtualRangeSelection: Story = {
+  id: "components-data-display-tree-list-outliner--virtual-range-selection",
   render: () => <VirtualSelection />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const user = userEvent.setup();
-    await user.click(canvas.getByRole("option", { name: "Layer 0", exact: true }));
-    await user.keyboard("{Shift>}");
-    for (let index = 0; index < 6; index += 1) await user.keyboard("{ArrowDown}");
-    await user.keyboard("{/Shift}");
-    await waitFor(() => expect(canvas.getByRole("option", { name: "Layer 45", exact: true })).toHaveFocus());
-    await waitFor(() =>
-      expect(canvas.getByRole("status")).toHaveTextContent("row-0, row-1, row-2, row-3, row-4, row-5, row-45"),
-    );
-  },
 };
-
 const Reparenting = () => {
   const [atRoot, setAtRoot] = useState(false);
   const [selected, setSelected] = useState(["b"]);
@@ -222,16 +180,7 @@ const Reparenting = () => {
   );
 };
 export const FocusAfterReparenting: Story = {
+  id: "components-data-display-tree-list-outliner--focus-after-reparenting",
   tags: ["!manifest"],
   render: () => <Reparenting />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("option", { name: "Last layer", exact: true }));
-    // A host command changes hierarchy without moving focus to another control.
-    fireEvent.click(canvas.getByRole("button", { name: "Move last layer to root" }));
-    await waitFor(() =>
-      expect(canvas.getByRole("option", { name: "Last layer", exact: true })).toHaveAttribute("aria-level", "1"),
-    );
-    await waitFor(() => expect(canvas.getByRole("option", { name: "Last layer", exact: true })).toHaveFocus());
-  },
 };

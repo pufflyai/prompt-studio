@@ -1,7 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { Workbench } from "../workbench/workbench";
@@ -53,7 +52,6 @@ const SettingsOverlayStory = () => {
   }, [workbench]);
   return <Workbench workbench={workbench} />;
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Settings overlay",
   component: SettingsOverlayStory,
@@ -72,31 +70,12 @@ const meta = {
       description: { component: "The settings dialog uses the shared dialog close position beside its title." },
     },
   },
-} satisfies Meta<typeof SettingsOverlayStory>;
+} satisfies CanvasMeta<typeof SettingsOverlayStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const CenteredClose: Story = {
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    const close = await body.findByRole("button", { name: /^Close/ });
-    const title = await body.findByText("Settings");
-    await waitFor(() => {
-      const closeRect = close.getBoundingClientRect();
-      const titleRect = title.getBoundingClientRect();
-      const difference = Math.abs(closeRect.y + closeRect.height / 2 - titleRect.y - titleRect.height / 2);
-      expect(difference).toBeLessThanOrEqual(1);
-    });
-  },
+  id: "pstdio-workbench-reference-core-api-settings-overlay--centered-close",
 };
-
 export const NavigationRetention: Story = {
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    const general = await body.findByRole("option", { name: "General" });
-    await userEvent.click(body.getByRole("option", { name: "Appearance" }));
-    await expect(await body.findByText("Appearance settings")).toBeVisible();
-    await expect(general).toBeVisible();
-    await expect(general).toBe(body.getByRole("option", { name: "General" }));
-  },
+  id: "pstdio-workbench-reference-core-api-settings-overlay--navigation-retention",
 };

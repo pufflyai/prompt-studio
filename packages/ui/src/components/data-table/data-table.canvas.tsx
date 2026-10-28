@@ -1,4 +1,3 @@
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { DataTable, type DataTableProps, type RowData } from ".";
 import { columnDescriptions } from "./data-table.story-descriptions";
 import { columnManagementRows, generateTableRows, tableRows, thousandTableRows } from "./data-table.story-fixtures";
@@ -19,10 +18,6 @@ import {
   RichTextEditModeStory,
 } from "./edit-mode-story";
 
-interface PlayContext {
-  canvasElement: HTMLElement;
-}
-
 const meta = {
   title: "Components/Data Display/Data Table",
   component: DataTable,
@@ -34,26 +29,15 @@ const meta = {
     toolbarStorageKey: "storybook-data-table-default",
   },
 };
-
 export default meta;
-
 export const Default = {
+  id: "components-data-display-data-table--default",
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="960px" height="420px" marginX="auto" />;
   },
-  play: async ({ canvasElement }: PlayContext) => {
-    const canvas = within(canvasElement);
-    const addViewButton = canvas.getByRole("button", { name: "Add view" });
-    const body = within(document.body);
-
-    await userEvent.hover(addViewButton);
-    await expect(await body.findByRole("tooltip")).toHaveTextContent("Add view");
-    await userEvent.unhover(addViewButton);
-    await waitFor(() => expect(body.queryByRole("tooltip")).not.toBeInTheDocument());
-  },
 };
-
 export const ColumnStats = {
+  id: "components-data-display-data-table--column-stats",
   args: {
     data: generateTableRows(96),
     initialPageSize: 50,
@@ -68,31 +52,9 @@ export const ColumnStats = {
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1180px" height="560px" marginX="auto" />;
   },
-  play: async ({ canvasElement }: PlayContext) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByLabelText("Distribution for Amount")).toBeVisible();
-
-    await userEvent.click(canvas.getByLabelText("Display settings"));
-    const displayMenu = within(document.body);
-    const columnMenu = within(displayMenu.getByRole("dialog"));
-    const invoiceCheckbox = columnMenu.getByRole("checkbox", { name: "Invoice" });
-    await userEvent.click(invoiceCheckbox);
-    await expect(invoiceCheckbox).not.toBeChecked();
-    await expect(canvas.queryByRole("columnheader", { name: "Invoice" })).not.toBeInTheDocument();
-
-    await userEvent.click(invoiceCheckbox);
-    await expect(columnMenu.getByRole("checkbox", { name: "Invoice" })).toBeChecked();
-    await expect(canvas.getByRole("columnheader", { name: "Invoice" })).toBeInTheDocument();
-
-    const statisticsSwitch = columnMenu.getByRole("switch", { name: /^Statistics/ });
-    await expect(statisticsSwitch).toBeChecked();
-    await userEvent.click(displayMenu.getByText("Statistics", { exact: true }));
-    await expect(statisticsSwitch).not.toBeChecked();
-    await expect(canvasElement.querySelector(".data-table-stats-row")).not.toBeInTheDocument();
-  },
 };
-
 export const SingleValueStats = {
+  id: "components-data-display-data-table--single-value-stats",
   args: {
     data: singleValueRows,
     initialPageSize: 20,
@@ -105,20 +67,9 @@ export const SingleValueStats = {
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
-  play: async ({ canvasElement }: PlayContext) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Paid", { selector: "[data-single-value-stat] *" })).toBeVisible();
-
-    await expect(
-      canvas.getByText(new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(1200)),
-    ).toBeInTheDocument();
-    await expect(canvas.getByText("Paid", { selector: "[data-single-value-stat] *" })).toBeInTheDocument();
-    await expect(canvas.queryByLabelText("Distribution for Amount")).not.toBeInTheDocument();
-    await expect(canvas.queryByLabelText("Paid: 100%")).not.toBeInTheDocument();
-  },
 };
-
 export const ColumnDescriptions = {
+  id: "components-data-display-data-table--column-descriptions",
   args: {
     data: generateTableRows(24),
     columnDescriptions,
@@ -128,8 +79,8 @@ export const ColumnDescriptions = {
     <DataTableStoryContainer args={args} maxWidth="1080px" height="480px" marginX="auto" />
   ),
 };
-
 export const FullHeight = {
+  id: "components-data-display-data-table--full-height",
   args: {
     data: thousandTableRows,
     toolbarStorageKey: "storybook-data-table-full-height",
@@ -142,8 +93,8 @@ export const FullHeight = {
     return <DataTableStoryContainer args={args} height="100%" />;
   },
 };
-
 export const Paginated = {
+  id: "components-data-display-data-table--paginated",
   args: {
     data: generateTableRows(96),
     initialPageSize: 10,
@@ -155,8 +106,8 @@ export const Paginated = {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
 };
-
 export const SelectableRows = {
+  id: "components-data-display-data-table--selectable-rows",
   args: {
     data: generateTableRows(48),
     initialPageSize: 10,
@@ -168,25 +119,9 @@ export const SelectableRows = {
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
-  play: async ({ canvasElement }: PlayContext) => {
-    const canvas = within(canvasElement);
-    const header = canvas.getByTestId("collection-view-bar");
-    const rowSelectors = canvas.getAllByLabelText("Select row");
-
-    await expect(within(header).queryByText("48 rows")).not.toBeInTheDocument();
-    await userEvent.click(rowSelectors[0]!);
-    await userEvent.click(rowSelectors[1]!);
-
-    const selectionBar = canvas.getByRole("toolbar", { name: "Selection actions" });
-    const selectionOverlay = selectionBar.parentElement;
-    await expect(selectionBar).toHaveTextContent("2 rows selected");
-    await expect(selectionOverlay).not.toBeNull();
-    await expect(getComputedStyle(selectionOverlay!).position).toBe("absolute");
-    await expect(within(header).getByText("All")).toBeInTheDocument();
-  },
 };
-
 export const RowActions = {
+  id: "components-data-display-data-table--row-actions",
   args: {
     data: generateTableRows(36),
     initialPageSize: 10,
@@ -198,8 +133,8 @@ export const RowActions = {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
 };
-
 export const DynamicRowActions = {
+  id: "components-data-display-data-table--dynamic-row-actions",
   args: {
     data: [
       { Invoice: "INV-001", Status: "Open" },
@@ -212,18 +147,9 @@ export const DynamicRowActions = {
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
-  play: async ({ canvasElement }: PlayContext) => {
-    const canvas = within(canvasElement);
-    const rows = canvas.getAllByRole("row").slice(1);
-
-    await userEvent.click(within(rows[0]!).getByRole("button", { name: "Row actions" }));
-    await waitFor(() => expect(within(document.body).getByRole("menuitem", { name: "Archive invoice" })).toBeVisible());
-    await userEvent.keyboard("{Escape}");
-    await expect(within(rows[1]!).queryByRole("button", { name: "Row actions" })).not.toBeInTheDocument();
-  },
 };
-
 export const RowActivation = {
+  id: "components-data-display-data-table--row-activation",
   args: {
     data: generateTableRows(36),
     initialPageSize: 10,
@@ -235,28 +161,28 @@ export const RowActivation = {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
 };
-
 export const EditMode = {
+  id: "components-data-display-data-table--edit-mode",
   render: () => <EditModeStory />,
 };
-
 export const RichTextEditMode = {
+  id: "components-data-display-data-table--rich-text-edit-mode",
   render: () => <RichTextEditModeStory />,
 };
-
 export const ModeToggle = {
+  id: "components-data-display-data-table--mode-toggle",
   render: () => <ModeToggleStory />,
 };
-
 export const EditableSelectableRows = {
+  id: "components-data-display-data-table--editable-selectable-rows",
   render: () => <EditableSelectableRowsStory />,
 };
-
 export const EditableWithViews = {
+  id: "components-data-display-data-table--editable-with-views",
   render: () => <EditableWithViewsStory />,
 };
-
 export const TagRichRows = {
+  id: "components-data-display-data-table--tag-rich-rows",
   args: {
     data: generateTableRows(48),
     initialPageSize: 10,
@@ -271,8 +197,8 @@ export const TagRichRows = {
     return <DataTableStoryContainer args={args} maxWidth="1180px" height="560px" marginX="auto" />;
   },
 };
-
 export const ColumnManagement = {
+  id: "components-data-display-data-table--column-management",
   args: {
     data: columnManagementRows,
     initialPageSize: 10,

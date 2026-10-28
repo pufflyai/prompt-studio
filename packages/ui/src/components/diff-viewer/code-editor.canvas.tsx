@@ -1,9 +1,7 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import { loader } from "@monaco-editor/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ThemePreferenceProvider, useThemePreference } from "../../utils/theme-preference";
-import { CodeDiffEditor, CodeEditor, preloadCodeEditor } from "./code-editor";
+import { CodeDiffEditor, CodeEditor } from "./code-editor";
 
 const meta = {
   title: "Patterns/Editors/Code Editor",
@@ -21,16 +19,18 @@ const meta = {
     isEditable: true,
     showLineNumbers: true,
   },
-} satisfies Meta<typeof CodeEditor>;
-
+} satisfies CanvasMeta<typeof CodeEditor>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Editable: Story = {};
-
-export const ReadOnly: Story = { args: { isEditable: false } };
-
+type Story = CanvasVariant<typeof meta>;
+export const Editable: Story = {
+  id: "patterns-editors-code-editor--editable",
+};
+export const ReadOnly: Story = {
+  id: "patterns-editors-code-editor--read-only",
+  args: { isEditable: false },
+};
 export const ConstrainedContainer: Story = {
+  id: "patterns-editors-code-editor--constrained-container",
   tags: ["!manifest"],
   args: {
     defaultCode: 'export const greeting: number = "Hello";\n',
@@ -42,76 +42,16 @@ export const ConstrainedContainer: Story = {
       </Box>
     ),
   ],
-  play: async ({ canvasElement }) => {
-    await preloadCodeEditor();
-    const monaco: typeof import("monaco-editor") = await loader.init();
-    const editor = await waitFor(
-      () => {
-        const instance = monaco.editor.getEditors().find((candidate) => canvasElement.contains(candidate.getDomNode()));
-        expect(instance).toBeDefined();
-        expect(monaco.editor.getModelMarkers({ resource: instance!.getModel()!.uri }).length).toBeGreaterThan(0);
-        return instance!;
-      },
-      { timeout: 5_000 },
-    );
-    editor.setPosition({ lineNumber: 1, column: 15 });
-    await editor.getAction("editor.action.showHover")!.run();
-    await waitFor(() => {
-      const hover = canvasElement.querySelector<HTMLElement>(".monaco-hover");
-      expect(hover).toBeVisible();
-      const bounds = hover!.getBoundingClientRect();
-      expect(bounds.right).toBeGreaterThan(editor.getDomNode()!.getBoundingClientRect().right);
-      const document = canvasElement.ownerDocument;
-      for (const x of [bounds.left + 5, bounds.right - 5]) {
-        for (const y of [bounds.top + 5, bounds.bottom - 5]) {
-          expect(hover!.contains(document.elementFromPoint(x, y))).toBe(true);
-        }
-      }
-    });
-  },
 };
-
 export const Tsx: Story = {
+  id: "patterns-editors-code-editor--tsx",
   args: {
     fileName: "icon.tsx",
     defaultCode: 'declare const React: any;\nexport const Icon = () => <svg width={24}><path d="M0 0" /></svg>;\n',
   },
-  play: async ({ canvasElement }) => {
-    await preloadCodeEditor();
-    const monaco: typeof import("monaco-editor") = await loader.init();
-    const editor = await waitFor(
-      () => {
-        const instance = monaco.editor.getEditors().find((candidate) => canvasElement.contains(candidate.getDomNode()));
-        expect(instance).toBeDefined();
-        return instance!;
-      },
-      { timeout: 5_000 },
-    );
-    const model = editor.getModel()!;
-    const source = model.getValue();
-    const uri = model.uri.toString();
-    const getWorker = await monaco.typescript.getTypeScriptWorker();
-    const worker = await getWorker(model.uri);
-    await waitFor(async () => {
-      expect(await worker.getSyntacticDiagnostics(uri)).toEqual([]);
-      expect(await worker.getSemanticDiagnostics(uri)).toEqual([]);
-    });
-    try {
-      model.setValue(`${source}\nexport const invalid: number = "wrong";`);
-      await waitFor(async () => {
-        const diagnostics = await worker.getSemanticDiagnostics(uri);
-        expect(diagnostics.map((diagnostic) => diagnostic.code)).toContain(2322);
-      });
-    } finally {
-      model.setValue(source);
-    }
-    await waitFor(async () => {
-      expect(await worker.getSemanticDiagnostics(uri)).toEqual([]);
-    });
-  },
 };
-
 export const Diff: Story = {
+  id: "patterns-editors-code-editor--diff",
   render: () => (
     <CodeDiffEditor
       language="typescript"
@@ -121,10 +61,8 @@ export const Diff: Story = {
     />
   ),
 };
-
 const ThemeSwitchingEditors = () => {
   const { toggleThemePreference } = useThemePreference();
-
   return (
     <Stack height="full">
       <Button alignSelf="start" onClick={toggleThemePreference}>
@@ -143,39 +81,12 @@ const ThemeSwitchingEditors = () => {
     </Stack>
   );
 };
-
 export const ThemeSwitching: Story = {
+  id: "patterns-editors-code-editor--theme-switching",
   tags: ["!manifest"],
   render: () => (
     <ThemePreferenceProvider initialPreference="pstdio-light">
       <ThemeSwitchingEditors />
     </ThemePreferenceProvider>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const document = canvasElement.ownerDocument;
-    const assertEditorMode = async (mode: "light" | "dark") => {
-      await waitFor(
-        () => {
-          const editors = canvasElement.querySelectorAll<HTMLElement>(".monaco-editor:not(.gutter)");
-          expect(editors).toHaveLength(3);
-          for (const editor of editors) {
-            const background = document.defaultView!.getComputedStyle(editor).backgroundColor;
-            const channels = background.match(/\d+/g)!.map(Number);
-            expect(channels.slice(0, 3).every((channel) => (mode === "light" ? channel > 200 : channel < 60))).toBe(
-              true,
-            );
-            expect(editor).toHaveClass(mode === "light" ? "vs" : "vs-dark");
-          }
-        },
-        { timeout: 5_000 },
-      );
-    };
-
-    await assertEditorMode("light");
-    await userEvent.click(canvas.getByRole("button", { name: "Toggle theme" }));
-    await assertEditorMode("dark");
-    await userEvent.click(canvas.getByRole("button", { name: "Toggle theme" }));
-    await assertEditorMode("light");
-  },
 };

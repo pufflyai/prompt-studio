@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchResourceSearch } from "./resource-search";
@@ -17,7 +16,7 @@ const meta = {
   ],
   args: {
     workbench,
-    onClose: fn(),
+    onClose: () => {},
     request: {
       label: "Switch session",
       placeholder: "Search sessions",
@@ -33,26 +32,17 @@ const meta = {
         })),
     },
   },
-} satisfies Meta<typeof WorkbenchResourceSearch>;
+} satisfies CanvasMeta<typeof WorkbenchResourceSearch>;
 export default meta;
-export const FullHistory: StoryObj<typeof meta> = {
-  play: async ({ canvasElement, args }) => {
-    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "Switch session" });
-    const search = within(dialog).getByPlaceholderText("Search sessions");
-    await userEvent.type(search, "Session 199");
-    await expect(within(dialog).getByRole("option", { name: "Session 199" })).toBeVisible();
-    await userEvent.keyboard("{Escape}");
-    await expect(search).toHaveValue("");
-    await expect(args.onClose).not.toHaveBeenCalled();
-    await userEvent.keyboard("{Escape}");
-    await expect(args.onClose).toHaveBeenCalledOnce();
-  },
+export const FullHistory: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-components-resource-search--full-history",
 };
-export const Empty: StoryObj<typeof meta> = {
+export const Empty: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-components-resource-search--empty",
   args: { request: { label: "Switch session", placeholder: "Search sessions", list: () => [] } },
 };
-
-export const StatusIndicators: StoryObj<typeof meta> = {
+export const StatusIndicators: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-components-resource-search--status-indicators",
   args: {
     request: {
       label: "Switch session",
@@ -74,17 +64,12 @@ export const StatusIndicators: StoryObj<typeof meta> = {
         })),
     },
   },
-  play: async ({ canvasElement }) => {
-    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "Switch session" });
-    await expect(within(dialog).getByRole("img", { name: "Session status: Completed" })).toBeVisible();
-    await expect(within(dialog).getByRole("img", { name: "Session status: Failed" })).toBeVisible();
-  },
 };
-
 const ownedWorkbench = createWorkbench();
 ownedWorkbench.resources.registerKind({ kind: "drawing", extensionId: "first", label: "First", icon: "File" });
 ownedWorkbench.resources.registerKind({ kind: "drawing", extensionId: "second", label: "Second", icon: "Folder" });
-export const OwnerIcons: StoryObj<typeof meta> = {
+export const OwnerIcons: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-components-resource-search--owner-icons",
   args: {
     workbench: ownedWorkbench,
     request: {
@@ -95,12 +80,5 @@ export const OwnerIcons: StoryObj<typeof meta> = {
         { resource: { type: "drawing", id: "one", extensionId: "second", label: "Second drawing" }, activate() {} },
       ],
     },
-  },
-  play: async ({ canvasElement }) => {
-    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "Owner icons" });
-    const first = within(dialog).getByRole("option", { name: "First drawing" });
-    const second = within(dialog).getByRole("option", { name: "Second drawing" });
-    await expect(first.querySelector("svg.lucide-file")).toBeInTheDocument();
-    await expect(second.querySelector("svg.lucide-folder")).toBeInTheDocument();
   },
 };

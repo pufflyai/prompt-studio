@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { SessionHarnessSignIn } from "./session-harness-sign-in";
 import { SessionHarnessUnavailable } from "./session-harness-unavailable";
@@ -32,17 +32,26 @@ const AccessStory = (props: { installed: boolean; signedIn: boolean }) => {
     </Box>
   );
 };
-const meta: Meta<typeof AccessStory> = {
+const meta: CanvasMeta<typeof AccessStory> = {
   title: "Sessions/Harness access",
   component: AccessStory,
   args: { installed: true, signedIn: false },
 };
 export default meta;
-type Story = StoryObj<typeof AccessStory>;
-export const SignedOut: Story = {};
-export const NoHarness: Story = { args: { installed: false } };
-export const SignedIn: Story = { args: { signedIn: true } };
+type Story = CanvasVariant<typeof AccessStory>;
+export const SignedOut: Story = {
+  id: "sessions-harness-access--signed-out",
+};
+export const NoHarness: Story = {
+  id: "sessions-harness-access--no-harness",
+  args: { installed: false },
+};
+export const SignedIn: Story = {
+  id: "sessions-harness-access--signed-in",
+  args: { signedIn: true },
+};
 export const Narrow: Story = {
+  id: "sessions-harness-access--narrow",
   decorators: [
     (Story) => (
       <Box maxW="xs">

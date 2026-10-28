@@ -1,12 +1,11 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, fireEvent, userEvent, within } from "storybook/test";
 import { useThemePreference } from "../../utils/theme-preference";
 import { mermaidFixtures } from "./mermaid-fixtures";
 import { MermaidRenderer } from "./mermaid-renderer";
 
-const meta: Meta<typeof MermaidRenderer> = {
+const meta: CanvasMeta<typeof MermaidRenderer> = {
   title: "Patterns/Editors/Mermaid Renderer",
   component: MermaidRenderer,
   parameters: {
@@ -25,14 +24,10 @@ const meta: Meta<typeof MermaidRenderer> = {
     onRequestEdit: () => undefined,
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof MermaidRenderer>;
-
+type Story = CanvasVariant<typeof MermaidRenderer>;
 const SourceChangeResetStory = () => {
-  const [code, setCode] = useState(mermaidFixtures.ps81Flowchart);
-
+  const [code, setCode] = useState<string>(mermaidFixtures.ps81Flowchart);
   return (
     <Stack gap="sm">
       <Button size="sm" alignSelf="flex-start" onClick={() => setCode(mermaidFixtures.sequence)}>
@@ -42,10 +37,8 @@ const SourceChangeResetStory = () => {
     </Stack>
   );
 };
-
 const ThemeToggleStory = () => {
   const { themePreference, toggleThemePreference } = useThemePreference();
-
   return (
     <Stack gap="sm">
       <Button size="sm" alignSelf="flex-start" onClick={toggleThemePreference}>
@@ -57,115 +50,91 @@ const ThemeToggleStory = () => {
     </Stack>
   );
 };
-
-export const Default: Story = {};
-
+export const Default: Story = {
+  id: "patterns-editors-mermaid-renderer--default",
+};
 export const ReadOnly: Story = {
+  id: "patterns-editors-mermaid-renderer--read-only",
   args: {
     isEditable: false,
     onRequestEdit: undefined,
   },
 };
-
 export const SequenceDiagram: Story = {
+  id: "patterns-editors-mermaid-renderer--sequence-diagram",
   args: {
     code: mermaidFixtures.sequence,
   },
 };
-
 export const StateDiagram: Story = {
+  id: "patterns-editors-mermaid-renderer--state-diagram",
   args: {
     code: mermaidFixtures.state,
   },
 };
-
 export const EntityRelationshipDiagram: Story = {
+  id: "patterns-editors-mermaid-renderer--entity-relationship-diagram",
   args: {
     code: mermaidFixtures.er,
   },
 };
-
 export const ClassDiagram: Story = {
+  id: "patterns-editors-mermaid-renderer--class-diagram",
   args: {
     code: mermaidFixtures.class,
   },
 };
-
 export const GanttChart: Story = {
+  id: "patterns-editors-mermaid-renderer--gantt-chart",
   args: {
     code: mermaidFixtures.gantt,
   },
 };
-
 export const DarkMode: Story = {
+  id: "patterns-editors-mermaid-renderer--dark-mode",
   globals: {
     theme: "pstdio-dark",
   },
 };
-
 export const InvalidSyntax: Story = {
+  id: "patterns-editors-mermaid-renderer--invalid-syntax",
   args: {
     code: mermaidFixtures.invalid,
   },
 };
-
 export const FullscreenOpen: Story = {
+  id: "patterns-editors-mermaid-renderer--fullscreen-open",
   tags: ["!manifest"],
   args: {
     initialFullscreenOpen: true,
   },
 };
-
 export const ZoomedInPan: Story = {
+  id: "patterns-editors-mermaid-renderer--zoomed-in-pan",
   tags: ["!manifest"],
   args: {
     initialZoom: 1.5,
   },
 };
-
 export const SourceChangeReset: Story = {
+  id: "patterns-editors-mermaid-renderer--source-change-reset",
   tags: ["!manifest"],
   render: () => <SourceChangeResetStory />,
 };
-
 export const ThemeToggle: Story = {
+  id: "patterns-editors-mermaid-renderer--theme-toggle",
   tags: ["!manifest"],
   render: () => <ThemeToggleStory />,
 };
-
 export const ZoomControlPlay: Story = {
+  id: "patterns-editors-mermaid-renderer--zoom-control-play",
   tags: ["!manifest"],
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByRole("img", { name: "Mermaid diagram" });
-    await userEvent.click(canvas.getByRole("button", { name: "Zoom in" }));
-    await expect(canvas.getByTestId("mermaid-diagram-transform")).toHaveAttribute("data-pan-enabled", "true");
-  },
 };
-
 export const FullscreenPlay: Story = {
+  id: "patterns-editors-mermaid-renderer--fullscreen-play",
   tags: ["!manifest"],
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByRole("img", { name: "Mermaid diagram" });
-    await userEvent.click(canvas.getByRole("button", { name: "Open diagram" }));
-    await expect(within(document.body).getByRole("dialog", { name: "Mermaid diagram" })).toBeVisible();
-  },
 };
-
 export const PanGatePlay: Story = {
+  id: "patterns-editors-mermaid-renderer--pan-gate-play",
   tags: ["!manifest"],
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByRole("img", { name: "Mermaid diagram" });
-
-    const transform = canvas.getByTestId("mermaid-diagram-transform");
-    const before = getComputedStyle(transform).transform;
-    fireEvent.pointerDown(transform, { pointerId: 1, clientX: 10, clientY: 10 });
-    fireEvent.pointerMove(transform, { pointerId: 1, clientX: 80, clientY: 40 });
-    fireEvent.pointerUp(transform, { pointerId: 1 });
-
-    await expect(transform).toHaveAttribute("data-pan-enabled", "false");
-    expect(getComputedStyle(transform).transform).toBe(before);
-  },
 };

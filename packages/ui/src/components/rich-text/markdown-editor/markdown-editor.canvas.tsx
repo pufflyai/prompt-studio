@@ -1,10 +1,10 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import { mermaidFixtures } from "@/components/mermaid-renderer/mermaid-fixtures";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { MarkdownEditor } from "./markdown-editor";
-import { checkSelectionToolbarScrolling, scrollingMarkdown } from "./markdown-editor-scrolling.play";
+import { scrollingMarkdown } from "./markdown-editor-scrolling.play";
 
 const message = `
 # MarkdownEditor
@@ -129,7 +129,6 @@ def fib(n: int):
 print(list(fib(10)))
 \`\`\`
 `;
-
 const buildMermaidMessage = (title: string, code: string) => `
 # ${title}
 
@@ -137,11 +136,9 @@ const buildMermaidMessage = (title: string, code: string) => `
 ${code}
 \`\`\`
 `;
-
 const mermaidMessage = buildMermaidMessage("Mermaid Diagram", mermaidFixtures.ps81Flowchart);
 const invalidMermaidMessage = buildMermaidMessage("Broken Mermaid", mermaidFixtures.invalid);
 const mermaidEditedMessage = buildMermaidMessage("Mermaid Edit Workflow", mermaidFixtures.ps81Flowchart);
-
 const editableCodeBlockMessage = `
 # Code Authoring
 
@@ -153,10 +150,8 @@ export function greet(name: string) {
 }
 \`\`\`
 `;
-
 const MermaidEditWorkflowStory = () => {
   const [markdown, setMarkdown] = useState(mermaidEditedMessage);
-
   return (
     <>
       <MarkdownEditor defaultState={mermaidEditedMessage} isEditable onChange={setMarkdown} />
@@ -164,7 +159,6 @@ const MermaidEditWorkflowStory = () => {
     </>
   );
 };
-
 const liveShortcutsMessage = `# Live Markdown Shortcuts
 
 Use this editor to exercise live markdown formatting. Try:
@@ -177,10 +171,8 @@ Use this editor to exercise live markdown formatting. Try:
 - Wrap text with backticks for inline code.
 - Type \`---\` on its own line for a horizontal rule.
 `;
-
 const LiveShortcutsStory = () => {
   const [markdown, setMarkdown] = useState(liveShortcutsMessage);
-
   return (
     <>
       <MarkdownEditor defaultState={liveShortcutsMessage} isEditable onChange={setMarkdown} />
@@ -188,8 +180,7 @@ const LiveShortcutsStory = () => {
     </>
   );
 };
-
-const meta: Meta<typeof MarkdownEditor> = {
+const meta: CanvasMeta<typeof MarkdownEditor> = {
   title: "Patterns/Editors/Markdown Editor",
   component: MarkdownEditor,
   decorators: [
@@ -222,94 +213,93 @@ const meta: Meta<typeof MarkdownEditor> = {
     },
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof MarkdownEditor>;
-
-export const Basic: Story = {};
-
+type Story = CanvasVariant<typeof MarkdownEditor>;
+export const Basic: Story = {
+  id: "patterns-editors-markdown-editor--basic",
+};
 export const EmptyWithPlaceholder: Story = {
+  id: "patterns-editors-markdown-editor--empty-with-placeholder",
   args: {
     defaultState: "",
     placeholder: "Start writing Markdown...",
   },
 };
-
 export const MermaidPreviewAndEdit: Story = {
+  id: "patterns-editors-markdown-editor--mermaid-preview-and-edit",
   args: {
     defaultState: mermaidMessage,
     isEditable: true,
   },
 };
-
 export const MermaidEditPreviewWorkflow: Story = {
+  id: "patterns-editors-markdown-editor--mermaid-edit-preview-workflow",
   tags: ["!manifest"],
   render: () => <MermaidEditWorkflowStory />,
 };
-
 export const MermaidSyntaxError: Story = {
+  id: "patterns-editors-markdown-editor--mermaid-syntax-error",
   args: {
     defaultState: invalidMermaidMessage,
     isEditable: true,
   },
 };
-
 export const MermaidReadOnly: Story = {
+  id: "patterns-editors-markdown-editor--mermaid-read-only",
   args: {
     defaultState: mermaidMessage,
     isEditable: false,
   },
 };
-
 export const MermaidSequenceDiagram: Story = {
+  id: "patterns-editors-markdown-editor--mermaid-sequence-diagram",
   args: {
     defaultState: buildMermaidMessage("Mermaid Sequence Diagram", mermaidFixtures.sequence),
     isEditable: true,
   },
 };
-
 export const MermaidStateDiagram: Story = {
+  id: "patterns-editors-markdown-editor--mermaid-state-diagram",
   args: {
     defaultState: buildMermaidMessage("Mermaid State Diagram", mermaidFixtures.state),
     isEditable: true,
   },
 };
-
 export const MermaidEntityRelationshipDiagram: Story = {
+  id: "patterns-editors-markdown-editor--mermaid-entity-relationship-diagram",
   args: {
     defaultState: buildMermaidMessage("Mermaid Entity Relationship Diagram", mermaidFixtures.er),
     isEditable: true,
   },
 };
-
 export const MermaidClassDiagram: Story = {
+  id: "patterns-editors-markdown-editor--mermaid-class-diagram",
   args: {
     defaultState: buildMermaidMessage("Mermaid Class Diagram", mermaidFixtures.class),
     isEditable: true,
   },
 };
-
 export const MermaidGanttChart: Story = {
+  id: "patterns-editors-markdown-editor--mermaid-gantt-chart",
   args: {
     defaultState: buildMermaidMessage("Mermaid Gantt Chart", mermaidFixtures.gantt),
     isEditable: true,
   },
 };
-
 export const EditableCodeBlocks: Story = {
+  id: "patterns-editors-markdown-editor--editable-code-blocks",
   args: {
     defaultState: editableCodeBlockMessage,
     isEditable: true,
   },
 };
-
 export const LiveMarkdownShortcuts: Story = {
+  id: "patterns-editors-markdown-editor--live-markdown-shortcuts",
   tags: ["!manifest"],
   render: () => <LiveShortcutsStory />,
 };
-
 export const SelectionToolbarEditorScroll: Story = {
+  id: "patterns-editors-markdown-editor--selection-toolbar-editor-scroll",
   tags: ["!manifest", "markdown-selection-scroll"],
   args: { defaultState: scrollingMarkdown },
   render: (args) => (
@@ -317,17 +307,15 @@ export const SelectionToolbarEditorScroll: Story = {
       <MarkdownEditor {...args} />
     </Box>
   ),
-  play: checkSelectionToolbarScrolling,
 };
-
 export const SelectionToolbarAncestorScroll: Story = {
+  id: "patterns-editors-markdown-editor--selection-toolbar-ancestor-scroll",
   tags: ["!manifest", "markdown-selection-scroll"],
   args: { defaultState: scrollingMarkdown, scrollable: false },
-  play: checkSelectionToolbarScrolling,
 };
-
 /** Empty documents and their placeholder share the larger document inset. */
 export const EmptyDocument: Story = {
+  id: "patterns-editors-markdown-editor--empty-document",
   args: { defaultState: "", isEditable: true, placeholder: "Describe the tool you need...", fullWidth: true },
   render: (args) => (
     <Box height="320px">

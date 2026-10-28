@@ -1,8 +1,8 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { KanbanRendererSkeleton } from "./kanban-renderer-skeleton";
 
-const meta: Meta<typeof KanbanRendererSkeleton> = {
+const meta: CanvasMeta<typeof KanbanRendererSkeleton> = {
   title: "Patterns/Kanban Renderer/Loading",
   component: KanbanRendererSkeleton,
   parameters: { layout: "fullscreen" },
@@ -15,11 +15,12 @@ const meta: Meta<typeof KanbanRendererSkeleton> = {
     ),
   ],
 };
-
 export default meta;
-
-type Story = StoryObj<typeof KanbanRendererSkeleton>;
-
-export const Board: Story = {};
-
-export const List: Story = { args: { viewMode: "list" } };
+type Story = CanvasVariant<typeof KanbanRendererSkeleton>;
+export const Board: Story = {
+  id: "patterns-kanban-renderer-loading--board",
+};
+export const List: Story = {
+  id: "patterns-kanban-renderer-loading--list",
+  args: { viewMode: "list" },
+};

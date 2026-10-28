@@ -2,6 +2,8 @@ import { Box, Button } from "@chakra-ui/react";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { Component, type ReactNode, useState } from "react";
 import { createRoot } from "react-dom/client";
+import type { CanvasDefinition } from "../src/canvases/definitions";
+import catalog from "../src/catalog/generated/stories.json";
 import { CanvasThemeContext, CanvasThemeProvider } from "../src/catalog/theme";
 import { createCanvasRuntime } from "../src/controller/runtime";
 import { readLayout } from "../src/layout";
@@ -35,7 +37,65 @@ class Boundary extends Component<{ children: ReactNode }, { error?: string }> {
   }
 }
 const id = new URLSearchParams(location.search).get("canvas");
-const canvas = verificationCanvases.find((canvas) => canvas.id === id);
+const variantId = new URLSearchParams(location.search).get("preview");
+const documentEntry = catalog.documents.find((entry) => entry.id === variantId);
+const variant = catalog.stories.find((entry) => entry.id === variantId);
+const resolveCanvas = (): CanvasDefinition | undefined => {
+  if (new URLSearchParams(location.search).has("failure"))
+    return {
+      id: "failure",
+      name: "Failure",
+      items: [
+        {
+          id: "missing",
+          name: "Missing preview",
+          position: { x: 0, y: 0 },
+          width: 400,
+          height: 300,
+          preview: {
+            kind: "story",
+            id: "missing",
+            source: "missing.canvas.tsx",
+            suite: "ui",
+            exportName: "Missing",
+            viewportHeight: 300,
+          },
+        },
+      ],
+    };
+  if (variant)
+    return {
+      id: "single-preview",
+      name: "Test preview",
+      items: [
+        {
+          id: variant.id,
+          name: variant.name,
+          position: { x: 0, y: 0 },
+          width: 1200,
+          height: 960,
+          preview: { kind: "story", ...variant, viewportHeight: 960 },
+        },
+      ],
+    };
+  if (documentEntry)
+    return {
+      id: "document-preview",
+      name: "Document preview",
+      items: [
+        {
+          id: documentEntry.id,
+          name: documentEntry.name,
+          position: { x: 0, y: 0 },
+          width: 1200,
+          height: 240,
+          preview: { kind: "document", ...documentEntry },
+        },
+      ],
+    };
+  return verificationCanvases.find((canvas) => canvas.id === id);
+};
+const canvas = resolveCanvas();
 if (!canvas) throw new Error(`Unknown canvas ${id}`);
 const runtime = createCanvasRuntime(canvas, readLayout(null, canvas.items), () => {
   window.__CANVAS_VERIFICATION__.saves += 1;

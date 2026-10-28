@@ -1,5 +1,5 @@
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { Meta, StoryObj } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
 
@@ -18,7 +18,6 @@ queryClient.setQueryData(["extension-connections", "project-1"], {
     },
   ],
 });
-
 const definitions: NonNullable<WorkbenchExtensionMetadata["connections"]> = [
   {
     id: "pstdio.remote.connection.control-plane",
@@ -29,8 +28,7 @@ const definitions: NonNullable<WorkbenchExtensionMetadata["connections"]> = [
     supportsCheck: true,
   },
 ];
-
-const meta: Meta<typeof ExtensionConnectionsCard> = {
+const meta: CanvasMeta<typeof ExtensionConnectionsCard> = {
   title: "ProjectSettings/ExtensionConnectionsCard",
   component: ExtensionConnectionsCard,
   parameters: { layout: "padded" },
@@ -42,9 +40,9 @@ const meta: Meta<typeof ExtensionConnectionsCard> = {
     ),
   ],
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ExtensionConnectionsCard>;
-
-export const Connected: Story = { args: { projectId: "project-1", definitions } };
+type Story = CanvasVariant<typeof ExtensionConnectionsCard>;
+export const Connected: Story = {
+  id: "projectsettings-extensionconnectionscard--connected",
+  args: { projectId: "project-1", definitions },
+};

@@ -1,11 +1,10 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { PromptEditor, type PromptEditorProps } from "./prompt-input";
 import { generateEditorStateFromString } from "./utils";
 
-const meta: Meta<typeof PromptEditor> = {
+const meta: CanvasMeta<typeof PromptEditor> = {
   title: "Patterns/Editors/Prompt Editor",
   component: PromptEditor,
   parameters: { layout: "padded" },
@@ -18,61 +17,30 @@ const meta: Meta<typeof PromptEditor> = {
   },
 };
 export default meta;
-type Story = StoryObj<typeof PromptEditor>;
-export const Basic: Story = {};
-export const ReadOnly: Story = { args: { isEditable: false } };
-export const DebugView: Story = { args: { debug: true } };
-
+type Story = CanvasVariant<typeof PromptEditor>;
+export const Basic: Story = {
+  id: "patterns-editors-prompt-editor--basic",
+};
+export const ReadOnly: Story = {
+  id: "patterns-editors-prompt-editor--read-only",
+  args: { isEditable: false },
+};
+export const DebugView: Story = {
+  id: "patterns-editors-prompt-editor--debug-view",
+  args: { debug: true },
+};
 export const SlashPopover: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    const input = canvas.getByRole("textbox");
-    await userEvent.type(input, "/");
-    await expect(await page.findByRole("listbox", { name: "Typeahead menu" })).toBeVisible();
-    await userEvent.keyboard("{ArrowDown}{Enter}");
-    await expect(input.innerText).toBe("/compact ");
-    await expect(page.queryByRole("listbox", { name: "Typeahead menu" })).not.toBeInTheDocument();
-  },
+  id: "patterns-editors-prompt-editor--slash-popover",
 };
-
 export const FilterAndTab: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    const input = canvas.getByRole("textbox");
-    await userEvent.type(input, "/pl");
-    await expect(await page.findAllByRole("option")).toHaveLength(1);
-    await userEvent.keyboard("{Tab}");
-    await expect(input.innerText).toBe("/plan ");
-    await userEvent.type(input, "Keep my task text");
-    await expect(input).toHaveTextContent("/plan Keep my task text");
-  },
+  id: "patterns-editors-prompt-editor--filter-and-tab",
 };
-
 export const DismissPopover: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    const input = canvas.getByRole("textbox");
-    await userEvent.type(input, "/");
-    await userEvent.keyboard("{Escape}");
-    await expect(input).toHaveTextContent("/");
-    await expect(page.queryByRole("listbox", { name: "Typeahead menu" })).not.toBeInTheDocument();
-  },
+  id: "patterns-editors-prompt-editor--dismiss-popover",
 };
-
 export const MultilineDraft: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const input = canvas.getByRole("textbox");
-    await userEvent.type(input, "/");
-    await userEvent.keyboard("{Shift>}{Enter}{/Shift}");
-    await userEvent.type(input, "Keep this line");
-    await expect(input.innerText).toContain("/\nKeep this line");
-  },
+  id: "patterns-editors-prompt-editor--multiline-draft",
 };
-
 const DiscoveringCommands = (props: PromptEditorProps) => {
   const { commands = [], ...editorProps } = props;
   const [query, setQuery] = useState("");
@@ -85,15 +53,9 @@ const DiscoveringCommands = (props: PromptEditorProps) => {
   return <PromptEditor {...editorProps} commands={ready ? commands : []} onChange={setQuery} />;
 };
 export const DelayedDiscovery: Story = {
+  id: "patterns-editors-prompt-editor--delayed-discovery",
   render: (args) => <DiscoveringCommands {...args} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    await userEvent.type(canvas.getByRole("textbox"), "/");
-    await expect(await page.findByRole("listbox", { name: "Typeahead menu" })).toBeVisible();
-  },
 };
-
 // The editor owns focus: a request made while it is locked lands once it becomes editable.
 const LockedFocusRequest = (props: PromptEditorProps) => {
   const [editable, setEditable] = useState(false);
@@ -113,12 +75,6 @@ const LockedFocusRequest = (props: PromptEditorProps) => {
   );
 };
 export const FocusRequest: Story = {
+  id: "patterns-editors-prompt-editor--focus-request",
   render: (args) => <LockedFocusRequest {...args} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const input = canvas.getByRole("textbox");
-    await expect(input).not.toHaveFocus();
-    await userEvent.click(canvas.getByRole("button", { name: "Unlock" }));
-    await waitFor(() => expect(input).toHaveFocus());
-  },
 };

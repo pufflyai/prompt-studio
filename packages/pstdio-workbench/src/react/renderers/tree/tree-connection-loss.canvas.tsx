@@ -1,8 +1,7 @@
 import { Button, Stack } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { PstdioConnectionError } from "@pstdio/sdk/client";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../../core";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { WorkbenchConnectionProvider } from "../workbench-connection-provider";
@@ -37,12 +36,10 @@ const createFixture = (initialFailure?: Error) => {
     },
   };
 };
-
 interface NavigationConnectionProps {
   initialFailure?: Error;
   initiallyConnected?: boolean;
 }
-
 const NavigationConnection = (props: NavigationConnectionProps) => {
   const { initialFailure, initiallyConnected = true } = props;
   const [fixture] = useState(() => createFixture(initialFailure));
@@ -72,7 +69,6 @@ const NavigationConnection = (props: NavigationConnectionProps) => {
     </Stack>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Guides/Navigation connection loss",
   component: NavigationConnection,
@@ -83,61 +79,20 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof NavigationConnection>;
+} satisfies CanvasMeta<typeof NavigationConnection>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const RetainNavigation: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("option", { name: "Notes" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Drop response" }));
-    await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Disconnect" }));
-    await waitFor(() =>
-      expect(canvas.getByRole("region", { name: "Navigation" })).toHaveAttribute("aria-busy", "false"),
-    );
-    await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
-    await expect(canvas.getByRole("option", { name: "Notes" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Reconnect" }));
-    await expect(canvas.getByRole("option", { name: "Notes" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Fail view" }));
-    await expect(await canvas.findByText("This view has an invalid query.")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Disconnect" }));
-    await expect(canvas.getByText("This view has an invalid query.")).toBeVisible();
-  },
+  id: "pstdio-workbench-guides-navigation-connection-loss--retain-navigation",
 };
-
 export const InitialConnectionFailure: Story = {
+  id: "pstdio-workbench-guides-navigation-connection-loss--initial-connection-failure",
   args: { initialFailure: new PstdioConnectionError(new TypeError("Failed to fetch")) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Could not connect to the backend.")).toBeVisible();
-    await expect(canvas.getByRole("button", { name: "Retry" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Restore response" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Retry" }));
-    await expect(await canvas.findByRole("option", { name: "Notes" })).toBeVisible();
-  },
 };
-
 export const LocalReadDuringOutage: Story = {
+  id: "pstdio-workbench-guides-navigation-connection-loss--local-read-during-outage",
   args: { initiallyConnected: false },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("option", { name: "Notes" })).toBeVisible();
-    await expect(canvas.getByRole("region", { name: "Navigation" })).toHaveAttribute("aria-busy", "false");
-  },
 };
-
 export const RetainCompletedNavigation: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("option", { name: "Notes" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Drop partial response" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Disconnect" }));
-    await expect(canvas.getByRole("option", { name: "Notes" })).toBeVisible();
-    await expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Reconnect" }));
-    await expect(canvas.getByRole("option", { name: "Notes" })).toBeVisible();
-  },
+  id: "pstdio-workbench-guides-navigation-connection-loss--retain-completed-navigation",
 };

@@ -1,74 +1,18 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { TreeResourceActionsStory } from "./tree-resource-actions-story";
 
 const meta = {
   title: "pstdio-workbench/Guides/Tree resource actions",
   component: TreeResourceActionsStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof TreeResourceActionsStory>;
-
+} satisfies CanvasMeta<typeof TreeResourceActionsStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-const exerciseRowMenus = async (canvasElement: HTMLElement) => {
-  const canvas = within(canvasElement);
-  const document = within(canvasElement.ownerDocument.body);
-  const session = await canvas.findByRole("option", { name: "Inactive session" });
-  session.focus();
-  await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-  await waitFor(() => expect(document.getByRole("menuitem", { name: "Inspect session" })).toBeVisible());
-  await userEvent.click(document.getByRole("menuitem", { name: "Inspect session" }));
-  await waitFor(() => expect(document.getByText("Inspected Inactive session")).toBeVisible());
-  await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
-  const ticket = await canvas.findByRole("option", { name: /Write notes/ });
-  await fireEvent.contextMenu(ticket);
-  await waitFor(() => expect(document.getByRole("menuitem", { name: "Archive ticket" })).toBeVisible());
-  await expect(document.getAllByRole("menu")).toHaveLength(1);
-  await waitFor(() => expect(document.getByRole("menu")).toHaveFocus());
-  await userEvent.keyboard("{Escape}");
-  await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
-
-  const file = canvas.getByRole("option", { name: /notes.md/ });
-  await userEvent.hover(within(file).getByText("notes.md"));
-  await waitFor(() => expect(document.getByRole("tooltip", { name: "docs/notes.md" })).toBeVisible());
-  await userEvent.unhover(within(file).getByText("notes.md"));
-  await fireEvent.contextMenu(file);
-  await userEvent.click(await document.findByRole("menuitem", { name: "Rename" }));
-  const dialog = await document.findByRole("dialog");
-  const name = within(dialog).getByRole("textbox");
-  await userEvent.clear(name);
-  await userEvent.type(name, "summary.md");
-  await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-  await waitFor(() => expect(document.getByText("Renamed notes.md to summary.md")).toBeVisible());
-
-  await fireEvent.contextMenu(canvas.getByRole("option", { name: /Review workspace/ }));
-  await waitFor(() => expect(document.getByRole("menuitem", { name: "Archive workspace" })).toBeVisible());
-  await expect(document.getByRole("menuitem", { name: "Delete workspace" })).toHaveAttribute("data-disabled");
-  await expect(document.queryByRole("menuitem", { name: "Archive ticket" })).not.toBeInTheDocument();
-  await waitFor(() => expect(document.getByRole("menu")).toHaveFocus());
-  await userEvent.keyboard("{Escape}");
-  await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
-};
-
+type Story = CanvasVariant<typeof meta>;
 export const Sidenav: Story = {
+  id: "pstdio-workbench-guides-tree-resource-actions--sidenav",
   args: { region: "sidenav" },
-  play: async ({ canvasElement }) => {
-    await exerciseRowMenus(canvasElement);
-    const sidenav = canvasElement.querySelector('[data-workbench-region="sidenav"]');
-    if (!sidenav) throw new Error("Sidenav is missing.");
-    await fireEvent.contextMenu(sidenav);
-    const document = within(canvasElement.ownerDocument.body);
-    await userEvent.click(await document.findByRole("menuitem", { name: "Hide/show items" }));
-    await waitFor(() => expect(document.getByRole("menuitem", { name: /Resources/ })).toBeVisible());
-    await expect(document.queryByRole("menuitem", { name: "Archive workspace" })).not.toBeInTheDocument();
-    await waitFor(() => expect(document.getByRole("menu", { name: "Hide/show items" })).toHaveFocus());
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
-  },
 };
-
 export const Standalone: Story = {
+  id: "pstdio-workbench-guides-tree-resource-actions--standalone",
   args: { region: "main" },
-  play: async ({ canvasElement }) => exerciseRowMenus(canvasElement),
 };

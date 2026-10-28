@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Kbd, Menu, Portal, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import {
   ChevronDown,
   Circle,
@@ -18,7 +18,7 @@ import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 import { ListRow } from "./list-row";
 import type { ListRowItem } from "./list-row.types";
 
-const meta: Meta<typeof ListRow> = {
+const meta: CanvasMeta<typeof ListRow> = {
   title: "Components/Data Display/List Row",
   component: ListRow,
   parameters: {
@@ -30,23 +30,20 @@ const meta: Meta<typeof ListRow> = {
     },
   },
 };
-
 export default meta;
-type Story = StoryObj<typeof ListRow>;
-
+type Story = CanvasVariant<typeof ListRow>;
 const baseItem: ListRowItem = {
   id: "overview",
   label: "Overview",
   icon: <FileText size={14} />,
 };
-
 const SectionLabel = (props: { children: string }) => (
   <Text textStyle="label/XS" color="fg.muted" textTransform="uppercase" letterSpacing="0.08em">
     {props.children}
   </Text>
 );
-
 export const States: Story = {
+  id: "components-data-display-list-row--states",
   render: () => (
     <Stack gap="md" maxW="22rem">
       <Stack gap="2xs">
@@ -73,8 +70,8 @@ export const States: Story = {
     </Stack>
   ),
 };
-
 export const Tones: Story = {
+  id: "components-data-display-list-row--tones",
   render: () => (
     <Stack gap="md" maxW="22rem">
       <Stack gap="2xs">
@@ -103,8 +100,8 @@ export const Tones: Story = {
     </Stack>
   ),
 };
-
 export const Decorations: Story = {
+  id: "components-data-display-list-row--decorations",
   render: () => (
     <Stack gap="md" maxW="22rem">
       <Stack gap="2xs">
@@ -284,8 +281,8 @@ export const Decorations: Story = {
     </Stack>
   ),
 };
-
 export const Interactions: Story = {
+  id: "components-data-display-list-row--interactions",
   render: () => (
     <Stack gap="md" maxW="22rem">
       <Stack gap="2xs">
@@ -324,8 +321,8 @@ export const Interactions: Story = {
     </Stack>
   ),
 };
-
 export const ShortcutSlots: Story = {
+  id: "components-data-display-list-row--shortcut-slots",
   render: () => (
     <Stack gap="md" maxW="22rem">
       <Stack gap="2xs">
@@ -395,14 +392,12 @@ export const ShortcutSlots: Story = {
     </Stack>
   ),
 };
-
 const folderItem: ListRowItem = {
   id: "src",
   label: "src",
   icon: <Folder size={14} />,
   isContainer: true,
 };
-
 const ExpandableExample = () => {
   const [expanded, setExpanded] = useState(true);
   return (
@@ -414,8 +409,8 @@ const ExpandableExample = () => {
     />
   );
 };
-
 export const Tree: Story = {
+  id: "components-data-display-list-row--tree",
   render: () => (
     <Stack gap="md" maxW="22rem">
       <Stack gap="2xs">
@@ -441,8 +436,9 @@ export const Tree: Story = {
     </Stack>
   ),
 };
-
-const dropdownItems: (ListRowItem & { id: string })[] = [
+const dropdownItems: (ListRowItem & {
+  id: string;
+})[] = [
   {
     id: "open",
     label: "Open",
@@ -478,7 +474,6 @@ const dropdownItems: (ListRowItem & { id: string })[] = [
     disabled: true,
   },
 ];
-
 const MenuExample = (props: { label: string }) => (
   <Menu.Root>
     <Menu.Trigger asChild>
@@ -500,8 +495,8 @@ const MenuExample = (props: { label: string }) => (
     </Portal>
   </Menu.Root>
 );
-
 export const InsideMenu: Story = {
+  id: "components-data-display-list-row--inside-menu",
   render: () => (
     <Box>
       <Stack gap="md">

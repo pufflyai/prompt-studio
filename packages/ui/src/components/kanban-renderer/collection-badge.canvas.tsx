@@ -1,5 +1,5 @@
 import { Box, Stack, Text, Wrap } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import { CollectionBadge } from "./collection-badge";
 import { renderBadgeListDisplay } from "./kanban-renderer-helpers";
@@ -11,7 +11,6 @@ const descriptor = {
   type: { kind: "string" },
   display: { kind: "badge-list", itemsAttributeId: "contributorItems" },
 } satisfies AttributeDescriptor;
-
 const row = {
   id: "recipe-1",
   title: "Soup",
@@ -23,13 +22,11 @@ const row = {
     ],
   },
 } satisfies KanbanRendererRow;
-
 const LinkedBadgeList = () => {
   const [opened, setOpened] = useState("None");
   const badges = renderBadgeListDisplay(descriptor, row.attributes.contributors, row, (resource) =>
     setOpened(resource.id),
   );
-
   return (
     <Stack p="lg" gap="md">
       <Wrap gap="2xs">{badges}</Wrap>
@@ -40,20 +37,18 @@ const LinkedBadgeList = () => {
     </Stack>
   );
 };
-
 const meta = {
   title: "Patterns/Kanban Renderer/Collection badge list",
   parameters: { layout: "fullscreen" },
-} satisfies Meta;
-
+} satisfies CanvasMeta;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const LinkedResources: Story = {
+  id: "patterns-kanban-renderer-collection-badge-list--linked-resources",
   render: () => <LinkedBadgeList />,
 };
-
 export const ReviewRequestCounts: Story = {
+  id: "patterns-kanban-renderer-collection-badge-list--review-request-counts",
   render: () => (
     <Wrap p="lg" gap="sm">
       <CollectionBadge

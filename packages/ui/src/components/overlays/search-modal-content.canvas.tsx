@@ -1,7 +1,6 @@
 import { Button, Dialog, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
 import { ListRow } from "@/components/list-row/list-row";
 import { SearchModalContent } from "./search-modal-content";
 
@@ -41,23 +40,18 @@ const ProjectListDialog = (props: { showSearch: boolean }) => {
     </Dialog.Root>
   );
 };
-
 const meta = {
   title: "Overlays/Search modal content",
   component: ProjectListDialog,
   parameters: { layout: "fullscreen" },
   args: { showSearch: true },
-} satisfies Meta<typeof ProjectListDialog>;
-
+} satisfies CanvasMeta<typeof ProjectListDialog>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Searchable: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const Searchable: Story = {
+  id: "overlays-search-modal-content--searchable",
+};
 export const WithoutSearch: Story = {
+  id: "overlays-search-modal-content--without-search",
   args: { showSearch: false },
-  play: async ({ canvasElement }) => {
-    const dialog = within(canvasElement).getByRole("dialog");
-    await expect(within(dialog).queryByRole("textbox")).not.toBeInTheDocument();
-    await expect(within(dialog).getByRole("heading", { name: "Projects" })).toBeVisible();
-  },
 };

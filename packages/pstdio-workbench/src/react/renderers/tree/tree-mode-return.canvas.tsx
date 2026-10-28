@@ -1,7 +1,6 @@
 import { Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { createLevelNavigation, createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
@@ -82,71 +81,33 @@ const createFixture = (modeLabel: string, showHeader: boolean) => {
   workbench.pageLocations.navigate({ kind: "page", page: pageRef("details") });
   return workbench;
 };
-
 const ModeReturnStory = (props: { modeLabel: string; showHeader: boolean }) => {
   const { modeLabel, showHeader } = props;
   const [workbench] = useState(() => createFixture(modeLabel, showHeader));
   return <WorkbenchStory workbench={workbench} />;
 };
-
 const meta = {
   title: "pstdio-workbench/Guides/Fixed mode return",
   component: ModeReturnStory,
   parameters: { layout: "fullscreen" },
   args: { modeLabel: "Project", showHeader: true },
-} satisfies Meta<typeof ModeReturnStory>;
+} satisfies CanvasMeta<typeof ModeReturnStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const Project: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
-    const button = await canvas.findByRole("button", { name: `Back to ${args.modeLabel.toLocaleLowerCase()}` });
-    await expect(button).toBeVisible();
-    await expect(button.closest('[draggable="true"]')).toBeNull();
-    if (args.showHeader) {
-      const pinned = await canvas.findByRole("option", { name: "Pinned note" });
-      await expect(button.getBoundingClientRect().top).toBeGreaterThanOrEqual(pinned.getBoundingClientRect().bottom);
-    }
-    const viewport = button.closest('[data-scope="scroll-area"][data-part="viewport"]');
-    await expect(viewport).not.toBeNull();
-    const first = await canvas.findByRole("option", { name: "File 1" });
-    const second = await canvas.findByRole("option", { name: "File 2" });
-    const bounds = button.getBoundingClientRect();
-    await expect(first.closest('[data-scope="scroll-area"][data-part="viewport"]')).toBe(viewport);
-    const firstBounds = first.getBoundingClientRect();
-    const secondBounds = second.getBoundingClientRect();
-    await expect(bounds.x).toBe(firstBounds.x);
-    await expect(bounds.width).toBe(firstBounds.width);
-    await expect(bounds.height).toBe(firstBounds.height);
-    await expect(firstBounds.top - bounds.bottom).toBe(secondBounds.top - firstBounds.bottom);
-    await userEvent.click(button);
-    await expect(await within(canvas.getByRole("main")).findByText("home", { exact: true })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: `Back to ${args.modeLabel.toLocaleLowerCase()}` })).toBeNull();
-  },
+  id: "pstdio-workbench-guides-fixed-mode-return--project",
 };
-export const RenamedMode: Story = { args: { modeLabel: "Workspace" }, play: Project.play };
-export const WithoutHeaderItems: Story = { args: { showHeader: false }, play: Project.play };
-
+export const RenamedMode: Story = {
+  id: "pstdio-workbench-guides-fixed-mode-return--renamed-mode",
+  args: { modeLabel: "Workspace" },
+};
+export const WithoutHeaderItems: Story = {
+  id: "pstdio-workbench-guides-fixed-mode-return--without-header-items",
+  args: { showHeader: false },
+};
 export const KeyboardReturn: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByText("details", { exact: true }));
-    await userEvent.keyboard("{Alt>}{Shift>}{ArrowUp}{/Shift}{/Alt}");
-    await expect(await within(canvas.getByRole("main")).findByText("home", { exact: true })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Back to project" })).toBeNull();
-  },
+  id: "pstdio-workbench-guides-fixed-mode-return--keyboard-return",
 };
-
 export const GoToProject: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByText("details", { exact: true }));
-    await userEvent.keyboard("{Alt>}{Shift>}[Space]{/Shift}{/Alt}gp");
-    await expect(await within(canvas.getByRole("main")).findByText("home", { exact: true })).toBeVisible();
-    await expect(
-      within(canvasElement.ownerDocument.body).getByRole("region", { name: "Keyboard shortcut mode" }),
-    ).toBeVisible();
-    await userEvent.keyboard("{Escape}");
-  },
+  id: "pstdio-workbench-guides-fixed-mode-return--go-to-project",
 };

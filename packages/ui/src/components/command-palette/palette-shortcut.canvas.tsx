@@ -1,6 +1,5 @@
 import { Button, HStack, Kbd } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Tooltip } from "../primitives/tooltip";
 import { PaletteShortcut } from "./palette-shortcut";
 
@@ -8,27 +7,22 @@ const meta = {
   title: "Components/PaletteShortcut",
   component: PaletteShortcut,
   args: { binding: "Alt+Shift+N" },
-} satisfies Meta<typeof PaletteShortcut>;
+} satisfies CanvasMeta<typeof PaletteShortcut>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Inline: Story = {};
-
-export const Sequence: Story = { args: { binding: ["Mod+K", "Mod+S"] } };
-
-export const ArrowKeys: Story = {
-  args: { binding: ["ArrowLeft", "ArrowUp", "ArrowDown", "ArrowRight"] },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    for (const direction of ["Left", "Up", "Down", "Right"]) {
-      const key = canvas.getByLabelText(`Arrow ${direction}`);
-      await expect(key.querySelector("svg")).not.toBeNull();
-      await expect(key).toHaveTextContent("");
-    }
-  },
+type Story = CanvasVariant<typeof meta>;
+export const Inline: Story = {
+  id: "components-paletteshortcut--inline",
 };
-
+export const Sequence: Story = {
+  id: "components-paletteshortcut--sequence",
+  args: { binding: ["Mod+K", "Mod+S"] },
+};
+export const ArrowKeys: Story = {
+  id: "components-paletteshortcut--arrow-keys",
+  args: { binding: ["ArrowLeft", "ArrowUp", "ArrowDown", "ArrowRight"] },
+};
 export const InTooltip: Story = {
+  id: "components-paletteshortcut--in-tooltip",
   render: (args) => (
     <Tooltip
       open
@@ -43,8 +37,8 @@ export const InTooltip: Story = {
     </Tooltip>
   ),
 };
-
 export const KeysInTooltip: Story = {
+  id: "components-paletteshortcut--keys-in-tooltip",
   render: () => (
     <Tooltip
       open

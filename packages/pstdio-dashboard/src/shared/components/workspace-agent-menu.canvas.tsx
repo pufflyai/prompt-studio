@@ -1,11 +1,10 @@
 import { Box, Button, Dialog, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Cpu, TerminalIcon } from "lucide-react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { WorkspaceAgentMenu, type WorkspacePanelMenuOption } from "./workspace-agent-menu";
 
-const meta: Meta<typeof WorkspaceAgentMenu> = {
+const meta: CanvasMeta<typeof WorkspaceAgentMenu> = {
   title: "Shared/WorkspaceAgentMenu",
   component: WorkspaceAgentMenu,
   parameters: { layout: "padded" },
@@ -17,17 +16,13 @@ const meta: Meta<typeof WorkspaceAgentMenu> = {
     ),
   ],
 };
-
 export default meta;
-
-type Story = StoryObj<typeof WorkspaceAgentMenu>;
-
+type Story = CanvasVariant<typeof WorkspaceAgentMenu>;
 const agentOptions = [
   { label: "Claude Code", value: "claude-code", icon: TerminalIcon },
   { label: "OpenCode", value: "opencode", icon: TerminalIcon },
   { label: "Codex", value: "codex", icon: Cpu },
 ];
-
 const modelsByAgent: Record<string, WorkspacePanelMenuOption[]> = {
   "claude-code": [
     { label: "Claude Sonnet 4", value: "claude-sonnet-4", description: "Balanced speed and intelligence" },
@@ -44,23 +39,20 @@ const modelsByAgent: Record<string, WorkspacePanelMenuOption[]> = {
     { label: "o3", value: "o3" },
   ],
 };
-
 const defaultModelByAgent: Record<string, string> = {
   "claude-code": "claude-sonnet-4",
   opencode: "openai/gpt-5.5",
   codex: "o3",
 };
-
 export const Default: Story = {
+  id: "shared-workspaceagentmenu--default",
   render: () => {
     const [selectedAgent, setSelectedAgent] = useState("claude-code");
     const [selectedModel, setSelectedModel] = useState("claude-sonnet-4");
-
     const handleSelectAgent = (agent: string) => {
       setSelectedAgent(agent);
       setSelectedModel(defaultModelByAgent[agent] ?? "");
     };
-
     return (
       <WorkspaceAgentMenu
         agentOptions={agentOptions}
@@ -73,11 +65,10 @@ export const Default: Story = {
     );
   },
 };
-
 export const SingleAgent: Story = {
+  id: "shared-workspaceagentmenu--single-agent",
   render: () => {
     const [selectedModel, setSelectedModel] = useState("claude-sonnet-4");
-
     return (
       <WorkspaceAgentMenu
         agentOptions={[agentOptions[0]]}
@@ -90,11 +81,10 @@ export const SingleAgent: Story = {
     );
   },
 };
-
 export const NoModels: Story = {
+  id: "shared-workspaceagentmenu--no-models",
   render: () => {
     const [selectedAgent, setSelectedAgent] = useState("claude-code");
-
     return (
       <WorkspaceAgentMenu
         agentOptions={agentOptions}
@@ -107,12 +97,11 @@ export const NoModels: Story = {
     );
   },
 };
-
 // A harness without models, such as a remote machine whose template picks the model.
 export const WithoutModelChoice: Story = {
+  id: "shared-workspaceagentmenu--without-model-choice",
   render: () => {
     const [selectedAgent, setSelectedAgent] = useState("claude-code");
-
     return (
       <WorkspaceAgentMenu
         agentOptions={[...agentOptions, { label: "Outdated Agent", value: "unavailable", icon: Cpu, disabled: true }]}
@@ -125,23 +114,10 @@ export const WithoutModelChoice: Story = {
       />
     );
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(document.body);
-    await expect(canvas.queryByRole("button", { name: "Select model" })).toBeNull();
-    await userEvent.click(canvas.getByRole("button", { name: "Select harness" }));
-    // An unavailable harness cannot be picked.
-    await userEvent.click(await body.findByRole("menuitem", { name: "Outdated Agent" }), { pointerEventsCheck: 0 });
-    await expect(canvas.getByRole("button", { name: "Select harness" })).toHaveTextContent("Claude Code");
-    if (!body.queryByRole("menuitem", { name: "Codex" }))
-      await userEvent.click(canvas.getByRole("button", { name: "Select harness" }));
-    await userEvent.click(await body.findByRole("menuitem", { name: "Codex" }));
-    await expect(canvas.getByRole("button", { name: "Select harness" })).toHaveTextContent("Codex");
-  },
 };
-
 // A session's harness is fixed and offers no models, so there is nothing to choose.
 export const WithoutModelChoiceLockedAgent: Story = {
+  id: "shared-workspaceagentmenu--without-model-choice-locked-agent",
   args: {
     agentOptions,
     selectedAgent: "claude-code",
@@ -152,12 +128,9 @@ export const WithoutModelChoiceLockedAgent: Story = {
     offersModels: false,
     isAgentSwitchDisabled: true,
   },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).queryByRole("button")).toBeNull();
-  },
 };
-
 export const Disabled: Story = {
+  id: "shared-workspaceagentmenu--disabled",
   args: {
     agentOptions,
     selectedAgent: "claude-code",
@@ -168,11 +141,10 @@ export const Disabled: Story = {
     isDisabled: true,
   },
 };
-
 export const DisabledAgentSwitch: Story = {
+  id: "shared-workspaceagentmenu--disabled-agent-switch",
   render: () => {
     const [selectedModel, setSelectedModel] = useState("claude-sonnet-4");
-
     return (
       <WorkspaceAgentMenu
         agentOptions={agentOptions}
@@ -186,14 +158,12 @@ export const DisabledAgentSwitch: Story = {
     );
   },
 };
-
 const unavailableReason = "Requires Codex 0.157.0 or newer. Found 0.155.0.";
-
 export const WithDisabledAgent: Story = {
+  id: "shared-workspaceagentmenu--with-disabled-agent",
   render: () => {
     const [selectedAgent, setSelectedAgent] = useState("claude-code");
     const [selectedModel, setSelectedModel] = useState("claude-sonnet-4");
-
     const allAgents = [
       ...agentOptions,
       {
@@ -204,12 +174,10 @@ export const WithDisabledAgent: Story = {
         description: unavailableReason,
       },
     ];
-
     const handleSelectAgent = (agent: string) => {
       setSelectedAgent(agent);
       setSelectedModel(defaultModelByAgent[agent] ?? "");
     };
-
     return (
       <WorkspaceAgentMenu
         agentOptions={allAgents}
@@ -221,15 +189,9 @@ export const WithDisabledAgent: Story = {
       />
     );
   },
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "Select model" }));
-    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Select harness" }));
-    // An unavailable harness says why it cannot run.
-    await expect(await within(document.body).findByText(unavailableReason)).toBeVisible();
-  },
 };
-
 export const Loading: Story = {
+  id: "shared-workspaceagentmenu--loading",
   args: {
     agentOptions: [],
     selectedAgent: "",
@@ -241,17 +203,15 @@ export const Loading: Story = {
     isModelsLoading: true,
   },
 };
-
 export const NoSelection: Story = {
+  id: "shared-workspaceagentmenu--no-selection",
   render: () => {
     const [selectedAgent, setSelectedAgent] = useState("");
     const [selectedModel, setSelectedModel] = useState("");
-
     const handleSelectAgent = (agent: string) => {
       setSelectedAgent(agent);
       setSelectedModel(defaultModelByAgent[agent] ?? "");
     };
-
     return (
       <WorkspaceAgentMenu
         agentOptions={agentOptions}
@@ -264,8 +224,8 @@ export const NoSelection: Story = {
     );
   },
 };
-
 export const NoHarnessAvailable: Story = {
+  id: "shared-workspaceagentmenu--no-harness-available",
   args: {
     agentOptions: [],
     selectedAgent: "",
@@ -275,19 +235,17 @@ export const NoHarnessAvailable: Story = {
     onSelectModel: () => {},
   },
 };
-
 export const CommandDialogPlacement: Story = {
+  id: "shared-workspaceagentmenu--command-dialog-placement",
   tags: ["!manifest"],
   parameters: { layout: "fullscreen" },
   render: () => {
     const [selectedAgent, setSelectedAgent] = useState("claude-code");
     const [selectedModel, setSelectedModel] = useState("claude-sonnet-4");
-
     const handleSelectAgent = (agent: string) => {
       setSelectedAgent(agent);
       setSelectedModel(defaultModelByAgent[agent] ?? "");
     };
-
     return (
       <Dialog.Root open size="lg" scrollBehavior="inside">
         <Dialog.Backdrop />
@@ -324,19 +282,5 @@ export const CommandDialogPlacement: Story = {
         </Dialog.Positioner>
       </Dialog.Root>
     );
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
-    await userEvent.click(canvas.getByRole("button", { name: "Select model" }));
-
-    await within(document.body).findByTestId("workspace-agent-model-options");
-    const menuItem = within(document.body).getByRole("menuitem", { name: "Claude Opus 4" });
-    await expect(within(document.body).queryByRole("option", { name: "Claude Opus 4" })).not.toBeInTheDocument();
-
-    const box = menuItem.getBoundingClientRect();
-    const hitTarget = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-
-    await expect(menuItem.contains(hitTarget) || hitTarget?.contains(menuItem)).toBe(true);
   },
 };

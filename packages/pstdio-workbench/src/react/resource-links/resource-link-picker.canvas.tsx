@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { ResourceLinkPicker } from "./resource-link-picker";
 
@@ -32,12 +32,18 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof ResourceLinkPicker>;
+} satisfies CanvasMeta<typeof ResourceLinkPicker>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Search: Story = {};
-export const Empty: Story = { args: { service: { ...meta.args.service, search: async () => [] } } };
+type Story = CanvasVariant<typeof meta>;
+export const Search: Story = {
+  id: "workbench-resource-link-picker--search",
+};
+export const Empty: Story = {
+  id: "workbench-resource-link-picker--empty",
+  args: { service: { ...meta.args.service, search: async () => [] } },
+};
 export const Failure: Story = {
+  id: "workbench-resource-link-picker--failure",
   args: {
     service: {
       ...meta.args.service,

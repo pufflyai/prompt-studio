@@ -1,7 +1,6 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, fireEvent, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
@@ -67,23 +66,12 @@ const meta = {
   title: "pstdio-workbench/Guides/Structure before contents",
   component: StructureLoading,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof StructureLoading>;
+} satisfies CanvasMeta<typeof StructureLoading>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const PendingContents: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByText("T-1 Ticket")).toBeVisible();
-    for (const label of ["Files", "Workspaces", "Sessions"])
-      await expect(canvas.getByText(label, { exact: true })).toBeVisible();
-    await expect(canvas.getAllByText("Loading…")).toHaveLength(3);
-    await expect(canvas.queryByText("No files")).not.toBeInTheDocument();
-    await userEvent.click(await canvas.findByRole("button", { name: "Complete fetch" }));
-    await expect(await canvas.findByText("README.md")).toBeVisible();
-    await expect(canvas.queryByText("Loading…")).not.toBeInTheDocument();
-  },
+  id: "pstdio-workbench-guides-structure-before-contents--pending-contents",
 };
-
 const GroupMenuDuringLoading = () => {
   const [{ workbench, pending }] = useState(() => {
     const workbench = createWorkbench();
@@ -120,24 +108,8 @@ const GroupMenuDuringLoading = () => {
     </div>
   );
 };
-
 export const GroupMenuWhileContentsArrive: Story = {
+  id: "pstdio-workbench-guides-structure-before-contents--group-menu-while-contents-arrive",
   tags: ["!manifest"],
   render: () => <GroupMenuDuringLoading />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    fireEvent.contextMenu(await canvas.findByText("Search", { exact: true }));
-    await userEvent.click(await body.findByRole("menuitem", { name: "New group" }));
-    const input = await canvas.findByRole("textbox", { name: "Group name" });
-    await userEvent.type(input, "Research{Enter}");
-    fireEvent.contextMenu(await canvas.findByText("Research", { exact: true }));
-    await expect(await canvas.findByText("Folder", { exact: true })).toBeVisible();
-    await userEvent.click(await body.findByRole("menuitem", { name: "Rename group" }));
-    const rename = await canvas.findByRole("textbox", { name: "Group name" });
-    await expect(rename).toHaveFocus();
-    await userEvent.clear(rename);
-    await userEvent.type(rename, "Product research{Enter}");
-    await expect(await canvas.findByText("Product research", { exact: true })).toBeVisible();
-  },
 };

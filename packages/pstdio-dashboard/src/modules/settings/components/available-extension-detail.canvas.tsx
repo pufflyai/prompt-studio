@@ -1,8 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { AvailableExtensionDetail } from "./available-extension-detail";
 
 const noop = () => undefined;
-
 const metadata = {
   extensions: [
     {
@@ -65,8 +64,7 @@ const metadata = {
   ],
   diagnostics: [],
 } as never;
-
-const meta: Meta<typeof AvailableExtensionDetail> = {
+const meta: CanvasMeta<typeof AvailableExtensionDetail> = {
   title: "ProjectSettings/AvailableExtensionDetail",
   component: AvailableExtensionDetail,
   parameters: { layout: "fullscreen" },
@@ -92,16 +90,16 @@ const meta: Meta<typeof AvailableExtensionDetail> = {
     onInstall: noop,
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof AvailableExtensionDetail>;
-
-export const Contributions: Story = {};
+type Story = CanvasVariant<typeof AvailableExtensionDetail>;
+export const Contributions: Story = {
+  id: "projectsettings-availableextensiondetail--contributions",
+};
 export const RepositorySource: Story = {
+  id: "projectsettings-availableextensiondetail--repository-source",
   args: { extension: { ...meta.args!.extension!, registry: undefined } },
 };
-
 export const Installing: Story = {
+  id: "projectsettings-availableextensiondetail--installing",
   args: { installing: true },
 };

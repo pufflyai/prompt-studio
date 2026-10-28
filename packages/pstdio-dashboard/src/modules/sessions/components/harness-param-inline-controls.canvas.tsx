@@ -1,8 +1,7 @@
 import { Flex } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { HarnessParamValues } from "@pstdio/ui/param-editor";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { HarnessParamInlineControls } from "./harness-param-inline-controls";
 
 const meta = {
@@ -33,12 +32,14 @@ const meta = {
     const [overrides, setOverrides] = useState<HarnessParamValues>(props.overrides);
     return <HarnessParamInlineControls {...props} overrides={overrides} onOverridesChange={setOverrides} />;
   },
-} satisfies Meta<typeof HarnessParamInlineControls>;
+} satisfies CanvasMeta<typeof HarnessParamInlineControls>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const EffortLevels: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const EffortLevels: Story = {
+  id: "sessions-harness-inline-controls--effort-levels",
+};
 export const Speed: Story = {
+  id: "sessions-harness-inline-controls--speed",
   args: {
     schema: {
       service_tier: {
@@ -55,9 +56,11 @@ export const Speed: Story = {
   },
 };
 export const RememberedEffort: Story = {
+  id: "sessions-harness-inline-controls--remembered-effort",
   args: { overrides: { effort: "high" } },
 };
 export const BooleanControl: Story = {
+  id: "sessions-harness-inline-controls--boolean-control",
   args: {
     schema: {
       enabled: {
@@ -68,32 +71,12 @@ export const BooleanControl: Story = {
       },
     },
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Enabled: off" }));
-    const enabled = canvas.getByRole("button", { name: "Enabled: on" });
-    await userEvent.hover(enabled);
-    await expect(await page.findByRole("tooltip")).toHaveTextContent("Enabled");
-    await userEvent.unhover(enabled);
-  },
 };
 export const Tooltips: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    const initial = canvas.getByRole("button", { name: "Reasoning effort: Medium" });
-    await userEvent.hover(initial);
-    await expect(await page.findByRole("tooltip")).toHaveTextContent("Reasoning effort");
-    await userEvent.click(initial);
-    await userEvent.click(page.getByRole("menuitemradio", { name: "Extra high" }));
-    const changed = canvas.getByRole("button", { name: "Reasoning effort: Extra high" });
-    await userEvent.hover(changed);
-    await expect(await page.findByRole("tooltip")).toHaveTextContent("Reasoning effort");
-    await userEvent.unhover(changed);
-  },
+  id: "sessions-harness-inline-controls--tooltips",
 };
 export const CommandOwnedPlan: Story = {
+  id: "sessions-harness-inline-controls--command-owned-plan",
   args: {
     schema: {
       ...meta.args.schema,
@@ -110,6 +93,7 @@ export const CommandOwnedPlan: Story = {
   },
 };
 export const LevelColors: Story = {
+  id: "sessions-harness-inline-controls--level-colors",
   render: (props) => (
     <Flex gap="4" wrap="wrap">
       {meta.args.schema.effort.options.map((option) => (
@@ -119,28 +103,12 @@ export const LevelColors: Story = {
   ),
 };
 export const ChangeEffort: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Reasoning effort: Medium" }));
-    await userEvent.click(page.getByRole("menuitemradio", { name: "Extra high" }));
-    await expect(canvas.getByRole("button", { name: "Reasoning effort: Extra high" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Reasoning effort: Extra high" }));
-    await expect(page.getByRole("menuitemradio", { name: "Extra high" })).toHaveAttribute("aria-checked", "true");
-    await userEvent.click(page.getByRole("menuitemradio", { name: "Medium" }));
-    await expect(canvas.getByRole("button", { name: "Reasoning effort: Medium" })).toBeVisible();
-  },
+  id: "sessions-harness-inline-controls--change-effort",
 };
 export const ChangeEffortWithKeyboard: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    const trigger = canvas.getByRole("button", { name: "Reasoning effort: Medium" });
-    trigger.focus();
-    await userEvent.keyboard("{ArrowDown}");
-    await waitFor(() => expect(page.getByRole("menu")).toHaveFocus());
-    await userEvent.keyboard("{End}{Enter}");
-    await expect(canvas.getByRole("button", { name: "Reasoning effort: Ultra" })).toBeVisible();
-  },
+  id: "sessions-harness-inline-controls--change-effort-with-keyboard",
 };
-export const Disabled: Story = { args: { disabled: true } };
+export const Disabled: Story = {
+  id: "sessions-harness-inline-controls--disabled",
+  args: { disabled: true },
+};

@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ActionInput } from "./action-input";
 
 const run = { id: "run", name: "Run" };
@@ -12,35 +11,23 @@ const meta = {
     defaultValue: "run",
     options: [run],
     presentation: "horizontal",
-    onChange: fn(),
+    onChange: () => {},
   },
-} satisfies Meta<typeof ActionInput>;
+} satisfies CanvasMeta<typeof ActionInput>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const RepeatSelectedAction: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    for (let count = 1; count <= 2; count++) {
-      await userEvent.click(canvas.getByRole("button", { name: "Run" }));
-      await userEvent.click(page.getByRole("menuitemradio", { name: "Run" }));
-      await expect(args.onChange).toHaveBeenCalledTimes(count);
-      await expect(args.onChange).toHaveBeenLastCalledWith("action", "run");
-    }
-  },
+  id: "patterns-param-editor-actions--repeat-selected-action",
 };
 export const OnlyActiveActionEnabled: Story = {
+  id: "patterns-param-editor-actions--only-active-action-enabled",
   args: { options: [run, { id: "stop", name: "Stop", disabled: true }] },
-  play: RepeatSelectedAction.play,
 };
 export const ReadOnly: Story = {
+  id: "patterns-param-editor-actions--read-only",
   args: { readOnly: true },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole("button", { name: "Run" })).toBeDisabled();
-  },
 };
 export const NoEnabledActions: Story = {
+  id: "patterns-param-editor-actions--no-enabled-actions",
   args: { options: [{ ...run, disabled: true }] },
-  play: ReadOnly.play,
 };

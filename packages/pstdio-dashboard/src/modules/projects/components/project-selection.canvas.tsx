@@ -1,4 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import {
   createWorkbenchSettingsModule,
@@ -6,9 +7,7 @@ import {
   Workbench,
   WorkbenchThemeProvider,
 } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { ProjectStoryFixture } from "../data/project-story-fixture";
 import { DesktopProjectTabsController } from "../desktop-project-tabs-controller";
 import { createProjectsModule } from "../module";
@@ -59,45 +58,21 @@ const ProjectSelectionStory = (props: { platform?: string }) => {
     </ProjectStoryFixture>
   );
 };
-
 const meta = {
   title: "Dashboard/Project selection",
   component: ProjectSelectionStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof ProjectSelectionStory>;
+} satisfies CanvasMeta<typeof ProjectSelectionStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-const checkEmptyScreen = async (canvasElement: HTMLElement) => {
-  const body = within(canvasElement.ownerDocument.body);
-  const picker = await body.findByRole("dialog");
-  await expect(within(picker).getByText("No projects yet")).toBeVisible();
-  await expect(within(picker).getByRole("button", { name: "Create project" })).toBeVisible();
-  for (const control of canvasElement.querySelectorAll("button, [role=tab], [data-workbench-region=status]")) {
-    await expect(control).not.toBeVisible();
-  }
-  const main = canvasElement.querySelector<HTMLElement>('[data-workbench-panel="main"]')!;
-  await expect(getComputedStyle(main).borderWidth).toBe("0px");
-  const settings = within(picker).getByRole("button", { name: "Settings" });
-  await expect(settings).toBeVisible();
-  await userEvent.click(settings);
-  await expect(await body.findByText("General settings")).toBeVisible();
-  await userEvent.click(body.getByRole("button", { name: /^Close/ }));
-  await expect(await body.findByText("No projects yet")).toBeVisible();
-  await userEvent.keyboard("{Escape}");
-  await expect(body.getByRole("button", { name: "Create project" })).toBeVisible();
-};
-
+type Story = CanvasVariant<typeof meta>;
 export const Browser: Story = {
-  play: async ({ canvasElement }) => checkEmptyScreen(canvasElement),
+  id: "dashboard-project-selection--browser",
 };
-
 export const Mac: Story = {
+  id: "dashboard-project-selection--mac",
   args: { platform: "darwin" },
-  play: async ({ canvasElement }) => checkEmptyScreen(canvasElement),
 };
-
 export const Windows: Story = {
+  id: "dashboard-project-selection--windows",
   args: { platform: "win32" },
-  play: async ({ canvasElement }) => checkEmptyScreen(canvasElement),
 };

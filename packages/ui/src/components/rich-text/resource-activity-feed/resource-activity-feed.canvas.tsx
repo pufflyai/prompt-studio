@@ -1,6 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { ResourceActivityFeed, type ResourceActivityFeedItem } from "./resource-activity-feed";
 
@@ -21,7 +20,6 @@ const attentionItem: ResourceActivityFeedItem = {
     ],
   },
 };
-
 const mixedItems: ResourceActivityFeedItem[] = [
   {
     id: "review-note",
@@ -53,7 +51,6 @@ const mixedItems: ResourceActivityFeedItem[] = [
     summary: "created this resource",
   },
 ];
-
 const longContentItems: ResourceActivityFeedItem[] = [
   {
     id: "long-message",
@@ -82,7 +79,6 @@ const item = {
 `,
   },
 ];
-
 const wideItems: ResourceActivityFeedItem[] = [
   attentionItem,
   {
@@ -106,7 +102,6 @@ const wideItems: ResourceActivityFeedItem[] = [
     relatedResources: [{ id: "PS-276", type: "ticket", label: "Refine PS-276" }],
   },
 ];
-
 const meta = {
   title: "Components/Data Display/Resource Activity Feed",
   component: ResourceActivityFeed,
@@ -121,13 +116,11 @@ const meta = {
       </ScrollArea>
     ),
   ],
-} satisfies Meta<typeof ResourceActivityFeed>;
-
+} satisfies CanvasMeta<typeof ResourceActivityFeed>;
 export default meta;
-
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const MixedActivity: Story = {
+  id: "components-data-display-resource-activity-feed--mixed-activity",
   args: {
     items: mixedItems,
     hasMore: true,
@@ -135,31 +128,31 @@ export const MixedActivity: Story = {
     onRelatedResourceSelect: () => undefined,
   },
 };
-
 export const AttentionMessage: Story = {
+  id: "components-data-display-resource-activity-feed--attention-message",
   args: {
     items: [attentionItem],
     onActionSelect: () => undefined,
   },
 };
-
 export const Empty: Story = {
+  id: "components-data-display-resource-activity-feed--empty",
   args: { items: [] },
 };
-
 export const Loading: Story = {
+  id: "components-data-display-resource-activity-feed--loading",
   args: { items: [], isLoading: true },
 };
-
 export const ErrorState: Story = {
+  id: "components-data-display-resource-activity-feed--error-state",
   args: { items: [], error: "The activity service did not respond." },
 };
-
 export const LongContent: Story = {
+  id: "components-data-display-resource-activity-feed--long-content",
   args: { items: longContentItems },
 };
-
 export const WideContent: Story = {
+  id: "components-data-display-resource-activity-feed--wide-content",
   args: {
     items: wideItems,
     onActionSelect: () => undefined,
@@ -167,8 +160,8 @@ export const WideContent: Story = {
   },
   parameters: { feedWidth: "1100px" },
 };
-
 export const PanelMenu: Story = {
+  id: "components-data-display-resource-activity-feed--panel-menu",
   args: {
     items: [attentionItem, ...mixedItems.slice(0, 2)],
     size: "compact",
@@ -177,13 +170,13 @@ export const PanelMenu: Story = {
   },
   parameters: { feedWidth: "320px" },
 };
-
 export const PanelMenuDark: Story = {
+  id: "components-data-display-resource-activity-feed--panel-menu-dark",
   ...PanelMenu,
   globals: { theme: "pstdio-dark" },
 };
-
 export const DarkMode: Story = {
+  id: "components-data-display-resource-activity-feed--dark-mode",
   args: {
     items: [attentionItem, ...mixedItems],
     hasMore: true,

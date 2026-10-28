@@ -1,8 +1,7 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { TreeList, type TreeListSection } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { useRendererRead } from "./use-renderer-read";
@@ -16,7 +15,6 @@ const sections: TreeListSection[] = [
     ],
   },
 ];
-
 const ProgressiveRead = () => {
   const [workbench] = useState(() => createWorkbench());
   const [scope, setScope] = useState(0);
@@ -57,28 +55,14 @@ const ProgressiveRead = () => {
     </WorkbenchThemeProvider>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Guides/Progressive read continuity",
   component: ProgressiveRead,
   tags: ["!manifest"],
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof ProgressiveRead>;
+} satisfies CanvasMeta<typeof ProgressiveRead>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const RefreshBeforeCompletion: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const ticket = await canvas.findByRole("option", { name: /^Ticket$/ });
-    const workspace = canvas.getByRole("option", { name: /^Project folder$/ });
-    await userEvent.click(canvas.getByRole("button", { name: "Refresh navigation" }));
-    await canvas.findByText("Read 2 started");
-    await expect(ticket).toBeVisible();
-    await expect(workspace).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Finish loading" }));
-    await canvas.findByText("Ready");
-    await expect(ticket).toBeVisible();
-    await expect(workspace).toBeVisible();
-  },
+  id: "pstdio-workbench-guides-progressive-read-continuity--refresh-before-completion",
 };

@@ -1,7 +1,6 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { type ComponentProps, useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import type { Command, RegisteredCommand } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { CommandParamsDialog } from "./command-params-dialog";
@@ -15,7 +14,6 @@ const registerCommand = (command: Command) =>
     priority: 0,
     source: "module",
   }) satisfies RegisteredCommand;
-
 const bumpCounterCommand = registerCommand({
   id: "extension-lab.counter.bump",
   label: "Bump lab counter",
@@ -27,7 +25,6 @@ const bumpCounterCommand = registerCommand({
     },
   },
 });
-
 // The planner's "Refine ticket" shape: a template picker plus free-form context,
 // the two fields that used to be hand-rolled beside the editor-rendered ones.
 const refineTicketCommand = registerCommand({
@@ -47,7 +44,6 @@ const refineTicketCommand = registerCommand({
     context: { type: "longtext", label: "Additional context", required: false },
   },
 });
-
 const everyControlCommand = registerCommand({
   id: "storybook.every-param",
   label: "Run with every param type",
@@ -75,7 +71,6 @@ const everyControlCommand = registerCommand({
     notes: { type: "longtext", label: "Notes" },
   },
 });
-
 const filesCommand = registerCommand({
   id: "storybook.files-param",
   label: "Import data files",
@@ -90,15 +85,12 @@ const filesCommand = registerCommand({
     },
   },
 });
-
 const commandSourceParameters = (code: string) => ({
   docs: { source: { code, language: "tsx", type: "code" } },
 });
-
 const CommandParameterExample = (props: ComponentProps<typeof CommandParamsDialog>) => {
   const { onClose, request } = props;
   const [open, setOpen] = useState(false);
-
   return (
     <Stack align="flex-start" gap="sm" p="lg">
       <Stack gap="xs">
@@ -119,7 +111,6 @@ const CommandParameterExample = (props: ComponentProps<typeof CommandParamsDialo
     </Stack>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Guides/Command parameters",
   component: CommandParamsDialog,
@@ -146,13 +137,11 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof CommandParamsDialog>;
-
+} satisfies CanvasMeta<typeof CommandParamsDialog>;
 export default meta;
-
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const NumberParameter: Story = {
+  id: "pstdio-workbench-guides-command-parameters--number-parameter",
   parameters: commandSourceParameters(commandParamsSources.number),
   render: (args) => <CommandParameterExample {...args} />,
   args: {
@@ -162,8 +151,8 @@ export const NumberParameter: Story = {
     },
   },
 };
-
 export const RefineTicket: Story = {
+  id: "pstdio-workbench-guides-command-parameters--refine-ticket",
   parameters: commandSourceParameters(commandParamsSources.refineTicket),
   render: (args) => <CommandParameterExample {...args} />,
   args: {
@@ -173,8 +162,8 @@ export const RefineTicket: Story = {
     },
   },
 };
-
 export const EveryControl: Story = {
+  id: "pstdio-workbench-guides-command-parameters--every-control",
   parameters: commandSourceParameters(commandParamsSources.everyControl),
   render: (args) => <CommandParameterExample {...args} />,
   args: {
@@ -184,8 +173,8 @@ export const EveryControl: Story = {
     },
   },
 };
-
 export const FilesParameter: Story = {
+  id: "pstdio-workbench-guides-command-parameters--files-parameter",
   parameters: commandSourceParameters(commandParamsSources.files),
   render: (args) => <CommandParameterExample {...args} />,
   args: {
@@ -195,7 +184,6 @@ export const FilesParameter: Story = {
     },
   },
 };
-
 const dynamicRequest = {
   label: "Run experiment",
   record: {
@@ -228,6 +216,7 @@ const dynamicRequest = {
   },
 };
 export const DependentOptions: Story = {
+  id: "pstdio-workbench-guides-command-parameters--dependent-options",
   render: (args) => <CommandParameterExample {...args} />,
   args: {
     request: dynamicRequest,
@@ -237,10 +226,12 @@ export const DependentOptions: Story = {
   },
 };
 export const LoadingOptions: Story = {
+  id: "pstdio-workbench-guides-command-parameters--loading-options",
   ...DependentOptions,
   args: { request: dynamicRequest, executeOptionCommand: () => new Promise(() => {}) },
 };
 export const FailedOptions: Story = {
+  id: "pstdio-workbench-guides-command-parameters--failed-options",
   ...DependentOptions,
   args: {
     request: dynamicRequest,
@@ -250,10 +241,10 @@ export const FailedOptions: Story = {
   },
 };
 export const EmptyOptions: Story = {
+  id: "pstdio-workbench-guides-command-parameters--empty-options",
   ...DependentOptions,
   args: { request: dynamicRequest, executeOptionCommand: async () => [] },
 };
-
 // The planner's "Run attempt": when the ticket cannot start, Run keeps the dialog open
 // and shows the command's reason above the actions.
 const runAttemptCommand = registerCommand({
@@ -274,19 +265,13 @@ const runAttemptCommand = registerCommand({
     },
   },
 });
-
 export const RunFailed: Story = {
+  id: "pstdio-workbench-guides-command-parameters--run-failed",
   render: (args) => <CommandParameterExample {...args} />,
   args: {
     request: { label: "Run attempt", record: runAttemptCommand },
     onRun: async () => {
       throw new Error("PS-458 can't start: it waits on PS-457, which is not done and has no attempt to build on.");
     },
-  },
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "Open parameter form" }));
-    const dialog = within(document.body);
-    await userEvent.click(await dialog.findByRole("button", { name: "Run" }));
-    await expect(await dialog.findByText(/PS-458 can't start: it waits on PS-457/)).toBeVisible();
   },
 };

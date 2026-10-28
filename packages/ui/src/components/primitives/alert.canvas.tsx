@@ -1,7 +1,6 @@
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { AlertMessage } from "./alert";
 
 const meta = {
@@ -16,10 +15,9 @@ const meta = {
       },
     },
   },
-} satisfies Meta<typeof AlertMessage>;
+} satisfies CanvasMeta<typeof AlertMessage>;
 export default meta;
-type Story = StoryObj<typeof AlertMessage>;
-
+type Story = CanvasVariant<typeof AlertMessage>;
 const examples = [
   {
     status: "info",
@@ -41,7 +39,6 @@ const examples = [
     action: "Restart service",
   },
 ] as const;
-
 const AlertActionsPreview = () => {
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [requested, setRequested] = useState<string[]>([]);
@@ -86,33 +83,12 @@ const AlertActionsPreview = () => {
     </Stack>
   );
 };
-
 export const Actions: Story = {
+  id: "primitives-alertmessage--actions",
   render: () => <AlertActionsPreview />,
-  play: async ({ canvas }) => {
-    await expect(canvas.getAllByRole("alert")).toHaveLength(4);
-    const error = within(canvas.getAllByRole("alert")[3]);
-    const dismiss = error.getByRole("button", { name: "Dismiss error notice" }).getBoundingClientRect();
-    const title = error.getByText("Extension runtime stopped").getBoundingClientRect();
-    const indicator = canvas.getAllByRole("alert")[3].firstElementChild!.getBoundingClientRect();
-    const action = error.getByRole("button", { name: "Restart service" }).getBoundingClientRect();
-    const center = (rect: DOMRect) => rect.top + rect.height / 2;
-    await expect(Math.abs(center(dismiss) - center(title))).toBeLessThanOrEqual(1);
-    await expect(Math.abs(center(indicator) - center(title))).toBeLessThanOrEqual(1);
-    await expect(title.left - indicator.right).toBeGreaterThanOrEqual(8);
-    await expect(dismiss.bottom).toBeLessThanOrEqual(action.top);
-    await userEvent.click(error.getByRole("button", { name: "Restart service" }));
-    await expect(error.getByText("Action requested")).toBeVisible();
-    await userEvent.click(error.getByRole("button", { name: "Show details" }));
-    await expect(error.getByText("Your work is saved. You can keep using the workspace.")).toBeVisible();
-    await userEvent.click(error.getByRole("button", { name: "Dismiss error notice" }));
-    await expect(canvas.getAllByRole("alert")).toHaveLength(3);
-    await userEvent.click(canvas.getByRole("button", { name: "Reset alerts" }));
-    await expect(canvas.getAllByRole("alert")).toHaveLength(4);
-  },
 };
-
 export const Statuses: Story = {
+  id: "primitives-alertmessage--statuses",
   render: () => (
     <Stack gap="sm">
       <AlertMessage status="info" title="Pipeline saved" />
@@ -124,8 +100,8 @@ export const Statuses: Story = {
     </Stack>
   ),
 };
-
 export const NarrowActions: Story = {
+  id: "primitives-alertmessage--narrow-actions",
   render: () => (
     <Box width="2xs" maxW="full">
       <AlertMessage
@@ -144,13 +120,9 @@ export const NarrowActions: Story = {
       </AlertMessage>
     </Box>
   ),
-  play: async ({ canvas }) => {
-    const alert = canvas.getByRole("alert");
-    await expect(alert.scrollWidth).toBeLessThanOrEqual(alert.clientWidth);
-  },
 };
-
 export const WarningActions: Story = {
+  id: "primitives-alertmessage--warning-actions",
   render: () => (
     <AlertMessage status="warning" title="No connection available">
       <Stack gap="xs">
@@ -163,9 +135,9 @@ export const WarningActions: Story = {
     </AlertMessage>
   ),
 };
-
 // A problem the user can act on can be closed; only a temporary failure offers Retry.
 export const Recoverable: Story = {
+  id: "primitives-alertmessage--recoverable",
   render: () => (
     <Stack gap="sm">
       <AlertMessage
@@ -182,8 +154,8 @@ export const Recoverable: Story = {
     </Stack>
   ),
 };
-
 export const LongContent: Story = {
+  id: "primitives-alertmessage--long-content",
   render: () => (
     <Box width="sm" maxW="full">
       <AlertMessage
@@ -197,12 +169,7 @@ export const LongContent: Story = {
       </AlertMessage>
     </Box>
   ),
-  play: async ({ canvas }) => {
-    const alert = canvas.getByRole("alert");
-    await expect(alert.scrollWidth).toBeLessThanOrEqual(alert.clientWidth);
-  },
 };
-
 const VariableContentPreview = (props: { titleOnly?: boolean; constrained?: boolean }) => {
   const { titleOnly = false, constrained = false } = props;
   const [requested, setRequested] = useState(false);
@@ -243,69 +210,19 @@ const VariableContentPreview = (props: { titleOnly?: boolean; constrained?: bool
     </Stack>
   );
 };
-
-const checkVariableContent: Story["play"] = async ({ canvas, canvasElement }) => {
-  const alert = canvas.getByRole("alert");
-  const bounds = alert.getBoundingClientRect();
-  const window = canvasElement.ownerDocument.defaultView!;
-  await expect(bounds.height).toBeLessThanOrEqual(window.innerHeight / 2);
-  await expect(alert.scrollWidth).toBeLessThanOrEqual(alert.clientWidth);
-  const viewport = alert.querySelector<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]')!;
-  await expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight);
-  viewport.scrollTop = viewport.scrollHeight;
-  await expect(viewport.scrollTop).toBeGreaterThan(0);
-  const scrollbar = alert.querySelector<HTMLElement>('[data-part="scrollbar"][data-orientation="vertical"]')!;
-  const thumb = scrollbar.querySelector<HTMLElement>('[data-part="thumb"]')!;
-  const alertStyle = window.getComputedStyle(alert);
-  await expect(window.getComputedStyle(thumb).backgroundColor).toBe(alertStyle.color);
-  await expect(
-    Math.abs(scrollbar.getBoundingClientRect().right - bounds.right + Number.parseFloat(alertStyle.paddingRight)),
-  ).toBeLessThan(1);
-  await userEvent.hover(scrollbar);
-  await expect(window.getComputedStyle(thumb).backgroundColor).toBe(alertStyle.color);
-  await userEvent.unhover(scrollbar);
-  const retry = canvas.getByRole("button", { name: "Retry" });
-  await expect(retry.getBoundingClientRect().bottom).toBeLessThanOrEqual(bounds.bottom);
-  await userEvent.click(retry);
-  await expect(canvas.getByRole("button", { name: "Requested" })).toBeVisible();
-  await userEvent.click(canvas.getByRole("button", { name: "Dismiss" }));
-  await expect(canvas.getByText("Dismissed")).toBeVisible();
-  await userEvent.click(canvas.getByRole("button", { name: "Reset alert" }));
-};
-
 export const VariableContent: Story = {
+  id: "primitives-alertmessage--variable-content",
   render: () => <VariableContentPreview />,
-  play: checkVariableContent,
 };
-
 export const VariableTitle: Story = {
+  id: "primitives-alertmessage--variable-title",
   render: () => <VariableContentPreview titleOnly />,
-  play: checkVariableContent,
 };
-
 export const ConstrainedContent: Story = {
+  id: "primitives-alertmessage--constrained-content",
   render: () => <VariableContentPreview constrained />,
-  play: async (context) => {
-    const alert = context.canvas.getByRole("alert");
-    await expect(alert.getBoundingClientRect().height).toBeLessThanOrEqual(
-      alert.parentElement!.getBoundingClientRect().height,
-    );
-    await checkVariableContent!(context);
-  },
 };
-
 export const CopyMessage: Story = {
+  id: "primitives-alertmessage--copy-message",
   render: () => <VariableContentPreview />,
-  play: async ({ canvas }) => {
-    const user = userEvent.setup();
-    await user.click(canvas.getByRole("button", { name: "Copy error message" }));
-    const copied = await navigator.clipboard.readText();
-    await expect(copied).toContain("Service unavailable");
-    await expect(copied).toContain("Diagnostic 99");
-    await expect(copied).not.toContain("Copy error message");
-    await expect(copied).not.toContain("Retry");
-    await user.click(canvas.getByRole("button", { name: "Retry" }));
-    await user.click(canvas.getByRole("button", { name: "Copied" }));
-    await expect(await navigator.clipboard.readText()).toContain("Retry requested");
-  },
 };

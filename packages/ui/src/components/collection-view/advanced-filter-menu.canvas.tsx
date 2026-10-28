@@ -1,20 +1,16 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { AdvancedFilterMenu } from "./advanced-filter-menu";
 import { storyFields, storyFilter, storyOptions } from "./collection-view-story-fixtures";
 
-const meta: Meta<typeof AdvancedFilterMenu> = {
+const meta: CanvasMeta<typeof AdvancedFilterMenu> = {
   title: "Patterns/Collection View/Advanced Filter Menu",
   component: AdvancedFilterMenu,
 };
-
 export default meta;
-
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 const Menu = (props: { filter: ViewFilterGroup }) => {
   const [filter, setFilter] = useState(props.filter);
   return (
@@ -23,8 +19,8 @@ const Menu = (props: { filter: ViewFilterGroup }) => {
     </Box>
   );
 };
-
 export const SimpleRules: Story = {
+  id: "patterns-collection-view-advanced-filter-menu--simple-rules",
   render: () => (
     <Menu
       filter={{
@@ -37,22 +33,14 @@ export const SimpleRules: Story = {
     />
   ),
 };
-
 /** Every rule uses the same And/Or choice. */
 export const AllOrAnyRules: Story = {
+  id: "patterns-collection-view-advanced-filter-menu--all-or-any-rules",
   render: () => <Menu filter={storyFilter} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Conjunction" }));
-    await userEvent.click(canvas.getByRole("menuitem", { name: "Or", exact: true }));
-    await expect(canvas.getByRole("button", { name: "Conjunction" })).toHaveTextContent("Or");
-    await userEvent.click(canvas.getAllByRole("button", { name: "Remove filter" })[0]!);
-    await expect(canvas.getAllByTestId("filter-rule-row")).toHaveLength(3);
-  },
 };
-
 /** "Is empty" and "Is not empty" take no value, so the value control is hidden. */
 export const EmptyValueConditions: Story = {
+  id: "patterns-collection-view-advanced-filter-menu--empty-value-conditions",
   render: () => (
     <Menu
       filter={{

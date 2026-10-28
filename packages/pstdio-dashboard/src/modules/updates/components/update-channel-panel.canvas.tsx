@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID, Workbench } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { receiveSettings } from "@/shared/settings/synced-settings";
@@ -19,16 +19,29 @@ const meta = {
     onChange: () => undefined,
     onDismissError: () => undefined,
   },
-} satisfies Meta<typeof UpdateChannelContent>;
+} satisfies CanvasMeta<typeof UpdateChannelContent>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Stable: Story = { args: { channel: "stable" } };
-export const Nightly: Story = { args: { channel: "nightly", version: "0.42.0-nightly.20261011" } };
-export const Loading: Story = { args: { channel: undefined, version: undefined } };
-export const Saving: Story = { args: { channel: "nightly", saving: true } };
-export const SaveFailure: Story = { args: { channel: "stable", error: "Could not change the update channel." } };
-
+type Story = CanvasVariant<typeof meta>;
+export const Stable: Story = {
+  id: "settings-update-channel--stable",
+  args: { channel: "stable" },
+};
+export const Nightly: Story = {
+  id: "settings-update-channel--nightly",
+  args: { channel: "nightly", version: "0.42.0-nightly.20261011" },
+};
+export const Loading: Story = {
+  id: "settings-update-channel--loading",
+  args: { channel: undefined, version: undefined },
+};
+export const Saving: Story = {
+  id: "settings-update-channel--saving",
+  args: { channel: "nightly", saving: true },
+};
+export const SaveFailure: Story = {
+  id: "settings-update-channel--save-failure",
+  args: { channel: "stable", error: "Could not change the update channel." },
+};
 // A desktop app that remembers the channel in memory, like Electron main does on disk.
 const createDesktopBridge = (): UpdateChannelBridge => {
   let channel: UpdateChannel = "stable";
@@ -40,7 +53,6 @@ const createDesktopBridge = (): UpdateChannelBridge => {
     },
   };
 };
-
 // The real modules with a fake desktop app: pick a channel, then reopen the panel.
 const UpdateChannelNavigation = () => {
   const [client] = useState(() => {
@@ -61,7 +73,6 @@ const UpdateChannelNavigation = () => {
       .then(() => next.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "update-channel" }));
     return next;
   });
-
   return (
     <QueryClientProvider client={client}>
       <Box h="100dvh" w="full">
@@ -70,8 +81,8 @@ const UpdateChannelNavigation = () => {
     </QueryClientProvider>
   );
 };
-
 export const SettingsNavigation: Story = {
+  id: "settings-update-channel--settings-navigation",
   parameters: { layout: "fullscreen" },
   render: () => <UpdateChannelNavigation />,
 };

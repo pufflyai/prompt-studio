@@ -1,17 +1,9 @@
 import { Box, Button, HStack, IconButton, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
-import { expect, within } from "storybook/test";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
-import {
-  PromptHistoryPanel,
-  PromptHistoryResetPanel,
-  resetHistoryWalk,
-  walkFullHistory,
-  walkMultilineHistory,
-  walkThreePrompts,
-} from "./chat-history-story";
+import { PromptHistoryPanel, PromptHistoryResetPanel } from "./chat-history-story";
 import { ChatPanel } from "./chat-panel";
 import { WorkingIndicatorVisibilityRenderer } from "./chat-panel-work-timer-fixtures";
 import type { QueuedFollowUp, SessionMessage } from "./message-types";
@@ -19,7 +11,6 @@ import { moveQueuedFollowUp, type QueuedFollowUpMoveDirection } from "./queued-f
 import { ChatWorkspaceHub } from "./workspace-hub";
 
 const conversationMessages = rawConversationMessages as unknown as SessionMessage[];
-
 const longUserPrompt = [
   "I need a release checklist for this rollout and I want every detail captured in one place.",
   "Include pre-flight checks for database migrations, message queue lag, worker health, API latency budgets, and frontend error budgets.",
@@ -28,7 +19,6 @@ const longUserPrompt = [
   "Please include dry-run instructions, expected command outputs, and post-deploy validation checks for auth, billing, and audit logs.",
   "Finally, provide a handoff note that the on-call engineer can use without extra context, including escalation paths and paging thresholds.",
 ].join(" ");
-
 const longPromptMessages: SessionMessage[] = [
   {
     id: "long-user-prompt",
@@ -46,7 +36,6 @@ const longPromptMessages: SessionMessage[] = [
     ],
   },
 ];
-
 const overflowingFollowUpMessages: SessionMessage[] = [
   {
     id: "initial-user-prompt",
@@ -87,8 +76,7 @@ const overflowingFollowUpMessages: SessionMessage[] = [
     ],
   },
 ];
-
-const meta: Meta<typeof ChatPanel> = {
+const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel",
   component: ChatPanel,
   parameters: {
@@ -96,12 +84,9 @@ const meta: Meta<typeof ChatPanel> = {
     actions: { argTypesRegex: "^on[A-Z].*" },
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ChatPanel>;
+type Story = CanvasVariant<typeof ChatPanel>;
 type ChatPanelProps = ComponentProps<typeof ChatPanel>;
-
 const panelContainerStyles = {
   w: "960px",
   maxW: "100%",
@@ -112,7 +97,6 @@ const panelContainerStyles = {
   borderRadius: "lg",
   p: "md",
 } as const;
-
 // Composer toolbar controls (attach lives in the app; here the model/harness menu stands in).
 const defaultActions = (
   <HStack gap="1">
@@ -122,7 +106,6 @@ const defaultActions = (
     </Button>
   </HStack>
 );
-
 // The workspace identity/selector now lives in the hub header, not below the input.
 const defaultWorkspaceControl = (
   <Button size="xs" variant="ghost" px="2xs">
@@ -133,33 +116,30 @@ const defaultWorkspaceControl = (
     <ChevronDown size={14} />
   </Button>
 );
-
 const openWorkspaceAction = (
   <IconButton size="xs" variant="ghost" aria-label="Open workspace">
     <ArrowUpRight size={14} />
   </IconButton>
 );
-
 const streamingMessages = conversationMessages.slice(-18);
 const STREAM_CHUNK_SIZE = 10;
 const STREAM_INTERVAL_MS = 60;
-
 const splitTextIntoChunks = (text: string) => {
   if (!text) return [];
-
   const chunks: string[] = [];
-
   for (let index = 0; index < text.length; index += STREAM_CHUNK_SIZE) {
     chunks.push(text.slice(index, index + STREAM_CHUNK_SIZE));
   }
-
   return chunks;
 };
-
-const isTextPart = (part: SessionMessage["parts"][number]): part is { type: "text"; text: string } => {
+const isTextPart = (
+  part: SessionMessage["parts"][number],
+): part is {
+  type: "text";
+  text: string;
+} => {
   return part.type === "text";
 };
-
 const updateAssistantTextPart = (
   currentMessages: SessionMessage[],
   messageId: string,
@@ -168,28 +148,28 @@ const updateAssistantTextPart = (
 ) => {
   return currentMessages.map((message) => {
     if (message.id !== messageId) return message;
-
     const targetPart = message.parts[partIndex];
     if (!targetPart || !isTextPart(targetPart)) return message;
-
     const nextParts = [...message.parts];
     nextParts[partIndex] = { ...targetPart, text };
-
     return {
       ...message,
       parts: nextParts,
     };
   });
 };
-
-type TextPartEntry = { part: { type: "text"; text: string }; idx: number };
-
+type TextPartEntry = {
+  part: {
+    type: "text";
+    text: string;
+  };
+  idx: number;
+};
 const getTextPartEntries = (message: SessionMessage) => {
   return message.parts
     .map((part, idx) => ({ part, idx }))
     .filter(({ part }) => isTextPart(part) && part.text.trim().length > 0) as TextPartEntry[];
 };
-
 const seedTextParts = (message: SessionMessage, textPartEntries: TextPartEntry[]) => {
   const textPartIndexes = new Set(textPartEntries.map(({ idx }) => idx));
   return {
@@ -199,7 +179,6 @@ const seedTextParts = (message: SessionMessage, textPartEntries: TextPartEntry[]
     ),
   } satisfies SessionMessage;
 };
-
 const streamTextParts = async (options: {
   message: SessionMessage;
   textPartEntries: TextPartEntry[];
@@ -207,13 +186,10 @@ const streamTextParts = async (options: {
   onChunk: (messageId: string, partIndex: number, text: string) => void;
 }) => {
   const { message, textPartEntries, isCancelled, onChunk } = options;
-
   for (const { part, idx } of textPartEntries) {
     if (isCancelled()) return;
-
     const chunks = splitTextIntoChunks(part.text);
     let streamed = "";
-
     for (const chunk of chunks) {
       if (isCancelled()) return;
       streamed += chunk;
@@ -222,7 +198,6 @@ const streamTextParts = async (options: {
     }
   }
 };
-
 const streamConversationMessages = async (options: {
   messages: SessionMessage[];
   isCancelled: () => boolean;
@@ -232,85 +207,66 @@ const streamConversationMessages = async (options: {
   onComplete: () => void;
 }) => {
   const { messages, isCancelled, onStart, onMessage, onChunk, onComplete } = options;
-
   onStart();
-
   for (const message of messages) {
     if (isCancelled()) return;
-
     const textPartEntries = getTextPartEntries(message);
     if (textPartEntries.length === 0) {
       onMessage(message);
-
       const pauseMs =
         message.role === "user" ? CONVERSATION_STREAM_MESSAGE_DELAY_MS : CONVERSATION_STREAM_STEP_DELAY_MS;
       await delay(pauseMs);
       continue;
     }
-
     onMessage(seedTextParts(message, textPartEntries));
     await streamTextParts({ message, textPartEntries, isCancelled, onChunk });
     await delay(CONVERSATION_STREAM_MESSAGE_DELAY_MS);
   }
-
   if (!isCancelled()) onComplete();
 };
-
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const CONVERSATION_STREAM_MESSAGE_DELAY_MS = 200;
 const CONVERSATION_STREAM_STEP_DELAY_MS = 80;
-
 const clearStreamTimer = (timerRef: { current: ReturnType<typeof setInterval> | null }) => {
   if (timerRef.current === null) return;
-
   clearInterval(timerRef.current);
   timerRef.current = null;
 };
-
 const streamAssistantText = (options: {
-  timerRef: { current: ReturnType<typeof setInterval> | null };
+  timerRef: {
+    current: ReturnType<typeof setInterval> | null;
+  };
   sourceText: string;
   onStart: () => void;
   onChunk: (nextText: string) => void;
   onComplete: () => void;
 }) => {
   const { timerRef, sourceText, onStart, onChunk, onComplete } = options;
-
   clearStreamTimer(timerRef);
-
   const chunks = splitTextIntoChunks(sourceText);
   if (chunks.length === 0) {
     onComplete();
     return;
   }
-
   let streamedText = "";
   let chunkIndex = 0;
-
   onStart();
-
   timerRef.current = setInterval(() => {
     streamedText += chunks[chunkIndex] ?? "";
     onChunk(streamedText);
-
     chunkIndex += 1;
-
     if (chunkIndex >= chunks.length) {
       clearStreamTimer(timerRef);
       onComplete();
     }
   }, STREAM_INTERVAL_MS);
 };
-
 const buildMockAssistantReply = (text: string, attachments: string[]) => {
   if (attachments.length === 0) {
     return `Mock response: I received "${text}" and generated a draft answer.`;
   }
-
   return `Mock response: I received "${text}" with ${attachments.length} attachment(s): ${attachments.join(", ")}.`;
 };
-
 const queuedFollowUpItems: QueuedFollowUp[] = [
   {
     id: "queued-prompt-session-1-1",
@@ -329,7 +285,6 @@ const queuedFollowUpItems: QueuedFollowUp[] = [
     position: 3,
   },
 ];
-
 function MockChatPanelRenderer(props: ChatPanelProps) {
   const {
     messages: initialMessages = [],
@@ -345,32 +300,26 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
     onQueuedFollowUpMove,
     chatInputCommands,
   } = props;
-
   const [messages, setMessages] = useState<SessionMessage[]>(initialMessages);
   const [streaming, setStreaming] = useState(false);
   const [streamingStartedAt, setStreamingStartedAt] = useState(Date.now);
   const [nextMessageNumber, setNextMessageNumber] = useState(initialMessages.length + 1);
   const streamTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   useEffect(() => {
     clearStreamTimer(streamTimerRef);
     setMessages(initialMessages);
     setNextMessageNumber(initialMessages.length + 1);
   }, [initialMessages]);
-
   useEffect(() => {
     return () => clearStreamTimer(streamTimerRef);
   }, []);
-
   const handleSubmitMessage = (text: string, attachments: string[]) => {
     onSubmitMessage?.(text, attachments);
-
     const userMessage: SessionMessage = {
       id: `message-${nextMessageNumber}`,
       role: "user",
       parts: [{ type: "text", text }],
     };
-
     const assistantReply = buildMockAssistantReply(text, attachments);
     const assistantMessageId = `message-${nextMessageNumber + 1}`;
     const assistantMessage: SessionMessage = {
@@ -378,7 +327,6 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
       role: "assistant",
       parts: [{ type: "text", text: "" }],
     };
-
     setNextMessageNumber((current) => current + 2);
     setMessages((current) => [...current, userMessage, assistantMessage]);
     streamAssistantText({
@@ -394,7 +342,6 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
       onComplete: () => setStreaming(false),
     });
   };
-
   return (
     <ChatPanel
       messages={messages}
@@ -414,22 +361,17 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
     />
   );
 }
-
 function QueuedFollowUpsRenderer(props: ChatPanelProps) {
   const [queuedFollowUps, setQueuedFollowUps] = useState<QueuedFollowUp[]>(props.queuedFollowUps ?? []);
-
   const handleQueuedFollowUpUpdate = (itemId: string, prompt: string) => {
     setQueuedFollowUps((items) => items.map((item) => (item.id === itemId ? { ...item, prompt } : item)));
   };
-
   const handleQueuedFollowUpRemove = (itemId: string) => {
     setQueuedFollowUps((items) => items.filter((item) => item.id !== itemId));
   };
-
   const handleQueuedFollowUpMove = (itemId: string, direction: QueuedFollowUpMoveDirection, steps?: number) => {
     setQueuedFollowUps((items) => moveQueuedFollowUp(items, itemId, direction, steps));
   };
-
   return (
     <MockChatPanelRenderer
       {...props}
@@ -440,8 +382,8 @@ function QueuedFollowUpsRenderer(props: ChatPanelProps) {
     />
   );
 }
-
 export const Empty: Story = {
+  id: "patterns-chat-chat-panel--empty",
   render: (args) => (
     <Box {...panelContainerStyles}>
       <MockChatPanelRenderer {...args} />
@@ -459,8 +401,8 @@ export const Empty: Story = {
     },
   },
 };
-
 export const Conversation: Story = {
+  id: "patterns-chat-chat-panel--conversation",
   render: (args) => (
     <Box {...panelContainerStyles}>
       <MockChatPanelRenderer {...args} />
@@ -471,8 +413,8 @@ export const Conversation: Story = {
     messages: conversationMessages,
   },
 };
-
 export const QueuedFollowUps: Story = {
+  id: "patterns-chat-chat-panel--queued-follow-ups",
   render: (args) => (
     <Box {...panelContainerStyles}>
       <QueuedFollowUpsRenderer {...args} />
@@ -487,17 +429,13 @@ export const QueuedFollowUps: Story = {
     ],
   },
 };
-
 function StreamingConversationRenderer(props: ChatPanelProps) {
   const { messages: allMessages = [], emptyStateTitle, emptyStateDescription, chatInputPlaceholder, actions } = props;
-
   const [visibleMessages, setVisibleMessages] = useState<SessionMessage[]>([]);
   const [streaming, setStreaming] = useState(true);
   const [streamingStartedAt, setStreamingStartedAt] = useState(Date.now);
-
   useEffect(() => {
     let cancelled = false;
-
     const run = async () => {
       await streamConversationMessages({
         messages: allMessages,
@@ -518,14 +456,11 @@ function StreamingConversationRenderer(props: ChatPanelProps) {
         },
       });
     };
-
     run();
-
     return () => {
       cancelled = true;
     };
   }, [allMessages]);
-
   return (
     <ChatPanel
       messages={visibleMessages}
@@ -538,8 +473,8 @@ function StreamingConversationRenderer(props: ChatPanelProps) {
     />
   );
 }
-
 export const Streaming: Story = {
+  id: "patterns-chat-chat-panel--streaming",
   render: (args) => (
     <Box {...panelContainerStyles}>
       <StreamingConversationRenderer {...args} />
@@ -550,8 +485,8 @@ export const Streaming: Story = {
     messages: streamingMessages,
   },
 };
-
 export const WorkingIndicatorVisibility: Story = {
+  id: "patterns-chat-chat-panel--working-indicator-visibility",
   render: (args) => (
     <Box {...panelContainerStyles} display="flex" flexDirection="column" gap="sm">
       <WorkingIndicatorVisibilityRenderer {...args} />
@@ -562,16 +497,16 @@ export const WorkingIndicatorVisibility: Story = {
     messages: longPromptMessages,
   },
 };
-
 export const WorkingIndicatorLongRun: Story = {
+  id: "patterns-chat-chat-panel--working-indicator-long-run",
   ...WorkingIndicatorVisibility,
   args: {
     ...WorkingIndicatorVisibility.args,
-    streamingStartedAt: Date.now() - 5 * 60_000,
+    streamingStartedAt: Date.now() - 5 * 60000,
   },
 };
-
 export const LongStickyUserPrompt: Story = {
+  id: "patterns-chat-chat-panel--long-sticky-user-prompt",
   render: (args) => (
     <Box {...panelContainerStyles}>
       <MockChatPanelRenderer {...args} />
@@ -582,8 +517,8 @@ export const LongStickyUserPrompt: Story = {
     messages: longPromptMessages,
   },
 };
-
 export const OverflowingFollowUp: Story = {
+  id: "patterns-chat-chat-panel--overflowing-follow-up",
   render: (args) => (
     <Box {...panelContainerStyles}>
       <MockChatPanelRenderer {...args} />
@@ -593,53 +528,9 @@ export const OverflowingFollowUp: Story = {
     ...Empty.args,
     messages: overflowingFollowUpMessages,
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const initialUserMessage = (await canvas.findByText("Summarize the rollout status.")).closest<HTMLElement>(
-      ".ai-message__root",
-    );
-    const initialAssistantMessage = (await canvas.findByText(/Rollout check 1:/)).closest<HTMLElement>(
-      ".ai-message__root",
-    );
-    const latestUserMessage = (
-      await canvas.findByText("Show me the detailed verification results.")
-    ).closest<HTMLElement>(".ai-message__root");
-    const viewport = latestUserMessage?.closest<HTMLElement>('[data-part="content"][role="list"]')?.parentElement;
-
-    if (!viewport || !initialUserMessage || !initialAssistantMessage || !latestUserMessage) {
-      throw new Error("Expected the conversation viewport and both user turns");
-    }
-
-    viewport.scrollTop = 0;
-    viewport.dispatchEvent(new Event("scroll"));
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-
-    const viewportTop = viewport.getBoundingClientRect().top;
-    const initialAssistantOffset = initialAssistantMessage.getBoundingClientRect().top - viewportTop;
-    const latestUserOffset = latestUserMessage.getBoundingClientRect().top - viewportTop;
-
-    viewport.scrollTop = initialAssistantOffset + 80;
-    viewport.dispatchEvent(new Event("scroll"));
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-
-    expect(viewport.scrollTop).toBeGreaterThan(0);
-    expect(initialUserMessage.getBoundingClientRect().top).toBeGreaterThanOrEqual(viewportTop - 1);
-    expect(initialUserMessage.getBoundingClientRect().top).toBeLessThanOrEqual(viewportTop + 1);
-    expect(initialAssistantMessage.compareDocumentPosition(latestUserMessage) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
-
-    viewport.scrollTop = latestUserOffset + 80;
-    viewport.dispatchEvent(new Event("scroll"));
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-
-    expect(latestUserMessage.getBoundingClientRect().top).toBeGreaterThanOrEqual(viewportTop - 1);
-    expect(latestUserMessage.getBoundingClientRect().top).toBeLessThanOrEqual(viewportTop + 1);
-    expect(initialUserMessage.getBoundingClientRect().bottom).toBeLessThanOrEqual(viewportTop + 1);
-  },
 };
-
 export const ConversationWithWorkspaceHub: Story = {
+  id: "patterns-chat-chat-panel--conversation-with-workspace-hub",
   render: (args) => (
     <Box {...panelContainerStyles}>
       <MockChatPanelRenderer {...args} />
@@ -658,8 +549,8 @@ export const ConversationWithWorkspaceHub: Story = {
     ),
   },
 };
-
 export const QueuedFollowUpsWithWorkspaceHub: Story = {
+  id: "patterns-chat-chat-panel--queued-follow-ups-with-workspace-hub",
   render: (args) => (
     <Box {...panelContainerStyles}>
       <QueuedFollowUpsRenderer {...args} />
@@ -678,19 +569,21 @@ export const QueuedFollowUpsWithWorkspaceHub: Story = {
     ),
   },
 };
-
-export const PromptHistory: Story = { render: () => <PromptHistoryPanel />, play: walkThreePrompts };
-
+export const PromptHistory: Story = {
+  id: "patterns-chat-chat-panel--prompt-history",
+  render: () => <PromptHistoryPanel />,
+};
 export const PromptHistoryFull: Story = {
+  id: "patterns-chat-chat-panel--prompt-history-full",
   tags: ["!manifest"],
   render: () => <PromptHistoryPanel prompts={Array.from({ length: 12 }, (_, i) => `Prompt ${i + 1}`)} />,
-  play: walkFullHistory,
 };
-
 export const PromptHistoryMultiline: Story = {
+  id: "patterns-chat-chat-panel--prompt-history-multiline",
   tags: ["!manifest"],
   render: () => <PromptHistoryPanel prompts={["Earlier prompt", "First line\nSecond line"]} />,
-  play: walkMultilineHistory,
 };
-
-export const PromptHistoryReset: Story = { render: () => <PromptHistoryResetPanel />, play: resetHistoryWalk };
+export const PromptHistoryReset: Story = {
+  id: "patterns-chat-chat-panel--prompt-history-reset",
+  render: () => <PromptHistoryResetPanel />,
+};

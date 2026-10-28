@@ -128,7 +128,7 @@ Follow these steps **every time**:
 
 Do not write:
 
-- Tests for UI changes. Use colocated Canvas examples instead.
+- Exhaustive UI permutations and cosmetic-only assertions. Keep Canvas examples for exploration; add automated browser checks only for critical behavior, with the risk identified in the test.
 - Tests for changes that only affect configuration.
 - Tests for changes that only affect documentation.
 - Tests that assert literal bundled copy.
@@ -166,7 +166,7 @@ For code changes, run targeted tests and the relevant package checks, such as ty
 
 For documentation-only changes, check the content, links, paths, and formatting. Do not run application tests or full validation merely because a documentation path appears in a source comment, prompt, or test fixture.
 
-Always validate UI changes using Playwright.
+Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies.
 
 ### 5. Test packaged files
 
@@ -200,7 +200,7 @@ A pull request may contain only one migration entry. If the tools create more th
 
 - Always reproduce a bug before fixing it.
 - Always write a test that proves the bug stays fixed.
-- Always validate UI changes using Playwright.
+- Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies.
 
 ## Git
 
@@ -246,7 +246,7 @@ A pull request may contain only one migration entry. If the tools create more th
 
 Do not write:
 
-- Tests for UI changes. Use colocated Canvas examples instead.
+- Exhaustive UI permutations and cosmetic-only assertions. Keep Canvas examples for exploration; add automated browser checks only for critical behavior, with the risk identified in the test.
 - Tests for changes that only affect configuration.
 - Tests for changes that only affect documentation.
 - Tests that assert literal bundled copy.

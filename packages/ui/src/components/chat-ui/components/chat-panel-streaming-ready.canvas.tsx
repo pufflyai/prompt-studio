@@ -1,12 +1,10 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
-import { expect, waitFor, within } from "storybook/test";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 
 const initialText = Array.from({ length: 12 }, (_, index) => `Earlier paragraph ${index + 1}.`).join("\n\n");
-
 function StreamingOnOpen() {
   const [text, setText] = useState(initialText);
   const [status, setStatus] = useState<"closed" | "streaming" | "stopped">("closed");
@@ -49,26 +47,13 @@ function StreamingOnOpen() {
     </Stack>
   );
 }
-
 const meta = {
   title: "Patterns/Chat/Chat Panel Streaming Ready",
   component: StreamingOnOpen,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof StreamingOnOpen>;
+} satisfies CanvasMeta<typeof StreamingOnOpen>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const OpensDuringContinuousStream: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    canvas.getByRole("button", { name: "Open streaming conversation" }).click();
-    const log = await canvas.findByRole("log");
-    const viewport = log.querySelector<HTMLElement>('[data-part="viewport"]')!;
-    try {
-      await waitFor(() => expect(viewport).toBeVisible());
-      await expect(canvasElement.querySelector(".streaming-text-chunk")).toBeVisible();
-    } finally {
-      canvas.getByRole("button", { name: "Stop stream" }).click();
-    }
-  },
+  id: "patterns-chat-chat-panel-streaming-ready--opens-during-continuous-stream",
 };

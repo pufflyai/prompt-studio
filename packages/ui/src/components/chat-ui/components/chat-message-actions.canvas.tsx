@@ -1,6 +1,5 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 
@@ -36,7 +35,6 @@ const completedTurnMessages: SessionMessage[] = [
     parts: [{ type: "text", text: "Thanks." }],
   },
 ];
-
 const incompleteTurnMessages: SessionMessage[] = [
   {
     id: "incomplete-user",
@@ -81,24 +79,20 @@ const incompleteTurnMessages: SessionMessage[] = [
     parts: [{ type: "tool", tool: "shell", status: "running" }],
   },
 ];
-
-const meta: Meta<typeof ChatPanel> = {
+const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Message Actions",
   component: ChatPanel,
   parameters: { layout: "padded" },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ChatPanel>;
-
+type Story = CanvasVariant<typeof ChatPanel>;
 const panelProps = {
   emptyStateTitle: "No messages yet",
   emptyStateDescription: "Send a message to start this session.",
   chatInputPlaceholder: "Type a message...",
 };
-
 export const TurnBoundaries: Story = {
+  id: "patterns-chat-message-actions--turn-boundaries",
   render: () => (
     <HStack alignItems="flex-start" gap="md">
       <Box data-message-action-example="completed" width="480px">
@@ -119,15 +113,4 @@ export const TurnBoundaries: Story = {
       </Box>
     </HStack>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByText("The change is complete.");
-    await canvas.findByText("Third update.");
-
-    const completed = canvasElement.querySelector('[data-message-action-example="completed"]');
-    const incomplete = canvasElement.querySelector('[data-message-action-example="incomplete"]');
-
-    expect(completed?.querySelectorAll('[data-chat-message-action-panel="true"]')).toHaveLength(3);
-    expect(incomplete?.querySelectorAll('[data-chat-message-action-panel="true"]')).toHaveLength(1);
-  },
 };

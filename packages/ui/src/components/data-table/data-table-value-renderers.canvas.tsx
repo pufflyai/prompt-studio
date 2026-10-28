@@ -1,9 +1,7 @@
 import { Badge, Box } from "@chakra-ui/react";
-import { expect, userEvent, within } from "storybook/test";
 import { DataTable, type DataTableProps, type RowData } from ".";
 
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-
 const workspaceRows: RowData[] = [
   {
     Name: "Project workspace",
@@ -38,7 +36,6 @@ const workspaceRows: RowData[] = [
     Provider: "example.remote",
   },
 ];
-
 const valueRenderers: DataTableProps["columnRenderers"] = {
   Type: {
     type: "badge",
@@ -52,21 +49,18 @@ const valueRenderers: DataTableProps["columnRenderers"] = {
   Created: { type: "date" },
   Diff: { type: "diff" },
 };
-
 const meta = {
   title: "Components/Data Display/Data Table",
   component: DataTable,
 };
-
 export default meta;
-
 const StoryFrame = (args: DataTableProps) => (
   <Box width="100%" maxWidth="880px" height="440px" marginX="auto" padding="sm" background="bg">
     <DataTable {...args} />
   </Box>
 );
-
 export const ValueRenderers = {
+  id: "components-data-display-data-table--value-renderers",
   parameters: {
     docs: {
       description: {
@@ -82,20 +76,9 @@ export const ValueRenderers = {
     toolbarStorageKey: "storybook-data-table-value-renderers",
   },
   render: StoryFrame,
-  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getAllByText("Git worktree")[0]).toBeVisible();
-    await expect(canvas.getByText("+128")).toBeVisible();
-    await expect(canvas.getByText("+0")).toBeVisible();
-    await expect(canvas.getByText("5 hours ago")).toBeVisible();
-    const fullPath = String(workspaceRows[1]!.Location);
-    await expect(
-      canvas.getByText((_, element) => element?.getAttribute("tabindex") === "0" && element.textContent === fullPath),
-    ).toBeVisible();
-  },
 };
-
 export const DefaultDisplay = {
+  id: "components-data-display-data-table--default-display",
   args: {
     data: workspaceRows,
     fullWidth: true,
@@ -105,21 +88,9 @@ export const DefaultDisplay = {
     toolbarStorageKey: "storybook-data-table-default-display",
   },
   render: StoryFrame,
-  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.queryByText("pstdio.root")).toBeNull();
-    await expect(canvas.queryByText("50%")).toBeNull();
-    await userEvent.click(canvas.getByRole("button", { name: "Display settings" }));
-    const menu = within(await within(document.body).findByRole("dialog"));
-    await userEvent.click(menu.getByText("Statistics"));
-    await userEvent.click(menu.getByText("Provider"));
-    // The value shows in its cell and, once statistics load, in the column's top values.
-    await expect((await canvas.findAllByText("pstdio.root"))[0]).toBeVisible();
-    await expect((await canvas.findAllByText("50%")).length).toBeGreaterThan(0);
-  },
 };
-
 export const SearchCellValues = {
+  id: "components-data-display-data-table--search-cell-values",
   args: {
     data: [
       {

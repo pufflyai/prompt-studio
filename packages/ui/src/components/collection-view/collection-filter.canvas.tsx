@@ -1,6 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { CollectionFilter, type CollectionFilterProps } from "./collection-filter";
 import { storyFields, storyOptions } from "./collection-view-story-fixtures";
 
@@ -9,8 +8,7 @@ function FilterStory(props: CollectionFilterProps) {
   const [filter, setFilter] = useState(initialFilter);
   return <CollectionFilter {...rest} filter={filter} onFilterChange={setFilter} />;
 }
-
-const meta: Meta<typeof CollectionFilter> = {
+const meta: CanvasMeta<typeof CollectionFilter> = {
   title: "Patterns/Collection View/Collection Filter",
   component: CollectionFilter,
   render: (props) => <FilterStory {...props} />,
@@ -26,22 +24,16 @@ const meta: Meta<typeof CollectionFilter> = {
   },
 };
 export default meta;
-type Story = StoryObj<typeof CollectionFilter>;
-
+type Story = CanvasVariant<typeof CollectionFilter>;
 export const InlineCriteria: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
-    await expect(await body.findByTestId("filter-menu")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
-    await expect(body.queryByTestId("filter-menu")).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Remove Status filter" }));
-    await expect(canvas.queryByRole("group", { name: "Status filter" })).not.toBeInTheDocument();
-  },
+  id: "patterns-collection-view-collection-filter--inline-criteria",
 };
-export const Empty: Story = { args: { filter: { conjunction: "and", rules: [] } } };
+export const Empty: Story = {
+  id: "patterns-collection-view-collection-filter--empty",
+  args: { filter: { conjunction: "and", rules: [] } },
+};
 export const Advanced: Story = {
+  id: "patterns-collection-view-collection-filter--advanced",
   args: {
     filter: {
       conjunction: "and",

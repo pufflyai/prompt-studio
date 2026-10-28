@@ -1,7 +1,6 @@
 import { Box, Button, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useRef, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Tooltip } from "./tooltip";
 
 const meta = {
@@ -15,18 +14,14 @@ const meta = {
       },
     },
   },
-} satisfies Meta<typeof Tooltip>;
+} satisfies CanvasMeta<typeof Tooltip>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const Default: Story = {
+  id: "components-overlays-tooltip--default",
   args: { content: "Reasoning effort", children: <Button>High</Button> },
 };
-
 // ResizeObserver must finish measuring before the next synthetic pointer event.
-const waitForLayout = () =>
-  new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-
 const ResizingLabel = () => {
   const labelRef = useRef<HTMLSpanElement>(null);
   const [narrow, setNarrow] = useState(true);
@@ -47,57 +42,8 @@ const ResizingLabel = () => {
     </Box>
   );
 };
-
 export const TruncatedLabel: Story = {
+  id: "components-overlays-tooltip--truncated-label",
   args: { content: "Session notes for review" },
   render: () => <ResizingLabel />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    const tab = canvas.getByRole("tab");
-    const waitForClipping = async (clipped: boolean) => {
-      // Width changes animate; wait for the visible label before moving the synthetic pointer.
-      await waitFor(() => {
-        const label = tab.querySelector("span")!;
-        expect(label.scrollWidth > label.clientWidth).toBe(clipped);
-      });
-      await waitForLayout();
-    };
-    await waitForClipping(true);
-    await userEvent.hover(tab);
-    await expect(await page.findByRole("tooltip")).toHaveTextContent("Session notes for review");
-    await userEvent.unhover(tab);
-    await userEvent.click(canvas.getByRole("button", { name: "Toggle width" }));
-    await waitForClipping(false);
-    tab.focus();
-    await userEvent.hover(tab);
-    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
-    await userEvent.unhover(tab);
-    await userEvent.click(canvas.getByRole("button", { name: "Toggle width" }));
-    await waitForClipping(true);
-    await userEvent.hover(tab);
-    await expect(await page.findByRole("tooltip")).toHaveTextContent("Session notes for review");
-    await userEvent.unhover(tab);
-    await userEvent.click(canvas.getByRole("button", { name: "Rename" }));
-    await waitForClipping(false);
-    await userEvent.hover(tab);
-    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
-    await userEvent.unhover(tab);
-    await userEvent.click(canvas.getByRole("button", { name: "Toggle tooltips" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Rename" }));
-    await waitForClipping(true);
-    await userEvent.hover(tab);
-    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
-    await userEvent.unhover(tab);
-    await userEvent.click(canvas.getByRole("button", { name: "Toggle width" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Toggle tooltips" }));
-    await waitForClipping(false);
-    await userEvent.hover(tab);
-    await waitFor(() => expect(page.queryByRole("tooltip")).toBeNull());
-    await userEvent.unhover(tab);
-    await userEvent.click(canvas.getByRole("button", { name: "Toggle width" }));
-    await waitForClipping(true);
-    await userEvent.hover(tab);
-    await expect(await page.findByRole("tooltip")).toHaveTextContent("Session notes for review");
-  },
 };

@@ -1,8 +1,7 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
-
 export const createDropFeedbackWorkbench = (pinned = false, floating = false) => {
   const page = { kind: "page", extensionId: "storybook", id: "drop-feedback" } as const;
   const workbench = createWorkbench({
@@ -64,12 +63,22 @@ const meta = {
   component: WorkbenchStory,
   excludeStories: ["createDropFeedbackWorkbench"],
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof WorkbenchStory>;
+} satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const PreviewInsertion: Story = { args: { workbench: createDropFeedbackWorkbench() } };
+type Story = CanvasVariant<typeof meta>;
+export const PreviewInsertion: Story = {
+  id: "pstdio-workbench-reference-core-api-drop-feedback--preview-insertion",
+  args: { workbench: createDropFeedbackWorkbench() },
+};
 export const DarkPreviewInsertion: Story = {
+  id: "pstdio-workbench-reference-core-api-drop-feedback--dark-preview-insertion",
   args: { workbench: createDropFeedbackWorkbench(), initialThemePreference: "pstdio-dark" },
 };
-export const PinnedInsertion: Story = { args: { workbench: createDropFeedbackWorkbench(true) } };
-export const FloatingInsertion: Story = { args: { workbench: createDropFeedbackWorkbench(false, true) } };
+export const PinnedInsertion: Story = {
+  id: "pstdio-workbench-reference-core-api-drop-feedback--pinned-insertion",
+  args: { workbench: createDropFeedbackWorkbench(true) },
+};
+export const FloatingInsertion: Story = {
+  id: "pstdio-workbench-reference-core-api-drop-feedback--floating-insertion",
+  args: { workbench: createDropFeedbackWorkbench(false, true) },
+};

@@ -1,8 +1,8 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { CopyButton } from "./copy-button";
 
-const meta: Meta<typeof CopyButton> = {
+const meta: CanvasMeta<typeof CopyButton> = {
   title: "Components/Inputs/CopyButton",
   component: CopyButton,
   args: { text: "Build the tools that make your work easier." },
@@ -16,9 +16,12 @@ const meta: Meta<typeof CopyButton> = {
   },
 };
 export default meta;
-type Story = StoryObj<typeof CopyButton>;
-export const Default: Story = {};
+type Story = CanvasVariant<typeof CopyButton>;
+export const Default: Story = {
+  id: "components-inputs-copybutton--default",
+};
 export const Draft: Story = {
+  id: "components-inputs-copybutton--draft",
   args: {
     label: "Copy draft",
     text: "I built a daily research tool in Prompt Studio.\n\nIt finds useful conversations and suggests replies.",
@@ -32,5 +35,11 @@ export const Draft: Story = {
     </Stack>
   ),
 };
-export const Disabled: Story = { args: { disabled: true } };
-export const Empty: Story = { args: { text: "" } };
+export const Disabled: Story = {
+  id: "components-inputs-copybutton--disabled",
+  args: { disabled: true },
+};
+export const Empty: Story = {
+  id: "components-inputs-copybutton--empty",
+  args: { text: "" },
+};

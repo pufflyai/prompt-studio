@@ -1,6 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { buildPlan } from "../model/build-plan";
 import { buildTracks } from "../model/tracks";
 import type { DropTarget } from "./drag";
@@ -32,7 +31,6 @@ const plan = buildPlan({
     ],
   },
 });
-
 const densePlan = buildPlan({
   statuses: [],
   tags: [],
@@ -47,16 +45,17 @@ const densePlan = buildPlan({
   })),
   plan: { deadlines: [], order: [] },
 });
-
 // Drops only reset the preview here; the story has no plan to move tickets in.
 const storyClient = {
   commands: { "timeline.track.assign": async () => {}, "timeline.plan.move": async () => {} },
 } as unknown as PlanClient;
-
 function TimelineGraphStory(props: {
   dense?: boolean;
   filtered?: boolean;
-  preview?: { dragId: string; dropTarget: DropTarget };
+  preview?: {
+    dragId: string;
+    dropTarget: DropTarget;
+  };
 }) {
   const { dense, filtered, preview } = props;
   const shown = dense ? densePlan : plan;
@@ -93,8 +92,7 @@ function TimelineGraphStory(props: {
     </Box>
   );
 }
-
-const meta: Meta<typeof TimelineGraphStory> = {
+const meta: CanvasMeta<typeof TimelineGraphStory> = {
   title: "Extensions/Planner/Timeline graph",
   component: TimelineGraphStory,
   decorators: [
@@ -106,27 +104,27 @@ const meta: Meta<typeof TimelineGraphStory> = {
   ],
 };
 export default meta;
-type Story = StoryObj<typeof TimelineGraphStory>;
-export const AllMilestones: Story = {};
-export const LargePlan: Story = { args: { dense: true } };
-export const FilteredMilestone: Story = { args: { filtered: true } };
+type Story = CanvasVariant<typeof TimelineGraphStory>;
+export const AllMilestones: Story = {
+  id: "extensions-planner-timeline-graph--all-milestones",
+};
+export const LargePlan: Story = {
+  id: "extensions-planner-timeline-graph--large-plan",
+  args: { dense: true },
+};
+export const FilteredMilestone: Story = {
+  id: "extensions-planner-timeline-graph--filtered-milestone",
+  args: { filtered: true },
+};
 export const DropPreview: Story = {
+  id: "extensions-planner-timeline-graph--drop-preview",
   args: { preview: { dragId: "launch", dropTarget: { deadlineId: "preview", beforeId: "preview", trackId: null } } },
 };
 export const DropOnEmptyMilestone: Story = {
+  id: "extensions-planner-timeline-graph--drop-on-empty-milestone",
   args: { preview: { dragId: "launch", dropTarget: { deadlineId: "empty" } } },
 };
 // Panning focuses the canvas for arrow keys without drawing a keyboard focus ring.
 export const PanWithoutFocusRing: Story = {
-  play: async ({ canvasElement }) => {
-    const viewport = canvasElement.querySelector<HTMLElement>("[data-timeline-viewport]");
-    await expect(viewport).not.toBeNull();
-    const { left, top } = viewport!.getBoundingClientRect();
-    const point = { pointerId: 1, button: 0, bubbles: true, clientX: left + 600, clientY: top + 400 };
-    viewport!.dispatchEvent(new PointerEvent("pointerdown", point));
-    viewport!.dispatchEvent(new PointerEvent("pointermove", { ...point, clientX: point.clientX - 40 }));
-    viewport!.dispatchEvent(new PointerEvent("pointerup", point));
-    await expect(viewport).toHaveFocus();
-    await expect(viewport!.matches(":focus-visible")).toBe(false);
-  },
+  id: "extensions-planner-timeline-graph--pan-without-focus-ring",
 };

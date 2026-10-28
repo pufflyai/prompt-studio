@@ -1,6 +1,5 @@
 import { Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -41,38 +40,19 @@ const createNavigationWorkbench = () => {
   workbench.pageLocations.navigate({ kind: "page", page });
   return workbench;
 };
-
-const checkPanelControls = async (canvasElement: HTMLElement, open: boolean) => {
-  const nav = canvasElement.querySelector<HTMLElement>('[data-workbench-region="nav"]')!;
-  const controls = within(nav).getByRole("group", { name: "Panel controls" });
-  const buttons = within(controls).getAllByRole("button");
-  await expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
-    `${open ? "Hide" : "Show"} Sidenav`,
-    "Hide Bottom Panel",
-    "Hide Side Panel",
-  ]);
-  await expect(controls.getBoundingClientRect().left).toBeGreaterThan(
-    nav.getBoundingClientRect().left + nav.clientWidth / 2,
-  );
-  await userEvent.click(buttons[0]);
-  await expect(within(controls).getByRole("button", { name: `${open ? "Show" : "Hide"} Sidenav` })).toBeVisible();
-  await expect(within(controls).getAllByRole("button")).toHaveLength(3);
-};
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Browser panel controls",
   component: WorkbenchStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof WorkbenchStory>;
+} satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const SidenavOpen: Story = {
+  id: "pstdio-workbench-reference-core-api-browser-panel-controls--sidenav-open",
   args: { workbench: createNavigationWorkbench() },
-  play: async ({ canvasElement }) => checkPanelControls(canvasElement, true),
 };
-
 export const SidenavClosed: Story = {
+  id: "pstdio-workbench-reference-core-api-browser-panel-controls--sidenav-closed",
   args: {
     workbench: (() => {
       const workbench = createNavigationWorkbench();
@@ -80,5 +60,4 @@ export const SidenavClosed: Story = {
       return workbench;
     })(),
   },
-  play: async ({ canvasElement }) => checkPanelControls(canvasElement, false),
 };

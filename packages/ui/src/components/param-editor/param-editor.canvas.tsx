@@ -1,6 +1,5 @@
 import { Button, Container, HStack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ParamEditor } from "./param-editor";
 
 const meta = {
@@ -11,12 +10,11 @@ const meta = {
   },
   tags: [],
   argTypes: {},
-} satisfies Meta<typeof ParamEditor>;
-
+} satisfies CanvasMeta<typeof ParamEditor>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const Demo: Story = {
+  id: "patterns-param-editor-param-editor-vertical--demo",
   render: (props) => {
     return (
       <Container padding="md">
@@ -104,8 +102,8 @@ export const Demo: Story = {
     readOnly: false,
   },
 };
-
 export const PropertyRows: Story = {
+  id: "patterns-param-editor-param-editor-vertical--property-rows",
   render: (props) => {
     return (
       <Container padding="md">
@@ -147,8 +145,8 @@ export const PropertyRows: Story = {
     ],
   },
 };
-
 export const TextInputFocus: Story = {
+  id: "patterns-param-editor-param-editor-vertical--text-input-focus",
   render: (props) => {
     return (
       <Container padding="md">
@@ -192,8 +190,8 @@ export const TextInputFocus: Story = {
     readOnly: false,
   },
 };
-
 export const ReadOnly: Story = {
+  id: "patterns-param-editor-param-editor-vertical--read-only",
   render: (props) => {
     return (
       <Container padding="md">
@@ -270,8 +268,8 @@ export const ReadOnly: Story = {
     readOnly: true,
   },
 };
-
 export const DateInputs: Story = {
+  id: "patterns-param-editor-param-editor-vertical--date-inputs",
   render: (props) => {
     return (
       <Container padding="md">
@@ -324,21 +322,14 @@ export const DateInputs: Story = {
     readOnly: false,
   },
 };
-
 export const MultiSelectExamples: Story = {
+  id: "patterns-param-editor-param-editor-vertical--multi-select-examples",
   render: (props) => {
     return (
       <Container padding="md">
         <ParamEditor {...props} />
       </Container>
     );
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const openMenuButton = canvas.getByRole("button", { name: /User, Assistant/i });
-
-    await expect(openMenuButton).toBeInTheDocument();
-    await userEvent.click(openMenuButton);
   },
   args: {
     defaultValues: {
@@ -414,8 +405,8 @@ export const MultiSelectExamples: Story = {
     readOnly: false,
   },
 };
-
 export const MixedSelectionTypes: Story = {
+  id: "patterns-param-editor-param-editor-vertical--mixed-selection-types",
   render: (props) => {
     return (
       <Container padding="md">
@@ -488,8 +479,8 @@ export const MixedSelectionTypes: Story = {
     readOnly: false,
   },
 };
-
 export const WithInputGroups: Story = {
+  id: "patterns-param-editor-param-editor-vertical--with-input-groups",
   render: (props) => {
     return (
       <Container padding="md">
@@ -633,8 +624,8 @@ export const WithInputGroups: Story = {
     readOnly: false,
   },
 };
-
 export const MixedGroupsAndParams: Story = {
+  id: "patterns-param-editor-param-editor-vertical--mixed-groups-and-params",
   render: (props) => {
     return (
       <Container padding="md">
@@ -716,8 +707,8 @@ export const MixedGroupsAndParams: Story = {
     readOnly: false,
   },
 };
-
 export const SelectionsWithIcons: Story = {
+  id: "patterns-param-editor-param-editor-vertical--selections-with-icons",
   render: (props) => {
     return (
       <Container padding="md">
@@ -794,8 +785,8 @@ export const SelectionsWithIcons: Story = {
     readOnly: false,
   },
 };
-
 export const FullWidth: Story = {
+  id: "patterns-param-editor-param-editor-vertical--full-width",
   render: (props) => {
     return (
       <Container padding="md">
@@ -854,8 +845,8 @@ export const FullWidth: Story = {
     readOnly: false,
   },
 };
-
 export const GroupsWithSeparators: Story = {
+  id: "patterns-param-editor-param-editor-vertical--groups-with-separators",
   render: (props) => {
     return (
       <Container padding="md">

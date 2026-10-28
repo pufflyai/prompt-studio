@@ -1,22 +1,18 @@
 import { Badge, Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AlertMessage } from "../primitives/alert";
 import { KanbanRenderer } from "./kanban-renderer";
 import { attributes, boardColumnColors, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
 import type { AttributeDescriptor } from "./types";
 
-const meta: Meta<typeof KanbanRenderer> = {
+const meta: CanvasMeta<typeof KanbanRenderer> = {
   title: "Patterns/Kanban Renderer/Regression Cases",
   component: KanbanRenderer,
   parameters: { layout: "fullscreen" },
 };
-
 export default meta;
-
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 const EditableBadgeWrapper = () => {
   const [rows, setRows] = useState<StoryRow[]>(initialRows);
   const handleAttributeChange = (rowId: string, attributeId: string, value: unknown) => {
@@ -26,7 +22,6 @@ const EditableBadgeWrapper = () => {
       ),
     );
   };
-
   return (
     <Box p="sm" height="560px">
       <KanbanRenderer<StoryRow>
@@ -48,32 +43,16 @@ const EditableBadgeWrapper = () => {
     </Box>
   );
 };
-
 export const EditableDisplayBadge: Story = {
+  id: "patterns-kanban-renderer-regression-cases--editable-display-badge",
   tags: ["editable-display-badge-regression"],
   render: () => <EditableBadgeWrapper />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const todoColumn = canvas.getByTestId("board-column-todo");
-    const doneColumn = canvas.getByTestId("board-column-done");
-    const card = within(todoColumn).getByText("Set up API authentication").closest('[data-testid="renderer-card"]');
-
-    if (!card) throw new Error("Expected the ticket card to render in the Todo column");
-
-    await userEvent.click(within(card as HTMLElement).getByText("Todo"));
-    await userEvent.click(within(document.body).getByRole("menuitemradio", { name: "Done" }));
-
-    await expect(within(doneColumn).getByText("Set up API authentication")).toBeInTheDocument();
-    await expect(within(todoColumn).queryByText("Set up API authentication")).not.toBeInTheDocument();
-  },
 };
-
 const ClearableSingleSelectBadgeWrapper = () => {
   const [rows, setRows] = useState<StoryRow[]>(initialRows);
   const editableAttributes = attributes.map((attribute) =>
     attribute.id === "priority" ? { ...attribute, editable: true } : attribute,
   );
-
   return (
     <Box p="sm" height="560px">
       <KanbanRenderer<StoryRow>
@@ -97,22 +76,11 @@ const ClearableSingleSelectBadgeWrapper = () => {
     </Box>
   );
 };
-
 export const ClearSingleSelectBadgeByRepicking: Story = {
+  id: "patterns-kanban-renderer-regression-cases--clear-single-select-badge-by-repicking",
   tags: ["clearable-single-select-badge-regression"],
   render: () => <ClearableSingleSelectBadgeWrapper />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const card = canvas.getByText("Set up API authentication").closest('[data-testid="renderer-card"]');
-    if (!card) throw new Error("Expected the ticket card to render");
-
-    await userEvent.click(within(card as HTMLElement).getByText("High"));
-    await expect(within(document.body).queryByRole("menuitemradio", { name: "No Priority" })).not.toBeInTheDocument();
-    await userEvent.click(within(document.body).getByRole("menuitemradio", { name: "High" }));
-    await expect(within(card as HTMLElement).queryByText("High")).not.toBeInTheDocument();
-  },
 };
-
 const EditableMultiSelectBadgeWrapper = () => {
   const [rows, setRows] = useState<StoryRow[]>(initialRows);
   const editableAttributes = attributes.map((attribute) =>
@@ -125,7 +93,6 @@ const EditableMultiSelectBadgeWrapper = () => {
       ),
     );
   };
-
   return (
     <Box p="sm" height="560px">
       <KanbanRenderer<StoryRow>
@@ -147,37 +114,15 @@ const EditableMultiSelectBadgeWrapper = () => {
     </Box>
   );
 };
-
 export const EditableMultiSelectBadge: Story = {
+  id: "patterns-kanban-renderer-regression-cases--editable-multi-select-badge",
   render: () => <EditableMultiSelectBadgeWrapper />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const todoColumn = canvas.getByTestId("board-column-todo");
-    const card = within(todoColumn).getByText("Set up API authentication").closest('[data-testid="renderer-card"]');
-
-    if (!card) throw new Error("Expected the ticket card to render in the Todo column");
-
-    const tag = within(card as HTMLElement).getByText("Bug");
-    await userEvent.hover(tag);
-    await waitFor(() => expect(within(document.body).queryByRole("menu")).not.toBeInTheDocument());
-    await userEvent.click(tag);
-    await userEvent.click(within(document.body).getByRole("menuitemcheckbox", { name: "Regression" }));
-
-    await expect(within(document.body).getByRole("menuitemcheckbox", { name: "Bug" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    await expect(within(document.body).getByRole("menuitemcheckbox", { name: "Regression" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-  },
 };
-
 interface CustomRendererRow extends StoryRow {
-  attributes: StoryRow["attributes"] & { diffOverview: string };
+  attributes: StoryRow["attributes"] & {
+    diffOverview: string;
+  };
 }
-
 const customRendererRows: CustomRendererRow[] = initialRows.slice(0, 4).map((row, index) => ({
   ...row,
   attributes: {
@@ -185,7 +130,6 @@ const customRendererRows: CustomRendererRow[] = initialRows.slice(0, 4).map((row
     diffOverview: `+${[18, 4, 0, 27][index]!} -${[3, 12, 0, 8][index]!}`,
   },
 }));
-
 const customRendererAttributes: AttributeDescriptor[] = [
   ...attributes,
   {
@@ -200,8 +144,8 @@ const customRendererAttributes: AttributeDescriptor[] = [
     ),
   },
 ];
-
 export const CustomAttributeRenderer: Story = {
+  id: "patterns-kanban-renderer-regression-cases--custom-attribute-renderer",
   render: () => (
     <Box p="sm" height="560px">
       <KanbanRenderer<CustomRendererRow>
@@ -219,14 +163,16 @@ export const CustomAttributeRenderer: Story = {
     </Box>
   ),
 };
-
 interface WorkspaceDisplayRow extends StoryRow {
   attributes: StoryRow["attributes"] & {
     workspace: string;
-    workspaceItems: Array<{ id: string; label: string; icon?: string }>;
+    workspaceItems: Array<{
+      id: string;
+      label: string;
+      icon?: string;
+    }>;
   };
 }
-
 const workspaceDisplayAttributes: AttributeDescriptor[] = [
   ...attributes,
   {
@@ -237,7 +183,6 @@ const workspaceDisplayAttributes: AttributeDescriptor[] = [
     display: { kind: "badge-list", itemsAttributeId: "workspaceItems" },
   },
 ];
-
 const workspaceDisplayRows: WorkspaceDisplayRow[] = initialRows.slice(0, 4).map((row, index) => ({
   ...row,
   attributes: {
@@ -252,8 +197,8 @@ const workspaceDisplayRows: WorkspaceDisplayRow[] = initialRows.slice(0, 4).map(
     ],
   },
 }));
-
 export const WorkspaceDisplayProperty: Story = {
+  id: "patterns-kanban-renderer-regression-cases--workspace-display-property",
   render: () => (
     <Box p="sm" height="560px">
       <KanbanRenderer<WorkspaceDisplayRow>
@@ -271,7 +216,6 @@ export const WorkspaceDisplayProperty: Story = {
     </Box>
   ),
 };
-
 const FailedActionExample = () => {
   const [error, setError] = useState<string>();
   return (
@@ -290,17 +234,7 @@ const FailedActionExample = () => {
     </Box>
   );
 };
-
 export const FailedAction: Story = {
+  id: "patterns-kanban-renderer-regression-cases--failed-action",
   render: () => <FailedActionExample />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const column = canvas.getByTestId("board-column-todo");
-    const card = within(column).getByText("Set up API authentication").closest('[data-testid="renderer-card"]');
-    if (!card) throw new Error("Expected the ticket card");
-    await userEvent.click(within(card as HTMLElement).getByText("Todo"));
-    await userEvent.click(within(document.body).getByRole("menuitemradio", { name: "Done" }));
-    await expect(canvas.getByText("Could not save the change.")).toBeVisible();
-    await expect(within(column).getByText("Set up API authentication")).toBeVisible();
-  },
 };

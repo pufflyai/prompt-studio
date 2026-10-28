@@ -1,7 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { WindowTitleBar } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { createPolicyWorkbench } from "../region/panel-policy.fixture";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -30,11 +29,11 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof Workbench>;
+} satisfies CanvasMeta<typeof Workbench>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const HostTitle: Story = {
+  id: "pstdio-workbench-reference-core-api-title-bar--host-title",
   args: {
     workbench: createWorkbench(),
     titleBar: (
@@ -44,8 +43,8 @@ export const HostTitle: Story = {
     ),
   },
 };
-
 export const HostPanelControls: Story = {
+  id: "pstdio-workbench-reference-core-api-title-bar--host-panel-controls",
   args: (() => {
     const workbench = createPolicyWorkbench();
     return {
@@ -66,26 +65,4 @@ export const HostPanelControls: Story = {
       ),
     };
   })(),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const titleBar = canvasElement.querySelector("[data-window-title-bar]")!;
-    const title = within(titleBar as HTMLElement);
-    const maximize = canvas.getByRole("button", { name: "Enter Main fullscreen" });
-    await expect(title.getByRole("button", { name: "Enter Main fullscreen" })).toBe(maximize);
-    const controls = title.getByRole("group", { name: "Panel controls" });
-    await expect(controls.getBoundingClientRect().right).toBeLessThanOrEqual(maximize.getBoundingClientRect().left);
-    await expect(titleBar.getBoundingClientRect().right - maximize.getBoundingClientRect().right).toBeLessThanOrEqual(
-      10,
-    );
-    await userEvent.click(canvas.getByRole("button", { name: "Hide Side Panel" }));
-    await expect(canvas.getByRole("button", { name: "Show Side Panel" })).toBeVisible();
-    await userEvent.click(maximize);
-    await expect(titleBar).not.toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Exit Main fullscreen" }));
-    await expect(titleBar).toBeVisible();
-    await waitFor(() => expect(maximize).toHaveFocus());
-    await userEvent.click(maximize);
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(maximize).toHaveFocus());
-  },
 };

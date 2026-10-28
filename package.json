@@ -43,7 +43,6 @@
     "studio:db": "bun run --cwd packages/pstdio-db studio",
     "dev:desktop": "bun ./scripts/dev/dev-desktop.ts",
     "report:e2e": "bun run --cwd packages/e2e report",
-    "build:preview-tests:dashboard": "bun run --cwd packages/pstdio-dashboard build:preview-tests",
     "validate:changesets": "bun run --cwd scripts validate:changesets",
     "verify:translations": "bun run --cwd scripts verify:translations",
     "changeset": "changeset",
@@ -84,7 +83,8 @@
     "cross-env": "10.1.0",
     "knip": "6.3.0",
     "lerna": "9.0.7",
-    "node-gyp": "12.2.0"
+    "node-gyp": "12.2.0",
+    "@pstdio/canvas": "workspace:*"
   },
   "packageManager": "bun@1.4.4",
   "overrides": {

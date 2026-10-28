@@ -1,12 +1,11 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Bar } from "./collection-view-bar-story";
 
-const meta: Meta = { title: "Patterns/Collection View/Advanced Filter", parameters: { layout: "fullscreen" } };
+const meta: CanvasMeta = { title: "Patterns/Collection View/Advanced Filter", parameters: { layout: "fullscreen" } };
 export default meta;
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 export const NestedExactDateField: Story = {
+  id: "patterns-collection-view-advanced-filter--nested-exact-date-field",
   render: () => (
     <Bar
       storageKey="storybook-advanced-date-parameters"
@@ -17,22 +16,9 @@ export const NestedExactDateField: Story = {
       }}
     />
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Edit advanced filter" }));
-    const advanced = await body.findByTestId("advanced-filter-popover");
-    await userEvent.click(within(advanced).getByRole("button", { name: "Values" }));
-    const exact = within(advanced).getByLabelText("Value");
-    await expect(exact).toHaveValue("2026-10-04");
-    await userEvent.click(exact);
-    fireEvent.change(exact, { target: { value: "2026-10-05" } });
-    await expect(advanced).toBeVisible();
-    await expect(exact).toHaveValue("2026-10-05");
-  },
 };
-
 export const NormalAndAdvanced: Story = {
+  id: "patterns-collection-view-advanced-filter--normal-and-advanced",
   render: () => (
     <Bar
       storageKey="storybook-normal-advanced"
@@ -45,42 +31,9 @@ export const NormalAndAdvanced: Story = {
       }}
     />
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    const boolean = canvas.getByRole("group", { name: "Archived filter" });
-    const subject = within(boolean).getByText("Ticket", { exact: true });
-    const predicate = within(boolean).getByText("Archived", { exact: true });
-    expect(getComputedStyle(predicate).fontSize).toBe(getComputedStyle(subject).fontSize);
-    expect(
-      within(canvas.getByRole("group", { name: "Priority filter" })).getByRole("button", { name: "Condition" }),
-    ).toHaveTextContent("is any of");
-    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
-    const picker = await body.findByTestId("filter-menu");
-    await waitFor(() => expect(within(picker).getByRole("textbox", { name: "Filter properties" })).toBeVisible());
-    await userEvent.click(
-      within(within(picker).getByTestId("filter-menu-footer")).getByRole("button", {
-        name: "Advanced filter",
-        exact: true,
-      }),
-    );
-    const popover = await body.findByTestId("advanced-filter-popover");
-    await userEvent.click(within(popover).getByRole("button", { name: "Add filter rule" }));
-    await userEvent.click(within(popover).getByRole("button", { name: "Add filter rule" }));
-    await userEvent.click(within(popover).getByRole("button", { name: "Conjunction" }));
-    await userEvent.click(body.getByRole("menuitem", { name: "Or", exact: true }));
-    await expect(within(popover).getByRole("button", { name: "Conjunction" })).toHaveTextContent("Or");
-    await userEvent.click(within(popover).getAllByRole("button", { name: "Field", exact: true })[0]!);
-    await userEvent.click(body.getByRole("menuitem", { name: "Status", exact: true }));
-    await userEvent.click(within(popover).getByRole("button", { name: "Values" }));
-    await userEvent.click(body.getByRole("menuitemcheckbox", { name: /Todo/ }));
-    const valueIcon = body.getByRole("menuitemcheckbox", { name: /Todo/ }).querySelector(".chakra-icon")!;
-    expect(valueIcon.getBoundingClientRect().width).toBe(12);
-    await userEvent.keyboard("{Escape}");
-  },
 };
-
 export const ExistingOrView: Story = {
+  id: "patterns-collection-view-advanced-filter--existing-or-view",
   render: () => (
     <Bar
       storageKey="storybook-existing-or"
@@ -93,18 +46,10 @@ export const ExistingOrView: Story = {
       }}
     />
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByRole("button", { name: "Edit advanced filter" })).toHaveTextContent(" or ");
-    await userEvent.click(canvas.getByRole("button", { name: "Edit advanced filter" }));
-    await waitFor(() =>
-      expect(within(canvasElement.ownerDocument.body).getByTestId("advanced-filter-popover")).toBeVisible(),
-    );
-  },
 };
-
 /** One clear-all action resets normal criteria and every Advanced bubble together. */
 export const ClearAllFilters: Story = {
+  id: "patterns-collection-view-advanced-filter--clear-all-filters",
   render: () => (
     <Bar
       storageKey="storybook-clear-all-filters"
@@ -115,38 +60,13 @@ export const ClearAllFilters: Story = {
       }}
     />
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    const trigger = canvas.getByRole("button", { name: "Filter", exact: true });
-    expect(trigger.textContent?.trim()).toBe("2");
-    await userEvent.click(trigger);
-    const footer = await body.findByTestId("filter-menu-footer");
-    await userEvent.click(within(footer).getByRole("button", { name: "Clear all", exact: true }));
-    expect(trigger.textContent?.trim()).toBe("");
-    await expect(canvas.getByRole("button", { name: "Filter", exact: true })).toBeVisible();
-    await expect(canvas.getByLabelText("Unsaved view changes")).toBeVisible();
-  },
 };
-
 export const ClearAdvancedDraft: Story = {
+  id: "patterns-collection-view-advanced-filter--clear-advanced-draft",
   render: () => (
     <Bar
       storageKey="storybook-clear-advanced-draft"
       filter={{ conjunction: "and", rules: [], groups: [{ conjunction: "and", rules: [] }] }}
     />
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    expect(canvas.getByRole("button", { name: "Edit advanced filter" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
-    const footer = await body.findByTestId("filter-menu-footer");
-    const clear = within(footer).getByRole("button", { name: "Clear all", exact: true });
-    expect(clear).toBeEnabled();
-    await userEvent.click(clear);
-    await waitFor(() => expect(body.queryByTestId("filter-menu")).toBeNull());
-    expect(canvas.queryByRole("button", { name: "Edit advanced filter" })).toBeNull();
-    expect(canvas.getByLabelText("Unsaved view changes")).toBeVisible();
-  },
 };

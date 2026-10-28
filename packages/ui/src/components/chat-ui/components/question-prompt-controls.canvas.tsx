@@ -1,5 +1,5 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 import { QuestionPromptControls } from "./chat-input-question-prompt";
@@ -25,11 +25,9 @@ const prompt: ChatInputQuestionPrompt = {
     { id: "notes", question: "Corrections or other answers", options: [] },
   ],
 };
-
 interface QuestionFormProps {
   prompt: ChatInputQuestionPrompt;
 }
-
 // The chat composer's question form, used outside the chat with the caller's own buttons.
 function QuestionForm(props: QuestionFormProps) {
   const { prompt } = props;
@@ -58,8 +56,7 @@ function QuestionForm(props: QuestionFormProps) {
     </Stack>
   );
 }
-
-const meta: Meta<typeof QuestionForm> = {
+const meta: CanvasMeta<typeof QuestionForm> = {
   title: "Patterns/Chat/Question form",
   component: QuestionForm,
   decorators: [
@@ -72,7 +69,11 @@ const meta: Meta<typeof QuestionForm> = {
   args: { prompt },
 };
 export default meta;
-type Story = StoryObj<typeof QuestionForm>;
-
-export const StepTabs: Story = {};
-export const SingleQuestion: Story = { args: { prompt: { questions: [prompt.questions[0]] } } };
+type Story = CanvasVariant<typeof QuestionForm>;
+export const StepTabs: Story = {
+  id: "patterns-chat-question-form--step-tabs",
+};
+export const SingleQuestion: Story = {
+  id: "patterns-chat-question-form--single-question",
+  args: { prompt: { questions: [prompt.questions[0]] } },
+};

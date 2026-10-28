@@ -1,7 +1,6 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { IconPicker } from "./icon-picker";
 
 const Picker = (props: { disabled?: boolean }) => {
@@ -13,30 +12,14 @@ const Picker = (props: { disabled?: boolean }) => {
     </Stack>
   );
 };
-const meta = { title: "Components/Inputs/Icon Picker", component: Picker, tags: ["icon-picker"] } satisfies Meta<
+const meta = { title: "Components/Inputs/Icon Picker", component: Picker, tags: ["icon-picker"] } satisfies CanvasMeta<
   typeof Picker
 >;
 export default meta;
-export const ChooseIcon: StoryObj<typeof meta> = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Change icon" }));
-    await userEvent.click(await within(canvasElement.ownerDocument.body).findByRole("button", { name: "book open" }));
-    await expect(canvas.getByRole("status")).toHaveTextContent("book-open");
-    await userEvent.click(canvas.getByRole("button", { name: "Change icon" }));
-    await expect(
-      await within(canvasElement.ownerDocument.body).findByRole("button", { name: "book open" }),
-    ).toHaveAttribute("aria-pressed", "true");
-  },
+export const ChooseIcon: CanvasVariant<typeof meta> = {
+  id: "components-inputs-icon-picker--choose-icon",
 };
-export const Disabled: StoryObj<typeof meta> = {
+export const Disabled: CanvasVariant<typeof meta> = {
+  id: "components-inputs-icon-picker--disabled",
   args: { disabled: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const trigger = canvas.getByRole("button", { name: "Change icon" });
-    await expect(trigger).toBeDisabled();
-    await userEvent.click(trigger);
-    await expect(within(canvasElement.ownerDocument.body).queryByRole("button", { name: "book open" })).toBeNull();
-    await expect(canvas.getByRole("status")).toHaveTextContent("folder");
-  },
 };

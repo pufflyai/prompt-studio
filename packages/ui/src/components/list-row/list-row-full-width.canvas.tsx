@@ -1,20 +1,19 @@
 import { Box, HStack, Kbd, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Check, FileText, Folder } from "lucide-react";
 import { ListRow } from "./list-row";
 
-const meta: Meta<typeof ListRow> = {
+const meta: CanvasMeta<typeof ListRow> = {
   title: "Components/Data Display/List Row/Full Width",
   component: ListRow,
   parameters: {
     layout: "padded",
   },
 };
-
 export default meta;
-type Story = StoryObj<typeof ListRow>;
-
+type Story = CanvasVariant<typeof ListRow>;
 export const OverlayRows: Story = {
+  id: "components-data-display-list-row-full-width--overlay-rows",
   render: () => (
     <Box maxW="32rem" borderWidth="1px" borderColor="border.subtle" overflow="hidden">
       <Stack gap="0">

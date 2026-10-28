@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
@@ -27,7 +27,7 @@ const row: PlanRow = {
   instructions: "",
   target: ticketTarget({ id: "shared-card", shorthand: "P-1", title: "Use the same card on both boards" }),
 };
-const meta: Meta<typeof GraphCard> = {
+const meta: CanvasMeta<typeof GraphCard> = {
   title: "Extensions/Planner/Timeline card",
   component: GraphCard,
   render: (args) => <EditableCardPreview {...args} />,
@@ -50,25 +50,36 @@ const meta: Meta<typeof GraphCard> = {
   },
 };
 export default meta;
-type Story = StoryObj<typeof GraphCard>;
-export const Available: Story = {};
+type Story = CanvasVariant<typeof GraphCard>;
+export const Available: Story = {
+  id: "extensions-planner-timeline-card--available",
+};
 export const WaitingForPrerequisite: Story = {
+  id: "extensions-planner-timeline-card--waiting-for-prerequisite",
   args: { row: { ...row, dependsOn: [{ id: "prerequisite", shorthand: "P-2", done: false }], flags: ["waiting"] } },
 };
 export const Blocked: Story = {
+  id: "extensions-planner-timeline-card--blocked",
   args: { row: { ...row, state: "blocked", flags: ["blocked"], blockedReason: "Missing credentials" } },
 };
-export const Selected: Story = { args: { relation: "selected" } };
+export const Selected: Story = {
+  id: "extensions-planner-timeline-card--selected",
+  args: { relation: "selected" },
+};
 export const CustomStatus: Story = {
+  id: "extensions-planner-timeline-card--custom-status",
   args: { row: { ...row, status: { id: "queued", name: "Queued", icon: "flag", color: "purple" } } },
 };
 export const ReviewRequested: Story = {
+  id: "extensions-planner-timeline-card--review-requested",
   args: { row: { ...row, flags: ["human-needed"], state: "await-input", requests: [cardReviewRequest] } },
 };
 export const ReviewAnswered: Story = {
+  id: "extensions-planner-timeline-card--review-answered",
   args: { row: { ...row, state: "input-received", requests: [{ ...cardReviewRequest, state: "answered" }] } },
 };
 export const AllProperties: Story = {
+  id: "extensions-planner-timeline-card--all-properties",
   render: (args) => (
     <EditableCardPreview {...args} displayProperties={["id", "status", "type", "workspace", "needsAttention"]} />
   ),
@@ -87,12 +98,14 @@ const request: ReviewRequestView = {
   outcomeText: null,
 };
 export const MultipleRequests: Story = {
+  id: "extensions-planner-timeline-card--multiple-requests",
   args: {
     row: { ...row, requests: [request, { ...request, id: "second" }], state: "await-input" },
     onOpenRequests: () => {},
   },
 };
 export const AllRequestsResolved: Story = {
+  id: "extensions-planner-timeline-card--all-requests-resolved",
   args: {
     row: {
       ...row,
@@ -114,6 +127,7 @@ export const AllRequestsResolved: Story = {
   },
 };
 export const FullTitle: Story = {
+  id: "extensions-planner-timeline-card--full-title",
   args: {
     row: {
       ...row,

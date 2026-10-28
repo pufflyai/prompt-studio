@@ -1,7 +1,6 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench, getWorkbenchRenderers } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchControlsView } from "./controls/controls-view";
@@ -47,12 +46,15 @@ const ControlsRebinding = () => {
     </Stack>
   );
 };
-
 const FileContributionReplacement = () => {
   const [fixture] = useState(() => {
     const workbench = createWorkbench();
     const renderers = getWorkbenchRenderers(workbench);
-    let registration: { dispose(): void } | undefined;
+    let registration:
+      | {
+          dispose(): void;
+        }
+      | undefined;
     const register = (content: string) => {
       registration?.dispose();
       registration = renderers.registerFileRenderer({
@@ -75,7 +77,6 @@ const FileContributionReplacement = () => {
     </Stack>
   );
 };
-
 const KanbanViewRefresh = () => {
   const [fixture] = useState(() => {
     const workbench = createWorkbench();
@@ -109,7 +110,6 @@ const KanbanViewRefresh = () => {
     </Stack>
   );
 };
-
 const meta = {
   title: "Renderers/Rebinding",
   tags: ["!manifest"],
@@ -120,46 +120,18 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta;
+} satisfies CanvasMeta;
 export default meta;
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 export const ControlsResourceChange: Story = {
+  id: "renderers-rebinding--controls-resource-change",
   render: () => <ControlsRebinding />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("textbox")).toHaveValue("first");
-    await userEvent.click(canvas.getByRole("button", { name: "Select second resource" }));
-    await expect(await canvas.findByText("Loading…")).toBeVisible();
-    await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
-    await expect(canvas.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Finish loading" }));
-    await expect(await canvas.findByRole("textbox")).toHaveValue("second");
-  },
 };
-
 export const FileContributionChange: Story = {
+  id: "renderers-rebinding--file-contribution-change",
   render: () => <FileContributionReplacement />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Old contribution")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Replace contribution" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Refresh file" }));
-    await expect(await canvas.findByText("New contribution")).toBeVisible();
-  },
 };
-
 export const KanbanViewChange: Story = {
+  id: "renderers-rebinding--kanban-view-change",
   render: () => <KanbanViewRefresh />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Write docs")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Display settings" }));
-    await userEvent.click(await within(document.body).findByRole("button", { name: "Board" }));
-    await userEvent.keyboard("{Escape}");
-    // A view change runs the query again, but the old rows stay on screen until the new ones arrive.
-    await expect(canvas.getByText("Write docs")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Finish loading" }));
-    await expect(await canvas.findByText("Review docs")).toBeVisible();
-  },
 };

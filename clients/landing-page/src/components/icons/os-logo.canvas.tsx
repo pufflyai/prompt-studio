@@ -1,5 +1,5 @@
 import { HStack, Icon, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { OSLogo, platformIcon } from "./os-logo";
 
 const meta = {
@@ -7,14 +7,22 @@ const meta = {
   component: OSLogo,
   args: { platform: "macOS" },
   parameters: { layout: "centered" },
-} satisfies Meta<typeof OSLogo>;
-
+} satisfies CanvasMeta<typeof OSLogo>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const MacOS: Story = {};
-export const Windows: Story = { args: { platform: "Windows" } };
-export const Linux: Story = { args: { platform: "Linux" } };
+type Story = CanvasVariant<typeof meta>;
+export const MacOS: Story = {
+  id: "landing-os-logos--mac-os",
+};
+export const Windows: Story = {
+  id: "landing-os-logos--windows",
+  args: { platform: "Windows" },
+};
+export const Linux: Story = {
+  id: "landing-os-logos--linux",
+  args: { platform: "Linux" },
+};
 export const DownloadPlatforms: Story = {
+  id: "landing-os-logos--download-platforms",
   render: () => (
     <HStack gap="lg">
       {["macOS", "Windows", "Linux"].map((platform) => (

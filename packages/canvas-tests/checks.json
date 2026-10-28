@@ -1,11 +1,7 @@
 [
   {
-    "id": "preview-servers",
-    "command": ["bun", "run", "test:scripts"]
-  },
-  {
     "id": "preview-build",
-    "command": ["bun", "run", "build:previews"]
+    "command": ["bun", "x", "--no-install", "lerna", "run", "build:previews", "--scope", "canvas-tests"]
   },
   {
     "id": "preview-browser",

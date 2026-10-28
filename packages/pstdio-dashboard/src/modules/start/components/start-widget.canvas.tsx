@@ -1,5 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { createDashboardResource } from "@/shared/app/resources";
 import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
@@ -22,7 +22,6 @@ const recentResource = (
   updatedAt,
   resource: createDashboardResource(kind.toLowerCase(), id, title, icon, "project-1"),
 });
-
 const resources: RecentProjectResource[] = [
   recentResource(
     "session-1",
@@ -35,24 +34,19 @@ const resources: RecentProjectResource[] = [
   recentResource("artifact-1", "Weekly activity summary", "Artifact", "file-code", "2026-06-15T09:10:00.000Z"),
   recentResource("workspace-1", "PS-231_A1", "Workspace", "computer", "2026-06-14T17:45:00.000Z"),
 ];
-
 const actions: StartAction[] = [
   { id: "new-conversation", label: "New conversation", icon: "message-square", run: () => undefined },
   { id: "open-tool", label: "Open a tool", icon: "panels-top-left", run: () => undefined },
   { id: "browse-extensions", label: "Browse extensions", icon: "blocks", run: () => undefined },
 ];
-
 const missingGitError =
   "default extensions: Failed to clone https://github.com/pufflyai/prompt-studio.git at pstdio@0.40.0: spawn git ENOENT";
-
 interface StartPagePreviewProps {
   setupError?: string;
   harnesses?: AgentInfo[];
 }
-
 const StartPagePreview = (props: StartPagePreviewProps) => {
   const { setupError, harnesses } = props;
-
   return (
     <Stack w="full" maxW="52rem" pt="4xl" pb="3xl" gap="3xl">
       <Stack gap="xs" minW="0">
@@ -77,27 +71,27 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
     </Stack>
   );
 };
-
-const meta: Meta<typeof StartPagePreview> = {
+const meta: CanvasMeta<typeof StartPagePreview> = {
   title: "Start/StartPage",
   component: StartPagePreview,
   parameters: { layout: "padded" },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof StartPagePreview>;
-
-export const Default: Story = {};
-
-export const NoAgentAvailable: Story = { args: { harnesses: [] } };
-
+type Story = CanvasVariant<typeof StartPagePreview>;
+export const Default: Story = {
+  id: "start-startpage--default",
+};
+export const NoAgentAvailable: Story = {
+  id: "start-startpage--no-agent-available",
+  args: { harnesses: [] },
+};
 /** First run without Git or network: the default extensions, including every agent harness, did not install. */
 export const SetupDidNotFinish: Story = {
+  id: "start-startpage--setup-did-not-finish",
   args: { setupError: missingGitError, harnesses: [] },
 };
-
 export const NoRecentResources: Story = {
+  id: "start-startpage--no-recent-resources",
   render: () => (
     <Stack w="full" maxW="52rem" gap="3xl">
       <StartAboutPanel />

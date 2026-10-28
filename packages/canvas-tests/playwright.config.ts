@@ -11,8 +11,13 @@ export default defineConfig({
   retries: 0,
   forbidOnly: !!process.env.CI,
   outputDir: "test-results",
-  globalSetup: "./src/scripts/global-setup.ts",
+  webServer: { command: "bun src/scripts/preview-server.ts", url: "http://127.0.0.1:43187", timeout: 60_000 },
   reporter: [["html", { open: "never", outputFolder: "playwright-report" }], ["list"]],
-  use: { navigationTimeout: 60_000, trace: "retain-on-failure", screenshot: "only-on-failure" },
+  use: {
+    baseURL: "http://127.0.0.1:43187",
+    navigationTimeout: 60_000,
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+  },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

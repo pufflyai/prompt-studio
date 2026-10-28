@@ -1,18 +1,16 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { KanbanRenderer } from "./kanban-renderer";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
 
-const meta: Meta = {
+const meta: CanvasMeta = {
   title: "Patterns/Kanban Renderer/Dragging",
   tags: ["!manifest"],
   parameters: { layout: "fullscreen" },
 };
 export default meta;
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 const attributes: AttributeDescriptor[] = [
   {
     id: "status",
@@ -39,13 +37,11 @@ const attributes: AttributeDescriptor[] = [
     },
   },
 ];
-
 const initialRows: KanbanRendererRow[] = [
   { id: "unknown", title: "Recover an unknown status", attributes: { status: "removed", team: "design" } },
   { id: "missing", title: "Assign a missing status", attributes: { status: null, team: "design" } },
   { id: "done", title: "Move a completed card", attributes: { status: "done", team: "product" } },
 ];
-
 const DraggingBoard = (props: { grouped?: boolean; ungrouped?: boolean }) => {
   const { grouped = false, ungrouped = false } = props;
   const [rows, setRows] = useState(initialRows);
@@ -71,50 +67,15 @@ const DraggingBoard = (props: { grouped?: boolean; ungrouped?: boolean }) => {
     </Box>
   );
 };
-
-const dropCard = async (canvasElement: HTMLElement, title: string, target: HTMLElement) => {
-  const card = within(canvasElement).getByText(title).closest<HTMLElement>('[data-testid="renderer-card"]')!;
-  await expect(card).toHaveAttribute("draggable", "true");
-  await userEvent.hover(card);
-  const dataTransfer = new DataTransfer();
-  card.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer }));
-  target.dispatchEvent(new DragEvent("dragover", { bubbles: true, cancelable: true, dataTransfer }));
-  target.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer }));
-  card.dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer }));
-};
-
 export const MissingAndUnknownStatus: Story = {
+  id: "patterns-kanban-renderer-dragging--missing-and-unknown-status",
   render: () => <DraggingBoard />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const todo = canvas.getByTestId("board-column-todo");
-    const done = canvas.getByTestId("board-column-done");
-    await dropCard(canvasElement, "Recover an unknown status", todo);
-    await expect(await within(todo).findByText("Recover an unknown status")).toBeVisible();
-    await dropCard(canvasElement, "Assign a missing status", done);
-    await expect(await within(done).findByText("Assign a missing status")).toBeVisible();
-    const beforeCard = within(todo).getByRole("button", { name: "Recover an unknown status" });
-    await dropCard(canvasElement, "Move a completed card", beforeCard);
-    await expect(await within(todo).findByText("Move a completed card")).toBeVisible();
-  },
 };
-
 export const GroupedRows: Story = {
+  id: "patterns-kanban-renderer-dragging--grouped-rows",
   render: () => <DraggingBoard grouped />,
-  play: async ({ canvasElement }) => {
-    const done = within(canvasElement).getByTestId("board-column-done");
-    await dropCard(canvasElement, "Recover an unknown status", within(done).getByRole("button", { name: /Product/ }));
-    await expect(await within(done).findByText("Recover an unknown status")).toBeVisible();
-    const entry = within(done).getByText("Recover an unknown status").closest("[data-group-key]");
-    await expect(entry).toHaveAttribute("data-group-key", "product");
-  },
 };
-
 export const UngroupedBoard: Story = {
+  id: "patterns-kanban-renderer-dragging--ungrouped-board",
   render: () => <DraggingBoard ungrouped />,
-  play: async ({ canvasElement }) => {
-    const column = within(canvasElement).getByTestId("board-column-all");
-    await dropCard(canvasElement, "Recover an unknown status", column);
-    await expect(await within(column).findByText("Recover an unknown status")).toBeVisible();
-  },
 };

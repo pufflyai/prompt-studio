@@ -1,17 +1,15 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { MachineTokensPanelView } from "./machine-tokens-panel";
 
-const meta: Meta<typeof MachineTokensPanelView> = {
+const meta: CanvasMeta<typeof MachineTokensPanelView> = {
   title: "ProjectSettings/MachineTokensPanel",
   component: MachineTokensPanelView,
   parameters: { layout: "padded" },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof MachineTokensPanelView>;
-
+type Story = CanvasVariant<typeof MachineTokensPanelView>;
 export const ActiveToken: Story = {
+  id: "projectsettings-machinetokenspanel--active-token",
   args: {
     tokens: [
       {

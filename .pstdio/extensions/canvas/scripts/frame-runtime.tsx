@@ -48,7 +48,6 @@ export const mountPreviewRuntime = (
           args: inspect(loaded.args),
           argTypes: inspect(loaded.argTypes),
           description: docs?.description?.story,
-          hasPlay: loaded.hasPlay,
         },
       });
     }, [loaded]);
@@ -57,8 +56,10 @@ export const mountPreviewRuntime = (
   const Content = (props: { item: CanvasItem }) => {
     const { item } = props;
     const [loaded, setLoaded] = useState<LoadedStory>();
+    const [error, setError] = useState("");
     useEffect(() => {
       let active = true;
+      let dispose: (() => void) | undefined;
       const loadContent = async () => {
         await installPrismGlobal();
         if (item.preview) return load(item.preview);
@@ -68,14 +69,26 @@ export const mountPreviewRuntime = (
       void loadContent()
         .then((value) => {
           const result: LoadedStory = value;
-          if (!active) return;
+          if (!active) return result.dispose?.();
+          dispose = result.dispose;
           setLoaded(result);
         })
-        .catch((error) => send({ type: "error", message: String(error) }));
+        .catch((error) => {
+          if (!active) return;
+          setError(String(error));
+          send({ type: "error", message: String(error) });
+        });
       return () => {
         active = false;
+        dispose?.();
       };
     }, [item]);
+    if (error)
+      return (
+        <div role="alert" data-ui-canvas-error>
+          {error}
+        </div>
+      );
     if (!loaded) return <div data-ui-canvas-loading>Loading preview…</div>;
     return <ReadyStory loaded={loaded} />;
   };
@@ -113,7 +126,8 @@ export const mountPreviewRuntime = (
     );
   };
   const root = document.getElementById("root")!;
-  createRoot(root).render(<App />);
+  const reactRoot = createRoot(root);
+  reactRoot.render(<App />);
   let scheduled = 0;
   let previous = 0;
   const measure = () => {
@@ -129,8 +143,10 @@ export const mountPreviewRuntime = (
       }
     });
   };
-  new ResizeObserver(measure).observe(root);
-  new MutationObserver(measure).observe(document.body, {
+  const resizeObserver = new ResizeObserver(measure);
+  resizeObserver.observe(root);
+  const mutationObserver = new MutationObserver(measure);
+  mutationObserver.observe(document.body, {
     subtree: true,
     childList: true,
     attributes: true,
@@ -139,4 +155,15 @@ export const mountPreviewRuntime = (
   document.fonts.addEventListener("loadingdone", measure);
   void document.fonts.ready.then(measure);
   installFrameNavigation(send);
+  window.addEventListener(
+    "pagehide",
+    () => {
+      cancelAnimationFrame(scheduled);
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+      document.fonts.removeEventListener("loadingdone", measure);
+      reactRoot.unmount();
+    },
+    { once: true },
+  );
 };

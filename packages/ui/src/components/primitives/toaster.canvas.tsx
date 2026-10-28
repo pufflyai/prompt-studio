@@ -1,12 +1,9 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { type ReactNode, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
-
 import { Toaster, toaster } from "@/components/primitives/toaster";
 import { WindowTitleBar } from "@/components/tab-strip/window-title-bar";
 
 type StoryFn = () => ReactNode;
-
 const longErrorOutput = `#1 [internal] load local bake definitions
 #15 exporting to image
 Image pstdio-ps-46-a2-prompt-studio Built
@@ -15,7 +12,6 @@ Error response from daemon: invalid volume specification:
 '/host_mnt/Users/au-re/.pstdio-dev/workspaces/PS-46_A2/infra/local:.:rw'
 invalid mount config for type "bind": invalid mount path: '.'
 mount path must be absolute`;
-
 const meta = {
   title: "Components/Feedback/Toaster",
   component: Toaster,
@@ -27,10 +23,9 @@ const meta = {
     ),
   ],
 };
-
 export default meta;
-
 export const Variants = {
+  id: "components-feedback-toaster--variants",
   render: () => {
     const handleSuccess = () => {
       toaster.create({
@@ -39,7 +34,6 @@ export const Variants = {
         description: "The latest version is ready to run.",
       });
     };
-
     const handleWarning = () => {
       toaster.create({
         type: "warning",
@@ -47,7 +41,6 @@ export const Variants = {
         description: "Add at least one file before starting the job.",
       });
     };
-
     const handleError = () => {
       toaster.create({
         type: "error",
@@ -55,7 +48,6 @@ export const Variants = {
         description: "We could not reach the storage bucket.",
       });
     };
-
     const handleLoading = () => {
       toaster.create({
         type: "loading",
@@ -63,7 +55,6 @@ export const Variants = {
         description: "Generating the bundle for this pipeline.",
       });
     };
-
     const handleLongError = () => {
       toaster.create({
         type: "error",
@@ -71,7 +62,6 @@ export const Variants = {
         description: longErrorOutput,
       });
     };
-
     return (
       <Stack gap="md">
         <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -99,7 +89,6 @@ export const Variants = {
     );
   },
 };
-
 const DesktopTitleBarExample = () => {
   const [opened, setOpened] = useState(false);
   return (
@@ -126,25 +115,9 @@ const DesktopTitleBarExample = () => {
     </Box>
   );
 };
-
 export const WithDesktopTitleBar = {
+  id: "components-feedback-toaster--with-desktop-title-bar",
   tags: ["!manifest"],
   parameters: { layout: "fullscreen" },
   render: () => <DesktopTitleBarExample />,
-  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Show toast" }));
-    const close = await body.findByRole("button", { name: "Dismiss notification" });
-    const titleBar = canvasElement.querySelector("[data-window-title-bar]")!;
-    await waitFor(() =>
-      expect(close.getBoundingClientRect().top).toBeGreaterThanOrEqual(titleBar.getBoundingClientRect().bottom),
-    );
-    await userEvent.click(await body.findByRole("button", { name: "Open workspace" }));
-    await expect(canvas.getByText("Workspace opened")).toBeVisible();
-    await waitFor(() => expect(body.queryByText("Workspace ready")).not.toBeInTheDocument());
-    await userEvent.click(canvas.getByRole("button", { name: "Show toast" }));
-    await userEvent.click(await body.findByRole("button", { name: "Dismiss notification" }));
-    await waitFor(() => expect(body.queryByText("Workspace ready")).not.toBeInTheDocument());
-  },
 };

@@ -1,6 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { DesktopLifecycleView } from "./desktop-lifecycle-app";
 
 const actions = {
@@ -10,20 +9,6 @@ const actions = {
   revealInFinder: async () => {},
   retryRuntime: async () => {},
 };
-
-const expectWindowWidth = async (canvasElement: HTMLElement) => {
-  const main = within(canvasElement).getByRole("main");
-  const hostWidth = main.parentElement!.getBoundingClientRect().width;
-  await expect(main.getBoundingClientRect().width).toBe(hostWidth);
-  await expect(main.querySelector("[data-window-title-bar]")!.getBoundingClientRect().width).toBe(hostWidth);
-  const status = within(canvasElement).queryByRole("status");
-  if (status) {
-    const bounds = status.getBoundingClientRect();
-    const mainBounds = main.getBoundingClientRect();
-    await expect(Math.abs(bounds.x + bounds.width / 2 - mainBounds.x - hostWidth / 2)).toBeLessThan(1);
-  }
-};
-
 const meta = {
   title: "Patterns/Desktop/Lifecycle",
   component: DesktopLifecycleView,
@@ -35,35 +20,28 @@ const meta = {
       </Flex>
     ),
   ],
-  play: async ({ canvasElement }) => expectWindowWidth(canvasElement),
   args: { actions },
-} satisfies Meta<typeof DesktopLifecycleView>;
-
+} satisfies CanvasMeta<typeof DesktopLifecycleView>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const StartingDiscovery: Story = {
+  id: "patterns-desktop-lifecycle--starting-discovery",
   args: { state: { kind: "starting", phase: "discovery" } },
 };
-
 export const StartingRuntime: Story = {
+  id: "patterns-desktop-lifecycle--starting-runtime",
   args: { state: { kind: "starting", phase: "spawning" } },
 };
-
 export const BackingUpPreviousData: Story = {
+  id: "patterns-desktop-lifecycle--backing-up-previous-data",
   args: { state: { kind: "starting", phase: "retiring" } },
 };
-
 export const WaitingForWorkbench: Story = {
+  id: "patterns-desktop-lifecycle--waiting-for-workbench",
   args: { state: { kind: "starting", phase: "readiness" } },
 };
-
-const expectNoLifecycleSurface = async (canvasElement: HTMLElement) => {
-  await expect(within(canvasElement).queryByRole("main")).not.toBeInTheDocument();
-  await expect(canvasElement.querySelector("[data-window-title-bar]")).not.toBeInTheDocument();
-};
-
 export const Workbench: Story = {
+  id: "patterns-desktop-lifecycle--workbench",
   tags: ["!manifest"],
   args: {
     state: {
@@ -71,10 +49,9 @@ export const Workbench: Story = {
       runtime: { instanceId: "runtime-one", origin: "http://127.0.0.1:43127", ownerType: "desktop" },
     },
   },
-  play: async ({ canvasElement }) => expectNoLifecycleSurface(canvasElement),
 };
-
 export const ActiveWorkInWorkbench: Story = {
+  id: "patterns-desktop-lifecycle--active-work-in-workbench",
   tags: ["!manifest"],
   args: {
     state: {
@@ -83,10 +60,9 @@ export const ActiveWorkInWorkbench: Story = {
       activity: { sessions: [{ id: "session-one", label: "PS-217 implementation" }], terminals: [], jobs: [] },
     },
   },
-  play: async ({ canvasElement }) => expectNoLifecycleSurface(canvasElement),
 };
-
 export const Recovery: Story = {
+  id: "patterns-desktop-lifecycle--recovery",
   args: {
     state: {
       kind: "recovery",
@@ -98,12 +74,12 @@ export const Recovery: Story = {
     },
   },
 };
-
 export const Closing: Story = {
+  id: "patterns-desktop-lifecycle--closing",
   args: { state: { kind: "closing" } },
 };
-
 export const LongRecoveryDetails: Story = {
+  id: "patterns-desktop-lifecycle--long-recovery-details",
   args: {
     state: {
       kind: "recovery",
@@ -117,23 +93,5 @@ export const LongRecoveryDetails: Story = {
         actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
       },
     },
-  },
-  play: async ({ canvasElement }) => {
-    await expectWindowWidth(canvasElement);
-    const canvas = within(canvasElement);
-    const main = canvas.getByRole("main");
-    const window = canvasElement.ownerDocument.defaultView!;
-    await expect(main.getBoundingClientRect().height).toBeLessThanOrEqual(window.innerHeight);
-    const viewport = main.querySelector<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]')!;
-    await expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight);
-    viewport.scrollTop = viewport.scrollHeight;
-    await expect(viewport.scrollTop).toBeGreaterThan(0);
-    for (const name of ["Retry", "Open logs", "Copy diagnostics", "Quit"]) {
-      const button = canvas.getByRole("button", { name });
-      await expect(button).toBeVisible();
-      const bounds = button.getBoundingClientRect();
-      await expect(bounds.top).toBeGreaterThanOrEqual(0);
-      await expect(bounds.bottom).toBeLessThanOrEqual(window.innerHeight);
-    }
   },
 };

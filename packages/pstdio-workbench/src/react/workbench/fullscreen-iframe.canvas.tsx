@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ExtensionFrame } from "pstdio-extensions/bridge/host";
 import runtimeScript from "pstdio-extensions/bridge/webview-runtime.bundle.js?raw";
 import { renderInlineExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime-html";
@@ -34,7 +34,10 @@ const meta = {
   title: "pstdio-workbench/Reference/Core API/Main fullscreen iframe",
   component: WorkbenchStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof WorkbenchStory>;
+} satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const GuestKeyboard: Story = { args: { workbench: w } };
+type Story = CanvasVariant<typeof meta>;
+export const GuestKeyboard: Story = {
+  id: "pstdio-workbench-reference-core-api-main-fullscreen-iframe--guest-keyboard",
+  args: { workbench: w },
+};

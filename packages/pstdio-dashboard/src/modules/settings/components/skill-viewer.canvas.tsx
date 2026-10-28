@@ -1,9 +1,9 @@
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { FileIconThemePreferenceProvider } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import type { ProjectSkillDetails } from "../data/skills-api";
 import { SkillViewerContent } from "./skill-viewer";
 
-const meta: Meta<typeof SkillViewerContent> = {
+const meta: CanvasMeta<typeof SkillViewerContent> = {
   title: "ProjectSettings/SkillViewer",
   component: SkillViewerContent,
   parameters: { layout: "fullscreen" },
@@ -17,11 +17,8 @@ const meta: Meta<typeof SkillViewerContent> = {
     ),
   ],
 };
-
 export default meta;
-
-type Story = StoryObj<typeof SkillViewerContent>;
-
+type Story = CanvasVariant<typeof SkillViewerContent>;
 const baseSkill: ProjectSkillDetails = {
   deleted_at: null,
   id: "skill-1",
@@ -46,15 +43,14 @@ const baseSkill: ProjectSkillDetails = {
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
-
 const installation = (agentId: string, agentName: string) => ({
   agent_id: agentId,
   agent_name: agentName,
   installed_version: "1.2.0",
 });
-
 // Workspace provisioning copies the skill into each agent's skill folder.
 export const InstalledExtensionSkill: Story = {
+  id: "projectsettings-skillviewer--installed-extension-skill",
   args: {
     skill: {
       ...baseSkill,
@@ -65,8 +61,8 @@ export const InstalledExtensionSkill: Story = {
     },
   },
 };
-
 export const NotInstalledSkill: Story = {
+  id: "projectsettings-skillviewer--not-installed-skill",
   args: {
     skill: { ...baseSkill, installed_agents: [], agent_installations: [] },
   },

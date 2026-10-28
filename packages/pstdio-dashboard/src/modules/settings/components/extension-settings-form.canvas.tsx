@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ExtensionSettingValueRecord } from "@pstdio/sdk/api";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react";
 import { ExtensionSettingsForm } from "./extension-settings-form";
 
 // Mirrors the Planner's settings: two toggles, a number, and a branch dropdown whose
@@ -45,14 +45,12 @@ const settings: ExtensionSettingValueRecord[] = [
     source: "stored",
   },
 ];
-
 const listBranches: ExecuteOptionCommand = async () => [
   { branch: "origin/main" },
   { branch: "origin/release/next" },
   { branch: "origin/hotfix" },
 ];
-
-const meta: Meta<typeof ExtensionSettingsForm> = {
+const meta: CanvasMeta<typeof ExtensionSettingsForm> = {
   title: "ProjectSettings/ExtensionSettingsForm",
   component: ExtensionSettingsForm,
   decorators: [
@@ -68,33 +66,33 @@ const meta: Meta<typeof ExtensionSettingsForm> = {
     onChangeSetting: () => {},
   },
 };
-
 export default meta;
-type Story = StoryObj<typeof ExtensionSettingsForm>;
-
-export const Loaded: Story = {};
-
+type Story = CanvasVariant<typeof ExtensionSettingsForm>;
+export const Loaded: Story = {
+  id: "projectsettings-extensionsettingsform--loaded",
+};
 export const LoadingOptions: Story = {
+  id: "projectsettings-extensionsettingsform--loading-options",
   args: { executeOptionCommand: () => new Promise(() => {}) },
 };
-
 export const OptionsFailed: Story = {
+  id: "projectsettings-extensionsettingsform--options-failed",
   args: {
     executeOptionCommand: async () => {
       throw new Error("Could not list remote branches.");
     },
   },
 };
-
 // The saved branch was deleted on the remote. It stays selected until someone picks another.
 export const SavedValueNotListed: Story = {
+  id: "projectsettings-extensionsettingsform--saved-value-not-listed",
   args: {
     settings: settings.map((setting) =>
       setting.key === "implementation.defaultTargetBranch" ? { ...setting, value: "origin/release/old" } : setting,
     ),
   },
 };
-
 export const NoOptions: Story = {
+  id: "projectsettings-extensionsettingsform--no-options",
   args: { executeOptionCommand: async () => [] },
 };

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../workbench-story";
 import { createGenericCollectionRendererModule } from "./module";
@@ -16,15 +16,13 @@ const meta = {
       },
     },
   },
-} satisfies Meta;
-
+} satisfies CanvasMeta;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 const workbench = createWorkbench();
 workbench.registerModule(createGenericCollectionRendererModule());
-
 export const ExtensionOwnedRules: Story = {
+  id: "pstdio-workbench-reference-core-api-extension-adapter--extension-owned-rules",
   parameters: {
     docs: { source: { code: source, language: "tsx", type: "code" } },
   },

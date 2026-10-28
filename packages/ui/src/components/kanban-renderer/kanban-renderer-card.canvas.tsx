@@ -1,10 +1,9 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 import { KanbanRendererCard } from "./kanban-renderer-card";
 
-const meta: Meta<typeof KanbanRendererCard> = {
+const meta: CanvasMeta<typeof KanbanRendererCard> = {
   title: "Patterns/Kanban Renderer/Card",
   component: KanbanRendererCard,
   parameters: { layout: "padded" },
@@ -16,27 +15,25 @@ const meta: Meta<typeof KanbanRendererCard> = {
     ),
   ],
 };
-
 export default meta;
-
-type Story = StoryObj<typeof KanbanRendererCard>;
-
+type Story = CanvasVariant<typeof KanbanRendererCard>;
 export const Default: Story = {
+  id: "patterns-kanban-renderer-card--default",
   args: { title: "Implement user authentication flow" },
 };
-
 export const Selected: Story = {
+  id: "patterns-kanban-renderer-card--selected",
   args: { title: "Implement user authentication flow", isSelected: true },
 };
-
 export const WithSingleBadge: Story = {
+  id: "patterns-kanban-renderer-card--with-single-badge",
   args: {
     title: "Fix login redirect loop",
     badges: [{ attributeId: "labels", label: "bug", color: "red" }],
   },
 };
-
 export const WithMultipleBadges: Story = {
+  id: "patterns-kanban-renderer-card--with-multiple-badges",
   args: {
     title: "Add dark mode support to settings panel",
     badges: [
@@ -46,8 +43,8 @@ export const WithMultipleBadges: Story = {
     ],
   },
 };
-
 export const WithWorkspaceBadge: Story = {
+  id: "patterns-kanban-renderer-card--with-workspace-badge",
   args: {
     title: "Create API endpoint for user preferences",
     workspaceBadge: { workspaceType: "worktree", shorthand: "A1", sessionStatus: "completed" },
@@ -57,8 +54,8 @@ export const WithWorkspaceBadge: Story = {
     ],
   },
 };
-
 export const WorkspaceBadgeAsDisplayTag: Story = {
+  id: "patterns-kanban-renderer-card--workspace-badge-as-display-tag",
   args: {
     title: "Create API endpoint for user preferences",
     customSlots: [
@@ -78,8 +75,8 @@ export const WorkspaceBadgeAsDisplayTag: Story = {
     ],
   },
 };
-
 export const LongTitle: Story = {
+  id: "patterns-kanban-renderer-card--long-title",
   args: {
     title:
       "Refactor the entire authentication module to support OAuth2 and SAML providers with backward-compatible session handling",
@@ -89,12 +86,12 @@ export const LongTitle: Story = {
     ],
   },
 };
-
 export const NoBadges: Story = {
+  id: "patterns-kanban-renderer-card--no-badges",
   args: { title: "Quick typo fix in README" },
 };
-
 export const WithDiffBadge: Story = {
+  id: "patterns-kanban-renderer-card--with-diff-badge",
   args: {
     title: "Implement card workspace shortcut",
     workspaceBadge: {
@@ -106,8 +103,8 @@ export const WithDiffBadge: Story = {
     },
   },
 };
-
 export const Draggable: Story = {
+  id: "patterns-kanban-renderer-card--draggable",
   args: {
     title: "Drag me around",
     draggable: true,

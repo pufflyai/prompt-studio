@@ -1,7 +1,7 @@
 import { Box, Button, Code, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { SessionIndicator } from "@pstdio/ui";
 import { KanbanRendererBoard } from "@pstdio/ui/kanban-renderer";
-import type { Meta, StoryObj } from "@storybook/react";
 import { Check, CircleDashed } from "lucide-react";
 import { useState } from "react";
 import { landingStorySlotRecipe } from "./landing-story";
@@ -107,11 +107,14 @@ const meta = {
   title: "Theme/Landing Agent Demo",
   component: AgentDemo,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof AgentDemo>;
+} satisfies CanvasMeta<typeof AgentDemo>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Desktop: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const Desktop: Story = {
+  id: "theme-landing-agent-demo--desktop",
+};
 export const NarrowPanel: Story = {
+  id: "theme-landing-agent-demo--narrow-panel",
   decorators: [
     (Story) => (
       <Box width="80">

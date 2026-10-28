@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { GuestHost } from "@pstdio/sdk/extensions";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { buildPlan } from "../model/build-plan";
 import { PlanRoot } from "./plan-root";
 
@@ -20,10 +19,14 @@ const plan = {
   ticketAttributes: [],
   savedViews: { views: [], defaultViewId: null },
 };
-
 function TimelineStory(props: { failConfigure?: boolean; loading?: "tickets" | "preferences" }) {
   const { failConfigure, loading } = props;
-  const respond = async (method: string, input?: { commandId?: string }) => {
+  const respond = async (
+    method: string,
+    input?: {
+      commandId?: string;
+    },
+  ) => {
     if (method === "preferences.get" && loading === "preferences") return new Promise(() => {});
     if (method === "preferences.get") return undefined;
     if (method === "preferences.set") return;
@@ -65,49 +68,25 @@ function TimelineStory(props: { failConfigure?: boolean; loading?: "tickets" | "
     </Box>
   );
 }
-
-const meta: Meta<typeof TimelineStory> = {
+const meta: CanvasMeta<typeof TimelineStory> = {
   title: "Extensions/Planner/Timeline",
   component: TimelineStory,
 };
 export default meta;
-type Story = StoryObj<typeof TimelineStory>;
-
+type Story = CanvasVariant<typeof TimelineStory>;
 export const LoadingTickets: Story = {
+  id: "extensions-planner-timeline--loading-tickets",
   args: { loading: "tickets" },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    expect(await canvas.findByRole("button", { name: "Filter" })).toBeDisabled();
-    expect(canvas.getByRole("button", { name: "Auto Build" })).toBeDisabled();
-    expect(canvas.getByRole("region", { name: "Loading timeline" })).toHaveAttribute("aria-busy", "true");
-  },
 };
-
-export const LoadingPreferences: Story = { ...LoadingTickets, args: { loading: "preferences" } };
-
+export const LoadingPreferences: Story = {
+  id: "extensions-planner-timeline--loading-preferences",
+  ...LoadingTickets,
+  args: { loading: "preferences" },
+};
 export const SavedAutoBuildFailure: Story = {
-  play: async ({ canvasElement }) => {
-    const page = within(canvasElement.ownerDocument.body);
-    const button = await page.findByRole("button", { name: "Auto Build" });
-    await waitFor(() => expect(button).toBeEnabled());
-    expect(page.queryByRole("alert")).toBeNull();
-    await userEvent.click(button);
-    expect(await page.findByRole("alert")).toHaveTextContent(backgroundFailure);
-    const dialog = page.getByRole("dialog");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Auto Build" }));
-    await page.findByRole("dialog", { name: "Auto Build" });
-    expect(page.queryByRole("alert")).toBeNull();
-  },
+  id: "extensions-planner-timeline--saved-auto-build-failure",
 };
-
 export const ConfigureFailure: Story = {
+  id: "extensions-planner-timeline--configure-failure",
   args: { failConfigure: true },
-  play: async (context) => {
-    await SavedAutoBuildFailure.play!(context);
-    const page = within(context.canvasElement.ownerDocument.body);
-    const dialog = page.getByRole("dialog", { name: "Auto Build" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Auto Build" }));
-    await waitFor(() => expect(within(dialog).getByRole("alert")).toHaveTextContent(actionFailure));
-    expect(page.getAllByRole("alert")).toHaveLength(1);
-  },
 };

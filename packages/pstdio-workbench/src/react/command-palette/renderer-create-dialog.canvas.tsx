@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -52,12 +52,14 @@ workbench.keybindings.registerKeybinding({
 });
 workbench.keyboard.open();
 void workbench.keyboard.press("C").then(() => workbench.keyboard.press("T"));
-
 const meta = {
   title: "pstdio-workbench/Reference/Command creation",
   component: WorkbenchStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof WorkbenchStory>;
+} satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const SharedCreationForm: Story = { args: { workbench } };
+type Story = CanvasVariant<typeof meta>;
+export const SharedCreationForm: Story = {
+  id: "pstdio-workbench-reference-command-creation--shared-creation-form",
+  args: { workbench },
+};

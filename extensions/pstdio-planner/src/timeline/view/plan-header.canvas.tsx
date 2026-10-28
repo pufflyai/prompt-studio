@@ -1,6 +1,6 @@
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { CollectionViewsSource } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { AutoBuildButton } from "./auto-build-button";
 import { PlanHeader } from "./plan-header";
@@ -89,8 +89,7 @@ function HeaderStory(props: { filtered?: boolean; running?: boolean; obsoletePro
     />
   );
 }
-
-const meta: Meta<typeof HeaderStory> = {
+const meta: CanvasMeta<typeof HeaderStory> = {
   title: "Extensions/Planner/Timeline header",
   component: HeaderStory,
   decorators: [
@@ -102,9 +101,19 @@ const meta: Meta<typeof HeaderStory> = {
   ],
 };
 export default meta;
-type Story = StoryObj<typeof HeaderStory>;
-export const SavedViews: Story = {};
-export const FilteredView: Story = { args: { filtered: true } };
-export const AutoBuildRunning: Story = { args: { running: true } };
-
-export const RetiredDisplayProperties: Story = { args: { obsoleteProperties: true } };
+type Story = CanvasVariant<typeof HeaderStory>;
+export const SavedViews: Story = {
+  id: "extensions-planner-timeline-header--saved-views",
+};
+export const FilteredView: Story = {
+  id: "extensions-planner-timeline-header--filtered-view",
+  args: { filtered: true },
+};
+export const AutoBuildRunning: Story = {
+  id: "extensions-planner-timeline-header--auto-build-running",
+  args: { running: true },
+};
+export const RetiredDisplayProperties: Story = {
+  id: "extensions-planner-timeline-header--retired-display-properties",
+  args: { obsoleteProperties: true },
+};

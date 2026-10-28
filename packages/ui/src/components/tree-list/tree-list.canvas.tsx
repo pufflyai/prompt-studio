@@ -1,8 +1,7 @@
 import { Box, Button, Flex, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Check, Copy, EllipsisVertical, FileText, Folder, Plus, Search, Settings, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "./tree-list";
 import type { TreeListNavigateEvent, TreeListNode, TreeListSection } from "./tree-list.types";
@@ -11,22 +10,18 @@ import { applyTreeListOrder } from "./tree-list-order-filter";
 import { useTreeListVisibilityStore, type VisibilityOverride } from "./tree-list-visibility.store";
 import { buildTreeVisibilityMenuActions, filterVisibleSections } from "./tree-list-visibility-filter";
 
-const meta: Meta<typeof TreeList> = {
+const meta: CanvasMeta<typeof TreeList> = {
   title: "Components/Data Display/Tree List",
   component: TreeList,
 };
-
 export default meta;
-type Story = StoryObj<typeof TreeList>;
-
+type Story = CanvasVariant<typeof TreeList>;
 const toggleId = (ids: string[], id: string) => (ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]);
-
 const actionMenuItems = Array.from({ length: 10 }, (_, index) => ({
   id: `action-${index + 1}`,
   label: `Action ${index + 1}`,
   description: `Run action ${index + 1}`,
 }));
-
 const navigationSections: TreeListSection[] = [
   {
     id: "docs",
@@ -79,7 +74,6 @@ const navigationSections: TreeListSection[] = [
     ],
   },
 ];
-
 const fileSections: TreeListSection[] = [
   {
     id: "files",
@@ -113,18 +107,15 @@ const fileSections: TreeListSection[] = [
     ],
   },
 ];
-
 const SectionedNavigationStory = () => {
   const [expandedSections, setExpandedSections] = useState(["docs", "settings"]);
   const [expandedNodes, setExpandedNodes] = useState(["guides", "projects"]);
   const [activeNodeId, setActiveNodeId] = useState("overview");
   const [lastEvent, setLastEvent] = useState("No navigation yet");
-
   const handleNavigate = (event: TreeListNavigateEvent) => {
     setActiveNodeId(event.nodeId);
     setLastEvent(`${event.sectionId}:${event.nodeId}`);
   };
-
   return (
     <Stack maxW="18rem" gap="md">
       <TreeList
@@ -147,11 +138,9 @@ const SectionedNavigationStory = () => {
     </Stack>
   );
 };
-
 const FileTreeStory = () => {
   const [expandedNodes, setExpandedNodes] = useState(["src", "src/components"]);
   const [activeNodeId, setActiveNodeId] = useState("src/components/tree-list.tsx");
-
   const sections = fileSections.map((section) => ({
     ...section,
     nodes: section.nodes.map((node) => ({
@@ -165,7 +154,6 @@ const FileTreeStory = () => {
       })),
     })),
   })) as TreeListSection[];
-
   return (
     <Stack maxW="20rem" borderWidth="1px" p="xs">
       <TreeList
@@ -178,7 +166,6 @@ const FileTreeStory = () => {
     </Stack>
   );
 };
-
 const shortcutSections: TreeListSection[] = [
   {
     id: "workspace",
@@ -219,7 +206,6 @@ const shortcutSections: TreeListSection[] = [
     ],
   },
 ];
-
 const ShortcutTreeStory = () => (
   <Stack maxW="20rem" borderWidth="1px" p="xs">
     <TreeList
@@ -234,7 +220,6 @@ const ShortcutTreeStory = () => (
     </Text>
   </Stack>
 );
-
 const reorderSections: TreeListSection[] = [
   {
     id: "favorites",
@@ -254,13 +239,10 @@ const reorderSections: TreeListSection[] = [
     ],
   },
 ];
-
 const ReorderableStory = () => {
   const [sectionOrder, setSectionOrder] = useState<string[]>([]);
   const [nodeOrderBySection, setNodeOrderBySection] = useState<Record<string, string[]>>({});
-
   const sections = applyTreeListOrder(reorderSections, sectionOrder, nodeOrderBySection);
-
   return (
     <Stack maxW="20rem" gap="md">
       <Stack borderWidth="1px" p="xs">
@@ -293,7 +275,6 @@ const ReorderableStory = () => {
     </Stack>
   );
 };
-
 const visibilitySections: TreeListSection[] = [
   {
     id: "primary",
@@ -310,13 +291,10 @@ const visibilitySections: TreeListSection[] = [
     nodes: [{ id: "debug", label: "Debug", icon: <Settings size={14} /> }],
   },
 ];
-
 const VisibilityStory = () => {
   const [sectionOverrides, setSectionOverrides] = useState<Record<string, VisibilityOverride>>({});
   const [nodeOverrides, setNodeOverrides] = useState<Record<string, VisibilityOverride>>({});
-
   const sections = filterVisibleSections(visibilitySections, sectionOverrides, nodeOverrides);
-
   return (
     <Stack maxW="20rem" gap="md">
       <Stack borderWidth="1px" p="xs">
@@ -350,67 +328,30 @@ const VisibilityStory = () => {
     </Stack>
   );
 };
-
 export const SectionedNavigation: Story = {
+  id: "components-data-display-tree-list--sectioned-navigation",
   render: () => <SectionedNavigationStory />,
 };
-
 export const FileTree: Story = {
+  id: "components-data-display-tree-list--file-tree",
   render: () => <FileTreeStory />,
 };
-
 export const InlineFileCreation: Story = {
+  id: "components-data-display-tree-list--inline-file-creation",
   render: () => <TreeListInlineCreationStory />,
 };
-
 export const InlineFolderCreation: Story = {
+  id: "components-data-display-tree-list--inline-folder-creation",
   render: () => <TreeListInlineCreationStory type="folder" />,
 };
-
 export const ActionShortcuts: Story = {
+  id: "components-data-display-tree-list--action-shortcuts",
   render: () => <ShortcutTreeStory />,
 };
-
 export const Reorderable: Story = {
+  id: "components-data-display-tree-list--reorderable",
   render: () => <ReorderableStory />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const rowNames = () => canvas.getAllByRole("option").map((row) => row.textContent);
-    const row = (name: string) => canvas.getByRole("option", { name });
-    const center = (element: Element, offsetY = 0) => {
-      const rect = element.getBoundingClientRect();
-      return { x: rect.left + 20, y: rect.top + rect.height / 2 + offsetY };
-    };
-    // One user-event instance keeps the pressed pointer between the move and the release.
-    const user = userEvent.setup();
-    const drag = async (from: Element, to: { x: number; y: number }, expectDuring: () => void) => {
-      await user.pointer([
-        { keys: "[MouseLeft>]", target: from, coords: center(from) },
-        { target: from, coords: center(from, 8) },
-        { coords: to },
-      ]);
-      await waitFor(expectDuring);
-      await user.pointer({ keys: "[/MouseLeft]", coords: to });
-    };
-
-    // The lower half of the last row drops behind it, inside its group, and highlights the group.
-    await drag(row("Inbox"), center(row("Archive"), 4), () => {
-      expect(canvasElement.querySelector('[data-tree-list-drop-indicator="after"]')).toBeInTheDocument();
-      expect(canvasElement.querySelector("[data-tree-list-drop-group]")).toBeInTheDocument();
-    });
-    await waitFor(() => expect(rowNames()).toEqual(["Drafts", "Archive", "Inbox", "Alpha", "Beta"]));
-
-    // The gap after a group drops behind the group: the row leaves it as a bare row, with no group highlight.
-    const inbox = row("Inbox").getBoundingClientRect();
-    await drag(row("Drafts"), { x: inbox.left + 20, y: inbox.bottom + 6 }, () => {
-      expect(canvasElement.querySelector('[data-tree-list-drop-indicator="middle"]')).toBeInTheDocument();
-      expect(canvasElement.querySelector("[data-tree-list-drop-group]")).toBeNull();
-    });
-    await waitFor(() => expect(rowNames()).toEqual(["Archive", "Inbox", "Drafts", "Alpha", "Beta"]));
-    await expect(canvasElement.querySelector("[data-tree-list-drop-indicator]")).toBeNull();
-  },
 };
-
 const pinnedSections: TreeListSection[] = [
   { id: "pinned", nodes: [{ id: "search", label: "Search", icon: <Search size={14} /> }] },
   {
@@ -421,7 +362,6 @@ const pinnedSections: TreeListSection[] = [
     ],
   },
 ];
-
 // A bare section users emptied, like a header whose rows all moved away, still takes rows back while dragging.
 const EmptiedSectionStory = () => {
   const [sectionOrder, setSectionOrder] = useState<string[]>([]);
@@ -442,48 +382,14 @@ const EmptiedSectionStory = () => {
     </Stack>
   );
 };
-
 export const EmptiedSectionAcceptsRows: Story = {
+  id: "components-data-display-tree-list--emptied-section-accepts-rows",
   render: () => <EmptiedSectionStory />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const rowNames = () => canvas.getAllByRole("option").map((row) => row.textContent);
-    const row = (name: string) => canvas.getByRole("option", { name });
-    const center = (element: Element, offsetY = 0) => {
-      const rect = element.getBoundingClientRect();
-      return { x: rect.left + 20, y: rect.top + rect.height / 2 + offsetY };
-    };
-    // One user-event instance keeps the pressed pointer between the move and the release.
-    const user = userEvent.setup();
-    const drag = async (from: Element, to: () => { x: number; y: number }) => {
-      await user.pointer([
-        { keys: "[MouseLeft>]", target: from, coords: center(from) },
-        { target: from, coords: center(from, 8) },
-      ]);
-      const coords = await waitFor(to);
-      await user.pointer({ coords });
-      await waitFor(() => expect(canvasElement.querySelector("[data-tree-list-drop-indicator]")).toBeInTheDocument());
-      await user.pointer({ keys: "[/MouseLeft]", coords });
-    };
-
-    await drag(row("Search"), () => center(row("Notes"), 4));
-    await waitFor(() => expect(rowNames()).toEqual(["Sessions", "Notes", "Search"]));
-
-    // The emptied section shows a drop zone only while dragging.
-    await expect(canvasElement.querySelector("[data-tree-list-empty-drop-zone]")).toBeNull();
-    await drag(row("Notes"), () => {
-      const zone = canvasElement.querySelector("[data-tree-list-empty-drop-zone]");
-      expect(zone).toBeInTheDocument();
-      return center(zone!);
-    });
-    await waitFor(() => expect(rowNames()).toEqual(["Notes", "Sessions", "Search"]));
-  },
 };
-
 export const Visibility: Story = {
+  id: "components-data-display-tree-list--visibility",
   render: () => <VisibilityStory />,
 };
-
 const customizationHeaderNodes: TreeListNode[] = [
   { id: "search", label: "Search", icon: <Search size={14} />, canHide: true },
 ];
@@ -509,23 +415,19 @@ const customizationSections: TreeListSection[] = [
     nodes: [{ id: "readme", label: "README.md", icon: <Folder size={14} /> }],
   },
 ];
-
 const customizationMenuItems = {
   headerSections: [{ id: "header", nodes: customizationHeaderNodes }],
   sections: customizationSections,
   footerSections: [{ id: "footer", nodes: customizationFooterNodes }],
 };
 const customizationMenuIcons = { visibleIcon: <Check size={14} />, hiddenIcon: <Check size={14} /> };
-
 const CUSTOMIZATION_KEY = "storybook/tree-customization";
-
 const BackgroundContextMenuStory = () => {
   const sectionOverrides = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.sectionOverrides);
   const nodeOverrides = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.nodeOverrides);
   const toggleSection = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.toggleSection);
   const toggleNode = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.toggleNode);
   const reset = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.reset);
-
   const sections = filterVisibleSections(customizationSections, sectionOverrides, nodeOverrides);
   const backgroundContextActions = buildTreeVisibilityMenuActions(
     customizationMenuItems,
@@ -534,7 +436,6 @@ const BackgroundContextMenuStory = () => {
     { onToggleSection: toggleSection, onToggleNode: toggleNode, onResetAll: reset },
     customizationMenuIcons,
   );
-
   return (
     <Stack maxW="20rem" gap="md">
       <Box borderWidth="1px" h="16rem" overflow="hidden">
@@ -555,11 +456,10 @@ const BackgroundContextMenuStory = () => {
     </Stack>
   );
 };
-
 export const BackgroundContextMenu: Story = {
+  id: "components-data-display-tree-list--background-context-menu",
   render: () => <BackgroundContextMenuStory />,
 };
-
 // Mirrors the dashboard host (WorkbenchTreeView): TreeList inside a flex-column
 // ScrollArea. Verifies the back-of-tree menu is reachable across the whole
 // scroll area, not just the rows.
@@ -570,7 +470,6 @@ const BackgroundContextMenuInScrollAreaStory = () => {
   const toggleSection = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.toggleSection);
   const toggleNode = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.toggleNode);
   const reset = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.reset);
-
   const sections = filterVisibleSections(customizationSections, sectionOverrides, nodeOverrides);
   const backgroundContextActions = buildTreeVisibilityMenuActions(
     customizationMenuItems,
@@ -579,7 +478,6 @@ const BackgroundContextMenuInScrollAreaStory = () => {
     { onToggleSection: toggleSection, onToggleNode: toggleNode, onResetAll: reset },
     customizationMenuIcons,
   );
-
   return (
     <Flex direction="column" h="20rem" maxW="20rem" borderWidth="1px">
       <ScrollArea
@@ -607,7 +505,7 @@ const BackgroundContextMenuInScrollAreaStory = () => {
     </Flex>
   );
 };
-
 export const BackgroundContextMenuInScrollArea: Story = {
+  id: "components-data-display-tree-list--background-context-menu-in-scroll-area",
   render: () => <BackgroundContextMenuInScrollAreaStory />,
 };

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createExtensionPreview } from "../onboarding/extension-preview";
 import pageExtension, { guidePage } from "../onboarding/extensions/page-extension";
 import source from "../onboarding/extensions/page-extension.ts?raw";
@@ -8,12 +8,11 @@ const meta = {
   title: "pstdio-workbench/Reference/Extension API",
   tags: ["!dev"],
   parameters: { layout: "padded" },
-} satisfies Meta;
-
+} satisfies CanvasMeta;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const RunnableExample: Story = {
+  id: "pstdio-workbench-reference-extension-api--runnable-example",
   name: "Runnable example",
   parameters: {
     docs: {

@@ -1,7 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { Workbench, WorkbenchThemeProvider } from "../index";
 
@@ -41,11 +40,9 @@ const createTablessWorkbench = (withMenu: boolean) => {
   if (menu) workbench.panelMenuState.setOpen(`panel-menu:${menu.widgetId}`, false);
   return workbench;
 };
-
 interface PageMenuHeaderStoryProps {
   withMenu: boolean;
 }
-
 const PageMenuHeaderStory = (props: PageMenuHeaderStoryProps) => {
   const { withMenu } = props;
   // One workbench per mount, so a rerun of a play function starts with the menu closed.
@@ -58,39 +55,20 @@ const PageMenuHeaderStory = (props: PageMenuHeaderStoryProps) => {
     </WorkbenchThemeProvider>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Page menu header",
   component: PageMenuHeaderStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof PageMenuHeaderStory>;
+} satisfies CanvasMeta<typeof PageMenuHeaderStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 /** A tabless page keeps a minimal header that holds only the openers of its closed view menus. */
 export const WithClosedViewMenu: Story = {
+  id: "pstdio-workbench-reference-core-api-page-menu-header--with-closed-view-menu",
   args: { withMenu: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Board content")).toBeVisible();
-    const header = await waitFor(() => {
-      const element = canvasElement.querySelector<HTMLElement>('[data-workbench-page-menu-header="main"]');
-      expect(element).toBeVisible();
-      return element!;
-    });
-    await expect(within(header).queryAllByRole("tab")).toHaveLength(0);
-    await expect(canvasElement.querySelector('[data-workbench-panel-header="main"]')).toBeNull();
-    await expect(within(header).getByRole("button", { name: "Open Main right menu" })).toBeVisible();
-  },
 };
-
 /** A tabless page without view menus has no Main header at all. */
 export const WithoutViewMenus: Story = {
+  id: "pstdio-workbench-reference-core-api-page-menu-header--without-view-menus",
   args: { withMenu: false },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Board content")).toBeVisible();
-    await expect(canvasElement.querySelector('[data-workbench-page-menu-header="main"]')).toBeNull();
-    await expect(canvasElement.querySelector('[data-workbench-panel-header="main"]')).toBeNull();
-  },
 };

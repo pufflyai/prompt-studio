@@ -1,5 +1,5 @@
 import { Box, Button, Container, HStack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ParamEditor } from "./param-editor";
 
 const meta = {
@@ -8,12 +8,11 @@ const meta = {
   parameters: {
     layout: "fullscreen",
   },
-} satisfies Meta<typeof ParamEditor>;
-
+} satisfies CanvasMeta<typeof ParamEditor>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const GroupedInspector: Story = {
+  id: "patterns-param-editor-inspector--grouped-inspector",
   render: (props) => {
     return (
       <Container padding="md">
@@ -128,13 +127,13 @@ export const GroupedInspector: Story = {
     ],
   },
 };
-
 export const SmallInspector: Story = {
+  id: "patterns-param-editor-inspector--small-inspector",
   ...GroupedInspector,
   args: { ...GroupedInspector.args, variant: "small" },
 };
-
 export const SerializableReadOnlyValues: Story = {
+  id: "patterns-param-editor-inspector--serializable-read-only-values",
   render: (props) => (
     <Container padding="md">
       <Box maxWidth="380px" borderWidth="1px" borderColor="border.subtle" borderRadius="xs" overflow="hidden">

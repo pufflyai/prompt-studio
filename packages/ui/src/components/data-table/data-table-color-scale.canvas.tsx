@@ -9,7 +9,6 @@ const scoreRows: RowData[] = [
   { Team: "Central", Completion: 80, Variance: 60, Health: 82 },
   { Team: "International", Completion: 100, Variance: 100, Health: 96 },
 ];
-
 const statusRows: RowData[] = [
   { Project: "Website launch", Owner: "Maya", Status: "On track" },
   { Project: "Mobile refresh", Owner: "Noah", Status: "At risk" },
@@ -17,23 +16,19 @@ const statusRows: RowData[] = [
   { Project: "Customer research", Owner: "Leo", Status: "Complete" },
   { Project: "Partner rollout", Owner: "Mia", Status: "On track" },
 ];
-
 const meta = {
   title: "Components/Data Display/Data Table",
   component: DataTable,
 };
-
 export default meta;
-
 const themedColor = (light: string, dark: string) => ({ light, dark });
-
 const StoryFrame = (args: DataTableProps) => (
   <Box width="100%" maxWidth="880px" height="440px" marginX="auto" padding="sm" background="bg">
     <DataTable {...args} />
   </Box>
 );
-
 export const ColorScales = {
+  id: "components-data-display-data-table--color-scales",
   args: {
     data: scoreRows,
     fullWidth: true,
@@ -67,8 +62,8 @@ export const ColorScales = {
   },
   render: StoryFrame,
 };
-
 export const CategoricalColors = {
+  id: "components-data-display-data-table--categorical-colors",
   args: {
     data: statusRows,
     fullWidth: true,

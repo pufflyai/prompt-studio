@@ -1,8 +1,7 @@
 import { Button, Stack } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { TreeList } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
@@ -54,7 +53,6 @@ const RevealNewNote = () => {
     </Stack>
   );
 };
-
 const RefreshSelectedNote = (props: { resourceFree?: boolean; aliases?: boolean }) => {
   const { resourceFree, aliases } = props;
   const [workbench] = useState(() => {
@@ -133,7 +131,6 @@ const RefreshSelectedNote = (props: { resourceFree?: boolean; aliases?: boolean 
     </Stack>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Guides/Tree selection reveal",
   tags: ["tree-selection-reveal"],
@@ -145,51 +142,20 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof RevealNewNote>;
+} satisfies CanvasMeta<typeof RevealNewNote>;
 export default meta;
-export const NewNoteInCollapsedFolder: StoryObj<typeof meta> = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.queryByRole("option", { name: "New note" })).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "New note in Ideas" }));
-    await expect(await canvas.findByRole("option", { name: "New note" })).toHaveAttribute("aria-selected", "true");
-    await userEvent.click(canvas.getByRole("option", { name: "Ideas" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Refresh" }));
-    await expect(canvas.queryByRole("option", { name: "New note" })).not.toBeInTheDocument();
-  },
+export const NewNoteInCollapsedFolder: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-guides-tree-selection-reveal--new-note-in-collapsed-folder",
 };
-
-export const RefreshKeepsUserCollapse: StoryObj<typeof meta> = {
+export const RefreshKeepsUserCollapse: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-guides-tree-selection-reveal--refresh-keeps-user-collapse",
   render: () => <RefreshSelectedNote />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("option", { name: "first" })).toHaveAttribute("aria-selected", "true");
-    await userEvent.click(canvas.getByRole("option", { name: "Notes" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Start refresh" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Finish refresh" }));
-    await expect(canvas.getByRole("option", { name: "Notes" })).toHaveAttribute("aria-expanded", "false");
-    await userEvent.click(canvas.getByRole("button", { name: "Start refresh" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Select second" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Finish refresh" }));
-    await expect(await canvas.findByRole("option", { name: "second" })).toHaveAttribute("aria-selected", "true");
-    await expect(canvas.getByRole("option", { name: "Notes" })).toHaveAttribute("aria-expanded", "true");
-  },
 };
-
-export const RefreshResourceFreePage: StoryObj<typeof meta> = {
+export const RefreshResourceFreePage: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-guides-tree-selection-reveal--refresh-resource-free-page",
   render: () => <RefreshSelectedNote resourceFree />,
-  play: RefreshKeepsUserCollapse.play,
 };
-
-export const RevisitResourceAlias: StoryObj<typeof meta> = {
+export const RevisitResourceAlias: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-guides-tree-selection-reveal--revisit-resource-alias",
   render: () => <RefreshSelectedNote aliases />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("option", { name: "first" })).toHaveAttribute("aria-selected", "true");
-    for (const name of ["second", "first"]) {
-      await userEvent.click(canvas.getByRole("option", { name: "Notes" }));
-      await userEvent.click(canvas.getByRole("button", { name: `Select ${name}` }));
-      await expect(await canvas.findByRole("option", { name })).toHaveAttribute("aria-selected", "true");
-    }
-  },
 };

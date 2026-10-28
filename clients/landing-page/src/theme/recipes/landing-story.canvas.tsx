@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import { ExamplesView } from "../../components/sections/examples-view";
 import { WhatIsPromptStudioView } from "../../components/sections/what-is-prompt-studio-view";
@@ -9,7 +9,6 @@ const ExampleChapters = () => {
   const [example, setExample] = useState<ToolExampleId>("agents");
   return <ExamplesView exampleId={example} onNavigate={setExample} />;
 };
-
 const meta = {
   title: "Theme/Landing Chapters",
   component: WhatIsPromptStudioView,
@@ -21,11 +20,11 @@ const meta = {
       </Box>
     ),
   ],
-} satisfies Meta<typeof WhatIsPromptStudioView>;
-
+} satisfies CanvasMeta<typeof WhatIsPromptStudioView>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const WhatIsPromptStudio: Story = {
+  id: "theme-landing-chapters--what-is-prompt-studio",
   parameters: {
     docs: {
       description: {
@@ -35,8 +34,12 @@ export const WhatIsPromptStudio: Story = {
     },
   },
 };
-export const Examples: Story = { render: () => <ExampleChapters /> };
+export const Examples: Story = {
+  id: "theme-landing-chapters--examples",
+  render: () => <ExampleChapters />,
+};
 export const NarrowChapters: Story = {
+  id: "theme-landing-chapters--narrow-chapters",
   decorators: [
     (Story) => (
       <Box width="80" height="full">
@@ -46,10 +49,12 @@ export const NarrowChapters: Story = {
   ],
 };
 export const NarrowExamples: Story = {
+  id: "theme-landing-chapters--narrow-examples",
   ...NarrowChapters,
   render: () => <ExampleChapters />,
 };
 export const ShortViewport: Story = {
+  id: "theme-landing-chapters--short-viewport",
   decorators: [
     (Story) => (
       <Box height="28rem">

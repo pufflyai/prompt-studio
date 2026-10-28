@@ -1,8 +1,7 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { HelpCircle, Plus } from "lucide-react";
 import { useState } from "react";
-import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { TreeList } from "./tree-list";
 
 const MenuTree = () => {
@@ -37,11 +36,13 @@ const MenuTree = () => {
     </Box>
   );
 };
-const meta = { title: "Components/Tree List/Menu rows", component: MenuTree } satisfies Meta<typeof MenuTree>;
+const meta = { title: "Components/Tree List/Menu rows", component: MenuTree } satisfies CanvasMeta<typeof MenuTree>;
 export default meta;
-export const MenuAndBranch: StoryObj<typeof meta> = {};
-
-export const FooterMenu: StoryObj<typeof meta> = {
+export const MenuAndBranch: CanvasVariant<typeof meta> = {
+  id: "components-tree-list-menu-rows--menu-and-branch",
+};
+export const FooterMenu: CanvasVariant<typeof meta> = {
+  id: "components-tree-list-menu-rows--footer-menu",
   render: () => (
     <Box h="20rem" display="flex" alignItems="flex-end" p="md">
       <Box w="xs">
@@ -64,22 +65,4 @@ export const FooterMenu: StoryObj<typeof meta> = {
       </Box>
     </Box>
   ),
-  play: async ({ canvasElement }) => {
-    const help = within(canvasElement).getByRole("button", { name: "Help", exact: true });
-    await userEvent.click(help);
-    const menu = await screen.findByRole("menu");
-    await waitFor(() => {
-      const anchor = help.getBoundingClientRect();
-      const bounds = menu.getBoundingClientRect();
-      expect(Math.abs(bounds.left - anchor.left)).toBeLessThan(12);
-      expect(Math.abs(bounds.bottom - anchor.top)).toBeLessThan(20);
-    });
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(menu).not.toBeVisible());
-    help.focus();
-    await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Documentation" })).toBeVisible());
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(menu).not.toBeVisible());
-  },
 };

@@ -1,5 +1,5 @@
 import { Box, Dialog, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { NotificationCenter } from "./notification-center";
 import type { NotificationCenterItem } from "./notification-center.types";
 
@@ -50,8 +50,7 @@ const sampleItems: NotificationCenterItem[] = [
     timeLabel: "Today",
   },
 ];
-
-const meta: Meta<typeof NotificationCenter> = {
+const meta: CanvasMeta<typeof NotificationCenter> = {
   title: "Components/Feedback/Notification Center",
   component: NotificationCenter,
   decorators: [
@@ -68,11 +67,10 @@ const meta: Meta<typeof NotificationCenter> = {
     ),
   ],
 };
-
 export default meta;
-type Story = StoryObj<typeof NotificationCenter>;
-
+type Story = CanvasVariant<typeof NotificationCenter>;
 export const Default: Story = {
+  id: "components-feedback-notification-center--default",
   args: {
     items: sampleItems,
     footerStart: (
@@ -82,8 +80,8 @@ export const Default: Story = {
     ),
   },
 };
-
 export const SecondaryActions: Story = {
+  id: "components-feedback-notification-center--secondary-actions",
   args: {
     items: [
       {
@@ -99,8 +97,8 @@ export const SecondaryActions: Story = {
     ],
   },
 };
-
 export const ViewedItems: Story = {
+  id: "components-feedback-notification-center--viewed-items",
   args: {
     items: [
       {
@@ -120,28 +118,28 @@ export const ViewedItems: Story = {
     ],
   },
 };
-
 export const Empty: Story = {
+  id: "components-feedback-notification-center--empty",
   args: {
     items: [],
   },
 };
-
 export const Loading: Story = {
+  id: "components-feedback-notification-center--loading",
   args: {
     items: [],
     loading: true,
   },
 };
-
 export const ErrorState: Story = {
+  id: "components-feedback-notification-center--error-state",
   args: {
     items: [],
     error: "The notification stream could not be loaded.",
   },
 };
-
 export const HighVolume: Story = {
+  id: "components-feedback-notification-center--high-volume",
   args: {
     items: Array.from({ length: 80 }, (_, index) => {
       const highOrNormal = index % 3 === 0 ? "high" : "normal";

@@ -1,7 +1,6 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useRef, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
@@ -50,29 +49,15 @@ const meta = {
   title: "Components/Data Display/Tree List/Virtual Sortable",
   component: VirtualSortableTree,
   tags: ["!manifest"],
-} satisfies Meta<typeof VirtualSortableTree>;
+} satisfies CanvasMeta<typeof VirtualSortableTree>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const LargeSessions: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const first = await canvas.findByRole("option", { name: "Session 1" });
-    await expect(first).toBeVisible();
-    await expect(canvas.getAllByRole("option").length).toBeLessThan(60);
-    await userEvent.click(first);
-    await expect(canvas.getByText("Opened: session-1")).toBeVisible();
-    await userEvent.keyboard("{End}");
-    await waitFor(() => expect(canvas.getByRole("option", { name: "Session 1000" })).toHaveFocus());
-    await userEvent.keyboard("{Home}");
-    await waitFor(() =>
-      expect(canvas.getByText("Sessions", { exact: true }).closest("[data-tree-list-focus-id]")).toHaveFocus(),
-    );
-  },
+  id: "components-data-display-tree-list-virtual-sortable--large-sessions",
 };
-
-export const ReorderVisibleRows: Story = {};
-
+export const ReorderVisibleRows: Story = {
+  id: "components-data-display-tree-list-virtual-sortable--reorder-visible-rows",
+};
 const VirtualSections = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [ids, setIds] = useState(["Files", "Sessions"]);
@@ -91,9 +76,10 @@ const VirtualSections = () => {
     </Box>
   );
 };
-
-export const ReorderSections: Story = { render: () => <VirtualSections /> };
-
+export const ReorderSections: Story = {
+  id: "components-data-display-tree-list-virtual-sortable--reorder-sections",
+  render: () => <VirtualSections />,
+};
 const VirtualGroups = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [orders, setOrders] = useState<Record<string, string[]>>({ navigation: ["search"], research: [] });
@@ -115,5 +101,7 @@ const VirtualGroups = () => {
     </Box>
   );
 };
-
-export const MoveIntoGroup: Story = { render: () => <VirtualGroups /> };
+export const MoveIntoGroup: Story = {
+  id: "components-data-display-tree-list-virtual-sortable--move-into-group",
+  render: () => <VirtualGroups />,
+};

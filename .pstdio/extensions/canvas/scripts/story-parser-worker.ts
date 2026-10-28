@@ -1,4 +1,4 @@
-import { createRequire } from "node:module";
+import { indexExamples } from "@pstdio/canvas/indexer";
 
 export interface StorySource {
   source: string;
@@ -25,26 +25,9 @@ const worker = globalThis as unknown as {
 };
 worker.onmessage = async (event) => {
   try {
-    const { manifest, files } = event.data;
-    const require = createRequire(manifest);
-    const { loadCsf } = await import(require.resolve("storybook/internal/csf-tools"));
+    const { files } = event.data;
     worker.postMessage({
-      files: files.map(({ source, text }) => {
-        const csf = loadCsf(text, {
-          fileName: source,
-          makeTitle: (title?: string) => title ?? source.replace(/\.canvas\.tsx?$/, ""),
-        }).parse();
-        return {
-          source,
-          title: csf.meta.title,
-          component: csf.meta.component,
-          componentImport: csf._rawComponentPath,
-          stories: Object.entries(csf._stories).map(([exportName, story]) => {
-            const { id, name } = story as { id: string; name: string };
-            return { exportName, id, name };
-          }),
-        };
-      }),
+      files: files.map(({ source, text }) => ({ source, ...indexExamples(source, text) })),
     });
   } catch (error) {
     worker.postMessage({ error: String(error) });

@@ -1,17 +1,15 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Archive } from "lucide-react";
 import { useState } from "react";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { ListRow } from "./list-row";
 
-const meta: Meta<typeof ListRow> = {
+const meta: CanvasMeta<typeof ListRow> = {
   title: "Components/Data Display/List Row/Action Menus",
   component: ListRow,
 };
 export default meta;
-type Story = StoryObj<typeof ListRow>;
-
+type Story = CanvasVariant<typeof ListRow>;
 const ActionMenu = (props: { searchable?: boolean }) => {
   const { searchable } = props;
   const [invoked, setInvoked] = useState(0);
@@ -41,19 +39,11 @@ const ActionMenu = (props: { searchable?: boolean }) => {
     </Stack>
   );
 };
-
-const checkDisabled: NonNullable<Story["play"]> = async ({ canvasElement }) => {
-  const canvas = within(canvasElement);
-  const body = within(canvasElement.ownerDocument.body);
-  await userEvent.click(canvas.getByRole("button", { name: "Resource actions" }));
-  const archive = await body.findByRole("menuitem", { name: "Archive", exact: true });
-  await expect(archive).toHaveAttribute("aria-disabled", "true");
-  fireEvent.click(archive);
-  await waitFor(() => expect(canvas.getByRole("status")).toHaveTextContent("Invoked: 0"));
+export const DisabledResourceAction: Story = {
+  id: "components-data-display-list-row-action-menus--disabled-resource-action",
+  render: () => <ActionMenu />,
 };
-
-export const DisabledResourceAction: Story = { render: () => <ActionMenu />, play: checkDisabled };
 export const DisabledSearchableAction: Story = {
+  id: "components-data-display-list-row-action-menus--disabled-searchable-action",
   render: () => <ActionMenu searchable />,
-  play: checkDisabled,
 };

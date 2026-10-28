@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { standardResourceIcons } from "@pstdio/workbench";
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn } from "storybook/test";
 import { createDashboardResource } from "@/shared/app/resources";
 import type { DashboardProject } from "../data/project-data";
 import { ProjectPickerRows, type ProjectPickerRowsProps } from "./project-picker-widget";
@@ -20,9 +19,7 @@ const projects = [
   project("docufin", "Docufin", "~/Projects/docufin"),
   project("scratchpad", "Scratchpad", "~/Documents/scratchpad"),
 ];
-
 const signedOut: ProjectPickerRowsProps["cloudState"] = () => ({ signedIn: false, cloud: false });
-
 const meta = {
   title: "Projects/Project picker rows",
   component: ProjectPickerRows,
@@ -37,15 +34,15 @@ const meta = {
     projects,
     selectedProjectId: "prompt-studio",
     searchTerm: "",
-    onSelectProject: fn(),
+    onSelectProject: () => {},
     cloudState: signedOut,
   },
-} satisfies Meta<typeof ProjectPickerRows>;
+} satisfies CanvasMeta<typeof ProjectPickerRows>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 /** Right after signing in on a new device, cloud projects download without a folder. */
 export const NotOnThisDeviceYet: Story = {
+  id: "projects-project-picker-rows--not-on-this-device-yet",
   args: {
     cloudState: (id) =>
       id === "scratchpad"
@@ -53,9 +50,9 @@ export const NotOnThisDeviceYet: Story = {
         : { signedIn: true, cloud: true, sync: { state: "first-download-incomplete", offlineReady: false } },
   },
 };
-
 /** The first download is done, and newer changes are still on their way. */
 export const WaitingToDownload: Story = {
+  id: "projects-project-picker-rows--waiting-to-download",
   args: {
     cloudState: (id) =>
       id === "scratchpad"
@@ -63,9 +60,9 @@ export const WaitingToDownload: Story = {
         : { signedIn: true, cloud: true, sync: { state: "waiting-to-sync", offlineReady: false } },
   },
 };
-
 /** The data is down. Docufin already got its folder. */
 export const ReadyWithoutFolder: Story = {
+  id: "projects-project-picker-rows--ready-without-folder",
   args: {
     cloudState: (id) =>
       id === "scratchpad"
@@ -73,9 +70,9 @@ export const ReadyWithoutFolder: Story = {
         : { signedIn: true, cloud: true, sync: { state: "synced", offlineReady: true } },
   },
 };
-
 /** A download that cannot finish without help says so instead of claiming to be ready. */
 export const NeedsAttention: Story = {
+  id: "projects-project-picker-rows--needs-attention",
   args: {
     cloudState: (id) =>
       id === "scratchpad"
@@ -83,5 +80,6 @@ export const NeedsAttention: Story = {
         : { signedIn: true, cloud: true, sync: { state: "needs-attention", offlineReady: false } },
   },
 };
-
-export const SignedOut: Story = {};
+export const SignedOut: Story = {
+  id: "projects-project-picker-rows--signed-out",
+};

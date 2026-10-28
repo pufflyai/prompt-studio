@@ -1,11 +1,10 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -229,9 +228,9 @@ const meta = {
       </QueryClientProvider>
     ),
   ],
-} satisfies Meta;
+} satisfies CanvasMeta;
 export default meta;
-type Story = StoryObj;
+type Story = CanvasVariant;
 const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void; desktop?: boolean }) => {
   const { open, desktop } = props;
   const [workbench] = useState(() => {
@@ -247,17 +246,11 @@ const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void; desktop
 };
 // F15: global collections stay fixed while the resource region is empty.
 export const ProjectMode: Story = {
+  id: "dashboard-sidenav--project-mode",
   render: () => <SidenavStory open={openStartPage} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const home = await canvas.findByRole("option", { name: "Home" });
-    const sessions = await canvas.findByRole("option", { name: "Sessions" });
-    await expect(home.getBoundingClientRect().bottom).toBeLessThanOrEqual(sessions.getBoundingClientRect().top);
-    await expect(home).toHaveAttribute("aria-selected", "true");
-    await expect(canvasElement.querySelector('[data-workbench-panel-header="sidenav"]')).toBeNull();
-  },
 };
 export const OverflowWithPinnedChrome: Story = {
+  id: "dashboard-sidenav--overflow-with-pinned-chrome",
   name: "Overflow with pinned header and footer",
   render: () => (
     <SidenavStory
@@ -291,75 +284,41 @@ export const OverflowWithPinnedChrome: Story = {
       }}
     />
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const header = await canvas.findByRole("option", { name: "Pinned header" });
-    const settings = await canvas.findByRole("option", { name: /^Settings$/ });
-    const viewport = canvasElement.querySelector<HTMLElement>(
-      '[data-workbench-region="sidenav"] [data-scope="scroll-area"][data-part="viewport"]',
-    );
-    await expect(viewport).not.toBeNull();
-    const headerTop = header.getBoundingClientRect().top;
-    const settingsBottom = settings.getBoundingClientRect().bottom;
-    viewport!.scrollTop = viewport!.scrollHeight;
-    await expect(header.getBoundingClientRect().top).toBe(headerTop);
-    await expect(settings.getBoundingClientRect().bottom).toBe(settingsBottom);
-  },
 };
 // Aggregate collection: Workspaces is not duplicated in the resource region.
 export const WorkspacesView: Story = {
+  id: "dashboard-sidenav--workspaces-view",
   render: () => <SidenavStory open={(workbench) => void openWorkspacesPage(workbench)} />,
 };
 export const WorkspacesViewHover: Story = {
+  id: "dashboard-sidenav--workspaces-view-hover",
   render: () => <SidenavStory open={(workbench) => void openWorkspacesPage(workbench)} />,
-  play: async ({ canvasElement }) => {
-    canvasElement.querySelector('[data-tree-list-focus-id="workspaces"]')?.setAttribute("data-hover", "");
-  },
 };
 // F17: a separator marks the boundary before the ticket's resource tree.
 export const TicketMode: Story = {
+  id: "dashboard-sidenav--ticket-mode",
   name: "Ticket page navigation",
   render: () => <SidenavStory open={openTicketPage} />,
 };
 export const DesktopSessionNavigation: Story = {
+  id: "dashboard-sidenav--desktop-session-navigation",
   name: "Desktop session navigation",
   render: () => <SidenavStory desktop open={(workbench) => void openSessionsPage(workbench)} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const breadcrumb = await canvas.findByRole("navigation", { name: "breadcrumb" });
-    await expect(within(breadcrumb).getByText("Sessions", { exact: true })).toBeVisible();
-    await userEvent.click(await canvas.findByRole("button", { name: /^Project$/ }));
-    await expect(await canvas.findByRole("option", { name: /^Home$/ })).toHaveAttribute("aria-selected", "true");
-    canvasElement.dataset.desktopSessionJourney = "complete";
-  },
 };
 // F22: the linked resource keeps the ticket ancestry and Back restores the selected ticket.
 export const TicketWorkspaceBackJourney: Story = {
+  id: "dashboard-sidenav--ticket-workspace-back-journey",
   name: "Ticket linked workspace and back",
   render: () => <SidenavStory open={openTicketPage} />,
 };
 // Session mode: global collections stay fixed above an expanded Sessions group with inline creation.
 export const SessionMode: Story = {
+  id: "dashboard-sidenav--session-mode",
   render: () => <SidenavStory open={(workbench) => void openSessionsPage(workbench)} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const document = within(canvasElement.ownerDocument.body);
-    const row = await canvas.findByRole("option", { name: "Investigate flaky test" });
-    await fireEvent.contextMenu(row);
-    await waitFor(() => expect(document.getByRole("menuitem", { name: "Rename session" })).toBeVisible());
-    await expect(document.getAllByRole("menu")).toHaveLength(1);
-    await waitFor(() => expect(document.getByRole("menu")).toHaveFocus());
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
-    await fireEvent.contextMenu(canvas.getByRole("option", { name: "Search" }));
-    await waitFor(() => expect(document.getByRole("menuitem", { name: "Hide/show items" })).toBeVisible());
-    await waitFor(() => expect(document.getByRole("menu")).toHaveFocus());
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
-  },
 };
 // Workspace resource: global collections stay fixed above the expanded, workspace-scoped Sessions group.
 export const WorkspaceResource: Story = {
+  id: "dashboard-sidenav--workspace-resource",
   render: () => (
     <SidenavStory
       open={(workbench) => {

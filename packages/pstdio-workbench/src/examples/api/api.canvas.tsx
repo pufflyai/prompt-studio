@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { PageReplacementExample } from "../page-composition/module";
 import pageCompositionSource from "../page-composition/module.tsx?raw";
 import { ResourceRebindExample } from "./resource-rebind-example";
@@ -21,12 +21,9 @@ const meta = {
       },
     },
   },
-} satisfies Meta;
-
+} satisfies CanvasMeta;
 export default meta;
-
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 const sourceParameters = (code: string) => ({
   docs: {
     source: {
@@ -36,32 +33,32 @@ const sourceParameters = (code: string) => ({
     },
   },
 });
-
 export const StaticPlacement: Story = {
+  id: "pstdio-workbench-guides-panels-and-pages--static-placement",
   name: "Static placement",
   parameters: sourceParameters(staticPlacementSource),
   render: () => <StaticPlacementExample />,
 };
-
 export const ResourceTabs: Story = {
+  id: "pstdio-workbench-guides-panels-and-pages--resource-tabs",
   name: "Resource placement (many)",
   parameters: sourceParameters(resourceTabsSource),
   render: () => <ResourceTabsExample />,
 };
-
 export const ResourceRebind: Story = {
+  id: "pstdio-workbench-guides-panels-and-pages--resource-rebind",
   name: "Resource placement (one)",
   parameters: sourceParameters(resourceRebindSource),
   render: () => <ResourceRebindExample />,
 };
-
 export const TabPresentation: Story = {
+  id: "pstdio-workbench-guides-panels-and-pages--tab-presentation",
   name: "Tab presentation",
   parameters: sourceParameters(tabPresentationSource),
   render: () => <TabPresentationExample />,
 };
-
 export const PageReplacement: Story = {
+  id: "pstdio-workbench-guides-panels-and-pages--page-replacement",
   name: "Page replacement",
   parameters: sourceParameters(pageCompositionSource),
   render: () => <PageReplacementExample />,

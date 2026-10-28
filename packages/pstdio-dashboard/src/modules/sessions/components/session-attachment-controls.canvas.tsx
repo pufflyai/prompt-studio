@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { useState } from "react";
@@ -29,8 +29,7 @@ const sampleAttachments: SessionAttachment[] = [
     updated_at: "2026-06-17T10:00:00.000Z",
   },
 ];
-
-const meta: Meta<typeof SessionAttachmentControls> = {
+const meta: CanvasMeta<typeof SessionAttachmentControls> = {
   title: "Modules/Sessions/Session Attachments",
   component: SessionAttachmentControls,
   parameters: { layout: "padded" },
@@ -45,15 +44,11 @@ const meta: Meta<typeof SessionAttachmentControls> = {
     ),
   ],
 };
-
 export default meta;
-
-type Story = StoryObj<typeof SessionAttachmentControls>;
-
+type Story = CanvasVariant<typeof SessionAttachmentControls>;
 const ControlsStory = (props: { initialAttachments?: SessionAttachment[]; uploading?: boolean }) => {
   const { initialAttachments = [], uploading = false } = props;
   const [attachments, setAttachments] = useState(initialAttachments);
-
   return (
     <>
       <SessionAttachmentList
@@ -82,20 +77,20 @@ const ControlsStory = (props: { initialAttachments?: SessionAttachment[]; upload
     </>
   );
 };
-
 export const DraftAttachments: Story = {
+  id: "modules-sessions-session-attachments--draft-attachments",
   render: () => <ControlsStory initialAttachments={sampleAttachments} />,
 };
-
 export const Uploading: Story = {
+  id: "modules-sessions-session-attachments--uploading",
   render: () => <ControlsStory initialAttachments={sampleAttachments.slice(0, 1)} uploading />,
 };
-
 export const SubmitErrorRecoverable: Story = {
+  id: "modules-sessions-session-attachments--submit-error-recoverable",
   render: () => <ControlsStory initialAttachments={sampleAttachments} />,
 };
-
 export const SubmittedUserTurn: Story = {
+  id: "modules-sessions-session-attachments--submitted-user-turn",
   render: () => (
     <Box h="520px">
       <ChatPanel

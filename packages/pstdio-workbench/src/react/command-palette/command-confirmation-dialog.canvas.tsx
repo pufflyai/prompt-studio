@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { CommandConfirmationDialog } from "./palette-params-dialog";
 
@@ -12,10 +12,11 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof CommandConfirmationDialog>;
+} satisfies CanvasMeta<typeof CommandConfirmationDialog>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const DeleteSession: Story = {
+  id: "pstdio-workbench-commands-confirmation--delete-session",
   args: {
     confirmation: {
       label: "Delete session “Landing page”",
@@ -27,6 +28,7 @@ export const DeleteSession: Story = {
   },
 };
 export const ArchiveQueuedSession: Story = {
+  id: "pstdio-workbench-commands-confirmation--archive-queued-session",
   args: {
     confirmation: {
       label: "Archive session “Landing page”",
@@ -38,9 +40,10 @@ export const ArchiveQueuedSession: Story = {
   },
 };
 export const RetryFailure: Story = {
+  id: "pstdio-workbench-commands-confirmation--retry-failure",
   args: {
     confirmation: {
-      ...DeleteSession.args!.confirmation,
+      ...DeleteSession.args!.confirmation!,
       onConfirm: async () => {
         throw new Error("Could not save. Try again.");
       },

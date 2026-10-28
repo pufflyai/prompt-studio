@@ -1,16 +1,14 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import type { SessionMessage, ToolPart } from "./message-types";
 import { ToolInvocationTimeline } from "./tool-invocation-timeline";
 
 const conversationMessages = rawConversationMessages as unknown as SessionMessage[];
-
 const toolInvocations = conversationMessages
   .flatMap((message) => message.parts ?? [])
   .filter((part): part is ToolPart => part.type === "tool")
   .slice(0, 10);
-
 const claudeToolInvocations: ToolPart[] = [
   {
     type: "tool",
@@ -87,20 +85,17 @@ const claudeToolInvocations: ToolPart[] = [
     },
   },
 ];
-
-const meta: Meta<typeof ToolInvocationTimeline> = {
+const meta: CanvasMeta<typeof ToolInvocationTimeline> = {
   title: "Patterns/Chat/Tool Invocation Timeline",
   component: ToolInvocationTimeline,
   parameters: {
     layout: "padded",
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ToolInvocationTimeline>;
-
+type Story = CanvasVariant<typeof ToolInvocationTimeline>;
 export const LongTitles: Story = {
+  id: "patterns-chat-tool-invocation-timeline--long-titles",
   tags: ["!manifest"],
   parameters: {
     docs: {
@@ -137,23 +132,22 @@ export const LongTitles: Story = {
     </Box>
   ),
 };
-
 export const FromConversationData: Story = {
+  id: "patterns-chat-tool-invocation-timeline--from-conversation-data",
   render: () => (
     <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
       <ToolInvocationTimeline invocations={toolInvocations} />
     </Box>
   ),
 };
-
 export const ClaudeCodeTools: Story = {
+  id: "patterns-chat-tool-invocation-timeline--claude-code-tools",
   render: () => (
     <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
       <ToolInvocationTimeline invocations={claudeToolInvocations} />
     </Box>
   ),
 };
-
 const codexShellInvocations: ToolPart[] = [
   {
     type: "tool",
@@ -170,15 +164,14 @@ const codexShellInvocations: ToolPart[] = [
     },
   },
 ];
-
 export const CodexShell: Story = {
+  id: "patterns-chat-tool-invocation-timeline--codex-shell",
   render: () => (
     <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
       <ToolInvocationTimeline invocations={codexShellInvocations} />
     </Box>
   ),
 };
-
 const codexApplyPatchInvocations: ToolPart[] = [
   {
     type: "tool",
@@ -194,15 +187,14 @@ const codexApplyPatchInvocations: ToolPart[] = [
     },
   },
 ];
-
 export const CodexApplyPatch: Story = {
+  id: "patterns-chat-tool-invocation-timeline--codex-apply-patch",
   render: () => (
     <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
       <ToolInvocationTimeline invocations={codexApplyPatchInvocations} />
     </Box>
   ),
 };
-
 const questionAndTodoInvocations: ToolPart[] = [
   {
     type: "tool",
@@ -248,8 +240,8 @@ const questionAndTodoInvocations: ToolPart[] = [
     },
   },
 ];
-
 export const QuestionAndTodoWrite: Story = {
+  id: "patterns-chat-tool-invocation-timeline--question-and-todo-write",
   render: () => (
     <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
       <ToolInvocationTimeline invocations={questionAndTodoInvocations} />

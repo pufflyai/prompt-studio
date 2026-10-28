@@ -1,30 +1,26 @@
 import type { ButtonProps } from "@chakra-ui/react";
 import { Box, Button, ButtonGroup, HStack, Icon, IconButton, SimpleGrid, Stack, Text } from "@chakra-ui/react";
-import type { Meta } from "@storybook/react";
+import type { CanvasMeta } from "@pstdio/canvas";
 import { ChevronDown, Download, Plus, Settings, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { getThemePreferenceClassNames, type ThemePreferenceMode } from "@/utils/apply-theme-preference";
 
 type StoryFn = () => ReactNode;
-
 interface ButtonVariantOption {
   label: string;
   description: string;
   variant: ButtonProps["variant"] | "primary" | "destructive";
 }
-
 interface ButtonSizeOption {
   label: string;
   helper: string;
   size: ButtonProps["size"];
 }
-
 interface ButtonModePreview {
   id: string;
   label: string;
   mode: ThemePreferenceMode;
 }
-
 const buttonVariants: ButtonVariantOption[] = [
   { label: "Primary", description: "Brand action style using accent tokens.", variant: "primary" },
   {
@@ -37,7 +33,6 @@ const buttonVariants: ButtonVariantOption[] = [
   { label: "Subtle", description: "Muted background actions with a light border.", variant: "subtle" },
   { label: "Plain", description: "Inline link-style actions.", variant: "plain" },
 ];
-
 const buttonSizes: ButtonSizeOption[] = [
   { label: "2XS", helper: "Tiny icon controls in dense tables.", size: "2xs" },
   { label: "Extra Small", helper: "Compact inline controls.", size: "xs" },
@@ -46,13 +41,11 @@ const buttonSizes: ButtonSizeOption[] = [
   { label: "Large", helper: "Primary CTAs in dialogs.", size: "lg" },
   { label: "2XL", helper: "Hero CTAs on landing surfaces.", size: "2xl" },
 ];
-
 const buttonModePreviews: ButtonModePreview[] = [
   { id: "pstdio-light", label: "Light mode", mode: "light" },
   { id: "pstdio-dark", label: "Dark mode", mode: "dark" },
 ];
-
-const meta: Meta<typeof Button> = {
+const meta: CanvasMeta<typeof Button> = {
   title: "Components/Inputs/Button",
   component: Button,
   decorators: [
@@ -63,10 +56,9 @@ const meta: Meta<typeof Button> = {
     ),
   ],
 };
-
 export default meta;
-
 export const Variants = {
+  id: "components-inputs-button--variants",
   render: () => (
     <SimpleGrid columns={{ base: 1, lg: 2 }} gap="md">
       {buttonVariants.map((variant) => (
@@ -101,8 +93,8 @@ export const Variants = {
     </SimpleGrid>
   ),
 };
-
 export const PrimaryAndDestructive = {
+  id: "components-inputs-button--primary-and-destructive",
   render: () => (
     <SimpleGrid columns={{ base: 1, lg: 2 }} gap="md">
       {buttonModePreviews.map((surface) => (
@@ -148,8 +140,8 @@ export const PrimaryAndDestructive = {
     </SimpleGrid>
   ),
 };
-
 export const Sizes = {
+  id: "components-inputs-button--sizes",
   render: () => (
     <Stack gap="lg">
       {buttonSizes.map((size) => (
@@ -195,8 +187,8 @@ export const Sizes = {
     </Stack>
   ),
 };
-
 export const IconOnly = {
+  id: "components-inputs-button--icon-only",
   render: () => (
     <HStack gap="sm" flexWrap="wrap" padding="md" borderWidth="1px" borderColor="border.subtle" borderRadius="xs">
       <IconButton variant="primary" aria-label="Add">
@@ -217,8 +209,8 @@ export const IconOnly = {
     </HStack>
   ),
 };
-
 export const AttachedGroups = {
+  id: "components-inputs-button--attached-groups",
   render: () => (
     <Stack gap="md" padding="md" borderWidth="1px" borderColor="border.subtle" borderRadius="xs" background="bg">
       <Text textStyle="label/L/medium">Flush button groups</Text>

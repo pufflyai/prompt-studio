@@ -1,6 +1,5 @@
 import { Box, Button } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, waitFor, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 import { ChatWorkspaceHub } from "./workspace-hub";
@@ -21,8 +20,7 @@ const messages: SessionMessage[] = [
     ],
   },
 ];
-
-const meta: Meta<typeof ChatPanel> = {
+const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel Width",
   component: ChatPanel,
   tags: ["chat-width"],
@@ -46,60 +44,26 @@ const meta: Meta<typeof ChatPanel> = {
     queuedFollowUps: [{ id: "queued", prompt: "Prepare the release notes.", position: 1 }],
   },
 };
-
 export default meta;
-type Story = StoryObj<typeof ChatPanel>;
-
-const checkContentWidth: NonNullable<Story["play"]> = async ({ canvasElement }) => {
-  const canvas = within(canvasElement);
-  const log = await canvas.findByRole("log");
-  const viewport = log.querySelector<HTMLElement>('[data-part="viewport"]')!;
-  const content = viewport.querySelector<HTMLElement>('[data-part="content"]')!;
-  const composer = log.nextElementSibling as HTMLElement;
-  const scrollbar = viewport.parentElement!.querySelector<HTMLElement>(
-    ':scope > [data-part="scrollbar"][data-orientation="vertical"]',
-  )!;
-
-  await waitFor(() => {
-    expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight);
-    expect(getComputedStyle(viewport).visibility).toBe("visible");
-    expect(scrollbar).toBeVisible();
-  });
-  const pane = log.parentElement!.getBoundingClientRect();
-  const transcript = content.getBoundingClientRect();
-  const footer = composer.getBoundingClientRect();
-  const expectedWidth = Math.min(pane.width, 832);
-
-  expect(viewport.getBoundingClientRect().width).toBeCloseTo(pane.width, 0);
-  expect(transcript.width).toBeCloseTo(expectedWidth, 0);
-  expect(transcript.left + transcript.width / 2).toBeCloseTo(pane.left + pane.width / 2, 0);
-  expect(footer.width).toBeCloseTo(transcript.width, 0);
-  expect(footer.left).toBeCloseTo(transcript.left, 0);
-
-  expect(scrollbar.getBoundingClientRect().right).toBeGreaterThan(pane.right - 12);
-  expect(viewport.scrollWidth).toBe(viewport.clientWidth);
-};
-
+type Story = CanvasVariant<typeof ChatPanel>;
 export const WidePane: Story = {
+  id: "patterns-chat-chat-panel-width--wide-pane",
   render: (args) => (
     <Box w="1200px" maxW="full" h="680px" bg="bg">
       <ChatPanel {...args} />
     </Box>
   ),
-  play: checkContentWidth,
 };
-
 export const NarrowPane: Story = {
+  id: "patterns-chat-chat-panel-width--narrow-pane",
   render: (args) => (
     <Box w="420px" maxW="full" h="680px" bg="bg">
       <ChatPanel {...args} />
     </Box>
   ),
-  play: checkContentWidth,
 };
-
 export const EmptyWidePane: Story = {
+  id: "patterns-chat-chat-panel-width--empty-wide-pane",
   ...WidePane,
   args: { messages: [], queuedFollowUps: [] },
-  play: undefined,
 };

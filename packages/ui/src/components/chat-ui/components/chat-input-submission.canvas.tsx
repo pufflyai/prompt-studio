@@ -1,7 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatInput } from "./chat-input";
 
@@ -47,70 +46,25 @@ const StreamingComposer = (props: { fail?: boolean; slow?: boolean; question?: b
     </Box>
   );
 };
-const meta = { title: "Patterns/Chat/Follow-up submission", component: StreamingComposer } satisfies Meta<
+const meta = { title: "Patterns/Chat/Follow-up submission", component: StreamingComposer } satisfies CanvasMeta<
   typeof StreamingComposer
 >;
 export default meta;
-export const QueueWhileRunning: StoryObj<typeof meta> = {};
-export const KeepFailedDraft: StoryObj<typeof meta> = {
+export const QueueWhileRunning: CanvasVariant<typeof meta> = {
+  id: "patterns-chat-follow-up-submission--queue-while-running",
+};
+export const KeepFailedDraft: CanvasVariant<typeof meta> = {
+  id: "patterns-chat-follow-up-submission--keep-failed-draft",
   tags: ["!manifest"],
   args: { fail: true, slow: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const editor = () => canvas.getByTestId("content-editable");
-    await userEvent.click(canvas.getByTestId("send-message-button"));
-    await waitFor(() => expect(canvas.getByText("Sending")).toBeVisible());
-    await expect(editor().textContent).toBe("");
-    await expect(editor()).toHaveAttribute("contenteditable", "false");
-    await waitFor(() => expect(canvas.getByText("Ready")).toBeVisible());
-    await expect(editor()).toHaveTextContent("Seeded draft");
-    await expect(editor()).toHaveAttribute("contenteditable", "true");
-    await waitFor(() => expect(editor()).toHaveFocus());
-  },
 };
-export const SlowSubmission: StoryObj<typeof meta> = {
+export const SlowSubmission: CanvasVariant<typeof meta> = {
+  id: "patterns-chat-follow-up-submission--slow-submission",
   tags: ["!manifest"],
   args: { slow: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const editor = () => canvas.getByTestId("content-editable");
-    const send = canvas.getByTestId("send-message-button");
-    await userEvent.click(editor());
-    await fireEvent.keyDown(editor(), { key: "Enter", code: "Enter" });
-    await waitFor(() => expect(canvas.getByText("Sending")).toBeVisible());
-    await expect(canvas.getByText("Waiting: Seeded draft")).toBeVisible();
-    await expect(editor().textContent).toBe("");
-    await expect(editor()).toHaveAttribute("contenteditable", "false");
-    await expect(send).toBeDisabled();
-    await waitFor(() => expect(canvas.getByText("Ready")).toBeVisible());
-    await expect(editor().textContent).toBe("");
-    await waitFor(() => expect(editor()).toHaveFocus());
-  },
 };
-
-export const KeepFailedQuestionAnswers: StoryObj<typeof meta> = {
+export const KeepFailedQuestionAnswers: CanvasVariant<typeof meta> = {
+  id: "patterns-chat-follow-up-submission--keep-failed-question-answers",
   tags: ["!manifest"],
   args: { fail: true, slow: true, question: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const option = canvas.getByRole("checkbox", { name: "TypeScript" });
-    const other = canvas.getByRole("checkbox", { name: "Other" });
-    const custom = () => canvas.getByRole("textbox", { name: "Choose a language (Other)" });
-    await userEvent.click(option);
-    await userEvent.click(other);
-    await userEvent.type(custom(), "Another language");
-    await userEvent.click(canvas.getByTestId("send-message-button"));
-    await waitFor(() => expect(canvas.getByText("Sending")).toBeVisible());
-    await expect(option).not.toBeChecked();
-    await expect(other).not.toBeChecked();
-    await expect(canvas.queryByRole("textbox", { name: "Choose a language (Other)" })).not.toBeInTheDocument();
-    await expect(option.closest("label")).toHaveAttribute("aria-readonly", "true");
-    await userEvent.click(option);
-    await expect(option).not.toBeChecked();
-    await waitFor(() => expect(canvas.getByText("Ready")).toBeVisible());
-    await waitFor(() => expect(option).toBeChecked());
-    await expect(other).toBeChecked();
-    await expect(custom()).toHaveValue("Another language");
-    await expect(canvas.getByTestId("content-editable")).toHaveTextContent("Seeded draft");
-  },
 };

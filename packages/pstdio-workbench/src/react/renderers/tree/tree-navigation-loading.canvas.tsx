@@ -1,7 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createLevelNavigation, createWorkbench, type Disposable } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
@@ -112,40 +111,21 @@ const meta = {
   component: TreeNavigationLoading,
   args: { pageOwned: false },
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof TreeNavigationLoading>;
+} satisfies CanvasMeta<typeof TreeNavigationLoading>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const PageChange: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("option", { name: "first page action" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Switch page" }));
-    await waitFor(() => expect(canvas.queryByRole("option", { name: "first page action" })).not.toBeInTheDocument());
-    await userEvent.click(await canvas.findByRole("button", { name: "Finish loading" }));
-    await expect(await canvas.findByRole("option", { name: "second page action" })).toBeVisible();
-  },
+  id: "pstdio-workbench-guides-tree-navigation-loading--page-change",
 };
-
-export const PageOwnedActions: Story = { args: { pageOwned: true }, play: PageChange.play };
-
-export const SlowProjectNavigation: Story = {
-  args: { pageOwned: true, composed: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("option", { name: "first page action" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Switch page" }));
-    await expect(await canvas.findByRole("option", { name: "second page action" })).toBeVisible();
-    await expect(canvas.queryByRole("option", { name: "first page action" })).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Finish loading" }));
-  },
-};
-
-export const OwnerRemoval: Story = {
+export const PageOwnedActions: Story = {
+  id: "pstdio-workbench-guides-tree-navigation-loading--page-owned-actions",
   args: { pageOwned: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("option", { name: "first page action" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Remove page navigation" }));
-    await waitFor(() => expect(canvas.queryByRole("option", { name: "first page action" })).not.toBeInTheDocument());
-  },
+};
+export const SlowProjectNavigation: Story = {
+  id: "pstdio-workbench-guides-tree-navigation-loading--slow-project-navigation",
+  args: { pageOwned: true, composed: true },
+};
+export const OwnerRemoval: Story = {
+  id: "pstdio-workbench-guides-tree-navigation-loading--owner-removal",
+  args: { pageOwned: true },
 };

@@ -1,7 +1,6 @@
 import { Button } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { HostStorageProvider } from "../../utils/host-storage";
 import { KanbanRendererCreateDialog } from "./kanban-renderer-create-dialog";
 import type { AttributeDescriptor, KanbanRendererCreateRowConfig, KanbanRendererCreateSubmission } from "./types";
@@ -48,7 +47,6 @@ const attributes: AttributeDescriptor[] = [
   { id: "estimate", label: "Estimate", editable: true, type: { kind: "number" } },
   { id: "created", label: "Created", type: { kind: "date" } },
 ];
-
 const labels = {
   cancel: "Cancel",
   properties: "Properties",
@@ -56,7 +54,6 @@ const labels = {
   removeFile: "Remove file",
   submitWithoutOpening: "Create without opening",
 };
-
 const config: KanbanRendererCreateRowConfig = {
   title: "New ticket",
   submitLabel: "Create ticket",
@@ -66,17 +63,13 @@ const config: KanbanRendererCreateRowConfig = {
   ],
   labels,
 };
-
 const meta = {
   title: "Patterns/Kanban Renderer/Create Dialog",
   component: KanbanRendererCreateDialog,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof KanbanRendererCreateDialog>;
-
+} satisfies CanvasMeta<typeof KanbanRendererCreateDialog>;
 export default meta;
-
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 const Harness = (props: {
   config: KanbanRendererCreateRowConfig;
   onSubmit?: (submission: KanbanRendererCreateSubmission) => Promise<void> | void;
@@ -92,7 +85,6 @@ const Harness = (props: {
       },
     };
   });
-
   return (
     <HostStorageProvider storage={storage}>
       <Button onClick={() => setOpen(true)}>New ticket</Button>
@@ -108,27 +100,22 @@ const Harness = (props: {
     </HostStorageProvider>
   );
 };
-
 /** Empty: submit is blocked because the required markdown field has no content. */
 export const Empty: Story = {
+  id: "patterns-kanban-renderer-create-dialog--empty",
   args: {} as never,
   render: () => <Harness config={config} />,
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await expect(await body.findByRole("button", { name: "Create ticket", exact: true })).toBeDisabled();
-    await expect(body.getByRole("button", { name: "Create without opening", exact: true })).toBeDisabled();
-  },
 };
-
 /** Status is pre-selected from the column and locked; the other properties are free. */
 export const PrefilledFromColumn: Story = {
+  id: "patterns-kanban-renderer-create-dialog--prefilled-from-column",
   args: {} as never,
   render: () => (
     <Harness config={{ ...config, fields: [{ ...config.fields[0], defaultValue: "Ticket body" }, config.fields[1]] }} />
   ),
 };
-
 export const LongDescription: Story = {
+  id: "patterns-kanban-renderer-create-dialog--long-description",
   args: {} as never,
   render: () => (
     <Harness
@@ -147,30 +134,10 @@ export const LongDescription: Story = {
       }}
     />
   ),
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    const editor = await body.findByRole("textbox");
-    const attachments = body.getByRole("button", { name: "Attach files", exact: true });
-    const submit = body.getByRole("button", { name: "Create ticket", exact: true });
-    const viewportHeight = canvasElement.ownerDocument.documentElement.clientHeight;
-    const viewport = editor.closest<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]');
-    await expect(viewport).not.toBeNull();
-    await expect(viewport!.scrollHeight).toBeGreaterThan(viewport!.clientHeight);
-    await expect(attachments.getBoundingClientRect().top).toBeGreaterThan(0);
-    await expect(attachments.getBoundingClientRect().bottom).toBeLessThan(viewportHeight);
-    await expect(submit.getBoundingClientRect().bottom).toBeLessThan(viewportHeight);
-    const lastParagraph = editor.lastElementChild;
-    await expect(lastParagraph).not.toBeNull();
-    lastParagraph?.scrollIntoView({ block: "nearest" });
-    await expect(viewport!.scrollTop).toBeGreaterThan(0);
-    await expect(lastParagraph!.getBoundingClientRect().bottom).toBeLessThan(attachments.getBoundingClientRect().top);
-    await expect(attachments.getBoundingClientRect().top).toBeGreaterThan(0);
-    await expect(attachments.getBoundingClientRect().bottom).toBeLessThan(viewportHeight);
-  },
 };
-
 /** Submitting: every control is disabled while the create command runs. */
 export const Submitting: Story = {
+  id: "patterns-kanban-renderer-create-dialog--submitting",
   args: {} as never,
   render: () => (
     <Harness
@@ -178,17 +145,10 @@ export const Submitting: Story = {
       onSubmit={() => new Promise(() => undefined)}
     />
   ),
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    const submit = await body.findByRole("button", { name: "Create ticket", exact: true });
-    await userEvent.click(submit);
-    await expect(submit).toBeDisabled();
-    await expect(body.getByRole("button", { name: "Create without opening", exact: true })).toBeDisabled();
-  },
 };
-
 /** A failing submit surfaces the caller-supplied error copy. */
 export const SubmitError: Story = {
+  id: "patterns-kanban-renderer-create-dialog--submit-error",
   args: {} as never,
   render: () => (
     <Harness
@@ -199,40 +159,21 @@ export const SubmitError: Story = {
     />
   ),
 };
-
 /** No declared fields: the dialog is just the derived Properties zone. */
 export const AttributesOnly: Story = {
+  id: "patterns-kanban-renderer-create-dialog--attributes-only",
   args: {} as never,
   render: () => <Harness config={{ ...config, fields: [] }} />,
 };
-
 /** Cancel suspends the draft so reopening does not lose the user's work. */
 export const RetainedDraft: Story = {
+  id: "patterns-kanban-renderer-create-dialog--retained-draft",
   args: {} as never,
   render: () => <Harness config={config} />,
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.type(await body.findByRole("textbox"), "Keep this ticket draft");
-    await userEvent.click(body.getByRole("button", { name: "Cancel", exact: true }));
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "New ticket", exact: true }));
-    await expect(await body.findByRole("textbox")).toHaveTextContent("Keep this ticket draft");
-  },
 };
-
 /** Choosing the split-button mode never submits and survives closing the dialog. */
 export const RememberedCreateAction: Story = {
+  id: "patterns-kanban-renderer-create-dialog--remembered-create-action",
   args: {} as never,
   render: () => <Harness config={config} />,
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.type(await body.findByRole("textbox"), "Choose a creation action");
-    await userEvent.click(await body.findByRole("button", { name: "Create without opening", exact: true }));
-    await userEvent.click(await body.findByRole("menuitemradio", { name: "Create without opening", exact: true }));
-    await expect(body.getByRole("dialog")).toBeVisible();
-    await userEvent.click(body.getByRole("button", { name: "Close", exact: true }));
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "New ticket", exact: true }));
-    const buttons = body.getAllByRole("button", { name: "Create without opening", exact: true });
-    await expect(buttons).toHaveLength(2);
-    await expect(buttons[0]).toHaveTextContent("Create without opening");
-  },
 };

@@ -1,7 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useRef, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { runResourceMutation } from "../../extensions/host/workbench-resource-mutation";
 import { PaletteParamsDialog } from "../command-palette/palette-params-dialog";
@@ -10,7 +9,13 @@ import { WorkbenchBreadcrumbView } from "./breadcrumb-view";
 
 const NoteBreadcrumb = (props: { optimistic?: boolean }) => {
   const { optimistic = false } = props;
-  const save = useRef<{ resolve(): void; reject(error: Error): void } | undefined>(undefined);
+  const save = useRef<
+    | {
+        resolve(): void;
+        reject(error: Error): void;
+      }
+    | undefined
+  >(undefined);
   const waitForSave = () =>
     optimistic ? new Promise<void>((resolve, reject) => (save.current = { resolve, reject })) : Promise.resolve();
   const [result, setResult] = useState("No action run");
@@ -60,9 +65,21 @@ const NoteBreadcrumb = (props: { optimistic?: boolean }) => {
         execute: (args) =>
           run("rename", args, async () => {
             await waitForSave();
-            title = (args as { title: string }).title;
+            title = (
+              args as {
+                title: string;
+              }
+            ).title;
             for (const listener of listeners) listener();
-            setResult(`Renamed ${(args as { noteId: string }).noteId}`);
+            setResult(
+              `Renamed ${
+                (
+                  args as {
+                    noteId: string;
+                  }
+                ).noteId
+              }`,
+            );
           }),
       },
     );
@@ -81,7 +98,15 @@ const NoteBreadcrumb = (props: { optimistic?: boolean }) => {
               .getLayout()
               .regions.main.widgets.find((widget) => widget.resource?.id === resource.id);
             if (placement?.placementIdentity) instance.closePlacement(placement.placementIdentity);
-            setResult(`Deleted ${(args as { noteId: string }).noteId}`);
+            setResult(
+              `Deleted ${
+                (
+                  args as {
+                    noteId: string;
+                  }
+                ).noteId
+              }`,
+            );
           }),
       },
     );
@@ -193,63 +218,13 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof NoteBreadcrumb>;
+} satisfies CanvasMeta<typeof NoteBreadcrumb>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const SelectedNote: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement),
-      body = within(canvasElement.ownerDocument.body);
-    await expect(canvas.getByText("Notes", { exact: true })).toBeVisible();
-    await userEvent.click(canvas.getByText("Research note", { exact: true }));
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-    await body.findByRole("menuitem", { name: "Rename note" });
-    await userEvent.keyboard("{Home}{Enter}");
-    const title = await body.findByRole("textbox", { name: /Title/ });
-    await expect(title).toHaveValue("Research note");
-    await userEvent.clear(title);
-    await userEvent.type(title, "Renamed note");
-    await userEvent.click(body.getByRole("button", { name: /^Run$/ }));
-    await expect(await canvas.findByText("Renamed note", { exact: true })).toBeVisible();
-    await expect(canvas.getByText("Renamed note-1", { exact: true })).toBeVisible();
-    await userEvent.click(canvas.getByText("Renamed note", { exact: true }));
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-    await body.findByRole("menuitem", { name: /^Delete$/ });
-    await userEvent.keyboard("{End}{Enter}");
-    await expect(await canvas.findByText("Deleted note-1", { exact: true })).toBeVisible();
-    await expect(canvas.queryByText("Renamed note", { exact: true })).not.toBeInTheDocument();
-    await expect(canvas.getByText("Notes", { exact: true })).toBeVisible();
-  },
+  id: "pstdio-workbench-guides-breadcrumb-resource-actions--selected-note",
 };
-
 export const OptimisticResourceActions: Story = {
+  id: "pstdio-workbench-guides-breadcrumb-resource-actions--optimistic-resource-actions",
   args: { optimistic: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement),
-      body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByText("Research note", { exact: true }));
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}{Home}{Enter}");
-    const title = await body.findByRole("textbox", { name: /Title/ });
-    await userEvent.clear(title);
-    await userEvent.type(title, "Instant title");
-    await userEvent.click(body.getByRole("button", { name: /^Run$/ }));
-    await expect(await canvas.findByText("Instant title", { exact: true })).toBeVisible();
-    await expect(canvas.getByText("No action run")).toBeVisible();
-    await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
-    await userEvent.click(canvas.getByRole("button", { name: "Fail save" }));
-    await expect(await canvas.findByText("Research note", { exact: true })).toBeVisible();
-    await userEvent.click(canvas.getByText("Research note", { exact: true }));
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}{End}{Enter}");
-    await body.findByRole("button", { name: /^Delete$/ });
-    await expect(canvas.getByText("Research note", { exact: true })).toBeVisible();
-    await userEvent.click(body.getByRole("button", { name: /^Close$/ }));
-    await expect(canvas.getByText("Research note", { exact: true })).toBeVisible();
-    await userEvent.click(canvas.getByText("Research note", { exact: true }));
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}{End}{Enter}");
-    await userEvent.click(await body.findByRole("button", { name: /^Delete$/ }));
-    await waitFor(() => expect(canvas.queryByText("Research note", { exact: true })).not.toBeInTheDocument());
-    await expect(canvas.getByText("No action run")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Fail save" }));
-    await expect(await canvas.findByText("Research note", { exact: true })).toBeVisible();
-  },
 };

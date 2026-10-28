@@ -1,8 +1,7 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ResourceActionMenu } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useId, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -47,7 +46,6 @@ const StaticTabActions = () => {
     </Stack>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Guides/Static tab actions",
   component: StaticTabActions,
@@ -59,34 +57,12 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof StaticTabActions>;
+} satisfies CanvasMeta<typeof StaticTabActions>;
 export default meta;
-
-export const PinAndUnpin: StoryObj<typeof meta> = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(document.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Tool actions" }));
-    await userEvent.click(await body.findByRole("menuitem", { name: "Unpin tab" }));
-    await expect(canvas.getByRole("status")).toHaveTextContent("preview");
-    await userEvent.click(canvas.getByRole("button", { name: "Tool actions" }));
-    await userEvent.click(await body.findByRole("menuitem", { name: "Pin tab" }));
-    await expect(canvas.getByRole("status")).toHaveTextContent("persistent");
-  },
+export const PinAndUnpin: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-guides-static-tab-actions--pin-and-unpin",
 };
-
-export const AddAfterPin: StoryObj<typeof meta> = {
+export const AddAfterPin: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-guides-static-tab-actions--add-after-pin",
   tags: ["tab-menu-next-action"],
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(document.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Tool actions" }));
-    const previousMenu = await body.findByRole("menu", { name: "Tool context menu" });
-    await userEvent.click(await body.findByRole("menuitem", { name: "Unpin tab" }));
-    await expect(canvas.getByRole("status")).toHaveTextContent("preview");
-    await userEvent.click(canvas.getByRole("button", { name: "Add tool" }));
-    await waitFor(() => expect(previousMenu).not.toBeInTheDocument());
-    await userEvent.click(await body.findByRole("menuitem", { name: "New tool" }));
-    await waitFor(() => expect(canvas.getByText("Tool created")).toBeVisible());
-  },
 };

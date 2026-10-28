@@ -1,12 +1,10 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-
 import { ColumnFileBrowser } from "@/components/file-browser/column-file-browser";
 import type { ColumnFileItem } from "@/components/file-browser/column-file-paths";
 
 type StoryFn = () => ReactNode;
-
 const demoItems: ColumnFileItem[] = [
   {
     id: "sample-raw",
@@ -92,7 +90,6 @@ const demoItems: ColumnFileItem[] = [
     meta: "18 KB · Jul 20, 2024",
   },
 ];
-
 const emptyItems: ColumnFileItem[] = [
   {
     id: "sample-raw",
@@ -102,17 +99,12 @@ const emptyItems: ColumnFileItem[] = [
     children: [],
   },
 ];
-
 const formatPath = (path: ColumnFileItem[]) => {
   if (path.length === 0) return "root";
-
   return path.map((item) => item.name).join(" / ");
 };
-
 const formatFileCount = (count: number) => `${count} file${count === 1 ? "" : "s"}`;
-
 const canDeleteItem = (item: ColumnFileItem) => item.type === "file";
-
 const meta = {
   title: "Components/Navigation/Column File Browser",
   component: ColumnFileBrowser,
@@ -124,39 +116,30 @@ const meta = {
     ),
   ],
 };
-
 export default meta;
-
 export const Default = {
+  id: "components-navigation-column-file-browser--default",
   render: () => {
     const [activity, setActivity] = useState("Select a file or folder.");
-
     const handleFolderOpen = (_folder: ColumnFileItem, path: ColumnFileItem[]) => {
       setActivity(`Opened folder: ${formatPath(path)}`);
     };
-
     const handleFileOpen = (_file: ColumnFileItem, path: ColumnFileItem[]) => {
       setActivity(`Opened file: ${formatPath(path)}`);
     };
-
     const handleDeleteItem = (item: ColumnFileItem, path: ColumnFileItem[]) => {
       setActivity(`Deleted ${item.type}: ${formatPath(path)}`);
     };
-
     const handleDownloadFile = (_file: ColumnFileItem, path: ColumnFileItem[]) => {
       setActivity(`Downloaded: ${formatPath(path)}`);
     };
-
     const handleDropFiles = (files: File[], _folder: ColumnFileItem | null, path: ColumnFileItem[]) => {
       const fileLabel = formatFileCount(files.length);
-
       setActivity(`Dropped ${fileLabel} into ${formatPath(path)}`);
     };
-
     const handleUploadClick = () => {
       setActivity("Upload clicked.");
     };
-
     return (
       <Stack gap="sm">
         <Box borderWidth="1px" borderColor="border.subtle" borderRadius="md" overflow="hidden" height="420px">
@@ -179,25 +162,20 @@ export const Default = {
     );
   },
 };
-
 export const EmptyFolder = {
+  id: "components-navigation-column-file-browser--empty-folder",
   render: () => {
     const [activity, setActivity] = useState("Drop files here to upload.");
-
     const handleFolderOpen = (_folder: ColumnFileItem, path: ColumnFileItem[]) => {
       setActivity(`Opened folder: ${formatPath(path)}`);
     };
-
     const handleDropFiles = (files: File[], _folder: ColumnFileItem | null, path: ColumnFileItem[]) => {
       const fileLabel = formatFileCount(files.length);
-
       setActivity(`Dropped ${fileLabel} into ${formatPath(path)}`);
     };
-
     const handleUploadClick = () => {
       setActivity("Upload clicked.");
     };
-
     return (
       <Stack gap="sm">
         <Box borderWidth="1px" borderColor="border.subtle" borderRadius="md" overflow="hidden" height="280px">

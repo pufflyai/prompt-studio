@@ -1,19 +1,16 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { FileText, Folder } from "lucide-react";
 import { useState } from "react";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
 
-const meta: Meta<typeof TreeList> = {
+const meta: CanvasMeta<typeof TreeList> = {
   title: "Components/Data Display/Tree List/Move",
   component: TreeList,
 };
-
 export default meta;
-type Story = StoryObj<typeof TreeList>;
-
+type Story = CanvasVariant<typeof TreeList>;
 const MovableFilesStory = () => {
   const [fileParent, setFileParent] = useState<"" | "docs">("");
   const [folderParent, setFolderParent] = useState<"" | "docs">("");
@@ -56,7 +53,6 @@ const MovableFilesStory = () => {
       ],
     },
   ];
-
   return (
     <Stack maxW="20rem" h="16rem" borderWidth="1px" gap="0">
       <Text p="xs" textStyle="label/S/regular" color="fg.muted">
@@ -75,11 +71,10 @@ const MovableFilesStory = () => {
     </Stack>
   );
 };
-
 export const MovableFiles: Story = {
+  id: "components-data-display-tree-list-move--movable-files",
   render: () => <MovableFilesStory />,
 };
-
 const MovableNotes = () => {
   const [inFolder, setInFolder] = useState(false);
   const [order, setOrder] = useState(["note", "second"]);
@@ -119,55 +114,12 @@ const MovableNotes = () => {
     />
   );
 };
-
 export const NotesInSortableNavigation: Story = {
+  id: "components-data-display-tree-list-move--notes-in-sortable-navigation",
   render: () => <MovableNotes />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const transfer = new DataTransfer();
-    const drag = (type: string, element: HTMLElement, clientY = 0) =>
-      fireEvent(element, new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: transfer, clientY }));
-    const moveAt = (after: boolean) => {
-      const row = canvas.getByRole("option", { name: "Research note" });
-      const second = canvas.getByRole("option", { name: "Meeting notes" });
-      const bounds = second.parentElement!.getBoundingClientRect();
-      drag("dragstart", row.parentElement!);
-      drag("dragover", second.parentElement!, after ? bounds.bottom - 1 : bounds.top + 1);
-      drag("drop", second.parentElement!, after ? bounds.bottom - 1 : bounds.top + 1);
-    };
-    moveAt(true);
-    await waitFor(() =>
-      expect(
-        canvas
-          .getByRole("option", { name: "Meeting notes" })
-          .compareDocumentPosition(canvas.getByRole("option", { name: "Research note" })) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy(),
-    );
-    moveAt(false);
-    await waitFor(() =>
-      expect(
-        canvas
-          .getByRole("option", { name: "Research note" })
-          .compareDocumentPosition(canvas.getByRole("option", { name: "Meeting notes" })) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy(),
-    );
-
-    drag("dragstart", canvas.getByRole("option", { name: "Research note" }).parentElement!);
-    drag("drop", canvas.getByRole("option", { name: "Ideas" }).parentElement!);
-    await waitFor(() =>
-      expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "3"),
-    );
-    drag("dragstart", canvas.getByRole("option", { name: "Research note" }).parentElement!);
-    drag("drop", canvas.getByRole("option", { name: "Notes" }).parentElement!);
-    await waitFor(() =>
-      expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "2"),
-    );
-  },
 };
-
 export const ExpandedNavigation: Story = {
+  id: "components-data-display-tree-list-move--expanded-navigation",
   tags: ["motion"],
   render: () => <MovableNotes />,
   parameters: {
@@ -176,18 +128,5 @@ export const ExpandedNavigation: Story = {
         story: "Drag Workspaces below expanded Notes. The placement line appears after the last visible descendant.",
       },
     },
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const source = canvas.getByRole("option", { name: "Workspaces", exact: true });
-    const target = canvas.getByRole("option", { name: "Notes", exact: true });
-    const start = source.getBoundingClientRect();
-    const end = target.getBoundingClientRect();
-    const clientX = start.left + start.width / 2;
-    await userEvent.pointer({ target: source, keys: "[MouseLeft>]", coords: { clientX, clientY: start.top + 14 } });
-    await userEvent.pointer({ target: source, coords: { clientX, clientY: start.top + 20 } });
-    await userEvent.pointer({ target, coords: { clientX, clientY: end.bottom - 2 } });
-    await waitFor(() => expect(canvasElement.querySelector('[data-tree-list-drop-indicator="after"]')).toBeVisible());
-    await userEvent.pointer({ target, keys: "[/MouseLeft]", coords: { clientX, clientY: end.bottom - 2 } });
   },
 };

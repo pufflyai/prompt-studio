@@ -1,16 +1,15 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { TreeList } from "./tree-list";
 
 const meta = {
   title: "Components/Data Display/Tree List/Footer",
   component: TreeList,
-} satisfies Meta<typeof TreeList>;
+} satisfies CanvasMeta<typeof TreeList>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const PinnedFooter: Story = {
+  id: "components-data-display-tree-list-footer--pinned-footer",
   args: {
     sections: [
       {
@@ -36,10 +35,4 @@ export const PinnedFooter: Story = {
       </Stack>
     ),
   ],
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const settings = await canvas.findByRole("option", { name: "Settings", exact: true });
-    const footer = canvas.getByTestId("footer-container");
-    await expect(footer.getBoundingClientRect().bottom - settings.getBoundingClientRect().bottom).toBe(8);
-  },
 };

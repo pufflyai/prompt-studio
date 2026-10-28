@@ -6,10 +6,9 @@ const meta = {
   title: "Components/Data Display/Data Table",
   component: DataTable,
 };
-
 export default meta;
-
 export const FriendlyJson = {
+  id: "components-data-display-data-table--friendly-json",
   args: {
     data: friendlyJsonRows,
     hiddenColumns: ["id"],

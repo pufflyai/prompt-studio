@@ -1,6 +1,6 @@
 import { Box, chakra, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Slider } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { landingStorySlotRecipe } from "./landing-story";
 import { landingToolDemoSlotRecipe } from "./landing-tool-demo";
@@ -16,7 +16,6 @@ const FormulaDemo = () => {
     { length: 101 },
     (_, index) => `${24 + index * 3.52},${200 - (balance((years * index) / 100) / maximum) * 176}`,
   ).join(" ");
-
   return (
     <Box css={story.page}>
       <Box css={story.panel}>
@@ -65,16 +64,18 @@ const FormulaDemo = () => {
     </Box>
   );
 };
-
 const meta = {
   title: "Theme/Landing Formula Demo",
   component: FormulaDemo,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof FormulaDemo>;
+} satisfies CanvasMeta<typeof FormulaDemo>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Interactive: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const Interactive: Story = {
+  id: "theme-landing-formula-demo--interactive",
+};
 export const NarrowPanel: Story = {
+  id: "theme-landing-formula-demo--narrow-panel",
   decorators: [
     (Story) => (
       <Box width="80">

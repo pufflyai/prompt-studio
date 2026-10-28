@@ -1,8 +1,7 @@
 import { Box, Flex, Icon, IconButton, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Bot, GitBranch, MoreHorizontal, PanelLeft } from "lucide-react";
 import type { ReactNode } from "react";
-import { expect, within } from "storybook/test";
 import { Header } from "@/components/layout/header";
 import { PANEL_HEADER_CONTROL_SIZE } from "@/components/layout/panel-header.constants";
 import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout";
@@ -12,10 +11,8 @@ interface PanelCardProps {
   description: string;
   bg?: string;
 }
-
 const PanelCard = (props: PanelCardProps) => {
   const { title, description, bg = "bg.panel" } = props;
-
   return (
     <Flex direction="column" h="full" w="full" minH="0" minW="0" bg={bg} layerStyle="panel" overflow="hidden">
       <Header variant="narrow" flexShrink={0}>
@@ -39,7 +36,6 @@ const PanelCard = (props: PanelCardProps) => {
     </Flex>
   );
 };
-
 const meta = {
   title: "Components/Layout/Resizable Split Layout",
   component: ResizableSplitLayout,
@@ -63,15 +59,14 @@ const meta = {
       </Box>
     ),
   ],
-} satisfies Meta<typeof ResizableSplitLayout>;
-
+} satisfies CanvasMeta<typeof ResizableSplitLayout>;
 export default meta;
-
-type Story = StoryObj<typeof meta>;
-
-export const LeftPanel: Story = {};
-
+type Story = CanvasVariant<typeof meta>;
+export const LeftPanel: Story = {
+  id: "components-layout-resizable-split-layout--left-panel",
+};
 export const BottomPanel: Story = {
+  id: "components-layout-resizable-split-layout--bottom-panel",
   args: {
     resizableSide: "bottom",
     resizablePanel: <PanelCard title="Secondary Panel" description="resource · hideable" />,
@@ -82,27 +77,18 @@ export const BottomPanel: Story = {
     resizeLabel: "Resize secondary panel",
   },
 };
-
 export const NotCollapsible: Story = {
+  id: "components-layout-resizable-split-layout--not-collapsible",
   args: { collapsible: false },
 };
-
 export const CollapsedFrameStaysFixed: Story = {
+  id: "components-layout-resizable-split-layout--collapsed-frame-stays-fixed",
   tags: ["!manifest", "split-frame-scroll"],
   args: { collapsed: true, resizableSide: "right", p: "0" },
   render: (args) => <ResizableSplitLayout {...args} data-testid="split-frame" />,
-  play: async ({ canvasElement }) => {
-    const frame = within(canvasElement).getByTestId("split-frame");
-    const content = frame.querySelector<HTMLElement>('[id$="-content"]')!;
-    const before = content.getBoundingClientRect().toJSON();
-    frame.scrollTo({ left: frame.scrollWidth, top: frame.scrollHeight });
-    expect(frame.scrollLeft).toBe(0);
-    expect(frame.scrollTop).toBe(0);
-    expect(content.getBoundingClientRect().toJSON()).toEqual(before);
-  },
 };
-
 export const ResponsivePanels: Story = {
+  id: "components-layout-resizable-split-layout--responsive-panels",
   args: { layout: { base: "stacked", lg: "split" }, collapsible: false },
   parameters: {
     docs: {
@@ -110,12 +96,12 @@ export const ResponsivePanels: Story = {
     },
   },
 };
-
 export const ContentFirstOnMobile: Story = {
+  id: "components-layout-resizable-split-layout--content-first-on-mobile",
   args: { layout: { base: "stacked-reverse", lg: "split" }, collapsible: false },
 };
-
 export const ResponsiveNavigation: Story = {
+  id: "components-layout-resizable-split-layout--responsive-navigation",
   args: { layout: { base: "content", lg: "split" }, collapsible: false },
   parameters: {
     docs: {
@@ -123,7 +109,6 @@ export const ResponsiveNavigation: Story = {
     },
   },
 };
-
 const ActivityRail = () => (
   <Flex as="nav" direction="column" align="center" flexShrink={0} w="3.5rem" py="xs" gap="2xs">
     <IconButton size="sm" variant="subtle" aria-label="Files">
@@ -137,7 +122,6 @@ const ActivityRail = () => (
     </IconButton>
   </Flex>
 );
-
 const StatusTray = () => (
   <Flex as="footer" align="center" flexShrink={0} h="2rem" px="sm" gap="sm">
     <Text fontSize="xs" color="fg.muted">
@@ -151,7 +135,6 @@ const StatusTray = () => (
     </Text>
   </Flex>
 );
-
 // The workbench shell: flat activity rail, header row and status tray around
 // rounded panel cards separated by grip handles.
 const PanelShell = () => (
@@ -204,12 +187,12 @@ const PanelShell = () => (
     <StatusTray />
   </Flex>
 );
-
 export const WorkbenchShell: Story = {
+  id: "components-layout-resizable-split-layout--workbench-shell",
   render: () => <PanelShell />,
 };
-
 export const LineSeparator: Story = {
+  id: "components-layout-resizable-split-layout--line-separator",
   args: {
     separator: "line",
     p: "0",

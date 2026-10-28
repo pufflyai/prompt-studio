@@ -1,4 +1,4 @@
-import { Meta } from "@storybook/addon-docs/blocks";
+import { Meta } from "@pstdio/canvas";
 
 <Meta title="Agent Guide/Preview Authoring" />
 
@@ -14,10 +14,12 @@ Start with the default useful state, then common configurations and supported ed
 
 - Use realistic, synthetic data and deterministic local fixtures.
 - Preserve stable IDs and existing exports when updating examples.
-- Keep arguments, decorators, loaders, and meaningful interaction functions beside the example.
+- Use Canvas-owned authoring types with an explicit stable variant ID. Keep props, providers, and deterministic setup beside the example. Critical behavioral assertions live in Playwright tests.
 - Avoid tests that assert generated wording or bundled copy.
 - Split growing fixtures into nearby source files.
 
 ## Metadata and validation
 
-Use concise component and variant descriptions when usage needs more explanation than props and examples provide. Rebuild the Canvas catalog, verify source coverage, and test the affected interactions in the isolated browser. A successful initial render does not prove every user flow.
+Use concise component and variant descriptions when usage needs more explanation than props and examples provide. Rebuild the Canvas catalog, verify source coverage, and test only critical interaction risks in the isolated browser. A successful initial render does not prove every user flow.
+
+Examples are design fixtures, not test cases. Add Playwright checks only for critical user behavior; avoid cosmetic, prop, viewport, and theme permutations.

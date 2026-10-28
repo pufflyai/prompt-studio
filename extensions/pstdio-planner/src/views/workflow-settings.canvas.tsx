@@ -1,5 +1,5 @@
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ParamEditor } from "@pstdio/ui/param-editor";
-import type { Meta, StoryObj } from "@storybook/react";
 import { DEFAULT_STATUSES } from "../data/seed";
 import { emptyWorkflowStatuses } from "../data/workflow-statuses";
 import { workflowSettingsControls } from "./workflow-settings";
@@ -26,15 +26,18 @@ const controls = workflowSettingsControls({
   ],
   missingStatusIds: [],
 });
-const meta: Meta<typeof ParamEditor> = {
+const meta: CanvasMeta<typeof ParamEditor> = {
   title: "Extensions/Planner/Workflow settings",
   component: ParamEditor,
   args: { variant: "small", groups: controls.groups, defaultValues: controls.values },
 };
 export default meta;
-type Story = StoryObj<typeof ParamEditor>;
-export const CurrentStatuses: Story = {};
+type Story = CanvasVariant<typeof ParamEditor>;
+export const CurrentStatuses: Story = {
+  id: "extensions-planner-workflow-settings--current-statuses",
+};
 export const EmptyChoices: Story = {
+  id: "extensions-planner-workflow-settings--empty-choices",
   args: {
     groups: workflowSettingsControls({ selections: emptyWorkflowStatuses(), statuses: [], missingStatusIds: [] })
       .groups,

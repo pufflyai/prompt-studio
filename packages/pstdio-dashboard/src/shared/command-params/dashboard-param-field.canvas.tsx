@@ -1,7 +1,7 @@
 import { Button, Dialog, Stack } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import type { CommandParamEntry, CommandParamValue } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import type { ProjectTemplateAsset } from "@/modules/settings/data/template-provider-api";
@@ -123,7 +123,9 @@ const meta = {
   title: "CommandParams/DashboardParamFields",
   component: DashboardParamFieldsPreview,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof DashboardParamFieldsPreview>;
+} satisfies CanvasMeta<typeof DashboardParamFieldsPreview>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const TemplateAndResourceDropdowns: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const TemplateAndResourceDropdowns: Story = {
+  id: "commandparams-dashboardparamfields--template-and-resource-dropdowns",
+};

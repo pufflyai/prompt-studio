@@ -1,7 +1,6 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { BackendConnectionStatus } from "./backend-connection-status";
 
 const ConnectionStatus = () => {
@@ -17,42 +16,22 @@ const ConnectionStatus = () => {
     </Stack>
   );
 };
-
 const meta = {
   title: "Sync/Backend connection status",
   component: BackendConnectionStatus,
   args: { connected: false },
   parameters: { layout: "padded" },
-} satisfies Meta<typeof BackendConnectionStatus>;
+} satisfies CanvasMeta<typeof BackendConnectionStatus>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const Disconnected: Story = {
-  play: async ({ canvasElement }) => {
-    const status = within(canvasElement).getByRole("status");
-    await expect(status).toBeVisible();
-    await expect(status).not.toHaveTextContent(/^$/);
-  },
+  id: "sync-backend-connection-status--disconnected",
 };
 export const Connected: Story = {
+  id: "sync-backend-connection-status--connected",
   args: { connected: true },
-  play: async ({ canvasElement }) => {
-    const status = within(canvasElement).getByRole("status");
-    await expect(status).toHaveTextContent(/^$/);
-    await userEvent.tab();
-    await expect(status).toHaveFocus();
-    const tooltip = await within(document.body).findByRole("tooltip");
-    await expect(tooltip).toHaveTextContent(status.getAttribute("aria-label") ?? "");
-  },
 };
 export const Recovered: Story = {
+  id: "sync-backend-connection-status--recovered",
   render: () => <ConnectionStatus />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByRole("status")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Reconnect" }));
-    await expect(canvas.getByRole("status")).toBeVisible();
-    await expect(canvas.getByRole("status")).toHaveTextContent(/^$/);
-    await expect(canvas.queryByRole("status", { name: /connection lost/i })).not.toBeInTheDocument();
-  },
 };

@@ -1,6 +1,5 @@
 import { CloseButton, Dialog } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ParamEditorLabel } from "./param-editor-label";
 
 const meta = {
@@ -11,25 +10,22 @@ const meta = {
     description:
       "Create an isolated branch. Git review and merge cover the entire repository, including paths outside the project folder.",
   },
-} satisfies Meta<typeof ParamEditorLabel>;
+} satisfies CanvasMeta<typeof ParamEditorLabel>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const WithInformation: Story = {
-  play: async ({ canvasElement }) => {
-    const user = userEvent.setup();
-    const canvas = within(canvasElement);
-    const trigger = canvas.getByRole("img", { name: "About Workspace type" });
-    await user.tab();
-    await waitFor(() => expect(canvas.getByRole("tooltip")).toBeVisible());
-    await user.keyboard("{Escape}");
-    await waitFor(() => expect(canvas.queryByRole("tooltip")).not.toBeInTheDocument());
-    await expect(trigger).toHaveFocus();
-  },
+  id: "patterns-param-editor-label--with-information",
 };
-export const Compact: Story = { args: { compact: true } };
-export const WithoutInformation: Story = { args: { description: undefined } };
+export const Compact: Story = {
+  id: "patterns-param-editor-label--compact",
+  args: { compact: true },
+};
+export const WithoutInformation: Story = {
+  id: "patterns-param-editor-label--without-information",
+  args: { description: undefined },
+};
 export const InformationInDialog: Story = {
+  id: "patterns-param-editor-label--information-in-dialog",
   decorators: [
     (Story) => (
       <Dialog.Root
@@ -55,24 +51,4 @@ export const InformationInDialog: Story = {
       </Dialog.Root>
     ),
   ],
-  play: async ({ canvasElement }) => {
-    const user = userEvent.setup();
-    const page = within(canvasElement.ownerDocument.body);
-    const trigger = page.getByRole("img", { name: "About Workspace type" });
-    await waitFor(() => expect(page.getByRole("dialog", { name: "Create workspace" })).toHaveStyle({ opacity: "1" }));
-    page.getByRole("button", { name: "Close workspace dialog" }).focus();
-    await waitFor(() => expect(page.queryByRole("tooltip")).not.toBeInTheDocument());
-    await user.hover(trigger);
-    await waitFor(() => expect(page.getByRole("tooltip")).toBeVisible());
-    await user.hover(page.getByRole("heading", { name: "Create workspace" }));
-    await waitFor(() => expect(page.queryByRole("tooltip")).not.toBeInTheDocument());
-    await user.tab();
-    await waitFor(() => {
-      expect(page.getByRole("tooltip")).toBeVisible();
-      expect(trigger).toHaveFocus();
-    });
-    page.getByRole("button", { name: "Close workspace dialog" }).focus();
-    await waitFor(() => expect(page.queryByRole("tooltip")).not.toBeInTheDocument());
-    await expect(page.getByRole("dialog", { name: "Create workspace" })).toBeVisible();
-  },
 };

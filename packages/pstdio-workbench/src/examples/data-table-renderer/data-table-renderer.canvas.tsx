@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../workbench-story";
 import { createDataTableRendererStoryModule } from "./module";
@@ -7,7 +7,6 @@ import { createPagedTableStoryModule } from "./paged-module";
 
 const workbench = createWorkbench();
 workbench.registerModule(createDataTableRendererStoryModule());
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Native data table",
   component: WorkbenchStory,
@@ -26,13 +25,11 @@ const meta = {
     },
     layout: "fullscreen",
   },
-} satisfies Meta<typeof WorkbenchStory>;
-
+} satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const MultipleSelection: Story = {
+  id: "pstdio-workbench-reference-core-api-native-data-table--multiple-selection",
   name: "Multiple selection",
   parameters: {
     docs: {
@@ -43,21 +40,24 @@ export const MultipleSelection: Story = {
     },
   },
 };
-
 const emptyWorkbench = createWorkbench();
 emptyWorkbench.registerModule(createDataTableRendererStoryModule(true));
-export const EmptyWithAction: Story = { name: "Empty table with primary action", args: { workbench: emptyWorkbench } };
-
+export const EmptyWithAction: Story = {
+  id: "pstdio-workbench-reference-core-api-native-data-table--empty-with-action",
+  name: "Empty table with primary action",
+  args: { workbench: emptyWorkbench },
+};
 const discoveredWorkbench = createWorkbench();
 discoveredWorkbench.registerModule(createPagedTableStoryModule(true));
 export const DiscoveredPageColumns: Story = {
+  id: "pstdio-workbench-reference-core-api-native-data-table--discovered-page-columns",
   name: "Paged table with discovered columns",
   args: { workbench: discoveredWorkbench },
 };
-
 const groupedWorkbench = createWorkbench();
 groupedWorkbench.registerModule(createPagedTableStoryModule(false));
 export const CollapsiblePageGroups: Story = {
+  id: "pstdio-workbench-reference-core-api-native-data-table--collapsible-page-groups",
   name: "Paged groups retain expand controls",
   args: { workbench: groupedWorkbench },
 };

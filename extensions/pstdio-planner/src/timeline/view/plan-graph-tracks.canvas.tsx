@@ -1,10 +1,9 @@
 import { Box, Button } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import type { HostStorage } from "@pstdio/ui";
 import type { AttributeDescriptor } from "@pstdio/ui/kanban-renderer";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, waitFor } from "storybook/test";
 import { emptyWorkflowStatuses } from "../../data/workflow-statuses";
 import type { PlanTag } from "../contracts";
 import { buildPlan } from "../model/build-plan";
@@ -28,7 +27,6 @@ const track: PlanTag = {
     description: null,
   })),
 };
-
 const ticket = (id: string, trackId: string | null, dependsOn: string[] = [], statusId: string | null = null) => ({
   id,
   shorthand: id.toUpperCase(),
@@ -38,7 +36,6 @@ const ticket = (id: string, trackId: string | null, dependsOn: string[] = [], st
   tagIds: trackId ? [trackId] : [],
   dependsOn,
 });
-
 // Same-track, cross-track, completed, and upward links, plus one ticket without a track.
 const plan = buildPlan({
   workflow: { ...emptyWorkflowStatuses(), completedStatusIds: ["done"] },
@@ -79,7 +76,6 @@ const plan = buildPlan({
     ],
   },
 });
-
 const rows = plan.sections.flatMap((section) => section.rows);
 const fields: AttributeDescriptor[] = [
   {
@@ -89,7 +85,6 @@ const fields: AttributeDescriptor[] = [
     filterable: true,
   },
 ];
-
 function TrackGraphStory(props: { filter: ViewFilterGroup; selectedId?: string; height?: number }) {
   const { filter, selectedId, height = 640 } = props;
   const tracks = visibleTracks(plan, filter, fields);
@@ -123,8 +118,7 @@ function TrackGraphStory(props: { filter: ViewFilterGroup; selectedId?: string; 
     </Box>
   );
 }
-
-const meta: Meta<typeof TrackGraphStory> = {
+const meta: CanvasMeta<typeof TrackGraphStory> = {
   title: "Extensions/Planner/Timeline graph/Tracks",
   component: TrackGraphStory,
   decorators: [
@@ -137,95 +131,43 @@ const meta: Meta<typeof TrackGraphStory> = {
   args: { filter: { conjunction: "and", rules: [] } },
 };
 export default meta;
-type Story = StoryObj<typeof TrackGraphStory>;
-
-export const CurvedDependencies: Story = {};
-export const SelectedHierarchy: Story = { args: { selectedId: "u-1" } };
+type Story = CanvasVariant<typeof TrackGraphStory>;
+export const CurvedDependencies: Story = {
+  id: "extensions-planner-timeline-graph-tracks--curved-dependencies",
+};
+export const SelectedHierarchy: Story = {
+  id: "extensions-planner-timeline-graph-tracks--selected-hierarchy",
+  args: { selectedId: "u-1" },
+};
 export const FilteredTracks: Story = {
+  id: "extensions-planner-timeline-graph-tracks--filtered-tracks",
   args: {
     filter: { conjunction: "and", rules: [{ attributeId: "track", condition: "is-any-of", value: ["api", "docs"] }] },
   },
 };
 export const UnassignedOnly: Story = {
+  id: "extensions-planner-timeline-graph-tracks--unassigned-only",
   args: { filter: { conjunction: "and", rules: [{ attributeId: "track", condition: "is-empty" }] } },
 };
-
 export const TrackpadNavigation: Story = {
-  play: async ({ canvasElement }) => {
-    const viewport = canvasElement.querySelector<HTMLElement>("[data-timeline-viewport]")!;
-    const scale = () => Number.parseFloat(getComputedStyle(viewport.firstElementChild!).zoom);
-    const { left, top } = viewport.getBoundingClientRect();
-    const point = { bubbles: true, cancelable: true, clientX: left + 200, clientY: top + 200 };
-    viewport.dispatchEvent(new WheelEvent("wheel", { ...point, deltaX: 120, deltaY: 80 }));
-    await waitFor(() => {
-      expect(viewport.scrollLeft).toBe(120);
-      expect(viewport.scrollTop).toBe(80);
-      expect(scale()).toBe(1);
-    });
-    viewport.dispatchEvent(new WheelEvent("wheel", { ...point, ctrlKey: true, deltaY: 300 }));
-    await waitFor(() => expect(scale()).toBeLessThan(1));
-    const zoom = scale();
-    const anchor = (viewport.scrollLeft + 200) / zoom;
-    viewport.dispatchEvent(new WheelEvent("wheel", { ...point, ctrlKey: true, deltaY: -100 }));
-    await waitFor(() => {
-      expect(scale()).toBeGreaterThan(zoom);
-      expect((viewport.scrollLeft + 200) / scale()).toBeCloseTo(anchor, 0);
-    });
-  },
+  id: "extensions-planner-timeline-graph-tracks--trackpad-navigation",
 };
-
 export const SelectedTrackpadNavigation: Story = {
+  id: "extensions-planner-timeline-graph-tracks--selected-trackpad-navigation",
   ...TrackpadNavigation,
   args: { selectedId: "a-1" },
 };
-
 export const MovingPinchAnchor: Story = {
-  play: async ({ canvasElement }) => {
-    const viewport = canvasElement.querySelector<HTMLElement>("[data-timeline-viewport]")!;
-    const { left, top } = viewport.getBoundingClientRect();
-    viewport.scrollTo(200, 80);
-    for (const [x, deltaY] of [
-      [100, 30],
-      [400, -30],
-    ]) {
-      viewport.dispatchEvent(
-        new WheelEvent("wheel", {
-          bubbles: true,
-          cancelable: true,
-          ctrlKey: true,
-          clientX: left + x,
-          clientY: top + 200,
-          deltaY,
-        }),
-      );
-    }
-    await waitFor(() => {
-      expect(Number.parseFloat(getComputedStyle(viewport.firstElementChild!).zoom)).toBe(1);
-      expect(viewport.scrollLeft).toBeGreaterThan(200);
-    });
-  },
+  id: "extensions-planner-timeline-graph-tracks--moving-pinch-anchor",
 };
-
 export const TouchNavigation: Story = {
+  id: "extensions-planner-timeline-graph-tracks--touch-navigation",
   args: { height: 360 },
   parameters: { viewport: { defaultViewport: "mobile1" } },
 };
-
 export const KeyboardAfterPan: Story = {
-  play: async ({ canvasElement }) => {
-    const viewport = canvasElement.querySelector<HTMLElement>("[data-timeline-viewport]")!;
-    const { left, top } = viewport.getBoundingClientRect();
-    const point = { pointerId: 1, button: 0, bubbles: true, clientX: left + 600, clientY: top + 400 };
-    viewport.dispatchEvent(new PointerEvent("pointerdown", point));
-    viewport.dispatchEvent(new PointerEvent("pointermove", { ...point, clientX: point.clientX - 40 }));
-    viewport.dispatchEvent(new PointerEvent("pointerup", point));
-    const button = canvasElement.querySelector<HTMLButtonElement>('[aria-label="Collapse API"]')!;
-    button.focus();
-    await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(canvasElement.querySelector('[aria-label="Expand API"]')).not.toBeNull());
-  },
+  id: "extensions-planner-timeline-graph-tracks--keyboard-after-pan",
 };
-
 function RememberedPresentationStory() {
   const [generation, setGeneration] = useState(0);
   const [storage] = useState<HostStorage>(() => {
@@ -247,4 +189,7 @@ function RememberedPresentationStory() {
     </>
   );
 }
-export const RememberedPresentation: Story = { render: () => <RememberedPresentationStory /> };
+export const RememberedPresentation: Story = {
+  id: "extensions-planner-timeline-graph-tracks--remembered-presentation",
+  render: () => <RememberedPresentationStory />,
+};

@@ -1,14 +1,12 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { type ComponentProps, useState } from "react";
-import { fn } from "storybook/test";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { AttachmentList } from "./attachment-list";
-import { keepDraft, walkFullHistory, walkMultilineHistory, walkThreePrompts } from "./chat-history-story";
 import { ChatInput } from "./chat-input";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 
-const meta: Meta<typeof ChatInput> = {
+const meta: CanvasMeta<typeof ChatInput> = {
   title: "Patterns/Chat/Chat Input",
   component: ChatInput,
   parameters: {
@@ -17,13 +15,11 @@ const meta: Meta<typeof ChatInput> = {
   },
 };
 export default meta;
-
-type Story = StoryObj<typeof ChatInput>;
+type Story = CanvasVariant<typeof ChatInput>;
 type ChatInputProps = ComponentProps<typeof ChatInput>;
-
 const initialState = createSerializedPromptState("");
-
 export const Default: Story = {
+  id: "patterns-chat-chat-input--default",
   args: {
     defaultState: initialState,
     placeholder: "Ask me something...",
@@ -36,8 +32,8 @@ export const Default: Story = {
     },
   },
 };
-
 export const Streaming: Story = {
+  id: "patterns-chat-chat-input--streaming",
   render: (args) => (
     <Box w="32rem">
       <ChatInput {...args} />
@@ -50,8 +46,8 @@ export const Streaming: Story = {
     onInterrupt: () => console.log("Interrupted"),
   },
 };
-
 export const Selected: Story = {
+  id: "patterns-chat-chat-input--selected",
   render: (args) => (
     <Box w="32rem">
       <ChatInput {...args} />
@@ -67,11 +63,9 @@ export const Selected: Story = {
     },
   },
 };
-
 function WithAttachmentsRenderer(props: ChatInputProps) {
   const { attachedResources: initialAttachedResources = [], onClearAttachments, ...rest } = props;
   const [attachedResources, setAttachedResources] = useState<string[]>(initialAttachedResources);
-
   const attachmentList =
     attachedResources.length > 0 ? (
       <AttachmentList
@@ -82,7 +76,6 @@ function WithAttachmentsRenderer(props: ChatInputProps) {
         }}
       />
     ) : undefined;
-
   return (
     <ChatInput
       {...rest}
@@ -95,15 +88,14 @@ function WithAttachmentsRenderer(props: ChatInputProps) {
     />
   );
 }
-
 export const WithAttachments: Story = {
+  id: "patterns-chat-chat-input--with-attachments",
   render: (args) => {
     const rendererArgs: ChatInputProps = {
       ...(args ?? {}),
       defaultState: args?.defaultState ?? initialState,
       attachedResources: args?.attachedResources ?? [],
     };
-
     return <WithAttachmentsRenderer {...rendererArgs} />;
   },
   args: {
@@ -117,15 +109,14 @@ export const WithAttachments: Story = {
     },
   },
 };
-
 export const EmptyAttachmentTray: Story = {
+  id: "patterns-chat-chat-input--empty-attachment-tray",
   render: (args) => {
     const rendererArgs: ChatInputProps = {
       ...(args ?? {}),
       defaultState: args?.defaultState ?? initialState,
       attachedResources: [],
     };
-
     return <WithAttachmentsRenderer {...rendererArgs} />;
   },
   args: {
@@ -133,7 +124,6 @@ export const EmptyAttachmentTray: Story = {
     placeholder: "Attach files when needed...",
   },
 };
-
 const singleChoiceQuestionPrompt: ChatInputQuestionPrompt = {
   questions: [
     {
@@ -145,7 +135,6 @@ const singleChoiceQuestionPrompt: ChatInputQuestionPrompt = {
     },
   ],
 };
-
 const multiChoiceQuestionPrompt: ChatInputQuestionPrompt = {
   questions: [
     {
@@ -161,7 +150,6 @@ const multiChoiceQuestionPrompt: ChatInputQuestionPrompt = {
     },
   ],
 };
-
 const customQuestionPrompt: ChatInputQuestionPrompt = {
   questions: [
     {
@@ -173,7 +161,6 @@ const customQuestionPrompt: ChatInputQuestionPrompt = {
     },
   ],
 };
-
 // Mirrors the shape Claude Code's own client shows: listed options plus an "Other" choice that
 // opens a text box, and a way out of the question entirely.
 const greetingQuestionPrompt: ChatInputQuestionPrompt = {
@@ -190,7 +177,6 @@ const greetingQuestionPrompt: ChatInputQuestionPrompt = {
     },
   ],
 };
-
 const freeformQuestionPrompt: ChatInputQuestionPrompt = {
   questions: [
     {
@@ -202,7 +188,6 @@ const freeformQuestionPrompt: ChatInputQuestionPrompt = {
     },
   ],
 };
-
 const multiStepQuestionPrompt: ChatInputQuestionPrompt = {
   questions: [
     {
@@ -227,8 +212,8 @@ const multiStepQuestionPrompt: ChatInputQuestionPrompt = {
     },
   ],
 };
-
 export const QuestionSingleChoice: Story = {
+  id: "patterns-chat-chat-input--question-single-choice",
   args: {
     defaultState: initialState,
     placeholder: "Add context if needed...",
@@ -239,8 +224,8 @@ export const QuestionSingleChoice: Story = {
     },
   },
 };
-
 export const QuestionMultipleChoice: Story = {
+  id: "patterns-chat-chat-input--question-multiple-choice",
   args: {
     defaultState: initialState,
     placeholder: "Optional details...",
@@ -251,8 +236,8 @@ export const QuestionMultipleChoice: Story = {
     },
   },
 };
-
 export const QuestionWithCustomAnswer: Story = {
+  id: "patterns-chat-chat-input--question-with-custom-answer",
   args: {
     defaultState: initialState,
     placeholder: "Add a custom answer...",
@@ -263,8 +248,8 @@ export const QuestionWithCustomAnswer: Story = {
     },
   },
 };
-
 export const QuestionSingleChoiceWithOther: Story = {
+  id: "patterns-chat-chat-input--question-single-choice-with-other",
   args: {
     defaultState: initialState,
     questionPrompt: greetingQuestionPrompt,
@@ -276,8 +261,8 @@ export const QuestionSingleChoiceWithOther: Story = {
     },
   },
 };
-
 export const QuestionFreeform: Story = {
+  id: "patterns-chat-chat-input--question-freeform",
   args: {
     defaultState: initialState,
     placeholder: "Answer the question...",
@@ -288,8 +273,8 @@ export const QuestionFreeform: Story = {
     },
   },
 };
-
 export const QuestionMultiStep: Story = {
+  id: "patterns-chat-chat-input--question-multi-step",
   args: {
     defaultState: initialState,
     questionPrompt: multiStepQuestionPrompt,
@@ -299,7 +284,6 @@ export const QuestionMultiStep: Story = {
     },
   },
 };
-
 const ControlledHistoryInput = (props: ChatInputProps) => {
   const [draft, setDraft] = useState(props.defaultState);
   return (
@@ -308,37 +292,36 @@ const ControlledHistoryInput = (props: ChatInputProps) => {
     </Box>
   );
 };
-
 export const PromptHistory: Story = {
+  id: "patterns-chat-chat-input--prompt-history",
   render: (args) => <ControlledHistoryInput {...args} />,
   args: {
     defaultState: initialState,
     recentUserMessages: ["Summarize the plan", "Show the next steps", "Explain the project"],
-    onSelectionChange: fn(),
-    onEditorStateChange: fn(),
+    onSelectionChange: () => {},
+    onEditorStateChange: () => {},
   },
-  play: walkThreePrompts,
 };
 export const PromptHistoryFull: Story = {
+  id: "patterns-chat-chat-input--prompt-history-full",
   tags: ["!manifest"],
   render: PromptHistory.render,
   args: { ...PromptHistory.args, recentUserMessages: Array.from({ length: 12 }, (_, i) => `Prompt ${12 - i}`) },
-  play: walkFullHistory,
 };
 export const PromptHistoryMultiline: Story = {
+  id: "patterns-chat-chat-input--prompt-history-multiline",
   tags: ["!manifest"],
   render: PromptHistory.render,
   args: { ...PromptHistory.args, recentUserMessages: ["First line\nSecond line", "Earlier prompt"] },
-  play: walkMultilineHistory,
 };
 export const PromptHistoryDraft: Story = {
+  id: "patterns-chat-chat-input--prompt-history-draft",
   render: PromptHistory.render,
   args: PromptHistory.args,
-  play: keepDraft,
 };
 export const PromptHistoryStreaming: Story = {
+  id: "patterns-chat-chat-input--prompt-history-streaming",
   tags: ["!manifest"],
   render: PromptHistory.render,
   args: { ...PromptHistory.args, streaming: true },
-  play: walkThreePrompts,
 };

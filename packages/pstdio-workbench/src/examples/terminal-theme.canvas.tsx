@@ -1,7 +1,6 @@
 import { Box, Button, HStack, Stack } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { defaultThemePreferences, type ThemePreferenceOption, useThemePreference } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Workbench, WorkbenchThemeProvider } from "../react";
 import { createHostTerminalWorkbench } from "./host-terminal-story";
 
@@ -24,7 +23,6 @@ const themes: ThemePreferenceOption[] = [
     },
   },
 ];
-
 const ThemeControls = () => {
   const { setThemePreference, previewThemePreference } = useThemePreference();
   return (
@@ -44,7 +42,6 @@ const ThemeControls = () => {
     </HStack>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Host terminal themes",
   parameters: { layout: "fullscreen", controls: { disable: true } },
@@ -62,32 +59,9 @@ const meta = {
       </Stack>
     </WorkbenchThemeProvider>
   ),
-} satisfies Meta;
-
+} satisfies CanvasMeta;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const ThemeChangesKeepSession: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("tab", { name: "Terminal 1" }));
-    const viewport = await waitFor(() => {
-      const element = canvasElement.querySelector<HTMLElement>(".xterm-viewport");
-      expect(element).toBeVisible();
-      return element!;
-    });
-    const textarea = canvasElement.querySelector(".xterm-helper-textarea");
-    const background = () => getComputedStyle(viewport).backgroundColor;
-    await waitFor(() => expect(background()).toBe("rgb(37, 39, 43)"));
-    await userEvent.click(canvas.getByRole("button", { name: "Paper" }));
-    await waitFor(() => expect(background()).toBe("rgb(238, 232, 213)"));
-    await userEvent.click(canvas.getByRole("button", { name: "Preview Kiln" }));
-    await waitFor(() => expect(background()).toBe("rgb(37, 39, 43)"));
-    await userEvent.click(canvas.getByRole("button", { name: "End preview" }));
-    await waitFor(() => expect(background()).toBe("rgb(238, 232, 213)"));
-    await userEvent.click(canvas.getByRole("button", { name: "Default dark" }));
-    await waitFor(() => expect(background()).toBe("rgb(10, 10, 10)"));
-    await expect(canvasElement.querySelector(".xterm-helper-textarea")).toBe(textarea);
-    await expect(canvas.getByText("workbench host terminal (scripted)", { exact: false })).toBeVisible();
-  },
+  id: "pstdio-workbench-reference-host-terminal-themes--theme-changes-keep-session",
 };

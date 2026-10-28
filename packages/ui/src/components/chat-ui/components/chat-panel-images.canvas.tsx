@@ -1,18 +1,17 @@
 import { Button } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import type { ChatLinkHandler } from "../links/chat-link";
 import { ChatPanel } from "./chat-panel";
 
-const meta: Meta<typeof ChatPanel> = { title: "Chat/ChatPanel/Images", component: ChatPanel };
+const meta: CanvasMeta<typeof ChatPanel> = { title: "Chat/ChatPanel/Images", component: ChatPanel };
 export default meta;
-type Story = StoryObj<typeof ChatPanel>;
-
+type Story = CanvasVariant<typeof ChatPanel>;
 const image =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9i8AAAAASUVORK5CYII=";
 const secondImage = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-
 export const CapturedLocalImage: Story = {
+  id: "chat-chatpanel-images--captured-local-image",
   args: {
     messages: [
       { id: "user", role: "user", parts: [{ type: "text", text: "Show the screenshot." }] },
@@ -43,8 +42,8 @@ export const CapturedLocalImage: Story = {
     emptyStateDescription: "",
   },
 };
-
 export const WorkspaceImage: Story = {
+  id: "chat-chatpanel-images--workspace-image",
   args: {
     ...CapturedLocalImage.args,
     messages: [
@@ -64,8 +63,8 @@ export const WorkspaceImage: Story = {
     },
   },
 };
-
 export const RepeatedImageCapture: Story = {
+  id: "chat-chatpanel-images--repeated-image-capture",
   args: {
     ...CapturedLocalImage.args,
     messages: [
@@ -96,7 +95,6 @@ export const RepeatedImageCapture: Story = {
     ],
   },
 };
-
 async function resolveWorkspaceImage(this: ChatLinkHandler, source: string) {
   return this.resolveHref({ source, origin: "markdown" })?.startsWith("workspace://second/") ? secondImage : image;
 }
@@ -109,15 +107,16 @@ const secondHandler: ChatLinkHandler = {
   ...firstHandler,
   resolveHref: ({ source }) => `workspace://second/${source}`,
 };
-
 function WorkspaceSwitchPreview() {
   const [handler, setHandler] = useState(firstHandler);
   return (
     <>
       <Button onClick={() => setHandler(secondHandler)}>Switch workspace</Button>
-      <ChatPanel {...WorkspaceImage.args!} linkHandler={handler} />
+      <ChatPanel {...(WorkspaceImage.args as React.ComponentProps<typeof ChatPanel>)} linkHandler={handler} />
     </>
   );
 }
-
-export const WorkspaceSwitch: Story = { render: () => <WorkspaceSwitchPreview /> };
+export const WorkspaceSwitch: Story = {
+  id: "chat-chatpanel-images--workspace-switch",
+  render: () => <WorkspaceSwitchPreview />,
+};

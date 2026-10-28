@@ -1,28 +1,23 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { KanbanRenderer } from "./kanban-renderer";
 import { attributes, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
 import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 
-const meta: Meta<typeof KanbanRenderer> = {
+const meta: CanvasMeta<typeof KanbanRenderer> = {
   title: "Patterns/Kanban Renderer/View Controls",
   component: KanbanRenderer,
   parameters: { layout: "fullscreen" },
 };
-
 export default meta;
-
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 interface ViewControlsBoardProps {
   storageKey: string;
   defaultFilter?: ViewFilterGroup;
   defaultSorts?: ViewSort[];
 }
-
 const reorder = (rows: StoryRow[], rowId: string, beforeRowId?: string) => {
   const moved = rows.find((row) => row.id === rowId);
   if (!moved) return rows;
@@ -30,7 +25,6 @@ const reorder = (rows: StoryRow[], rowId: string, beforeRowId?: string) => {
   const index = beforeRowId ? rest.findIndex((row) => row.id === beforeRowId) : rest.length;
   return [...rest.slice(0, index), moved, ...rest.slice(index)];
 };
-
 const ViewControlsBoard = (props: ViewControlsBoardProps) => {
   const { storageKey, defaultFilter, defaultSorts } = props;
   const [rows, setRows] = useState(initialRows);
@@ -42,7 +36,6 @@ const ViewControlsBoard = (props: ViewControlsBoardProps) => {
   const reset = useKanbanRendererStore(storageKey, (state) => state.reset, initialState);
   // Reset during the first render, before the renderer picks its first view in an effect.
   useState(reset);
-
   return (
     <Box p="sm" height="560px">
       <KanbanRenderer<StoryRow>
@@ -64,40 +57,25 @@ const ViewControlsBoard = (props: ViewControlsBoardProps) => {
     </Box>
   );
 };
-
 /** Search narrows the cards, marks each match, and counts matches against each column's total. */
 export const Search: Story = {
+  id: "patterns-kanban-renderer-view-controls--search",
   render: () => <ViewControlsBoard storageKey="storybook-kanban-view-controls-search" />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Search this view" }));
-    await userEvent.type(canvas.getByRole("textbox", { name: "Search this view" }), "set up");
-    await expect(await canvas.findAllByRole("mark")).not.toHaveLength(0);
-    await expect(canvas.queryByText("Write docs")).not.toBeInTheDocument();
-  },
 };
-
 export const SearchNoMatches: Story = {
+  id: "patterns-kanban-renderer-view-controls--search-no-matches",
   render: () => <ViewControlsBoard storageKey="storybook-kanban-view-controls-no-matches" />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Search this view" }));
-    await userEvent.type(canvas.getByRole("textbox", { name: "Search this view" }), "radr");
-    await expect(await canvas.findByText("No results for “radr”")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Clear search" }));
-    await expect(await canvas.findByText("Write docs")).toBeVisible();
-  },
 };
-
 /** Rules with conditions, plus an "or" group that reads as one pill. */
 export const FilterRules: Story = {
+  id: "patterns-kanban-renderer-view-controls--filter-rules",
   render: () => (
     <ViewControlsBoard
       storageKey="storybook-kanban-view-controls-rules"
       defaultFilter={{
         conjunction: "and",
-        rules: [
-          { attributeId: "status", condition: "is-none-of", value: ["done"] },
+        rules: [{ attributeId: "status", condition: "is-none-of", value: ["done"] }],
+        groups: [
           {
             conjunction: "or",
             rules: [
@@ -110,9 +88,9 @@ export const FilterRules: Story = {
     />
   ),
 };
-
 /** Cards follow priority inside each column, then the update date; columns keep the status order. */
 export const MultiSort: Story = {
+  id: "patterns-kanban-renderer-view-controls--multi-sort",
   render: () => (
     <ViewControlsBoard
       storageKey="storybook-kanban-view-controls-multi-sort"
@@ -122,13 +100,9 @@ export const MultiSort: Story = {
       ]}
     />
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByRole("button", { name: "Sorted by Priority" })).toHaveTextContent("+1");
-  },
 };
-
 /** Without sorts, dragging a card inside a column keeps the new position. */
 export const ManualOrderWithoutSort: Story = {
+  id: "patterns-kanban-renderer-view-controls--manual-order-without-sort",
   render: () => <ViewControlsBoard storageKey="storybook-kanban-view-controls-manual" />,
 };

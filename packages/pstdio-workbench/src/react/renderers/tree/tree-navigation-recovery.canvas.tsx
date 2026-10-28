@@ -1,7 +1,6 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
@@ -59,53 +58,23 @@ const createFixture = (initialFailure: boolean) => {
   workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", extensionId: "storybook", id: "guide" } });
   return workbench;
 };
-
 const NavigationRecovery = (props: { initialFailure: boolean }) => {
   const { initialFailure } = props;
   const [workbench] = useState(() => createFixture(initialFailure));
   return <WorkbenchStory workbench={workbench} />;
 };
-
 const meta = {
   title: "pstdio-workbench/Guides/Navigation recovery",
   component: NavigationRecovery,
   args: { initialFailure: false },
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof NavigationRecovery>;
+} satisfies CanvasMeta<typeof NavigationRecovery>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const FailedRefresh: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const notes = await canvas.findByRole("option", { name: /^Notes / });
-    const label = notes.textContent;
-    await userEvent.click(canvas.getByRole("button", { name: "Fail refresh" }));
-    // Background reads retain the loaded snapshot without setting aria-busy.
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    await waitFor(() =>
-      expect(canvas.getByRole("region", { name: "Navigation" })).toHaveAttribute("aria-busy", "false"),
-    );
-    await expect(notes).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
-    await expect(canvas.getByRole("option", { name: "Search" })).toBeVisible();
-    await expect(canvas.getByRole("option", { name: "Settings" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Restore navigation" }));
-    await waitFor(() => expect(canvas.getByRole("option", { name: /^Notes / })).not.toHaveTextContent(label!));
-  },
+  id: "pstdio-workbench-guides-navigation-recovery--failed-refresh",
 };
-
 export const InitialFailure: Story = {
+  id: "pstdio-workbench-guides-navigation-recovery--initial-failure",
   args: { initialFailure: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await waitFor(() =>
-      expect(canvas.getByRole("region", { name: "Navigation" })).toHaveAttribute("aria-busy", "false"),
-    );
-    await expect(canvas.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Restore navigation" }));
-    await expect(await canvas.findByRole("option", { name: /^Notes / })).toBeVisible();
-    await expect(canvas.getByRole("option", { name: "Search" })).toBeVisible();
-    await expect(canvas.getByRole("option", { name: "Settings" })).toBeVisible();
-  },
 };

@@ -1,10 +1,8 @@
 import { Box, Button, Grid, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
-
 import { getIconComponent } from "./icon-options";
 
 type StoryFn = () => ReactNode;
-
 /**
  * Glyphs from the repo's own `prompt-studio-icons` font, for the marks lucide does
  * not cover. They resolve through `getIconComponent` exactly like a lucide icon, so
@@ -24,9 +22,7 @@ const meta = {
     ),
   ],
 };
-
 export default meta;
-
 const STATUS_GLYPHS = [
   { name: "status-backlog", use: "Backlog — dashed ring" },
   { name: "status-todo", use: "Todo — open ring" },
@@ -35,15 +31,18 @@ const STATUS_GLYPHS = [
   { name: "status-done", use: "Done — filled, check knocked out" },
   { name: "status-canceled", use: "Canceled — filled, cross knocked out" },
 ];
-
 const LEVEL_GLYPHS = [
   { name: "level-low", use: "1 of 4 bars" },
   { name: "level-mid", use: "2 of 4 bars" },
   { name: "level-high", use: "3 of 4 bars" },
   { name: "level-xhigh", use: "4 of 4 bars" },
 ];
-
-const GlyphTable = (props: { entries: { name: string; use: string }[] }) => (
+const GlyphTable = (props: {
+  entries: {
+    name: string;
+    use: string;
+  }[];
+}) => (
   <Stack gap="none">
     {props.entries.map((entry) => (
       <HStack key={entry.name} gap="sm" py="xs" borderBottomWidth="1px" borderColor="border.subtle">
@@ -58,23 +57,23 @@ const GlyphTable = (props: { entries: { name: string; use: string }[] }) => (
     ))}
   </Stack>
 );
-
 /** Ring marks for the ticket lifecycle, matching `cmp/StatusRing` in the design system. */
 export const StatusRings = {
+  id: "foundations-icons-prompt-studio-glyphs--status-rings",
   render: () => <GlyphTable entries={STATUS_GLYPHS} />,
 };
-
 /**
  * Level meters for priority and complexity. A font glyph is single-colour, so unfilled
  * bars are outlined rather than tinted, and the marks are trimmed to 82% because a solid
  * square reads heavier than a round glyph at the same ink size.
  */
 export const LevelBars = {
+  id: "foundations-icons-prompt-studio-glyphs--level-bars",
   render: () => <GlyphTable entries={LEVEL_GLYPHS} />,
 };
-
 /** Glyphs scale with `boxSize` and inherit `color`, exactly like a lucide icon. */
 export const SizesAndColor = {
+  id: "foundations-icons-prompt-studio-glyphs--sizes-and-color",
   render: () => (
     <Stack gap="md">
       <HStack gap="md" alignItems="center">
@@ -90,16 +89,15 @@ export const SizesAndColor = {
     </Stack>
   ),
 };
-
 /**
  * Every glyph is normalised to the same ink box by the font builder, so the wrapper
  * re-centres it and matches lucide's optical size. These rows are the regression check:
  * glyphs must sit on the same centre line as the lucide icons beside them.
  */
 export const InlineAlignment = {
+  id: "foundations-icons-prompt-studio-glyphs--inline-alignment",
   render: () => {
     const marks = ["status-todo", "status-done", "level-low", "level-xhigh", "flame", "bug", "tag"];
-
     return (
       <Stack gap="md" alignItems="flex-start">
         <HStack gap="xs">
@@ -129,9 +127,9 @@ export const InlineAlignment = {
     );
   },
 };
-
 /** The full font, so a new glyph shows up here as soon as it is added. */
 export const AllGlyphs = {
+  id: "foundations-icons-prompt-studio-glyphs--all-glyphs",
   render: () => (
     <Grid templateColumns="repeat(auto-fill, minmax(9rem, 1fr))" gap="sm">
       {[...STATUS_GLYPHS, ...LEVEL_GLYPHS].map((entry) => (

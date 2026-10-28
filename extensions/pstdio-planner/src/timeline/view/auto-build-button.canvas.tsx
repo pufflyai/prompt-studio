@@ -1,8 +1,8 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { autoBuildStoryConfiguration } from "./auto-build.story-fixture";
 import { AutoBuildButton } from "./auto-build-button";
 
-const meta: Meta<typeof AutoBuildButton> = {
+const meta: CanvasMeta<typeof AutoBuildButton> = {
   title: "Extensions/Planner/Auto Build Status",
   component: AutoBuildButton,
   args: {
@@ -19,18 +19,28 @@ const meta: Meta<typeof AutoBuildButton> = {
   },
 };
 export default meta;
-type Story = StoryObj<typeof AutoBuildButton>;
-export const Off: Story = {};
+type Story = CanvasVariant<typeof AutoBuildButton>;
+export const Off: Story = {
+  id: "extensions-planner-auto-build-status--off",
+};
 export const StoppedWithLiveSessions: Story = {
+  id: "extensions-planner-auto-build-status--stopped-with-live-sessions",
   args: {
     enabled: false,
     running: 1,
     supervisor: { id: "supervisor", title: "Finish PocketCoder 1.0", status: "in_progress" },
   },
 };
-export const Waiting: Story = { args: { enabled: true } };
-export const Starting: Story = { args: { enabled: true, starting: true } };
+export const Waiting: Story = {
+  id: "extensions-planner-auto-build-status--waiting",
+  args: { enabled: true },
+};
+export const Starting: Story = {
+  id: "extensions-planner-auto-build-status--starting",
+  args: { enabled: true, starting: true },
+};
 export const ExistingWork: Story = {
+  id: "extensions-planner-auto-build-status--existing-work",
   args: {
     enabled: true,
     matchingTicketCount: 1,
@@ -39,10 +49,15 @@ export const ExistingWork: Story = {
   },
 };
 export const ReadyAlongsideExistingWork: Story = {
+  id: "extensions-planner-auto-build-status--ready-alongside-existing-work",
   args: { ...ExistingWork.args, matchingTicketCount: 2, readyTicketCount: 1 },
 };
-export const NoMatchingTickets: Story = { args: { enabled: true, matchingTicketCount: 0 } };
+export const NoMatchingTickets: Story = {
+  id: "extensions-planner-auto-build-status--no-matching-tickets",
+  args: { enabled: true, matchingTicketCount: 0 },
+};
 export const Running: Story = {
+  id: "extensions-planner-auto-build-status--running",
   args: {
     enabled: true,
     running: 2,
@@ -54,9 +69,11 @@ export const Running: Story = {
   },
 };
 export const Sleeping: Story = {
+  id: "extensions-planner-auto-build-status--sleeping",
   args: { enabled: true, supervisor: { id: "supervisor", title: "Auto Build supervisor", status: "completed" } },
 };
 export const Completed: Story = {
+  id: "extensions-planner-auto-build-status--completed",
   args: {
     enabled: true,
     completed: true,
@@ -64,9 +81,11 @@ export const Completed: Story = {
   },
 };
 export const Queued: Story = {
+  id: "extensions-planner-auto-build-status--queued",
   args: { enabled: true, supervisor: { id: "supervisor", title: "Finish PocketCoder 1.0", status: "queued" } },
 };
 export const SessionStatuses: Story = {
+  id: "extensions-planner-auto-build-status--session-statuses",
   args: {
     enabled: true,
     supervisor: { id: "supervisor", title: "Finish PocketCoder 1.0", status: "in_progress" },
@@ -76,22 +95,30 @@ export const SessionStatuses: Story = {
   },
 };
 export const Failed: Story = {
+  id: "extensions-planner-auto-build-status--failed",
   args: {
     enabled: true,
     supervisor: { id: "supervisor", title: "Auto Build supervisor", status: "failed" },
   },
 };
-export const WakeFailed: Story = { args: { error: "Agent unavailable" } };
+export const WakeFailed: Story = {
+  id: "extensions-planner-auto-build-status--wake-failed",
+  args: { error: "Agent unavailable" },
+};
 export const Stuck: Story = {
+  id: "extensions-planner-auto-build-status--stuck",
   args: {
     enabled: true,
     stuck: true,
     supervisor: { id: "supervisor", title: "Auto Build supervisor", status: "completed" },
   },
 };
-
-export const Paused: Story = { args: { ...Running.args, enabled: false, paused: true } };
+export const Paused: Story = {
+  id: "extensions-planner-auto-build-status--paused",
+  args: { ...Running.args, enabled: false, paused: true },
+};
 export const ManyRunningAgents: Story = {
+  id: "extensions-planner-auto-build-status--many-running-agents",
   args: {
     ...Running.args,
     running: 40,
@@ -103,8 +130,12 @@ export const ManyRunningAgents: Story = {
     })),
   },
 };
-export const PausedWithManyAgents: Story = { args: { ...ManyRunningAgents.args, enabled: false, paused: true } };
+export const PausedWithManyAgents: Story = {
+  id: "extensions-planner-auto-build-status--paused-with-many-agents",
+  args: { ...ManyRunningAgents.args, enabled: false, paused: true },
+};
 export const ReviewRequests: Story = {
+  id: "extensions-planner-auto-build-status--review-requests",
   args: {
     ...ManyRunningAgents.args,
     reviewRequests: [

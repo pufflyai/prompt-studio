@@ -1,13 +1,12 @@
 import { Box, Button } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ChatPanel, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fn, userEvent, within } from "storybook/test";
 import { SessionHarnessUnavailable } from "./session-harness-unavailable";
 
 const meta = {
   title: "Modules/Sessions/Harness Unavailable",
   component: SessionHarnessUnavailable,
-  args: { onReviewExtensions: fn() },
+  args: { onReviewExtensions: () => {} },
   parameters: { layout: "padded" },
   render: (args) => (
     <Box h="lg">
@@ -32,13 +31,18 @@ const meta = {
       />
     </Box>
   ),
-} satisfies Meta<typeof SessionHarnessUnavailable>;
-
+} satisfies CanvasMeta<typeof SessionHarnessUnavailable>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const NoHarnessAvailable: Story = {};
-export const Dark: Story = { globals: { theme: "pstdio-dark" } };
+type Story = CanvasVariant<typeof meta>;
+export const NoHarnessAvailable: Story = {
+  id: "modules-sessions-harness-unavailable--no-harness-available",
+};
+export const Dark: Story = {
+  id: "modules-sessions-harness-unavailable--dark",
+  globals: { theme: "pstdio-dark" },
+};
 export const Narrow: Story = {
+  id: "modules-sessions-harness-unavailable--narrow",
   decorators: [
     (Story) => (
       <Box maxW="xs">
@@ -48,13 +52,6 @@ export const Narrow: Story = {
   ],
 };
 export const ActiveRun: Story = {
-  args: { onInterrupt: fn() },
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: /^Stop session$/ }));
-    await expect(args.onInterrupt).toHaveBeenCalledOnce();
-    await userEvent.click(canvas.getByRole("button", { name: /^Browse extensions$/ }));
-    await expect(args.onReviewExtensions).toHaveBeenCalledOnce();
-  },
+  id: "modules-sessions-harness-unavailable--active-run",
+  args: { onInterrupt: () => {} },
 };

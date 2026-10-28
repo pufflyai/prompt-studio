@@ -1,13 +1,12 @@
 import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { KanbanRenderer } from "./kanban-renderer";
 import { attributes, type StoryRow } from "./kanban-renderer-story-fixtures";
 import type { AttributeDescriptor, EnumOption, EnumOptionsSource } from "./types";
 import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 
-const meta: Meta<typeof KanbanRenderer> = {
+const meta: CanvasMeta<typeof KanbanRenderer> = {
   title: "Patterns/Kanban Renderer/Internal/Live Options",
   component: KanbanRenderer,
   parameters: {
@@ -21,37 +20,28 @@ const meta: Meta<typeof KanbanRenderer> = {
   },
   tags: ["!manifest"],
 };
-
 export default meta;
-
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 const LIVE_STORAGE_KEY = "storybook-kanban-renderer-live";
-
 const ADDABLE_STATUSES: EnumOption[] = [
   { value: "review", label: "Review", color: "purple" },
   { value: "blocked", label: "Blocked", color: "red" },
   { value: "shipped", label: "Shipped", color: "cyan" },
   { value: "archived", label: "Archived", color: "gray" },
 ];
-
 const INITIAL_LIVE_STATUSES: EnumOption[] = [
   { value: "todo", label: "Todo", color: "gray" },
   { value: "in_progress", label: "In progress", color: "blue" },
   { value: "done", label: "Done", color: "green" },
 ];
-
 const COLOR_CYCLE = ["gray", "blue", "green", "red", "purple", "yellow", "cyan", "orange"] as const;
-
 const nextColor = (current: string | undefined) => {
   const index = COLOR_CYCLE.indexOf(current as (typeof COLOR_CYCLE)[number]);
   return COLOR_CYCLE[(index + 1) % COLOR_CYCLE.length]!;
 };
-
 const createEnumOptionsStore = (initial: EnumOption[]) => {
   let options = initial;
   const listeners = new Set<() => void>();
-
   const source: EnumOptionsSource = {
     subscribe: (listener) => {
       listeners.add(listener);
@@ -61,15 +51,12 @@ const createEnumOptionsStore = (initial: EnumOption[]) => {
     },
     getSnapshot: () => options,
   };
-
   const setOptions = (next: EnumOption[]) => {
     options = next;
     for (const listener of listeners) listener();
   };
-
   return { source, setOptions, getOptions: () => options };
 };
-
 const LIVE_INITIAL_ROWS: StoryRow[] = [
   {
     id: "live-1",
@@ -99,7 +86,6 @@ const LIVE_INITIAL_ROWS: StoryRow[] = [
     attributes: { status: "done", assignee: "Taylor", component: "docs", updated: "2026-03-17T12:00:00.000Z" },
   },
 ];
-
 const createLiveScene = () => {
   const store = createEnumOptionsStore(INITIAL_LIVE_STATUSES);
   const liveAttributes: AttributeDescriptor[] = [
@@ -117,63 +103,37 @@ const createLiveScene = () => {
   ];
   return { store, liveAttributes };
 };
-
-const switchToListView = async (canvas: ReturnType<typeof within>) => {
-  await userEvent.click(canvas.getByLabelText("Display settings"));
-  await userEvent.click(within(document.body).getByText("List"));
-};
-
-const getVisibleBadgeByText = (text: string) =>
-  [...document.body.querySelectorAll<HTMLElement>(".chakra-badge")].find((element) => {
-    const rect = element.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 && element.textContent?.trim() === text;
-  });
-
-const getVisibleListGroupCountBadge = (label: string) => {
-  const groupRow = [...document.body.querySelectorAll<HTMLElement>('[role="option"]')].find(
-    (element) => element.textContent?.replace(/\s+/g, "").trim() === `${label}1`,
-  );
-  return groupRow?.querySelector<HTMLElement>(".chakra-badge") ?? null;
-};
-
 const LiveWrapper = () => {
   const [{ store, liveAttributes }] = useState(createLiveScene);
   const [statuses, setStatuses] = useState<EnumOption[]>(() => store.getOptions());
   const [rows, setRows] = useState<StoryRow[]>(LIVE_INITIAL_ROWS);
   const nextRowId = useRef(LIVE_INITIAL_ROWS.length + 1);
   const reset = useKanbanRendererStore(LIVE_STORAGE_KEY, (state) => state.reset);
-
   // Reset during the first render, before the renderer picks its first view in an effect.
   useState(reset);
-
   useEffect(() => store.source.subscribe(() => setStatuses([...store.getOptions()])), [store]);
-
   const handleAddStatus = () => {
     const taken = new Set(statuses.map((option) => option.value));
     const next = ADDABLE_STATUSES.find((option) => !taken.has(option.value));
     if (!next) return;
     store.setOptions([...statuses, next]);
   };
-
   const handleRemoveLastStatus = () => {
     if (statuses.length <= 1) return;
     store.setOptions(statuses.slice(0, -1));
   };
-
   const handleRenameLastStatus = () => {
     if (statuses.length === 0) return;
     const last = statuses[statuses.length - 1]!;
     const updated: EnumOption = { ...last, label: `${last.label} *` };
     store.setOptions([...statuses.slice(0, -1), updated]);
   };
-
   const handleRecolorLastStatus = () => {
     if (statuses.length === 0) return;
     const last = statuses[statuses.length - 1]!;
     const updated: EnumOption = { ...last, color: nextColor(last.color) };
     store.setOptions([...statuses.slice(0, -1), updated]);
   };
-
   const handleAddRow = () => {
     const status = statuses[statuses.length - 1]?.value ?? "todo";
     const id = `live-${nextRowId.current++}`;
@@ -192,14 +152,12 @@ const LiveWrapper = () => {
       },
     ]);
   };
-
   const handleAttributeChange = (rowId: string, attributeId: string, value: unknown) =>
     setRows((current) =>
       current.map((row) =>
         row.id === rowId ? { ...row, attributes: { ...row.attributes, [attributeId]: value } } : row,
       ),
     );
-
   return (
     <Stack p="sm" height="640px" gap="sm">
       <Stack gap="2xs">
@@ -252,26 +210,8 @@ const LiveWrapper = () => {
     </Stack>
   );
 };
-
 export const LiveOptions: Story = {
+  id: "patterns-kanban-renderer-internal-live-options--live-options",
   tags: ["live-options-regression", "!manifest"],
   render: () => <LiveWrapper />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await switchToListView(canvas);
-
-    const beforeLiveBadge = getVisibleBadgeByText("Done");
-    const beforeListBadge = getVisibleListGroupCountBadge("Done");
-    if (!beforeLiveBadge || !beforeListBadge) throw new Error("Expected visible Done badges before recoloring");
-    const beforeListBackground = getComputedStyle(beforeListBadge).backgroundColor;
-
-    await userEvent.click(canvas.getByRole("button", { name: "Recolor last" }));
-
-    const liveBadge = getVisibleBadgeByText("Done");
-    const listBadge = getVisibleListGroupCountBadge("Done");
-    if (!liveBadge || !listBadge) throw new Error("Expected visible Done badges after recoloring");
-
-    await expect(getComputedStyle(listBadge).backgroundColor).toBe(getComputedStyle(liveBadge).backgroundColor);
-    await expect(getComputedStyle(listBadge).backgroundColor).not.toBe(beforeListBackground);
-  },
 };

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Chip } from "./chip";
 
 const meta = {
@@ -7,9 +7,9 @@ const meta = {
   args: {
     children: "Bug",
   },
-} satisfies Meta<typeof Chip>;
-
+} satisfies CanvasMeta<typeof Chip>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Default: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const Default: Story = {
+  id: "components-data-display-chip--default",
+};

@@ -1,7 +1,6 @@
 import { Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -63,44 +62,23 @@ const createNotesWorkbench = () => {
   workbench.pageLocations.navigate({ kind: "page", page });
   return workbench;
 };
-
 const NotesCards = () => {
   const [workbench] = useState(createNotesWorkbench);
   return <WorkbenchStory workbench={workbench} />;
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/New resource cards",
   component: NotesCards,
   parameters: { layout: "fullscreen" },
   tags: ["new-resource-cards"],
-} satisfies Meta<typeof NotesCards>;
+} satisfies CanvasMeta<typeof NotesCards>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const CreateFromCardAndMenu: Story = {
+  id: "pstdio-workbench-reference-core-api-new-resource-cards--create-from-card-and-menu",
   render: () => <NotesCards />,
-  play: async ({ canvasElement }) => {
-    const main = within(canvasElement.querySelector('[data-workbench-panel="main"]') as HTMLElement);
-    const cards = within(await main.findByRole("group", { name: "Available tabs" }));
-    await userEvent.click(cards.getByRole("button", { name: "New note" }));
-    await expect(await main.findByRole("tab", { name: "Note 1" })).toBeVisible();
-    await userEvent.click(main.getByRole("button", { name: "Add panel" }));
-    const body = within(document.body);
-    await userEvent.click(await body.findByRole("menuitem", { name: "New note" }));
-    await expect(await main.findByRole("tab", { name: "Note 2" })).toHaveAttribute("aria-selected", "true");
-    await expect(main.getByRole("tab", { name: "Note 1" })).toBeVisible();
-  },
 };
-
 export const CreateFromNumber: Story = {
+  id: "pstdio-workbench-reference-core-api-new-resource-cards--create-from-number",
   render: () => <NotesCards />,
-  play: async ({ canvasElement }) => {
-    const main = within(canvasElement.querySelector('[data-workbench-panel="main"]') as HTMLElement);
-    const cards = within(await main.findByRole("group", { name: "Available tabs" }));
-    await userEvent.keyboard("{Alt>}{Shift>}[Space]{/Shift}{/Alt}");
-    await expect(within(cards.getByRole("button", { name: "New note" })).getByLabelText("1")).toBeVisible();
-    await userEvent.keyboard("1");
-    await expect(await main.findByRole("tab", { name: "Note 1" })).toBeVisible();
-  },
 };

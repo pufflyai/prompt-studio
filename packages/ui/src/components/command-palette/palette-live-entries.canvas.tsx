@@ -1,10 +1,9 @@
 import { Button } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import { Palette, type PaletteEntry } from "./palette";
 
 const entry = (id: string): PaletteEntry => ({ id, label: id, onActivate: () => undefined });
-
 const LiveEntriesPalette = () => {
   const [loaded, setLoaded] = useState(false);
   const entries = loaded
@@ -21,12 +20,14 @@ const LiveEntriesPalette = () => {
     />
   );
 };
-
-const meta: Meta<typeof LiveEntriesPalette> = {
+const meta: CanvasMeta<typeof LiveEntriesPalette> = {
   title: "Components/Overlays/Palette/Live entries",
   component: LiveEntriesPalette,
   parameters: { layout: "fullscreen" },
 };
 export default meta;
-type Story = StoryObj<typeof LiveEntriesPalette>;
-export const PreservesHighlight: Story = { render: () => <LiveEntriesPalette /> };
+type Story = CanvasVariant<typeof LiveEntriesPalette>;
+export const PreservesHighlight: Story = {
+  id: "components-overlays-palette-live-entries--preserves-highlight",
+  render: () => <LiveEntriesPalette />,
+};

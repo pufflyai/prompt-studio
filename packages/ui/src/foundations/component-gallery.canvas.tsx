@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import { TokenEditorOverlay, TokenPreviewScope } from "@/components/internal/style-guide";
 import { useTokenEditorValues } from "@/components/internal/token-editor-state";
@@ -17,21 +17,16 @@ import { PanelsSection } from "./gallery/sections/panels-section";
 // One canvas that renders every light component family together. Flip the
 // Storybook "theme" toolbar (pstdio-light / pstdio-dark) to see the impact of a
 // token or recipe change across the whole system at once.
-
 const meta = {
   title: "Foundations/Component Gallery",
   parameters: { layout: "fullscreen" },
-} satisfies Meta;
-
+} satisfies CanvasMeta;
 export default meta;
-
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 const TokenizedGallery = (props: { children: ReactNode }) => {
   const { children } = props;
   const { themePreference, themePreferences } = useThemePreference();
   const { basePresetId, baseValues, values, setValues } = useTokenEditorValues({ themePreference, themePreferences });
-
   return (
     <TokenPreviewScope values={values}>
       <TokenEditorOverlay basePresetId={basePresetId} baseValues={baseValues} values={values} onChange={setValues} />
@@ -39,7 +34,6 @@ const TokenizedGallery = (props: { children: ReactNode }) => {
     </TokenPreviewScope>
   );
 };
-
 const FoundationsGallery = () => (
   <TokenizedGallery>
     <GalleryFrame
@@ -57,7 +51,6 @@ const FoundationsGallery = () => (
     </GalleryFrame>
   </TokenizedGallery>
 );
-
 const CompositesGallery = () => (
   <TokenizedGallery>
     <GalleryFrame
@@ -69,7 +62,6 @@ const CompositesGallery = () => (
     </GalleryFrame>
   </TokenizedGallery>
 );
-
 const PanelsGallery = () => (
   <TokenizedGallery>
     <GalleryFrame
@@ -81,15 +73,15 @@ const PanelsGallery = () => (
     </GalleryFrame>
   </TokenizedGallery>
 );
-
 export const Foundations: Story = {
+  id: "foundations-component-gallery--foundations",
   render: () => <FoundationsGallery />,
 };
-
 export const Composites: Story = {
+  id: "foundations-component-gallery--composites",
   render: () => <CompositesGallery />,
 };
-
 export const Panels: Story = {
+  id: "foundations-component-gallery--panels",
   render: () => <PanelsGallery />,
 };

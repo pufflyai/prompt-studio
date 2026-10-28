@@ -1,7 +1,6 @@
 import { Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
-import { createWorkbench, type WorkbenchPanelRegion } from "../../core";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createEmptyWorkbench = (pageEntries = false) => {
@@ -64,20 +63,27 @@ const createEmptyWorkbench = (pageEntries = false) => {
   workbench.shell.setRegionOpen("secondary", true);
   return workbench;
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Empty panel",
   component: WorkbenchStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof WorkbenchStory>;
+} satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const AvailableTabs: Story = { args: { workbench: createEmptyWorkbench() } };
-export const NarrowPanel: Story = { args: { workbench: createEmptyWorkbench() } };
-export const PageEntries: Story = { args: { workbench: createEmptyWorkbench(true) } };
-
+type Story = CanvasVariant<typeof meta>;
+export const AvailableTabs: Story = {
+  id: "pstdio-workbench-reference-core-api-empty-panel--available-tabs",
+  args: { workbench: createEmptyWorkbench() },
+};
+export const NarrowPanel: Story = {
+  id: "pstdio-workbench-reference-core-api-empty-panel--narrow-panel",
+  args: { workbench: createEmptyWorkbench() },
+};
+export const PageEntries: Story = {
+  id: "pstdio-workbench-reference-core-api-empty-panel--page-entries",
+  args: { workbench: createEmptyWorkbench(true) },
+};
 export const TopAlignedCards: Story = {
+  id: "pstdio-workbench-reference-core-api-empty-panel--top-aligned-cards",
   args: {
     workbench: (() => {
       const workbench = createEmptyWorkbench(true);
@@ -87,29 +93,20 @@ export const TopAlignedCards: Story = {
     })(),
   },
 };
-
-const openCard = async (canvasElement: HTMLElement, region: WorkbenchPanelRegion) => {
-  const panel = within(canvasElement.querySelector(`[data-workbench-panel="${region}"]`) as HTMLElement);
-  const cards = within(await panel.findByRole("group", { name: "Available tabs" }));
-  await userEvent.click(cards.getByRole("button", { name: "Terminal" }));
-  await expect(await panel.findByText("Terminal content")).toBeVisible();
-  await expect(panel.getByRole("tab", { name: "Terminal" })).toBeVisible();
-};
-
 export const OpenInMain: Story = {
+  id: "pstdio-workbench-reference-core-api-empty-panel--open-in-main",
   args: { workbench: createEmptyWorkbench() },
-  play: async ({ canvasElement }) => openCard(canvasElement, "main"),
 };
 export const OpenInSide: Story = {
+  id: "pstdio-workbench-reference-core-api-empty-panel--open-in-side",
   args: { workbench: createEmptyWorkbench() },
-  play: async ({ canvasElement }) => openCard(canvasElement, "side"),
 };
 export const OpenInBottom: Story = {
+  id: "pstdio-workbench-reference-core-api-empty-panel--open-in-bottom",
   args: { workbench: createEmptyWorkbench() },
-  play: async ({ canvasElement }) => openCard(canvasElement, "secondary"),
 };
-
 export const CustomPlaceholders: Story = {
+  id: "pstdio-workbench-reference-core-api-empty-panel--custom-placeholders",
   args: {
     workbench: (() => {
       const workbench = createEmptyWorkbench();
@@ -124,8 +121,8 @@ export const CustomPlaceholders: Story = {
     })(),
   },
 };
-
 export const SelectingMode: Story = {
+  id: "pstdio-workbench-reference-core-api-empty-panel--selecting-mode",
   args: {
     workbench: (() => {
       const workbench = createEmptyWorkbench();
@@ -139,12 +136,9 @@ export const SelectingMode: Story = {
       return workbench;
     })(),
   },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).queryByRole("group", { name: "Available tabs" })).toBeNull();
-  },
 };
-
 export const TabsDisabled: Story = {
+  id: "pstdio-workbench-reference-core-api-empty-panel--tabs-disabled",
   tags: ["panel-placeholder-policy"],
   args: {
     workbench: (() => {
@@ -159,10 +153,5 @@ export const TabsDisabled: Story = {
       workbench.modes.setActiveMode("selection");
       return workbench;
     })(),
-  },
-  play: async ({ canvasElement }) => {
-    const main = within(canvasElement.querySelector('[data-workbench-panel="main"]') as HTMLElement);
-    await expect(main.queryByRole("group", { name: "Available tabs" })).toBeNull();
-    await expect(main.queryByText("No tabs available")).toBeNull();
   },
 };

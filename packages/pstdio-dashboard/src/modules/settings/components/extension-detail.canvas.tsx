@@ -1,7 +1,7 @@
 import { Stack, Text } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ProjectExtensionInstance, WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
 import { SelectionInput } from "@pstdio/ui/param-editor";
-import type { Meta, StoryObj } from "@storybook/react";
 import { ExtensionDetail } from "./extension-detail";
 
 const extension: ProjectExtensionInstance = {
@@ -23,7 +23,6 @@ const extension: ProjectExtensionInstance = {
   canUpgrade: false,
   updateAvailable: false,
 };
-
 const automations: WorkbenchExtensionAutomationRecord[] = [
   {
     id: "pstdio-planner.refine-tickets",
@@ -46,9 +45,7 @@ const automations: WorkbenchExtensionAutomationRecord[] = [
     enabled: false,
   },
 ];
-
 const noop = () => {};
-
 const metadata = {
   extensions: [],
   commands: [
@@ -91,7 +88,6 @@ const metadata = {
   settingsPanels: [],
   diagnostics: [],
 } as never;
-
 const settings = [
   {
     key: "automation.enabled",
@@ -115,8 +111,7 @@ const settings = [
     source: "default",
   },
 ] as never;
-
-const meta: Meta<typeof ExtensionDetail> = {
+const meta: CanvasMeta<typeof ExtensionDetail> = {
   title: "ProjectSettings/ExtensionDetail",
   component: ExtensionDetail,
   parameters: { layout: "fullscreen" },
@@ -136,12 +131,10 @@ const meta: Meta<typeof ExtensionDetail> = {
     onUninstall: noop,
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ExtensionDetail>;
-
+type Story = CanvasVariant<typeof ExtensionDetail>;
 export const HarnessUnavailable: Story = {
+  id: "projectsettings-extensiondetail--harness-unavailable",
   args: {
     extension: { ...extension, displayName: "Remote helper", extensionId: "example.remote" },
     unavailableHarnesses: [
@@ -156,6 +149,7 @@ export const HarnessUnavailable: Story = {
   },
 };
 export const LongHarnessReason: Story = {
+  id: "projectsettings-extensiondetail--long-harness-reason",
   args: {
     ...HarnessUnavailable.args,
     unavailableHarnesses: HarnessUnavailable.args!.unavailableHarnesses!.map((harness) => ({
@@ -163,13 +157,12 @@ export const LongHarnessReason: Story = {
       availability: { type: "NOT_FOUND", reason: `RemoteEndpoint/${"a".repeat(280)}` },
     })),
   },
-  play: async ({ canvasElement }) => {
-    canvasElement.querySelector<HTMLButtonElement>('[data-testid="extension-health-trigger"]')?.click();
-  },
 };
-
-export const Loaded: Story = {};
+export const Loaded: Story = {
+  id: "projectsettings-extensiondetail--loaded",
+};
 export const CustomWorkflowSettings: Story = {
+  id: "projectsettings-extensiondetail--custom-workflow-settings",
   args: {
     settingsViews: (
       <Stack gap="md" padding="lg">
@@ -192,9 +185,9 @@ export const CustomWorkflowSettings: Story = {
     ),
   },
 };
-
 // A local source is fixed where it lives, so the alert offers only Copy error.
 export const FailedToLoad: Story = {
+  id: "projectsettings-extensiondetail--failed-to-load",
   args: {
     extension: {
       ...extension,
@@ -206,16 +199,16 @@ export const FailedToLoad: Story = {
     },
   },
 };
-
 export const Disabled: Story = {
+  id: "projectsettings-extensiondetail--disabled",
   args: {
     extension: { ...extension, enabled: false, status: "disabled" },
   },
 };
-
 // A second copy of an extension a project already runs stays off until someone picks it, so the
 // source folder is the only thing that tells the two apart.
 export const ConflictingSourceFolder: Story = {
+  id: "projectsettings-extensiondetail--conflicting-source-folder",
   args: {
     extension: {
       ...extension,
@@ -225,15 +218,15 @@ export const ConflictingSourceFolder: Story = {
     },
   },
 };
-
 // A local source folder changed. Reloading adopts it; nothing is fetched from a release.
 export const LocalChangesWaiting: Story = {
+  id: "projectsettings-extensiondetail--local-changes-waiting",
   args: {
     extension: { ...extension, updateAvailable: true },
   },
 };
-
 export const UpgradeAvailable: Story = {
+  id: "projectsettings-extensiondetail--upgrade-available",
   args: {
     extension: {
       ...extension,
@@ -243,9 +236,9 @@ export const UpgradeAvailable: Story = {
     },
   },
 };
-
 // A catalog extension can take a newer release, so the alert also offers Upgrade.
 export const FailedCatalogExtension: Story = {
+  id: "projectsettings-extensiondetail--failed-catalog-extension",
   args: {
     extension: {
       ...extension,
@@ -260,8 +253,8 @@ export const FailedCatalogExtension: Story = {
     },
   },
 };
-
 export const IncompatibleApi: Story = {
+  id: "projectsettings-extensiondetail--incompatible-api",
   args: {
     extension: {
       ...extension,
@@ -277,9 +270,9 @@ export const IncompatibleApi: Story = {
     },
   },
 };
-
 // A local source is fixed where it lives, so the alert offers Copy error but no Upgrade.
 export const IncompatibleLocalSource: Story = {
+  id: "projectsettings-extensiondetail--incompatible-local-source",
   args: {
     extension: {
       ...extension,

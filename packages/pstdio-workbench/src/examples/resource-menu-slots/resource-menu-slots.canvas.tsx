@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { WorkbenchThemeProvider } from "../../react";
 import { ResourceMenuSlotsExample } from "./module";
 import source from "./module.tsx?raw";
@@ -16,12 +16,11 @@ const meta = {
       },
     },
   },
-} satisfies Meta<typeof ResourceMenuSlotsExample>;
-
+} satisfies CanvasMeta<typeof ResourceMenuSlotsExample>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const TwoResourceKinds: Story = {
+  id: "pstdio-workbench-guides-resource-menu-slots--two-resource-kinds",
   parameters: {
     docs: { source: { code: source, language: "tsx", type: "code" } },
   },

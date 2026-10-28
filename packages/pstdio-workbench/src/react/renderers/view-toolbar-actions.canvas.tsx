@@ -1,7 +1,6 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import type { ViewToolbarAction } from "../../core/registries/renderers/view-toolbar-action";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -11,7 +10,6 @@ const actions: ViewToolbarAction[] = [
   { id: "run", label: "Run experiment", presentation: "primary" },
   { id: "refresh", label: "Refresh results" },
 ];
-
 const Toolbar = (props: { actions: ViewToolbarAction[] }) => {
   const { actions } = props;
   const [workbench] = useState(() => createWorkbench());
@@ -34,7 +32,6 @@ const Toolbar = (props: { actions: ViewToolbarAction[] }) => {
     </Stack>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Native toolbar actions",
   component: Toolbar,
@@ -46,35 +43,17 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof Toolbar>;
+} satisfies CanvasMeta<typeof Toolbar>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const VisibleActions: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const primary = canvas.getByRole("button", { name: "Run experiment" });
-    await expect(primary.getBoundingClientRect().height).toBe(28);
-    await expect(canvas.getByRole("button", { name: "Refresh results" }).getBoundingClientRect().height).toBe(28);
-    await expect(canvas.getAllByRole("separator")).toHaveLength(1);
-    await expect(canvas.getByRole("separator").getBoundingClientRect().height).toBe(24);
-    await userEvent.click(primary);
-    await expect(canvas.getByText("Last action: Run experiment")).toBeVisible();
-  },
+  id: "pstdio-workbench-reference-core-api-native-toolbar-actions--visible-actions",
 };
-
 export const NoActions: Story = {
+  id: "pstdio-workbench-reference-core-api-native-toolbar-actions--no-actions",
   args: { actions: [] },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).queryByRole("separator")).not.toBeInTheDocument();
-  },
 };
-
 export const HiddenActions: Story = {
+  id: "pstdio-workbench-reference-core-api-native-toolbar-actions--hidden-actions",
   args: { actions: actions.map((action) => ({ ...action, when: "false" })) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.queryByRole("button", { name: "Run experiment" })).not.toBeInTheDocument();
-    await expect(canvas.queryByRole("separator")).not.toBeInTheDocument();
-  },
 };

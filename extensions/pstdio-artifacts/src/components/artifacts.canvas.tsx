@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import { ArtifactLibrary } from "./artifact-library";
 import { exampleArtifact as item } from "./artifact-story-fixture";
@@ -22,13 +22,22 @@ const meta = {
     loadPreview: async (item) =>
       `<html><body><h1>${item.title}</h1><p>A saved interactive page.</p><h2>Overview</h2><p>Project notes and the next steps.</p></body></html>`,
   },
-} satisfies Meta<typeof ArtifactLibrary>;
+} satisfies CanvasMeta<typeof ArtifactLibrary>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Published: Story = {};
-export const Empty: Story = { args: { items: [] } };
-export const StartingSession: Story = { args: { creating: "brief" } };
+type Story = CanvasVariant<typeof meta>;
+export const Published: Story = {
+  id: "extensions-artifacts-library--published",
+};
+export const Empty: Story = {
+  id: "extensions-artifacts-library--empty",
+  args: { items: [] },
+};
+export const StartingSession: Story = {
+  id: "extensions-artifacts-library--starting-session",
+  args: { creating: "brief" },
+};
 export const ManyArtifacts: Story = {
+  id: "extensions-artifacts-library--many-artifacts",
   args: {
     items: [
       "Release overview",
@@ -41,6 +50,7 @@ export const ManyArtifacts: Story = {
   },
 };
 export const ScrollableLibrary: Story = {
+  id: "extensions-artifacts-library--scrollable-library",
   args: {
     items: Array.from({ length: 30 }, (_, index) => ({
       ...item,
@@ -57,6 +67,7 @@ export const ScrollableLibrary: Story = {
   ],
 };
 export const NarrowLibrary: Story = {
+  id: "extensions-artifacts-library--narrow-library",
   decorators: [
     (Story) => (
       <Stack width="xs" height="lg">
@@ -66,13 +77,13 @@ export const NarrowLibrary: Story = {
   ],
 };
 export const UnavailablePreview: Story = {
+  id: "extensions-artifacts-library--unavailable-preview",
   args: {
     loadPreview: async () => {
       throw new Error("Preview unavailable");
     },
   },
 };
-
 const HostUpdatesLibrary = () => {
   const [updates, setUpdates] = useState(0);
   return (
@@ -92,10 +103,12 @@ const HostUpdatesLibrary = () => {
     </Stack>
   );
 };
-
-export const HostUpdates: Story = { render: () => <HostUpdatesLibrary /> };
-
+export const HostUpdates: Story = {
+  id: "extensions-artifacts-library--host-updates",
+  render: () => <HostUpdatesLibrary />,
+};
 export const French: Story = {
+  id: "extensions-artifacts-library--french",
   decorators: [
     (Story) => (
       <ArtifactTranslationStory locale="fr">

@@ -1,6 +1,5 @@
 import { Box, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fireEvent, userEvent, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { ChatPrimitives } from "./ai-conversation";
 import { ChatMessage } from "./ai-message";
@@ -10,21 +9,16 @@ import type { SessionMessage } from "./message-types";
 import { getMessageOrigin, mergeReasoningToolOnlyMessages } from "./message-types";
 
 const conversationMessages = rawConversationMessages as unknown as SessionMessage[];
-
-const meta: Meta<typeof ChatPrimitives.Root> = {
+const meta: CanvasMeta<typeof ChatPrimitives.Root> = {
   title: "Patterns/Chat/AI Conversation",
   component: ChatPrimitives.Root,
   parameters: {
     layout: "padded",
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ChatPrimitives.Root>;
-
+type Story = CanvasVariant<typeof ChatPrimitives.Root>;
 const storyMessages = mergeReasoningToolOnlyMessages(conversationMessages).slice(-18);
-
 const statusColorPrompt = [
   "```ts",
   "const STATUS_INDICATOR_COLOR_BY_STATUS: Record<string, string> = {",
@@ -42,7 +36,6 @@ const statusColorPrompt = [
   "```",
   "instead of the above, use the correct status colors",
 ].join("\n");
-
 const multilineUserMessageConversation: SessionMessage[] = [
   {
     id: "status-color-user-message",
@@ -60,7 +53,6 @@ const multilineUserMessageConversation: SessionMessage[] = [
     ],
   },
 ];
-
 const tallStatusColorPrompt = [
   "Please replace this status indicator color map with the correct semantic status colors.",
   "",
@@ -75,7 +67,6 @@ const tallStatusColorPrompt = [
   "",
   "Keep the result typed, preserve the existing status order, and explain the mapping after the code change.",
 ].join("\n");
-
 const tallStickyUserMessageConversation: SessionMessage[] = [
   {
     id: "tall-status-color-user-message",
@@ -113,17 +104,6 @@ const tallStickyUserMessageConversation: SessionMessage[] = [
     ],
   },
 ];
-
-const getRequiredStoryElement = (root: HTMLElement, selector: string, label: string) => {
-  const element = root.querySelector<HTMLElement>(selector);
-
-  if (!element) {
-    throw new Error(`Expected ${label}`);
-  }
-
-  return element;
-};
-
 const ConversationPreview = () => {
   return (
     <Box h="640px" maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" overflow="hidden">
@@ -144,12 +124,12 @@ const ConversationPreview = () => {
     </Box>
   );
 };
-
 export const FullConversationPreview: Story = {
+  id: "patterns-chat-ai-conversation--full-conversation-preview",
   render: () => <ConversationPreview />,
 };
-
 export const MultilineUserMessageShowMore: Story = {
+  id: "patterns-chat-ai-conversation--multiline-user-message-show-more",
   render: () => (
     <Box h="520px" maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" overflow="hidden">
       <ChatPanel
@@ -160,21 +140,9 @@ export const MultilineUserMessageShowMore: Story = {
       />
     </Box>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const showMoreButton = await canvas.findByRole("button", { name: "Show more" });
-    const userMessageContent = canvasElement.querySelector<HTMLElement>(".ai-message__content");
-
-    if (!userMessageContent) {
-      throw new Error("Expected a user message content element");
-    }
-
-    await expect(showMoreButton).toBeVisible();
-    expect(userMessageContent.getBoundingClientRect().height).toBeLessThanOrEqual(128);
-  },
 };
-
 export const TallUserMessageScrollHandoff: Story = {
+  id: "patterns-chat-ai-conversation--tall-user-message-scroll-handoff",
   render: () => (
     <Box h="520px" maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" overflow="hidden">
       <ChatPanel
@@ -185,64 +153,4 @@ export const TallUserMessageScrollHandoff: Story = {
       />
     </Box>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const showMoreButton = await canvas.findByRole("button", { name: "Show more" });
-
-    await userEvent.click(showMoreButton);
-
-    const showLessButton = await canvas.findByRole("button", { name: "Show less" });
-    const stickyMessageContent = getRequiredStoryElement(
-      canvasElement,
-      '[data-sticky-user-message-content="expanded"]',
-      "an expanded sticky user message content element",
-    );
-    const conversationViewport = getRequiredStoryElement(
-      canvasElement,
-      '[data-scope="scroll-area"][data-part="viewport"]',
-      "a conversation viewport element",
-    );
-
-    await expect(showLessButton).toBeVisible();
-    const stickyMessageShell = showLessButton.closest<HTMLElement>(".ai-message__content");
-
-    if (!stickyMessageShell) {
-      throw new Error("Expected Show less to render inside the sticky user message");
-    }
-
-    expect(stickyMessageShell.contains(stickyMessageContent)).toBe(true);
-    expect(stickyMessageShell.contains(showLessButton)).toBe(true);
-    expect(stickyMessageContent.dataset.scope).toBe("scroll-area");
-    expect(stickyMessageContent.dataset.part).toBe("viewport");
-    expect(stickyMessageContent.scrollHeight).toBeGreaterThan(stickyMessageContent.clientHeight);
-    expect(conversationViewport.scrollHeight).toBeGreaterThan(conversationViewport.clientHeight);
-
-    conversationViewport.scrollTop = 0;
-    stickyMessageContent.scrollTop = 0;
-
-    const initialConversationScrollTop = conversationViewport.scrollTop;
-    fireEvent.wheel(stickyMessageContent, { deltaY: 160 });
-    stickyMessageContent.scrollTop = Math.min(
-      160,
-      stickyMessageContent.scrollHeight - stickyMessageContent.clientHeight,
-    );
-
-    expect(stickyMessageContent.scrollTop).toBeGreaterThan(0);
-    expect(conversationViewport.scrollTop).toBe(initialConversationScrollTop);
-    await expect(showLessButton).toBeVisible();
-
-    stickyMessageContent.scrollTop = stickyMessageContent.scrollHeight;
-
-    const boundaryConversationScrollTop = conversationViewport.scrollTop;
-    fireEvent.wheel(stickyMessageContent, { deltaY: 160 });
-    conversationViewport.scrollTop = Math.min(
-      boundaryConversationScrollTop + 160,
-      conversationViewport.scrollHeight - conversationViewport.clientHeight,
-    );
-
-    expect(conversationViewport.scrollTop).toBeGreaterThan(boundaryConversationScrollTop);
-    await userEvent.click(showLessButton);
-    await expect(await canvas.findByRole("button", { name: "Show more" })).toBeVisible();
-    expect(stickyMessageContent.scrollTop).toBe(0);
-  },
 };

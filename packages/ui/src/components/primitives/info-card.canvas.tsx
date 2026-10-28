@@ -6,7 +6,6 @@ import { InfoCard } from "@/components/primitives/info-card";
 
 type StoryFn = () => ReactNode;
 type InfoCardArgs = ComponentProps<typeof InfoCard>;
-
 const meta = {
   title: "Components/Data Display/Info Card",
   component: InfoCard,
@@ -26,18 +25,17 @@ const meta = {
     ],
   },
 };
-
 export default meta;
-
 export const Default = {
+  id: "components-data-display-info-card--default",
   render: (args: InfoCardArgs) => (
     <Box maxWidth="520px">
       <InfoCard {...args} />
     </Box>
   ),
 };
-
 export const WithActions = {
+  id: "components-data-display-info-card--with-actions",
   render: (args: InfoCardArgs) => {
     const actions = [
       <Button key="run" size="md" variant="primary">
@@ -86,7 +84,6 @@ export const WithActions = {
         </Menu.Positioner>
       </Menu.Root>,
     ];
-
     return (
       <Box maxWidth="520px">
         <InfoCard {...args} actions={actions} />
@@ -94,8 +91,8 @@ export const WithActions = {
     );
   },
 };
-
 export const WithBadge = {
+  id: "components-data-display-info-card--with-badge",
   args: {
     badge: (
       <Badge size="lg" variant="subtle" colorPalette="blue">
@@ -109,8 +106,8 @@ export const WithBadge = {
     </Box>
   ),
 };
-
 export const LongCopy = {
+  id: "components-data-display-info-card--long-copy",
   args: {
     title: "Northwind Traders Q4 validation",
     description:

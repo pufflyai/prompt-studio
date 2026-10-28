@@ -1,5 +1,5 @@
 import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench, type WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -10,14 +10,12 @@ const projects = [
   { id: "project-a", name: "Project A" },
   { id: "project-b", name: "Project B" },
 ];
-
 const ProjectName = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
   const project = projects.find((entry) => entry.id === projectId);
   return <Text p="md">{project?.name} content</Text>;
 };
-
 // The Side view keeps the same ID in every project, so only the project switch can reset its state.
 const ProjectNotes = () => {
   const [count, setCount] = useState(0);
@@ -29,7 +27,6 @@ const ProjectNotes = () => {
     </Box>
   );
 };
-
 const createProjectSwitchWorkbench = () => {
   const page = { kind: "page", extensionId: "example", id: "home" } as const;
   const workbench = createWorkbench({ initialSidePanelMode: "attached", startPage: page });
@@ -69,7 +66,6 @@ const createProjectSwitchWorkbench = () => {
   workbench.pageLocations.switchProject(projects[0].id);
   return workbench;
 };
-
 const ProjectSwitchStory = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   return (
@@ -89,7 +85,6 @@ const ProjectSwitchStory = (props: { workbench: WorkbenchCore }) => {
     </WorkbenchThemeProvider>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Guides/Project switch",
   component: ProjectSwitchStory,
@@ -102,8 +97,10 @@ const meta = {
       },
     },
   },
-} satisfies Meta<typeof ProjectSwitchStory>;
+} satisfies CanvasMeta<typeof ProjectSwitchStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const KeepsShellMounted: Story = { args: { workbench: createProjectSwitchWorkbench() } };
+type Story = CanvasVariant<typeof meta>;
+export const KeepsShellMounted: Story = {
+  id: "pstdio-workbench-guides-project-switch--keeps-shell-mounted",
+  args: { workbench: createProjectSwitchWorkbench() },
+};

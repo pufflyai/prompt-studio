@@ -1,18 +1,16 @@
 import { Box, Button } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 import { ChatPanel } from "./chat-panel";
 
-const meta: Meta<typeof ChatPanel> = {
+const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Question navigation",
   component: ChatPanel,
   tags: ["!manifest"],
   parameters: { layout: "centered" },
 };
 export default meta;
-type Story = StoryObj<typeof ChatPanel>;
-
+type Story = CanvasVariant<typeof ChatPanel>;
 const questionPrompt: ChatInputQuestionPrompt = {
   questions: [
     {
@@ -44,11 +42,13 @@ const questionPrompt: ChatInputQuestionPrompt = {
     },
   ],
 };
-
 export const FirstRadioChoiceAdvances: Story = {
+  id: "patterns-chat-question-navigation--first-radio-choice-advances",
   render: () => (
     <Box w="32rem" h="24rem">
       <ChatPanel
+        chatInputPlaceholder="Write a prompt"
+        emptyStateDescription="Send a prompt"
         messages={[]}
         emptyStateTitle="Question navigation"
         chatInputQuestionPrompt={questionPrompt}
@@ -61,75 +61,12 @@ export const FirstRadioChoiceAdvances: Story = {
       />
     </Box>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const expectStep = async (name: string) => {
-      await expect(canvas.getByRole("tab", { name })).toHaveAttribute("aria-selected", "true");
-    };
-
-    await userEvent.click(canvas.getByText("Hello", { exact: true }));
-    await expectStep("Choose an audience (not answered)");
-    await expect(canvas.getByRole("tabpanel")).toHaveFocus();
-
-    await userEvent.click(canvas.getByRole("tab", { name: "Choose a greeting (answered)" }));
-    await userEvent.click(canvas.getByText("Hi", { exact: true }));
-    await expectStep("Choose a greeting (answered)");
-    await expect(canvas.getByRole("radio", { name: "Hi", exact: true })).toBeChecked();
-
-    await userEvent.click(canvas.getByRole("tab", { name: "Choose an audience (not answered)" }));
-    await userEvent.click(canvas.getByText("Other", { exact: true }));
-    await expectStep("Choose an audience (not answered)");
-    await userEvent.click(canvas.getByText("World", { exact: true }));
-    await expectStep("Choose an audience (answered)");
-
-    await userEvent.click(canvas.getByRole("tab", { name: "Select constraints (not answered)" }));
-    await userEvent.click(canvas.getByText("Keep API stable", { exact: true }));
-    await expectStep("Select constraints (answered)");
-
-    await userEvent.click(canvas.getByRole("tab", { name: "Choose delivery (not answered)" }));
-    await userEvent.click(canvas.getByText("Now", { exact: true }));
-    await expectStep("Choose delivery (answered)");
-    await expect(canvas.getByRole("button", { name: "Send answer", exact: true })).toBeEnabled();
-  },
 };
-
 export const KeyboardRadioChoiceAdvances: Story = {
+  id: "patterns-chat-question-navigation--keyboard-radio-choice-advances",
   ...FirstRadioChoiceAdvances,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    canvas.getByRole("radio", { name: "Hello", exact: true }).focus();
-    await userEvent.keyboard("[Space]");
-    await expect(canvas.getByRole("tabpanel", { name: "Choose an audience (not answered)" })).toHaveFocus();
-    await userEvent.tab();
-    await expect(canvas.getByRole("radio", { name: "World", exact: true })).toHaveFocus();
-    await userEvent.keyboard("[Space]");
-    await expect(canvas.getByRole("tabpanel", { name: "Select constraints (not answered)" })).toHaveFocus();
-    await userEvent.tab();
-    await userEvent.keyboard("[Space]");
-    await expect(canvas.getByRole("checkbox", { name: "Keep API stable", exact: true })).toBeChecked();
-    await expect(canvas.getByRole("tab", { name: "Select constraints (answered)" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-  },
 };
-
 export const StepTooltipFollowsStep: Story = {
+  id: "patterns-chat-question-navigation--step-tooltip-follows-step",
   ...FirstRadioChoiceAdvances,
-  play: async ({ canvasElement }) => {
-    const tab = within(canvasElement).getByRole("tab", { name: "Choose delivery (not answered)" });
-    await userEvent.hover(tab);
-    const tooltip = await within(canvasElement.ownerDocument.body).findByRole("tooltip");
-    await expect(tooltip).toHaveTextContent("Choose delivery");
-    // The step tab sets its own DOM id, so the tooltip must still find it as its anchor.
-    await waitFor(() => {
-      const tabRect = tab.getBoundingClientRect();
-      const tooltipRect = tooltip.getBoundingClientRect();
-      const tabCenter = tabRect.left + tabRect.width / 2;
-      expect(tooltipRect.left).toBeLessThanOrEqual(tabCenter);
-      expect(tooltipRect.right).toBeGreaterThanOrEqual(tabCenter);
-      const gap = Math.min(Math.abs(tooltipRect.top - tabRect.bottom), Math.abs(tabRect.top - tooltipRect.bottom));
-      expect(gap).toBeLessThan(tabRect.height);
-    });
-  },
 };

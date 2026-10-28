@@ -224,3 +224,7 @@ access check must preserve that authority boundary. See the
   import.
 
 The database uses the contract-layer `ResourceRef` type for persisted resource values. The UI library imports the SDK's public serializable control types and adds separate React-node and browser-file variants. These are type dependencies; the UI library still owns no routing, query, or extension-host policy. The SDK declaration rollup includes the private contract types, so installed UI declarations resolve through public packages.
+
+## Canvas authoring tooling
+
+The private `@pstdio/canvas` package owns preview composition, documentation blocks, and source indexing. UI packages and repository preview builds may use it as development tooling; it has no application-layer dependencies. Published extensions may use its type-only imports inside colocated `.canvas.tsx` examples without declaring a runtime dependency. Runtime imports still require a declared, allowed dependency. This keeps repository examples independent of extension installation and published SDK/UI versions.

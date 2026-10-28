@@ -1,10 +1,9 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
@@ -60,11 +59,14 @@ const meta = {
   title: "Modules/Sessions/Session Chat Draft",
   component: SessionChatDraftStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof SessionChatDraftStory>;
+} satisfies CanvasMeta<typeof SessionChatDraftStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const PreviewWithRestoredDraft: Story = {};
+type Story = CanvasVariant<typeof meta>;
+export const PreviewWithRestoredDraft: Story = {
+  id: "modules-sessions-session-chat-draft--preview-with-restored-draft",
+};
 export const MainAndSidePanels: Story = {
+  id: "modules-sessions-session-chat-draft--main-and-side-panels",
   args: { showMain: true },
   parameters: {
     docs: {
@@ -76,14 +78,6 @@ export const MainAndSidePanels: Story = {
   },
 };
 export const OpenFromBubble: Story = {
+  id: "modules-sessions-session-chat-draft--open-from-bubble",
   args: { initiallyClosed: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const screen = within(canvasElement.ownerDocument.body);
-    await userEvent.click(await canvas.findByRole("button", { name: "Open Side Panel" }));
-    await waitFor(async () => expect(await screen.findByRole("tab", { name: /New session/ })).toBeVisible());
-    await userEvent.click(screen.getByRole("button", { name: "Close Side Panel" }));
-    await userEvent.click(await canvas.findByRole("button", { name: "Open Side Panel" }));
-    await expect(screen.getAllByRole("tab", { name: /New session/ })).toHaveLength(1);
-  },
 };

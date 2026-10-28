@@ -1,5 +1,5 @@
 import { Container } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { FileUploadValue, InputGroup, Param } from "./param-editor.types";
 import { ParamEditorHorizontal } from "./param-editor-horizontal";
 
@@ -18,7 +18,6 @@ const labels: Param = {
     { id: "feature", name: "Feature" },
   ],
 };
-
 const references: Param = {
   id: "references",
   name: "References",
@@ -31,7 +30,6 @@ const references: Param = {
     { id: "pull-request", name: "PR #7", icon: "git-pull-request", href: "https://example.com/pull/7" },
   ],
 };
-
 const attachment = new File([new Uint8Array(128 * 1024)], "brief.pdf", {
   type: "application/pdf",
   lastModified: 1,
@@ -43,7 +41,6 @@ const attachmentValue: FileUploadValue[] = [
     status: "complete",
   },
 ];
-
 const groups: InputGroup[] = [
   {
     id: "automation",
@@ -86,19 +83,17 @@ const groups: InputGroup[] = [
     ],
   },
 ];
-
 const meta = {
   title: "Patterns/Param Editor/Param Editor Horizontal",
   component: ParamEditorHorizontal,
   parameters: {
     layout: "fullscreen",
   },
-} satisfies Meta<typeof ParamEditorHorizontal>;
-
+} satisfies CanvasMeta<typeof ParamEditorHorizontal>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const ResourceControls: Story = {
+  id: "patterns-param-editor-param-editor-horizontal--resource-controls",
   render: (props) => (
     <Container padding="md" maxWidth="none">
       <ParamEditorHorizontal {...props} />

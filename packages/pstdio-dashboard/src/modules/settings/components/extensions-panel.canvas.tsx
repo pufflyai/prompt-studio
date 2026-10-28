@@ -1,9 +1,9 @@
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type {
   ExtensionDiagnostic,
   ProjectExtensionInstance,
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
-import type { Meta, StoryObj } from "@storybook/react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 
@@ -69,7 +69,6 @@ const installedExtensions: ProjectExtensionInstance[] = [
     updateAvailable: false,
   },
 ];
-
 const automations: WorkbenchExtensionAutomationRecord[] = [
   {
     id: "pstdio-planner.refine-tickets",
@@ -92,7 +91,6 @@ const automations: WorkbenchExtensionAutomationRecord[] = [
     enabled: false,
   },
 ];
-
 const diagnostics: ExtensionDiagnostic[] = [
   {
     code: "stale-template",
@@ -102,7 +100,6 @@ const diagnostics: ExtensionDiagnostic[] = [
     sourcePath: "templates/ticket.md",
   },
 ];
-
 const marketplace = [
   {
     installName: "pstdio-reports",
@@ -131,27 +128,18 @@ const marketplace = [
     publisher: "pufflyai",
   },
 ];
-
 const noop = () => {};
-
-const openFirstHealthPopover = (canvasElement: HTMLElement) => {
-  canvasElement.querySelector<HTMLButtonElement>('[data-testid="extension-health-trigger"]')?.click();
-};
-
 const failedExtension = installedExtensions[1]!;
-
-const meta: Meta<typeof ExtensionsPanelView> = {
+const meta: CanvasMeta<typeof ExtensionsPanelView> = {
   title: "ProjectSettings/ExtensionsPanel",
   component: ExtensionsPanelView,
   parameters: { layout: "fullscreen" },
   args: { onUpgrade: noop, onDropFolder: noop },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ExtensionsPanelView>;
-
+type Story = CanvasVariant<typeof ExtensionsPanelView>;
 export const Populated: Story = {
+  id: "projectsettings-extensionspanel--populated",
   args: {
     extensions: installedExtensions,
     marketplace,
@@ -159,7 +147,6 @@ export const Populated: Story = {
     automations,
   },
 };
-
 const remote = {
   ...installedExtensions[0]!,
   extensionId: "example.remote",
@@ -173,8 +160,8 @@ const remoteAgent: AgentInfo = {
   capabilities: [],
   availability: { type: "NOT_FOUND", reason: "Connect a machine in this extension's settings." },
 };
-
 export const HarnessUnavailable: Story = {
+  id: "projectsettings-extensionspanel--harness-unavailable",
   args: {
     extensions: [remote],
     marketplace: [],
@@ -184,26 +171,30 @@ export const HarnessUnavailable: Story = {
     agents: [remoteAgent],
   },
 };
-export const HarnessCheckUnknown: Story = { args: { ...HarnessUnavailable.args, agents: undefined } };
+export const HarnessCheckUnknown: Story = {
+  id: "projectsettings-extensionspanel--harness-check-unknown",
+  args: { ...HarnessUnavailable.args, agents: undefined },
+};
 export const HarnessAndExtensionIssues: Story = {
+  id: "projectsettings-extensionspanel--harness-and-extension-issues",
   args: {
     ...HarnessUnavailable.args,
     diagnostics: [{ ...diagnostics[0]!, extensionId: remote.extensionId }],
   },
-  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
 };
 export const LongHarnessReason: Story = {
+  id: "projectsettings-extensionspanel--long-harness-reason",
   args: {
     ...HarnessUnavailable.args,
     agents: [{ ...remoteAgent, availability: { type: "NOT_FOUND", reason: `RemoteEndpoint/${"a".repeat(280)}` } }],
   },
-  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
 };
 export const HarnessDisabled: Story = {
+  id: "projectsettings-extensionspanel--harness-disabled",
   args: { ...HarnessUnavailable.args, extensions: [{ ...remote, enabled: false, status: "disabled" }] },
 };
-
 export const Empty: Story = {
+  id: "projectsettings-extensionspanel--empty",
   args: {
     extensions: [],
     marketplace,
@@ -211,8 +202,8 @@ export const Empty: Story = {
     automations: [],
   },
 };
-
 export const Mutating: Story = {
+  id: "projectsettings-extensionspanel--mutating",
   args: {
     extensions: installedExtensions,
     marketplace,
@@ -221,8 +212,8 @@ export const Mutating: Story = {
     togglingInstanceId: "planner-instance",
   },
 };
-
 export const InstallingMultipleAvailableExtensions: Story = {
+  id: "projectsettings-extensionspanel--installing-multiple-available-extensions",
   args: {
     extensions: installedExtensions,
     marketplace,
@@ -231,30 +222,28 @@ export const InstallingMultipleAvailableExtensions: Story = {
     installingMarketplaceNames: ["pstdio-reports", "pstdio-planner"],
   },
 };
-
 export const HealthPopoverOpen: Story = {
+  id: "projectsettings-extensionspanel--health-popover-open",
   args: {
     extensions: installedExtensions,
     marketplace,
     diagnostics,
     automations,
   },
-  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
 };
-
 // A catalog extension that fails to load can take a newer release, so the popover offers Upgrade.
 export const FailedCatalogExtension: Story = {
+  id: "projectsettings-extensionspanel--failed-catalog-extension",
   args: {
     extensions: [{ ...failedExtension, canUpgrade: true }],
     marketplace,
     diagnostics: [],
     automations: [],
   },
-  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
 };
-
 // A local source is fixed where it lives, so the popover offers Copy error only.
 export const FailedLocalExtension: Story = {
+  id: "projectsettings-extensionspanel--failed-local-extension",
   args: {
     extensions: [
       {
@@ -268,12 +257,11 @@ export const FailedLocalExtension: Story = {
     diagnostics: [],
     automations: [],
   },
-  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
 };
-
 // Each row that can take a newer release shows an upgrade button, and the header offers one action
 // for all of them.
 export const UpgradesAvailable: Story = {
+  id: "projectsettings-extensionspanel--upgrades-available",
   args: {
     extensions: installedExtensions,
     marketplace,
@@ -282,8 +270,8 @@ export const UpgradesAvailable: Story = {
     onUpgradeAll: noop,
   },
 };
-
 export const UpgradingOneExtension: Story = {
+  id: "projectsettings-extensionspanel--upgrading-one-extension",
   args: {
     extensions: installedExtensions,
     marketplace,
@@ -292,9 +280,9 @@ export const UpgradingOneExtension: Story = {
     upgradingInstanceIds: ["planner-instance"],
   },
 };
-
 // Upgrade all marks every row it will upgrade, so rows still waiting their turn show a spinner too.
 export const UpgradingAll: Story = {
+  id: "projectsettings-extensionspanel--upgrading-all",
   args: {
     extensions: installedExtensions,
     marketplace,
@@ -306,9 +294,9 @@ export const UpgradingAll: Story = {
       .map((extension) => extension.id),
   },
 };
-
 // No row can take a newer release, so there are no row upgrade buttons and no Upgrade all.
 export const NothingToUpgrade: Story = {
+  id: "projectsettings-extensionspanel--nothing-to-upgrade",
   args: {
     extensions: installedExtensions.map((extension) => ({ ...extension, canUpgrade: false })),
     marketplace,
@@ -316,8 +304,8 @@ export const NothingToUpgrade: Story = {
     automations,
   },
 };
-
 export const AddingLocalFolder: Story = {
+  id: "projectsettings-extensionspanel--adding-local-folder",
   args: {
     extensions: installedExtensions,
     marketplace,

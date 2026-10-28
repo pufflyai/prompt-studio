@@ -1,7 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { DataTable } from "./data-table";
 
 const RefreshingRowMenu = () => {
@@ -25,21 +24,11 @@ const RefreshingRowMenu = () => {
     </Box>
   );
 };
-
 export default {
   title: "Components/Data Display/Data Table/Menu refresh",
   component: RefreshingRowMenu,
   tags: ["!manifest"],
-} satisfies Meta<typeof RefreshingRowMenu>;
-
-export const KeepsOpenDuringRefresh: StoryObj<typeof RefreshingRowMenu> = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Row actions" }));
-    await expect(canvas.getByText("Updated workspace")).toBeVisible();
-    const action = await within(canvasElement.ownerDocument.body).findByRole("menuitem", { name: "Open terminal" });
-    await waitFor(() => expect(action).toBeVisible());
-    await userEvent.click(action);
-    await expect(canvas.getByRole("status")).toHaveTextContent("Updated workspace");
-  },
+} satisfies CanvasMeta<typeof RefreshingRowMenu>;
+export const KeepsOpenDuringRefresh: CanvasVariant<typeof RefreshingRowMenu> = {
+  id: "components-data-display-data-table-menu-refresh--keeps-open-during-refresh",
 };

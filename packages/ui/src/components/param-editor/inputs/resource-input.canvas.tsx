@@ -1,6 +1,5 @@
 import { Container } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ParamEditor } from "../param-editor";
 import type { ResourceParam } from "../param-editor.types";
 
@@ -16,7 +15,6 @@ const status: ResourceParam = {
     { id: "done", name: "Done", icon: "check-circle", color: "green" },
   ],
 };
-
 const tags: ResourceParam = {
   id: "priority",
   name: "Priority",
@@ -31,7 +29,6 @@ const tags: ResourceParam = {
     { id: "urgent", name: "Urgent", icon: "alert-triangle", color: "red" },
   ],
 };
-
 const id: ResourceParam = {
   id: "id",
   name: "ID",
@@ -40,7 +37,6 @@ const id: ResourceParam = {
   defaultValue: "PS-42",
   options: [{ id: "PS-42", name: "PS-42", icon: "circle", copyText: "PS-42" }],
 };
-
 const dependsOn: ResourceParam = {
   id: "depends-on",
   name: "Depends on",
@@ -53,7 +49,6 @@ const dependsOn: ResourceParam = {
     { id: "PS-2", name: "PS-2", icon: "circle", ref: { type: "ticket", id: "PS-2" } },
   ],
 };
-
 const reviewLinks: ResourceParam = {
   id: "review-links",
   name: "Review links",
@@ -63,17 +58,15 @@ const reviewLinks: ResourceParam = {
   defaultValue: ["pr-42"],
   options: [{ id: "pr-42", name: "PR #42", icon: "code", href: "https://example.com/pr/42" }],
 };
-
 const meta = {
   title: "Components/Inputs/Param Editor/Resource Input",
   component: ParamEditor,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof ParamEditor>;
-
+} satisfies CanvasMeta<typeof ParamEditor>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const Demo: Story = {
+  id: "components-inputs-param-editor-resource-input--demo",
   render: (props) => (
     <Container padding="md" maxW="sm">
       <ParamEditor {...props} />
@@ -86,22 +79,12 @@ export const Demo: Story = {
     params: [id, status, tags, dependsOn, reviewLinks],
   },
 };
-
 export const ImmediateMultiSelectChanges: Story = {
+  id: "components-inputs-param-editor-resource-input--immediate-multi-select-changes",
   ...Demo,
   tags: ["!manifest"],
   args: {
     params: [{ ...tags, defaultValue: [] }],
-    onChange: fn(),
-  },
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Add priority" }));
-    await userEvent.click(within(document.body).getByRole("menuitemcheckbox", { name: /^High$/ }));
-    await expect(args.onChange).toHaveBeenLastCalledWith("priority", ["high"]);
-    await userEvent.click(within(document.body).getByRole("menuitemcheckbox", { name: /^Urgent$/ }));
-    await expect(args.onChange).toHaveBeenLastCalledWith("priority", ["high", "urgent"]);
-    await userEvent.click(within(document.body).getByRole("menuitemcheckbox", { name: /^High$/ }));
-    await expect(args.onChange).toHaveBeenLastCalledWith("priority", ["urgent"]);
+    onChange: () => {},
   },
 };

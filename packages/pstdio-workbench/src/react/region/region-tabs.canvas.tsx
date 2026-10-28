@@ -1,7 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { PageRef } from "@pstdio/sdk/extensions";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   createWorkbench,
   type WorkbenchPageSlot,
@@ -157,7 +156,6 @@ const createUnavailableMenuWorkbench = () => {
   workbench.modes.setActiveMode("main-only");
   return workbench;
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Panel tabs",
   component: WorkbenchStory,
@@ -171,108 +169,51 @@ const meta = {
       },
     },
   },
-} satisfies Meta<typeof WorkbenchStory>;
-
+} satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const SingleItems: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--single-items",
   args: { workbench: createPanelWorkbench() },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    for (const region of workbenchPanelRegions) {
-      await expect(await canvas.findByText(`${region}.first content`)).toBeVisible();
-    }
-    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
-  },
 };
 export const MenuOnlyPanels: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--menu-only-panels",
   args: { workbench: createPanelWorkbench({ menusOnly: true }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    for (const region of ["secondary", "side"] as const) {
-      await expect(await canvas.findByText(`${region}.second content`)).toBeVisible();
-    }
-    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
-  },
 };
 export const UnavailableMenuPanel: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--unavailable-menu-panel",
   args: { workbench: createUnavailableMenuWorkbench() },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.queryByRole("button", { name: /(?:Show|Hide) Side Panel/ })).toBeNull();
-    await expect(canvas.queryByText("side.second content")).not.toBeVisible();
-  },
 };
 export const AlwaysShowTabs: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--always-show-tabs",
   args: { workbench: createPanelWorkbench({ alwaysShowTabs: true }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    for (const region of workbenchPanelRegions) {
-      await expect(await canvas.findByRole("tab", { name: `${region} first` })).toBeVisible();
-    }
-  },
 };
 export const SingleResourcePage: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--single-resource-page",
   args: { workbench: createPanelWorkbench({ resource: true }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByText("main.first content")).toBeVisible();
-    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
-  },
 };
 export const SingleResourceWithMenu: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--single-resource-with-menu",
   args: { workbench: createPanelWorkbench({ resource: true, menu: true }) },
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByText("main.first content")).toBeVisible();
-    await expect(await canvas.findByText("main.second content")).toBeVisible();
-    const header = canvasElement.querySelector('[data-workbench-panel-header="main"]');
-    await expect(header).not.toBeVisible();
-    const menu = args.workbench.layout.getLayout().regions["main-right-menu"].widgets[0]!;
-    args.workbench.panelMenuState.setOpen(`panel-menu:${menu.widgetId}`, false);
-    await expect(await canvas.findByRole("button", { name: "Open Main right menu" })).toBeVisible();
-    args.workbench.panelMenuState.setOpen(`panel-menu:${menu.widgetId}`, true);
-    await expect(header).not.toBeVisible();
-  },
 };
 export const CloseResourcePage: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--close-resource-page",
   args: { workbench: createPanelWorkbench({ resource: true, cardinality: "many" }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "Close main first" }));
-    await expect(canvas.queryByRole("button", { name: "Close main first" })).toBeNull();
-    await expect(canvas.getByText("main.first content")).toBeVisible();
-  },
 };
 export const SingleClosablePanel: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--single-closable-panel",
   args: { workbench: createPanelWorkbench({ closable: true }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    for (const region of workbenchPanelRegions) {
-      await expect(await canvas.findByText(`${region}.first content`)).toBeVisible();
-    }
-    await userEvent.click(await canvas.findByRole("button", { name: "Close side first" }));
-    await expect(canvas.queryByText("side.first content")).toBeNull();
-    await expect(await canvas.findByRole("button", { name: "Close secondary first" })).toBeVisible();
-  },
 };
 export const HiddenSingleTabs: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--hidden-single-tabs",
   args: { workbench: createPanelWorkbench({ closable: true, alwaysShowTabs: false }) },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).queryAllByRole("tab")).toHaveLength(0);
-  },
 };
 export const ResourceTabLabel: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--resource-tab-label",
   args: { workbench: createPanelWorkbench({ resource: true, resourceLabel: "Design notes", cardinality: "many" }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("tab", { name: "Design notes" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Close Design notes" }));
-    await expect(canvas.queryByRole("tab", { name: "Design notes" })).toBeNull();
-  },
 };
 export const ExplicitTabLabel: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--explicit-tab-label",
   args: {
     workbench: createPanelWorkbench({
       resource: true,
@@ -282,55 +223,16 @@ export const ExplicitTabLabel: Story = {
       alwaysShowTabs: true,
     }),
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("tab", { name: "Unsaved notes" })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Close Unsaved notes" }));
-    await expect(canvas.queryByRole("tab", { name: "Unsaved notes" })).toBeNull();
-  },
 };
 export const AlwaysShowClosablePanel: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--always-show-closable-panel",
   args: { workbench: createPanelWorkbench({ closable: true, alwaysShowTabs: true }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const close = await canvas.findByRole("button", { name: "Close side first" });
-    await expect(close).toBeVisible();
-    await userEvent.click(close);
-    await expect(canvas.queryByText("side.first content")).not.toBeInTheDocument();
-    await expect(canvas.getByText("main.first content")).toBeVisible();
-  },
 };
 export const MultipleItems: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--multiple-items",
   args: { workbench: createPanelWorkbench({ multiple: true, closable: true }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    const first = await canvas.findByRole("tab", { name: "side first" });
-    first.focus();
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-    await expect(await body.findByRole("menu", { name: "side first context menu" })).toBeVisible();
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(first).toHaveFocus());
-    for (const region of workbenchPanelRegions) {
-      await userEvent.click(await canvas.findByRole("tab", { name: `${region} second` }));
-      await expect(await canvas.findByText(`${region}.second content`)).toBeVisible();
-      await userEvent.click(canvas.getByRole("button", { name: `Close ${region} second` }));
-      await expect(await canvas.findByText(`${region}.first content`)).toBeVisible();
-      if (region === "main") {
-        await expect(canvas.queryByRole("tab", { name: `${region} first` })).not.toBeInTheDocument();
-      } else {
-        await expect(canvas.getByRole("button", { name: `Close ${region} first` })).toBeVisible();
-      }
-    }
-  },
 };
 export const ActionsWithoutTabs: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-tabs--actions-without-tabs",
   args: { workbench: createPanelWorkbench({ actions: true }) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    for (const region of workbenchPanelRegions) {
-      await expect(await canvas.findByRole("button", { name: `Refresh ${region}` })).toBeVisible();
-    }
-    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
-  },
 };

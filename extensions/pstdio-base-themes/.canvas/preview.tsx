@@ -1,11 +1,10 @@
 import "@pstdio/ui/style.css";
+import type { CanvasProject } from "@pstdio/canvas";
 import { ChakraProvider, psTheme, ThemePreferenceProvider } from "@pstdio/ui";
-import type { Preview } from "@storybook/react-vite";
 import { themePreferences } from "../stories/theme-preferences";
 
 const previewStorage = { getItem: () => null, setItem: () => {} };
-
-const preview: Preview = {
+const preview: CanvasProject = {
   initialGlobals: { theme: "solarized-light" },
   globalTypes: {
     theme: {
@@ -32,5 +31,4 @@ const preview: Preview = {
     ),
   ],
 };
-
 export default preview;

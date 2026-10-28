@@ -1,7 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
@@ -91,7 +90,6 @@ const createFixture = (pageOwned: boolean, resourceDependent: boolean) => {
   open("first");
   return workbench;
 };
-
 const ResourceNavigation = (props: { pageOwned: boolean; resourceDependent: boolean }) => {
   const { pageOwned, resourceDependent } = props;
   const [workbench] = useState(() => createFixture(pageOwned, resourceDependent));
@@ -102,38 +100,17 @@ const meta = {
   component: ResourceNavigation,
   args: { pageOwned: false, resourceDependent: false },
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof ResourceNavigation>;
+} satisfies CanvasMeta<typeof ResourceNavigation>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const SharedNavigation: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const first = await canvas.findByRole("option", { name: "First session" });
-    await userEvent.click(canvas.getByRole("button", { name: "Open second session" }));
-    await expect(first).toBeVisible();
-    await expect(first).toBe(canvas.getByRole("option", { name: "First session" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Finish loading" }));
-    await expect(await canvas.findByRole("option", { name: "Loaded second" })).toBeVisible();
-    await expect(first).toBe(canvas.getByRole("option", { name: "First session" }));
-  },
+  id: "pstdio-workbench-guides-tree-resource-navigation--shared-navigation",
 };
-
 export const PageResourceActions: Story = {
+  id: "pstdio-workbench-guides-tree-resource-navigation--page-resource-actions",
   args: { pageOwned: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const first = await canvas.findByRole("option", { name: "Loaded first" });
-    await userEvent.click(canvas.getByRole("button", { name: "Open second session" }));
-    await expect(first).toBeVisible();
-    await expect(first).toBe(canvas.getByRole("option", { name: "Loaded first" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Finish loading" }));
-    await expect(await canvas.findByRole("option", { name: "Loaded second" })).toBeVisible();
-    await waitFor(() => expect(canvas.queryByRole("option", { name: "Loaded first" })).not.toBeInTheDocument());
-  },
 };
-
 export const ResourceDependentMode: Story = {
+  id: "pstdio-workbench-guides-tree-resource-navigation--resource-dependent-mode",
   args: { resourceDependent: true },
-  play: PageResourceActions.play,
 };

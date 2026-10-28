@@ -6,7 +6,7 @@ export interface LoadedStory {
   args?: Record<string, unknown>;
   argTypes?: Record<string, unknown>;
   parameters?: Record<string, unknown>;
-  hasPlay?: boolean;
+  dispose?: () => void;
 }
 export const inspect = (value: unknown) => {
   const seen = new WeakSet<object>();
@@ -38,7 +38,7 @@ export const FrameStory = (props: { loaded: LoadedStory; minimumHeight: number }
       return result ?? true;
     };
   };
-  // Controlled CSF args need a local owner outside Storybook's manager.
+  // Controlled example props have a local owner in each preview.
   if ("value" in args) {
     callbacks.onChange = (event) => {
       const original = args.onChange;

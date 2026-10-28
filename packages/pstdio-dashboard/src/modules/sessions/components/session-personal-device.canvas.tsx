@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
 import { SessionPersonalDevice } from "./session-personal-device";
 
 const meta = {
@@ -25,16 +24,13 @@ const meta = {
       />
     </Box>
   ),
-} satisfies Meta<typeof SessionPersonalDevice>;
+} satisfies CanvasMeta<typeof SessionPersonalDevice>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const OfflineSource: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByText("Session on Laptop")).toBeVisible();
-    await expect(
-      canvas.queryAllByRole("textbox").filter((element) => element.getAttribute("contenteditable") === "true"),
-    ).toHaveLength(0);
-  },
+  id: "modules-sessions-personal-device--offline-source",
 };
-export const Dark: Story = { globals: { theme: "pstdio-dark" } };
+export const Dark: Story = {
+  id: "modules-sessions-personal-device--dark",
+  globals: { theme: "pstdio-dark" },
+};

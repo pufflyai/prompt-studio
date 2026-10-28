@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { WorkbenchLanding } from "../../components/workbench/workbench-landing";
 import { LANDING_PAGES } from "../../content/landing-pages";
 
@@ -8,11 +8,11 @@ const meta = {
   component: WorkbenchLanding,
   parameters: { layout: "fullscreen" },
   args: { initialPath: "/", pages: LANDING_PAGES, initialDocument: undefined },
-} satisfies Meta<typeof WorkbenchLanding>;
-
+} satisfies CanvasMeta<typeof WorkbenchLanding>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const Desktop: Story = {
+  id: "theme-landing-pages--desktop",
   parameters: {
     docs: {
       description: {
@@ -22,6 +22,7 @@ export const Desktop: Story = {
   },
 };
 export const CompactDesktop: Story = {
+  id: "theme-landing-pages--compact-desktop",
   parameters: {
     docs: {
       description: {
@@ -32,6 +33,7 @@ export const CompactDesktop: Story = {
   },
 };
 export const SingleColumn: Story = {
+  id: "theme-landing-pages--single-column",
   decorators: [
     (Story) => (
       <Box width="1199px" maxWidth="full">
@@ -44,6 +46,7 @@ export const SingleColumn: Story = {
   },
 };
 export const Mobile: Story = {
+  id: "theme-landing-pages--mobile",
   decorators: [
     (Story) => (
       <Box width="sm" maxWidth="full">
@@ -52,6 +55,15 @@ export const Mobile: Story = {
     ),
   ],
 };
-export const WhatIsPromptStudio: Story = { args: { initialPath: "/what-is-prompt-studio/" } };
-export const Examples: Story = { args: { initialPath: "/examples/coding-agent-dashboard/" } };
-export const Features: Story = { args: { initialPath: "/features/" } };
+export const WhatIsPromptStudio: Story = {
+  id: "theme-landing-pages--what-is-prompt-studio",
+  args: { initialPath: "/what-is-prompt-studio/" },
+};
+export const Examples: Story = {
+  id: "theme-landing-pages--examples",
+  args: { initialPath: "/examples/coding-agent-dashboard/" },
+};
+export const Features: Story = {
+  id: "theme-landing-pages--features",
+  args: { initialPath: "/features/" },
+};

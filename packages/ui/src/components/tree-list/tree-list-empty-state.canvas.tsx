@@ -1,18 +1,16 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { GitBranch, Plus } from "lucide-react";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
 
-const meta: Meta<typeof TreeList> = {
+const meta: CanvasMeta<typeof TreeList> = {
   title: "Components/Data Display/Tree List/Empty State",
   component: TreeList,
 };
-
 export default meta;
-type Story = StoryObj<typeof TreeList>;
-
+type Story = CanvasVariant<typeof TreeList>;
 const sections: TreeListSection[] = [
   {
     id: "workspaces",
@@ -31,7 +29,6 @@ const sections: TreeListSection[] = [
     nodes: [],
   },
 ];
-
 const rowSections: TreeListSection[] = [
   {
     id: "files",
@@ -46,8 +43,8 @@ const rowSections: TreeListSection[] = [
     nodes: [{ id: "workspaces-empty", label: "No workspaces", disabled: true, rowVariant: "empty-state" }],
   },
 ];
-
 export const ExpandedSection: Story = {
+  id: "components-data-display-tree-list-empty-state--expanded-section",
   render: () => (
     <Box maxW="20rem" borderWidth="1px" p="xs">
       <TreeList
@@ -60,8 +57,8 @@ export const ExpandedSection: Story = {
     </Box>
   ),
 };
-
 export const PlaceholderRows: Story = {
+  id: "components-data-display-tree-list-empty-state--placeholder-rows",
   render: () => (
     <Box maxW="20rem" borderWidth="1px" p="xs">
       <TreeList

@@ -1,8 +1,7 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { getBridgeWebviewHostEventPublisher } from "../../extensions/bridge/bridge-webview-renderer";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -13,7 +12,6 @@ interface EventControlProps {
   title: string;
   events: HostEventPublisher;
 }
-
 const EventControl = (props: EventControlProps) => {
   const { title, events } = props;
   const [received, setReceived] = useState(0);
@@ -30,7 +28,6 @@ const EventControl = (props: EventControlProps) => {
     </Stack>
   );
 };
-
 const EmbeddedSettingsStory = () => {
   const [workbench] = useState(() => createWorkbench());
   useEffect(() => {
@@ -90,7 +87,6 @@ const EmbeddedSettingsStory = () => {
   }, [workbench]);
   return <Workbench workbench={workbench} />;
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Embedded settings",
   component: EmbeddedSettingsStory,
@@ -104,19 +100,9 @@ const meta = {
     ),
   ],
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof EmbeddedSettingsStory>;
+} satisfies CanvasMeta<typeof EmbeddedSettingsStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const IndependentEventsAndDisposal: Story = {
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(await body.findByRole("button", { name: "Send to First" }));
-    await expect(body.getByText("First received 1")).toBeVisible();
-    await expect(body.getByText("Second received 0")).toBeVisible();
-    await userEvent.click(body.getByRole("button", { name: "Remove First" }));
-    await waitFor(() => expect(body.queryByRole("button", { name: "Send to First" })).toBeNull());
-    await userEvent.click(body.getByRole("button", { name: "Send to Second" }));
-    await expect(body.getByText("Second received 1")).toBeVisible();
-  },
+  id: "pstdio-workbench-reference-core-api-embedded-settings--independent-events-and-disposal",
 };

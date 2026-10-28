@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID, Workbench } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { receiveSettings } from "@/shared/settings/synced-settings";
@@ -12,15 +12,26 @@ const meta = {
   title: "Settings/Beta features",
   component: BetaFeaturesContent,
   args: { onChange: () => undefined, onRetry: () => undefined },
-} satisfies Meta<typeof BetaFeaturesContent>;
+} satisfies CanvasMeta<typeof BetaFeaturesContent>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 const off = { notifications_enabled: false, machine_tokens_enabled: false };
-export const Off: Story = { args: { settings: off } };
-export const On: Story = { args: { settings: { notifications_enabled: true, machine_tokens_enabled: true } } };
-export const Loading: Story = { args: { settings: undefined } };
-export const Failure: Story = { args: { settings: off, error: "Could not save settings. Try again." } };
-
+export const Off: Story = {
+  id: "settings-beta-features--off",
+  args: { settings: off },
+};
+export const On: Story = {
+  id: "settings-beta-features--on",
+  args: { settings: { notifications_enabled: true, machine_tokens_enabled: true } },
+};
+export const Loading: Story = {
+  id: "settings-beta-features--loading",
+  args: { settings: undefined },
+};
+export const Failure: Story = {
+  id: "settings-beta-features--failure",
+  args: { settings: off, error: "Could not save settings. Try again." },
+};
 const BetaFeaturesNavigation = () => {
   const [client] = useState(() => {
     const next = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
@@ -34,7 +45,6 @@ const BetaFeaturesNavigation = () => {
     void next.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "beta-features" });
     return next;
   });
-
   return (
     <QueryClientProvider client={client}>
       <Box h="100dvh" w="full">
@@ -43,8 +53,8 @@ const BetaFeaturesNavigation = () => {
     </QueryClientProvider>
   );
 };
-
 export const ExperimentalNavigation: Story = {
+  id: "settings-beta-features--experimental-navigation",
   parameters: { layout: "fullscreen" },
   render: () => <BetaFeaturesNavigation />,
 };

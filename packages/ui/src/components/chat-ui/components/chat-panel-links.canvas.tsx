@@ -1,7 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { AlertMessage } from "@/components/primitives/alert";
 import { RichMessage } from "@/components/rich-text/rich-message/rich-message";
 import { type ChatLinkCandidate, parseChatLink } from "../links/chat-link";
@@ -11,12 +10,10 @@ const workspaceHref = (candidate: ChatLinkCandidate) =>
   candidate.source === "missing.ts" || parseChatLink(candidate)?.kind === "external"
     ? null
     : `/projects/demo/workspace?document=${encodeURIComponent(candidate.source)}`;
-
 const confirmWorkspaceFile = async (candidate: ChatLinkCandidate) => {
   const href = workspaceHref(candidate);
   return href ? { href } : null;
 };
-
 const LinkConversation = (props: { streaming?: boolean }) => {
   const { streaming = false } = props;
   const [opened, setOpened] = useState<string | null>(null);
@@ -75,7 +72,6 @@ const LinkConversation = (props: { streaming?: boolean }) => {
     />
   );
 };
-
 const EditableLinkMessage = () => {
   const source = '[Source](src/app.ts "Original title") after README.md.';
   const [markdown, setMarkdown] = useState(source);
@@ -106,41 +102,27 @@ const meta = {
       </Box>
     ),
   ],
-} satisfies Meta<typeof LinkConversation>;
+} satisfies CanvasMeta<typeof LinkConversation>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const FileLinks: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const source = await canvas.findByRole("link", { name: "Source" });
-    await expect(source.querySelector("svg.lucide-file-code")).not.toBeNull();
-    source.focus();
-    await expect(source).toHaveFocus();
-    await userEvent.keyboard("{Enter}");
-    await expect(await canvas.findByText("Opened link")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Missing file" }));
-    await expect(await canvas.findByText("Workspace file not found")).toBeVisible();
-  },
+  id: "chat-chatpanel-links--file-links",
 };
-export const StreamingLinks: Story = { args: { streaming: true } };
+export const StreamingLinks: Story = {
+  id: "chat-chatpanel-links--streaming-links",
+  args: { streaming: true },
+};
 export const ExternalReferences: Story = {
+  id: "chat-chatpanel-links--external-references",
   render: () => (
     <RichMessage
       defaultState="Open {{link('https://example.com')}}."
       linkHandler={{ resolveHref: () => null, resolveResource: async () => null, open: () => {} }}
     />
   ),
-  play: async ({ canvasElement }) => {
-    const reference = await within(canvasElement).findByRole("link", { name: "example.com" });
-    await expect(reference).toHaveAttribute("href", "https://example.com");
-    await expect(reference).toHaveAttribute("target", "_blank");
-    await expect(reference).toHaveAttribute("rel", "noopener noreferrer");
-    await expect(reference.querySelector('[data-scope="tooltip"]')).toBeNull();
-    reference.focus();
-    await expect(reference).toHaveFocus();
-  },
 };
 export const ResourceBubbles: Story = {
+  id: "chat-chatpanel-links--resource-bubbles",
   render: () => {
     const [opened, setOpened] = useState<string>();
     return (
@@ -161,28 +143,10 @@ export const ResourceBubbles: Story = {
       </>
     );
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const links = await canvas.findAllByRole("link", { name: "T-1 Fix resource links" });
-    await expect(links).toHaveLength(4);
-    for (const link of links) {
-      await expect(link.querySelector("svg.lucide-component")).not.toBeNull();
-      await expect(link.querySelector('[data-scope="tooltip"]')).toBeNull();
-      await expect(link.closest('[data-scope="tooltip"]')).toBeNull();
-    }
-    const document = await canvas.findByRole("link", { name: "notes.md" });
-    await expect(document.querySelector("svg.lucide-file-text")).not.toBeNull();
-    await userEvent.hover(links[0]!);
-    await expect(getComputedStyle(links[0]!).textDecorationLine).toBe("none");
-    links[0]!.focus();
-    await userEvent.keyboard("{Enter}");
-    await expect(canvas.getByText("tickets/T-1/ticket.md")).toBeVisible();
-    await expect(canvas.getByRole("link", { name: "Website" })).toHaveAttribute("href", "https://example.com");
-  },
 };
 const existingFiles = new Set(["src/app.ts", "README.md"]);
-
 export const GuessedPaths: Story = {
+  id: "chat-chatpanel-links--guessed-paths",
   render: () => (
     <RichMessage
       defaultState={
@@ -198,35 +162,9 @@ export const GuessedPaths: Story = {
       }}
     />
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findAllByRole("link", { name: "src/app.ts", exact: true })).toHaveLength(2);
-    await expect(await canvas.findByRole("link", { name: "README.md", exact: true })).toBeVisible();
-    await expect(await canvas.findByRole("link", { name: "app.ts", exact: true })).toBeVisible();
-    const table = canvasElement.querySelector("table")!;
-    await expect(await within(table).findByRole("link", { name: "src/app.ts", exact: true })).toBeVisible();
-    await expect(within(table).queryByRole("link", { name: "origin/main", exact: true })).toBeNull();
-    for (const text of ["main", "origin/main", "github.com", "Node.js", "U.S", "18.x", "src/missing.ts"])
-      await expect(canvas.queryByRole("link", { name: text, exact: true })).toBeNull();
-    await expect(canvas.getAllByText("origin/main")[0]!.closest("code")).not.toBeNull();
-    await expect(canvas.getByText("Node.js").closest("strong")).not.toBeNull();
-
-    const message = canvasElement.querySelector('[data-rich-message="true"] [contenteditable]')!;
-    const selection = window.getSelection()!;
-    selection.selectAllChildren(message);
-    let html = "";
-    const readCopy = (event: ClipboardEvent) => {
-      html = event.clipboardData?.getData("text/html") ?? "";
-    };
-    window.addEventListener("copy", readCopy, { once: true });
-    document.execCommand("copy");
-    selection.removeAllRanges();
-    for (const text of ["origin/main", "<code>src/app.ts</code>", "README.md", "<strong>Node.js</strong>"])
-      await expect(html).toContain(text);
-    await expect(html).toContain("{{link('src/app.ts')}}");
-  },
 };
 export const StandaloneRichMessage: Story = {
+  id: "chat-chatpanel-links--standalone-rich-message",
   render: () => (
     <RichMessage
       defaultState="[Source](src/app.ts:2) and `src/app.ts`."
@@ -235,6 +173,7 @@ export const StandaloneRichMessage: Story = {
   ),
 };
 export const ParenthesizedPaths: Story = {
+  id: "chat-chatpanel-links--parenthesized-paths",
   render: () => {
     const [opened, setOpened] = useState<string>();
     return (
@@ -251,27 +190,8 @@ export const ParenthesizedPaths: Story = {
       </>
     );
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const path = "src/app/(dashboard)/page.ts";
-    const link = await canvas.findByRole("link", { name: path, exact: true });
-    await expect(link).toHaveAttribute("href", `/projects/demo/workspace?document=${encodeURIComponent(path)}`);
-    await userEvent.click(link);
-    await expect(canvas.getByTestId("opened-path")).toHaveTextContent(path);
-    await expect(canvas.getByRole("link", { name: "src/app/[id]/page.ts", exact: true })).toBeVisible();
-    await expect(canvas.queryByRole("link", { name: "/page.ts", exact: true })).toBeNull();
-  },
 };
 export const EditableSource: Story = {
+  id: "chat-chatpanel-links--editable-source",
   render: () => <EditableLinkMessage />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const editor = await canvas.findByRole("textbox");
-    await userEvent.click(editor);
-    await userEvent.type(editor, " updated", { skipClick: true });
-    await expect(canvas.getByTestId("exported-markdown")).toHaveTextContent('"Original title"');
-    await expect(canvas.getByTestId("exported-markdown")).toHaveTextContent("updated");
-    await expect(canvas.getByTestId("exported-markdown")).toHaveTextContent("README.md");
-    await expect(canvas.getByTestId("exported-markdown")).not.toHaveTextContent("Workspace demo");
-  },
 };

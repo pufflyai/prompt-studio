@@ -1,7 +1,6 @@
 import { Button, Input, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useId, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench, resourceContextMenuPath } from "../../core";
 import { PaletteParamsDialog } from "../command-palette/palette-params-dialog";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -23,14 +22,28 @@ const NoteTabActions = () => {
       },
       {
         execute: (args) => {
-          const { noteId, title } = args as { noteId: string; title: string };
+          const { noteId, title } = args as {
+            noteId: string;
+            title: string;
+          };
           setResult(`Renamed ${noteId} to ${title}`);
         },
       },
     );
     instance.commands.registerCommand(
       { id: "delete", label: "Delete", params: { noteId } },
-      { execute: (args) => setResult(`Deleted ${(args as { noteId: string }).noteId}`) },
+      {
+        execute: (args) =>
+          setResult(
+            `Deleted ${
+              (
+                args as {
+                  noteId: string;
+                }
+              ).noteId
+            }`,
+          ),
+      },
     );
     instance.resources.registerKind({ kind: "note", label: "Note" });
     instance.layout.registerMenuItem(resourceContextMenuPath("note"), {
@@ -62,7 +75,6 @@ const NoteTabActions = () => {
     </Stack>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Guides/Tab actions",
   component: NoteTabActions,
@@ -74,34 +86,8 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof NoteTabActions>;
+} satisfies CanvasMeta<typeof NoteTabActions>;
 export default meta;
-export const EditableTitleAndBoundResource: StoryObj<typeof meta> = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(document.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Note actions" }));
-    await body.findByRole("menuitem", { name: "Rename note" });
-    await waitFor(() => expect(body.getByRole("menu")).toHaveFocus());
-    await userEvent.keyboard("{Home}{Enter}");
-    const dialog = await body.findByRole("dialog", { name: "Rename note" });
-    const title = within(dialog).getByRole("textbox", { name: "Title" });
-    await expect(title).toHaveValue("Existing title");
-    await userEvent.clear(title);
-    await userEvent.type(title, "New title");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Run" }));
-    await waitFor(() => expect(canvas.getByText("Renamed note-1 to New title")).toBeVisible());
-    await waitFor(() => expect(body.queryByRole("dialog", { hidden: true })).not.toBeInTheDocument());
-    await userEvent.click(canvas.getByRole("button", { name: "Note actions" }));
-    await userEvent.click(await body.findByRole("menuitem", { name: "Delete" }));
-    await waitFor(() => expect(canvas.getByText("Deleted note-1")).toBeVisible());
-    await expect(body.queryByRole("dialog")).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Note actions" }));
-    await body.findByRole("menuitem", { name: "Delete" });
-    await waitFor(() => expect(body.getByRole("menu")).toHaveFocus());
-    const draft = canvas.getByRole("textbox", { name: "Draft outside the menu" });
-    await userEvent.click(draft);
-    await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
-    await expect(draft).toHaveFocus();
-  },
+export const EditableTitleAndBoundResource: CanvasVariant<typeof meta> = {
+  id: "pstdio-workbench-guides-tab-actions--editable-title-and-bound-resource",
 };

@@ -1,12 +1,11 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import type { Diff } from "./diff-drawer";
 import { LARGE_DIFF_LINE_THRESHOLD } from "./diff-size";
 import { DiffDrawer } from "./lazy-diff";
 
 type StoryFn = () => ReactNode;
-
 const sampleDiffs: Diff[] = [
   {
     change: "modified",
@@ -54,8 +53,7 @@ const sampleDiffs: Diff[] = [
     deletions: 0,
   },
 ];
-
-const meta: Meta<typeof DiffDrawer> = {
+const meta: CanvasMeta<typeof DiffDrawer> = {
   title: "Patterns/Diff/Diff Panel",
   component: DiffDrawer,
   parameters: {
@@ -69,25 +67,22 @@ const meta: Meta<typeof DiffDrawer> = {
     ),
   ],
 };
-
 export default meta;
-
-type Story = StoryObj<typeof DiffDrawer>;
-
+type Story = CanvasVariant<typeof DiffDrawer>;
 export const Default: Story = {
+  id: "patterns-diff-diff-panel--default",
   render: (args) => <DiffDrawer {...args} />,
   args: {
     diffs: sampleDiffs,
   },
 };
-
 export const SingleFile: Story = {
+  id: "patterns-diff-diff-panel--single-file",
   render: (args) => <DiffDrawer {...args} />,
   args: {
     diffs: [sampleDiffs[0]],
   },
 };
-
 const userListOldContent = `import { useState } from "react";
 import { Button } from "@chakra-ui/react";
 
@@ -119,7 +114,6 @@ export const UserList = ({ users }: { users: User[] }) => {
   );
 };
 `;
-
 const userListNewContent = `import { useEffect, useState } from "react";
 import { Button, Stack } from "@chakra-ui/react";
 
@@ -157,7 +151,6 @@ export const UserList = ({ users }: { users: User[] }) => {
   );
 };
 `;
-
 const configOldContent = `export const defaultConfig = {
   appName: "Prompt Studio",
   version: "1.0.0",
@@ -176,7 +169,6 @@ const configOldContent = `export const defaultConfig = {
   },
 };
 `;
-
 const configNewContent = `export const defaultConfig = {
   appName: "Prompt Studio",
   version: "1.1.0",
@@ -196,8 +188,8 @@ const configNewContent = `export const defaultConfig = {
   },
 };
 `;
-
 export const ScatteredChanges: Story = {
+  id: "patterns-diff-diff-panel--scattered-changes",
   render: (args) => <DiffDrawer {...args} />,
   args: {
     diffs: [
@@ -213,8 +205,8 @@ export const ScatteredChanges: Story = {
     ],
   },
 };
-
 export const MultipleFilesWithContext: Story = {
+  id: "patterns-diff-diff-panel--multiple-files-with-context",
   render: (args) => <DiffDrawer {...args} />,
   args: {
     diffs: [
@@ -239,13 +231,12 @@ export const MultipleFilesWithContext: Story = {
     ],
   },
 };
-
 const largeDiffLines = Array.from(
   { length: LARGE_DIFF_LINE_THRESHOLD + 1 },
   (_, i) => `export const value${i + 1} = ${i + 1};`,
 );
-
 export const LargeDiffPlaceholder: Story = {
+  id: "patterns-diff-diff-panel--large-diff-placeholder",
   render: (args) => <DiffDrawer {...args} />,
   args: {
     diffs: [
@@ -260,8 +251,8 @@ export const LargeDiffPlaceholder: Story = {
     ],
   },
 };
-
 export const NotLoaded: Story = {
+  id: "patterns-diff-diff-panel--not-loaded",
   render: (args) => <DiffDrawer {...args} />,
   args: {
     diffs: [
@@ -275,7 +266,6 @@ export const NotLoaded: Story = {
     ],
   },
 };
-
 // Mixes large, medium and tiny diffs so the virtualizer's height estimate can be eyeballed:
 // scroll fast top-to-bottom and back — cards should not jump, overlap, or leave gaps.
 const manyScrollingDiffs: Diff[] = Array.from({ length: 30 }, (_, index) => {
@@ -311,15 +301,15 @@ const manyScrollingDiffs: Diff[] = Array.from({ length: 30 }, (_, index) => {
     deletions: 0,
   };
 });
-
 export const ManyFilesScrolling: Story = {
+  id: "patterns-diff-diff-panel--many-files-scrolling",
   render: (args) => <DiffDrawer {...args} />,
   args: {
     diffs: manyScrollingDiffs,
   },
 };
-
 export const SplitMode: Story = {
+  id: "patterns-diff-diff-panel--split-mode",
   render: (args) => <DiffDrawer {...args} />,
   args: {
     diffViewMode: "split",

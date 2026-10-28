@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { createStorybookArtifactsBridgeDocument } from "../artifacts-webview/bridge-document.storybook";
 import { createArtifactsWebviewExampleModule } from "../artifacts-webview/module";
@@ -22,18 +22,15 @@ const meta = {
   title: "pstdio-workbench/Guides/Renderers",
   tags: ["!dev"],
   parameters: { layout: "padded" },
-} satisfies Meta;
-
+} satisfies CanvasMeta;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 const rendererParameters = (description: string, code: string) => ({
   docs: {
     description: { story: description },
     source: { code, language: "tsx", type: "code" },
   },
 });
-
 const createWebviewWorkbench = () => {
   const workbench = createWorkbench();
   workbench.registerModule(
@@ -41,8 +38,8 @@ const createWebviewWorkbench = () => {
   );
   return workbench;
 };
-
 export const ChooseRenderer: Story = {
+  id: "pstdio-workbench-guides-renderers--choose-renderer",
   name: "0. Choose a renderer",
   parameters: rendererParameters(
     "Compare every supported View body before choosing one for a host feature or extension.",
@@ -50,8 +47,8 @@ export const ChooseRenderer: Story = {
   ),
   render: () => <OnboardingFrame createWorkbench={createViewsWorkbench} />,
 };
-
 export const ReactView: Story = {
+  id: "pstdio-workbench-guides-renderers--react-view",
   name: "1. React view",
   parameters: rendererParameters(
     "Trusted hosts can render React directly. Extensions cannot use this body kind.",
@@ -59,8 +56,8 @@ export const ReactView: Story = {
   ),
   render: () => <OnboardingFrame createWorkbench={createViewsWorkbench} />,
 };
-
 export const Tree: Story = {
+  id: "pstdio-workbench-guides-renderers--tree",
   name: "2. Tree",
   parameters: rendererParameters(
     "The extension returns sections and nodes. The workbench owns tree interaction.",
@@ -68,8 +65,8 @@ export const Tree: Story = {
   ),
   render: () => <OnboardingFrame createWorkbench={() => createExtensionPreview(treePageExtension, guidePage.id)} />,
 };
-
 export const Controls: Story = {
+  id: "pstdio-workbench-guides-renderers--controls",
   name: "3. Controls",
   parameters: rendererParameters(
     "The extension returns form declarations and values. The workbench renders and validates them.",
@@ -79,8 +76,8 @@ export const Controls: Story = {
     <OnboardingFrame createWorkbench={() => createExtensionPreview(controlsExtension, deploymentSettingsPage.id)} />
   ),
 };
-
 export const DataTable: Story = {
+  id: "pstdio-workbench-guides-renderers--data-table",
   name: "4. Data table",
   parameters: rendererParameters(
     "The extension returns columns and rows. The workbench owns table behavior.",
@@ -88,8 +85,8 @@ export const DataTable: Story = {
   ),
   render: () => <OnboardingFrame createWorkbench={() => createExtensionPreview(dataTableExtension, servicesPage.id)} />,
 };
-
 export const Kanban: Story = {
+  id: "pstdio-workbench-guides-renderers--kanban",
   name: "5. Kanban",
   parameters: rendererParameters(
     "The extension returns attributes and rows. The workbench groups them into a board.",
@@ -97,8 +94,8 @@ export const Kanban: Story = {
   ),
   render: () => <OnboardingFrame createWorkbench={() => createExtensionPreview(kanbanExtension, ticketsPage.id)} />,
 };
-
 export const File: Story = {
+  id: "pstdio-workbench-guides-renderers--file",
   name: "6. File",
   parameters: rendererParameters(
     "The extension loads content. The workbench picks the editor or preview from the file name.",
@@ -106,8 +103,8 @@ export const File: Story = {
   ),
   render: () => <OnboardingFrame createWorkbench={() => createExtensionPreview(fileExtension, notesPage.id)} />,
 };
-
 export const Webview: Story = {
+  id: "pstdio-workbench-guides-renderers--webview",
   name: "7. Webview",
   parameters: rendererParameters(
     "A packaged UI runs in an isolated frame with declared host capabilities.",

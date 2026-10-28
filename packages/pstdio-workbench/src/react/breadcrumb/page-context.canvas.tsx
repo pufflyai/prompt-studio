@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -62,60 +61,26 @@ const createPageContextWorkbench = (routed = false, contextView = false) => {
   }
   return workbench;
 };
-
 const meta = {
   title: "pstdio-workbench/Guides/Page context",
   component: WorkbenchStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof WorkbenchStory>;
+} satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const CollectionDocument: Story = {
+  id: "pstdio-workbench-guides-page-context--collection-document",
   args: { workbench: createPageContextWorkbench() },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("tab", { name: "side document" }));
-    const breadcrumb = within(canvas.getByRole("navigation", { name: "breadcrumb" }));
-    await expect(breadcrumb.getByText("main document", { exact: true })).toBeVisible();
-    await expect(breadcrumb.queryByText("side document", { exact: true })).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "Actions for main document" }));
-    await expect(
-      await within(canvasElement.ownerDocument.body).findByRole("menuitem", { name: "main document action" }),
-    ).toBeVisible();
-  },
 };
-
 export const RoutedResource: Story = {
+  id: "pstdio-workbench-guides-page-context--routed-resource",
   args: { workbench: createPageContextWorkbench(true) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    for (const label of ["main document", "side document"]) {
-      await userEvent.click(await canvas.findByRole("tab", { name: label }));
-      const breadcrumb = within(canvas.getByRole("navigation", { name: "breadcrumb" }));
-      await expect(breadcrumb.getByText("My workspace", { exact: true })).toBeVisible();
-      await expect(breadcrumb.queryByText(label, { exact: true })).not.toBeInTheDocument();
-    }
-  },
 };
-
 export const RoutedContextView: Story = {
+  id: "pstdio-workbench-guides-page-context--routed-context-view",
   tags: ["breadcrumb-resource-ownership"],
   args: { workbench: createPageContextWorkbench(true, true) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByRole("tab", { name: "main files" })).toBeVisible();
-    const breadcrumb = within(canvas.getByRole("navigation", { name: "breadcrumb" }));
-    await expect(breadcrumb.getByText("My workspace", { exact: true })).toBeVisible();
-    await expect(breadcrumb.queryByText("main files", { exact: true })).toBeNull();
-    await userEvent.click(canvas.getByRole("button", { name: "Actions for My workspace" }));
-    const action = await within(canvasElement.ownerDocument.body).findByRole("menuitem", {
-      name: "main document action",
-    });
-    await waitFor(() => expect(action).toBeVisible());
-  },
 };
-
 const createComposerWorkbench = () => {
   const workbench = createWorkbench();
   const page = { kind: "page" as const, extensionId: "storybook", id: "compose" };
@@ -175,20 +140,8 @@ const createComposerWorkbench = () => {
   workbench.pageLocations.navigate({ kind: "page", page });
   return workbench;
 };
-
 export const PageComposer: Story = {
+  id: "pstdio-workbench-guides-page-context--page-composer",
   tags: ["!manifest", "page-composer-navigation"],
   args: { workbench: createComposerWorkbench() },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const breadcrumb = within(canvas.getByRole("navigation", { name: "breadcrumb" }));
-    await expect(breadcrumb.getByText("Messages", { exact: true })).toBeVisible();
-    await expect(breadcrumb.getByText("New message", { exact: true })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Page actions" }));
-    await userEvent.click(
-      await within(canvasElement.ownerDocument.body).findByRole("menuitem", { name: "Open message" }),
-    );
-    await expect(breadcrumb.getByText("Messages", { exact: true })).toBeVisible();
-    await expect(await breadcrumb.findByText("Message one", { exact: true })).toBeVisible();
-  },
 };

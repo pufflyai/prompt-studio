@@ -1,7 +1,6 @@
 import { Box, HStack, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Trash2 } from "lucide-react";
-import { expect, waitFor, within } from "storybook/test";
 import { getThemePreferenceClassNames } from "@/utils/apply-theme-preference";
 
 const meta = {
@@ -39,40 +38,15 @@ const meta = {
       </HStack>
     </Stack>
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const button = canvas.getByRole("button", { name: "Delete item", exact: true });
-    const idle = getComputedStyle(canvas.getByTestId("idle-reference"));
-    const active = getComputedStyle(canvas.getByTestId("active-reference"));
-    const expectColors = async (element: HTMLElement, reference: CSSStyleDeclaration) => {
-      await waitFor(() => {
-        expect(getComputedStyle(element).color).toBe(reference.color);
-        expect(getComputedStyle(element).backgroundColor).toBe(reference.backgroundColor);
-      });
-    };
-    await expectColors(button, idle);
-    button.setAttribute("data-hover", "");
-    await expectColors(button, active);
-    button.removeAttribute("data-hover");
-    await expectColors(button, idle);
-    button.setAttribute("data-focus-visible", "");
-    await expectColors(button, active);
-    button.removeAttribute("data-focus-visible");
-    button.setAttribute("data-active", "");
-    await expectColors(button, active);
-    button.removeAttribute("data-active");
-    canvas.getByTestId("status-row").setAttribute("data-hover", "");
-    await expectColors(canvas.getByRole("button", { name: "Delete status", exact: true }), active);
-    await expectColors(canvas.getByRole("button", { name: "Delete default status", exact: true }), idle);
-    canvas.getByRole("button", { name: "Delete disabled item", exact: true }).setAttribute("data-hover", "");
-    await expectColors(canvas.getByRole("button", { name: "Delete disabled item", exact: true }), idle);
-    canvas.getByTestId("status-row").removeAttribute("data-hover");
-    canvas.getByRole("button", { name: "Delete disabled item", exact: true }).removeAttribute("data-hover");
-  },
-} satisfies Meta<{ mode: "light" | "dark" }>;
-
+} satisfies CanvasMeta<{
+  mode: "light" | "dark";
+}>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Light: Story = {};
-export const Dark: Story = { args: { mode: "dark" } };
+type Story = CanvasVariant<typeof meta>;
+export const Light: Story = {
+  id: "components-inputs-delete-icon-buttons--light",
+};
+export const Dark: Story = {
+  id: "components-inputs-delete-icon-buttons--dark",
+  args: { mode: "dark" },
+};

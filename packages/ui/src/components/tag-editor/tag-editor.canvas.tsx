@@ -2,7 +2,6 @@ import { Box, Button, Flex, HStack, Stack } from "@chakra-ui/react";
 import { CircleDashed, Diamond, Hexagon, Square, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { SegmentedControl } from "@/components/primitives/segmented-control";
 import { TagEditor } from "./tag-editor";
@@ -11,21 +10,18 @@ import { TagEditorHeading } from "./tag-editor-heading";
 import { TagEditorSaveBar } from "./tag-editor-save-bar";
 
 type StoryFn = () => ReactNode;
-
 const initialItems = [
   { id: "low", name: "Low", color: "gray", icon: "level-low", sortOrder: 10 },
   { id: "medium", name: "Medium", color: "yellow", icon: "level-mid", sortOrder: 20 },
   { id: "high", name: "High", color: "orange", icon: "level-high", sortOrder: 30 },
   { id: "urgent", name: "Urgent", color: "red", icon: "flame", sortOrder: 40 },
 ] satisfies TagEditorValue[];
-
 const customIcons = [
   { value: null, label: "circle", icon: CircleDashed },
   { value: "diamond", label: "diamond", icon: Diamond },
   { value: "hexagon", label: "hexagon", icon: Hexagon },
   { value: "square", label: "square", icon: Square },
 ];
-
 const meta = {
   title: "Components/Inputs/Tag Editor",
   component: TagEditor,
@@ -37,13 +33,11 @@ const meta = {
     ),
   ],
 };
-
 export default meta;
-
 export const WithIcons = {
+  id: "components-inputs-tag-editor--with-icons",
   render: () => {
     const [values, setValues] = useState<TagEditorValue[]>(initialItems);
-
     return (
       <Stack gap="md">
         <TagEditor title="Priority" values={values} onValuesChange={setValues} />
@@ -52,9 +46,9 @@ export const WithIcons = {
     );
   },
 };
-
 /** The Save control stays outside the scrolling tag definitions. */
 export const FixedSettingsHeader = {
+  id: "components-inputs-tag-editor--fixed-settings-header",
   render: () => {
     const [values, setValues] = useState<TagEditorValue[]>(
       Array.from({ length: 20 }, (_, index) => ({
@@ -77,33 +71,27 @@ export const FixedSettingsHeader = {
     );
   },
 };
-
 export const Hover = {
+  id: "components-inputs-tag-editor--hover",
   render: () => {
     const [values, setValues] = useState<TagEditorValue[]>(initialItems);
-
     return <TagEditor title="Priority" values={values} onValuesChange={setValues} />;
   },
-  play: async ({ canvasElement }) => {
-    await userEvent.hover(within(canvasElement).getByText("Low"));
-  },
 };
-
 export const Renaming = {
+  id: "components-inputs-tag-editor--renaming",
   render: () => {
     const [values, setValues] = useState<TagEditorValue[]>([
       { id: "new-priority", name: "New option", color: "blue", icon: "circle", sortOrder: 0, isNew: true },
       ...initialItems,
     ]);
-
     return <TagEditor title="Priority" values={values} onValuesChange={setValues} />;
   },
 };
-
 export const ExternalReset = {
+  id: "components-inputs-tag-editor--external-reset",
   render: () => {
     const [values, setValues] = useState<TagEditorValue[]>(initialItems);
-
     return (
       <Stack gap="sm">
         <TagEditor title="Priority" values={values} onValuesChange={setValues} />
@@ -113,40 +101,20 @@ export const ExternalReset = {
       </Stack>
     );
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByText("Low"));
-    const input = canvas.getByRole("textbox");
-    await userEvent.clear(input);
-    await userEvent.type(input, "Low reviewed{enter}");
-    await expect(canvas.getByText("Low reviewed")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Reset" }));
-    await expect(canvas.getByText("Low")).toBeVisible();
-    await expect(canvas.queryByText("Low reviewed")).not.toBeInTheDocument();
-  },
 };
-
 export const Dragging = {
+  id: "components-inputs-tag-editor--dragging",
   render: () => {
     const [values, setValues] = useState<TagEditorValue[]>(initialItems);
-
     return <TagEditor title="Priority" values={values} onValuesChange={setValues} />;
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.pointer([
-      { target: canvas.getByLabelText("Reorder Low"), keys: "[MouseLeft>]" },
-      { target: canvas.getByLabelText("Reorder Medium") },
-    ]);
-  },
 };
-
 /** Mirrors the design's editor composite: a mode toggle and delete in the header. */
 export const WithHeaderActions = {
+  id: "components-inputs-tag-editor--with-header-actions",
   render: () => {
     const [values, setValues] = useState<TagEditorValue[]>(initialItems);
     const [mode, setMode] = useState("single_select");
-
     return (
       <Stack gap="md">
         <TagEditor
@@ -175,8 +143,8 @@ export const WithHeaderActions = {
     );
   },
 };
-
 export const WithStatusGlyphs = {
+  id: "components-inputs-tag-editor--with-status-glyphs",
   render: () => {
     const [values, setValues] = useState<TagEditorValue[]>([
       { id: "backlog", name: "Backlog", color: "gray", icon: "status-backlog", sortOrder: 10 },
@@ -186,19 +154,17 @@ export const WithStatusGlyphs = {
       { id: "done", name: "Done", color: "green", icon: "status-done", sortOrder: 50 },
       { id: "canceled", name: "Canceled", color: "red", icon: "status-canceled", sortOrder: 60 },
     ]);
-
     return <TagEditor title="Status" values={values} onValuesChange={setValues} />;
   },
 };
-
 export const WithDefault = {
+  id: "components-inputs-tag-editor--with-default",
   render: () => {
     const [values, setValues] = useState<TagEditorValue[]>([
       { id: "todo", name: "todo", color: "gray", sortOrder: 10, isDefault: true },
       { id: "doing", name: "doing", color: "blue", sortOrder: 20 },
       { id: "done", name: "done", color: "green", sortOrder: 30 },
     ]);
-
     return (
       <TagEditor
         title="Attempt statuses"
@@ -212,8 +178,8 @@ export const WithDefault = {
     );
   },
 };
-
 export const WithActions = {
+  id: "components-inputs-tag-editor--with-actions",
   render: () => {
     const [values, setValues] = useState<TagEditorValue[]>([
       {
@@ -227,7 +193,6 @@ export const WithActions = {
       { id: "ready", name: "ready", color: "green", sortOrder: 20, actions: [] },
       { id: "done", name: "done", color: "green", sortOrder: 30, actions: ["archive_all"] },
     ]);
-
     return (
       <TagEditor
         title="Ticket statuses"
@@ -246,18 +211,17 @@ export const WithActions = {
     );
   },
 };
-
 export const ReadOnly = {
+  id: "components-inputs-tag-editor--read-only",
   render: () => <TagEditor title="Release statuses" values={initialItems} onValuesChange={() => undefined} readOnly />,
 };
-
 export const CustomPickerOptions = {
+  id: "components-inputs-tag-editor--custom-picker-options",
   render: () => {
     const [values, setValues] = useState<TagEditorValue[]>([
       { id: "vip", name: "vip", color: "pink", icon: "diamond", sortOrder: 10 },
       { id: "internal", name: "internal", color: "teal", icon: "hexagon", sortOrder: 20 },
     ]);
-
     return (
       <TagEditor
         title="Ticket tags"

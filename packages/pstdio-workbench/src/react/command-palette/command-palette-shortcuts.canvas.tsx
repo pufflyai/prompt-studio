@@ -1,6 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench, workbenchCommandPaletteMenuPath } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchCommandPalette } from "./command-palette";
@@ -23,7 +22,6 @@ const createPaletteWorkbench = () => {
   }
   return workbench;
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Command palette/Assigned shortcuts",
   component: WorkbenchCommandPalette,
@@ -36,33 +34,9 @@ const meta = {
       </Box>
     </WorkbenchThemeProvider>
   ),
-} satisfies Meta<typeof WorkbenchCommandPalette>;
+} satisfies CanvasMeta<typeof WorkbenchCommandPalette>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const AssignedShortcuts: Story = {
-  play: async ({ args }) => {
-    const canvas = within(document.body);
-    const input = await canvas.findByPlaceholderText("Run command");
-    for (const [label, key] of [
-      ["Open workspaces", "W"],
-      ["Open tickets", "P"],
-      ["New note", "N"],
-    ]) {
-      await userEvent.clear(input);
-      await userEvent.type(input, `>${label}`);
-      const row = await canvas.findByRole("option", { name: new RegExp(label) });
-      await expect(within(row).getByText(key, { exact: true })).toBeVisible();
-    }
-    const binding = args.workbench.keybindings.registerKeybinding({
-      action: { kind: "command", commandId: "notes.create" },
-      keybinding: "Mod+Alt+M",
-    });
-    try {
-      await expect(await canvas.findByText("M", { exact: true })).toBeVisible();
-    } finally {
-      binding.dispose();
-    }
-    await expect(await canvas.findByText("N", { exact: true })).toBeVisible();
-  },
+  id: "pstdio-workbench-reference-command-palette-assigned-shortcuts--assigned-shortcuts",
 };

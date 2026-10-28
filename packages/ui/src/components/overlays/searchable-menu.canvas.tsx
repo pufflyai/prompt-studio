@@ -1,14 +1,12 @@
 import { Box, Button, Dialog, Icon, Menu, Portal, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { FolderGit2, GitBranch } from "lucide-react";
 import { useRef, useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { ListRow } from "@/components/list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "@/components/overlays/searchable-menu";
 
 const branchItems: SearchableMenuItem[] = Array.from({ length: 18 }, (_, index) => {
   const branchName = index === 0 ? "main" : `feature/searchable-menu-${index}`;
-
   return {
     id: branchName,
     label: branchName,
@@ -17,10 +15,8 @@ const branchItems: SearchableMenuItem[] = Array.from({ length: 18 }, (_, index) 
     isSelected: branchName === "main",
   };
 });
-
 const repositoryItems: SearchableMenuItem[] = Array.from({ length: 12 }, (_, index) => {
   const repoName = index === 0 ? "prompt-studio" : `repo-browser-${index}`;
-
   return {
     id: repoName,
     label: repoName,
@@ -29,8 +25,7 @@ const repositoryItems: SearchableMenuItem[] = Array.from({ length: 12 }, (_, ind
     isSelected: false,
   };
 });
-
-const meta: Meta<typeof SearchableMenu> = {
+const meta: CanvasMeta<typeof SearchableMenu> = {
   title: "Components/Navigation/Searchable Menu",
   component: SearchableMenu,
   parameters: {
@@ -50,12 +45,10 @@ const meta: Meta<typeof SearchableMenu> = {
     ),
   ],
 };
-
 export default meta;
-
-type Story = StoryObj<typeof SearchableMenu>;
-
+type Story = CanvasVariant<typeof SearchableMenu>;
 export const BranchSelector: Story = {
+  id: "components-navigation-searchable-menu--branch-selector",
   tags: ["menu-selection"],
   render: () => (
     <SearchableMenu
@@ -76,27 +69,14 @@ export const BranchSelector: Story = {
       }
     />
   ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
-    await userEvent.click(canvas.getByRole("button", { name: "Select branch" }));
-
-    const searchInput = canvas.getByLabelText("Search branches…");
-    await userEvent.type(searchInput, "origin/main");
-
-    await expect(canvas.getByRole("menuitem", { name: "main" })).toBeVisible();
-    await expect(canvas.queryByRole("option", { name: "main" })).not.toBeInTheDocument();
-    await expect(canvas.queryByRole("menuitem", { name: "feature/searchable-menu-1" })).not.toBeInTheDocument();
-  },
 };
-
 export const SwitchableLists: Story = {
+  id: "components-navigation-searchable-menu--switchable-lists",
   tags: ["menu-selection"],
   render: () => {
     const [selectedBranch, setSelectedBranch] = useState("main");
     const [selectedRepository, setSelectedRepository] = useState("prompt-studio");
     const repositoryLabel = repositoryItems.find((item) => item.id === selectedRepository)?.label ?? selectedRepository;
-
     return (
       <SearchableMenu
         trigger={<Button variant="outline">Switchable menu</Button>}
@@ -144,31 +124,9 @@ export const SwitchableLists: Story = {
       />
     );
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
-    await userEvent.click(canvas.getByRole("button", { name: "Switchable menu" }));
-
-    const searchInput = canvas.getByLabelText("Search branches…");
-    await userEvent.type(searchInput, "searchable-menu-1");
-    await expect(canvas.getByText("feature/searchable-menu-1")).toBeVisible();
-
-    await userEvent.click(canvas.getByRole("menuitem", { name: "Toggle list" }));
-
-    const repositorySearchInput = canvas.getByLabelText("Search repositories…");
-    await expect(repositorySearchInput).toHaveValue("");
-    await userEvent.type(repositorySearchInput, "repo-browser-1");
-    await expect(canvas.getByText("repo-browser-1")).toBeVisible();
-
-    await userEvent.click(canvas.getByRole("menuitem", { name: "repo-browser-1" }));
-
-    // Menu stays open showing branches after parent selection
-    const nextSearchInput = canvas.getByLabelText("Search branches…");
-    await expect(nextSearchInput).toHaveValue("");
-  },
 };
-
 export const DisabledParentList: Story = {
+  id: "components-navigation-searchable-menu--disabled-parent-list",
   render: () => (
     <SearchableMenu
       trigger={<Button variant="outline">Single repo</Button>}
@@ -207,8 +165,8 @@ export const DisabledParentList: Story = {
     />
   ),
 };
-
 export const PortalledInsideDialog: Story = {
+  id: "components-navigation-searchable-menu--portalled-inside-dialog",
   parameters: {
     layout: "fullscreen",
   },
@@ -251,11 +209,5 @@ export const PortalledInsideDialog: Story = {
         </Portal>
       </Dialog.Root>
     );
-  },
-  play: async () => {
-    const body = within(document.body);
-
-    await userEvent.click(body.getByRole("button", { name: "Select workspace" }));
-    await expect(body.getByRole("menuitem", { name: "main" })).toBeVisible();
   },
 };

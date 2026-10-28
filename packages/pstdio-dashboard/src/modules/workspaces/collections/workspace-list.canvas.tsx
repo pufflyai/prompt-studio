@@ -1,10 +1,9 @@
 import { Box } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -14,7 +13,11 @@ import { seedWorkspaceViewsStory } from "./workspace-views-story";
 
 const PROJECT_ID = "storybook-workspace-list";
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-const workspaceRow = (row: { id: string } & Record<string, unknown>) => ({
+const workspaceRow = (
+  row: {
+    id: string;
+  } & Record<string, unknown>,
+) => ({
   project_id: PROJECT_ID,
   archived: false,
   setup_error: null,
@@ -60,7 +63,6 @@ const seedWorkspaces = () =>
       created_at: hoursAgo(2),
     }),
   ]);
-
 // Storybook has no API server. Only diff summaries are answered, and only while the story is mounted.
 const useDiffSummaryResponses = () => {
   useEffect(() => {
@@ -77,11 +79,9 @@ const useDiffSummaryResponses = () => {
     };
   }, []);
 };
-
 interface WorkspaceListStoryProps {
   openWorkspaceId?: string;
 }
-
 const WorkspaceListStory = (props: WorkspaceListStoryProps) => {
   const { openWorkspaceId } = props;
   useDiffSummaryResponses();
@@ -95,7 +95,6 @@ const WorkspaceListStory = (props: WorkspaceListStoryProps) => {
     openWorkspacesPage(next, openWorkspaceId ? { type: "workspace", id: openWorkspaceId } : undefined);
     return next;
   });
-
   return (
     <QueryClientProvider client={getDashboardQueryClient()}>
       <Box h="100dvh">
@@ -104,60 +103,24 @@ const WorkspaceListStory = (props: WorkspaceListStoryProps) => {
     </QueryClientProvider>
   );
 };
-
 const meta = {
   title: "Dashboard/Workspace list",
   component: WorkspaceListStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof WorkspaceListStory>;
+} satisfies CanvasMeta<typeof WorkspaceListStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-const columnHeaders = (canvasElement: HTMLElement) =>
-  [...canvasElement.querySelectorAll("thead tr.data-table-column-header-row th")]
-    .map((cell) => cell.textContent?.trim())
-    .filter(Boolean);
-
+type Story = CanvasVariant<typeof meta>;
 export const Defaults: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByText("Workspace list defaults");
-    await expect(columnHeaders(canvasElement)).toEqual(["Name", "Type", "Location", "Created at", "Diff"]);
-    await expect(canvas.queryByText("unique values")).toBeNull();
-    await expect(canvas.getByText("Git worktree")).toBeVisible();
-    await expect(canvas.getAllByText("Not supported")).toHaveLength(2);
-    await waitFor(() => expect(canvas.getByText("+128")).toBeVisible());
-  },
+  id: "dashboard-workspace-list--defaults",
 };
-
 export const DiagnosticColumns: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByText("Remote runner");
-    await userEvent.click(canvas.getByRole("button", { name: "Display settings" }));
-    const menu = within(await within(document.body).findByRole("dialog"));
-    await userEvent.click(menu.getByText("Statistics"));
-    await userEvent.click(menu.getByText("State", { exact: true }));
-    await userEvent.click(menu.getByText("Provider error"));
-    await expect(await canvas.findByText("Remote container failed to start")).toBeVisible();
-    await expect(canvas.getByRole("cell", { name: "Failed" })).toBeVisible();
-    await expect((await canvas.findAllByText("unique values")).length).toBeGreaterThan(0);
-  },
+  id: "dashboard-workspace-list--diagnostic-columns",
 };
-
-const breadcrumbLeafIcon = (canvasElement: HTMLElement) =>
-  canvasElement.querySelector('nav[aria-label="breadcrumb"] li:last-child svg')?.getAttribute("class") ?? "";
-
 export const ProjectFolderBreadcrumb: Story = {
+  id: "dashboard-workspace-list--project-folder-breadcrumb",
   args: { openWorkspaceId: "workspace-folder" },
-  play: async ({ canvasElement }) => {
-    await waitFor(() => expect(breadcrumbLeafIcon(canvasElement)).toContain("lucide-folder"));
-  },
 };
-
 export const GitWorktreeBreadcrumb: Story = {
+  id: "dashboard-workspace-list--git-worktree-breadcrumb",
   args: { openWorkspaceId: "workspace-worktree" },
-  play: async ({ canvasElement }) => {
-    await waitFor(() => expect(breadcrumbLeafIcon(canvasElement)).toContain("lucide-git-branch"));
-  },
 };

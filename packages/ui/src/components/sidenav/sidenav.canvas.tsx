@@ -1,5 +1,5 @@
 import { Badge, Box, Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import {
   Bell,
   Copy,
@@ -139,7 +139,6 @@ const sidenavSections: TreeListSection[] = [
     ],
   },
 ];
-
 const sessionStatuses: SessionCompletionStatus[] = [
   "in_progress",
   "awaiting_input",
@@ -147,7 +146,6 @@ const sessionStatuses: SessionCompletionStatus[] = [
   "failed",
   "cancelled",
 ];
-
 const coloredSessionSections: TreeListSection[] = [
   {
     id: "sessions",
@@ -165,27 +163,23 @@ const coloredSessionSections: TreeListSection[] = [
     })),
   },
 ];
-
 interface SidenavShellProps {
   storageKey: string;
   sections?: TreeListSection[];
   header?: ReactNode;
   contextActions?: ResourceContextAction[];
 }
-
 const SidenavShell = (props: SidenavShellProps) => {
   const { storageKey, sections = sidenavSections, header, contextActions } = props;
   const [activeNodeId, setActiveNodeId] = useState<string | null>("overview");
   const [navigationOutput, setNavigationOutput] = useState("No navigation yet");
   const [openState, setOpenState] = useState(true);
-
   const openSidenav = useSidenavStore(storageKey, (state) => state.openSidenav);
   const closeSidenav = useSidenavStore(storageKey, (state) => state.closeSidenav);
   const setSidenavOpen = (open: boolean) => {
     if (open) openSidenav();
     else closeSidenav();
   };
-
   return (
     <Stack align="stretch" h="560px" borderWidth="1px" borderColor="border.subtle">
       <ResizableSplitLayout
@@ -259,28 +253,25 @@ const SidenavShell = (props: SidenavShellProps) => {
     </Stack>
   );
 };
-
-const meta: Meta<typeof Sidenav> = {
+const meta: CanvasMeta<typeof Sidenav> = {
   title: "Components/Navigation/Sidenav",
   component: Sidenav,
   parameters: {
     layout: "fullscreen",
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof Sidenav>;
-
+type Story = CanvasVariant<typeof Sidenav>;
 export const DefaultDocsTree: Story = {
+  id: "components-navigation-sidenav--default-docs-tree",
   render: () => <SidenavShell storageKey="storybook-sidenav-default" />,
 };
-
 export const HeaderAndFooterLayout: Story = {
+  id: "components-navigation-sidenav--header-and-footer-layout",
   render: () => <SidenavShell storageKey="storybook-sidenav-layout" />,
 };
-
 export const HiddenWithExternalReopen: Story = {
+  id: "components-navigation-sidenav--hidden-with-external-reopen",
   render: () => <SidenavShell storageKey="storybook-sidenav-reopen" />,
   parameters: {
     docs: {
@@ -290,8 +281,8 @@ export const HiddenWithExternalReopen: Story = {
     },
   },
 };
-
 export const PersistenceRestore: Story = {
+  id: "components-navigation-sidenav--persistence-restore",
   render: () => <SidenavShell storageKey="storybook-sidenav-persist" />,
   parameters: {
     docs: {
@@ -301,7 +292,6 @@ export const PersistenceRestore: Story = {
     },
   },
 };
-
 const WholeSidenavContextMenuStory = () => {
   const [notificationsVisible, setNotificationsVisible] = useState(true);
   const sections = sidenavSections.map((section) => ({
@@ -316,13 +306,12 @@ const WholeSidenavContextMenuStory = () => {
       onClick: () => setNotificationsVisible((visible) => !visible),
     },
   ];
-
   return (
     <SidenavShell storageKey="storybook-sidenav-context-menu" sections={sections} contextActions={contextActions} />
   );
 };
-
 export const WholeSidenavContextMenu: Story = {
+  id: "components-navigation-sidenav--whole-sidenav-context-menu",
   render: () => <WholeSidenavContextMenuStory />,
   parameters: {
     docs: {
@@ -332,8 +321,8 @@ export const WholeSidenavContextMenu: Story = {
     },
   },
 };
-
 export const NamespaceIsolation: Story = {
+  id: "components-navigation-sidenav--namespace-isolation",
   render: () => {
     return (
       <Stack direction={{ base: "column", lg: "row" }} gap="4" p="4">
@@ -353,8 +342,8 @@ export const NamespaceIsolation: Story = {
     );
   },
 };
-
 export const ColoredSessionIcons: Story = {
+  id: "components-navigation-sidenav--colored-session-icons",
   render: () => <SidenavShell storageKey="storybook-sidenav-colored-icons" sections={coloredSessionSections} />,
   parameters: {
     docs: {

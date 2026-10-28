@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { DesktopStartupProgress } from "./desktop-starting-state";
 
 const meta = {
@@ -6,13 +6,25 @@ const meta = {
   component: DesktopStartupProgress,
   parameters: { layout: "centered" },
   args: { phase: "database" },
-} satisfies Meta<typeof DesktopStartupProgress>;
-
+} satisfies CanvasMeta<typeof DesktopStartupProgress>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const PreparingData: Story = {};
-export const BackingUpPreviousData: Story = { args: { phase: "retiring" } };
-export const BackupTakingLonger: Story = { args: { phase: "retiring", takingLonger: true } };
-export const LoadingTools: Story = { args: { phase: "extensions" } };
-export const TakingLonger: Story = { args: { phase: "database", takingLonger: true } };
+type Story = CanvasVariant<typeof meta>;
+export const PreparingData: Story = {
+  id: "patterns-desktop-startup-progress--preparing-data",
+};
+export const BackingUpPreviousData: Story = {
+  id: "patterns-desktop-startup-progress--backing-up-previous-data",
+  args: { phase: "retiring" },
+};
+export const BackupTakingLonger: Story = {
+  id: "patterns-desktop-startup-progress--backup-taking-longer",
+  args: { phase: "retiring", takingLonger: true },
+};
+export const LoadingTools: Story = {
+  id: "patterns-desktop-startup-progress--loading-tools",
+  args: { phase: "extensions" },
+};
+export const TakingLonger: Story = {
+  id: "patterns-desktop-startup-progress--taking-longer",
+  args: { phase: "database", takingLonger: true },
+};

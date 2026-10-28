@@ -1,5 +1,5 @@
 import { Button, HStack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
 import { startChatMountMetric } from "../performance/chat-mount-metrics";
 import {
@@ -21,7 +21,7 @@ import { ChatPanel } from "./chat-panel";
 import { ChatSkeleton } from "./chat-skeleton";
 import type { SessionMessage } from "./message-types";
 
-const meta: Meta<typeof ChatPanel> = {
+const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel Performance",
   component: ChatPanel,
   parameters: {
@@ -36,18 +36,14 @@ const meta: Meta<typeof ChatPanel> = {
   },
   tags: ["!manifest"],
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ChatPanel>;
-
+type Story = CanvasVariant<typeof ChatPanel>;
 const largeConversation = buildLargeChatConversation({
   sessionId: "perf-large",
   turns: CHAT_PERFORMANCE_STRESS_TURNS,
   textRepeat: 4,
   toolCallsPerTurn: 3,
 });
-
 const switchFixture = buildChatSessionSwitchFixture();
 const streamingTailTurns = 3;
 const streamingSeed = buildLargeChatConversation({
@@ -62,40 +58,31 @@ const streamingTail = buildLargeChatConversation({
   textRepeat: 1,
   toolCallsPerTurn: 2,
 });
-
 function LargeConversationBenchmark() {
   const [messages, setMessages] = useState<SessionMessage[]>([]);
   const [mountMeasurement, setMountMeasurement] = useState<ActiveMountMeasurement | null>(null);
   const startedRef = useRef(false);
-
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-
     let cancelled = false;
-
     const run = async () => {
       await nextFrame();
       if (cancelled) return;
-
       const id = startChatMountMetric({
         scenario: "large-conversation",
         label: "Large chat mount",
         messageCount: largeConversation.length,
         startMarkName: "chat-perf:large-conversation-mount-start",
       });
-
       setMountMeasurement({ id, readyMarkName: "chat-perf:large-conversation-ready" });
       setMessages(largeConversation);
     };
-
     void run();
-
     return () => {
       cancelled = true;
     };
   }, []);
-
   return (
     <ChatPerfShell scenario="large-conversation" activeLabel="Large conversation" messageCount={messages.length}>
       <ChatMountReadyMarker measurement={mountMeasurement} messageCount={messages.length} />
@@ -109,45 +96,36 @@ function LargeConversationBenchmark() {
     </ChatPerfShell>
   );
 }
-
 function SessionSwitchingBenchmark() {
   const [activeSession, setActiveSession] = useState<typeof switchFixture.primarySession | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [mountMeasurement, setMountMeasurement] = useState<ActiveMountMeasurement | null>(null);
   const startedRef = useRef(false);
   const loadRequestRef = useRef(0);
-
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-
     const requestId = loadRequestRef.current + 1;
     loadRequestRef.current = requestId;
     let cancelled = false;
-
     const run = async () => {
       await nextFrame();
       if (cancelled || loadRequestRef.current !== requestId) return;
-
       const session = switchFixture.primarySession;
       const id = startChatMountMetric({
         scenario: "session-switching",
         label: "Initial session mount",
         messageCount: session.messages.length,
       });
-
       setMountMeasurement({ id, readyMarkName: "chat-perf:session-switch-ready" });
       setActiveSession(session);
       setIsLoadingSession(false);
     };
-
     void run();
-
     return () => {
       cancelled = true;
     };
   }, []);
-
   const switchSession = (session: typeof switchFixture.primarySession) => {
     const requestId = loadRequestRef.current + 1;
     loadRequestRef.current = requestId;
@@ -157,22 +135,17 @@ function SessionSwitchingBenchmark() {
       messageCount: session.messages.length,
       startMarkName: "chat-perf:session-switch-start",
     });
-
     setMountMeasurement({ id, readyMarkName: "chat-perf:session-switch-ready" });
     setIsLoadingSession(true);
     setActiveSession(null);
-
     const run = async () => {
       await nextFrame();
       if (loadRequestRef.current !== requestId) return;
-
       setActiveSession(session);
       setIsLoadingSession(false);
     };
-
     void run();
   };
-
   const controls = (
     <HStack gap="xs">
       <Button size="xs" onClick={() => switchSession(switchFixture.primarySession)}>
@@ -183,9 +156,7 @@ function SessionSwitchingBenchmark() {
       </Button>
     </HStack>
   );
-
   const messages = activeSession?.messages ?? [];
-
   return (
     <ChatPerfShell
       scenario="session-switching"
@@ -204,38 +175,29 @@ function SessionSwitchingBenchmark() {
     </ChatPerfShell>
   );
 }
-
 function StreamingBenchmark() {
   const [messages, setMessages] = useState<SessionMessage[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [mountMeasurement, setMountMeasurement] = useState<ActiveMountMeasurement | null>(null);
   const startedRef = useRef(false);
-
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-
     let cancelled = false;
-
     const run = async () => {
       await nextFrame();
       if (cancelled) return;
-
       const id = startChatMountMetric({
         scenario: "streaming",
         label: "Seed chat mount",
         messageCount: streamingSeed.length,
       });
-
       setMountMeasurement({ id });
       setMessages(streamingSeed);
       setStreaming(true);
-
       await nextFrame();
       await nextFrame();
-
       performance.mark("chat-perf:stream-start");
-
       await streamMessages({
         messages: streamingTail,
         isCancelled: () => cancelled,
@@ -243,20 +205,15 @@ function StreamingBenchmark() {
         updateText: (messageId, partIndex, text) =>
           setMessages((current) => updateStreamingTextPart(current, messageId, partIndex, text)),
       });
-
       if (cancelled) return;
-
       setStreaming(false);
       markAfterPaint("chat-perf:stream-complete");
     };
-
     void run();
-
     return () => {
       cancelled = true;
     };
   }, []);
-
   return (
     <ChatPerfShell scenario="streaming" activeLabel="Streaming conversation" messageCount={messages.length}>
       <ChatMountReadyMarker measurement={mountMeasurement} messageCount={messages.length} />
@@ -270,15 +227,15 @@ function StreamingBenchmark() {
     </ChatPerfShell>
   );
 }
-
 export const LargeConversation: Story = {
+  id: "patterns-chat-chat-panel-performance--large-conversation",
   render: () => <LargeConversationBenchmark />,
 };
-
 export const SessionSwitching: Story = {
+  id: "patterns-chat-chat-panel-performance--session-switching",
   render: () => <SessionSwitchingBenchmark />,
 };
-
 export const StreamingScenario: Story = {
+  id: "patterns-chat-chat-panel-performance--streaming-scenario",
   render: () => <StreamingBenchmark />,
 };

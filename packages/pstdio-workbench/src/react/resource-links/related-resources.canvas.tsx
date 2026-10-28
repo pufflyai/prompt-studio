@@ -1,6 +1,6 @@
 import { Dialog } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { ResourceAnchorPage, ResourceRef } from "@pstdio/sdk/extensions";
-import type { Meta, StoryObj } from "@storybook/react";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { RelatedResources } from "./related-resources";
 import type { ResourceLinksService } from "./resource-links-types";
@@ -29,7 +29,6 @@ const workspace: ResourceRef = {
   icon: "folder",
 };
 const missing: ResourceRef = { type: "note", id: "deleted-resource", extensionId: "notes", projectId: "project" };
-
 const service = (items: ResourceAnchorPage["items"], fail = false): ResourceLinksService => ({
   list: async () => {
     if (fail) throw new Error("The connection was interrupted. Try again.");
@@ -47,7 +46,6 @@ const service = (items: ResourceAnchorPage["items"], fail = false): ResourceLink
   ],
   subscribe: () => () => undefined,
 });
-
 const meta = {
   title: "Workbench/Resource links",
   component: RelatedResources,
@@ -65,11 +63,11 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-} satisfies Meta<typeof RelatedResources>;
+} satisfies CanvasMeta<typeof RelatedResources>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const Related: Story = {
+  id: "workbench-resource-links--related",
   args: {
     service: service([
       { source: ticket, target: { ...artifact, role: "result" } },
@@ -78,6 +76,15 @@ export const Related: Story = {
     ]),
   },
 };
-export const Empty: Story = { args: { service: service([]) } };
-export const Failure: Story = { args: { service: service([], true) } };
-export const Loading: Story = { args: { service: { ...service([]), list: () => new Promise(() => {}) } } };
+export const Empty: Story = {
+  id: "workbench-resource-links--empty",
+  args: { service: service([]) },
+};
+export const Failure: Story = {
+  id: "workbench-resource-links--failure",
+  args: { service: service([], true) },
+};
+export const Loading: Story = {
+  id: "workbench-resource-links--loading",
+  args: { service: { ...service([]), list: () => new Promise(() => {}) } },
+};

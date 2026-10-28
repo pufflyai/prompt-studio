@@ -9,6 +9,8 @@ const metadataRoot = ".pstdio/extensions/canvas/src/catalog/generated";
 export const parserInputs = [
   "bun.lock",
   "packages/ui/package.json",
+  "packages/canvas/package.json",
+  "packages/canvas/src/indexer.ts",
   ...["story-catalog.ts", "story-catalog-cache.ts", "parse-story-sources.ts", "story-parser-worker.ts"].map(
     (file) => `${scriptRoot}/${file}`,
   ),

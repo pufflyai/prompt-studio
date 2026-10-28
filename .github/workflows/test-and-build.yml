@@ -559,8 +559,8 @@ jobs:
       CI_PRIORITY: P2
       CI_SOURCE_COVERAGE: ${{ needs.scope.outputs.source_coverage == 'true' && '1' || '0' }}
       GH_TOKEN: ${{ github.token }}
-  storybooks:
-    name: storybooks_${{ matrix.priority }} (${{ matrix.package }})
+  components:
+    name: components_${{ matrix.priority }} (${{ matrix.package }})
     needs: scope
     if: needs.scope.outputs.component_checks == 'true'
     runs-on: ubuntu-latest
@@ -594,8 +594,8 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
         with:
           profile: playwright
-      - name: Build selected Storybook owner
-        run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun x --no-install lerna run build:preview-tests --scope '${{ matrix.project }}'
+      - name: Build native Canvas preview harness
+        run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun x --no-install lerna run build:previews --scope canvas-tests
       - name: Test selected component contracts
         run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun run --cwd packages/canvas-tests test:browser
       - name: Preserve component evidence
@@ -611,7 +611,7 @@ jobs:
         if: ${{ !cancelled() && needs.scope.outputs.stage == 'merge_queue' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ci-build-playwright-storybook-${{ matrix.package }}-attempt-${{ github.run_attempt }}
+          name: ci-build-playwright-components-${{ matrix.package }}-attempt-${{ github.run_attempt }}
           path: .cache/ci-build
           include-hidden-files: true
           compression-level: 0

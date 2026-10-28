@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench, type WorkflowStatus } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkflowStatusSettings } from "./workflow-status-settings";
@@ -19,11 +19,9 @@ const ticketStatuses: WorkflowStatus[] = [
     sortOrder: 200,
   },
 ];
-
 const actionableTicketStatuses = ticketStatuses.map((status) =>
   status.id === "done" ? { ...status, actions: ["archive_all"] } : status,
 );
-
 const severalProvidersWorkbench = createWorkbench();
 severalProvidersWorkbench.statuses.registerStatusSet({
   id: "planner.ticket",
@@ -37,14 +35,12 @@ severalProvidersWorkbench.statuses.registerStatusSet({
   title: "Release statuses",
   query: async () => [{ id: "ready", label: "Ready", color: "blue", sortOrder: 100 }],
 });
-
 const loadingWorkbench = createWorkbench();
 loadingWorkbench.statuses.registerStatusSet({
   id: "slow",
   title: "Loading provider",
   query: () => new Promise<WorkflowStatus[]>(() => {}),
 });
-
 const cachedWorkbench = createWorkbench();
 cachedWorkbench.statuses.registerStatusSet({
   id: "cached",
@@ -52,7 +48,6 @@ cachedWorkbench.statuses.registerStatusSet({
   query: async () => ticketStatuses,
   save: async (statuses) => statuses,
 });
-
 const saveFailureWorkbench = createWorkbench();
 saveFailureWorkbench.statuses.registerStatusSet({
   id: "failing",
@@ -62,7 +57,6 @@ saveFailureWorkbench.statuses.registerStatusSet({
     throw new Error("The provider rejected this status order.");
   },
 });
-
 const isolatedProvidersWorkbench = createWorkbench();
 isolatedProvidersWorkbench.statuses.registerStatusSet({
   id: "broken",
@@ -71,7 +65,6 @@ isolatedProvidersWorkbench.statuses.registerStatusSet({
     throw new Error("This provider is unavailable.");
   },
 });
-
 const statusStorySource = (setup: string) => `import { Box } from "@chakra-ui/react";
 import { createWorkbench } from "@pstdio/workbench";
 import {
@@ -89,7 +82,6 @@ export const App = () => (
     </Box>
   </WorkbenchThemeProvider>
 );`;
-
 const statusSourceParameters = (setup: string) => ({
   docs: { source: { code: statusStorySource(setup), language: "tsx", type: "code" } },
 });
@@ -99,7 +91,6 @@ isolatedProvidersWorkbench.statuses.registerStatusSet({
   query: async () => ticketStatuses,
   save: async (statuses) => statuses,
 });
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Workflow status editor",
   tags: ["autodocs"],
@@ -112,12 +103,9 @@ const meta = {
       },
     },
   },
-} satisfies Meta;
-
+} satisfies CanvasMeta;
 export default meta;
-
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 const StatusesFrame = (props: { workbench: ReturnType<typeof createWorkbench> }) => {
   const { workbench } = props;
   return (
@@ -128,8 +116,8 @@ const StatusesFrame = (props: { workbench: ReturnType<typeof createWorkbench> })
     </WorkbenchThemeProvider>
   );
 };
-
 export const SeveralProvidersAndReadOnly: Story = {
+  id: "pstdio-workbench-reference-core-api-workflow-status-editor--several-providers-and-read-only",
   parameters: statusSourceParameters(`workbench.statuses.registerStatusSet({
   id: "planner.ticket",
   title: "Ticket statuses",
@@ -149,8 +137,8 @@ workbench.statuses.registerStatusSet({
 });`),
   render: () => <StatusesFrame workbench={severalProvidersWorkbench} />,
 };
-
 export const Loading: Story = {
+  id: "pstdio-workbench-reference-core-api-workflow-status-editor--loading",
   parameters: statusSourceParameters(`workbench.statuses.registerStatusSet({
   id: "slow",
   title: "Loading provider",
@@ -158,8 +146,8 @@ export const Loading: Story = {
 });`),
   render: () => <StatusesFrame workbench={loadingWorkbench} />,
 };
-
 export const AlreadyLoaded: Story = {
+  id: "pstdio-workbench-reference-core-api-workflow-status-editor--already-loaded",
   parameters: statusSourceParameters(`workbench.statuses.registerStatusSet({
   id: "cached",
   title: "Already loaded provider",
@@ -173,8 +161,8 @@ await workbench.statuses.load("cached");`),
   loaders: [async () => await cachedWorkbench.statuses.load("cached")],
   render: () => <StatusesFrame workbench={cachedWorkbench} />,
 };
-
 export const SaveFailure: Story = {
+  id: "pstdio-workbench-reference-core-api-workflow-status-editor--save-failure",
   parameters: statusSourceParameters(`workbench.statuses.registerStatusSet({
   id: "failing",
   title: "Save failure",
@@ -188,8 +176,8 @@ export const SaveFailure: Story = {
 });`),
   render: () => <StatusesFrame workbench={saveFailureWorkbench} />,
 };
-
 export const ProviderIsolation: Story = {
+  id: "pstdio-workbench-reference-core-api-workflow-status-editor--provider-isolation",
   parameters: statusSourceParameters(`workbench.statuses.registerStatusSet({
   id: "broken",
   title: "Unavailable provider",

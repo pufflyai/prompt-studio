@@ -1,7 +1,7 @@
 import { Dialog } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { WorkbenchKeyboardShortcutsPanel } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react";
 
 const workbench = createWorkbench();
 workbench.resources.registerKind({ kind: "note", label: "Notes", extensionId: "pstdio.pstdio-notes" });
@@ -35,8 +35,13 @@ const meta = {
       </Dialog.Root>
     ),
   ],
-} satisfies Meta<typeof WorkbenchKeyboardShortcutsPanel>;
+} satisfies CanvasMeta<typeof WorkbenchKeyboardShortcutsPanel>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const AssignedShortcuts: Story = {};
-export const FilteredResource: Story = { args: { initialFilter: "Sessions" } };
+type Story = CanvasVariant<typeof meta>;
+export const AssignedShortcuts: Story = {
+  id: "help-keyboard-shortcuts--assigned-shortcuts",
+};
+export const FilteredResource: Story = {
+  id: "help-keyboard-shortcuts--filtered-resource",
+  args: { initialFilter: "Sessions" },
+};

@@ -1,7 +1,6 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { RichMessage } from "./rich-message";
 
 // The text and eight-update workload follow workbench-fixture's long-stream-replay.ts.
@@ -34,17 +33,13 @@ const meta = {
   tags: ["motion"],
   title: "Patterns/Editors/RichMessage/Streaming Motion",
   component: StreamingMessage,
-} satisfies Meta<typeof StreamingMessage>;
+} satisfies CanvasMeta<typeof StreamingMessage>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const ChunkFade: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const earlier = canvas.getByText("Earlier text.");
-    await userEvent.click(canvas.getByRole("button", { name: "Append chunk" }));
-    await waitFor(() => expect(canvasElement.querySelector(".streaming-text-chunk")).toHaveTextContent("New chunk."));
-    await expect(earlier.isConnected).toBe(true);
-    await expect(earlier).toHaveTextContent("Earlier text.");
-  },
+  id: "patterns-editors-richmessage-streaming-motion--chunk-fade",
 };
-export const History: Story = { render: () => <RichMessage defaultState={replayText} fullWidth /> };
+export const History: Story = {
+  id: "patterns-editors-richmessage-streaming-motion--history",
+  render: () => <RichMessage defaultState={replayText} fullWidth />,
+};

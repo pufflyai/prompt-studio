@@ -16,7 +16,7 @@ interface TestGroup {
   owner: TestPackage;
   runner: string;
   files: string[];
-  storybook?: string;
+  componentOwner?: string;
 }
 
 const performanceCommand = (paths: string[], owner: TestPackage) => {
@@ -32,7 +32,7 @@ const performanceCommand = (paths: string[], owner: TestPackage) => {
   return ["bun", ...paths];
 };
 
-const runCommand = (runner: string, files: string[], owner: TestPackage, storybook?: string) => {
+const runCommand = (runner: string, files: string[], owner: TestPackage, componentOwner?: string) => {
   const paths = files.map((file) => relative(owner.dir, file).replaceAll("\\", "/"));
   if (runner === "api") return ["bun", "run", "test", `--files=${JSON.stringify(paths)}`];
   const script = {
@@ -67,7 +67,7 @@ const runCommand = (runner: string, files: string[], owner: TestPackage, storybo
     ];
   }
   if (runner === "performance") return performanceCommand(paths, owner);
-  if (storybook) throw new Error("A Storybook owner requires the component runner");
+  if (componentOwner) throw new Error("A Canvas preview owner requires the component runner");
   if (
     owner.scripts.test &&
     owner.scripts.test.trim() !== "bun test" &&
@@ -84,9 +84,10 @@ const runCommand = (runner: string, files: string[], owner: TestPackage, storybo
 
 const groupDetails = (file: string, runner: string, owner: TestPackage) => {
   if (runner === "component") {
-    const storybook = relative("packages/canvas-tests/src/ui", dirname(file)).replaceAll("\\", "/");
-    if (!storybook || storybook.includes("/")) throw new Error(`Component test needs an owner directory: ${file}`);
-    return { subgroup: storybook, storybook };
+    const componentOwner = relative("packages/canvas-tests/src/ui", dirname(file)).replaceAll("\\", "/");
+    if (!componentOwner || componentOwner.includes("/"))
+      throw new Error(`Component test needs an owner directory: ${file}`);
+    return { subgroup: componentOwner, componentOwner };
   }
   if (runner === "desktop") return { subgroup: file.includes("/packaged-") ? "packaged" : "source" };
   if (runner !== "performance") return { subgroup: "" };
@@ -104,10 +105,10 @@ const groupRuns = (id: string, group: TestGroup, priority: TestPriority) => {
     cwd: group.owner.dir,
     runner: group.runner,
     files: group.files,
-    storybook: group.storybook,
+    componentOwner: group.componentOwner,
   };
   if (group.runner !== "integration")
-    return [{ ...base, command: runCommand(group.runner, group.files, group.owner, group.storybook) }];
+    return [{ ...base, command: runCommand(group.runner, group.files, group.owner, group.componentOwner) }];
   if (group.owner.scripts["test:integration"])
     return [
       {
@@ -143,8 +144,8 @@ export const createPriorityPlan = (
       scripts: {},
     };
     const runner = testRunner(file);
-    const { subgroup, storybook } = groupDetails(file, runner, owner);
-    const sourceOwner = storybook ? packages.find((pkg) => pkg.dir === `packages/${storybook}`) : undefined;
+    const { subgroup, componentOwner } = groupDetails(file, runner, owner);
+    const sourceOwner = componentOwner ? packages.find((pkg) => pkg.dir === `packages/${componentOwner}`) : undefined;
     const scopedOwners = sourceOwner ? [owner, sourceOwner] : [owner];
     if (
       options.scope &&
@@ -153,7 +154,7 @@ export const createPriorityPlan = (
       continue;
     if (options.runner && runner !== options.runner) continue;
     const id = `${owner.name}:${runner}${subgroup ? `:${subgroup}` : ""}`;
-    const group = groups.get(id) ?? { owner, runner, files: [], ...(storybook ? { storybook } : {}) };
+    const group = groups.get(id) ?? { owner, runner, files: [], ...(componentOwner ? { componentOwner } : {}) };
     group.files.push(file);
     groups.set(id, group);
   }

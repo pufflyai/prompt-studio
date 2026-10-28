@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ShapeField } from "../../components/shapes/shape-field";
 
 const meta = {
@@ -13,11 +13,11 @@ const meta = {
       </Box>
     ),
   ],
-} satisfies Meta<typeof ShapeField>;
-
+} satisfies CanvasMeta<typeof ShapeField>;
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = CanvasVariant<typeof meta>;
 export const DraggableAgents: Story = {
+  id: "theme-tool-assembly--draggable-agents",
   parameters: {
     docs: {
       description: {
@@ -28,6 +28,7 @@ export const DraggableAgents: Story = {
   },
 };
 export const Narrow: Story = {
+  id: "theme-tool-assembly--narrow",
   decorators: [
     (Story) => (
       <Box width="80" height="60rem" position="relative">

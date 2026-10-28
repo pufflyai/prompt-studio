@@ -1,8 +1,8 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ChatPanel } from "./chat-panel";
 
-const meta: Meta<typeof ChatPanel> = {
+const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel/Working Indicator",
   component: ChatPanel,
   render: (args) => (
@@ -20,7 +20,11 @@ const meta: Meta<typeof ChatPanel> = {
   },
 };
 export default meta;
-type Story = StoryObj<typeof ChatPanel>;
-
-export const WithoutAnchor: Story = {};
-export const AnchoredRun: Story = { args: { streamingStartedAt: Date.now() - 5 * 60_000 } };
+type Story = CanvasVariant<typeof ChatPanel>;
+export const WithoutAnchor: Story = {
+  id: "patterns-chat-chat-panel-working-indicator--without-anchor",
+};
+export const AnchoredRun: Story = {
+  id: "patterns-chat-chat-panel-working-indicator--anchored-run",
+  args: { streamingStartedAt: Date.now() - 5 * 60000 },
+};

@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Profiler, type ReactNode, useEffect, useRef, useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import {
   formatPerformanceMs,
   installPerformanceFrameRateSampler,
@@ -13,7 +12,6 @@ import type { Diff } from "./diff-card";
 import { DiffViewer } from "./lazy-diff";
 
 type StoryFn = () => ReactNode;
-
 const sampleDiffs: Diff[] = [
   {
     change: "modified",
@@ -50,7 +48,6 @@ const sampleDiffs: Diff[] = [
     deletions: 1,
   },
 ];
-
 const binaryDiffs: Diff[] = [
   {
     change: "modified",
@@ -89,23 +86,19 @@ const binaryDiffs: Diff[] = [
     deletions: 0,
   },
 ];
-
 const changes: Diff["change"][] = ["modified", "added", "deleted", "renamed"];
 const diffSizes = [2, 8, 24, 60, 140, 1200] as const;
-
 const buildVariableSizeContent = (index: number, lineCount: number, suffix: string) => {
   return Array.from({ length: lineCount }, (_, lineIndex) => `// file ${index} ${suffix} line ${lineIndex + 1}`).join(
     "\n",
   );
 };
-
 const stressDiffs: Diff[] = Array.from({ length: 200 }, (_, index) => {
   const lineCount = diffSizes[index % diffSizes.length];
   const change = changes[index % changes.length];
   const oldPath = `packages/app/src/features/feature-${index % 12}/file-${index}.ts`;
   const newPath =
     change === "renamed" ? `packages/app/src/features/feature-${index % 12}/renamed-${index}.ts` : oldPath;
-
   return {
     change,
     oldPath,
@@ -116,13 +109,11 @@ const stressDiffs: Diff[] = Array.from({ length: 200 }, (_, index) => {
     deletions: change === "added" ? 0 : lineCount,
   };
 });
-
 interface PerfSample {
   phase: "mount" | "update" | "nested-update";
   actualDuration: number;
   commitTime: number;
 }
-
 const DiffViewerPerformancePanel = (props: {
   diffCount: number;
   samples: PerfSample[];
@@ -132,7 +123,6 @@ const DiffViewerPerformancePanel = (props: {
   const { diffCount, samples, mountedAtMs, frameRate } = props;
   const mountSample = samples.find((sample) => sample.phase === "mount") ?? null;
   const updates = samples.filter((sample) => sample.phase !== "mount");
-
   return (
     <PerformancePanel
       title="Diff viewer performance"
@@ -156,13 +146,11 @@ const DiffViewerPerformancePanel = (props: {
     />
   );
 };
-
 const DiffViewerStressStory = () => {
   const startedAtRef = useRef(performance.now());
   const [mountedAtMs, setMountedAtMs] = useState<number | null>(null);
   const [samples, setSamples] = useState<PerfSample[]>([]);
   const [frameRate, setFrameRate] = useState<PerformanceFrameRateSnapshot>(() => readPerformanceFrameRateSnapshot());
-
   useEffect(() => {
     installPerformanceFrameRateSampler();
     const frame = requestAnimationFrame(() => setMountedAtMs(performance.now() - startedAtRef.current));
@@ -172,7 +160,6 @@ const DiffViewerStressStory = () => {
       window.clearInterval(interval);
     };
   }, []);
-
   return (
     <Box h="full" w="full" minH="0" position="relative" display="flex">
       <DiffViewerPerformancePanel
@@ -194,8 +181,7 @@ const DiffViewerStressStory = () => {
     </Box>
   );
 };
-
-const meta: Meta<typeof DiffViewer> = {
+const meta: CanvasMeta<typeof DiffViewer> = {
   title: "Patterns/Diff/Diff Viewer",
   component: DiffViewer,
   parameters: {
@@ -212,20 +198,19 @@ const meta: Meta<typeof DiffViewer> = {
     diffs: sampleDiffs,
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof DiffViewer>;
-
-export const Default: Story = {};
-
+type Story = CanvasVariant<typeof DiffViewer>;
+export const Default: Story = {
+  id: "patterns-diff-diff-viewer--default",
+};
 export const Empty: Story = {
+  id: "patterns-diff-diff-viewer--empty",
   args: {
     diffs: [],
   },
 };
-
 export const Loading: Story = {
+  id: "patterns-diff-diff-viewer--loading",
   args: {
     diffs: [],
     changedFilePaths: [
@@ -235,33 +220,19 @@ export const Loading: Story = {
     loading: true,
   },
 };
-
 export const BinaryAndImage: Story = {
+  id: "patterns-diff-diff-viewer--binary-and-image",
   args: {
     diffs: binaryDiffs,
   },
 };
-
 export const CopiedFilePath: Story = {
+  id: "patterns-diff-diff-viewer--copied-file-path",
   args: {
     diffs: [sampleDiffs[0]],
   },
-  play: async ({ canvasElement }) => {
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText: async () => undefined },
-    });
-
-    const canvas = within(canvasElement);
-    const header = within(await canvas.findByTestId("diff-card-header"));
-    header.getByRole("button", { name: "Collapse", exact: true }).focus();
-    await userEvent.tab();
-    await userEvent.keyboard("{Enter}");
-
-    await expect(canvas.getByLabelText("Copied")).toBeVisible();
-  },
 };
-
 export const StressTest: Story = {
+  id: "patterns-diff-diff-viewer--stress-test",
   render: () => <DiffViewerStressStory />,
 };

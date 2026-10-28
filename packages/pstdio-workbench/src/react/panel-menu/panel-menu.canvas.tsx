@@ -1,7 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { Workbench, WorkbenchThemeProvider } from "../index";
 
@@ -12,7 +11,6 @@ interface MenuWorkbenchOptions {
   tall?: boolean;
   embedded?: boolean;
 }
-
 const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
   const page = { extensionId: "storybook", kind: "page" as const, id: "menus" };
   const workbench = createWorkbench({ startPage: page });
@@ -66,12 +64,10 @@ const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
   }
   return workbench;
 };
-
 interface PanelMenuStoryProps {
   width: number;
   menus: MenuWorkbenchOptions;
 }
-
 const PanelMenuStory = (props: PanelMenuStoryProps) => {
   const { width, menus } = props;
   // One workbench per mount, so a rerun of a play function starts from the story's initial menu state.
@@ -84,124 +80,42 @@ const PanelMenuStory = (props: PanelMenuStoryProps) => {
     </WorkbenchThemeProvider>
   );
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Panel menus",
   component: PanelMenuStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof PanelMenuStory>;
+} satisfies CanvasMeta<typeof PanelMenuStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const ReopenAttached: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-menus--reopen-attached",
   args: { width: 700, menus: { closed: ["right"] } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("tab", { name: "Document" })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Close Document" })).toBeNull();
-    await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
-    await waitFor(() => expect(canvasElement.querySelector('[data-workbench-panel-menu="main-right"]')).toBeVisible());
-    await expect(canvas.queryByRole("button", { name: "Open Main right menu" })).toBeNull();
-    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
-    await expect(canvasElement.querySelector('[data-workbench-panel-header="main"]')).not.toBeVisible();
-    await userEvent.dblClick(canvas.getByRole("separator", { name: "Resize Main right menu" }));
-    await expect(await canvas.findByRole("tab", { name: "Document" })).toBeVisible();
-    await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
-    await waitFor(() => expect(canvasElement.querySelector('[data-workbench-panel-menu="main-right"]')).toBeVisible());
-  },
 };
-
 export const FloatingWhenNarrow: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-menus--floating-when-narrow",
   args: { width: 500, menus: { closed: ["right"] } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("tab", { name: "Document" })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Close Document" })).toBeNull();
-    await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
-    const floating = await within(canvasElement.ownerDocument.body).findByRole("menu", {
-      name: "Main right menu controls",
-    });
-    // Short content keeps the floating menu short instead of stretching it to the viewport.
-    await waitFor(() => expect(floating.getBoundingClientRect().height).toBeLessThan(200));
-  },
 };
-
 export const FloatingEmbeddedContent: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-menus--floating-embedded-content",
   args: { width: 500, menus: { closed: ["right"], embedded: true } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
-    const menu = await within(canvasElement.ownerDocument.body).findByRole("menu", {
-      name: "Main right menu controls",
-    });
-    await waitFor(() => expect(menu.querySelector("iframe")!.getBoundingClientRect().height).toBeGreaterThan(100));
-  },
 };
-
 export const FloatingTallContent: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-menus--floating-tall-content",
   args: { width: 500, menus: { closed: ["right"], tall: true } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
-    const floating = await within(canvasElement.ownerDocument.body).findByRole("menu", {
-      name: "Main right menu controls",
-    });
-    await waitFor(() => {
-      const bounds = floating.getBoundingClientRect();
-      const viewport = canvasElement.ownerDocument.defaultView!.innerHeight;
-      expect(bounds.bottom).toBeLessThanOrEqual(viewport);
-      expect(bounds.height).toBeGreaterThan(viewport - bounds.top - 20);
-    });
-    const scroller = within(floating).getAllByText("Inspector details").at(-1)!;
-    scroller.scrollIntoView();
-    await waitFor(() =>
-      expect(scroller.getBoundingClientRect().bottom).toBeLessThanOrEqual(floating.getBoundingClientRect().bottom),
-    );
-  },
 };
-
 export const BothMenusAttached: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-menus--both-menus-attached",
   args: { width: 700, menus: { both: true } },
-  play: async ({ canvasElement }) => {
-    for (const side of ["left", "right"]) {
-      await waitFor(() =>
-        expect(canvasElement.querySelector(`[data-workbench-panel-menu="main-${side}"]`)).toBeVisible(),
-      );
-    }
-    const content = within(canvasElement).getByText("Project notes");
-    await expect(content.getBoundingClientRect().width).toBeGreaterThanOrEqual(120);
-    const divider = within(canvasElement).getByRole("separator", { name: "Resize Main left menu" });
-    divider.focus();
-    await userEvent.keyboard("{End}");
-    await expect(content.getBoundingClientRect().width).toBeGreaterThanOrEqual(120);
-  },
 };
-
 export const OneMenuFits: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-menus--one-menu-fits",
   args: { width: 650, menus: { both: true, menuMinPx: 300 } },
 };
-
 export const FloatingPeekKeepsAttachedMenu: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-menus--floating-peek-keeps-attached-menu",
   args: { width: 650, menus: { both: true, closed: ["left"], menuMinPx: 300 } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const rightMenu = () => canvasElement.querySelector('[data-workbench-panel-menu="main-right"]');
-    await waitFor(() => expect(rightMenu()).toBeVisible());
-    await userEvent.click(await canvas.findByRole("button", { name: "Open Main left menu" }));
-    await within(canvasElement.ownerDocument.body).findByRole("menu", { name: "Main left menu controls" });
-    await expect(canvasElement.querySelector('[data-workbench-panel-menu="main-left"]')).not.toBeVisible();
-    await expect(rightMenu()).toBeVisible();
-  },
 };
-
 export const FloatingPeekKeepsOpenPreference: Story = {
+  id: "pstdio-workbench-reference-core-api-panel-menus--floating-peek-keeps-open-preference",
   args: { width: 240, menus: {} },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
-    await within(canvasElement.ownerDocument.body).findByRole("menu", { name: "Main right menu controls" });
-    await userEvent.keyboard("{Escape}");
-    canvas.getByTestId("panel-menu-story-frame").style.width = "700px";
-    await waitFor(() => expect(canvasElement.querySelector('[data-workbench-panel-menu="main-right"]')).toBeVisible());
-  },
 };

@@ -189,7 +189,6 @@
       "ignore": ["dist/**", "vendor/**"]
     },
     "packages/pstdio-dashboard": {
-      "storybook": { "config": [".canvas/main.ts"], "entry": [".canvas/preview.tsx", "src/**/*.canvas.tsx"] },
       "entry": [
         "vite.config.ts",
         ".canvas/**/*.{ts,tsx}",
@@ -246,7 +245,6 @@
       "ignoreDependencies": ["pstdio-sync-contracts", "zod"]
     },
     "packages/pstdio-workbench": {
-      "storybook": { "config": [".canvas/main.ts"], "entry": [".canvas/preview.tsx", "src/**/*.canvas.tsx"] },
       "entry": [
         "package.json",
         ".canvas/**/*.{ts,tsx}",
@@ -267,7 +265,6 @@
       "ignoreDependencies": ["pstdio-sync-contracts", "rimless", "zod"]
     },
     "packages/ui": {
-      "storybook": { "config": [".canvas/main.ts"], "entry": [".canvas/preview.tsx", "src/**/*.canvas.tsx"] },
       "entry": [
         "package.json",
         "vite.config.ts",
@@ -295,7 +292,6 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-base-themes": {
-      "storybook": { "config": [".canvas/main.ts"], "entry": [".canvas/preview.tsx", "stories/**/*.canvas.tsx"] },
       "entry": ["package.json", "extension.ts", "*.test.ts", ".canvas/**/*.{ts,tsx}", "stories/**/*.{ts,tsx}"],
       "project": ["*.ts", ".canvas/**/*.{ts,tsx}", "stories/**/*.{ts,tsx}"]
     },
@@ -361,7 +357,6 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "clients/desktop": {
-      "storybook": { "config": [".canvas/main.ts"], "entry": [".canvas/preview.tsx", "src/**/*.canvas.tsx"] },
       "entry": [
         "forge.config.ts",
         "vite.config.ts",
@@ -384,7 +379,6 @@
       "ignoreDependencies": ["@electron-forge/maker-deb", "@electron-forge/maker-squirrel", "@electron-forge/maker-zip"]
     },
     "clients/*": {
-      "storybook": { "config": [".canvas/main.ts"], "entry": [".canvas/preview.tsx", "src/**/*.canvas.tsx"] },
       "entry": [
         "package.json",
         "astro.config.*",

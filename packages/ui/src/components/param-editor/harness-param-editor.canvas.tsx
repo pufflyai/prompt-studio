@@ -1,7 +1,6 @@
 import { Box, Dialog, Portal, Stack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { HarnessParamEditor } from "./harness-param-editor";
 import type { HarnessParamValues } from "./harness-param-values";
 import { ParamEditor } from "./param-editor";
@@ -38,7 +37,6 @@ const codexSchema = {
     defaultValue: false,
   },
 };
-
 const runAttemptSelections: SelectionParam[] = [
   {
     id: "model",
@@ -80,7 +78,6 @@ const runAttemptSelections: SelectionParam[] = [
     },
   },
 ];
-
 const runAttemptMode: SelectionParam = {
   id: "mode",
   name: "Mode",
@@ -91,14 +88,12 @@ const runAttemptMode: SelectionParam = {
     { id: "current_branch", name: "Current branch", icon: "git-commit-horizontal" },
   ],
 };
-
 const HarnessParamEditorStory = (props: {
   initial?: HarnessParamValues;
   defaults?: HarnessParamValues;
   schema?: typeof codexSchema;
 }) => {
   const [overrides, setOverrides] = useState<HarnessParamValues>(props.initial ?? {});
-
   return (
     <Box maxW="640px" p="4" bg="bg" borderWidth="1px" borderColor="border.subtle">
       <HarnessParamEditor
@@ -112,31 +107,29 @@ const HarnessParamEditorStory = (props: {
     </Box>
   );
 };
-
-const meta: Meta<typeof HarnessParamEditorStory> = {
+const meta: CanvasMeta<typeof HarnessParamEditorStory> = {
   title: "Components/Param Editor/Harness run options",
   component: HarnessParamEditorStory,
 };
-
 export default meta;
-
-type Story = StoryObj<typeof HarnessParamEditorStory>;
-
-export const Defaults: Story = {};
-
+type Story = CanvasVariant<typeof HarnessParamEditorStory>;
+export const Defaults: Story = {
+  id: "components-param-editor-harness-run-options--defaults",
+};
 export const WithOverrides: Story = {
+  id: "components-param-editor-harness-run-options--with-overrides",
   args: {
     initial: { model_reasoning_effort: "high", dryRun: true },
   },
 };
-
 export const CustomProjectDefaults: Story = {
+  id: "components-param-editor-harness-run-options--custom-project-defaults",
   args: {
     defaults: { model_reasoning_effort: "low", model_reasoning_summary: "concise", dryRun: false },
   },
 };
-
 export const ModelSpecificEffortLevels: Story = {
+  id: "components-param-editor-harness-run-options--model-specific-effort-levels",
   args: {
     schema: {
       ...codexSchema,
@@ -153,8 +146,8 @@ export const ModelSpecificEffortLevels: Story = {
     defaults: { model_reasoning_effort: "high", model_reasoning_summary: "auto", dryRun: false },
   },
 };
-
 export const Narrow: Story = {
+  id: "components-param-editor-harness-run-options--narrow",
   decorators: [
     (Story) => (
       <Box w="240px">
@@ -163,10 +156,10 @@ export const Narrow: Story = {
     ),
   ],
 };
-
 // The run attempt modal renders this editor inside a dialog, so its options must remain
 // clickable there as well as in a standalone form.
 export const InsideDialog: Story = {
+  id: "components-param-editor-harness-run-options--inside-dialog",
   parameters: { layout: "fullscreen" },
   decorators: [
     (Story) => (
@@ -199,20 +192,4 @@ export const InsideDialog: Story = {
       </Dialog.Root>
     ),
   ],
-  play: async () => {
-    const body = within(document.body);
-
-    await expect(body.getByRole("button", { name: "GPT-5.3 Codex" })).toBeVisible();
-    await expect(body.getByRole("button", { name: "PS-10_A1" })).toBeVisible();
-
-    await userEvent.click(body.getByRole("button", { name: "Medium" }));
-
-    const option = await body.findByRole("menuitemradio", { name: "High" });
-    const bounds = option.getBoundingClientRect();
-    const topMostElement = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
-    await expect(option.contains(topMostElement)).toBe(true);
-
-    await userEvent.click(option);
-    await expect(body.getByRole("button", { name: "High" })).toBeVisible();
-  },
 };

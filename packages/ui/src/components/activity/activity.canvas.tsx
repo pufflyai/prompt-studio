@@ -1,25 +1,21 @@
 import { Box, HStack, Icon, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Circle, CircleDot, MoreHorizontal, Paperclip, Pin, PinOff, Tag, Trash2 } from "lucide-react";
 import { useState } from "react";
-
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Activity, type ActivityActor } from "./index";
 
 const author: ActivityActor = {
   name: "Jordan Lee",
 };
-
 const bot: ActivityActor = {
   name: "System",
 };
-
 interface StoryReply {
   id: string;
   body: string;
   timestamp: string;
 }
-
 interface StoryComment {
   id: string;
   body: string;
@@ -27,18 +23,15 @@ interface StoryComment {
   replies: StoryReply[];
   isPinned?: boolean;
 }
-
 interface StoryAttachment {
   id: string;
   timestamp: string;
 }
-
 interface CommentActionsProps {
   comment: StoryComment;
   onDelete: (commentId: string) => void;
   onTogglePin: (commentId: string) => void;
 }
-
 interface StoryActivityCommentProps {
   comment: StoryComment;
   onAttach: () => void;
@@ -46,7 +39,6 @@ interface StoryActivityCommentProps {
   onReplySubmit: (commentId: string, body: string) => void;
   onTogglePin: (commentId: string) => void;
 }
-
 const initialComments: StoryComment[] = [
   {
     id: "opening-comment",
@@ -61,8 +53,7 @@ const initialComments: StoryComment[] = [
     replies: [],
   },
 ];
-
-const meta: Meta = {
+const meta: CanvasMeta = {
   title: "Components/Data Display/Activity",
   parameters: { layout: "fullscreen" },
   decorators: [
@@ -75,16 +66,11 @@ const meta: Meta = {
     ),
   ],
 };
-
 export default meta;
-
-type Story = StoryObj;
-
+type Story = CanvasVariant;
 const createStoryId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
 const CommentActions = (props: CommentActionsProps) => {
   const { comment, onDelete, onTogglePin } = props;
-
   return (
     <HStack gap="2xs">
       {comment.isPinned ? (
@@ -116,10 +102,8 @@ const CommentActions = (props: CommentActionsProps) => {
     </HStack>
   );
 };
-
 const StoryActivityComment = (props: StoryActivityCommentProps) => {
   const { comment, onAttach, onDelete, onReplySubmit, onTogglePin } = props;
-
   return (
     <Activity.Comment
       actor={author}
@@ -144,7 +128,6 @@ const StoryActivityComment = (props: StoryActivityCommentProps) => {
     </Activity.Comment>
   );
 };
-
 const FeatureLabel = () => (
   <HStack as="span" gap="2xs" whiteSpace="nowrap">
     <Text as="span">added label</Text>
@@ -154,21 +137,17 @@ const FeatureLabel = () => (
     </Text>
   </HStack>
 );
-
 const ActivitySetupExample = () => {
   const [comments, setComments] = useState(initialComments);
   const [attachments, setAttachments] = useState<StoryAttachment[]>([]);
-
   const firstComment = comments.find((comment) => comment.id === "opening-comment");
   const timelineComments = comments.filter((comment) => comment.id !== "opening-comment");
-
   const handleAttach = () => {
     setAttachments((current) => [
       ...current,
       { id: createStoryId("attachment"), timestamp: current.length === 0 ? "just now" : "now" },
     ]);
   };
-
   const handleCommentSubmit = (body: string) => {
     setComments((current) => [
       ...current,
@@ -180,12 +159,10 @@ const ActivitySetupExample = () => {
       },
     ]);
   };
-
   const handleReplySubmit = (commentId: string, body: string) => {
     setComments((current) =>
       current.map((comment) => {
         if (comment.id !== commentId) return comment;
-
         return {
           ...comment,
           replies: [...comment.replies, { id: createStoryId("reply"), body, timestamp: "just now" }],
@@ -193,21 +170,17 @@ const ActivitySetupExample = () => {
       }),
     );
   };
-
   const handleTogglePin = (commentId: string) => {
     setComments((current) =>
       current.map((comment) => {
         if (comment.id !== commentId) return comment;
-
         return { ...comment, isPinned: !comment.isPinned };
       }),
     );
   };
-
   const handleDelete = (commentId: string) => {
     setComments((current) => current.filter((comment) => comment.id !== commentId));
   };
-
   return (
     <Box>
       <Activity.Root>
@@ -278,7 +251,7 @@ const ActivitySetupExample = () => {
     </Box>
   );
 };
-
 export const Setup: Story = {
+  id: "components-data-display-activity--setup",
   render: () => <ActivitySetupExample />,
 };

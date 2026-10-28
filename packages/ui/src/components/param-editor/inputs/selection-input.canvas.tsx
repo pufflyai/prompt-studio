@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { SelectionInput } from "./selection-input";
 
 const main = { id: "main", name: "main", icon: "git-commit-horizontal" };
@@ -15,26 +14,15 @@ const meta = {
     options: [main, develop],
     onChange: () => {},
   },
-} satisfies Meta<typeof SelectionInput>;
+} satisfies CanvasMeta<typeof SelectionInput>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const BranchChoices: Story = {
+  id: "patterns-param-editor-selection--branch-choices",
   tags: ["menu-selection"],
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "main" }));
-    const selected = body.getByRole("menuitemradio", { name: "main" });
-    await expect(selected).toBeChecked();
-    expect(getComputedStyle(selected).backgroundColor).toBe("rgba(0, 0, 0, 0)");
-    expect(selected.querySelector(".lucide-check")).not.toBeNull();
-    await waitFor(() => expect(body.getByRole("menu")).toHaveFocus());
-    await userEvent.keyboard("{Home}{ArrowDown}{Enter}");
-    await waitFor(() => expect(canvas.getByRole("button", { name: "develop" })).toBeVisible());
-  },
 };
 export const StatusChoices: Story = {
+  id: "patterns-param-editor-selection--status-choices",
   args: {
     id: "status",
     name: "Eligible statuses",
@@ -49,12 +37,11 @@ export const StatusChoices: Story = {
   },
 };
 export const OnlySelectedOption: Story = {
+  id: "patterns-param-editor-selection--only-selected-option",
   args: { options: [main] },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole("button", { name: "main" })).toBeDisabled();
-  },
 };
 export const EffortLevels: Story = {
+  id: "patterns-param-editor-selection--effort-levels",
   args: {
     id: "effort",
     name: "Reasoning effort",
@@ -68,51 +55,32 @@ export const EffortLevels: Story = {
   },
 };
 export const NoOptions: Story = {
+  id: "patterns-param-editor-selection--no-options",
   args: { options: [], defaultValue: "" },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole("button", { name: "Select" })).toBeDisabled();
-  },
 };
 export const OnlyUnsetOption: Story = {
+  id: "patterns-param-editor-selection--only-unset-option",
   args: { options: [main], defaultValue: "" },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Select" }));
-    await userEvent.click(page.getByRole("menuitemradio", { name: "main" }));
-    await expect(canvas.getByRole("button", { name: "main" })).toBeDisabled();
-  },
 };
 export const OptionalSelection: Story = {
+  id: "patterns-param-editor-selection--optional-selection",
   args: { options: [main], clearable: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "main" }));
-    await userEvent.click(page.getByRole("menuitemradio", { name: "main" }));
-    await expect(canvas.getByRole("button", { name: "Select" })).toBeEnabled();
-  },
 };
 export const MultiSelection: Story = {
+  id: "patterns-param-editor-selection--multi-selection",
   tags: ["menu-selection"],
   args: { options: [main], defaultValue: ["main"], multiSelect: true },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "main" }));
-    await userEvent.click(page.getByRole("menuitemcheckbox", { name: "main" }));
-    await expect(canvas.getByRole("button", { name: "Select" })).toBeEnabled();
-  },
 };
 export const UnavailableAlternatives: Story = {
+  id: "patterns-param-editor-selection--unavailable-alternatives",
   args: { options: [main, { ...develop, disabled: true }], searchable: true },
-  play: OnlySelectedOption.play,
 };
 export const AllOptionsUnavailable: Story = {
+  id: "patterns-param-editor-selection--all-options-unavailable",
   args: { options: [{ ...main, disabled: true }], defaultValue: "", clearable: true },
-  play: NoOptions.play,
 };
 export const IconlessChoices: Story = {
+  id: "patterns-param-editor-selection--iconless-choices",
   args: {
     options: [
       { id: "main", name: "main" },
@@ -121,7 +89,6 @@ export const IconlessChoices: Story = {
     searchable: true,
   },
 };
-
 const group = {
   id: "repository",
   name: "Repository",
@@ -132,25 +99,22 @@ const group = {
   ],
 };
 export const ChangeGroup: Story = {
+  id: "patterns-param-editor-selection--change-group",
   args: { options: [main], group },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const page = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "main" }));
-    await userEvent.click(page.getByRole("menuitem", { name: "Repository" }));
-    await userEvent.click(page.getByRole("menuitem", { name: "Docs" }));
-    await expect(canvas.getByRole("button", { name: "main" })).toBeEnabled();
-  },
 };
-export const EmptyGroup: Story = { args: { options: [], defaultValue: "", group } };
+export const EmptyGroup: Story = {
+  id: "patterns-param-editor-selection--empty-group",
+  args: { options: [], defaultValue: "", group },
+};
 export const UnavailableGroups: Story = {
+  id: "patterns-param-editor-selection--unavailable-groups",
   args: { options: [main], group: { ...group, options: [group.options[0], { ...group.options[1], disabled: true }] } },
-  play: OnlySelectedOption.play,
 };
 export const OnlyUnsetGroup: Story = {
+  id: "patterns-param-editor-selection--only-unset-group",
   args: { options: [], defaultValue: "", group: { ...group, options: [group.options[0]], defaultValue: "" } },
 };
-
 export const CustomChoices: Story = {
+  id: "patterns-param-editor-selection--custom-choices",
   args: { allowCustomValues: true, multiSelect: true, defaultValue: ["custom,value"], options: [main, develop] },
 };

@@ -1,22 +1,19 @@
 import { Box, Button, HStack } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage, ToolPart } from "./message-types";
 
-const meta: Meta<typeof ChatPanel> = {
+const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel/Question Stream",
   component: ChatPanel,
   parameters: {
     layout: "padded",
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ChatPanel>;
-
+type Story = CanvasVariant<typeof ChatPanel>;
 const panelContainerStyles = {
   w: "960px",
   maxW: "100%",
@@ -27,13 +24,11 @@ const panelContainerStyles = {
   borderRadius: "lg",
   p: "md",
 } as const;
-
 const STREAM_CHUNK_SIZE = 9;
 const STREAM_INTERVAL_MS = 55;
 const QUESTION_MESSAGE_ID = "assistant-question";
 const QUESTION_CALL_ID = "question-call-1";
 const RESUMED_MESSAGE_ID = "assistant-resumed";
-
 const questionPrompt: ChatInputQuestionPrompt = {
   callId: QUESTION_CALL_ID,
   questions: [
@@ -65,7 +60,6 @@ const questionPrompt: ChatInputQuestionPrompt = {
     },
   ],
 };
-
 const initialMessages: SessionMessage[] = [
   {
     id: "user-initial",
@@ -83,12 +77,10 @@ const initialMessages: SessionMessage[] = [
     parts: [{ type: "text", text: "" }],
   },
 ];
-
 const introText = [
   "I am streaming the response until the Question tool appears.",
   "At that point the stream stops and the input switches to the question form.",
 ].join(" ");
-
 const buildResumedText = (answer: string) =>
   [
     "Answer submitted. I can now resume the OpenCode conversation with that response.",
@@ -97,7 +89,6 @@ const buildResumedText = (answer: string) =>
     "",
     "The previous question is shown as the submitted response instead of the full form, and the assistant stream continues from here.",
   ].join("\n");
-
 const createQuestionToolPart = (answer?: string): ToolPart => ({
   type: "tool",
   tool: "Question",
@@ -109,59 +100,48 @@ const createQuestionToolPart = (answer?: string): ToolPart => ({
     output: answer,
   },
 });
-
 const splitTextIntoChunks = (text: string) => {
   const chunks: string[] = [];
-
   for (let index = 0; index < text.length; index += STREAM_CHUNK_SIZE) {
     chunks.push(text.slice(index, index + STREAM_CHUNK_SIZE));
   }
-
   return chunks;
 };
-
 const clearStreamTimer = (timerRef: { current: ReturnType<typeof setInterval> | null }) => {
   if (timerRef.current === null) return;
-
   clearInterval(timerRef.current);
   timerRef.current = null;
 };
-
 const updateAssistantTextPart = (messages: SessionMessage[], messageId: string, text: string) =>
   messages.map((message) => {
     if (message.id !== messageId) return message;
-
     const firstPart = message.parts[0];
     if (!firstPart || firstPart.type !== "text") return message;
-
     return {
       ...message,
       parts: [{ ...firstPart, text }, ...message.parts.slice(1)],
     };
   });
-
 const appendQuestionTool = (messages: SessionMessage[]) =>
   messages.map((message) => {
     if (message.id !== QUESTION_MESSAGE_ID) return message;
-
     return {
       ...message,
       parts: [...message.parts, createQuestionToolPart()],
     };
   });
-
 const completeQuestionTool = (messages: SessionMessage[], answer: string) =>
   messages.map((message) => ({
     ...message,
     parts: message.parts.map((part) => {
       if (part.type !== "tool" || part.callId !== QUESTION_CALL_ID) return part;
-
       return createQuestionToolPart(answer);
     }),
   }));
-
 const streamText = (options: {
-  timerRef: { current: ReturnType<typeof setInterval> | null };
+  timerRef: {
+    current: ReturnType<typeof setInterval> | null;
+  };
   sourceText: string;
   onStart: () => void;
   onChunk: (text: string) => void;
@@ -171,33 +151,26 @@ const streamText = (options: {
   const chunks = splitTextIntoChunks(sourceText);
   let streamedText = "";
   let chunkIndex = 0;
-
   clearStreamTimer(timerRef);
   onStart();
-
   timerRef.current = setInterval(() => {
     streamedText += chunks[chunkIndex] ?? "";
     onChunk(streamedText);
     chunkIndex += 1;
-
     if (chunkIndex < chunks.length) return;
-
     clearStreamTimer(timerRef);
     onComplete();
   }, STREAM_INTERVAL_MS);
 };
-
 function QuestionInterruptedStreamRenderer() {
   const [messages, setMessages] = useState<SessionMessage[]>(initialMessages);
   const [streaming, setStreaming] = useState(true);
   const [streamingStartedAt, setStreamingStartedAt] = useState(Date.now);
   const [activeQuestionPrompt, setActiveQuestionPrompt] = useState<ChatInputQuestionPrompt>();
   const streamTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   useEffect(() => {
     setMessages(initialMessages);
     setActiveQuestionPrompt(undefined);
-
     streamText({
       timerRef: streamTimerRef,
       sourceText: introText,
@@ -209,10 +182,8 @@ function QuestionInterruptedStreamRenderer() {
         setStreaming(false);
       },
     });
-
     return () => clearStreamTimer(streamTimerRef);
   }, []);
-
   const handleSubmitMessage = (text: string, attachments: string[]) => {
     const userMessage: SessionMessage = {
       id: "user-answer",
@@ -224,11 +195,9 @@ function QuestionInterruptedStreamRenderer() {
       role: "assistant",
       parts: [{ type: "text", text: "" }],
     };
-
     console.log("Submitted answer", { text, attachments });
     setActiveQuestionPrompt(undefined);
     setMessages((current) => [...completeQuestionTool(current, text), userMessage, assistantMessage]);
-
     streamText({
       timerRef: streamTimerRef,
       sourceText: buildResumedText(text),
@@ -240,7 +209,6 @@ function QuestionInterruptedStreamRenderer() {
       onComplete: () => setStreaming(false),
     });
   };
-
   return (
     <ChatPanel
       messages={messages}
@@ -264,8 +232,8 @@ function QuestionInterruptedStreamRenderer() {
     />
   );
 }
-
 export const StopsAtQuestionAndResumes: Story = {
+  id: "patterns-chat-chat-panel-question-stream--stops-at-question-and-resumes",
   render: () => (
     <Box {...panelContainerStyles}>
       <QuestionInterruptedStreamRenderer />

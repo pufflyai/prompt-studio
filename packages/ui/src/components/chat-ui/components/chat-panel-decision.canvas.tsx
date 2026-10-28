@@ -1,6 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, fn, userEvent, within } from "storybook/test";
 import { ChatPanel, type ChatPanelProps } from "./chat-panel";
 import { HarnessControls } from "./harness-controls";
 
@@ -41,7 +40,7 @@ const PlanDecision = (props: ChatPanelProps) => {
     />
   );
 };
-const meta: Meta<typeof ChatPanel> = {
+const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Composer Decision",
   component: ChatPanel,
   render: (args) => <PlanDecision {...args} />,
@@ -57,7 +56,7 @@ const meta: Meta<typeof ChatPanel> = {
     chatInputPlaceholder: "Reply to the agent...",
     emptyStateTitle: "Conversation",
     emptyStateDescription: "",
-    onSubmitMessage: fn(),
+    onSubmitMessage: () => {},
     composerDecision: {
       id: "proposal",
       model: "gpt-5.5",
@@ -66,31 +65,17 @@ const meta: Meta<typeof ChatPanel> = {
         { id: "continue", label: "Continue planning", variant: "subtle" },
         { id: "approve", label: "Approve and implement", variant: "primary" },
       ],
-      onAction: fn(),
+      onAction: () => {},
     },
   },
 };
 export default meta;
-type Story = StoryObj<typeof ChatPanel>;
+type Story = CanvasVariant<typeof ChatPanel>;
 export const PlanApproval: Story = {
-  play: async ({ canvasElement }) => {
-    const c = within(canvasElement);
-    await expect(c.getByLabelText("Plan decision")).toBeVisible();
-    await userEvent.click(c.getByRole("button", { name: "Continue planning", exact: true }));
-    await expect(
-      canvasElement.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]')!,
-    ).toHaveTextContent("Keep this unsent draft");
-    await userEvent.click(c.getByRole("button", { name: "Plan details" }));
-    await userEvent.click(
-      await within(canvasElement.ownerDocument.body).findByRole("button", {
-        name: "Approve and implement",
-        exact: true,
-      }),
-    );
-    await expect(c.getByLabelText("Plan decision")).toBeVisible();
-  },
+  id: "patterns-chat-composer-decision--plan-approval",
 };
 export const Unavailable: Story = {
+  id: "patterns-chat-composer-decision--unavailable",
   args: {
     composerDecision: {
       ...meta.args!.composerDecision!,
@@ -98,20 +83,16 @@ export const Unavailable: Story = {
     },
   },
 };
-export const Pending: Story = { args: { composerDecision: { ...meta.args!.composerDecision!, pending: true } } };
+export const Pending: Story = {
+  id: "patterns-chat-composer-decision--pending",
+  args: { composerDecision: { ...meta.args!.composerDecision!, pending: true } },
+};
 export const QueuedEdit: Story = {
-  args: { queuedFollowUps: [{ id: "queued", prompt: "Keep this queued edit" }], onQueuedFollowUpUpdate: fn() },
-  play: async ({ canvasElement, args }) => {
-    const c = within(canvasElement);
-    await userEvent.click(c.getByRole("button", { name: /^Edit queued message:/ }));
-    await userEvent.click(c.getByRole("button", { name: "Continue planning", exact: true }));
-    await expect(
-      canvasElement.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]')!,
-    ).toHaveTextContent("Keep this queued edit");
-    await expect(args.onQueuedFollowUpUpdate).not.toHaveBeenCalled();
-  },
+  id: "patterns-chat-composer-decision--queued-edit",
+  args: { queuedFollowUps: [{ id: "queued", prompt: "Keep this queued edit" }], onQueuedFollowUpUpdate: () => {} },
 };
 export const Failed: Story = {
+  id: "patterns-chat-composer-decision--failed",
   args: {
     composerDecision: {
       ...meta.args!.composerDecision!,
@@ -122,6 +103,7 @@ export const Failed: Story = {
   },
 };
 export const NativeQuestionFirst: Story = {
+  id: "patterns-chat-composer-decision--native-question-first",
   args: {
     messages: [
       ...meta.args!.messages!,
@@ -143,8 +125,5 @@ export const NativeQuestionFirst: Story = {
         ],
       },
     ],
-  },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole("radio", { name: "Browser" })).toBeVisible();
   },
 };

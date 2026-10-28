@@ -1,6 +1,5 @@
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ThemePreferenceProvider } from "@pstdio/ui";
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fn, screen, userEvent, waitFor } from "storybook/test";
 import { DesktopQuitConfirmationDialog } from "./desktop-quit-confirmation";
 
 const meta = {
@@ -16,26 +15,14 @@ const meta = {
         { id: "job-two", label: "Auto build", description: "Website" },
       ],
     },
-    onKeepOpen: fn(),
-    onQuit: fn(),
+    onKeepOpen: () => {},
+    onQuit: () => {},
   },
-  play: async ({ args }) => {
-    const dialog = await screen.findByRole("alertdialog", { name: "Active work is still running" });
-    // The dialog fades in after it mounts.
-    await waitFor(() => expect(dialog).toBeVisible());
-    await expect(screen.getByRole("button", { name: "Keep Prompt Studio open" })).toHaveFocus();
-    await userEvent.tab();
-    await expect(screen.getByRole("button", { name: "Cancel work and quit" })).toHaveFocus();
-    await userEvent.keyboard("{Escape}");
-    await expect(args.onKeepOpen).toHaveBeenCalledOnce();
-    await expect(args.onQuit).not.toHaveBeenCalled();
-  },
-} satisfies Meta<typeof DesktopQuitConfirmationDialog>;
-
+} satisfies CanvasMeta<typeof DesktopQuitConfirmationDialog>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const Light: Story = {
+  id: "desktop-quitconfirmation--light",
   decorators: [
     (Story) => (
       <ThemePreferenceProvider key="pstdio-light" initialPreference="pstdio-light">
@@ -44,8 +31,8 @@ export const Light: Story = {
     ),
   ],
 };
-
 export const Dark: Story = {
+  id: "desktop-quitconfirmation--dark",
   decorators: [
     (Story) => (
       <ThemePreferenceProvider key="pstdio-dark" initialPreference="pstdio-dark">
@@ -54,13 +41,13 @@ export const Dark: Story = {
     ),
   ],
 };
-
 export const OneTerminal: Story = {
+  id: "desktop-quitconfirmation--one-terminal",
   args: { activity: { sessions: [], terminals: [{ id: "terminal-one", label: "sleep 300" }], jobs: [] } },
   decorators: Light.decorators,
 };
-
 export const LongContent: Story = {
+  id: "desktop-quitconfirmation--long-content",
   decorators: Light.decorators,
   args: {
     activity: {
@@ -74,13 +61,5 @@ export const LongContent: Story = {
       })),
       jobs: [{ id: "background-check", label: "Check merged pull requests", description: "Prompt Studio" }],
     },
-  },
-  play: async () => {
-    const dialog = await screen.findByRole("alertdialog", { name: "Active work is still running" });
-    await waitFor(() => expect(dialog).toBeVisible());
-    await expect(screen.getByText("Check merged pull requests")).toBeInTheDocument();
-    await expect(screen.getAllByRole("listitem")).toHaveLength(51);
-    await expect(screen.getByRole("button", { name: "Keep Prompt Studio open" })).toBeVisible();
-    await expect(screen.getByRole("button", { name: "Cancel work and quit" })).toBeVisible();
   },
 };

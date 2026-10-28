@@ -1,5 +1,5 @@
 import { Box, Grid, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { Section } from "./core-components.canvas";
 import { themePreferences } from "./theme-preferences";
 
@@ -13,7 +13,6 @@ const heights: Record<Section, number> = {
   overlays: 650,
   composed: 1100,
 };
-
 function Compare(props: { section: Section }) {
   const { section } = props;
   return (
@@ -45,20 +44,41 @@ function Compare(props: { section: Section }) {
     </Stack>
   );
 }
-
 const meta = {
   title: "Themes/Compare",
   component: Compare,
   args: { section: "all" },
-} satisfies Meta<typeof Compare>;
+} satisfies CanvasMeta<typeof Compare>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const AllCoreComponents: Story = {};
-export const SurfacesAndText: Story = { args: { section: "foundations" } };
-export const ButtonStates: Story = { args: { section: "buttons" } };
-export const FormControls: Story = { args: { section: "inputs" } };
-export const NavigationAndLists: Story = { args: { section: "navigation" } };
-export const DataDisplayAndFeedback: Story = { args: { section: "feedback" } };
-export const MenusAndOverlays: Story = { args: { section: "overlays" } };
-export const ComposedControls: Story = { args: { section: "composed" } };
+type Story = CanvasVariant<typeof meta>;
+export const AllCoreComponents: Story = {
+  id: "themes-compare--all-core-components",
+};
+export const SurfacesAndText: Story = {
+  id: "themes-compare--surfaces-and-text",
+  args: { section: "foundations" },
+};
+export const ButtonStates: Story = {
+  id: "themes-compare--button-states",
+  args: { section: "buttons" },
+};
+export const FormControls: Story = {
+  id: "themes-compare--form-controls",
+  args: { section: "inputs" },
+};
+export const NavigationAndLists: Story = {
+  id: "themes-compare--navigation-and-lists",
+  args: { section: "navigation" },
+};
+export const DataDisplayAndFeedback: Story = {
+  id: "themes-compare--data-display-and-feedback",
+  args: { section: "feedback" },
+};
+export const MenusAndOverlays: Story = {
+  id: "themes-compare--menus-and-overlays",
+  args: { section: "overlays" },
+};
+export const ComposedControls: Story = {
+  id: "themes-compare--composed-controls",
+  args: { section: "composed" },
+};

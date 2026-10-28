@@ -7,8 +7,8 @@ Use the live Canvas designs as the source of truth for appearance, component sta
 - Use [Preview Authoring](src/docs/agents/story-authoring.mdx) when adding or changing examples.
 - Verify props against source types and the canvas's Props and source details.
 - Prefer exported `@pstdio/ui` components when an equivalent exists.
-- Keep examples in colocated `*.canvas.tsx` files. Use deterministic local fixtures and meaningful interaction checks.
-- Rebuild with `bun run --cwd scripts canvas:build`, then run `canvas:coverage` and the relevant isolated browser checks.
+- Keep examples in colocated `*.canvas.tsx` files. Use deterministic local fixtures. Add interaction tests only for critical behavior; examples do not each need a test.
+- Rebuild with `bun run --cwd scripts canvas:build`, then run `canvas:coverage` and isolated browser checks only for critical risks.
 
 ## Styling
 

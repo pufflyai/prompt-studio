@@ -1,13 +1,13 @@
 import { HStack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Terminal } from "lucide-react";
 import { SimpleCard, SimpleCardBody } from "./simple-card";
 
-const meta = { title: "Primitives/SimpleCard", component: SimpleCard } satisfies Meta<typeof SimpleCard>;
+const meta = { title: "Primitives/SimpleCard", component: SimpleCard } satisfies CanvasMeta<typeof SimpleCard>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const Outline: Story = {
+  id: "primitives-simplecard--outline",
   render: () => (
     <SimpleCard>
       <SimpleCardBody>Card body</SimpleCardBody>
@@ -15,6 +15,7 @@ export const Outline: Story = {
   ),
 };
 export const Action: Story = {
+  id: "primitives-simplecard--action",
   parameters: {
     docs: {
       description: { story: "Hover and pressed feedback changes immediately, including when the pointer leaves." },

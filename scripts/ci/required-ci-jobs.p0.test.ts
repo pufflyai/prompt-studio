@@ -9,7 +9,7 @@ test("required matrix identities come from discovered priority rows", () => {
   const plan = plannedCiJobs(scope);
   expect(plan.find((job) => job.id === "database_tests_P0")?.priority).toBe("P0");
   expect(plan.find((job) => job.id === "database_tests_P1")?.priority).toBe("P1");
-  expect(plan.find((job) => job.id === "storybooks_P1")?.count).toBe(scope.componentMatrix.length);
+  expect(plan.find((job) => job.id === "components_P1")?.count).toBe(scope.componentMatrix.length);
   expect(plan.find((job) => job.id === "e2e_P1")?.count).toBe(scope.appMatrix.length);
   const observed = plan.flatMap((job) =>
     job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })),

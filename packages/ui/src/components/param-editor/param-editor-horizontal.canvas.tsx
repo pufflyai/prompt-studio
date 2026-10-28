@@ -1,5 +1,5 @@
 import { Container } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ParamEditorHorizontal } from "./param-editor-horizontal";
 
 const meta = {
@@ -10,12 +10,11 @@ const meta = {
   },
   tags: [],
   argTypes: {},
-} satisfies Meta<typeof ParamEditorHorizontal>;
-
+} satisfies CanvasMeta<typeof ParamEditorHorizontal>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const Demo: Story = {
+  id: "patterns-param-editor-param-editor-horizontal--demo",
   render: (props) => {
     return (
       <Container padding="md">
@@ -103,13 +102,13 @@ export const Demo: Story = {
     readOnly: false,
   },
 };
-
 export const Small: Story = {
+  id: "patterns-param-editor-param-editor-horizontal--small",
   ...Demo,
   args: { ...Demo.args, variant: "small" },
 };
-
 export const ReadOnly: Story = {
+  id: "patterns-param-editor-param-editor-horizontal--read-only",
   render: (props) => {
     return (
       <Container padding="md">
@@ -174,8 +173,8 @@ export const ReadOnly: Story = {
     readOnly: true,
   },
 };
-
 export const DateInputs: Story = {
+  id: "patterns-param-editor-param-editor-horizontal--date-inputs",
   render: (props) => {
     return (
       <Container padding="md">
@@ -231,8 +230,8 @@ export const DateInputs: Story = {
     readOnly: false,
   },
 };
-
 export const MultiSelectExample: Story = {
+  id: "patterns-param-editor-param-editor-horizontal--multi-select-example",
   render: (props) => {
     return (
       <Container padding="md">
@@ -316,8 +315,8 @@ export const MultiSelectExample: Story = {
     readOnly: false,
   },
 };
-
 export const WithInputGroups: Story = {
+  id: "patterns-param-editor-param-editor-horizontal--with-input-groups",
   render: (props) => {
     return (
       <Container padding="md">
@@ -417,8 +416,8 @@ export const WithInputGroups: Story = {
     readOnly: false,
   },
 };
-
 export const MixedGroupsAndParams: Story = {
+  id: "patterns-param-editor-param-editor-horizontal--mixed-groups-and-params",
   render: (props) => {
     return (
       <Container padding="md">
@@ -476,8 +475,8 @@ export const MixedGroupsAndParams: Story = {
     readOnly: false,
   },
 };
-
 export const SelectionsWithIcons: Story = {
+  id: "patterns-param-editor-param-editor-horizontal--selections-with-icons",
   render: (props) => {
     return (
       <Container padding="md">
@@ -554,8 +553,8 @@ export const SelectionsWithIcons: Story = {
     readOnly: false,
   },
 };
-
 export const FullWidthNoEffect: Story = {
+  id: "patterns-param-editor-param-editor-horizontal--full-width-no-effect",
   render: (props) => {
     return (
       <Container padding="md">
@@ -610,7 +609,6 @@ export const FullWidthNoEffect: Story = {
         defaultValue: "2024-01-01",
       },
     ],
-    fullWidth: true,
     readOnly: false,
   },
 };

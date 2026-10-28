@@ -5,10 +5,9 @@ const meta = {
   title: "Components/Data Display/Data Table",
   component: DataTableSkeleton,
 };
-
 export default meta;
-
 export const LoadingSkeleton = {
+  id: "components-data-display-data-table--loading-skeleton",
   render: () => (
     <Stack width="100%" maxWidth="820px" marginX="auto" padding="sm" gap="md" background="bg">
       <Box>

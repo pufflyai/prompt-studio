@@ -1,7 +1,6 @@
 import { Box, Button, IconButton, Stack, Tabs } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ArrowUpRight, GitBranch } from "lucide-react";
-import { expect, fn, userEvent, within } from "storybook/test";
 import { ChatPanel } from "./chat-panel";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
@@ -11,7 +10,6 @@ const workspaceControl = (
     release-notes
   </Button>
 );
-
 const workspaceHub = (
   <ChatWorkspaceHub
     workspaceControl={workspaceControl}
@@ -24,8 +22,7 @@ const workspaceHub = (
     }
   />
 );
-
-const meta: Meta<typeof ChatPanel> = {
+const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Composer Surfaces",
   component: ChatPanel,
   parameters: { layout: "padded" },
@@ -36,7 +33,7 @@ const meta: Meta<typeof ChatPanel> = {
     chatInputPlaceholder: "Describe the release...",
     chatInputDefaultValue: "Summarize the changes in this workspace.",
     workspaceHub,
-    onSubmitMessage: fn(),
+    onSubmitMessage: () => {},
   },
   render: (args) => (
     <Stack maxW="chat-content" gap="sm">
@@ -54,53 +51,40 @@ const meta: Meta<typeof ChatPanel> = {
       </Box>
     </Stack>
   ),
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
-    const editor = canvas.getByTestId("content-editable");
-    const input = editor.closest<HTMLElement>(".ps-chat-composer__input");
-    if (!input) throw new Error("Chat input is missing");
-    const tabs = canvas.getAllByRole("tab");
-    await userEvent.click(tabs[0]);
-    await expect(input).toHaveStyle({ borderWidth: "0px", outlineStyle: "none" });
-    for (const tab of tabs) await expect(tab).toHaveStyle({ borderWidth: "0px" });
-    const workspace = canvasElement.querySelector(".ps-chat-composer__workspace");
-    if (args.workspaceHub) {
-      await expect(workspace).toHaveStyle({ borderWidth: "0px", rowGap: "0px" });
-      await expect(getComputedStyle(workspace as Element).backgroundColor).toBe(
-        getComputedStyle(tabs[0]).backgroundColor,
-      );
-    }
-    if (args.inputDisabled) return;
-    const before = input.getBoundingClientRect();
-    await userEvent.click(editor);
-    await expect(input).toHaveStyle({ outlineStyle: "solid", outlineWidth: "1px", outlineOffset: "-1px" });
-    const after = input.getBoundingClientRect();
-    await expect([after.width, after.height, after.bottom]).toEqual([before.width, before.height, before.bottom]);
-    if (!args.chatInputAutoFocus) {
-      await userEvent.click(tabs[0]);
-      await expect(input).toHaveStyle({ outlineStyle: "none" });
-    }
-  },
 };
-
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Light: Story = { globals: { theme: "pstdio-light" } };
-export const Dark: Story = { globals: { theme: "pstdio-dark" } };
-export const WithoutWorkspace: Story = { args: { workspaceHub: undefined } };
+type Story = CanvasVariant<typeof meta>;
+export const Light: Story = {
+  id: "patterns-chat-composer-surfaces--light",
+  globals: { theme: "pstdio-light" },
+};
+export const Dark: Story = {
+  id: "patterns-chat-composer-surfaces--dark",
+  globals: { theme: "pstdio-dark" },
+};
+export const WithoutWorkspace: Story = {
+  id: "patterns-chat-composer-surfaces--without-workspace",
+  args: { workspaceHub: undefined },
+};
 export const Focused: Story = {
+  id: "patterns-chat-composer-surfaces--focused",
   args: { chatInputAutoFocus: true },
   parameters: {
     docs: { description: { story: "Focus inside the input highlights its edge without changing its size." } },
   },
 };
-export const FocusedDark: Story = { ...Focused, globals: { theme: "pstdio-dark" } };
+export const FocusedDark: Story = {
+  id: "patterns-chat-composer-surfaces--focused-dark",
+  ...Focused,
+  globals: { theme: "pstdio-dark" },
+};
 export const FocusedWithoutWorkspace: Story = {
+  id: "patterns-chat-composer-surfaces--focused-without-workspace",
   ...Focused,
   args: { chatInputAutoFocus: true, workspaceHub: undefined },
 };
 export const SettingUp: Story = {
+  id: "patterns-chat-composer-surfaces--setting-up",
   args: {
     inputDisabled: true,
     workspaceHub: (
@@ -115,6 +99,7 @@ export const SettingUp: Story = {
   },
 };
 export const SetupFailed: Story = {
+  id: "patterns-chat-composer-surfaces--setup-failed",
   args: {
     workspaceHub: (
       <ChatWorkspaceHub

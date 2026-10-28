@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import type { Diff } from "./diff-card";
 import { DiffViewer } from "./lazy-diff";
 
@@ -24,15 +24,13 @@ const buildDiff = (index: number, lineCount: number): Diff => {
     deletions: Math.ceil(lineCount / 3),
   };
 };
-
 // Front-load tall diffs, then a long tail of small ones so mid-list targets sit far below them.
 const scrollDiffs: Diff[] = [
   ...Array.from({ length: 12 }, (_, index) => buildDiff(index, 60 + (index % 4) * 12)),
   ...Array.from({ length: 60 }, (_, index) => buildDiff(index + 12, 4 + (index % 5))),
 ];
 const changedFilePaths = scrollDiffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown");
-
-const meta: Meta<typeof DiffViewer> = {
+const meta: CanvasMeta<typeof DiffViewer> = {
   title: "Patterns/Diff/Diff Viewer Scroll",
   component: DiffViewer,
   parameters: { layout: "fullscreen" },
@@ -44,9 +42,9 @@ const meta: Meta<typeof DiffViewer> = {
     </Box>
   ),
 };
-
 export default meta;
-type Story = StoryObj<typeof DiffViewer>;
-
+type Story = CanvasVariant<typeof DiffViewer>;
 /** Selecting files up and down the tree should scroll to each without overshooting and snapping back. */
-export const MidListNavigation: Story = {};
+export const MidListNavigation: Story = {
+  id: "patterns-diff-diff-viewer-scroll--mid-list-navigation",
+};

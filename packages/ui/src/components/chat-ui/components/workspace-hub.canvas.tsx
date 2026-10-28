@@ -1,20 +1,17 @@
 import { Button, IconButton, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
-const meta: Meta<typeof ChatWorkspaceHub> = {
+const meta: CanvasMeta<typeof ChatWorkspaceHub> = {
   title: "Patterns/Chat/Workspace Hub",
   component: ChatWorkspaceHub,
   parameters: {
     layout: "padded",
   },
 };
-
 export default meta;
-
-type Story = StoryObj<typeof ChatWorkspaceHub>;
-
+type Story = CanvasVariant<typeof ChatWorkspaceHub>;
 const workspaceControl = (
   <Button size="xs" variant="ghost" px="2xs">
     <GitBranch size={14} />
@@ -24,14 +21,13 @@ const workspaceControl = (
     <ChevronDown size={14} />
   </Button>
 );
-
 const openWorkspaceAction = (
   <IconButton size="xs" variant="ghost" aria-label="Open workspace">
     <ArrowUpRight size={14} />
   </IconButton>
 );
-
 export const Default: Story = {
+  id: "patterns-chat-workspace-hub--default",
   args: {
     workspaceControl,
     additions: 83,
@@ -39,8 +35,8 @@ export const Default: Story = {
     action: openWorkspaceAction,
   },
 };
-
 export const WithChanges: Story = {
+  id: "patterns-chat-workspace-hub--with-changes",
   args: {
     workspaceControl,
     additions: 148,
@@ -48,8 +44,8 @@ export const WithChanges: Story = {
     action: openWorkspaceAction,
   },
 };
-
 export const NoChanges: Story = {
+  id: "patterns-chat-workspace-hub--no-changes",
   args: {
     workspaceControl,
     additions: 0,
@@ -57,8 +53,8 @@ export const NoChanges: Story = {
     action: openWorkspaceAction,
   },
 };
-
 export const SettingUp: Story = {
+  id: "patterns-chat-workspace-hub--setting-up",
   args: {
     workspaceControl,
     additions: 0,
@@ -68,8 +64,8 @@ export const SettingUp: Story = {
     action: openWorkspaceAction,
   },
 };
-
 export const SetupFailed: Story = {
+  id: "patterns-chat-workspace-hub--setup-failed",
   args: {
     workspaceControl,
     additions: 0,

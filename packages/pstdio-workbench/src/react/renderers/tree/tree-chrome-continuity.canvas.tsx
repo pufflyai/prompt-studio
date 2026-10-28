@@ -1,7 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { createLevelNavigation, createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
@@ -102,7 +101,6 @@ const createFixture = () => {
   workbench.pageLocations.navigate({ kind: "page", page: page("home") });
   return workbench;
 };
-
 const ChromeContinuityStory = () => {
   const [workbench] = useState(createFixture);
   return <WorkbenchStory workbench={workbench} />;
@@ -111,51 +109,12 @@ const meta = {
   title: "pstdio-workbench/Guides/Navigation chrome continuity",
   component: ChromeContinuityStory,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof ChromeContinuityStory>;
+} satisfies CanvasMeta<typeof ChromeContinuityStory>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-
+type Story = CanvasVariant<typeof meta>;
 export const OpenTicket: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const search = await canvas.findByRole("option", { name: "Search" });
-    const help = await canvas.findByRole("option", { name: "Help" });
-    const top = search.getBoundingClientRect().top;
-    const bottom = help.getBoundingClientRect().bottom;
-    await userEvent.click(await canvas.findByRole("button", { name: "Open ticket" }));
-    await canvas.findByText("Ticket contents");
-    await expect(search).toBeVisible();
-    await expect(help).toBeVisible();
-    await expect(search.getBoundingClientRect().top).toBe(top);
-    await expect(help.getBoundingClientRect().bottom).toBe(bottom);
-    await userEvent.click(canvas.getByRole("button", { name: "Finish navigation read" }));
-    await canvas.findByRole("option", { name: "notes.md" });
-    await expect(search).toBeVisible();
-    await expect(help).toBeVisible();
-  },
+  id: "pstdio-workbench-guides-navigation-chrome-continuity--open-ticket",
 };
-
 export const ReturnToProject: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const labels = ["Home", "Notes", "Tickets"];
-    const positions = [];
-    for (const label of labels)
-      positions.push((await canvas.findByRole("option", { name: label })).getBoundingClientRect().top);
-    await userEvent.click(await canvas.findByRole("button", { name: "Open ticket" }));
-    await userEvent.click(await canvas.findByRole("button", { name: "Finish navigation read" }));
-    await canvas.findByRole("option", { name: "notes.md" });
-    await userEvent.click(canvas.getByRole("button", { name: "Back to project" }));
-    await canvas.findByRole("button", { name: "Open ticket" });
-    for (const [index, label] of labels.entries()) {
-      const row = canvas.getByRole("option", { name: label });
-      await expect(row).toBeVisible();
-      await expect(row.getBoundingClientRect().top).toBe(positions[index]);
-    }
-    await userEvent.click(canvas.getByRole("button", { name: "Finish project read" }));
-    for (const [index, label] of labels.entries()) {
-      await expect(canvas.getByRole("option", { name: label }).getBoundingClientRect().top).toBe(positions[index]);
-    }
-    canvasElement.dataset.returnJourney = "complete";
-  },
+  id: "pstdio-workbench-guides-navigation-chrome-continuity--return-to-project",
 };

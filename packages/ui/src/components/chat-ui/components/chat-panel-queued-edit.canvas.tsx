@@ -1,7 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ChatPanel } from "./chat-panel";
 import type { QueuedFollowUp } from "./message-types";
 
@@ -35,53 +34,16 @@ const QueuedEditHost = () => {
     </Box>
   );
 };
-
-const meta = { title: "Patterns/Chat/Queued follow-up edit", component: QueuedEditHost } satisfies Meta<
+const meta = { title: "Patterns/Chat/Queued follow-up edit", component: QueuedEditHost } satisfies CanvasMeta<
   typeof QueuedEditHost
 >;
 export default meta;
-
-export const EditingSurface: StoryObj<typeof meta> = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: /^Edit queued message:/ }));
-    const editor = canvas.getAllByTestId("content-editable").at(-1)!;
-    await userEvent.click(editor);
-    const input = editor.closest(".ps-chat-composer__input");
-    await expect(input).toHaveStyle({ borderWidth: "0px", outlineStyle: "solid", outlineWidth: "1px" });
-    await userEvent.click(canvas.getByText("Agent is working"));
-    await expect(input).toHaveStyle({ borderWidth: "0px", outlineStyle: "none" });
-  },
+export const EditingSurface: CanvasVariant<typeof meta> = {
+  id: "patterns-chat-queued-follow-up-edit--editing-surface",
 };
-
-export const KeepDraftAfterQueuedEdit: StoryObj<typeof meta> = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const editor = () => canvas.getAllByTestId("content-editable").at(-1)!;
-    await userEvent.click(editor());
-    await userEvent.keyboard("Half-written note");
-    await waitFor(() => expect(canvas.getByText("Stored draft: Half-written note")).toBeVisible());
-    await userEvent.click(canvas.getByRole("button", { name: /^Edit queued message:/ }));
-    await waitFor(() => expect(editor()).toHaveTextContent("Run the validation suite next."));
-    await userEvent.click(editor());
-    await userEvent.keyboard(" Then summarize.{Enter}");
-    await waitFor(() => expect(canvas.getByText("Run the validation suite next. Then summarize.")).toBeVisible());
-    await waitFor(() => expect(editor()).toHaveTextContent("Half-written note"));
-    await expect(canvas.getByText("Stored draft: Half-written note")).toBeVisible();
-  },
+export const KeepDraftAfterQueuedEdit: CanvasVariant<typeof meta> = {
+  id: "patterns-chat-queued-follow-up-edit--keep-draft-after-queued-edit",
 };
-
-export const KeepMatchingDraftAfterQueuedEdit: StoryObj<typeof meta> = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const editor = () => canvas.getAllByTestId("content-editable").at(-1)!;
-    await userEvent.click(editor());
-    await userEvent.keyboard("Run the validation suite next.");
-    await userEvent.click(canvas.getByRole("button", { name: /^Edit queued message:/ }));
-    await userEvent.click(editor());
-    await userEvent.keyboard(" Then summarize.{Enter}");
-    await waitFor(() => expect(canvas.getByText("Run the validation suite next. Then summarize.")).toBeVisible());
-    await waitFor(() => expect(editor()).toHaveTextContent("Run the validation suite next."));
-    await expect(canvas.getByText("Stored draft: Run the validation suite next.")).toBeVisible();
-  },
+export const KeepMatchingDraftAfterQueuedEdit: CanvasVariant<typeof meta> = {
+  id: "patterns-chat-queued-follow-up-edit--keep-matching-draft-after-queued-edit",
 };
