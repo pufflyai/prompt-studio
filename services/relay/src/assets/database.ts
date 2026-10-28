@@ -12,32 +12,52 @@ export const createAssetDatabase = (
   const control = new Pool({ connectionString: databaseUrl, max: 1 });
   const writers = new Pool({ connectionString: databaseUrl });
   const leases = createDatabaseLeases(databaseUrl, [control, writers]);
-  const listener = new Client({ connectionString: databaseUrl });
-  let listening: Promise<void> | undefined;
-  let failure: Error | undefined;
+  let listener: { client: Client; ready: Promise<void> } | undefined;
+  const retiring = new Set<Promise<void>>();
   let closing = false;
-  const fail = (error: Error) => {
-    if (closing) return;
-    failure ??= error;
-    failed(failure);
+  const retire = (client: Client) => {
+    // The failed connection is already unusable. Its close must drain without blocking a new listener.
+    const ended = client.end().catch(() => {});
+    retiring.add(ended);
+    void ended.then(() => retiring.delete(ended));
   };
-  control.on("error", fail);
-  writers.on("error", fail);
-  listener.on("error", fail);
-  listener.on("end", () => fail(new Error("Asset cancellation listener disconnected")));
-  listener.on("notification", (message) => {
-    if (message.channel === "relay_asset_cancel" && message.payload) cancelled(message.payload);
-  });
+  const fail = (error: Error, expected = listener) => {
+    if (closing || (expected && listener !== expected)) return;
+    const previous = listener;
+    listener = undefined;
+    failed(error);
+    if (previous) retire(previous.client);
+  };
+  control.on("error", (error) => fail(error));
+  writers.on("error", (error) => fail(error));
+  const subscribe = () => {
+    const client = new Client({ connectionString: databaseUrl });
+    const next = { client, ready: Promise.resolve() };
+    listener = next;
+    client.on("error", (error) => fail(error, next));
+    client.on("end", () => fail(new Error("Asset cancellation listener disconnected"), next));
+    client.on("notification", (message) => {
+      if (listener === next && message.channel === "relay_asset_cancel" && message.payload) cancelled(message.payload);
+    });
+    next.ready = client
+      .connect()
+      .then(async () => {
+        await client.query("LISTEN relay_asset_cancel");
+      })
+      .catch((error) => {
+        fail(error, next);
+        throw error;
+      });
+    return next;
+  };
   return {
     run: <T>(action: (db: NodePgDatabase) => Promise<T>, signal: AbortSignal) =>
       leases.run(control, (client) => action(drizzle(client)), signal),
     async ready() {
-      if (failure) throw failure;
-      listening ??= listener.connect().then(async () => {
-        await listener.query("LISTEN relay_asset_cancel");
-      });
-      await listening;
-      if (failure) throw failure;
+      if (closing) throw new Error("Asset database is closed");
+      const current = listener ?? subscribe();
+      await current.ready;
+      if (listener !== current) throw new Error("Asset cancellation listener disconnected");
     },
     async lock<T>(key: string, signal: AbortSignal, action: (database: NodePgDatabase) => Promise<T>) {
       return leases.run(
@@ -56,7 +76,9 @@ export const createAssetDatabase = (
     },
     async close() {
       closing = true;
-      const results = await Promise.allSettled([leases.close(), listener.end()]);
+      const current = listener;
+      listener = undefined;
+      const results = await Promise.allSettled([leases.close(), current?.client.end(), ...retiring]);
       const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
       if (errors.length) throw new AggregateError(errors, "Asset database shutdown failed");
     },

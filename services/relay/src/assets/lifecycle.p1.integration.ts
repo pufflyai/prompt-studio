@@ -151,7 +151,7 @@ test("closing an owner stops queued retries from starting another paused transfe
   await expect(owner.service.begin(scope, "after-close", reference(bytes))).rejects.toThrow("closed");
 });
 
-test("losing cancellation notifications interrupts work and rejects later admission", async () => {
+test("losing cancellation notifications interrupts work and reconnects before later uploads", async () => {
   const owner = owned();
   const scope = newScope();
   const bytes = new TextEncoder().encode("lost cancellation connection");
@@ -171,7 +171,22 @@ test("losing cancellation notifications interrupts work and rejects later admiss
   }
   expect(await writing).toBeInstanceOf(Error);
   expect(source.cancelled()).toBe(true);
-  await expect(owner.service.begin(scope, "after-loss", reference(bytes))).rejects.toThrow();
+  const resumed = await owner.service.begin(scope, "after-loss", reference(bytes));
+  expect(resumed.completed).toBe(false);
+  const resumedSource = paused(bytes);
+  const resumedWriting = watch(owner.service.writePart(scope, "after-loss", 1, resumedSource.input));
+  await resumedSource.ready;
+  const canceller = owned();
+  await canceller.service.cancel(scope, "after-loss");
+  expect(await resumedWriting).toBeInstanceOf(Error);
+  expect(resumedSource.cancelled()).toBe(true);
+  await owner.service.begin(scope, "after-reconnect", reference(bytes));
+  await owner.service.writePart(scope, "after-reconnect", 1, {
+    ...reference(bytes),
+    body: new Blob([bytes]).stream(),
+  });
+  await owner.service.finish(scope, "after-reconnect");
+  expect(await owner.service.complete(scope, reference(bytes))).toBe(true);
 });
 
 for (const stage of ["list uploads", "abort multipart", "check aborted parts", "delete object"]) {
