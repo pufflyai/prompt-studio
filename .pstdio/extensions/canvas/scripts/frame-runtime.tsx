@@ -38,8 +38,8 @@ export const mountPreviewRuntime = (
       return this.state.error ? <div role="alert">{this.state.error}</div> : this.props.children;
     }
   }
-  const ReadyStory = (props: { loaded: LoadedStory }) => {
-    const { loaded } = props;
+  const ReadyStory = (props: { loaded: LoadedStory; viewportHeight: number }) => {
+    const { loaded, viewportHeight } = props;
     useEffect(() => {
       const docs = loaded.parameters?.docs as { description?: { story?: string } } | undefined;
       send({
@@ -51,7 +51,9 @@ export const mountPreviewRuntime = (
         },
       });
     }, [loaded]);
-    return <FrameStory loaded={loaded} minimumHeight={loaded.parameters?.layout === "fullscreen" ? 960 : 0} />;
+    return (
+      <FrameStory loaded={loaded} minimumHeight={loaded.parameters?.layout === "fullscreen" ? viewportHeight : 0} />
+    );
   };
   const Content = (props: { item: CanvasItem }) => {
     const { item } = props;
@@ -90,7 +92,9 @@ export const mountPreviewRuntime = (
         </div>
       );
     if (!loaded) return <div data-ui-canvas-loading>Loading preview…</div>;
-    return <ReadyStory loaded={loaded} />;
+    return (
+      <ReadyStory loaded={loaded} viewportHeight={item.preview?.kind === "story" ? item.preview.viewportHeight : 960} />
+    );
   };
   const App = () => {
     const [request, setRequest] = useState<FrameRequest>();

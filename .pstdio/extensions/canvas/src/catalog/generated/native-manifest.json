@@ -4,7 +4,7 @@
     ".pstdio/extensions/canvas/scripts/build-native-previews.ts": "0c314920f041c74e642c8ad39dbeab17ba58723030923b0ccaef5b1f4bf1003d",
     ".pstdio/extensions/canvas/scripts/native-build-output.ts": "e2c716f3be1e6b25e96a00c9eb1b80c84b527331849103560e2dfaa0e53a3e58",
     ".pstdio/extensions/canvas/scripts/frame-archive.ts": "30ec08048fbc835689941c70f2a8692e5f2b5dea001ce9745f4ca0752ebde451",
-    ".pstdio/extensions/canvas/scripts/frame-runtime.tsx": "ddf2dafc2105494efe232f02bf69cb8599ab61bda46f022614709c586314a5ff",
+    ".pstdio/extensions/canvas/scripts/frame-runtime.tsx": "46d027dcf89963315ee5560f67b97de7e2a4e0feabdac2746457e13f25f5d191",
     ".pstdio/extensions/canvas/scripts/frame-navigation.ts": "9719a4c95b8b4e6b6c0b65c1bb5ca53fb142685ee21493079ee0480383f69718",
     ".pstdio/extensions/canvas/scripts/frame-story.tsx": "074f9ac826c2f72b75b1900cb9667bc33508eb8f099a4e9ff2b313c2af2765fc",
     "bun.lock": "5ece1ebf25c70822571592823891336994331a68ee100a139f9a82e1ba1918e4",
@@ -2371,9 +2371,9 @@
     ".pstdio/extensions/canvas/scripts/native-preview-runtime.tsx": "3c46fed360b95b7c7292be3a0669aca9f7969a204106476fbf443783746408ff"
   },
   "outputs": {
-    "frame-bundle.ts": "9f0b37b69a6a64898122020281daa9b8c46c46e8d7fcebfbd481c9e462f3a9a6"
+    "frame-bundle.ts": "f4700d4b6d4ae1f5e72ee16d714dd0501d9eb39f68204d5eaa63aed157114d78"
   },
   "stories": 1625,
   "documents": 36,
-  "bytes": 66556746
+  "bytes": 66556849
 }

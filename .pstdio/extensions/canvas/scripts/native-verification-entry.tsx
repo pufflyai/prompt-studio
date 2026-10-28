@@ -38,6 +38,8 @@ class Boundary extends Component<{ children: ReactNode }, { error?: string }> {
 }
 const id = new URLSearchParams(location.search).get("canvas");
 const variantId = new URLSearchParams(location.search).get("preview");
+const viewportWidth = Number(new URLSearchParams(location.search).get("viewport-width") ?? "1198");
+const viewportHeight = Number(new URLSearchParams(location.search).get("viewport-height") ?? "960");
 const documentEntry = catalog.documents.find((entry) => entry.id === variantId);
 const variant = catalog.stories.find((entry) => entry.id === variantId);
 const resolveCanvas = (): CanvasDefinition | undefined => {
@@ -72,9 +74,9 @@ const resolveCanvas = (): CanvasDefinition | undefined => {
           id: variant.id,
           name: variant.name,
           position: { x: 0, y: 0 },
-          width: 1200,
-          height: 960,
-          preview: { kind: "story", ...variant, viewportHeight: 960 },
+          width: viewportWidth + 2,
+          height: viewportHeight,
+          preview: { kind: "story", ...variant, viewportHeight },
         },
       ],
     };
