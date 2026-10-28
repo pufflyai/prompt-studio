@@ -19,8 +19,10 @@ const stableValue = (value: unknown): unknown => {
 };
 export const createFileRendererLoadKey = (input: FileRendererLoadKeyInput) => {
   const { fileRendererId, resource } = input;
-  if (input.documentKey !== undefined)
-    return `${JSON.stringify(resourceKey(resource))}:${fileRendererId}:${input.documentKey}`;
+  if (input.documentKey !== undefined) {
+    const key = `${JSON.stringify(resourceKey(resource))}:${fileRendererId}:${input.documentKey}`;
+    return input.pageParams ? `${key}:${JSON.stringify(stableValue(input.pageParams))}` : key;
+  }
   const resourceValue = resource
     ? stableValue({
         id: resource.id,

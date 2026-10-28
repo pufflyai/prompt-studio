@@ -59,8 +59,9 @@ export const resolveGitExecutable = (deps: GitExecutableDeps = {}) => {
 
 export const createGitExecutableResolver = (deps: GitExecutableDeps = {}) => {
   let executable: string | undefined;
+  const exists = deps.exists ?? existsSync;
   return () => {
-    executable ??= resolveGitExecutable(deps) ?? undefined;
+    if (!executable || !exists(executable)) executable = resolveGitExecutable(deps) ?? undefined;
     return executable;
   };
 };

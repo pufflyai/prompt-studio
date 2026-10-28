@@ -25,6 +25,18 @@ describe("git", () => {
     }
   });
 
+  test("resolves a new Git installation when the cached executable disappears", () => {
+    let installed = "/old/bin/git";
+    const resolve = createGitExecutableResolver({
+      platform: "linux",
+      which: () => installed,
+      exists: (path) => path === installed,
+    });
+    expect(resolve()).toBe("/old/bin/git");
+    installed = "/new/bin/git";
+    expect(resolve()).toBe("/new/bin/git");
+  });
+
   test("does not launch Apple's Git stub when developer tools are missing", () => {
     expect(
       resolveGitExecutable({

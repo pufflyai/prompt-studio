@@ -191,9 +191,11 @@ const buildFileDiffSummary = async (
   const oldPath = entry.oldPath ?? entry.filePath;
   const newPath = entry.newPath ?? entry.filePath;
   const cachedStats = entry.oldPath ? undefined : statsByPath?.get(entry.filePath);
-  const stats = untracked
-    ? { additions: 0, deletions: 0 }
-    : (cachedStats ?? (await countAdditionsDeletions(worktreePath, base, newPath, entry.oldPath)));
+  const stats =
+    cachedStats ??
+    (untracked
+      ? { additions: 0, deletions: 0 }
+      : await countAdditionsDeletions(worktreePath, base, newPath, entry.oldPath));
   const additions =
     entry.change === "added" && stats.additions === 0
       ? countContentLines(await getWorkingContent(worktreePath, newPath))

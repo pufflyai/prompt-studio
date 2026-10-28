@@ -40,6 +40,44 @@ const createHarness = (input?: { failSaves?: number; saveRevision?: string; save
 };
 
 describe("manual file editing", () => {
+  for (const failFirst of [false, true]) {
+    test(`an explicit save during ${failFirst ? "a failing" : "an active"} save saves the pending edit without overlap`, async () => {
+      let finishFirst!: () => void;
+      let active = 0;
+      let maxActive = 0;
+      const saves: string[] = [];
+      const controller = createFileEditController({
+        binding,
+        debounceMs: DEBOUNCE_MS,
+        saveMode: "manual",
+        load: () => {},
+        save: async (value) => {
+          active++;
+          maxActive = Math.max(maxActive, active);
+          saves.push(value);
+          if (value === "first") await new Promise<void>((resolve) => (finishFirst = resolve));
+          active--;
+          if (value === "first" && failFirst) throw new Error("first save failed");
+        },
+      });
+      controller.setBaseline("loaded");
+      controller.handleChange("first");
+      controller.flush();
+      controller.handleChange("second");
+      controller.flush();
+      expect(saves).toEqual(["first"]);
+      finishFirst();
+      await tick();
+      expect(saves).toEqual(["first", "second"]);
+      expect(maxActive).toBe(1);
+      expect(controller.getBaseline()).toBe("second");
+      expect(controller.getState()).toEqual({ dirty: false, saving: false });
+      controller.handleChange("third");
+      await tick();
+      expect(saves).toEqual(["first", "second"]);
+    });
+  }
+
   test("manual edits remain drafts until an explicit save, including edits during a save", async () => {
     let finish!: () => void;
     const saves: string[] = [];

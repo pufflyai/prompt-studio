@@ -40,6 +40,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
   let baselineRevision: string | undefined;
   let draft: string | null = null;
   let activeSave: { value: string; origin: FileRendererRefreshOrigin } | null = null;
+  let pendingFlush = false;
   let saveError: string | undefined;
   let deferredRevision: string | undefined;
   let genericRefreshDeferred = false;
@@ -132,6 +133,12 @@ export const createFileEditController = (input: FileEditControllerInput) => {
         if (draft === null) draft = value;
         saveError = describeError(error);
         notify();
+      })
+      .finally(() => {
+        if (!pendingFlush) return;
+        pendingFlush = false;
+        saveError = undefined;
+        runSave();
       });
   };
 
@@ -232,6 +239,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     flush() {
       clearTimer();
       if (input.saveMode === "manual") saveError = undefined;
+      if (activeSave && draft !== null) pendingFlush = true;
       runSave();
     },
   };

@@ -8,8 +8,8 @@ test("file cache identity distinguishes resource owners and projects", () => {
   expect(key(resource)).not.toBe(key({ ...resource, extensionId: "other" }));
 });
 
-test("file reads for different page params have separate cache entries", () => {
-  const input = { fileRendererId: "report", resource: { type: "report", id: "one" } };
+test.each([undefined, "report.md"])("file reads with document key %s separate page params", (documentKey) => {
+  const input = { fileRendererId: "report", resource: { type: "report", id: "one" }, documentKey };
   const key = createFileRendererLoadKey({ ...input, pageParams: { range: "now-6h", live: true } });
   expect(key).not.toBe(createFileRendererLoadKey({ ...input, pageParams: { range: "now-24h", live: true } }));
   expect(key).toBe(createFileRendererLoadKey({ ...input, pageParams: { live: true, range: "now-6h" } }));
