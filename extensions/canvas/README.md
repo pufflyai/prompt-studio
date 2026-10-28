@@ -19,7 +19,7 @@ Its catalog is downloaded on demand and is not embedded in the core CLI. It is n
 
 Use a runtime that satisfies the extension API range declared in `package.json`.
 
-Open **Canvases** in the project navigation. Browse **Design System**, **Workbench Core**, **Dashboard**, **Extensions**, and **Landing Page**, with expandable subgroups. All canvases use one shared, project-owned tab viewer. Selecting a canvas opens an unpinned preview tab by default. The next unpinned selection replaces that preview. Use Pin tab to pin a canvas; pinned canvases retain their preview inputs and camera in the shared tab list. Landing-page components have their own Landing Page group. Host UI such as Paused extension view belongs under Workbench Core → Chrome; actual extension-owned examples belong under Extensions. **Foundations** contains three previews of semantic colors, typography, spacing, and radii. **Shared components** contains nine previews of controls, feedback, identity, surfaces, keyboard hints, empty states, and overlays. All previews use synthetic data and local state. Creating a project in the preview never creates a real project.
+Open **UI Canvas** in the project navigation. Browse **Design System**, **Workbench Core**, **Dashboard**, **Extensions**, and **Landing Page**, with expandable subgroups. All canvases use one shared, project-owned tab viewer. Selecting a canvas opens an unpinned preview tab by default. The next unpinned selection replaces that preview. Use Pin tab to pin a canvas; pinned canvases retain their preview inputs and camera in the shared tab list. Landing-page components have their own Landing Page group. Host UI such as Paused extension view belongs under Workbench Core → Chrome; actual extension-owned examples belong under Extensions. **Foundations** contains three previews of semantic colors, typography, spacing, and radii. **Shared components** contains nine previews of controls, feedback, identity, surfaces, keyboard hints, empty states, and overlays. All previews use synthetic data and local state. Creating a project in the preview never creates a real project.
 
 ## Work with a design
 
@@ -91,7 +91,7 @@ bun run --cwd scripts canvas:coverage
 
 `canvas:build` composes colocated `*.canvas.tsx` examples and MDX documents, then records source and output hashes. Generated modules are build output; edit the source and rebuild. The builder retains each scenario's existing ID, variant parameters, providers and asynchronous setup. `canvas:inventory` regenerates the source destination ledger. The original scenario inventory checks that every covered export still has a canvas destination.
 
-The extension's normal `build` command also regenerates the catalog, including after release versioning changes its manifest or dependencies. Freshness verification stays separate from generation.
+The extension's normal `build` command discovers current examples and reuses the compiled catalog while its inputs are unchanged. It regenerates stale output, including after release versioning changes its manifest or dependencies. Freshness verification stays separate from generation.
 
 `typecheck` checks the extension and examples across all owning workspaces. Published extension configurations exclude repository-only examples; the catalog checks them separately with the private authoring types.
 
