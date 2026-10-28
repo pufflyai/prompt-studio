@@ -17,6 +17,7 @@
     "pstdio-api",
     "pstdio-api-contracts",
     "pstdio-api-runtime-host",
+    "pstdio-benchmarks",
     "pstdio-dashboard",
     "pstdio-diagnostics",
     "pstdio-db",

@@ -1,13 +1,40 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { GitError, git, gitBytes, resolveGitExecutable } from "./git";
+import { createGitExecutableResolver, GitError, git, gitBytes, resolveGitExecutable } from "./git";
 import { createTempRepo } from "./test-helpers";
 
 describe("git", () => {
+  test("resolves Apple's selected developer tools once for repeated Git commands", () => {
+    let resolutions = 0;
+    const resolve = createGitExecutableResolver({
+      platform: "darwin",
+      which: () => "/usr/bin/git",
+      exists: () => true,
+      developerDirectory: () => {
+        resolutions++;
+        return "/custom/Xcode.app/Contents/Developer";
+      },
+    });
+    expect(resolve()).toBe("/custom/Xcode.app/Contents/Developer/usr/bin/git");
+    expect(resolve()).toBe("/custom/Xcode.app/Contents/Developer/usr/bin/git");
+    expect(resolutions).toBe(1);
+  });
   test("does not resolve a missing Git executable on any supported platform", () => {
     for (const platform of ["darwin", "linux", "win32"] as const) {
       expect(resolveGitExecutable({ platform, which: () => null })).toBeNull();
     }
+  });
+
+  test("resolves a new Git installation when the cached executable disappears", () => {
+    let installed = "/old/bin/git";
+    const resolve = createGitExecutableResolver({
+      platform: "linux",
+      which: () => installed,
+      exists: (path) => path === installed,
+    });
+    expect(resolve()).toBe("/old/bin/git");
+    installed = "/new/bin/git";
+    expect(resolve()).toBe("/new/bin/git");
   });
 
   test("does not launch Apple's Git stub when developer tools are missing", () => {

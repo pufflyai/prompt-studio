@@ -62,6 +62,7 @@
     "vite": "7.3.7",
     "workbench-fixture": "workspace:*",
     "pstdio-scripts": "workspace:*",
-    "@pstdio/canvas": "workspace:*"
+    "@pstdio/canvas": "workspace:*",
+    "pstdio-benchmarks": "workspace:*"
   }
 }

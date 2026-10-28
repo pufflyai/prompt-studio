@@ -18,9 +18,7 @@ import {
   workspaceFilesUnavailableState,
   workspaceIdOf,
 } from "@/shared/workspaces/workspace-file-resource";
-import { WorkspaceFileChangeBadge, WorkspaceFileTreeIcon } from "./components/workspace-file-tree-presentation";
-import { resolveWorkspaceDiffRequest } from "./components/workspace-widget-state";
-import { workspaceDiffFilePath } from "./data/workspace-queries";
+import { WorkspaceFileTreeIcon } from "./components/workspace-file-tree-presentation";
 
 const OPEN_WORKSPACE_FILE_COMMAND = "dashboard.workspace.open-file";
 const CREATE_WORKSPACE_FILE_ACTION = "workspace-file.create";
@@ -173,7 +171,7 @@ const fileNode = (
   resource: ResourceRef,
   entry: { path: string; name: string; type: "file" | "directory" },
   actions: WorkspaceFileTreeActions,
-  options: { change?: string; revealInFinder: boolean },
+  options: { revealInFinder: boolean },
 ): TreeNode => {
   const copyActions = [copyPathAction(ctx, resource, entry.path), copyRelativePathAction(ctx, entry.path)];
   const renameAction = renameEntryAction(resource, entry.path, entry.name, entry.type, actions);
@@ -186,6 +184,7 @@ const fileNode = (
     ];
     return {
       id: entry.path,
+      rowVariant: "file",
       label: entry.name,
       collapsible: true,
       canDrag: true,
@@ -197,9 +196,9 @@ const fileNode = (
 
   return {
     id: entry.path,
+    rowVariant: "file",
     label: entry.name,
     iconElement: createElement(WorkspaceFileTreeIcon, { name: entry.name }),
-    endContent: options.change ? createElement(WorkspaceFileChangeBadge, { change: options.change }) : undefined,
     target: { kind: "command", commandId: OPEN_WORKSPACE_FILE_COMMAND, args: { path: entry.path } },
     contextMenuActions: [renameAction, ...copyActions, ...revealAction, deleteAction],
     showContextMenuTrigger: false,
@@ -244,7 +243,6 @@ export const loadWorkspaceFileEntries = async (
   const unavailable = workspaceFilesUnavailableState(resource);
   if (unavailable === projectFolderMissingState) return projectFolderSection;
   if (unavailable) return unsupportedSection(unavailable.title, unavailable.description);
-  const diffRequest = resolveWorkspaceDiffRequest({ resourceId: resource.id, metadata: resource.metadata });
 
   context.signal?.throwIfAborted();
   const response = await getApiClient().workspaces.listFiles(
@@ -257,15 +255,8 @@ export const loadWorkspaceFileEntries = async (
     { signal: context.signal },
   );
   context.signal?.throwIfAborted();
-  const diffSummary = diffRequest
-    ? await getApiClient().workspaces.diffFiles(diffRequest.workspaceId, diffRequest.mode, context.signal)
-    : null;
-  context.signal?.throwIfAborted();
   const revealInFinder = await finderAvailable();
-  const changeByPath = new Map(diffSummary?.files.map((file) => [workspaceDiffFilePath(file), file.change]));
-  const nodes = response.entries.map((entry) =>
-    fileNode(ctx, resource, entry, actions, { change: changeByPath.get(entry.path), revealInFinder }),
-  );
+  const nodes = response.entries.map((entry) => fileNode(ctx, resource, entry, actions, { revealInFinder }));
   if (pendingCreation && pendingCreation.workspaceId === workspaceId && pendingCreation.parentPath === path) {
     nodes.unshift(inlineCreateNode(resource, path, pendingCreation.type, actions));
   }

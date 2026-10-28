@@ -124,6 +124,86 @@
       "componentImport": "./study-status"
     },
     {
+      "id": "dashboard-extensions-prompt-studio-dev-compare-commits--both-measured",
+      "name": "Both Measured",
+      "exportName": "BothMeasured",
+      "source": ".pstdio/extensions/pstdio-dev/src/compare/compare.canvas.tsx",
+      "suite": "dashboard",
+      "title": "Extensions/Prompt Studio Dev/Compare commits",
+      "sourceHash": "84215f670cae51ed17b8c6fd2363a36cc2a51019ecfb851bddc5cfae8cba5c9f",
+      "component": "InteractiveCompare"
+    },
+    {
+      "id": "dashboard-extensions-prompt-studio-dev-compare-commits--head-not-measured",
+      "name": "Head Not Measured",
+      "exportName": "HeadNotMeasured",
+      "source": ".pstdio/extensions/pstdio-dev/src/compare/compare.canvas.tsx",
+      "suite": "dashboard",
+      "title": "Extensions/Prompt Studio Dev/Compare commits",
+      "sourceHash": "84215f670cae51ed17b8c6fd2363a36cc2a51019ecfb851bddc5cfae8cba5c9f",
+      "component": "InteractiveCompare"
+    },
+    {
+      "id": "dashboard-extensions-prompt-studio-dev-benchmark-runs--runs",
+      "name": "Runs",
+      "exportName": "Runs",
+      "source": ".pstdio/extensions/pstdio-dev/src/runs/runs.canvas.tsx",
+      "suite": "dashboard",
+      "title": "Extensions/Prompt Studio Dev/Benchmark runs",
+      "sourceHash": "603e8f5e939c3fc32de881fae5c5642fb1a1cf1138ffcd68b063042fb4039d7c",
+      "component": "RunsStory"
+    },
+    {
+      "id": "dashboard-extensions-prompt-studio-dev-benchmark-runs--git-hub-signed-out",
+      "name": "Git Hub Signed Out",
+      "exportName": "GitHubSignedOut",
+      "source": ".pstdio/extensions/pstdio-dev/src/runs/runs.canvas.tsx",
+      "suite": "dashboard",
+      "title": "Extensions/Prompt Studio Dev/Benchmark runs",
+      "sourceHash": "603e8f5e939c3fc32de881fae5c5642fb1a1cf1138ffcd68b063042fb4039d7c",
+      "component": "RunsStory"
+    },
+    {
+      "id": "dashboard-extensions-prompt-studio-dev-performance-trends--across-versions",
+      "name": "Across Versions",
+      "exportName": "AcrossVersions",
+      "source": ".pstdio/extensions/pstdio-dev/src/trends/trends.canvas.tsx",
+      "suite": "dashboard",
+      "title": "Extensions/Prompt Studio Dev/Performance trends",
+      "sourceHash": "1401bd9bef6a55f9e49610e7d6039dfcd2dbc5b56671c5ef3f9fd8bb3f5fc9d0",
+      "component": "InteractiveTrends"
+    },
+    {
+      "id": "dashboard-extensions-prompt-studio-dev-performance-trends--as-table",
+      "name": "As Table",
+      "exportName": "AsTable",
+      "source": ".pstdio/extensions/pstdio-dev/src/trends/trends.canvas.tsx",
+      "suite": "dashboard",
+      "title": "Extensions/Prompt Studio Dev/Performance trends",
+      "sourceHash": "1401bd9bef6a55f9e49610e7d6039dfcd2dbc5b56671c5ef3f9fd8bb3f5fc9d0",
+      "component": "InteractiveTrends"
+    },
+    {
+      "id": "dashboard-extensions-prompt-studio-dev-performance-trends--one-version",
+      "name": "One Version",
+      "exportName": "OneVersion",
+      "source": ".pstdio/extensions/pstdio-dev/src/trends/trends.canvas.tsx",
+      "suite": "dashboard",
+      "title": "Extensions/Prompt Studio Dev/Performance trends",
+      "sourceHash": "1401bd9bef6a55f9e49610e7d6039dfcd2dbc5b56671c5ef3f9fd8bb3f5fc9d0",
+      "component": "InteractiveTrends"
+    },
+    {
+      "id": "dashboard-extensions-prompt-studio-dev-performance-trends--no-release-results",
+      "name": "No Release Results",
+      "exportName": "NoReleaseResults",
+      "source": ".pstdio/extensions/pstdio-dev/src/trends/trends.canvas.tsx",
+      "suite": "dashboard",
+      "title": "Extensions/Prompt Studio Dev/Performance trends",
+      "sourceHash": "1401bd9bef6a55f9e49610e7d6039dfcd2dbc5b56671c5ef3f9fd8bb3f5fc9d0",
+      "component": "InteractiveTrends"
+    },
+    {
       "id": "dashboard-extensions-social-radar-analysis--fourteen-days",
       "name": "Fourteen Days",
       "exportName": "FourteenDays",
@@ -6816,6 +6896,28 @@
       "component": "StaticTabActions"
     },
     {
+      "id": "workbench-pstdio-workbench-file-tree-viewport--in-panel-menu",
+      "name": "In Panel Menu",
+      "exportName": "InPanelMenu",
+      "source": "packages/pstdio-workbench/src/react/region/tree-viewport.canvas.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/File tree/Viewport",
+      "sourceHash": "755982cc03263fe356c04617b5f6f2f3ae9999377c2fbd76a954dc152247b3b1",
+      "component": "WorkbenchStory",
+      "componentImport": "../../examples/workbench-story"
+    },
+    {
+      "id": "workbench-pstdio-workbench-file-tree-viewport--in-main-panel",
+      "name": "In Main Panel",
+      "exportName": "InMainPanel",
+      "source": "packages/pstdio-workbench/src/react/region/tree-viewport.canvas.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/File tree/Viewport",
+      "sourceHash": "755982cc03263fe356c04617b5f6f2f3ae9999377c2fbd76a954dc152247b3b1",
+      "component": "WorkbenchStory",
+      "componentImport": "../../examples/workbench-story"
+    },
+    {
       "id": "workbench-pstdio-workbench-reference-core-api-whole-panel-placement--interactive",
       "name": "Interactive",
       "exportName": "Interactive",
@@ -6935,6 +7037,39 @@
       "sourceHash": "db5dea7874ff6b35b1aeb963b19dc420e521bfe79aafd458d4e1227f18fd9e21",
       "component": "FileRendererErrorNotice",
       "componentImport": "./file-renderer-error-notice"
+    },
+    {
+      "id": "workbench-pstdio-workbench-file-editor-save-status--saved",
+      "name": "Saved",
+      "exportName": "Saved",
+      "source": "packages/pstdio-workbench/src/react/renderers/file/file-renderer-path-header.canvas.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/File editor/Save status",
+      "sourceHash": "dd51877c37448a289cd7a61e165056467d2b3c17a9257cc12af276e218adf811",
+      "component": "FileRendererPathHeader",
+      "componentImport": "./file-renderer-path-header"
+    },
+    {
+      "id": "workbench-pstdio-workbench-file-editor-save-status--unsaved",
+      "name": "Unsaved",
+      "exportName": "Unsaved",
+      "source": "packages/pstdio-workbench/src/react/renderers/file/file-renderer-path-header.canvas.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/File editor/Save status",
+      "sourceHash": "dd51877c37448a289cd7a61e165056467d2b3c17a9257cc12af276e218adf811",
+      "component": "FileRendererPathHeader",
+      "componentImport": "./file-renderer-path-header"
+    },
+    {
+      "id": "workbench-pstdio-workbench-file-editor-save-status--saving",
+      "name": "Saving",
+      "exportName": "Saving",
+      "source": "packages/pstdio-workbench/src/react/renderers/file/file-renderer-path-header.canvas.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/File editor/Save status",
+      "sourceHash": "dd51877c37448a289cd7a61e165056467d2b3c17a9257cc12af276e218adf811",
+      "component": "FileRendererPathHeader",
+      "componentImport": "./file-renderer-path-header"
     },
     {
       "id": "workbench-renderers-kanban-move-preview--move-before-save",
@@ -16522,6 +16657,17 @@
       "suite": "ui",
       "title": "Components/Data Display/Tree List/Empty State",
       "sourceHash": "af8885c22eb177f03980cc4a347db23c71ec67196b8408a312c8a5af57ad9e7d",
+      "component": "TreeList",
+      "componentImport": "./tree-list"
+    },
+    {
+      "id": "ui-components-data-display-tree-list-files--compact-files",
+      "name": "Compact Files",
+      "exportName": "CompactFiles",
+      "source": "packages/ui/src/components/tree-list/tree-list-files.canvas.tsx",
+      "suite": "ui",
+      "title": "Components/Data Display/Tree List/Files",
+      "sourceHash": "4d2900b4d59936d4221f2607ed9d0c57f2a9e3e71c5865283f085caa70b31c7f",
       "component": "TreeList",
       "componentImport": "./tree-list"
     },

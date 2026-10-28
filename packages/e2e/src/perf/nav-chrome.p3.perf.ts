@@ -4,11 +4,12 @@ import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-fo
 import { uiOrigin } from "../ui-server";
 import {
   afterTwoFrames,
+  budgetMisses,
   collectRepeatSamples,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
-  reportSamples,
+  reportPageMemory,
   resetInteraction,
 } from "./perf-helpers";
 
@@ -60,9 +61,11 @@ test("settles the persistent Nav Chrome after navigating back within budget", as
   expect(await navNode!.evaluate((element) => element.isConnected)).toBe(true);
   console.info(JSON.stringify({ metric: "nav-chrome", repeat: testInfo.repeatEachIndex, ...result }));
 
+  await reportPageMemory(page, "nav-chrome");
+
   const results = collectRepeatSamples(testInfo, "nav-chrome", [result.duration]);
   if (!results) return;
   expect(results).toHaveLength(testInfo.project.repeatEach);
   // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 721 ms) plus about 20%.
-  expect(reportSamples("nav-chrome", "navigate-back", results).max).toBeLessThanOrEqual(875);
+  expect(budgetMisses("nav-chrome", "navigate-back", results, 875)).toEqual([]);
 });

@@ -78,7 +78,11 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
   browserName: _browserName,
 }) => {
   // Initial setup, trace capture and relaunch share this user-approved execution allowance.
-  if (process.platform === "darwin" && process.arch === "arm64") test.setTimeout(45_000);
+  if (
+    (process.platform === "darwin" && process.arch === "arm64") ||
+    (process.platform === "linux" && process.arch === "x64")
+  )
+    test.setTimeout(45_000);
   const home = createPackagedHome();
   let first: PackagedApp | null = null;
   let second: PackagedApp | null = null;

@@ -443,6 +443,28 @@ jobs:
           previous-tag: ${{ needs.plan.outputs.previous_tag }}
           patch: ${{ inputs.channel == 'patch' }}
 
+  # Stable and patch releases measure every benchmark suite for the Performance pages. The run is
+  # separate and starts after publishing, so benchmarks never hold or fail a release.
+  benchmarks:
+    needs: [plan, publish]
+    if: ${{ !cancelled() && needs.publish.result == 'success' && needs.plan.outputs.channel != 'nightly' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ needs.plan.outputs.tag }}
+      COMMIT: ${{ needs.plan.outputs.commit }}
+      TARGETS: ${{ needs.plan.outputs.targets }}
+    steps:
+      - name: Start the release benchmarks
+        run: |
+          set -euo pipefail
+          gh workflow run benchmarks.yml --ref "$TAG" \
+            -f commits="$COMMIT" -f platforms="$(jq -r 'join(",")' <<< "$TARGETS")" -f release_tag="$TAG"
+
   # Runs only after a nightly published with every asset.
   nightly_prune:
     needs: [plan, publish_nightly]

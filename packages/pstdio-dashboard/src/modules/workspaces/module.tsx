@@ -155,7 +155,7 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
     },
     main: {
       kind: "panels",
-      landing: "changes",
+      landing: "files",
       empty: {
         kind: "view",
         id: dashboardWidgetIds.workspaceSummary,
@@ -201,11 +201,13 @@ const syncActiveWorkspacePage = (ctx: WorkbenchModuleContext) => {
   const resource = ctx.getPrimaryResource();
   if (!resource) return;
   updateDashboardSidenav(ctx, { selectedNode: null });
-  if (resourceMetadataString(resource, "workspaceView") !== "files") return;
-  const files = ctx.layout
+  const view = resourceMetadataString(resource, "workspaceView");
+  if (view !== "files" && view !== "diffs") return;
+  const viewId = view === "files" ? dashboardWidgetIds.workspaceFiles : dashboardWidgetIds.workspaceDiffs;
+  const panel = ctx.layout
     .listPanelInstances("main")
-    .find((panel) => panel.viewId === dashboardWidgetIds.workspaceFiles && panel.resourceKey === resourceKey(resource));
-  if (files) ctx.layout.activatePanel(files.instanceId);
+    .find((panel) => panel.viewId === viewId && panel.resourceKey === resourceKey(resource));
+  if (panel) ctx.layout.activatePanel(panel.instanceId);
 };
 // The workspaces slice owns the project navigation shell, the workspaces board,
 // and the workspace panels used when a workspace resource opens.
