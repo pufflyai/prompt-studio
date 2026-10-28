@@ -10,7 +10,7 @@ import {
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 
 interface CreateBootstrapModuleInput {
-  beforeOpenProject?: (resume: () => void, isCurrent: () => boolean) => Promise<boolean>;
+  beforeOpen?: (resume: () => void, isCurrent: () => boolean) => Promise<boolean>;
   isInitialSyncComplete?: () => boolean;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
 }
@@ -63,14 +63,17 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
             });
             return;
           }
-          enterProjectSelection();
-          return;
         }
 
-        ctx.pageLocations.setProject(projectId);
+        if (projectId) ctx.pageLocations.setProject(projectId);
+        else ctx.pageLocations.clearProject();
         const isCurrent = () => run === generation && getDashboardSelectedProjectId(ctx) === projectId;
-        const openProject = () => {
+        const openWorkspace = () => {
           if (!isCurrent()) return;
+          if (!projectId) {
+            enterProjectSelection();
+            return;
+          }
           ctx.modes.setActiveMode("project");
           const boot = () => {
             if (!isCurrent()) return false;
@@ -100,14 +103,14 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
             readyUnsubscribe = subscribeDashboardExtensionsReadyProject(ctx, boot);
           }
         };
-        if (input.beforeOpenProject) {
+        if (input.beforeOpen) {
           void input
-            .beforeOpenProject(openProject, isCurrent)
+            .beforeOpen(openWorkspace, isCurrent)
             .then((open) => {
-              if (open) openProject();
+              if (open) openWorkspace();
             })
-            .catch(openProject);
-        } else openProject();
+            .catch(openWorkspace);
+        } else openWorkspace();
       };
 
       bootSelectedProject();
