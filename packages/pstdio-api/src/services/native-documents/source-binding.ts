@@ -35,7 +35,7 @@ const readWorkspaceSource = async (root: string, path: string) => {
     return await createFileMount(root).readBytes(path);
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
-    if (code === "ENOENT" || code === "ENOTDIR" || code === "EACCES")
+    if (code === "ENOENT" || code === "ENOTDIR" || code === "EISDIR" || code === "EACCES")
       throw unavailable("The shared workspace file is unavailable");
     throw error;
   }
