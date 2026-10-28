@@ -80,8 +80,9 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     const result = await deps.extensionInstallations.run(
       { projectId, installName, displayName: entry?.displayName ?? installName, extensionId: entry?.extensionId },
       () => performInstall(projectId, input),
+      installName,
+      async (result) => provisionWhenRequired(projectId, await changesWorkspaceProvisioning(result.installedSource)),
     );
-    await provisionWhenRequired(projectId, await changesWorkspaceProvisioning(result.installedSource));
     return { source: result.source, extension: await projectExtension(result.instance, result.installedSource) };
   };
 

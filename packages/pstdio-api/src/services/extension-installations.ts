@@ -8,6 +8,7 @@ interface InstallationWork {
   targets: string[];
   request?: { kind: "catalog"; name: string };
   operation: (signal: AbortSignal) => Promise<unknown>;
+  afterOperation?: () => Promise<void>;
   completion: ReturnType<typeof Promise.withResolvers<unknown>>;
 }
 interface InstallationOptions {
@@ -23,12 +24,25 @@ const snapshot = (entry: InstallationWork, id: string) => ({
   ...entry.job,
   ...entry.related.find((item) => item.id === id),
 });
+const retainSuccessfulOperation = (operation: InstallationWork["operation"]) => {
+  let result: Promise<unknown> | undefined;
+  return (signal: AbortSignal) => {
+    result ??= Promise.resolve()
+      .then(() => operation(signal))
+      .catch((error) => {
+        result = undefined;
+        throw error;
+      });
+    return result;
+  };
+};
 
 /** One owner for scheduling, retry, persistence and shutdown of extension installations. */
 class ExtensionInstallationService {
   private readonly work = new Map<string, InstallationWork>();
   private readonly owners = new Map<string, string>();
   private readonly active = new Set<string>();
+  private readonly installing = new Set<string>();
   private readonly locked = new Set<string>();
   private readonly lifetime = new AbortController();
   private readonly storage: ReturnType<typeof createInstallationStorage>;
@@ -71,19 +85,27 @@ class ExtensionInstallationService {
     this.scheduled = false;
     if (this.lifetime.signal.aborted) return;
     for (const entry of this.work.values()) {
-      if (this.active.size >= 2) break;
+      if (this.installing.size >= 2) break;
       const names = entry.targets;
       if (entry.job.status !== "queued" || names.some((name) => this.locked.has(name))) continue;
       this.active.add(entry.job.id);
+      this.installing.add(entry.job.id);
       for (const name of names) this.locked.add(name);
       entry.job = { ...entry.job, status: "running", startedAt: new Date().toISOString() };
       void this.execute(entry, names);
     }
   }
+  private releaseInstallation(entry: InstallationWork, names: string[]) {
+    if (!this.installing.delete(entry.job.id)) return;
+    for (const name of names) this.locked.delete(name);
+    this.schedule();
+  }
   private async execute(entry: InstallationWork, names: string[]) {
     try {
       await this.persist();
       const result = await entry.operation(this.lifetime.signal);
+      this.releaseInstallation(entry, names);
+      await entry.afterOperation?.();
       entry.job = { ...entry.job, status: "completed", completedAt: new Date().toISOString() };
       await this.persist();
       entry.completion.resolve(result);
@@ -101,8 +123,7 @@ class ExtensionInstallationService {
       entry.completion.reject(error);
     } finally {
       this.active.delete(entry.job.id);
-      for (const name of names) this.locked.delete(name);
-      this.schedule();
+      this.releaseInstallation(entry, names);
     }
   }
   private enqueueGroup(
@@ -110,6 +131,7 @@ class ExtensionInstallationService {
     operation: InstallationWork["operation"],
     request?: InstallationWork["request"],
     targets = identities.map((identity) => identity.installName),
+    afterOperation?: InstallationWork["afterOperation"],
   ) {
     this.lifetime.signal.throwIfAborted();
     const [identity, ...rest] = identities;
@@ -120,7 +142,15 @@ class ExtensionInstallationService {
       queuedAt: new Date().toISOString(),
     };
     const related = rest.map((identity) => ({ ...identity, id: crypto.randomUUID() }));
-    this.work.set(job.id, { job, related, targets, request, operation, completion: completion() });
+    this.work.set(job.id, {
+      job,
+      related,
+      targets,
+      request,
+      afterOperation,
+      operation: retainSuccessfulOperation(operation),
+      completion: completion(),
+    });
     for (const id of [job.id, ...related.map((item) => item.id)]) this.owners.set(id, job.id);
     void this.persist().catch(() => {});
     this.schedule();
@@ -154,6 +184,7 @@ class ExtensionInstallationService {
     identities: InstallationIdentity[],
     operation: (signal: AbortSignal) => Promise<T>,
     targets?: string[],
+    afterOperation?: (result: T) => Promise<void>,
   ) {
     if (!identities.length) return operation(this.lifetime.signal);
     let result!: T;
@@ -164,6 +195,7 @@ class ExtensionInstallationService {
       },
       undefined,
       targets,
+      afterOperation ? () => afterOperation(result) : undefined,
     );
     await this.wait(job.id);
     return result;
@@ -172,8 +204,9 @@ class ExtensionInstallationService {
     identity: InstallationIdentity,
     operation: (signal: AbortSignal) => Promise<T>,
     target = identity.installName,
+    afterOperation?: (result: T) => Promise<void>,
   ) {
-    return this.runGroup([identity], operation, [target]);
+    return this.runGroup([identity], operation, [target], afterOperation);
   }
   retry(id: string) {
     this.lifetime.signal.throwIfAborted();

@@ -13,7 +13,7 @@ export const registerExtensionDetailPage = (ctx: WorkbenchModuleContext) => {
       render: (input) => (
         <ExtensionsPanel
           key={input.instance.resource?.id}
-          projectId={input.instance.resource?.projectId ?? getDashboardSelectedProjectId(ctx)}
+          projectId={getDashboardSelectedProjectId(ctx)}
           initialInstallName={input.instance.resource?.id}
           settingsInput={input}
         />
