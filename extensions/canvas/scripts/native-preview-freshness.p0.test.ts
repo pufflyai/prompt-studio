@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { gunzipSync } from "node:zlib";
+import { previews } from "../src/canvases/previews";
 import archive from "../src/catalog/generated/frame-bundle";
 import catalog from "../src/catalog/generated/stories.json";
 import type { FrameBootstrap } from "../src/frames/assets";
@@ -14,19 +15,17 @@ test("native previews match the component sources, fixtures, and generated files
 });
 
 test("every retained preview has a complete startup graph and its suite provider", () => {
-  const data = JSON.parse(gunzipSync(Buffer.from(archive, "base64")).toString()) as {
-    scripts: Record<string, string>;
-    styles: string[];
-    entry: string;
-    graph: FrameBootstrap["graph"];
-  };
+  const decode = (data: string) => new Blob([gunzipSync(Buffer.from(data, "base64"))]);
   const all: FrameBootstrap = {
-    entry: `canvas-preview:${data.entry}`,
-    graph: data.graph,
-    scripts: Object.fromEntries(Object.entries(data.scripts).map(([name, code]) => [name, new Blob([code])])),
-    styles: data.styles.map((style) => new Blob([style])),
+    entry: archive.entry,
+    graph: archive.graph,
+    scripts: Object.fromEntries(Object.entries(archive.scripts).map(([name, code]) => [name, decode(code)])),
+    styles: archive.styles.map(decode),
   };
-  const sources = [...new Set([...catalog.stories, ...catalog.documents].map((entry) => entry.source)), "$native"];
+  const sources = [
+    ...new Set([...catalog.stories, ...catalog.documents].map((entry) => entry.source)),
+    ...Object.keys(previews).map((name) => `$native:${name}`),
+  ];
   expect(Object.keys(all.graph.sources).sort()).toEqual(sources.sort());
   for (const source of sources) {
     const selected = selectFrameBootstrap(all, source);
@@ -35,7 +34,7 @@ test("every retained preview has a complete startup graph and its suite provider
     if (description.project) expect(selected.scripts[description.project]).toBe(all.scripts[description.project]);
     expect(selected.styles.length).toBeGreaterThan(0);
   }
-  expect(Object.keys(selectFrameBootstrap(all, "$native").scripts).length).toBeLessThan(
+  expect(Object.keys(selectFrameBootstrap(all, "$native:project-form").scripts).length).toBeLessThan(
     Object.keys(all.scripts).length,
   );
 });

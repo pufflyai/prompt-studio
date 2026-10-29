@@ -10,12 +10,17 @@ import { type FrameBootstrap, frameBootstrap, frameDocument } from "./assets";
 import { FrameLoading } from "./frame-loading";
 import { navigateFrame } from "./navigation";
 import { type FrameMessage, type FrameRequest, frameProtocol } from "./protocol";
-import { selectFrameBootstrap } from "./selection";
 
 const postFrame = (frame: HTMLIFrameElement | null, message: Omit<FrameRequest, "protocol">) =>
   frame?.contentWindow?.postMessage({ protocol: frameProtocol, ...message }, "*");
 const validFrameMessage = (event: MessageEvent<FrameMessage>, frame: HTMLIFrameElement | null) =>
   event.source === frame?.contentWindow && event.data?.protocol === frameProtocol;
+const sendCatalog = (frame: HTMLIFrameElement | null, nonce: string, source: string) => {
+  void frameBootstrap(source).then(
+    (bootstrap) => postFrame(frame, { nonce, type: "catalog", source, bootstrap }),
+    (error) => postFrame(frame, { nonce, type: "catalog", source, error: String(error) }),
+  );
+};
 
 const frameThemes = [...themes, { id: "pstdio-light", mode: "light" }, { id: "pstdio-dark", mode: "dark" }];
 
@@ -24,10 +29,8 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
   const frame = useRef<HTMLIFrameElement>(null);
   const nonce = useRef(crypto.randomUUID());
   const [revision, setRevision] = useState(0);
-  const [assets, setAssets] = useState<{ all: FrameBootstrap; selected: FrameBootstrap }>();
-  const bootstrap = assets?.all;
-  const selectedBootstrap = assets?.selected;
-  const source = item.preview?.source ?? "$native";
+  const [bootstrap, setBootstrap] = useState<FrameBootstrap>();
+  const source = item.preview?.source ?? `$native:${item.component}`;
   const [height, setHeight] = useState(item.height);
   const [information, setInformation] = useState<FrameMessage["information"]>();
   const [expanded, setExpanded] = useState(false);
@@ -40,10 +43,9 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
   const sentTheme = useRef<typeof theme>(undefined);
   useEffect(() => {
     let active = true;
-    void frameBootstrap()
-      .then((all) => {
-        const selected = selectFrameBootstrap(all, source);
-        if (active) setAssets({ all, selected });
+    void frameBootstrap(source)
+      .then((selected) => {
+        if (active) setBootstrap(selected);
       })
       .catch((error) => {
         if (active) setError(String(error));
@@ -62,9 +64,11 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
       const message = event.data;
       if (!validFrameMessage(event, frame.current)) return;
       switch (message.type) {
-        case "bootstrap":
-          postFrame(frame.current, { nonce: nonce.current, type: "bootstrap", bootstrap: selectedBootstrap });
+        case "bootstrap": {
+          const { scripts, styles, entry } = bootstrap!;
+          postFrame(frame.current, { nonce: nonce.current, type: "bootstrap", assets: { scripts, styles, entry } });
           return;
+        }
         case "boot":
           sentTheme.current = theme;
           postFrame(frame.current, {
@@ -72,13 +76,14 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
             type: "render",
             item,
             theme: theme as ThemePreferenceOption,
-            // Nested documentation examples select from the same immutable archive.
-            bootstrap,
           });
           return;
       }
       if (message.nonce !== nonce.current) return;
       switch (message.type) {
+        case "catalog":
+          sendCatalog(frame.current, nonce.current, message.source ?? "");
+          break;
         case "height":
           if (Number.isFinite(message.height)) setHeight(Math.max(item.height, Math.min(message.height!, 100000)));
           break;
@@ -94,7 +99,7 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
     };
     window.addEventListener("message", receive);
     return () => window.removeEventListener("message", receive);
-  }, [bootstrap, selectedBootstrap, theme, item, runtime]);
+  }, [bootstrap, theme, item, runtime]);
   return (
     <>
       {error && (

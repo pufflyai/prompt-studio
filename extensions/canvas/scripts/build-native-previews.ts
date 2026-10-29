@@ -1,9 +1,23 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
+import { previews } from "../src/canvases/previews";
 import { type NativeBuildOutput, publishNativeBuild } from "./native-build-output";
 
 import { generatedRoot, generateStoryCatalog, repoRoot, suites } from "./story-catalog";
+
+const nativeSources = Object.fromEntries(
+  Object.entries(previews).map(([name, preview]) => [
+    name,
+    resolve(import.meta.dir, "../src/canvases", preview.source),
+  ]),
+);
+const nativeDeclaration = `const __UI_CANVAS_NATIVE__={${Object.entries(previews)
+  .map(
+    ([name, preview]) =>
+      `${JSON.stringify(name)}:()=>import(${JSON.stringify(nativeSources[name])}).then(module=>module[${JSON.stringify(preview.exportName)}])`,
+  )
+  .join(",")}};`;
 
 const buildPreviews = async (
   stories: Awaited<ReturnType<typeof generateStoryCatalog>>["stories"],
@@ -42,6 +56,7 @@ const buildPreviews = async (
       )
       .join(",")}};`,
   );
+  declarations.push(nativeDeclaration);
   declarations.push(
     `const __UI_CANVAS_MODULES__={${files.map((file) => `${JSON.stringify(file)}:()=>import(${JSON.stringify(resolve(repoRoot, file))})`).join(",")}};`,
   );
@@ -52,7 +67,7 @@ const buildPreviews = async (
     ),
   );
   declarations.push(
-    `import {mountPreviewRuntime} from ${JSON.stringify(resolve(import.meta.dir, "frame-runtime.tsx"))}; mountPreviewRuntime(loadPreview);`,
+    `import {mountPreviewRuntime} from ${JSON.stringify(resolve(import.meta.dir, "frame-runtime.tsx"))}; mountPreviewRuntime(loadPreview, component=>__UI_CANVAS_NATIVE__[component]());`,
   );
   const entry = resolve(scratch, "entry.tsx");
   await writeFile(entry, declarations.join("\n"));
@@ -91,6 +106,14 @@ const buildPreviews = async (
         name: "ui-canvas-mdx",
         enforce: "pre",
         async transform(source: string, id: string) {
+          if (id.endsWith("/@chakra-ui/react/dist/esm/preset.js")) {
+            // Reading defaultConfig must not initialize Chakra's unused default system
+            // in every sandbox. Keep the factory call when an example uses defaultSystem.
+            return {
+              code: source.replace("= createSystem(defaultConfig)", "= /* @__PURE__ */ createSystem(defaultConfig)"),
+              map: null,
+            };
+          }
           if (id === resolve(repoRoot, "packages/ui/dist-monaco/monaco.js")) {
             return {
               code: `${source}\nimport {installCanvasMonacoWorkers} from ${JSON.stringify(resolve(import.meta.dir, "frame-monaco-workers.ts"))}; installCanvasMonacoWorkers(self.MonacoEnvironment);`,
@@ -201,7 +224,7 @@ const buildPreviews = async (
       projects: Object.fromEntries(
         Object.entries(suites).map(([name, path]) => [name, resolve(repoRoot, path, ".canvas/preview.tsx")]),
       ),
-      nativeSource: resolve(repoRoot, "extensions/canvas/src/canvases/previews.tsx"),
+      nativeSources,
       catalogSource: entry,
     },
   );

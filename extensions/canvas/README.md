@@ -37,7 +37,7 @@ Each frame has a **Theme** menu: Follow app, Light, Dark, Solarized Light, Solar
 
 ## Edit source
 
-`src/canvases/definitions.ts` owns canvas IDs, unique readable names, preview membership, component keys, initial positions, and intended dimensions. `src/canvases/previews.tsx` maps component keys to live React components. Add another canvas to the definitions array and another preview component when needed. Camera and gesture code do not need to change.
+`src/canvases/definitions.ts` owns canvas IDs, unique readable names, preview membership, component keys, initial positions, and intended dimensions. `src/canvases/previews.tsx` maps component keys to source files and named React exports. The compiler keeps native component groups lazy. Add another canvas to the definitions array and another preview component when needed. Camera and gesture code do not need to change.
 
 Preserve IDs and names in follow-up edits. Add a new named entry for another version. Keep unrelated designs. Place new entries in nearby empty space and reveal them through the camera. Use the `canvas` skill for the full authoring and validation rules.
 
@@ -77,7 +77,7 @@ Scenarios render compiled original React components in individual preview docume
 
 Documentation frames have content-driven heights. Resize observations and font completion refresh measured bounds. Fit and explicit reveal include a tall panel and its title. Fullscreen application examples retain a minimum viewport inside the documentation frame; lists and editors retain their own scrolling. Long prose, source listings, and API details have no inner vertical scroll area. The **IntrinsicDocumentation** verification story checks expansion and draft retention outside the canvas resource registry.
 
-Each frame starts only the compiled modules and styles reachable from its example and suite provider, in the archive's original stylesheet order. The viewer retains the immutable archive for nested documentation examples; module instances and fixture state stay in each opaque preview. Syntax highlighting initializes only when a component needs it.
+Each frame starts only the compiled modules and styles reachable from its example and suite provider, in the archive's original stylesheet order. The bundled archive compresses modules individually so cold startup decodes only the selected graph. The viewer caches immutable decoded Blobs; embedded documentation requests its own graph lazily through the existing frame bridge. Module instances and fixture state stay in each opaque preview. Syntax highlighting initializes only when a component needs it.
 
 ### Rebuild and verify
 

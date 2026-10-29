@@ -39,6 +39,7 @@ export const publishNativeBuild = async (
   const hashes: Record<string, string> = {};
   for (const source of [
     "extensions/canvas/package.json",
+    "extensions/canvas/src/canvases/previews.tsx",
     "extensions/canvas/scripts/build-catalog.ts",
     "extensions/canvas/scripts/build-native-previews.ts",
     "extensions/canvas/scripts/native-build-output.ts",

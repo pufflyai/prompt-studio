@@ -1,6 +1,6 @@
 import "@pstdio/ui/style.css";
 import { ChakraProvider, psTheme, type ThemePreferenceOption, ThemePreferenceProvider } from "@pstdio/ui";
-import { Component, type ComponentType, type ReactNode, useEffect } from "react";
+import { Component, type ComponentType, type ReactNode, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import type { CanvasItem } from "../src/canvases/definitions";
 import { installFrameBootstrap } from "../src/frames/assets";
@@ -8,18 +8,29 @@ import { type FrameMessage, type FrameRequest, frameProtocol } from "../src/fram
 import { installFrameNavigation } from "./frame-navigation";
 import { FrameStory, inspect, type LoadedStory } from "./frame-story";
 
-const installBootstrap = (message: FrameRequest) => {
-  if (message.bootstrap) installFrameBootstrap(message.bootstrap);
-};
 const storage = { getItem: () => null, setItem: () => {} };
 export const mountPreviewRuntime = (
   load: (
     input: import("../src/catalog/definitions").StoryPreview | import("../src/catalog/definitions").DocumentPreview,
   ) => Promise<LoadedStory>,
+  loadNative: (component: string) => Promise<ComponentType<Record<string, unknown>>>,
 ) => {
   let nonce = "";
   const send = (message: Omit<FrameMessage, "protocol" | "nonce">) =>
     window.parent.postMessage({ protocol: frameProtocol, nonce, ...message }, "*");
+  const catalogRequests = new Map<
+    string,
+    { resolve: (bootstrap: import("../src/frames/assets").FrameBootstrap) => void; reject: (error: Error) => void }
+  >();
+  // Embedded previews request their own graph. Ordinary frames must not clone
+  // every catalog module and dependency edge to render their selected example.
+  installFrameBootstrap(
+    (source) =>
+      new Promise((resolve, reject) => {
+        catalogRequests.set(source, { resolve, reject });
+        send({ type: "catalog", source });
+      }),
+  );
   class Boundary extends Component<{ children: ReactNode }, { error?: string }> {
     state: { error?: string } = {};
     static getDerivedStateFromError(error: Error) {
@@ -34,7 +45,7 @@ export const mountPreviewRuntime = (
   }
   const ReadyStory = (props: { loaded: LoadedStory; viewportHeight: number }) => {
     const { loaded, viewportHeight } = props;
-    useEffect(() => {
+    useLayoutEffect(() => {
       const docs = loaded.parameters?.docs as { description?: { story?: string } } | undefined;
       send({
         type: "loaded",
@@ -74,11 +85,7 @@ export const mountPreviewRuntime = (
     item = next;
     const result: LoadedStory = next.preview
       ? await load(next.preview)
-      : {
-          Component: (await import("../src/canvases/previews")).previews[next.component!] as ComponentType<
-            Record<string, unknown>
-          >,
-        };
+      : { Component: await loadNative(next.component!) };
     if (!active) return result.dispose?.();
     loaded = result;
     // Mount the providers once, after the requested content and initial theme are available.
@@ -90,7 +97,12 @@ export const mountPreviewRuntime = (
     if (nonce && message.nonce !== nonce) return;
     nonce = message.nonce;
     if (message.theme) theme = message.theme;
-    installBootstrap(message);
+    if (message.type === "catalog" && message.source) {
+      const pending = catalogRequests.get(message.source);
+      if (message.bootstrap) pending?.resolve(message.bootstrap);
+      else pending?.reject(new Error(message.error ?? "Missing preview assets"));
+      catalogRequests.delete(message.source);
+    }
     if (message.type === "theme") render();
     if (message.type === "render" && message.item && !item) {
       void loadContent(message.item).catch((error) => {

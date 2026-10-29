@@ -8,7 +8,7 @@ export interface FrameArchiveInputs {
   repoRoot: string;
   sources: Record<string, string>;
   projects: Record<string, string>;
-  nativeSource: string;
+  nativeSources: Record<string, string>;
   catalogSource: string;
 }
 export const publishFrameArchive = async (root: string, outputs: NativeBuildOutput[], inputs: FrameArchiveInputs) => {
@@ -50,7 +50,8 @@ export const publishFrameArchive = async (root: string, outputs: NativeBuildOutp
       ]),
     ),
   };
-  graph.sources.$native = { script: chunkFor(inputs.nativeSource) };
+  for (const [name, source] of Object.entries(inputs.nativeSources))
+    graph.sources[`$native:${name}`] = { script: chunkFor(source) };
   const ownedStyles = new Set(Object.values(graph.modules).flatMap((module) => module.styles));
   if (styleNames.some((_name, index) => !ownedStyles.has(index)))
     throw new Error("Preview styles must have an owning module");
@@ -63,9 +64,15 @@ export const publishFrameArchive = async (root: string, outputs: NativeBuildOutp
     else if (output.fileName.endsWith(".css")) styles.push(String(output.source));
   }
   const entry = outputs.find((file) => file.type === "chunk" && file.isEntry)!.fileName;
-  const payload = gzipSync(JSON.stringify({ scripts, styles, entry, graph })).toString("base64");
+  const encode = (source: string) => gzipSync(source).toString("base64");
+  const payload = {
+    scripts: Object.fromEntries(Object.entries(scripts).map(([name, source]) => [name, encode(source)])),
+    styles: styles.map(encode),
+    entry: `canvas-preview:${entry}`,
+    graph,
+  };
   await writeFile(
     resolve(root, "frame-bundle.ts"),
-    `// Generated source-component preview modules.\nexport default ${JSON.stringify(payload)};\n`,
+    `// Generated source-component preview modules.\nexport default ${JSON.stringify(payload)} as import("../../frames/assets").FrameArchive;\n`,
   );
 };

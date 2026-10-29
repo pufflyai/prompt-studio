@@ -1,39 +1,50 @@
-import archive from "../catalog/generated/frame-bundle";
-import type { FrameGraph } from "./selection";
+import payload from "../catalog/generated/frame-bundle";
+import { type FramePayload, selectFrameBootstrap } from "./selection";
 
-export interface FrameBootstrap {
-  scripts: Record<string, Blob>;
-  styles: Blob[];
-  entry: string;
-  graph: FrameGraph;
-}
-let prepared: Promise<FrameBootstrap> | undefined;
-export const installFrameBootstrap = (bootstrap: FrameBootstrap) => {
-  prepared = Promise.resolve(bootstrap);
+export type FrameBootstrap = FramePayload<Blob>;
+export type FrameArchive = FramePayload<string>;
+const archive: FrameArchive = payload;
+const prepared = new Map<string, Promise<FrameBootstrap>>();
+const decoded = new Map<string, Promise<Blob>>();
+let inherited: ((source: string) => Promise<FrameBootstrap>) | undefined;
+export const installFrameBootstrap = (load: (source: string) => Promise<FrameBootstrap>) => {
+  inherited = load;
+  prepared.clear();
 };
-export const frameBootstrap = () => {
-  prepared ??= (async () => {
-    const binary = atob(archive);
-    const bytes = new Uint8Array(binary.length);
-    // Avoid allocating an iterator value and invoking a callback for every archive byte.
-    for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
-    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-    const data = JSON.parse(await new Response(stream).text()) as {
-      scripts: Record<string, string>;
-      styles: string[];
-      entry: string;
-      graph: FrameGraph;
-    };
-    return {
-      scripts: Object.fromEntries(
-        Object.entries(data.scripts).map(([name, source]) => [name, new Blob([source], { type: "text/javascript" })]),
-      ),
-      styles: data.styles.map((style) => new Blob([style], { type: "text/css" })),
-      entry: `canvas-preview:${data.entry}`,
-      graph: data.graph,
-    };
-  })();
-  return prepared;
+const decode = (data: string, type: string) => {
+  const key = `${type}:${data}`;
+  let result = decoded.get(key);
+  if (!result) {
+    result = (async () => {
+      const binary = atob(data);
+      const bytes = new Uint8Array(binary.length);
+      // Avoid allocating an iterator value and invoking a callback for every archive byte.
+      for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+      return new Blob([await new Response(stream).arrayBuffer()], { type });
+    })();
+    decoded.set(key, result);
+  }
+  return result;
+};
+export const frameBootstrap = (source: string) => {
+  let result = prepared.get(source);
+  if (!result) {
+    result = inherited
+      ? inherited(source)
+      : (async () => {
+          const selected = selectFrameBootstrap(archive, source);
+          const scripts = await Promise.all(
+            Object.entries(selected.scripts).map(
+              async ([name, data]) => [name, await decode(data, "text/javascript")] as const,
+            ),
+          );
+          const styles = await Promise.all(selected.styles.map((data) => decode(data, "text/css")));
+          return { ...selected, scripts: Object.fromEntries(scripts), styles };
+        })();
+    prepared.set(source, result);
+  }
+  return result;
 };
 
 // Each sandbox has an opaque origin. Transfer immutable blobs and create URLs in
@@ -45,7 +56,7 @@ const bootDocument = (protocol: string) => {
     if (event.source !== window.parent || message?.protocol !== protocol || message.type !== "bootstrap" || started)
       return;
     started = true;
-    const data: FrameBootstrap = message.bootstrap;
+    const data: Pick<FrameBootstrap, "scripts" | "styles" | "entry"> = message.assets;
     const imports = Object.fromEntries(
       Object.entries(data.scripts).map(([name, blob]) => [`canvas-preview:${name}`, URL.createObjectURL(blob)]),
     );

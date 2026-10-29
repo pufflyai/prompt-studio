@@ -1,5 +1,3 @@
-import type { FrameBootstrap } from "./assets";
-
 export interface FrameGraph {
   entry: string;
   catalog: string;
@@ -7,7 +5,14 @@ export interface FrameGraph {
   modules: Record<string, { imports: string[]; dynamicImports: string[]; styles: number[] }>;
 }
 
-export const selectFrameBootstrap = (bootstrap: FrameBootstrap, source: string): FrameBootstrap => {
+export interface FramePayload<T> {
+  scripts: Record<string, T>;
+  styles: T[];
+  entry: string;
+  graph: FrameGraph;
+}
+
+export const selectFrameBootstrap = <T>(bootstrap: FramePayload<T>, source: string): FramePayload<T> => {
   const { graph } = bootstrap;
   if (!Object.hasOwn(graph.sources, source)) throw new Error(`Missing preview source: ${source}`);
   const selected = graph.sources[source]!;

@@ -4,15 +4,19 @@ export const frameProtocol = "pstdio.canvas.preview";
 export interface FrameRequest {
   protocol: typeof frameProtocol;
   nonce: string;
-  type: "render" | "theme" | "bootstrap";
+  type: "render" | "theme" | "bootstrap" | "catalog";
   item?: CanvasItem;
   theme?: ThemePreferenceOption;
   bootstrap?: import("./assets").FrameBootstrap;
+  source?: string;
+  error?: string;
+  assets?: Pick<import("./assets").FrameBootstrap, "scripts" | "styles" | "entry">;
 }
 export interface FrameMessage {
   protocol: typeof frameProtocol;
-  type: "bootstrap" | "boot" | "height" | "loaded" | "error" | "wheel" | "pan" | "reveal" | "focus";
+  type: "bootstrap" | "catalog" | "boot" | "height" | "loaded" | "error" | "wheel" | "pan" | "reveal" | "focus";
   nonce?: string;
+  source?: string;
   height?: number;
   width?: number;
   message?: string;

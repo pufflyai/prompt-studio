@@ -7,7 +7,7 @@ Use this reference only when working in a Prompt Studio source checkout. Install
 Use the Canvas extension for UI exploration and ticket designs. Read repository rules and `design/DESIGN.md` first.
 
 1. Run `pst canvas list`. Reuse the relevant canvas for follow-up requests.
-2. Edit `extensions/canvas/src/canvases/definitions.ts`. This typed registry owns canvas IDs, names, item membership, readable names, component keys, initial positions, and intended dimensions. Implement previews in `src/canvases/previews.tsx`, or split growing previews into nearby files and register their component keys. Keep the controller independent of preview content.
+2. Edit `extensions/canvas/src/canvases/definitions.ts`. This typed registry owns canvas IDs, names, item membership, readable names, component keys, initial positions, and intended dimensions. Implement previews in nearby source files and register their paths and named exports in `src/canvases/previews.tsx`. Keep native component groups lazy. Keep the controller independent of preview content.
 3. Reuse exported `@pstdio/ui` components and existing tokens. Use synthetic data and local callbacks. Do not import application internals, make real requests, use real credentials, or modify production components to support a preview. Never evaluate stored strings as code.
 4. Preserve existing IDs, names, positions, dimensions, and unrelated designs. For another version, add a new stable ID and unique readable name. For a change to the current version, update it in place. Remove only requested entries. Keep comparison data consistent. Theme choices may differ per frame for theme comparison.
 5. Add new items in nearby empty space using current bounds and saved positions from `pst canvas layout read --canvas <id>`. Allow intentional overlap. Reveal additions through camera changes using `pst canvas layout update`; do not rearrange existing items. Define mobile and desktop dimensions in the registry when needed.
@@ -52,7 +52,7 @@ Keep source examples in colocated `*.canvas.tsx` files and suite providers in `.
 
 Rebuild with `bun run --cwd scripts canvas:build`, regenerate source destinations with `canvas:inventory`, and run `canvas:coverage`. Run `canvas:verify` in the isolated Docker tools environment. Source and emitted-file hashes must match before claiming current coverage. Report gaps in live behavior or appearance honestly.
 
-Keep startup assets scoped to the selected example and its suite provider. Preserve real asynchronous imports and stylesheet order. Nested documentation examples must retain access to the immutable archive while creating their own module instances and fixture state. Rebuild and verify every retained source graph when changing compiled asset selection; use the fixed populated Canvas check without reducing its workload or increasing its allowance.
+Keep startup assets scoped to the selected example and its suite provider. Preserve real asynchronous imports and stylesheet order. Decode only the requested graph from the self-contained archive and cache immutable assets. Nested documentation requests its graph lazily through the frame bridge while creating its own module instances and fixture state. Rebuild and verify every retained source graph when changing compiled asset selection; use the fixed populated Canvas check without reducing its workload or increasing its allowance.
 
 ## Source handoff between workspaces
 
