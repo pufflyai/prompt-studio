@@ -68,7 +68,7 @@ const relaunch = async (app: PackagedApp) => {
   await waitForExit(app.child);
   await app.browser.close();
   // Desktop owned the runtime, so quitting stopped it and the relaunch usually serves the dashboard from a new origin.
-  return launchPackagedApp(app.home);
+  return launchPackagedApp(app.home, fixtureExtensions);
 };
 
 test("restores each project's navigation order, placement, and visibility after relaunch", async ({
