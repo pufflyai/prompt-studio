@@ -26,6 +26,8 @@ const previewOutput = {
       {
         name: "preview-core",
         test: /\/node_modules\/(?:react(?:-dom)?|scheduler|@chakra-ui|@emotion|@ark-ui|@zag-js)\//,
+        entriesAware: true,
+        entriesAwareMergeThreshold: 65_536,
       },
     ],
   },

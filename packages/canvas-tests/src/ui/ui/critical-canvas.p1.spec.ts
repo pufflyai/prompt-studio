@@ -32,10 +32,31 @@ test("documentation grows without clipping its contents", async ({ page }) => {
 
 // Critical: preserve the fixed workload used to detect camera regressions.
 test("the populated camera workload retains 24 previews and batches saves", async ({ page }, info) => {
-  const surface = await openSurface(page, "verification-populated");
-  await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(24);
-  const result = await profilePopulatedCanvas(surface);
-  expect(result.previews).toBe(24);
-  expect(result.saves).toBe(1);
-  await info.attach("camera-workload", { body: JSON.stringify(result, null, 2), contentType: "application/json" });
+  await page.addInitScript(() => {
+    const events: { type: string; at: number }[] = [];
+    Object.defineProperty(window, "__canvasStartup", { value: events });
+    window.addEventListener("message", ({ data }) => {
+      if (
+        data?.protocol === "pstdio.canvas.preview" &&
+        ["bootstrap", "boot", "render", "loaded", "error"].includes(data.type)
+      )
+        events.push({ type: data.type, at: performance.timeOrigin + performance.now() });
+    });
+  });
+  try {
+    const surface = await openSurface(page, "verification-populated");
+    await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(24);
+    const result = await profilePopulatedCanvas(surface);
+    expect(result.previews).toBe(24);
+    expect(result.saves).toBe(1);
+    await info.attach("camera-workload", { body: JSON.stringify(result, null, 2), contentType: "application/json" });
+  } finally {
+    const startup = await Promise.all(
+      page.frames().map(async (frame) => ({
+        url: frame.url(),
+        events: await frame.evaluate(() => Reflect.get(window, "__canvasStartup")).catch(() => undefined),
+      })),
+    );
+    await info.attach("frame-startup", { body: JSON.stringify(startup, null, 2), contentType: "application/json" });
+  }
 });
