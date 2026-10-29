@@ -61,16 +61,30 @@ test("closes owned connections while an upstream metadata request remains pendin
 test("a cancelled metadata request does not block a later package resolution", async () => {
   const { root, name, writePackage } = await fixture();
   const entered = Promise.withResolvers<void>();
+  const aborted = Promise.withResolvers<void>();
+  const settled = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   let requests = 0;
   const upstream = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
-    fetch: async () => {
+    fetch: async (request) => {
       if (++requests === 1) {
+        request.signal.addEventListener(
+          "abort",
+          () => {
+            aborted.resolve();
+            release.resolve();
+          },
+          { once: true },
+        );
         entered.resolve();
-        await release.promise;
-        return new Response("Unavailable", { status: 503 });
+        try {
+          await release.promise;
+          return new Response("Unavailable", { status: 503 });
+        } finally {
+          settled.resolve();
+        }
       }
       return Response.json({ versions: { "0.25.0": { name, version: "0.25.0" } } });
     },
@@ -91,6 +105,8 @@ test("a cancelled metadata request does not block a later package resolution", a
   await entered.promise;
   controller.abort();
   expect(await abandoned).toBeInstanceOf(Error);
+  await aborted.promise;
+  await settled.promise;
 
   const resolved = await fetch(`${registry.origin}/${name}`).catch((error: unknown) => error);
   expect(resolved).toBeInstanceOf(Response);

@@ -39,10 +39,10 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-core-"));
   // Keep setup evidence outside the disposable home, including when Bun ends a timed-out case.
   const evidenceRoot = join(REPO_ROOT, "packages/e2e/test-results/packaged-core-extensions");
-  mkdirSync(evidenceRoot, { recursive: true });
   let child: ChildProcess | undefined;
   let closeRegistry: (() => Promise<void>) | undefined;
   try {
+    mkdirSync(evidenceRoot, { recursive: true });
     const npmConfigPath = join(tempRoot, ".npmrc");
     const registry = await startLocalWorkspaceRegistry({
       configPath: npmConfigPath,
