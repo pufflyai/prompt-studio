@@ -44,7 +44,7 @@ export const createOnboarding = (input: {
       } else {
         state = { ...current, hidden: request.hidden };
       }
-      for (const name of extensions) await input.enqueue(name, projectId);
+      await Promise.all(extensions.map((name) => input.enqueue(name, projectId)));
       await save(state);
       return state;
     });

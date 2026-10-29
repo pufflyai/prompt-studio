@@ -1,11 +1,7 @@
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import type { ExtensionInstallations } from "../../services/extension-installations";
 import type { createExtensionService } from "../../services/extension-service";
-import {
-  installMissingDefaultExtensions,
-  registerInstalledExtensionSources,
-  syncInstalledExtensionsForProject,
-} from "../extensions/default-extensions";
+import { installMissingDefaultExtensions, registerInstalledExtensionSources } from "../extensions/default-extensions";
 import { packagedExtensionCatalog } from "../extensions/extension-catalog";
 import { getInstalledOnboardingSources } from "./installed-extensions";
 
@@ -19,7 +15,7 @@ export const createOnboardingInstaller =
     const entry = packagedExtensionCatalog.extensions.find((entry) => entry.installName === installName);
     if (!entry) throw new Error(`Unknown setup extension: ${installName}`);
     const extensionId = entry.extensionId ?? `pstdio.${installName}`;
-    const installed = (await getInstalledOnboardingSources(input.installedExtensionSourcesService)).some(
+    let installed = (await getInstalledOnboardingSources(input.installedExtensionSourcesService)).find(
       (source) => source.extension_id === extensionId,
     );
     if (!installed) {
@@ -30,13 +26,22 @@ export const createOnboardingInstaller =
         forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
       });
       await registerInstalledExtensionSources(input.extensionService, sources);
+      installed = (await getInstalledOnboardingSources(input.installedExtensionSourcesService)).find(
+        (source) => source.extension_id === extensionId,
+      );
     }
     signal?.throwIfAborted();
     if (!projectId) return;
-    await syncInstalledExtensionsForProject({ extensionService: input.extensionService, projectId });
-    const selected = (await input.extensionService.listProjectExtensionInstances(projectId)).find(
+    let selected = (await input.extensionService.listProjectExtensionInstances(projectId)).find(
       ({ installedSource }) => installedSource.extension_id === extensionId,
     );
+    if (!selected && installed) {
+      selected =
+        (await input.extensionService.attachRegisteredSourceForProject({
+          projectId,
+          installedSourceId: installed.id,
+        })) ?? undefined;
+    }
     if (!selected) throw new Error(`Setup extension is unavailable: ${installName}`);
     if (!selected.instance.enabled) await input.extensionService.setProjectExtensionEnabled(selected.instance.id, true);
   };

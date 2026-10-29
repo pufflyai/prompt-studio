@@ -4,6 +4,62 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { writeExtension } from "../../extensions/default-extensions-test-fixtures";
+
+test("new projects attach known tools without refreshing unselected extension code", async () => {
+  const root = await mkdtemp(join(tmpdir(), "project-known-extensions-"));
+  const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
+  process.env.PSTDIO_HOME = join(root, "home");
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  const source = join(root, "home/extensions/optional-tool");
+  writeExtension(source, "optional-tool");
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const gate = Bun.serve({
+    port: 0,
+    async fetch() {
+      entered.resolve();
+      await release.promise;
+      return new Response("ready");
+    },
+  });
+  const handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage") });
+  const create = async (name: string) => {
+    const path = join(root, name);
+    await mkdir(path);
+    return handle.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ initial_workspace: { provider_id: "pstdio.root", params: { path } } }),
+    });
+  };
+  let creating: Promise<Response> | undefined;
+  try {
+    expect((await create("first")).status).toBe(201);
+    await writeFile(join(source, "extension.ts"), `await fetch(${JSON.stringify(gate.url.href)}); export default {};`);
+    creating = create("second");
+    expect(await Promise.race([creating.then(() => "created"), entered.promise.then(() => "unselected")])).toBe(
+      "created",
+    );
+    const response = await creating;
+    expect(response.status).toBe(201);
+    const project = await response.json();
+    const instances = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
+    expect(
+      instances.find(({ installedSource }) => installedSource.install_name === "optional-tool")?.instance.enabled,
+    ).toBe(false);
+  } finally {
+    release.resolve();
+    await creating;
+    await handle.close();
+    gate.stop(true);
+    await rm(root, { recursive: true, force: true });
+    if (previous.home === undefined) delete process.env.PSTDIO_HOME;
+    else process.env.PSTDIO_HOME = previous.home;
+    if (previous.defaults === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+    else process.env.PSTDIO_DEFAULT_EXTENSIONS = previous.defaults;
+  }
+});
 
 test("concurrent projects open with complete defaults after a held installation", async () => {
   const root = await mkdtemp(join(tmpdir(), "concurrent-project-defaults-"));
