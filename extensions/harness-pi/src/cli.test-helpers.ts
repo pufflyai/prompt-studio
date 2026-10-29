@@ -7,6 +7,13 @@ import { createPiHarness } from "./harness";
 import { startPiProcess } from "./process";
 
 export const piFixture = async (installed = false) => {
+  const resolved = installed
+    ? resolvePiCommand({
+        managed: () => {
+          throw new Error("Installed CLI test requires the Pi CLI on PATH");
+        },
+      })
+    : resolvePiCommand({ which: () => null });
   const root = mkdtempSync(join(tmpdir(), "pstdio-pi-"));
   const requests: Array<{ messages: Array<{ role: string; content: unknown }> }> = [];
   const server = Bun.serve({
@@ -79,8 +86,8 @@ export const piFixture = async (installed = false) => {
   );
   await Bun.write(join(root, "agent/settings.json"), JSON.stringify({ retry: { enabled: false } }));
   await Bun.write(join(root, "hello.txt"), "Hello file");
-  const command = installed ? ["pi"] : resolvePiCommand({ which: () => null }).command;
-  if (!installed) Object.assign(env, resolvePiCommand({ which: () => null }).env);
+  const command = resolved.command;
+  Object.assign(env, resolved.env);
   const run: HarnessContext["process"]["run"] = async (input) => {
     const process = startPiProcess([], { command: input.command, env: { ...env, ...input.env }, cwd: input.cwd });
     process.child.stdin.end();
