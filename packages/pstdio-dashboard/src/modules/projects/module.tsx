@@ -23,6 +23,7 @@ import {
 } from "./project-selection-sync";
 
 interface CreateProjectsModuleInput {
+  onProjectCreated?: (projectId: string) => Promise<void>;
   initialProjectId?: string;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
   projectTabs?: DesktopProjectTabsController;
@@ -30,7 +31,7 @@ interface CreateProjectsModuleInput {
 
 const requiredProjectPickerOverlay = "dashboard-workbench.required-project-picker";
 
-const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
+const registerProjectWidgets = (ctx: WorkbenchModuleContext, input: CreateProjectsModuleInput) => {
   ctx.views.registerView({
     id: dashboardWidgetIds.projectPicker,
     title: "Projects",
@@ -62,7 +63,7 @@ const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
     title: "Create project",
     body: {
       kind: "react",
-      render: (input) => <CreateProjectWidget input={input} />,
+      render: (panelInput) => <CreateProjectWidget input={panelInput} onProjectCreated={input.onProjectCreated} />,
     },
   });
   ctx.overlays.registerOverlay({
@@ -215,7 +216,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
         input.initialProjectId ?? input.projectSelectionPersistence?.getSelectedProjectId(),
       );
 
-      registerProjectWidgets(ctx);
+      registerProjectWidgets(ctx, input);
       registerProjectFolder(ctx);
       registerProjectSelectionMode(ctx);
       registerProjects(ctx);
