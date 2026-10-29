@@ -30,7 +30,13 @@ test(
       }
       expect(new Set(files).size).toBe(2);
       for (const file of files) {
-        const { capture } = JSON.parse(readFileSync(join(root, file), "utf8")) as { capture: PerformanceCapture };
+        const { capture, summary } = JSON.parse(readFileSync(join(root, file), "utf8")) as {
+          capture: PerformanceCapture;
+          summary: { settling: { operationEndedAt: string; minimumIdleMs: number } };
+        };
+        expect(Date.parse(capture.samples.at(-1)!.capturedAt)).toBeGreaterThanOrEqual(
+          Date.parse(summary.settling.operationEndedAt) + summary.settling.minimumIdleMs,
+        );
         expect(capture.samples.some((sample) => sample.backend.runtimeId === null && sample.processes.length > 0)).toBe(
           true,
         );

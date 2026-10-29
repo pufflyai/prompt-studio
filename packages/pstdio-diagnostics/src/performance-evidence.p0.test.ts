@@ -67,6 +67,24 @@ test("requires a post-operation observation before reporting settled memory", ()
   expect(tooEarly.failures).toContain("backend settling memory was not measured");
 });
 
+test("uses the recorded observation time for the post-operation settling boundary", () => {
+  const input = capture();
+  const end = Date.parse(input.startedAt) + 4000;
+  input.samples.at(-1)!.elapsedMs = 5999.5;
+  const summary = summarizePerformanceEvidence(input, ["backend"], end);
+  expect(summary.failures).toEqual([]);
+  expect(summary.processes[0]!.settledResidentBytes).toBe(150);
+});
+
+test("does not infer a settled reading from a later monotonic clock offset", () => {
+  const input = capture();
+  const end = Date.parse(input.startedAt) + 4000;
+  input.samples.at(-1)!.capturedAt = new Date(end + 1999).toISOString();
+  const summary = summarizePerformanceEvidence(input, ["backend"], end);
+  expect(summary.failures).toContain("backend settling memory was not measured");
+  expect(summary.processes[0]!.settledResidentBytes).toBeNull();
+});
+
 test("keeps timed-out replies out of percentiles and counts unavailable replies", () => {
   const input = capture();
   input.samples[1]!.backend = { ...input.samples[1]!.backend, state: "timeout", durationMs: null, observedForMs: 2000 };

@@ -381,7 +381,11 @@ do not claim application capture coverage.
 
 The normal completion path observes memory after one existing sampling interval
 of post-workload idle time. It exports the operation end and minimum idle interval;
-this does not assert heap stability or force garbage collection. Immediate crashes
+this does not assert heap stability or force garbage collection.
+The settling check compares the operation end with each reading's recorded wall-clock
+timestamp. Monotonic elapsed times describe sampling intervals and gaps; they do not
+reconstruct wall-clock observation times.
+Immediate crashes
 keep their kill boundary. Their missing exit or settling readings remain explicit
 coverage failures instead of fabricated memory values. Observation and cleanup
 still fit within the existing case cap.
