@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 /** Match the upstream Windows npm layout so a private fallback cannot bypass the probe fixture. */
@@ -16,8 +16,12 @@ export const installNativeProbeFixture = async (prefix: string, command: string,
     opencode: ["opencode-ai", "bin", "opencode.exe"],
   };
   const entry = join(prefix, "node_modules", ...locations[command]!);
+  if (existsSync(entry)) return;
   mkdirSync(dirname(entry), { recursive: true });
-  const compiler = Bun.spawn([process.execPath, "build", script, "--compile", "--outfile", entry], {
+  // State changes belong to the script. Keep native launchers unchanged between discovery and recovery.
+  const launcher = join(dirname(entry), "probe-launcher.ts");
+  writeFileSync(launcher, `const script = ${JSON.stringify(script)}; require(script);`);
+  const compiler = Bun.spawn([process.execPath, "build", launcher, "--compile", "--outfile", entry], {
     env: { ...process.env, BUN_BE_BUN: "1" },
     stdout: "pipe",
     stderr: "pipe",
