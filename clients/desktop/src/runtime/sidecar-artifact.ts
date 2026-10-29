@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { startupProbe } from "../performance/startup-probe";
 
 export type DesktopSidecarErrorCode =
   | "checksum_mismatch"
@@ -131,7 +132,9 @@ export const validateSidecarArtifact = async (input: ValidateSidecarArtifactInpu
     );
   }
 
+  startupProbe("checksum-start");
   const checksum = await readBinaryChecksum(binaryPath, input.signal);
+  startupProbe("checksum-end");
   if (checksum !== manifest.checksum) {
     throw new DesktopSidecarError(
       "checksum_mismatch",
@@ -139,7 +142,9 @@ export const validateSidecarArtifact = async (input: ValidateSidecarArtifactInpu
     );
   }
 
+  startupProbe("binary-version-start");
   const binaryVersion = await (input.readVersion ?? readBinaryVersion)(binaryPath, input.signal);
+  startupProbe("binary-version-end");
   if (manifest.version !== input.appVersion || binaryVersion !== input.appVersion) {
     throw new DesktopSidecarError(
       "version_mismatch",
