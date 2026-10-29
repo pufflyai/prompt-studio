@@ -53,6 +53,7 @@ test("candidate provenance must match the archive's recorded build", async () =>
 test("names policy files the same way on every platform so Windows evidence matches the candidate", () => {
   const files = productionPolicyFiles();
   expect(files).toContain("scripts/ci/production-artifacts.ts");
+  expect(files).toContain("scripts/verify/packaged-runtime-tests.ts");
   expect(files).toContain(".github/workflows/production-validation.yml");
   expect(files).not.toContain("scripts/ci/production-artifacts.p0.test.ts");
 });
