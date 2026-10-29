@@ -2,7 +2,7 @@ import { Box, Dialog, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { OnboardingInfo } from "pstdio-api-contracts";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { Onboarding } from "./onboarding";
 
 const info: OnboardingInfo = {
@@ -18,12 +18,7 @@ const Example = (props: { info: OnboardingInfo }) => {
       <Dialog.Root open placement="center" scrollBehavior="inside" closeOnInteractOutside={false}>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content
-            w="folder-picker-width"
-            h="folder-picker-height"
-            maxW="calc(100vw - {spacing.xl})"
-            maxH="calc(100dvh - {spacing.xl})"
-          >
+          <Dialog.Content w="4xl" h="3xl" maxW="calc(100vw - {spacing.xl})" maxH="calc(100dvh - {spacing.xl})">
             <Onboarding
               info={props.info}
               update={async (request) => ({
@@ -56,19 +51,14 @@ export const Work: Story = {
     await expect(within(canvasElement).getByRole("heading", { name: "What do you want to work on?" })).toBeVisible();
   },
 };
-export const BreadcrumbNavigation: Story = {
+export const BackNavigation: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const breadcrumb = within(canvas.getByRole("navigation", { name: "Setup steps" }));
-    await waitFor(() => expect(breadcrumb.getByRole("list")).toBeVisible());
-    await expect(breadcrumb.getByText("Harnesses")).toHaveAttribute("aria-current", "page");
     await userEvent.click(canvas.getByRole("button", { name: "Continue" }));
-    await expect(breadcrumb.getByText("Work")).toHaveAttribute("aria-current", "page");
-    await userEvent.click(breadcrumb.getByRole("button", { name: "Harnesses" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Back" }));
     await expect(canvas.getByRole("heading", { name: "Choose your harnesses" })).toBeVisible();
     await expect(canvas.getByRole("checkbox", { name: "Codex" })).toBeChecked();
     await expect(canvas.getByRole("checkbox", { name: "OpenCode" })).toBeChecked();
-    await expect(breadcrumb.getByText("Harnesses")).toHaveAttribute("aria-current", "page");
   },
 };
 export const CombinedWork: Story = {

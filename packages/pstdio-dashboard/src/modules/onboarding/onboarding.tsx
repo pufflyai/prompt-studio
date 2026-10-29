@@ -1,5 +1,5 @@
 import { Box, Button, Dialog, HStack, Icon, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, Breadcrumb, ScrollArea } from "@pstdio/ui";
+import { AlertMessage, ScrollArea } from "@pstdio/ui";
 import { ArrowLeft, ArrowRight, TriangleAlert } from "lucide-react";
 import type { OnboardingInfo, OnboardingState, OnboardingWorkArea, UpdateOnboarding } from "pstdio-api-contracts";
 import { type RefObject, useEffect, useRef, useState } from "react";
@@ -49,29 +49,16 @@ export const Onboarding = (props: OnboardingProps) => {
   return (
     <>
       <Dialog.Header px="md" py="sm">
-        <Stack w="full" gap="sm">
-          <HStack justify="space-between" gap="sm">
-            <StepHeading
-              key={step}
-              viewport={viewport}
-              text={step === "harnesses" ? t("onboarding.chooseHarnesses") : t("onboarding.chooseWork")}
-            />
-            <Button size="sm" variant="ghost" disabled={saving} onClick={() => void save({ step: "skip" })}>
-              {t("onboarding.skip")}
-            </Button>
-          </HStack>
-          <Breadcrumb
-            aria-label={t("onboarding.steps")}
-            items={
-              step === "harnesses"
-                ? [{ title: t("onboarding.harnesses") }]
-                : [
-                    { title: t("onboarding.harnesses"), onClick: () => setStep("harnesses") },
-                    { title: t("onboarding.work") },
-                  ]
-            }
+        <HStack w="full" justify="space-between" gap="sm">
+          <StepHeading
+            key={step}
+            viewport={viewport}
+            text={step === "harnesses" ? t("onboarding.chooseHarnesses") : t("onboarding.chooseWork")}
           />
-        </Stack>
+          <Button size="sm" variant="ghost" disabled={saving} onClick={() => void save({ step: "skip" })}>
+            {t("onboarding.skip")}
+          </Button>
+        </HStack>
       </Dialog.Header>
       <Dialog.Body p="0" minH="0">
         <ScrollArea h="full" viewportRef={viewport}>

@@ -15,9 +15,9 @@ The runtime is one background process that serves the API and the dashboard on t
 
 ## First-launch setup (0.46)
 
-The first launch opens a setup dialog for choosing harnesses and default extensions,
-before you select or create a project. Finishing or skipping setup opens Projects
-when no project is selected.
+Creating your first project opens a setup dialog for choosing harnesses and default
+extensions after you choose its folder. Finishing or skipping setup opens the
+project workspace. Opening an existing project does not start setup.
 You can choose several harnesses, continue without one, or choose **Skip setup**.
 **Settings → Customizations → Don’t show onboarding** hides the flow on this host.
 Extension installation continues in the background after setup closes.

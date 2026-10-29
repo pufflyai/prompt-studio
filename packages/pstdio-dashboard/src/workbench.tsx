@@ -60,6 +60,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
     createExtensionsModule(),
     createResourceLinksModule(),
     createProjectsModule({
+      onProjectCreated: onboarding.open,
       initialProjectId: input.initialProjectId,
       projectSelectionPersistence: input.projectSelectionPersistence,
       projectTabs: input.projectTabs,
@@ -80,7 +81,6 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
     createTerminalModule(),
     onboarding.module,
     createBootstrapModule({
-      beforeOpen: onboarding.open,
       projectSelectionPersistence: input.projectSelectionPersistence,
     }),
   ];
