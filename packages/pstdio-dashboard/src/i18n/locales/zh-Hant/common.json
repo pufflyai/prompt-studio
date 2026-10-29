@@ -11,6 +11,7 @@
   "onboarding": {
     "onThisDevice": "此裝置上",
     "onThisMac": "此 Mac 上",
+    "installed": "已安裝在此裝置上",
     "available": "可安裝",
     "workAreas": "工作領域",
     "extensions": "要安裝的擴充功能",

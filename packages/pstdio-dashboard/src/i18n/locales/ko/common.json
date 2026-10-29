@@ -11,6 +11,7 @@
   "onboarding": {
     "onThisDevice": "이 기기",
     "onThisMac": "이 Mac",
+    "installed": "이 기기에 설치됨",
     "available": "설치 가능",
     "workAreas": "작업 분야",
     "extensions": "설치할 확장 기능",

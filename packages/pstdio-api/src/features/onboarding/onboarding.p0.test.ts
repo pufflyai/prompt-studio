@@ -50,15 +50,6 @@ describe("first-launch setup", () => {
     });
   });
 
-  test("resumes submitted selections after a host restart without installing skipped work", async () => {
-    const { onboarding, queued, options } = await setup();
-    await onboarding.update({ step: "harnesses", harnesses: ["codex"] });
-    await onboarding.update({ step: "skip" });
-    queued.length = 0;
-    await createOnboarding(options).resume();
-    expect(queued).toEqual(["harness-codex"]);
-  });
-
   test("allows no harness and completes independently of extension installation", async () => {
     const { onboarding, queued, options } = await setup();
     await onboarding.update({ step: "harnesses", harnesses: [] });

@@ -5,7 +5,7 @@ import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { OnboardingState } from "pstdio-api-contracts";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createOnboardingModule } from "./module";
 
@@ -33,7 +33,7 @@ const CreatedProject = (props: { previouslyCompleted: boolean }) => {
     workbench.pageLocations.navigate({ kind: "page", page: workbenchPages.start });
     let state: OnboardingState = { completed: previouslyCompleted, hidden: false, harnesses: null, workAreas: null };
     const onboarding = createOnboardingModule({
-      read: async () => ({ state, detectedHarnesses: [], platform: "linux" }),
+      read: async () => ({ state, installedExtensions: [], detectedHarnesses: [], platform: "linux" }),
       update: async (request) => {
         if (request.step === "harnesses") state = { ...state, harnesses: request.harnesses };
         if (request.step === "complete") state = { ...state, completed: true, workAreas: request.workAreas };
@@ -66,6 +66,7 @@ export const Finish: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(await body.findByRole("button", { name: "Continue" }));
     await userEvent.click(await body.findByRole("button", { name: /^Finish$/ }));
+    await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
     await expect(await body.findByText("Workspace", { selector: "p" })).toBeVisible();
   },
 };
@@ -73,6 +74,7 @@ export const Skip: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(await body.findByRole("button", { name: "Skip setup" }));
+    await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
     await expect(await body.findByText("Workspace", { selector: "p" })).toBeVisible();
   },
 };

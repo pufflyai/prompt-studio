@@ -13,7 +13,7 @@ interface InstallationWork {
 }
 interface InstallationOptions {
   path?: string;
-  installCatalog: (installName: string, signal: AbortSignal) => Promise<void>;
+  installCatalog: (installName: string, signal: AbortSignal, projectId?: string) => Promise<void>;
 }
 const completion = () => {
   const pending = Promise.withResolvers<unknown>();
@@ -61,7 +61,7 @@ class ExtensionInstallationService {
         related: [],
         targets: [job.installName],
         request: stored.request,
-        operation: (signal) => options.installCatalog(stored.request.name, signal),
+        operation: (signal) => options.installCatalog(stored.request.name, signal, job.projectId),
         completion: pending,
       });
       this.owners.set(job.id, job.id);
@@ -170,10 +170,14 @@ class ExtensionInstallationService {
       (entry) => entry.request?.name === identity.installName && entry.job.projectId === identity.projectId,
     );
     if (previous) return { ...previous.job };
-    return this.enqueueGroup([identity], (signal) => options.installCatalog(identity.installName, signal), {
-      kind: "catalog",
-      name: identity.installName,
-    });
+    return this.enqueueGroup(
+      [identity],
+      (signal) => options.installCatalog(identity.installName, signal, identity.projectId),
+      {
+        kind: "catalog",
+        name: identity.installName,
+      },
+    );
   }
   wait(id: string) {
     const entry = this.find(id);

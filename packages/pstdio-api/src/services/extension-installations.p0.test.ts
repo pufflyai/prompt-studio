@@ -50,15 +50,17 @@ describe("extension installation jobs", () => {
     const path = join(root, "jobs.json");
     const gate = Promise.withResolvers<void>();
     let resumed = 0;
+    const projects: (string | undefined)[] = [];
     try {
       const first = createExtensionInstallations({ path, installCatalog: () => gate.promise });
-      const job = first.enqueueCatalog(extension("notes"));
+      const job = first.enqueueCatalog({ ...extension("notes"), projectId: "project-1" });
       await Bun.sleep(0);
       await first.flush();
       const second = createExtensionInstallations({
         path,
-        installCatalog: async () => {
+        installCatalog: async (_name, _signal, projectId) => {
           resumed++;
+          projects.push(projectId);
         },
       });
       await second.wait(job.id);
@@ -69,9 +71,10 @@ describe("extension installation jobs", () => {
           resumed++;
         },
       });
-      third.enqueueCatalog(extension("notes"));
+      third.enqueueCatalog({ ...extension("notes"), projectId: "project-1" });
       await Bun.sleep(0);
       expect(resumed).toBe(1);
+      expect(projects).toEqual(["project-1"]);
       expect(third.list()).toHaveLength(1);
     } finally {
       await rm(root, { recursive: true, force: true });

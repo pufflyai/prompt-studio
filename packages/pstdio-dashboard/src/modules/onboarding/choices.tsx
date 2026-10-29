@@ -45,21 +45,24 @@ interface HarnessChoicesProps {
   selected: OnboardingHarness[];
   detected: OnboardingHarness[];
   platform: string;
+  installed: string[];
   onChange: (selected: OnboardingHarness[]) => void;
 }
 export const HarnessChoices = (props: HarnessChoicesProps) => {
-  const { selected, detected, platform, onChange } = props;
+  const { selected, detected, installed, platform, onChange } = props;
   const { t } = useTranslation("common");
   return (
     <Stack gap="lg">
       {[true, false].map((existing) => {
-        const choices = harnessChoices.filter(({ id }) => detected.includes(id) === existing);
+        const choices = harnessChoices.filter(
+          ({ id }) => (detected.includes(id) || installed.includes(`pstdio.harness-${id}`)) === existing,
+        );
         if (!choices.length) return null;
         let label = t("onboarding.onThisDevice");
         if (platform === "darwin") label = t("onboarding.onThisMac");
         if (!existing) label = t("onboarding.available");
         return (
-          <Stack key={String(existing)} gap="xs">
+          <Stack key={String(existing)} gap="xs" role="group" aria-label={label}>
             <Text textStyle="label/S/medium" color="fg.muted">
               {label}
             </Text>
@@ -81,9 +84,10 @@ export const HarnessChoices = (props: HarnessChoicesProps) => {
 
 export const WorkChoices = (props: {
   selected: OnboardingWorkArea[];
+  installed: string[];
   onChange: (selected: OnboardingWorkArea[]) => void;
 }) => {
-  const { selected, onChange } = props;
+  const { selected, installed, onChange } = props;
   const { t } = useTranslation("common");
   return (
     <Stack gap="xl">
@@ -99,26 +103,36 @@ export const WorkChoices = (props: {
         ))}
       </Stack>
       <Stack gap="xs" role="region" aria-label={t("onboarding.extensions")}>
-        <Text textStyle="label/S/medium" color="fg.muted">
-          {t("onboarding.extensions")}
-        </Text>
-        <SimpleCard>
-          <SimpleCardBody>
-            <Stack gap="md">
-              {onboardingExtensions(selected).map((name) => {
-                const entry = extensions[name];
-                return (
-                  <HStack key={name} gap="xs">
-                    <Icon boxSize="icon-xs" color="fg.muted">
-                      <entry.icon />
-                    </Icon>
-                    <Text textStyle="label/M/regular">{entry.name}</Text>
-                  </HStack>
-                );
-              })}
+        {[true, false].map((existing) => {
+          const names = onboardingExtensions(selected).filter(
+            (name) => installed.includes(`pstdio.${name}`) === existing,
+          );
+          if (!names.length) return null;
+          return (
+            <Stack key={String(existing)} gap="xs">
+              <Text textStyle="label/S/medium" color="fg.muted">
+                {t(existing ? "onboarding.installed" : "onboarding.extensions")}
+              </Text>
+              <SimpleCard>
+                <SimpleCardBody>
+                  <Stack gap="md">
+                    {names.map((name) => {
+                      const entry = extensions[name];
+                      return (
+                        <HStack key={name} gap="xs">
+                          <Icon boxSize="icon-xs" color="fg.muted">
+                            <entry.icon />
+                          </Icon>
+                          <Text textStyle="label/M/regular">{entry.name}</Text>
+                        </HStack>
+                      );
+                    })}
+                  </Stack>
+                </SimpleCardBody>
+              </SimpleCard>
             </Stack>
-          </SimpleCardBody>
-        </SimpleCard>
+          );
+        })}
       </Stack>
     </Stack>
   );

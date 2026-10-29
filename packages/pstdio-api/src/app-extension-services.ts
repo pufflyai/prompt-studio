@@ -57,7 +57,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
   let installCatalog: ReturnType<typeof createOnboardingInstaller>;
   const extensionInstallations = createExtensionInstallations({
     path: join(input.storageRoot, "extension-installations.json"),
-    installCatalog: (name, signal) => installCatalog(name, signal),
+    installCatalog: (name, signal, projectId) => installCatalog(name, signal, projectId),
   });
   let refreshInstalledExtensionProcesses: (
     sourcePath?: string,
@@ -86,12 +86,12 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
   });
   installCatalog = createOnboardingInstaller({
     extensionService,
-    projectService: input.projectService,
+    installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     releaseRef: extensionUpgradeService.releaseRef,
   });
   const onboarding = createOnboarding({
     path: join(input.storageRoot, "onboarding.json"),
-    enqueue: (name) => enqueueOnboardingExtension(extensionInstallations, name),
+    enqueue: (name, projectId) => enqueueOnboardingExtension(extensionInstallations, name, projectId),
   });
   const extensionRuntimeCatalog = createProjectExtensionRuntimeCatalog({
     extensionService,
