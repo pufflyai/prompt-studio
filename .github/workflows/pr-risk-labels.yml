@@ -53,12 +53,13 @@ jobs:
               runUrl: `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             };
             const snapshot = await policy.prepare(policy.createApi(options));
-            core.setOutput('snapshot', JSON.stringify(snapshot));
+            if (snapshot) core.setOutput('snapshot', JSON.stringify(snapshot));
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Synchronize managed area labels
         id: labeler
+        if: steps.prepare.outputs.snapshot != ''
         uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7
         with:
           configuration-path: .github/labeler.yml
@@ -66,7 +67,7 @@ jobs:
           pr-number: ${{ env.POLICY_PR }}
 
       - name: Publish SDK and extension separation
-        if: always() && steps.prepare.outcome == 'success'
+        if: always() && steps.prepare.outcome == 'success' && steps.prepare.outputs.snapshot != ''
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GITHUB_TOKEN: ${{ github.token }}
