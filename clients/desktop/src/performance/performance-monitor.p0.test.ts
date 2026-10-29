@@ -255,13 +255,9 @@ test("the first periodic capture stays on schedule when the baseline metrics rea
   let tick: (() => void) | undefined;
   const sampledAt: number[] = [];
   const readMetrics = harness.options.readMetrics;
-  let baseline = true;
   harness.options.now = () => now;
   harness.options.readMetrics = () => {
-    if (baseline) {
-      baseline = false;
-      now += 1_900;
-    }
+    now += 1_900;
     return readMetrics();
   };
   harness.options.schedule = (callback, intervalMs) => {
@@ -270,8 +266,9 @@ test("the first periodic capture stays on schedule when the baseline metrics rea
     return () => {};
   };
   harness.options.createCapture = () => ({
-    sample: async () => {
+    sample: async (readProcesses) => {
       sampledAt.push(now);
+      readProcesses();
     },
     snapshot: () => ({
       version: 2,

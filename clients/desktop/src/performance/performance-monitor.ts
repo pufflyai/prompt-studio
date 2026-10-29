@@ -33,7 +33,7 @@ export interface PerformanceMonitorOptions {
   cpuCount: number;
   openEndpoint: (read: () => PerformanceSnapshot | null) => Promise<{ close: () => Promise<void> }>;
   createCapture?: () => {
-    sample: (processes: PerformanceProcessSample[]) => Promise<void>;
+    sample: (readProcesses: () => PerformanceProcessSample[]) => Promise<void>;
     snapshot: () => PerformanceCapture;
     close: () => Promise<void>;
   };
@@ -185,7 +185,7 @@ export class DesktopPerformanceMonitor {
     if (this.#cancel) return;
     try {
       this.#capture = this.#options.createCapture?.() ?? null;
-      void this.#capture?.sample([]);
+      void this.#capture?.sample(() => []);
       this.#cancel = (this.#options.schedule ?? scheduleInterval)(() => {
         try {
           this.#sample();
@@ -205,6 +205,11 @@ export class DesktopPerformanceMonitor {
   }
 
   #sample() {
+    if (this.#capture) void this.#capture.sample(() => this.#readProcesses());
+    else this.#readProcesses();
+  }
+
+  #readProcesses() {
     const { platform, cpuCount } = this.#options;
     const capturedAt = this.#now();
     const frames = this.#options.listFrames();
@@ -240,25 +245,23 @@ export class DesktopPerformanceMonitor {
     this.#latest = { capturedAt, windowMs: capturedAt - (this.#lastSampleAt ?? capturedAt), processes };
     this.#lastSampleAt = capturedAt;
     const raw = new Map(metrics.map((metric) => [metric.pid, metric]));
-    void this.#capture?.sample(
-      processes.map((process) => ({
-        pid: process.pid,
-        processStartId: String(raw.get(process.pid)?.creationTime),
-        startedAt: new Date(raw.get(process.pid)!.creationTime).toISOString(),
-        role: process.role,
-        cpuPercent: process.cpuPercent,
-        cpuTimeMs:
-          raw.get(process.pid)?.cpu.cumulativeCPUUsage === undefined
-            ? null
-            : raw.get(process.pid)!.cpu.cumulativeCPUUsage! * 1000,
-        residentBytes: process.memoryKiB.workingSet * 1024,
-        peakResidentBytes: process.memoryKiB.peakWorkingSet * 1024,
-        privateCommittedBytes: process.memoryKiB.privateBytes === null ? null : process.memoryKiB.privateBytes * 1024,
-        physicalFootprintBytes: null,
-        peakPhysicalFootprintBytes: null,
-        heapUsedBytes: null,
-        externalBytes: null,
-      })),
-    );
+    return processes.map((process) => ({
+      pid: process.pid,
+      processStartId: String(raw.get(process.pid)?.creationTime),
+      startedAt: new Date(raw.get(process.pid)!.creationTime).toISOString(),
+      role: process.role,
+      cpuPercent: process.cpuPercent,
+      cpuTimeMs:
+        raw.get(process.pid)?.cpu.cumulativeCPUUsage === undefined
+          ? null
+          : raw.get(process.pid)!.cpu.cumulativeCPUUsage! * 1000,
+      residentBytes: process.memoryKiB.workingSet * 1024,
+      peakResidentBytes: process.memoryKiB.peakWorkingSet * 1024,
+      privateCommittedBytes: process.memoryKiB.privateBytes === null ? null : process.memoryKiB.privateBytes * 1024,
+      physicalFootprintBytes: null,
+      peakPhysicalFootprintBytes: null,
+      heapUsedBytes: null,
+      externalBytes: null,
+    }));
   }
 }
