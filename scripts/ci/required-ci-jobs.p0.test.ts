@@ -27,7 +27,7 @@ test("production requires breadth while main requires provenance and smoke", () 
   expect(requiredCiJobs(main)).toEqual(["scope", "static_checks", "browser_smoke"]);
 });
 
-test("queue native owners provide delivered integrity while production requires all six independent toolchains", () => {
+test("queue native owners provide delivered integrity while production requires every native toolchain shard", () => {
   const input = scopeFixture();
   const queue = plannedCiJobs(resolveCiScope({ ...input, event: "merge_group" }));
   const delivered = queue.find((job) => job.id === "build_clients")!;
@@ -45,7 +45,7 @@ test("queue native owners provide delivered integrity while production requires 
     ).outcome,
   ).toBe("failure");
   const production = plannedCiJobs(resolveCiScope({ ...input, event: "workflow_dispatch", profile: "production" }));
-  expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(6);
+  expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(7);
 });
 
 test("production cannot pass without native UI quarantine execution", () => {
@@ -60,6 +60,26 @@ test("production cannot pass without native UI quarantine execution", () => {
     evaluateCiGate(
       plan,
       observed.filter((job) => job.name !== "quarantined_native_ui_tests"),
+      false,
+      true,
+    ).outcome,
+  ).toBe("failure");
+});
+
+test("production requires both Windows ARM packaged runtime shards", () => {
+  const scope = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
+  const plan = plannedCiJobs(scope);
+  const names = plan.find((job) => job.id === "packaged_toolchain")!.names!;
+  expect(names).toContain("packaged_toolchain / verify (cli-win-arm64 1/2)");
+  expect(names).toContain("packaged_toolchain / verify (cli-win-arm64 2/2)");
+  const observed = plan.flatMap((job) =>
+    job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })),
+  );
+  expect(evaluateCiGate(plan, observed, false, true).outcome).toBe("success");
+  expect(
+    evaluateCiGate(
+      plan,
+      observed.filter((job) => job.name !== "packaged_toolchain / verify (cli-win-arm64 2/2)"),
       false,
       true,
     ).outcome,

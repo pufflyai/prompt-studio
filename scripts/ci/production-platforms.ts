@@ -21,7 +21,12 @@ export const productionToolchainPlatforms = (channel: string) =>
     { os: "macos-15-intel", platform_pkg: "cli-darwin-x64" },
     { os: "windows-latest", platform_pkg: "cli-win-x64" },
     { os: "windows-11-arm", platform_pkg: "cli-win-arm64" },
-  ].filter((row) => channel !== "nightly" || row.platform_pkg !== "cli-darwin-x64");
+  ]
+    .filter((row) => channel !== "nightly" || row.platform_pkg !== "cli-darwin-x64")
+    .flatMap((row) => {
+      const shards = row.platform_pkg === "cli-win-arm64" ? 2 : 1;
+      return Array.from({ length: shards }, (_, index) => ({ ...row, shard: index + 1, shards }));
+    });
 
 if (import.meta.main)
   appendFileSync(
