@@ -39,7 +39,7 @@ export const plannedCiJobs = (scope: Scope) => {
     add("e2e_cli", ["e2e_cli"], scope.production ? "P2" : "P1");
     add(
       "build_clients",
-      scope.clientMatrix.map((row) => `build_clients (${row.target})`),
+      scope.clientMatrix.map((row) => `build_clients (${row.target} ${row.shard}/${row.shards})`),
       scope.production ? "P2" : "P1",
     );
     if (scope.production)

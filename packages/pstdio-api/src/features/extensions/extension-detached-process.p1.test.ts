@@ -12,11 +12,18 @@ test.each([0, 1500])("a detached extension command outlives its host after %ims 
   const home = mkdtempSync(join(tmpdir(), "extension-detached-"));
   const heartbeat = join(home, "heartbeat.json");
   const ready = Promise.withResolvers<{ pid: number; tick: number }>();
+  const continued = Promise.withResolvers<{ pid: number; tick: number }>();
+  let stoppedTick: number | null = null;
   const watcher = watch(home, () => {
-    if (existsSync(heartbeat)) ready.resolve(JSON.parse(readFileSync(heartbeat, "utf8")));
+    if (!existsSync(heartbeat)) return;
+    const value = JSON.parse(readFileSync(heartbeat, "utf8")) as { pid: number; tick: number };
+    ready.resolve(value);
+    if (stoppedTick !== null && value.tick > stoppedTick) continued.resolve(value);
   });
   watcher.on("error", ready.reject);
+  watcher.on("error", continued.reject);
   void ready.promise.catch(() => {});
+  void continued.promise.catch(() => {});
   const childScript = `
     const fs = require("node:fs");
     const path = ${JSON.stringify(heartbeat)};
@@ -59,6 +66,7 @@ test.each([0, 1500])("a detached extension command outlives its host after %ims 
   cleanups.push(async () => {
     watcher.close();
     ready.reject(new Error("Detached fixture ended"));
+    continued.reject(new Error("Detached fixture ended"));
     if (host.exitCode === null) host.kill("SIGKILL");
     if (childPid) {
       try {
@@ -74,9 +82,10 @@ test.each([0, 1500])("a detached extension command outlives its host after %ims 
   expect(started.pid).toBe(pid);
   const exit = await Promise.race([host.exited, Bun.sleep(1_000).then(() => "still running")]);
   expect(exit).toBe(0);
-  const stoppedTick = (JSON.parse(readFileSync(heartbeat, "utf8")) as { tick: number }).tick;
+  stoppedTick = (JSON.parse(readFileSync(heartbeat, "utf8")) as { tick: number }).tick;
   await Bun.sleep(150);
-  const afterExit = JSON.parse(readFileSync(heartbeat, "utf8")) as { pid: number; tick: number };
+  // A loaded host can schedule the child after the observation pause. Require real post-exit progress.
+  const afterExit = await continued.promise;
   expect(afterExit.pid).toBe(pid);
   expect(afterExit.tick).toBeGreaterThan(stoppedTick);
 });

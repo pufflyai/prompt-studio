@@ -31,7 +31,7 @@ test("queue native owners provide delivered integrity while production requires 
   const input = scopeFixture();
   const queue = plannedCiJobs(resolveCiScope({ ...input, event: "merge_group" }));
   const delivered = queue.find((job) => job.id === "build_clients")!;
-  expect(delivered.names).toEqual(["build_clients (linux-x64)", "build_clients (darwin-arm64)"]);
+  expect(delivered.names).toEqual(["build_clients (linux-x64 1/1)", "build_clients (darwin-arm64 1/1)"]);
   const completed = queue
     .filter((job) => job.id !== "packaged_toolchain")
     .flatMap((job) => job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })));
@@ -39,7 +39,7 @@ test("queue native owners provide delivered integrity while production requires 
   expect(
     evaluateCiGate(
       queue,
-      completed.filter((job) => job.name !== "build_clients (darwin-arm64)"),
+      completed.filter((job) => job.name !== "build_clients (darwin-arm64 1/1)"),
       false,
       true,
     ).outcome,
@@ -64,6 +64,34 @@ test("production cannot pass without native UI quarantine execution", () => {
       true,
     ).outcome,
   ).toBe("failure");
+});
+
+test("production requires both Intel Mac desktop smoke shards while keeping physical release targets unique", async () => {
+  const scope = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
+  const plan = plannedCiJobs(scope);
+  const names = plan.find((job) => job.id === "build_clients")!.names!;
+  expect(names).toContain("build_clients (darwin-x64 1/2)");
+  expect(names).toContain("build_clients (darwin-x64 2/2)");
+  const observed = plan.flatMap((job) =>
+    job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })),
+  );
+  expect(evaluateCiGate(plan, observed, false, true).outcome).toBe("success");
+  expect(
+    evaluateCiGate(
+      plan,
+      observed.filter((job) => job.name !== "build_clients (darwin-x64 2/2)"),
+      false,
+      true,
+    ).outcome,
+  ).toBe("failure");
+  const { productionDesktopPlatforms, publishedDesktopTargets } = await import("./production-platforms");
+  expect(productionDesktopPlatforms("stable").map((row) => row.target)).toEqual([
+    "linux-x64",
+    "darwin-arm64",
+    "darwin-x64",
+    "win32-x64",
+  ]);
+  expect(new Set(publishedDesktopTargets("stable")).size).toBe(4);
 });
 
 test("production accepts every supported harness version and requires the Windows Pi lanes", () => {

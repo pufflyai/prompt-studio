@@ -1,10 +1,10 @@
 import type { ExtensionStorageApi, JsonObject } from "@pstdio/sdk/extensions";
 import type { ScribbleDocument } from "./apps/scribble-data";
 import { scribblePageEdit, scribblePageFields } from "./scribble-page-record";
-import { migrateScribblePages } from "./scribble-pages-migration";
 import { createScribbleDocument } from "./scribble-pages-state";
 import { applyStateChanges, type StateChange } from "./state-changes";
 import { documentMarkdown, exampleDefaults } from "./state-defaults";
+import { migrateExampleStorage } from "./state-storage";
 
 const seedEntry = (document: ScribbleDocument, index: number) => ({
   document,
@@ -14,7 +14,7 @@ const seedEntry = (document: ScribbleDocument, index: number) => ({
 });
 
 export const readScribblePageEntries = async (storage: ExtensionStorageApi) => {
-  await migrateScribblePages(storage);
+  await migrateExampleStorage(storage);
   const entries = new Map(
     exampleDefaults.scribble.documents.map((document, index) => [document.id, seedEntry(document, index)]),
   );
@@ -36,7 +36,7 @@ export const readScribblePageEntries = async (storage: ExtensionStorageApi) => {
 };
 
 export const updateScribblePageFields = async (storage: ExtensionStorageApi, id: string, fields: JsonObject) => {
-  await migrateScribblePages(storage);
+  await migrateExampleStorage(storage);
   await storage.records.commit({ operationId: crypto.randomUUID(), edits: [scribblePageEdit(storage, id, fields)] });
 };
 
