@@ -19,6 +19,7 @@ jobs:
     runs-on: macos-15-intel
     timeout-minutes: 20
     env:
+      GH_TOKEN: ${{ github.token }}
       PSTDIO_EXTENSION_RELEASE_REF: ${{ inputs.source_sha }}
       TEST_PRIORITIES: P0,P1,P2
       CI_PRIORITY: P2
