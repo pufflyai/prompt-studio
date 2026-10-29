@@ -1077,7 +1077,7 @@ jobs:
       CI_PRIORITY: P0
       GH_TOKEN: ${{ github.token }}
   build_clients:
-    name: build_clients (${{ matrix.target }})
+    name: build_clients (${{ matrix.target }} ${{ matrix.shard }}/${{ matrix.shards }})
     needs: scope
     if: needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true'
     runs-on: ${{ matrix.os }}
@@ -1112,7 +1112,7 @@ jobs:
           install-strategy: native
       - name: Test native DMG attachment cleanup
         id: dmg_cleanup
-        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.platform == 'darwin'
+        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.platform == 'darwin' && matrix.shard == 1
         working-directory: clients/desktop
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"
@@ -1125,7 +1125,7 @@ jobs:
         shell: bash
       - name: Run quarantined native DMG cleanup cases
         id: dmg_cleanup_quarantine
-        if: needs.scope.outputs.production == 'true' && matrix.platform == 'darwin' && !cancelled() && steps.install_native_dependencies.outcome == 'success'
+        if: needs.scope.outputs.production == 'true' && matrix.platform == 'darwin' && matrix.shard == 1 && !cancelled() && steps.install_native_dependencies.outcome == 'success'
         continue-on-error: true
         env:
           CI_PRIORITY: P2
@@ -1135,7 +1135,7 @@ jobs:
           set -o pipefail
           bun ../../scripts/ci/run-quarantined-tests.ts bun --scope @pstdio/desktop --prebuilt 2>&1 | tee ../../native-dmg-cleanup-quarantine.log
       - name: Require every quarantined native DMG case to have executed
-        if: needs.scope.outputs.production == 'true' && matrix.platform == 'darwin' && !cancelled() && steps.install_native_dependencies.outcome == 'success'
+        if: needs.scope.outputs.production == 'true' && matrix.platform == 'darwin' && matrix.shard == 1 && !cancelled() && steps.install_native_dependencies.outcome == 'success'
         env:
           CI_PRIORITY: P2
         run: bun scripts/ci/verify-quarantine-reports.ts bun --scope @pstdio/desktop
@@ -1206,25 +1206,32 @@ jobs:
         if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.platform == 'win32'
         uses: ./.github/actions/setup-windows-desktop-tests
       - name: Test source Electron
-        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.tests
+        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.tests && matrix.shard == 1
         working-directory: clients/desktop
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"
         env:
           CI_CHECK_COMMAND: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.config.ts
         shell: bash
+      - name: Record complete packaged desktop inventory
+        if: matrix.tests && matrix.shards > 1 && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
+        working-directory: clients/desktop
+        run: |
+          mkdir -p test-results
+          bun run test:packaged -- --list --reporter=json > test-results/packaged-release-inventory.json
+        shell: bash
       - name: Smoke packaged desktop app
         if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.tests && !cancelled() &&
           steps.desktop.outcome == 'success'
         env:
           DEBUG: pw:api,pw:browser
-          CI_CHECK_COMMAND: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged
+          CI_CHECK_COMMAND: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged -- --shard=${{ matrix.shard }}/${{ matrix.shards }}
         working-directory: clients/desktop
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"
         shell: bash
       - name: Run quarantined packaged desktop cases
-        if: needs.scope.outputs.production == 'true' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
+        if: needs.scope.outputs.production == 'true' && matrix.tests && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
         continue-on-error: true
         env:
           CI_PRIORITY: P2
@@ -1232,7 +1239,7 @@ jobs:
         working-directory: clients/desktop
         run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun ../../scripts/ci/run-quarantined-tests.ts packaged-desktop --scope @pstdio/desktop --prebuilt
       - name: Require first-attempt packaged desktop quarantine execution
-        if: needs.scope.outputs.production == 'true' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
+        if: needs.scope.outputs.production == 'true' && matrix.tests && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
         env:
           CI_PRIORITY: P2
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop --scope @pstdio/desktop
@@ -1240,7 +1247,7 @@ jobs:
         if: always() && (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.tests
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-test-results-${{ matrix.target }}-attempt-${{ github.run_attempt }}
+          name: desktop-test-results-${{ matrix.target }}-shard-${{ matrix.shard }}-of-${{ matrix.shards }}-attempt-${{ github.run_attempt }}
           path: |
             clients/desktop/test-results
             test-results/quarantine
@@ -1249,7 +1256,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: git diff --exit-code
       - name: Share native desktop build archives with certified main promotion
-        if: ${{ !cancelled() && needs.scope.outputs.stage == 'merge_queue' && steps.desktop.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.shard == 1 && needs.scope.outputs.stage == 'merge_queue' && steps.desktop.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: ci-build-host-native-desktop-${{ runner.os }}-${{ runner.arch }}-attempt-${{ github.run_attempt }}

@@ -3,7 +3,7 @@ import { appendFileSync } from "node:fs";
 import { basename } from "node:path";
 import { affectedPackages } from "./ci-packages";
 import { partitionPackageChecks } from "./package-check-matrix";
-import { productionDesktopPlatforms, productionToolchainPlatforms } from "./production-platforms";
+import { productionDesktopCheckPlatforms, productionToolchainPlatforms } from "./production-platforms";
 import { plannedCiJobs, requiredCiJobs } from "./required-ci-jobs";
 import { sourceCoverageArtifacts } from "./source-coverage-artifacts";
 import { discoverTestFiles, priorityFromFile } from "./test-discovery";
@@ -47,7 +47,7 @@ export const resolveCiScope = (input: CiScopeInput) => {
   if (production) priorities = ["P0", "P1", "P2"];
   const matrices = createTestMatrices(tests, packages, affectedOwners, priorities);
   const browserSmoke = stage === "main";
-  const clientMatrix = productionDesktopPlatforms(production ? releaseChannel : "nightly")
+  const clientMatrix = productionDesktopCheckPlatforms(production ? releaseChannel : "nightly")
     .filter((row) => production || row.platform !== "win32")
     .map((row) => ({ ...row, os: row.platform === "linux" ? "ubuntu-latest" : row.os, tests: true }));
   return {
