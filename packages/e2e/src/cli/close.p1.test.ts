@@ -187,7 +187,11 @@ describe("pstdio close", () => {
       );
       await waitForReady(url, runtimeToCleanup);
 
-      browserToCleanup = await firefox.launch({ headless: true });
+      browserToCleanup = await firefox.launch({
+        headless: true,
+        // The pinned Firefox still reads application data outside its profile on macOS (ADR 0116).
+        env: { ...process.env, CFFIXED_USER_HOME: homePath },
+      });
       const page = await browserToCleanup.newPage();
       const streamConnected = page.waitForResponse(
         (response) => new URL(response.url()).pathname === "/v1/sync/stream" && response.status() === 200,
