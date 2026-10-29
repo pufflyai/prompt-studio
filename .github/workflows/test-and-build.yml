@@ -38,8 +38,8 @@ jobs:
           install-strategy: native
       - name: Build the real cold native app
         run: bun run --cwd clients/desktop package -- --arch=x64
-      - name: Diagnose one cold capture
-        run: bun run --cwd clients/desktop test:packaged -- --grep "exports complete evidence after the settling requirement is met"
+      - name: Profile the full native shard
+        run: bun run --cwd clients/desktop test:packaged -- --shard=1/2
       - uses: actions/upload-artifact@v4
         if: always()
         with:
