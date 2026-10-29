@@ -129,6 +129,7 @@ test(
         runtimeAuthorization(started.descriptor),
         project.id,
         peer.id,
+        tempRoot,
       );
       const peerExtensions = await fetch(`${started.baseUrl}/v1/projects/${peer.id}/extensions`, {
         headers: runtimeAuthorization(started.descriptor),

@@ -22,6 +22,30 @@ const setup = async () => {
 };
 
 describe("first-launch setup", () => {
+  test("queues independent choices together before waiting for durable acceptance", async () => {
+    const { options, queued } = await setup();
+    const entered = Promise.withResolvers<void>();
+    const accepted = Promise.withResolvers<void>();
+    const onboarding = createOnboarding({
+      ...options,
+      enqueue: async (name) => {
+        queued.push(name);
+        entered.resolve();
+        await accepted.promise;
+      },
+    });
+    const updating = onboarding.update({ step: "harnesses", harnesses: ["codex", "pi"] });
+    try {
+      await entered.promise;
+      expect(queued).toEqual(["harness-codex", "harness-pi"]);
+      expect((await onboarding.read()).harnesses).toBeNull();
+    } finally {
+      accepted.resolve();
+      await updating;
+    }
+    expect((await onboarding.read()).harnesses).toEqual(["codex", "pi"]);
+  });
+
   test("skips setup without starting unsubmitted installations", async () => {
     const { onboarding, queued, options } = await setup();
     await onboarding.update({ step: "harnesses", harnesses: ["codex"] });
