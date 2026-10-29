@@ -45,7 +45,9 @@ export const plannedCiJobs = (scope: Scope) => {
     if (scope.production)
       add(
         "packaged_toolchain",
-        scope.toolchainMatrix.map((row) => `packaged_toolchain / verify (${row.platform_pkg})`),
+        scope.toolchainMatrix.map(
+          (row) => `packaged_toolchain / verify (${row.platform_pkg} ${row.shard}/${row.shards})`,
+        ),
         "P2",
       );
   }
