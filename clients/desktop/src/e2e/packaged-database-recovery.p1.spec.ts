@@ -15,6 +15,9 @@ import {
   waitForExit,
 } from "./packaged-app-helpers";
 
+// Database ownership and recovery do not use an agent harness.
+const recoveryEnvironment = { PSTDIO_DEFAULT_EXTENSIONS: "[]" };
+
 test("explains a database ownership conflict and retries after its owner stops", async ({
   browserName: _browserName,
 }, testInfo) => {
@@ -22,9 +25,12 @@ test("explains a database ownership conflict and retries after its owner stops",
   const desktopHome = createPackagedHome();
   let app: PackagedWindow | null = null;
   try {
-    expect(await runPackagedCli(ownerHome, ["serve"])).toMatchObject({ exitCode: 0 });
+    expect(await runPackagedCli(ownerHome, ["serve"], recoveryEnvironment)).toMatchObject({ exitCode: 0 });
     const owner = await waitForDescriptor(ownerHome);
-    app = await launchPackagedRecovery(desktopHome, { PSTDIO_DB_PATH: join(ownerHome, "pstdio.db") });
+    app = await launchPackagedRecovery(desktopHome, {
+      ...recoveryEnvironment,
+      PSTDIO_DB_PATH: join(ownerHome, "pstdio.db"),
+    });
     await expect(app.lifecyclePage.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
     await testInfo.attach("database-ownership-recovery", {
       body: await app.lifecyclePage.screenshot(),
@@ -67,14 +73,14 @@ test("keeps a damaged database intact and retries after its control file is rest
   const home = createPackagedHome();
   let app: PackagedWindow | null = null;
   try {
-    expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
+    expect(await runPackagedCli(home, ["serve"], recoveryEnvironment)).toMatchObject({ exitCode: 0 });
     expect(await runPackagedCli(home, ["close"])).toMatchObject({ exitCode: 0 });
     const controlPath = join(home, "pstdio.db", "global", "pg_control");
     const originalControl = readFileSync(controlPath);
     const damagedControl = Buffer.alloc(originalControl.length);
     writeFileSync(controlPath, damagedControl);
 
-    app = await launchPackagedRecovery(home);
+    app = await launchPackagedRecovery(home, recoveryEnvironment);
     await expect(app.lifecyclePage.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
     await testInfo.attach("damaged-database-recovery", {
       body: await app.lifecyclePage.screenshot(),

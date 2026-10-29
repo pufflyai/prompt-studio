@@ -174,7 +174,7 @@ Copy `dist/pstdio` to a private path and point `E2E_PACKAGED_BINARY_PATH` at the
 
 ## Isolation
 
-Packaged desktop update-channel tests use `PSTDIO_DEFAULT_EXTENSIONS=[]`. They still create real projects and check Settings and the CLI through the packaged app. Cold default-extension installation remains covered by `packages/e2e/src/packaged/packaged-core-extensions-smoke.p1.test.ts`, which runs in the native packaged toolchain checks, including Windows, with its existing workload and allowance. Recovery tests keep their existing cold extension setup.
+Packaged desktop update-channel and database-recovery tests use `PSTDIO_DEFAULT_EXTENSIONS=[]`. They keep real project creation, Settings and CLI checks, database ownership conflicts, damaged control files, and recovery after repair. These host checks do not use an agent harness. Cold default-extension installation remains covered by `packages/e2e/src/packaged/packaged-core-extensions-smoke.p1.test.ts`, which runs in the native packaged toolchain checks, including Windows, with its existing workload and allowance. Attached backend-recovery tests keep their existing cold extension setup.
 
 When an assertion waits for child-process or socket output, await the operation before asserting on its result or captured error. Bun's `expect(promise).rejects` and `.resolves` can synchronously drive a nested event loop and block Windows I/O callbacks. See [the pipe-read lesson](../../lessons-learned/0016-bun-expect-rejects-blocks-pipe-reads.md) for the safe rejection pattern.
 
