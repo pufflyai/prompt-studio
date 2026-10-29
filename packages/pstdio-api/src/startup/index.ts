@@ -97,11 +97,6 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
 };
 
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
-  try {
-    await deps.onboarding.resume();
-  } catch (err) {
-    apiLogger.warn({ err, event: "startup.onboarding_resume.error" }, "Could not resume onboarding installations");
-  }
   const defaultExtensionPreparation = (async () => {
     signal?.throwIfAborted();
     if (options?.prepareDefaultExtensions) await options.prepareDefaultExtensions(signal);

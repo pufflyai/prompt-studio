@@ -18,6 +18,7 @@ const createDashboardWorkbench = (input: Parameters<typeof createWorkbench>[0] =
     onboarding: {
       read: async () => ({
         state: { completed: true, hidden: false, harnesses: null, workAreas: null },
+        installedExtensions: [],
         detectedHarnesses: [],
         platform: "linux",
       }),

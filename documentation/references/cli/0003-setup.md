@@ -22,7 +22,9 @@ project. Opening a project from the project list does not start setup.
 You can choose several harnesses, continue without one, or choose **Skip setup**.
 **Settings → Customizations → Don’t show onboarding** hides the flow on this host.
 Appearance controls are in a separate section of Customizations.
-Extension installation continues in the background after setup closes.
+Installed harnesses and extensions are shown separately from downloads. The project
+keeps its background layout while the setup dialog is open. Extension installation
+continues after setup closes; only the requesting project enables the chosen tools.
 
 The unreleased 0.46 CLI exposes the same choices:
 
@@ -35,6 +37,7 @@ pst onboarding hide
 pst onboarding show
 ~~~
 
+Run `harnesses` and `complete` inside the linked project, or pass `--project-id`.
 `harnesses` with no `--harness` saves an empty selection. `complete` with no `--work`
 keeps only Base Themes and Prompt Studio Skills. `show` clears the visibility
 preference so setup opens again when you create a project. Skipping does not install choices

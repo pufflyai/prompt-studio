@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, TriangleAlert } from "lucide-react";
 import type { OnboardingInfo, OnboardingState, OnboardingWorkArea, UpdateOnboarding } from "pstdio-api-contracts";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { harnessChoices } from "./catalog";
 import { HarnessChoices, WorkChoices } from "./choices";
 
 interface OnboardingProps {
@@ -28,7 +29,14 @@ export const Onboarding = (props: OnboardingProps) => {
   const { info, update, onComplete } = props;
   const { t } = useTranslation("common");
   const [step, setStep] = useState<"harnesses" | "work">("harnesses");
-  const [harnesses, setHarnesses] = useState(info.state.harnesses ?? info.detectedHarnesses);
+  const [harnesses, setHarnesses] = useState(
+    info.state.harnesses ??
+      harnessChoices
+        .filter(
+          ({ id }) => info.detectedHarnesses.includes(id) || info.installedExtensions.includes(`pstdio.harness-${id}`),
+        )
+        .map(({ id }) => id),
+  );
   const [workAreas, setWorkAreas] = useState<OnboardingWorkArea[]>(info.state.workAreas ?? ["coding"]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
@@ -72,11 +80,12 @@ export const Onboarding = (props: OnboardingProps) => {
               <HarnessChoices
                 selected={harnesses}
                 detected={info.detectedHarnesses}
+                installed={info.installedExtensions}
                 platform={info.platform}
                 onChange={setHarnesses}
               />
             ) : (
-              <WorkChoices selected={workAreas} onChange={setWorkAreas} />
+              <WorkChoices installed={info.installedExtensions} selected={workAreas} onChange={setWorkAreas} />
             )}
             {error && (
               <AlertMessage status="error" title={t("onboarding.saveError")}>

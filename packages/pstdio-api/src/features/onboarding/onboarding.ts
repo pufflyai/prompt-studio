@@ -7,7 +7,10 @@ import {
   type UpdateOnboarding,
 } from "pstdio-api-contracts";
 
-export const createOnboarding = (input: { path: string; enqueue: (installName: string) => void }) => {
+export const createOnboarding = (input: {
+  path: string;
+  enqueue: (installName: string, projectId?: string) => void | Promise<void>;
+}) => {
   const read = async () => {
     try {
       return onboardingStateSchema.parse(JSON.parse(await readFile(input.path, "utf8")));
@@ -23,7 +26,7 @@ export const createOnboarding = (input: { path: string; enqueue: (installName: s
     await rename(temporary, input.path);
   };
   let pending: Promise<unknown> = Promise.resolve();
-  const update = (request: UpdateOnboarding) => {
+  const update = (request: UpdateOnboarding, projectId?: string) => {
     const operation = pending.then(async () => {
       const current = await read();
       let state: OnboardingState;
@@ -41,19 +44,12 @@ export const createOnboarding = (input: { path: string; enqueue: (installName: s
       } else {
         state = { ...current, hidden: request.hidden };
       }
+      for (const name of extensions) await input.enqueue(name, projectId);
       await save(state);
-      for (const name of extensions) input.enqueue(name);
       return state;
     });
     pending = operation.catch(() => {});
     return operation;
   };
-  const resume = async () => {
-    const state = await read();
-    for (const id of state.harnesses ?? []) input.enqueue(`harness-${id}`);
-    if (state.completed && state.workAreas) {
-      for (const name of onboardingExtensions(state.workAreas)) input.enqueue(name);
-    }
-  };
-  return { read, update, resume };
+  return { read, update };
 };

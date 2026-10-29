@@ -11,6 +11,7 @@
   "onboarding": {
     "onThisDevice": "En este dispositivo",
     "onThisMac": "En este Mac",
+    "installed": "Instaladas en este dispositivo",
     "available": "Disponibles para instalar",
     "workAreas": "Áreas de trabajo",
     "extensions": "Extensiones para instalar",

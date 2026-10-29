@@ -11,6 +11,7 @@
   "onboarding": {
     "onThisDevice": "このデバイス",
     "onThisMac": "このMac",
+    "installed": "このデバイスにインストール済み",
     "available": "インストール可能",
     "workAreas": "作業分野",
     "extensions": "インストールする拡張機能",
