@@ -55,8 +55,10 @@ export const expectPackagedChatHistory = async (page: Page, sessionId: string) =
     await expect
       .poll(() =>
         viewport.evaluate((element) => {
-          const user = element.querySelector('[data-chat-message-list-item="user"]')!;
-          return Math.abs(user.getBoundingClientRect().top - element.getBoundingClientRect().top);
+          const user = element.querySelector('[data-chat-message-list-item="user"]');
+          return user
+            ? Math.abs(user.getBoundingClientRect().top - element.getBoundingClientRect().top)
+            : Number.POSITIVE_INFINITY;
         }),
       )
       .toBeLessThan(20);
