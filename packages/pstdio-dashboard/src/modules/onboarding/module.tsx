@@ -2,6 +2,7 @@ import type { PstdioClient } from "@pstdio/sdk/client";
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import type { OnboardingInfo } from "pstdio-api-contracts";
 import { getApiClient } from "@/lib/api";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { Customizations } from "./customizations";
 import { Onboarding } from "./onboarding";
 
@@ -16,17 +17,17 @@ export const createOnboardingModule = (
   let context: WorkbenchModuleContext;
   let info: OnboardingInfo;
   let complete: () => void;
-  const open = async (onComplete: () => void, isCurrent: () => boolean) => {
+  const open = async (projectId: string) => {
+    const isCurrent = () => getDashboardSelectedProjectId(context) === projectId;
     const loaded = await client.read();
-    if (!isCurrent()) return false;
-    if (loaded.state.completed || loaded.state.hidden) return true;
+    if (!isCurrent()) return;
+    if (loaded.state.completed || loaded.state.hidden) return;
     info = loaded;
     complete = () => {
       if (!isCurrent()) return;
-      onComplete();
+      context.modes.setActiveMode("project");
     };
     context.modes.setActiveMode(modeId);
-    return false;
   };
   const module = {
     id: "dashboard.onboarding",
@@ -65,8 +66,8 @@ export const createOnboardingModule = (
             placement: "center",
             scrollBehavior: "inside",
             closeOnInteractOutside: false,
-            contentWidth: "folder-picker-width",
-            contentHeight: "folder-picker-height",
+            contentWidth: "4xl",
+            contentHeight: "3xl",
             contentMaxWidth: "calc(100vw - {spacing.xl})",
             contentMaxHeight: "calc(100dvh - {spacing.xl})",
           },

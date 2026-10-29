@@ -4,8 +4,12 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { FolderPicker } from "@/shared/filesystem/folder-picker";
 import { createProject } from "../data/project-creation";
 
-export const CreateProjectWidget = (props: { input: WorkbenchPanelRenderInput }) => {
-  const { input } = props;
+interface CreateProjectWidgetProps {
+  input: WorkbenchPanelRenderInput;
+  onProjectCreated?: (projectId: string) => Promise<void>;
+}
+export const CreateProjectWidget = (props: CreateProjectWidgetProps) => {
+  const { input, onProjectCreated } = props;
   const mutation = useMutation({ mutationFn: createProject });
   const openProject = async (path: string) => {
     try {
@@ -14,6 +18,7 @@ export const CreateProjectWidget = (props: { input: WorkbenchPanelRenderInput })
         project: { id: project.id, name: project.name },
       });
       input.workbench.layout.removeWidgetPlacement(input.instance.instanceId);
+      await onProjectCreated?.(project.id);
     } catch {
       /* The picker shows the server error and allows retry. */
     }

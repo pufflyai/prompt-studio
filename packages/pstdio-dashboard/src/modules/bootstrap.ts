@@ -10,7 +10,6 @@ import {
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 
 interface CreateBootstrapModuleInput {
-  beforeOpen?: (resume: () => void, isCurrent: () => boolean) => Promise<boolean>;
   isInitialSyncComplete?: () => boolean;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
 }
@@ -63,17 +62,14 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
             });
             return;
           }
+          enterProjectSelection();
+          return;
         }
 
-        if (projectId) ctx.pageLocations.setProject(projectId);
-        else ctx.pageLocations.clearProject();
+        ctx.pageLocations.setProject(projectId);
         const isCurrent = () => run === generation && getDashboardSelectedProjectId(ctx) === projectId;
-        const openWorkspace = () => {
+        const openProject = () => {
           if (!isCurrent()) return;
-          if (!projectId) {
-            enterProjectSelection();
-            return;
-          }
           ctx.modes.setActiveMode("project");
           const boot = () => {
             if (!isCurrent()) return false;
@@ -103,14 +99,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
             readyUnsubscribe = subscribeDashboardExtensionsReadyProject(ctx, boot);
           }
         };
-        if (input.beforeOpen) {
-          void input
-            .beforeOpen(openWorkspace, isCurrent)
-            .then((open) => {
-              if (open) openWorkspace();
-            })
-            .catch(openWorkspace);
-        } else openWorkspace();
+        openProject();
       };
 
       bootSelectedProject();
