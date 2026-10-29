@@ -1,9 +1,11 @@
 import archive from "../catalog/generated/frame-bundle";
+import type { FrameGraph } from "./selection";
 
 export interface FrameBootstrap {
   scripts: Record<string, Blob>;
   styles: Blob[];
   entry: string;
+  graph: FrameGraph;
 }
 let prepared: Promise<FrameBootstrap> | undefined;
 export const installFrameBootstrap = (bootstrap: FrameBootstrap) => {
@@ -11,12 +13,16 @@ export const installFrameBootstrap = (bootstrap: FrameBootstrap) => {
 };
 export const frameBootstrap = () => {
   prepared ??= (async () => {
-    const bytes = Uint8Array.from(atob(archive), (character) => character.charCodeAt(0));
+    const binary = atob(archive);
+    const bytes = new Uint8Array(binary.length);
+    // Avoid allocating an iterator value and invoking a callback for every archive byte.
+    for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
     const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
     const data = JSON.parse(await new Response(stream).text()) as {
       scripts: Record<string, string>;
       styles: string[];
       entry: string;
+      graph: FrameGraph;
     };
     return {
       scripts: Object.fromEntries(
@@ -24,6 +30,7 @@ export const frameBootstrap = () => {
       ),
       styles: data.styles.map((style) => new Blob([style], { type: "text/css" })),
       entry: `canvas-preview:${data.entry}`,
+      graph: data.graph,
     };
   })();
   return prepared;

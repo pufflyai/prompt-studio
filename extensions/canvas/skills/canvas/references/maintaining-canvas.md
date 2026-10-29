@@ -52,6 +52,8 @@ Keep source examples in colocated `*.canvas.tsx` files and suite providers in `.
 
 Rebuild with `bun run --cwd scripts canvas:build`, regenerate source destinations with `canvas:inventory`, and run `canvas:coverage`. Run `canvas:verify` in the isolated Docker tools environment. Source and emitted-file hashes must match before claiming current coverage. Report gaps in live behavior or appearance honestly.
 
+Keep startup assets scoped to the selected example and its suite provider. Preserve real asynchronous imports and stylesheet order. Nested documentation examples must retain access to the immutable archive while creating their own module instances and fixture state. Rebuild and verify every retained source graph when changing compiled asset selection; use the fixed populated Canvas check without reducing its workload or increasing its allowance.
+
 ## Source handoff between workspaces
 
 A canvas URL does not transfer its source changes. Before handing a ticket to another workspace, make the reviewed design source retrievable there. For Git projects, commit only the intended design sources, push that revision to a reachable branch, and record the branch and commit SHA with the canvas links and paths in the ticket. Reuse an existing implementation owner when one exists; do not start a competing writer or commit unrelated edits.

@@ -192,7 +192,19 @@ const buildPreviews = async (
     },
   });
   const outputs = (Array.isArray(result) ? result : [result]).flatMap((result) => result.output) as NativeBuildOutput[];
-  await publishNativeBuild(outputs, { stories: stories.length, documents: documents.length });
+  await publishNativeBuild(
+    outputs,
+    { stories: stories.length, documents: documents.length },
+    {
+      repoRoot,
+      sources: Object.fromEntries([...stories, ...documents].map(({ source, suite }) => [source, suite])),
+      projects: Object.fromEntries(
+        Object.entries(suites).map(([name, path]) => [name, resolve(repoRoot, path, ".canvas/preview.tsx")]),
+      ),
+      nativeSource: resolve(repoRoot, "extensions/canvas/src/canvases/previews.tsx"),
+      catalogSource: entry,
+    },
+  );
 };
 const catalog = await generateStoryCatalog();
 await buildPreviews(catalog.stories, catalog.documents);

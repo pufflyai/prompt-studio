@@ -77,6 +77,8 @@ Scenarios render compiled original React components in individual preview docume
 
 Documentation frames have content-driven heights. Resize observations and font completion refresh measured bounds. Fit and explicit reveal include a tall panel and its title. Fullscreen application examples retain a minimum viewport inside the documentation frame; lists and editors retain their own scrolling. Long prose, source listings, and API details have no inner vertical scroll area. The **IntrinsicDocumentation** verification story checks expansion and draft retention outside the canvas resource registry.
 
+Each frame starts only the compiled modules and styles reachable from its example and suite provider, in the archive's original stylesheet order. The viewer retains the immutable archive for nested documentation examples; module instances and fixture state stay in each opaque preview. Syntax highlighting initializes only when a component needs it.
+
 ### Rebuild and verify
 
 From the repository root:

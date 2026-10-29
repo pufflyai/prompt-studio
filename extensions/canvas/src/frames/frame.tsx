@@ -10,18 +10,24 @@ import { type FrameBootstrap, frameBootstrap, frameDocument } from "./assets";
 import { FrameLoading } from "./frame-loading";
 import { navigateFrame } from "./navigation";
 import { type FrameMessage, type FrameRequest, frameProtocol } from "./protocol";
+import { selectFrameBootstrap } from "./selection";
 
 const postFrame = (frame: HTMLIFrameElement | null, message: Omit<FrameRequest, "protocol">) =>
   frame?.contentWindow?.postMessage({ protocol: frameProtocol, ...message }, "*");
 const validFrameMessage = (event: MessageEvent<FrameMessage>, frame: HTMLIFrameElement | null) =>
   event.source === frame?.contentWindow && event.data?.protocol === frameProtocol;
 
+const frameThemes = [...themes, { id: "pstdio-light", mode: "light" }, { id: "pstdio-dark", mode: "dark" }];
+
 export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }) => {
   const { item, runtime } = props;
   const frame = useRef<HTMLIFrameElement>(null);
   const nonce = useRef(crypto.randomUUID());
   const [revision, setRevision] = useState(0);
-  const [bootstrap, setBootstrap] = useState<FrameBootstrap>();
+  const [assets, setAssets] = useState<{ all: FrameBootstrap; selected: FrameBootstrap }>();
+  const bootstrap = assets?.all;
+  const selectedBootstrap = assets?.selected;
+  const source = item.preview?.source ?? "$native";
   const [height, setHeight] = useState(item.height);
   const [information, setInformation] = useState<FrameMessage["information"]>();
   const [expanded, setExpanded] = useState(false);
@@ -30,19 +36,26 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
   const selected = useSyncExternalStore(runtime.subscribe, () => runtime.get().themes[item.id] ?? "app");
   const app = useThemePreference();
   const appTheme = app.themePreferences.find((theme) => theme.id === app.themePreference);
-  const theme =
-    selected === "app"
-      ? appTheme
-      : [...themes, { id: "pstdio-light", mode: "light" }, { id: "pstdio-dark", mode: "dark" }].find(
-          (theme) => theme.id === selected,
-        );
+  const theme = selected === "app" ? appTheme : frameThemes.find((theme) => theme.id === selected);
+  const sentTheme = useRef<typeof theme>(undefined);
   useEffect(() => {
+    let active = true;
     void frameBootstrap()
-      .then(setBootstrap)
-      .catch((error) => setError(String(error)));
-  }, []);
+      .then((all) => {
+        const selected = selectFrameBootstrap(all, source);
+        if (active) setAssets({ all, selected });
+      })
+      .catch((error) => {
+        if (active) setError(String(error));
+      });
+    return () => {
+      active = false;
+    };
+  }, [source]);
   useEffect(() => {
-    if (ready) postFrame(frame.current, { nonce: nonce.current, type: "theme", theme: theme as ThemePreferenceOption });
+    if (!ready || sentTheme.current === theme) return;
+    sentTheme.current = theme;
+    postFrame(frame.current, { nonce: nonce.current, type: "theme", theme: theme as ThemePreferenceOption });
   }, [theme, ready]);
   useEffect(() => {
     const receive = (event: MessageEvent<FrameMessage>) => {
@@ -50,14 +63,16 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
       if (!validFrameMessage(event, frame.current)) return;
       switch (message.type) {
         case "bootstrap":
-          postFrame(frame.current, { nonce: nonce.current, type: "bootstrap", bootstrap });
+          postFrame(frame.current, { nonce: nonce.current, type: "bootstrap", bootstrap: selectedBootstrap });
           return;
         case "boot":
+          sentTheme.current = theme;
           postFrame(frame.current, {
             nonce: nonce.current,
             type: "render",
             item,
             theme: theme as ThemePreferenceOption,
+            // Nested documentation examples select from the same immutable archive.
             bootstrap,
           });
           return;
@@ -79,7 +94,7 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
     };
     window.addEventListener("message", receive);
     return () => window.removeEventListener("message", receive);
-  }, [bootstrap, theme, item, runtime]);
+  }, [bootstrap, selectedBootstrap, theme, item, runtime]);
   return (
     <>
       {error && (

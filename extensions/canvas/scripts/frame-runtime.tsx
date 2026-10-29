@@ -1,12 +1,6 @@
 import "@pstdio/ui/style.css";
-import {
-  ChakraProvider,
-  installPrismGlobal,
-  psTheme,
-  type ThemePreferenceOption,
-  ThemePreferenceProvider,
-} from "@pstdio/ui";
-import { Component, type ComponentType, type ReactNode, useEffect, useState } from "react";
+import { ChakraProvider, psTheme, type ThemePreferenceOption, ThemePreferenceProvider } from "@pstdio/ui";
+import { Component, type ComponentType, type ReactNode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import type { CanvasItem } from "../src/canvases/definitions";
 import { installFrameBootstrap } from "../src/frames/assets";
@@ -55,83 +49,63 @@ export const mountPreviewRuntime = (
       <FrameStory loaded={loaded} minimumHeight={loaded.parameters?.layout === "fullscreen" ? viewportHeight : 0} />
     );
   };
-  const Content = (props: { item: CanvasItem }) => {
-    const { item } = props;
-    const [loaded, setLoaded] = useState<LoadedStory>();
-    const [error, setError] = useState("");
-    useEffect(() => {
-      let active = true;
-      let dispose: (() => void) | undefined;
-      const loadContent = async () => {
-        await installPrismGlobal();
-        if (item.preview) return load(item.preview);
-        const { previews } = await import("../src/canvases/previews");
-        return { Component: previews[item.component!] as ComponentType<Record<string, unknown>> };
-      };
-      void loadContent()
-        .then((value) => {
-          const result: LoadedStory = value;
-          if (!active) return result.dispose?.();
-          dispose = result.dispose;
-          setLoaded(result);
-        })
-        .catch((error) => {
-          if (!active) return;
-          setError(String(error));
-          send({ type: "error", message: String(error) });
-        });
-      return () => {
-        active = false;
-        dispose?.();
-      };
-    }, [item]);
-    if (error)
-      return (
-        <div role="alert" data-ui-canvas-error>
-          {error}
-        </div>
-      );
-    if (!loaded) return <div data-ui-canvas-loading>Loading preview…</div>;
-    return (
-      <ReadyStory loaded={loaded} viewportHeight={item.preview?.kind === "story" ? item.preview.viewportHeight : 960} />
-    );
-  };
-  const App = () => {
-    const [request, setRequest] = useState<FrameRequest>();
-    const [theme, setTheme] = useState<ThemePreferenceOption>({ id: "pstdio-light", mode: "light" });
-    useEffect(() => {
-      const receive = (event: MessageEvent<FrameRequest>) => {
-        const message = event.data;
-        if (event.source !== window.parent || message?.protocol !== frameProtocol) return;
-        if (nonce && message.nonce !== nonce) return;
-        nonce = message.nonce;
-        if (message.theme) setTheme(message.theme);
-        installBootstrap(message);
-        switch (message.type) {
-          case "render":
-            setRequest(message);
-            break;
-        }
-      };
-      window.addEventListener("message", receive);
-      send({ type: "boot" });
-      return () => window.removeEventListener("message", receive);
-    }, []);
-    return (
-      <ChakraProvider value={psTheme}>
-        <ThemePreferenceProvider initialPreference={theme.id} themePreferences={[theme]} storage={storage}>
-          {request?.item && (
-            <Boundary>
-              <Content item={request.item} />
-            </Boundary>
-          )}
-        </ThemePreferenceProvider>
-      </ChakraProvider>
-    );
-  };
   const root = document.getElementById("root")!;
   const reactRoot = createRoot(root);
-  reactRoot.render(<App />);
+  let theme: ThemePreferenceOption = { id: "pstdio-light", mode: "light" };
+  let loaded: LoadedStory | undefined;
+  let item: CanvasItem | undefined;
+  let active = true;
+  const App = (props: { loaded: LoadedStory; item: CanvasItem; theme: ThemePreferenceOption }) => (
+    <ChakraProvider value={psTheme}>
+      <ThemePreferenceProvider initialPreference={props.theme.id} themePreferences={[props.theme]} storage={storage}>
+        <Boundary>
+          <ReadyStory
+            loaded={props.loaded}
+            viewportHeight={props.item.preview?.kind === "story" ? props.item.preview.viewportHeight : 960}
+          />
+        </Boundary>
+      </ThemePreferenceProvider>
+    </ChakraProvider>
+  );
+  const render = () => {
+    if (active && loaded && item) reactRoot.render(<App loaded={loaded} item={item} theme={theme} />);
+  };
+  const loadContent = async (next: CanvasItem) => {
+    item = next;
+    const result: LoadedStory = next.preview
+      ? await load(next.preview)
+      : {
+          Component: (await import("../src/canvases/previews")).previews[next.component!] as ComponentType<
+            Record<string, unknown>
+          >,
+        };
+    if (!active) return result.dispose?.();
+    loaded = result;
+    // Mount the providers once, after the requested content and initial theme are available.
+    render();
+  };
+  const receive = (event: MessageEvent<FrameRequest>) => {
+    const message = event.data;
+    if (event.source !== window.parent || message?.protocol !== frameProtocol) return;
+    if (nonce && message.nonce !== nonce) return;
+    nonce = message.nonce;
+    if (message.theme) theme = message.theme;
+    installBootstrap(message);
+    if (message.type === "theme") render();
+    if (message.type === "render" && message.item && !item) {
+      void loadContent(message.item).catch((error) => {
+        if (!active) return;
+        reactRoot.render(
+          <div role="alert" data-ui-canvas-error>
+            {String(error)}
+          </div>,
+        );
+        send({ type: "error", message: String(error) });
+      });
+    }
+  };
+  window.addEventListener("message", receive);
+  send({ type: "boot" });
   let scheduled = 0;
   let previous = 0;
   const measure = () => {
@@ -162,6 +136,9 @@ export const mountPreviewRuntime = (
   window.addEventListener(
     "pagehide",
     () => {
+      active = false;
+      window.removeEventListener("message", receive);
+      loaded?.dispose?.();
       cancelAnimationFrame(scheduled);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
