@@ -1,4 +1,5 @@
 import { defineExtension } from "@pstdio/sdk/extensions";
+import { marmaladeKeyboardActions } from "../apps/marmalade/marmalade-keybindings";
 import { defineExample, webview } from "../definition";
 
 const views = [
@@ -36,6 +37,7 @@ const example = defineExample({
   ],
 });
 export default defineExtension({
+  ...marmaladeKeyboardActions(example.mode.ref),
   modes: [example.mode],
   themes: [example.theme],
   resourceKinds: [example.resourceKind],

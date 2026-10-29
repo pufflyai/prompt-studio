@@ -16,7 +16,12 @@ import { commands } from "./src/state-commands";
 const examples = [scribble, boombox, zipline, pigeon, kiln, marmalade];
 export default defineExtension({
   defaultLocale: "en",
-  commands: [...Object.values(commands), ...Object.values(marmaladeCommands), ...scribble.commands],
+  commands: [
+    ...Object.values(commands),
+    ...Object.values(marmaladeCommands),
+    ...scribble.commands,
+    ...marmalade.commands,
+  ],
   statusBarItems: [...scribble.statusBarItems, ...zipline.statusBarItems, ...kiln.statusBarItems],
   modes: examples.flatMap((example) => example.modes),
   placements: [...scribble.placements, ...boombox.placements, ...kiln.placements],
@@ -24,15 +29,18 @@ export default defineExtension({
   resourceKinds: examples.flatMap((example) => example.resourceKinds),
   views: examples.flatMap<ViewContribution>((example) => example.views),
   pages: examples.flatMap<PageContribution>((example) => example.pages),
-  keybindings: examples.flatMap((example, index) =>
-    example.navigationItems.slice(0, 1).map((navigation) =>
-      defineKeybinding({
-        id: `keyboard-example-${index}`,
-        layer: "go",
-        key: example === scribble ? "R" : navigation.id[0]!.toUpperCase(),
-        action: navigation.action,
-      }),
+  keybindings: [
+    ...marmalade.keybindings,
+    ...examples.flatMap((example, index) =>
+      example.navigationItems.slice(0, 1).map((navigation) =>
+        defineKeybinding({
+          id: `keyboard-example-${index}`,
+          layer: "go",
+          key: example === scribble ? "R" : navigation.id[0]!.toUpperCase(),
+          action: navigation.action,
+        }),
+      ),
     ),
-  ),
+  ],
   navigationItems: examples.flatMap((example) => example.navigationItems),
 });

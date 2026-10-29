@@ -26,7 +26,14 @@ export const webview = (id: string, title: string, capabilities: WebviewCapabili
     body: {
       kind: "webview",
       entry: packageAsset(`./src/views/${id}.tsx`, baseUrl),
-      capabilities: ["commands.execute", "navigation.open", "page.params.update", "editing.session", ...capabilities],
+      capabilities: [
+        "commands.execute",
+        "navigation.open",
+        "page.params.update",
+        "editing.session",
+        "overlays",
+        ...capabilities,
+      ],
     },
   });
 interface ExampleEnvironment {

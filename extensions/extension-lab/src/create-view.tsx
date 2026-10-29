@@ -1,7 +1,7 @@
 import "@pstdio/ui/style.css";
 import { Box, Text } from "@chakra-ui/react";
-import { defineExtensionView, type GuestHost, type PropsStore } from "@pstdio/sdk/extensions";
-import { ChakraProvider, psTheme } from "@pstdio/ui";
+import { createWebviewClient, defineExtensionView, type GuestHost, type PropsStore } from "@pstdio/sdk/extensions";
+import { ChakraProvider, psTheme, WebviewOverlayProvider } from "@pstdio/ui";
 import { type ComponentType, useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { createExampleHost, type ExampleProps, type ExampleViewInput, ViewContext } from "./view-context";
@@ -32,6 +32,7 @@ interface ExampleRootProps {
 const ExampleRoot = (props: ExampleRootProps) => {
   const { Component, bridge, propsStore, store, background } = props;
   const [host] = useState(() => createExampleHost(bridge));
+  const [client] = useState(() => createWebviewClient(bridge));
   const [error, setError] = useState<string>();
   const [ready, setReady] = useState(!store);
   const hostProps = useSyncExternalStore(propsStore.subscribe, propsStore.get, propsStore.get);
@@ -47,18 +48,20 @@ const ExampleRoot = (props: ExampleRootProps) => {
   );
   const input = { host, resource: hostProps.resource ?? hostProps.pageLocation?.resource };
   return (
-    <ViewContext value={input}>
-      <Box h="100dvh" w="full" display="flex" flexDirection="column" overflow="hidden" color="fg" bg={background}>
-        {error ? (
-          <Text role="alert" color="fg.error" p="sm">
-            {error}
-          </Text>
-        ) : null}
-        <Box flex="1" minH="0" minW="0">
-          {ready ? <Component input={input} /> : null}
+    <WebviewOverlayProvider client={client.overlays} onError={(error) => setError(String(error))}>
+      <ViewContext value={input}>
+        <Box h="100dvh" w="full" display="flex" flexDirection="column" overflow="hidden" color="fg" bg={background}>
+          {error ? (
+            <Text role="alert" color="fg.error" p="sm">
+              {error}
+            </Text>
+          ) : null}
+          <Box flex="1" minH="0" minW="0">
+            {ready ? <Component input={input} /> : null}
+          </Box>
         </Box>
-      </Box>
-    </ViewContext>
+      </ViewContext>
+    </WebviewOverlayProvider>
   );
 };
 export const createExampleView = (

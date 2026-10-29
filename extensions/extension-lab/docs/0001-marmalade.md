@@ -21,7 +21,7 @@ Open **Examples → Marmalade**. The Great Wave document opens with canvas, prop
 
 The sample includes paired image/mask previews and an unavailable reference row. The mask preview represents a full-image mask; this example does not edit masks. Brush strokes are vector paths. PSD files, raster retouching, and advanced masks are outside this example.
 
-Keyboard shortcuts work while the canvas or layer list owns focus. V, T, R, E, B, H, and Z select tools. Ctrl/Cmd+Z undoes; Ctrl/Cmd+Shift+Z redoes; Ctrl/Cmd+D duplicates; Ctrl/Cmd+G groups; Ctrl/Cmd+Shift+G ungroups; Delete removes selected layers. Text fields keep their normal editing shortcuts.
+Keyboard shortcuts use the shared shortcut system while any Marmalade view owns focus. Find and reassign them in the shortcut reference. V, T, R, E, B, H, and Z select tools. Ctrl/Cmd+Z undoes; Ctrl/Cmd+Shift+Z redoes (Ctrl+Y on Windows); Ctrl/Cmd+D duplicates; Ctrl/Cmd+G groups; Ctrl/Cmd+Shift+G ungroups; Delete removes selected layers (Backspace on macOS). Text fields, menus and dialogs keep their normal editing shortcuts. Tool and document actions are also available as named commands, such as `pst extension-lab marmalade hand`.
 
 ## Use the same commands from an agent
 
