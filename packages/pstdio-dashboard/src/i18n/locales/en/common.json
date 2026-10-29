@@ -20,6 +20,7 @@
     "finish": "Finish",
     "back": "Back",
     "saveError": "Could not save setup",
+    "title": "Onboarding",
     "customizations": "Customizations",
     "dontShow": "Don’t show onboarding"
   }

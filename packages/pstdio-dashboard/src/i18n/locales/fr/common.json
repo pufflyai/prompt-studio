@@ -20,6 +20,7 @@
     "finish": "Terminer",
     "back": "Retour",
     "saveError": "Impossible d’enregistrer la configuration",
+    "title": "Premiers pas",
     "customizations": "Personnalisations",
     "dontShow": "Ne pas afficher la configuration initiale"
   }

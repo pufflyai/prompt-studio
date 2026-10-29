@@ -20,6 +20,7 @@
     "finish": "完了",
     "back": "戻る",
     "saveError": "設定を保存できませんでした",
+    "title": "初期設定",
     "customizations": "カスタマイズ",
     "dontShow": "初期設定を表示しない"
   }

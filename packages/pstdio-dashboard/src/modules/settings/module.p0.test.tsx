@@ -33,7 +33,7 @@ describe("createSettingsModule", () => {
     expect(workbench.commands.getCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID)).toBeDefined();
   });
 
-  test("shared settings shortcuts cover extension setup, appearance, runtime, and skills", () => {
+  test("shared settings shortcuts cover extension setup, customizations, runtime, and skills", () => {
     const workbench = createWorkbench();
     const registration = workbench.registerModule(createSettingsModule());
     const destinations = workbench.keyboard
@@ -50,7 +50,7 @@ describe("createSettingsModule", () => {
     expect(destinations).toEqual(
       expect.arrayContaining([
         ["S E", { panelId: "extensions" }],
-        ["S I", { panelId: "appearance" }],
+        ["S I", { panelId: "customizations" }],
         ["MOD+,", { panelId: "runtime" }],
         ["S S", { panelId: "skills" }],
       ]),

@@ -13,7 +13,7 @@ export const createOnboardingRoutes = (deps: Pick<RouteDeps, "onboarding">) => {
       tags: ["Setup"],
       responses: {
         200: {
-          description: "First-launch choices and detected harnesses.",
+          description: "Saved setup choices and detected harnesses.",
           content: { "application/json": { schema: onboardingInfoSchema } },
         },
       },
@@ -23,7 +23,7 @@ export const createOnboardingRoutes = (deps: Pick<RouteDeps, "onboarding">) => {
       return c.json(
         {
           state,
-          detectedHarnesses: state.completed || state.hidden ? [] : await detectOnboardingHarnesses(),
+          detectedHarnesses: state.hidden ? [] : await detectOnboardingHarnesses(),
           platform: process.platform,
         },
         200,
