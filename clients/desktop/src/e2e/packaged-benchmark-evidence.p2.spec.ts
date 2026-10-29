@@ -71,10 +71,6 @@ test("exports complete evidence after the settling requirement is met", async ()
     await test
       .info()
       .attach("startup-probe.json", { path: join(home, "startup-probe.json"), contentType: "application/json" });
-    await test.info().attach("startup-profile.cpuprofile", {
-      path: join(home, "startup-profile.cpuprofile"),
-      contentType: "application/json",
-    });
     await attachBenchmarkPerformance(app, "completed-settling", Date.now());
     const attachment = test.info().attachments.find((item) => item.name === "performance-completed-settling.json");
     expect(attachment).toBeDefined();
