@@ -372,6 +372,21 @@ CPU time, and peak and settled memory. Missing required native readings, incompl
 history and sampling gaps fail coverage. Container runtimes remain remote to the
 host sampler; local CPU or memory never substitutes for container evidence.
 
+Desktop schedules its two-second capture timer before the baseline Electron metrics
+read. A slow baseline read must not add a second delay before the first periodic
+sample. The CPU measurement window starts after that read and reports its actual
+duration separately from the capture cadence.
+
+The collector timestamps the start of collection before invoking native readers.
+Desktop supplies its Electron metrics reader to that same operation, so the cost
+of the read does not shift the sample's start timestamp. CLI sampling uses the
+same collector with no Electron processes.
+
+Desktop verifies the complete sidecar checksum through sequential asynchronous
+reads into one reusable 64 KiB buffer. This avoids allocating a new native buffer
+for every chunk on the main thread. Cancellation stops further reads and closes
+the file before verification can continue to the version check.
+
 CPU and memory summaries state whether they cover a process born during capture
 or only observed readings. The environment row records the compiled binary's
 version and SHA-256 alongside the source revision and runner details. Collection
@@ -381,7 +396,11 @@ do not claim application capture coverage.
 
 The normal completion path observes memory after one existing sampling interval
 of post-workload idle time. It exports the operation end and minimum idle interval;
-this does not assert heap stability or force garbage collection. Immediate crashes
+this does not assert heap stability or force garbage collection.
+The settling check compares the operation end with each reading's recorded wall-clock
+timestamp. Monotonic elapsed times describe sampling intervals and gaps; they do not
+reconstruct wall-clock observation times.
+Immediate crashes
 keep their kill boundary. Their missing exit or settling readings remain explicit
 coverage failures instead of fabricated memory values. Observation and cleanup
 still fit within the existing case cap.

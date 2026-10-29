@@ -78,19 +78,19 @@ export class PerformanceCaptureCollector {
     this.#lastSampleAt = null;
   }
 
-  sample(processes: PerformanceProcessSample[]) {
+  sample(readProcesses: () => PerformanceProcessSample[]) {
     if (this.#abort.signal.aborted) return Promise.resolve();
     if (this.#pending) return this.#pending;
-    this.#pending = this.#sample(processes).finally(() => {
+    this.#pending = this.#sample(readProcesses).finally(() => {
       this.#pending = null;
     });
     return this.#pending;
   }
 
   /** Operation boundaries need a fresh reading, even when a periodic probe is finishing. */
-  async flush(processes: PerformanceProcessSample[]) {
+  async flush(readProcesses: () => PerformanceProcessSample[]) {
     await this.#pending;
-    await this.sample(processes);
+    await this.sample(readProcesses);
   }
 
   #record(sample: PerformanceCaptureSample) {
@@ -102,11 +102,13 @@ export class PerformanceCaptureCollector {
     this.#options.record?.(sample);
   }
 
-  async #sample(processes: PerformanceProcessSample[]) {
+  async #sample(readProcesses: () => PerformanceProcessSample[]) {
     const { signal } = this.#abort;
     const backend = this.#options.backend();
     const sampledAt = this.#now();
     const capturedAt = new Date().toISOString();
+    // Every native reader belongs to this collection, including synchronous Electron metrics.
+    let processes = readProcesses();
     const [reading, response] = await Promise.all([
       backend?.scope === "local" && backend.pid !== null
         ? this.#options.readProcess(backend.pid, signal).catch(() => null)

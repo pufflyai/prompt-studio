@@ -38,7 +38,7 @@ permissions:
   actions: read
 jobs:
   verify:
-    name: verify (${{ matrix.platform_pkg }})
+    name: verify (${{ matrix.platform_pkg }} ${{ matrix.shard }}/${{ matrix.shards }})
     env:
       CI_PRIORITY: ${{ inputs.priority }}
       CI_GATE_PLAN: ${{ inputs.gate_plan }}
@@ -92,24 +92,26 @@ jobs:
         run: >-
           bun scripts/ci/run-ci-checks.ts --observe-peers --
           bun run --cwd scripts verify:packages --profile "${{ inputs.profile }}"
+          --shard "${{ matrix.shard }}/${{ matrix.shards }}"
           ${{ inputs.artifact_run_id != '' && '--prebuilt' || '' }}
       - name: Run quarantined Windows compiled CLI cases
-        if: inputs.profile == 'full' && runner.os == 'Windows' && !cancelled() && steps.toolchain.outcome == 'success'
+        if: inputs.profile == 'full' && runner.os == 'Windows' && matrix.shard == 1 && !cancelled() && steps.toolchain.outcome == 'success'
         continue-on-error: true
         env:
           E2E_TEST_LANE: quarantine
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
         run: bun scripts/ci/run-quarantined-tests.ts packaged-bun --scope e2e --prebuilt
       - name: Require every compiled CLI quarantine case to have executed
-        if: inputs.profile == 'full' && runner.os == 'Windows' && !cancelled() && steps.toolchain.outcome == 'success'
+        if: inputs.profile == 'full' && runner.os == 'Windows' && matrix.shard == 1 && !cancelled() && steps.toolchain.outcome == 'success'
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun --scope e2e
       - name: Preserve packaged toolchain evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: packaged-toolchain-${{ matrix.platform_pkg }}-attempt-${{ github.run_attempt }}
+          name: packaged-toolchain-${{ matrix.platform_pkg }}-shard-${{ matrix.shard }}-of-${{ matrix.shards }}-attempt-${{ github.run_attempt }}
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report
+            test-results/ci/bun/packages/e2e
             test-results/quarantine
           if-no-files-found: warn

@@ -31,16 +31,16 @@ export const startNativePerformanceCapture = async (input: NativeCaptureInput) =
     clearInterval(timer);
     capture.stop();
     try {
-      await capture.flush([]);
+      await capture.flush(() => []);
     } finally {
       sampler?.close();
       sampler = null;
     }
   };
   try {
-    await capture.sample([]);
-    timer = setInterval(() => void capture.sample([]).catch(input.onError), 2000);
-    return { sample: () => capture.flush([]), snapshot: () => capture.snapshot(), close };
+    await capture.sample(() => []);
+    timer = setInterval(() => void capture.sample(() => []).catch(input.onError), 2000);
+    return { sample: () => capture.flush(() => []), snapshot: () => capture.snapshot(), close };
   } catch (error) {
     await close();
     throw error;

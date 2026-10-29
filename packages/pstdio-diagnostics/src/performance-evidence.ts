@@ -1,7 +1,7 @@
 import type { PerformanceCapture, PerformanceProcessSample } from "pstdio-api-contracts/performance-diagnostics";
 
 type Role = PerformanceProcessSample["role"];
-type Reading = { elapsedMs: number; value: PerformanceProcessSample };
+type Reading = { elapsedMs: number; capturedAt: string; value: PerformanceProcessSample };
 
 // Local scope starts at spawn; a missing reply must not postpone native coverage.
 const roleExists = (sample: PerformanceCapture["samples"][number], role: Role) =>
@@ -26,9 +26,9 @@ const processSummary = (readings: Reading[], capture: PerformanceCapture, operat
   const cpu = readings.map(({ value }) => value.cpuTimeMs);
   const startedAt = Date.parse(first.value.startedAt ?? "");
   const captureStartedAt = capture.startedAt;
+  // The operation boundary and observation timestamp share a wall clock; elapsedMs is monotonic.
   const settled =
-    operationEndedAt !== undefined &&
-    Date.parse(captureStartedAt) + last.elapsedMs >= operationEndedAt + capture.sampleIntervalMs;
+    operationEndedAt !== undefined && Date.parse(last.capturedAt) >= operationEndedAt + capture.sampleIntervalMs;
   const bornDuringCapture =
     startedAt >= Date.parse(captureStartedAt) && startedAt <= Date.parse(captureStartedAt) + first.elapsedMs;
   const hasCpu =
@@ -79,7 +79,7 @@ const processEvidence = (capture: PerformanceCapture, requiredRoles: Role[], ope
     for (const value of sample.processes) {
       const key = JSON.stringify([value.pid, value.processStartId]);
       const entries = readings.get(key) ?? [];
-      entries.push({ elapsedMs: sample.elapsedMs, value });
+      entries.push({ elapsedMs: sample.elapsedMs, capturedAt: sample.capturedAt, value });
       readings.set(key, entries);
     }
   }
