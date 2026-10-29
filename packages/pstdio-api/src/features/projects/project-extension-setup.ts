@@ -7,8 +7,8 @@ import {
   installMissingDefaultExtensions,
   registerInstalledExtensionSources,
   resolveDefaultExtensionsConfig,
-  syncInstalledExtensionsForProject,
 } from "../extensions/default-extensions";
+import { attachInstalledExtensionsForProject } from "../extensions/installed-extension-sync";
 import type { ProjectsRouteDeps } from "./deps";
 
 const enableDefaultProjectExtensions = async (deps: ProjectsRouteDeps, projectId: string, existingIds: Set<string>) => {
@@ -86,8 +86,9 @@ export const setupProjectExtensions = async (
   };
 
   await traceSetupPhase("project.extension_sync", { project_id: projectId }, () =>
-    syncInstalledExtensionsForProject({
+    attachInstalledExtensionsForProject({
       extensionService: deps.extensionService,
+      installedExtensionSourcesService: deps.installedExtensionSourcesService,
       onLoadFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
       projectId,
     }),

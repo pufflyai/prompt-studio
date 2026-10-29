@@ -24,22 +24,26 @@ export const expectPackagedOnboarding = async (baseUrl: string, headers: Record<
   expect(Array.isArray(await jobs.json())).toBe(true);
 };
 
+const writePackagedOnboardingSource = (root: string, name: string) => {
+  const source = join(root, "extensions", name);
+  mkdirSync(source, { recursive: true });
+  writeFileSync(
+    join(source, "package.json"),
+    JSON.stringify({
+      name,
+      publisher: "pstdio",
+      version: "1.0.0",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+    }),
+  );
+  writeFileSync(join(source, "extension.ts"), "export default {};\n");
+  return source;
+};
+
 export const writePackagedOnboardingSources = (root: string) => {
-  for (const name of ["harness-codex", "pstdio-planner", "pstdio-base-themes", "pstdio-skills"]) {
-    const source = join(root, "extensions", name);
-    mkdirSync(source, { recursive: true });
-    writeFileSync(
-      join(source, "package.json"),
-      JSON.stringify({
-        name,
-        publisher: "pstdio",
-        version: "1.0.0",
-        main: "./extension.ts",
-        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
-      }),
-    );
-    writeFileSync(join(source, "extension.ts"), "export default {};\n");
-  }
+  for (const name of ["harness-codex", "pstdio-planner", "pstdio-base-themes", "pstdio-skills"])
+    writePackagedOnboardingSource(root, name);
 };
 
 export const expectPackagedProjectChoices = async (
@@ -47,6 +51,7 @@ export const expectPackagedProjectChoices = async (
   headers: Record<string, string>,
   projectId: string,
   peerId: string,
+  root: string,
 ) => {
   const extensions = async (id: string) =>
     (await (await fetch(`${baseUrl}/v1/projects/${id}/extensions`, { headers })).json()).extensions as {
@@ -76,5 +81,28 @@ export const expectPackagedProjectChoices = async (
   });
   expect(empty.status).toBe(200);
   while (!(await enabled(peerId, "pstdio.pstdio-skills"))) await Bun.sleep(25);
+  expect(await enabled(peerId, "pstdio.pstdio-planner")).toBe(false);
+  const sourcePath = writePackagedOnboardingSource(root, "harness-pi");
+  const registered = await fetch(`${baseUrl}/v1/projects/${projectId}/extensions/installed/harness-pi/enable`, {
+    method: "POST",
+    headers: { ...headers, "content-type": "application/json" },
+    body: JSON.stringify({
+      displayName: "Pi",
+      extensionId: "pstdio.harness-pi",
+      manifest: { id: "pstdio.harness-pi", name: "harness-pi" },
+      name: "harness-pi",
+      sourcePath,
+      sourceKind: "local_path",
+      version: "1.0.0",
+    }),
+  });
+  expect(registered.status).toBe(200);
+  const late = await fetch(`${baseUrl}/v1/onboarding?project_id=${peerId}`, {
+    method: "PATCH",
+    headers: { ...headers, "content-type": "application/json" },
+    body: JSON.stringify({ step: "harnesses", harnesses: ["pi"] }),
+  });
+  expect(late.status).toBe(200);
+  while (!(await enabled(peerId, "pstdio.harness-pi"))) await Bun.sleep(25);
   expect(await enabled(peerId, "pstdio.pstdio-planner")).toBe(false);
 };
