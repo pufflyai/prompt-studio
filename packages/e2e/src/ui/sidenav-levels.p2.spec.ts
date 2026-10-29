@@ -30,13 +30,22 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   const firstRow = sidenav.locator("[data-tree-list-node-id]").first();
 
   // Users pin a project row by dragging it into the header.
+  const source = row("Tickets");
   const target = row("Search");
-  await target.hover();
-  const targetHeight = await target.evaluate((element) => element.getBoundingClientRect().height);
-  await row("Tickets").dragTo(target, {
-    targetPosition: { x: 40, y: targetHeight * 0.25 },
+  const targetList = sidenav
+    .getByRole("listbox")
+    .filter({ has: page.getByRole("option", { name: "Search", exact: true }) });
+  await source.hover();
+  const from = (await source.boundingBox())!;
+  const to = (await target.boundingBox())!;
+  await page.mouse.move(from.x + 40, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 40, from.y + from.height / 2 + 8, { steps: 4 });
+  await page.mouse.move(to.x + 40, to.y + to.height * 0.25, {
     steps: 12,
   });
+  await expect(targetList.locator('[data-tree-list-drop-indicator="before"]')).toBeVisible();
+  await page.mouse.up();
   await expect(firstRow).toHaveAccessibleName("Tickets");
   // dnd-kit swallows clicks for 50ms after a drop so the drop is not also a click; a person never clicks that fast.
   await page.waitForTimeout(100);
