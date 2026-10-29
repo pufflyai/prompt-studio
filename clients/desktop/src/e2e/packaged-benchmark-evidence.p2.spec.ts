@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect } from "@playwright/test";
 import type { PerformanceCapture } from "pstdio-api-contracts/performance-diagnostics";
 import { test } from "../testing/packaged-fixture";
@@ -67,6 +68,9 @@ test("exports complete evidence after the settling requirement is met", async ()
   enableBenchmarkMonitoring(home);
   const app = await launchPackagedApp(home, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
   try {
+    await test
+      .info()
+      .attach("startup-probe.json", { path: join(home, "startup-probe.json"), contentType: "application/json" });
     await attachBenchmarkPerformance(app, "completed-settling", Date.now());
     const attachment = test.info().attachments.find((item) => item.name === "performance-completed-settling.json");
     expect(attachment).toBeDefined();
