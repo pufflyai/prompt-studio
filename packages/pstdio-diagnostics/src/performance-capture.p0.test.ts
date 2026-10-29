@@ -12,6 +12,29 @@ const reading = {
 };
 const backend = { id: "runtime", pid: 12, origin: null, token: null, scope: "local" as const };
 
+test("timestamps each collection before reading native process metrics", async () => {
+  let now = 0;
+  const capture = new PerformanceCaptureCollector({
+    hostVersion: "test",
+    platform: "darwin",
+    intervalMs: 2000,
+    backend: () => null,
+    readProcess: async () => null,
+    now: () => now,
+  });
+  const readProcesses = () => {
+    now += 1900;
+    return [];
+  };
+  await capture.sample(readProcesses);
+  now = 2000;
+  await capture.sample(readProcesses);
+  expect(now).toBe(3900);
+  expect(capture.snapshot().samples.map((sample) => sample.elapsedMs)).toEqual([0, 2000]);
+  expect(capture.snapshot().samples[1]?.intervalMs).toBe(2000);
+  capture.stop();
+});
+
 test("samples an explicit operation boundary after an outstanding periodic sample", async () => {
   const pending = Promise.withResolvers<typeof reading>();
   let reads = 0;
@@ -22,8 +45,8 @@ test("samples an explicit operation boundary after an outstanding periodic sampl
     backend: () => backend,
     readProcess: async () => (++reads === 1 ? pending.promise : { ...reading, cpuTimeMs: 120 }),
   });
-  const periodic = capture.sample([]);
-  const boundary = capture.flush([]);
+  const periodic = capture.sample(() => []);
+  const boundary = capture.flush(() => []);
   pending.resolve(reading);
   await Promise.all([periodic, boundary]);
   expect(reads).toBe(2);
@@ -43,19 +66,19 @@ test("preserves process identity and bounded history without readers", async () 
     readProcess: async () => ({ ...reading, cpuTimeMs: cpu, processStartId: startId }),
     now: () => time,
   });
-  await capture.sample([]);
+  await capture.sample(() => []);
   cpu = 2000;
   time = 2000;
-  await capture.sample([]);
+  await capture.sample(() => []);
   expect(capture.snapshot().samples[1]?.processes[0]?.cpuPercent).toBe(100);
   startId = "replacement";
   cpu = 50;
   time = 4000;
-  await capture.sample([]);
+  await capture.sample(() => []);
   expect(capture.snapshot().samples[2]?.processes[0]?.cpuPercent).toBeNull();
   for (let i = 0; i < 200; i++) {
     time += 2000;
-    await capture.sample([]);
+    await capture.sample(() => []);
   }
   const snapshot = capture.snapshot();
   expect(snapshot.samples.length).toBe(150);
@@ -76,7 +99,7 @@ test("cancels in-flight collection and cannot repopulate disabled history", asyn
         finish = resolve;
       }),
   });
-  const sample = capture.sample([]);
+  const sample = capture.sample(() => []);
   capture.stop();
   finish(reading);
   await sample;
@@ -95,7 +118,7 @@ test("does not sample local processes for a remote connection or multiply concur
       return reading;
     },
   });
-  await Promise.all([capture.sample([]), capture.sample([])]);
+  await Promise.all([capture.sample(() => []), capture.sample(() => [])]);
   expect(reads).toBe(0);
   expect(capture.snapshot().samples).toHaveLength(1);
   expect(capture.snapshot().samples[0]?.backend.scope).toBe("remote");
@@ -124,7 +147,7 @@ test("bounds live history by encoded bytes so the supported local reader remains
     heapUsedBytes: null,
     externalBytes: null,
   }));
-  for (let index = 0; index < 150; index++) await capture.sample(processes);
+  for (let index = 0; index < 150; index++) await capture.sample(() => processes);
   expect(Buffer.byteLength(JSON.stringify(capture.snapshot()))).toBeLessThan(600_000);
   expect(capture.snapshot().droppedSamples).toBeGreaterThan(0);
   capture.stop();

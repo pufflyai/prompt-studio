@@ -23,13 +23,13 @@ void app.whenReady().then(async () => {
           hostVersion: "fixture",
           onError: (error) => process.send?.({ kind: "error", error: String(error) }),
         });
-        await capture.sample([]);
-        timer = setInterval(() => void capture?.sample([]), 2000);
+        await capture.sample(() => []);
+        timer = setInterval(() => void capture?.sample(() => []), 2000);
         process.send?.({ kind: "capture", snapshot: capture.snapshot() });
       } else if (command === "ping") {
         process.send?.({ kind: "heartbeat", at: Date.now() });
       } else if (command === "sample") {
-        await capture?.sample([]);
+        await capture?.sample(() => []);
         process.send?.({ kind: "sample", snapshot: capture?.snapshot() });
       } else if (command === "stop") {
         clearInterval(timer);
