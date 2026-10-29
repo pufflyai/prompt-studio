@@ -1,46 +1,59 @@
+import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import type { ExtensionInstallations } from "../../services/extension-installations";
 import type { createExtensionService } from "../../services/extension-service";
-import type { createProjectService } from "../../services/project-service";
 import {
   installMissingDefaultExtensions,
   registerInstalledExtensionSources,
-  syncInstalledExtensionsForProjects,
+  syncInstalledExtensionsForProject,
 } from "../extensions/default-extensions";
 import { packagedExtensionCatalog } from "../extensions/extension-catalog";
+import { getInstalledOnboardingSources } from "./installed-extensions";
 
 export const createOnboardingInstaller =
   (input: {
     extensionService: ReturnType<typeof createExtensionService>;
-    projectService: ReturnType<typeof createProjectService>;
+    installedExtensionSourcesService: Pick<ReturnType<typeof createInstalledExtensionSourcesDBService>, "list">;
     releaseRef?: string;
   }) =>
-  async (installName: string, signal?: AbortSignal) => {
+  async (installName: string, signal?: AbortSignal, projectId?: string) => {
     const entry = packagedExtensionCatalog.extensions.find((entry) => entry.installName === installName);
     if (!entry) throw new Error(`Unknown setup extension: ${installName}`);
-    const sources = await installMissingDefaultExtensions({
-      signal,
-      installNames: [installName],
-      releaseRef: input.releaseRef,
-      forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
-    });
-    await registerInstalledExtensionSources(input.extensionService, sources);
-    await syncInstalledExtensionsForProjects(input);
-    for (const project of await input.projectService.list()) {
-      signal?.throwIfAborted();
-      const selected = (await input.extensionService.listProjectExtensionInstances(project.id)).find(
-        ({ installedSource }) => installedSource.install_name === installName,
-      );
-      if (selected && !selected.instance.enabled)
-        await input.extensionService.setProjectExtensionEnabled(selected.instance.id, true);
+    const extensionId = entry.extensionId ?? `pstdio.${installName}`;
+    const installed = (await getInstalledOnboardingSources(input.installedExtensionSourcesService)).some(
+      (source) => source.extension_id === extensionId,
+    );
+    if (!installed) {
+      const sources = await installMissingDefaultExtensions({
+        signal,
+        installNames: [installName],
+        releaseRef: input.releaseRef,
+        forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
+      });
+      await registerInstalledExtensionSources(input.extensionService, sources);
     }
+    signal?.throwIfAborted();
+    if (!projectId) return;
+    await syncInstalledExtensionsForProject({ extensionService: input.extensionService, projectId });
+    const selected = (await input.extensionService.listProjectExtensionInstances(projectId)).find(
+      ({ installedSource }) => installedSource.extension_id === extensionId,
+    );
+    if (!selected) throw new Error(`Setup extension is unavailable: ${installName}`);
+    if (!selected.instance.enabled) await input.extensionService.setProjectExtensionEnabled(selected.instance.id, true);
   };
 
-export const enqueueOnboardingExtension = (jobs: ExtensionInstallations, installName: string) => {
+export const enqueueOnboardingExtension = async (
+  jobs: ExtensionInstallations,
+  installName: string,
+  projectId?: string,
+) => {
   const entry = packagedExtensionCatalog.extensions.find((entry) => entry.installName === installName);
   if (!entry) throw new Error(`Unknown setup extension: ${installName}`);
   jobs.enqueueCatalog({
     installName,
     displayName: entry.displayName,
     extensionId: entry.extensionId ?? `pstdio.${installName}`,
+    projectId,
   });
+  // The queue owns restart recovery; saving preferences must not create a second install owner.
+  await jobs.flush();
 };

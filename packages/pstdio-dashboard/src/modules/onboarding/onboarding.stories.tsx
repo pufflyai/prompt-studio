@@ -8,6 +8,7 @@ import { Onboarding } from "./onboarding";
 const info: OnboardingInfo = {
   platform: "darwin",
   detectedHarnesses: ["codex", "open-code"],
+  installedExtensions: ["pstdio.pstdio-base-themes", "pstdio.pstdio-skills"],
   state: { completed: false, hidden: false, harnesses: null, workAreas: null },
 };
 const Example = (props: { info: OnboardingInfo }) => {
@@ -18,7 +19,7 @@ const Example = (props: { info: OnboardingInfo }) => {
       <Dialog.Root open placement="center" scrollBehavior="inside" closeOnInteractOutside={false}>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content w="4xl" h="3xl" maxW="calc(100vw - {spacing.xl})" maxH="calc(100dvh - {spacing.xl})">
+          <Dialog.Content w="4xl" h="xl" maxW="calc(100vw - {spacing.xl})" maxH="calc(100dvh - {spacing.xl})">
             <Onboarding
               info={props.info}
               update={async (request) => ({
@@ -76,5 +77,39 @@ export const Skip: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Skip setup" }));
     await expect(await canvas.findByText("Workspace")).toBeVisible();
+  },
+};
+
+export const InstalledHarness: Story = {
+  args: {
+    info: {
+      ...info,
+      detectedHarnesses: [],
+      installedExtensions: [...info.installedExtensions, "pstdio.harness-claude-code"],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const installed = within(canvas.getByRole("group", { name: "On this Mac" }));
+    await expect(installed.getByRole("checkbox", { name: "Claude Code" })).toBeChecked();
+  },
+};
+export const InstalledWork: Story = {
+  args: {
+    info: {
+      ...info,
+      installedExtensions: [
+        ...info.installedExtensions,
+        "pstdio.pstdio-planner",
+        "pstdio.pstdio-reports",
+        "pstdio.pstdio-artifacts",
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Continue" }));
+    await expect(canvas.getByText("Installed on this device", { exact: true })).toBeVisible();
+    await expect(canvas.getByText("Project Planner", { exact: true })).toBeVisible();
   },
 };

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { chromium } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
+import { enablePackagedProjectExtension } from "./packaged-project-extensions";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { writeResourceChoicesExtension } from "./resource-choices-fixture";
@@ -27,6 +28,7 @@ test("packaged resource actions pass hidden values to dependent choices and subm
     });
     expect(created.status).toBe(201);
     const project = (await created.json()) as { id: string };
+    await enablePackagedProjectExtension(started, project.id, "resource-choices");
     const page = await browser.newPage();
     await page.addInitScript((id) => {
       localStorage.setItem("onboarding-complete", "true");

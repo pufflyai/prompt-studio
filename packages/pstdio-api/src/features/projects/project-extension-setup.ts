@@ -1,3 +1,4 @@
+import { basename } from "node:path";
 import type { ExtensionSetupWarning } from "pstdio-api-contracts";
 import { apiLogger } from "../../lib/logger";
 import { traceSetupPhase } from "../../lib/setup-phase";
@@ -5,14 +6,21 @@ import { AlwaysEnabledExtensionError } from "../extensions/always-on-extensions"
 import {
   installMissingDefaultExtensions,
   registerInstalledExtensionSources,
+  resolveDefaultExtensionsConfig,
   syncInstalledExtensionsForProject,
 } from "../extensions/default-extensions";
 import type { ProjectsRouteDeps } from "./deps";
 
-const enableSyncedProjectExtensions = async (deps: ProjectsRouteDeps, projectId: string, existingIds: Set<string>) => {
+const enableDefaultProjectExtensions = async (deps: ProjectsRouteDeps, projectId: string, existingIds: Set<string>) => {
+  const defaults = await resolveDefaultExtensionsConfig();
+  const names = new Set(
+    defaults.defaultExtensions.map((entry) =>
+      typeof entry === "string" ? basename(entry) : (entry.installName ?? basename(entry.source)),
+    ),
+  );
   const extensions = await deps.extensionService.listProjectExtensionInstances(projectId);
-  for (const { instance } of extensions) {
-    if (instance.enabled || existingIds.has(instance.id)) continue;
+  for (const { instance, installedSource } of extensions) {
+    if (instance.enabled || existingIds.has(instance.id) || !names.has(installedSource.install_name)) continue;
     try {
       await deps.extensionService.setProjectExtensionEnabled(instance.id, true);
     } catch (error) {
@@ -85,7 +93,7 @@ export const setupProjectExtensions = async (
     }),
   );
   await traceSetupPhase("project.extension_enable", { project_id: projectId }, () =>
-    enableSyncedProjectExtensions(deps, projectId, preservedInstanceIds),
+    enableDefaultProjectExtensions(deps, projectId, preservedInstanceIds),
   );
 
   return warnings;

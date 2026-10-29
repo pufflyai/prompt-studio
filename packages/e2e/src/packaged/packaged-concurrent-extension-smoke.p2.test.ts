@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { enablePackagedProjectExtension } from "./packaged-project-extensions";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
@@ -42,7 +43,9 @@ test("loads a shared extension across projects and reloads edited transitive imp
           body: JSON.stringify(folderProjectInput({ name: `Concurrent project ${index}` })),
         });
         expect(response.status).toBe(201);
-        return (await response.json()) as { id: string; extension_warnings?: unknown[] };
+        const project = (await response.json()) as { id: string; extension_warnings?: unknown[] };
+        await enablePackagedProjectExtension(host, project.id, "shared-entry");
+        return project;
       }),
     );
     const instances: Array<{ projectId: string; instanceId: string }> = [];

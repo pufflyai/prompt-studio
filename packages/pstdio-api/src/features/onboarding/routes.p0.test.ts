@@ -20,7 +20,7 @@ test("detects harnesses for later projects after setup has completed", async () 
        import { createOnboardingRoutes } from ${JSON.stringify(import.meta.resolve("./routes"))};
        const onboarding = createOnboarding({path: ${JSON.stringify(join(root, "onboarding.json"))}, enqueue: () => {}});
        await onboarding.update({step: "skip"});
-       const routes = createOnboardingRoutes({onboarding});
+       const routes = createOnboardingRoutes({onboarding, installedExtensionSourcesService: {list: async () => []}, projectService: {get: async () => null}});
        const visible = await (await routes.request("/onboarding")).json();
        await onboarding.update({step: "visibility", hidden: true});
        const hidden = await (await routes.request("/onboarding")).json();

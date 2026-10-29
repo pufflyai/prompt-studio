@@ -17,6 +17,7 @@ export const updateOnboardingSchema = z.discriminatedUnion("step", [
 export const onboardingInfoSchema = z.object({
   state: onboardingStateSchema,
   detectedHarnesses: z.array(onboardingHarnessSchema),
+  installedExtensions: z.array(z.string()),
   platform: z.string(),
 });
 export type OnboardingHarness = z.infer<typeof onboardingHarnessSchema>;
