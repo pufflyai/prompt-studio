@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Record performance collection before native process reads begin.
+Record native performance collection on time and reduce desktop checksum allocation work.

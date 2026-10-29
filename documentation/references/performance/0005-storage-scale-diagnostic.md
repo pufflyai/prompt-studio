@@ -382,6 +382,11 @@ Desktop supplies its Electron metrics reader to that same operation, so the cost
 of the read does not shift the sample's start timestamp. CLI sampling uses the
 same collector with no Electron processes.
 
+Desktop verifies the complete sidecar checksum through sequential asynchronous
+reads into one reusable 64 KiB buffer. This avoids allocating a new native buffer
+for every chunk on the main thread. Cancellation stops further reads and closes
+the file before verification can continue to the version check.
+
 CPU and memory summaries state whether they cover a process born during capture
 or only observed readings. The environment row records the compiled binary's
 version and SHA-256 alongside the source revision and runner details. Collection
