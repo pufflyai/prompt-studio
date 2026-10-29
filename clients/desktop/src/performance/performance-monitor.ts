@@ -186,9 +186,6 @@ export class DesktopPerformanceMonitor {
     try {
       this.#capture = this.#options.createCapture?.() ?? null;
       void this.#capture?.sample([]);
-      // The first metrics call only starts Electron's CPU measurement window.
-      this.#options.readMetrics();
-      this.#lastSampleAt = this.#now();
       this.#cancel = (this.#options.schedule ?? scheduleInterval)(() => {
         try {
           this.#sample();
@@ -197,6 +194,9 @@ export class DesktopPerformanceMonitor {
           // the next one reads the new frames.
         }
       }, SAMPLE_INTERVAL_MS);
+      // Prime Electron's CPU window after scheduling so a slow first read does not delay the capture cadence.
+      this.#options.readMetrics();
+      this.#lastSampleAt = this.#now();
       this.#endpoint = await this.#options.openEndpoint(() => this.snapshot());
     } catch (error) {
       await this.#end();
