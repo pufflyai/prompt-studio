@@ -13,7 +13,6 @@ import {
   slowFrameReportSchema,
 } from "pstdio-api-contracts/performance-diagnostics";
 import { attributeProcess, type OwnedFrame } from "./process-attribution";
-import { flushStartupProbe, startupProbe } from "./startup-probe";
 
 // Measured cost: one getAppMetrics call and one frame walk per sample. A 30-second
 // window at 80% of one core catches sustained work, such as streaming at ~100%,
@@ -185,32 +184,20 @@ export class DesktopPerformanceMonitor {
   async #begin() {
     if (this.#cancel) return;
     try {
-      startupProbe("capture-create-start");
       this.#capture = this.#options.createCapture?.() ?? null;
-      startupProbe("capture-create-end");
-      startupProbe("empty-sample-request");
-      void this.#capture?.sample(() => []).then(() => startupProbe("empty-sample-complete"));
-      startupProbe("timer-register-start");
+      void this.#capture?.sample(() => []);
       this.#cancel = (this.#options.schedule ?? scheduleInterval)(() => {
         try {
-          startupProbe("timer-callback-entry");
           this.#sample();
-          startupProbe("timer-callback-exit");
-          flushStartupProbe();
         } catch {
           // A frame can be disposed while a renderer reloads or exits. Skip this sample;
           // the next one reads the new frames.
         }
       }, SAMPLE_INTERVAL_MS);
-      startupProbe("timer-register-end");
       // Prime Electron's CPU window after scheduling so a slow first read does not delay the capture cadence.
-      startupProbe("baseline-read-start");
       this.#options.readMetrics();
-      startupProbe("baseline-read-end");
       this.#lastSampleAt = this.#now();
-      startupProbe("endpoint-open-start");
       this.#endpoint = await this.#options.openEndpoint(() => this.snapshot());
-      startupProbe("endpoint-open-end");
     } catch (error) {
       await this.#end();
       throw error;
@@ -225,14 +212,10 @@ export class DesktopPerformanceMonitor {
   #readProcesses() {
     const { platform, cpuCount } = this.#options;
     const capturedAt = this.#now();
-    startupProbe("frame-list-start");
     const frames = this.#options.listFrames();
-    startupProbe("frame-list-end");
     const runtimeOrigin = this.#options.runtimeOrigin();
     const live = new Set<string>();
-    startupProbe("periodic-metrics-start");
     const metrics = this.#options.readMetrics();
-    startupProbe("periodic-metrics-end");
     const processes = metrics.map((metric) => {
       const key = `${metric.pid}:${metric.creationTime}`;
       live.add(key);
