@@ -58,7 +58,7 @@ export const publishFrameArchive = async (root: string, outputs: NativeBuildOutp
   for (const output of outputs) {
     if (output.type === "chunk")
       scripts[output.fileName] = output.code.replace(
-        /(["'])\.\/([^"']+\.js)\1/g,
+        /(["'`])\.\/([^"'`]+\.js)\1/g,
         (_match, quote, file) => `${quote}canvas-preview:${file}${quote}`,
       );
     else if (output.fileName.endsWith(".css")) styles.push(String(output.source));

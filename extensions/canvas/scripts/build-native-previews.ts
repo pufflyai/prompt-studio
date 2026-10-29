@@ -21,6 +21,7 @@ const nativeDeclaration = `const __UI_CANVAS_NATIVE__={${Object.entries(previews
 // Keep the shared rendering runtime together. Hundreds of tiny sandbox-local
 // module URLs otherwise repeat their loader work in every frame.
 const previewOutput = {
+  minify: true,
   codeSplitting: {
     groups: [
       {
