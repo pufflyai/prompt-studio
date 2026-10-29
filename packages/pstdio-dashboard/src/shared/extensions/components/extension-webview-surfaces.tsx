@@ -1,5 +1,6 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { LocalizableString } from "@pstdio/sdk/api";
+import { WebviewOverlaySurface } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { useWebviewKeyboardShortcuts } from "@pstdio/workbench/react";
 import {
@@ -110,6 +111,7 @@ export const BridgedWebviewSurface = (props: {
         </Center>
       ) : null}
       <ExtensionFrame
+        renderOverlay={(presentation) => <WebviewOverlaySurface {...presentation} />}
         {...keyboard}
         sizing={props.sizing}
         view={view}

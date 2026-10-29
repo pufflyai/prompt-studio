@@ -3,6 +3,7 @@ import { WEBVIEW_HOST_CAPABILITIES } from "pstdio-api-contracts/extension-kernel
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
 
 const requests = {
+  overlays: { op: "close", id: "tools" },
   "performance.read": { operation: "state" },
   "performance.control": { operation: "set-enabled", enabled: true },
   "harnesses.read": {},

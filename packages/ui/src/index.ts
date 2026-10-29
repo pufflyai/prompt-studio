@@ -45,6 +45,12 @@ export type {
 export { NotificationCenter } from "@/components/notification-center";
 export * from "@/components/overlays";
 export * from "@/components/primitives";
+// Theme + utils.
+export { WebviewOverlayProvider, WebviewOverlayTrigger } from "@/components/primitives/webview-overlay-provider";
+export {
+  WebviewOverlaySurface,
+  type WebviewOverlaySurfaceProps,
+} from "@/components/primitives/webview-overlay-surface";
 export { Sidenav } from "@/components/sidenav/sidenav";
 export { useSidenavStore } from "@/components/sidenav/sidenav.store";
 export type { SidenavProps } from "@/components/sidenav/sidenav.types";
@@ -92,8 +98,6 @@ export {
   filterVisibleSections,
   resolveVisibility,
 } from "@/components/tree-list/tree-list-visibility-filter";
-
-// Theme + utils.
 export type { MonacoThemeData, VsCodeColorTheme } from "@/theme";
 export { createMonacoThemeFromVsCodeTheme, createThemePreferenceFromVsCodeTheme, psTheme } from "@/theme";
 export {

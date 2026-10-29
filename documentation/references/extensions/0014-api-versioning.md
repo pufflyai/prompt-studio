@@ -34,6 +34,12 @@ Status bar items on `main` can also declare a `popover` view through the additiv
 
 The page and panel additions share the planned API 0.3.0 release: page-owned empty views and landing slots, non-rendering page groups with default children, closable fixed tabs, tabless Main presentation, independent panel views, declarative slot replacements, caller-relative viewer navigation, mode-owned fullscreen permission, and collection badge navigation actions. They do not add another version step before that release.
 
+The additive `overlays` webview capability, typed `client.overlays` methods, and
+shared UI adapters also share the planned API 0.3.0 release. They let the host
+render plain tooltip, menu and popover content outside an isolated source frame.
+The private shortcut profile adds an optional `allowInInputs` field so ordinary
+commands preserve guest text ownership. See [webview overlays](0005-webview-and-storage-api.md#tooltips-menus-and-popovers-outside-a-frame).
+
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |

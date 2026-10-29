@@ -18,8 +18,13 @@ export const installModifierForwarder = (
         return;
       if (!event.ctrlKey && !event.metaKey && !event.altKey) return;
       const editable =
-        event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable="true"]');
-      if (editable && !event.shiftKey) return;
+        event.target instanceof Element &&
+        event.target.closest(
+          'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"]',
+        );
+      // Negotiated global chords already ran in the capture listener. Forwarding an
+      // unclaimed text shortcut would lose its input target in the host document.
+      if (editable) return;
       setTimeout(() => {
         if (event.defaultPrevented) return;
         void dispatch({

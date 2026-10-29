@@ -36,4 +36,5 @@ export type * from "./views";
 export * from "./webview-capabilities";
 export type * from "./webview-editing";
 export type * from "./webview-host-props";
+export type * from "./webview-overlays";
 export type * from "./workspaces";

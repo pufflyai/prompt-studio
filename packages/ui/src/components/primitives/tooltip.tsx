@@ -1,5 +1,7 @@
 import { Tooltip as ChakraTooltip, Portal, useTooltipContext } from "@chakra-ui/react";
 import * as React from "react";
+import { useWebviewOverlayClient } from "./webview-overlay-provider";
+import { WebviewTooltip } from "./webview-tooltip";
 
 export interface TooltipProps extends ChakraTooltip.RootProps {
   children?: React.ReactElement;
@@ -35,6 +37,8 @@ const TooltipHoverReset = (props: { disabled: boolean }) => {
 export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function Tooltip(props, ref) {
   const { children, disabled, portalled = true, content, contentProps, portalRef, ids, overflowRef, ...rest } = props;
   const [overflowing, setOverflowing] = React.useState(false);
+  const overlayClient = useWebviewOverlayClient();
+  const triggerId = React.useId();
 
   React.useLayoutEffect(() => {
     const label = overflowRef?.current;
@@ -70,20 +74,29 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
     <ChakraTooltip.Root
       openDelay={tooltipOpenDelay}
       closeDelay={100}
-      ids={{ trigger: childId, ...ids }}
+      ids={{ trigger: childId ?? triggerId, ...ids }}
       {...rest}
       disabled={visibilityBlocked}
       open={visibilityBlocked && rest.open !== undefined ? false : rest.open}
     >
       <TooltipHoverReset disabled={visibilityBlocked} />
       <ChakraTooltip.Trigger asChild>{children}</ChakraTooltip.Trigger>
-      <Portal disabled={!portalled} container={portalRef}>
-        <ChakraTooltip.Positioner>
-          <ChakraTooltip.Content ref={ref} {...contentProps}>
-            {content}
-          </ChakraTooltip.Content>
-        </ChakraTooltip.Positioner>
-      </Portal>
+      {overlayClient && typeof content === "string" ? (
+        <WebviewTooltip
+          client={overlayClient}
+          text={content}
+          triggerId={ids?.trigger ?? childId ?? triggerId}
+          placement={rest.positioning?.placement}
+        />
+      ) : (
+        <Portal disabled={!portalled} container={portalRef}>
+          <ChakraTooltip.Positioner>
+            <ChakraTooltip.Content ref={ref} {...contentProps}>
+              {content}
+            </ChakraTooltip.Content>
+          </ChakraTooltip.Positioner>
+        </Portal>
+      )}
     </ChakraTooltip.Root>
   );
 });

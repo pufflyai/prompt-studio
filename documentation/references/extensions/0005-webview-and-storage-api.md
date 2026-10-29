@@ -244,6 +244,47 @@ accepted but are deprecated through 0.44. Typed clients still require the declar
 `client.placement.close()` needs `placement.close`; `client.notify.toast({ type, title?, message })`
 needs `notification.show`. The old `{ level, title, message? }` toast shape is deprecated.
 
+## Tooltips, menus and popovers outside a frame
+
+On `main`, planned for 0.46.0 (extension API 0.3.0), declare `overlays` when a
+webview needs floating content outside its iframe. A guest portal and z-index
+cannot cross the iframe boundary. The host renders plain content with the shared
+design system; the guest keeps its trigger and action handlers.
+
+With `@pstdio/ui`, wrap the view in `WebviewOverlayProvider` and pass
+`client={client.overlays}`. Plain-text `Tooltip` content then renders in the host.
+Use `WebviewOverlayTrigger` for menus and popovers:
+
+```tsx
+<WebviewOverlayProvider client={client.overlays} onError={showError}>
+  <Tooltip content="Move layer"><Button>Move</Button></Tooltip>
+  <WebviewOverlayTrigger
+    content={{ kind: "menu", label: "Layer actions", items: [{ id: "duplicate", label: "Duplicate" }] }}
+    onAction={runLayerAction}
+  >
+    <Button>Actions</Button>
+  </WebviewOverlayTrigger>
+</WebviewOverlayProvider>
+```
+
+Popover content has `{ kind: "popover", title, text, actions? }`. Menu items and
+popover actions have `{ id, label, disabled? }`. Rich guest HTML and React elements
+stay inside the guest; the host accepts only structured plain content.
+
+The low-level `client.overlays.show({ id, anchor, content, placement? })` returns
+`{ actionId }` after a selection, or `{}` after dismissal, replacement, or frame
+disposal. Anchors use guest viewport coordinates `{ x, y, width, height }`.
+`client.overlays.move(id, anchor)` updates them; `close(id)` dismisses the matching
+overlay. `observeWebviewOverlayAnchor(element, onMove, onClose)` tracks scrolling,
+resizing, layout changes and removal. Dispose the observer when the overlay closes.
+Each frame owns one overlay. Disabled actions cannot be selected. Escape returns
+focus to the source trigger; an outside click keeps focus with its destination.
+
+Ordinary command shortcuts also reach focused webviews through the shared
+keybinding system. They remain local while an input, editable field, dialog or
+menu owns the keyboard. Authors should contribute `defineKeybinding` actions
+instead of installing a separate document listener in each iframe.
+
 ## Terminal sessions
 
 Use the host terminal surface for new views. The old `terminal.session` capability and

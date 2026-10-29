@@ -15,6 +15,7 @@ import type { PageLocation, PageParamValue } from "./pages";
 import type { ResourceRef } from "./resources";
 import type { ExtensionHarnessInput } from "./sessions";
 import type { WebviewEditingSessionParams, WebviewEditingSnapshot } from "./webview-editing";
+import type { WebviewOverlayParams, WebviewOverlayResult } from "./webview-overlays";
 
 export type { ExtensionBlobRef } from "./context";
 
@@ -26,6 +27,7 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "commands.execute",
   "commands.stream",
   "editing.session",
+  "overlays",
   "harnesses.read",
   "resources.actions",
   "navigation.open",
@@ -206,6 +208,8 @@ export interface WebviewKeyboardEventParams {
 /** A host-owned chord. Guests receive resolved keys, without parsing platform syntax. */
 export interface WebviewKeyboardShortcut {
   id: string;
+  /** False keeps this chord in the guest while a text field owns focus. Older profiles are global. */
+  allowInInputs?: boolean;
   /** Only these host navigation intents may be relayed by untrusted nested content. */
   entry?: "mode" | "tab" | "panel";
   key: string;
@@ -222,6 +226,7 @@ export interface WebviewKeyboardShortcutRequest {
 }
 
 export interface WebviewHostCapabilityParams {
+  overlays: WebviewOverlayParams;
   "performance.read": PerformanceReadRequest;
   "performance.control": PerformanceControlRequest;
   "harnesses.read": { harnessId?: string; model?: string };
@@ -261,6 +266,7 @@ export interface WebviewHostCapabilityParams {
 }
 
 export interface WebviewHostCapabilityResults {
+  overlays: WebviewOverlayResult;
   "performance.read": PerformanceReadResult;
   "performance.control": void;
   "harnesses.read": {

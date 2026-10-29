@@ -1,4 +1,5 @@
 import { Box, Center, Stack, Text } from "@chakra-ui/react";
+import { WebviewOverlaySurface } from "@pstdio/ui";
 import { resolvePageParams } from "pstdio-api-contracts";
 import { createWebviewDiagnostics, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
@@ -45,6 +46,7 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
         </Center>
       ) : null}
       <ExtensionFrame
+        renderOverlay={(presentation) => <WebviewOverlaySurface {...presentation} />}
         view={view}
         {...frameProps}
         {...keyboard}

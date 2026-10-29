@@ -11,3 +11,4 @@ export {
 export { createHostEventPublisher, type HostEventPublisher } from "./host-event-publisher";
 export { extensionIframeAllow } from "./iframe-permissions";
 export { collectChakraThemeVariables, postThemeToFrame } from "./theme";
+export type { WebviewOverlayPresentation } from "./webview-overlays";

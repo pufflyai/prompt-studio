@@ -1,4 +1,9 @@
-import { extensionResourceRefSchema, jsonObjectSchema, pageParamValueSchema } from "pstdio-api-contracts";
+import {
+  extensionResourceRefSchema,
+  jsonObjectSchema,
+  pageParamValueSchema,
+  webviewOverlayParamsSchema,
+} from "pstdio-api-contracts";
 import type { WebviewHostCapability, WebviewHostCapabilityParams } from "pstdio-api-contracts/extension-kernel";
 import { isNavigationTarget, type NavigationTarget } from "pstdio-api-contracts/extension-kernel";
 import { z } from "zod";
@@ -55,6 +60,7 @@ const terminalRequest = z.object({
 const projectId = { projectId: identifier.optional() };
 
 const schemas = {
+  overlays: webviewOverlayParamsSchema,
   "performance.read": z.strictObject({
     operation: z.enum(["state", "snapshot", "subscribe", "unsubscribe", "recordings", "retain", "dispose"]),
   }),

@@ -154,6 +154,7 @@ export type {
   WebviewEditingSession,
 } from "./webview-editing";
 export { EXTENSION_EVENTS_SCOPE, type WebviewEventsClient, type WebviewExtensionEvent } from "./webview-events";
+export { observeWebviewOverlayAnchor, type WebviewOverlaysClient } from "./webview-overlays";
 export { matchesResourceWhen } from "./when";
 export const projectPrefix = () => ({ $prefix: "project" as const });
 

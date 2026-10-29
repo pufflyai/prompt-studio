@@ -33,6 +33,7 @@ export * from "./settings";
 export * from "./skills";
 export { createStorageId, createStorageMigration } from "./storage-identities";
 export { createStoragePositions } from "./storage-positions";
+export { webviewOverlayParamsSchema } from "./webview-overlay-params";
 export * from "./workspace-collection";
 export * from "./workspace-diffs";
 export * from "./workspaces";

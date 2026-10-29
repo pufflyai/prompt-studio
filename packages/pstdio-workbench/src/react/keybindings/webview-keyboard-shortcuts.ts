@@ -6,13 +6,13 @@ import { createWorkbenchHotkeyRegistrations } from "./workbench-hotkey-registrat
 
 export const createWebviewKeyboardShortcuts = (workbench: WorkbenchCore, commandIds?: readonly string[]) => {
   const registrations = createWorkbenchHotkeyRegistrations({ workbench, commandIds }).filter(
-    (registration) =>
-      registration.enabled && !registration.ignoreInputs && getKeybindingSteps(registration.hotkey).length === 1,
+    (registration) => registration.enabled && getKeybindingSteps(registration.hotkey).length === 1,
   );
   const shortcuts: WebviewKeyboardShortcut[] = registrations.map((registration) => {
     const parsed = parseHotkey(getKeybindingSteps(registration.hotkey)[0]!);
     return {
       id: registration.requestId!,
+      allowInInputs: !registration.ignoreInputs,
       entry: registration.entry,
       key: parsed.key,
       ctrlKey: parsed.ctrl,
@@ -27,11 +27,7 @@ export const createWebviewKeyboardShortcuts = (workbench: WorkbenchCore, command
       if (request.repeat) return;
       // Resolve again at dispatch; stale iframe profiles never retain a removed binding.
       const registration = createWorkbenchHotkeyRegistrations({ workbench, commandIds }).find(
-        (candidate) =>
-          candidate.enabled &&
-          !candidate.ignoreInputs &&
-          candidate.requestId === request.id &&
-          (!request.nested || candidate.entry),
+        (candidate) => candidate.enabled && candidate.requestId === request.id && (!request.nested || candidate.entry),
       );
       await registration?.execute();
     },

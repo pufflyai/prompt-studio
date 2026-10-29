@@ -24,7 +24,15 @@ export const installKeyboardShortcuts = (
 ) => {
   const listener = (input: Event) => {
     const event = input as KeyboardEvent;
-    const shortcut = shortcuts().find((candidate) => matchesKeyboardShortcut(event, candidate));
+    const editable =
+      typeof Element !== "undefined" &&
+      event.target instanceof Element &&
+      event.target.closest(
+        'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"]',
+      );
+    const shortcut = shortcuts().find(
+      (candidate) => (!editable || candidate.allowInInputs !== false) && matchesKeyboardShortcut(event, candidate),
+    );
     if (!shortcut) return;
     event.preventDefault();
     event.stopImmediatePropagation();

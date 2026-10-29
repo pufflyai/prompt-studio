@@ -17,6 +17,7 @@ import { type ArtifactMountKey, artifactMountId } from "./webview-capabilities";
 import { createWebviewEditingClient, type WebviewEditingClient } from "./webview-editing";
 import { createWebviewEventsClient, type WebviewEventsClient } from "./webview-events";
 import { createWebviewFilesClient, type WebviewFilesClient } from "./webview-files-client";
+import { createWebviewOverlaysClient, type WebviewOverlaysClient } from "./webview-overlays";
 import { createWebviewPageClient, type WebviewPageClient } from "./webview-page-client";
 import { createWebviewPerformanceClient, type WebviewPerformanceClient } from "./webview-performance-client";
 import { type CommandStreamOptions, openWebviewCommandStream, type WebviewStreamsClient } from "./webview-streams";
@@ -61,6 +62,7 @@ export type WebviewArtifactsClient = {
 };
 
 export type WebviewClient<TCommands, TSettings = undefined> = {
+  overlays: WebviewOverlaysClient;
   editing: WebviewEditingClient;
   files: WebviewFilesClient;
   page: WebviewPageClient;
@@ -188,6 +190,7 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
   };
   return {
     ...hostClient,
+    overlays: createWebviewOverlaysClient(host),
     editing: createWebviewEditingClient(host),
     files: createWebviewFilesClient(host),
     page: createWebviewPageClient(host),

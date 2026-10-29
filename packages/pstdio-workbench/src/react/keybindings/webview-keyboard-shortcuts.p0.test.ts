@@ -3,6 +3,29 @@ import { createWorkbench } from "../../core";
 import { createWebviewKeyboardShortcuts } from "./webview-keyboard-shortcuts";
 import { createWorkbenchHotkeyRegistrations } from "./workbench-hotkey-registrations";
 
+test("editor shortcuts reach managed views without taking text input", async () => {
+  const workbench = createWorkbench();
+  let calls = 0;
+  workbench.commands.registerCommand(
+    { id: "editor.hand", label: "Hand tool" },
+    {
+      execute: () => {
+        calls++;
+      },
+    },
+  );
+  workbench.keybindings.registerKeybinding({
+    id: "editor-hand",
+    action: { kind: "command", commandId: "editor.hand" },
+    keybinding: "H",
+  });
+  const bridge = createWebviewKeyboardShortcuts(workbench);
+  const shortcut = bridge.shortcuts.find((entry) => entry.key === "H");
+  expect(shortcut).toMatchObject({ key: "H", allowInInputs: false });
+  await bridge.dispatch({ id: shortcut!.id, repeat: false });
+  expect(calls).toBe(1);
+});
+
 test("the fullscreen shortcut toggles from editable nested content and completes shortcut mode", async () => {
   const workbench = createWorkbench();
   workbench.context.set("inputFocus", true);
@@ -110,7 +133,7 @@ test("scoped direct bindings resolve availability against every visible target",
   expect(changed).toBe("B");
 });
 
-test("only explicitly global bindings are negotiated for editable webviews", async () => {
+test("negotiated profiles distinguish global shortcuts from editor shortcuts", async () => {
   const workbench = createWorkbench();
   let calls = 0;
   workbench.commands.registerCommand(
@@ -122,17 +145,22 @@ test("only explicitly global bindings are negotiated for editable webviews", asy
     },
   );
   workbench.keybindings.registerKeybinding({
+    id: "global-keyboard",
     action: { kind: "command", commandId: "keyboard.open" },
     keybinding: "Alt+Shift+K",
     allowInInputs: true,
   });
   workbench.keybindings.registerKeybinding({
+    id: "editor-keyboard",
     action: { kind: "command", commandId: "keyboard.open" },
     keybinding: "Mod+K",
   });
   const bridge = createWebviewKeyboardShortcuts(workbench);
-  const shortcut = bridge.shortcuts.find((shortcut) => shortcut.key === "K")!;
-  expect(shortcut).toMatchObject({ key: "K", altKey: true, shiftKey: true });
+  const shortcut = bridge.shortcuts.find((shortcut) => shortcut.key === "K" && shortcut.allowInInputs)!;
+  expect(shortcut).toMatchObject({ key: "K", altKey: true, shiftKey: true, allowInInputs: true });
+  expect(bridge.shortcuts.find((shortcut) => shortcut.key === "K" && !shortcut.altKey)).toMatchObject({
+    allowInInputs: false,
+  });
   await bridge.dispatch({ id: shortcut.id, repeat: false });
   expect(calls).toBe(1);
 });

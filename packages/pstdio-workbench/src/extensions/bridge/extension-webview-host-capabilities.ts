@@ -89,6 +89,8 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
   const readHarnesses = adapters.harnesses?.read.bind(adapters.harnesses);
   const account = createAccountCapability(adapters.account);
   return {
+    // The mounted ExtensionFrame supplies this frame-scoped service.
+    overlays: capability("overlays", undefined),
     "harnesses.read": capability("harnesses.read", readHarnesses),
     "resources.actions": capability("resources.actions", adapters.resourceActions),
     "commands.execute": capability("commands.execute", commandExecution(adapters)),

@@ -3,7 +3,7 @@ import type {
   WebviewKeyboardShortcut,
   WebviewKeyboardShortcutRequest,
 } from "pstdio-api-contracts/extension-kernel";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 import { host } from "rimless";
 import type {
   ExtensionViewDescriptor,
@@ -19,11 +19,15 @@ import { createHostCapabilityGate } from "../contract";
 import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
 import { capabilityReply } from "./capability-reply";
+import { dispatchFramePointerEvent } from "./frame-pointer-events";
 import type { HostEventPublisher } from "./host-event-publisher";
 import { extensionIframeAllow } from "./iframe-permissions";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
+import { useWebviewOverlays } from "./use-webview-overlays";
+import type { WebviewOverlayPresentation } from "./webview-overlays";
 
 export interface ExtensionFrameProps {
+  renderOverlay?: (presentation: WebviewOverlayPresentation) => ReactNode;
   keyboardShortcuts?: readonly WebviewKeyboardShortcut[];
   onShortcut?: (request: WebviewKeyboardShortcutRequest) => void | Promise<void>;
   sizing?: "content-width" | "content-height";
@@ -83,6 +87,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     onDiagnostics,
     title,
     sizing,
+    renderOverlay,
   } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const remoteRef = useRef<GuestRemote | null>(null);
@@ -106,10 +111,15 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const [frameEpoch, setFrameEpoch] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
+  const overlay = useWebviewOverlays(
+    iframeRef,
+    `${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`,
+    renderOverlay,
+  );
 
   propsRef.current = createWebviewHostProps(extensionProps);
   themeRef.current = theme;
-  capabilitiesRef.current = capabilities;
+  capabilitiesRef.current = { ...capabilities, ...overlay.capabilities };
   onKeyboardEventRef.current = onKeyboardEvent;
   keyboardRef.current = { shortcuts: keyboardShortcuts, onShortcut };
   hostEventsRef.current = hostEvents;
@@ -172,21 +182,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
       },
       dispatchPointerEvent: (event: WebviewPointerEvent) => {
         if (iframeRef.current !== iframe || !iframe.isConnected) return;
-        if (event.type !== "pointerdown" && event.type !== "click") return;
-        const bounds = iframe.getBoundingClientRect();
-        if (!bounds.width || !bounds.height) return;
-        // Outside-interaction layers need the host iframe as their target, including
-        // when the iframe belongs to the menu itself. Guest DOM stays sandboxed.
-        iframe.dispatchEvent(
-          new PointerEvent(event.type, {
-            ...event,
-            bubbles: true,
-            composed: true,
-            cancelable: true,
-            clientX: bounds.left + event.clientX * (bounds.width / iframe.clientWidth),
-            clientY: bounds.top + event.clientY * (bounds.height / iframe.clientHeight),
-          }),
-        );
+        dispatchFramePointerEvent(iframe, event);
       },
       contentHeightChanged: (height: number) => {
         if (sizing === "content-height" && Number.isFinite(height) && height >= 0) setContentHeight(height);
@@ -205,7 +201,11 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         onErrorRef.current?.(payload);
       },
       call: async (request: HostCapabilityRequest) => {
-        return await capabilityReply(() => createCapabilityGate().call(request));
+        return await capabilityReply(() => {
+          if (iframeRef.current !== iframe || !iframe.isConnected)
+            throw new Error("Extension view is no longer mounted.");
+          return createCapabilityGate().call(request);
+        });
       },
     } satisfies GuestApi;
 
@@ -327,6 +327,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         height: sizing === "content-height" ? contentHeight : "100%",
       }}
     >
+      {overlay.content}
       <iframe
         // A new runtime or module needs its own browsing context and bridge handshake.
         key={`${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`}
