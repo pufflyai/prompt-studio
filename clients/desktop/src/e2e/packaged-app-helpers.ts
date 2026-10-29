@@ -232,11 +232,11 @@ export const waitForExit = async (child: ChildProcess) => {
   expect(child.signalCode).toBeNull();
 };
 
-export const runPackagedCli = (home: string, args: string[]) =>
+export const runPackagedCli = (home: string, args: string[], runtimeEnvironment: Record<string, string> = {}) =>
   new Promise<{ exitCode: number | null; stderr: string; stdout: string }>((resolveExit) => {
     const child = spawnPackagedProcess(packageLayout.sidecar, args, {
       cwd: home,
-      env: packagedEnvironment(home),
+      env: { ...packagedEnvironment(home), ...runtimeEnvironment },
       stdio: "pipe",
     });
     let stdout = "";
