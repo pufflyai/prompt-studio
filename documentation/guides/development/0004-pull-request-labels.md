@@ -27,7 +27,9 @@ The PR author owns `waiting-for-release`. Add it to an extension PR that uses SD
 
 `sdk-extension-separation` fails when synchronized labels contain both `sdk` and `extensions`. Split those changes into independently valid PRs. Merge compatible SDK preparation first, then extension adoption, then remove obsolete SDK behavior when consumers no longer need it. `extension-runtime` does not trigger this rule by itself.
 
-The workflow publishes pending before classification, then success, failure, or error on the evaluated PR head commit. It evaluates immediately after label synchronization; bot label events are not needed. Manually deleting an area label triggers reclassification and cannot clear the rule. A changed head or base during classification produces an error on the old evaluated head, never success on a newer commit. Runs are serialized by PR with cancellation disabled.
+For open PRs, the workflow publishes pending before classification, then success, failure, or error on the evaluated PR head commit. It evaluates immediately after label synchronization; bot label events are not needed. Manually deleting an area label triggers reclassification and cannot clear the rule. A changed head or base during classification produces an error on the old evaluated head, never success on a newer commit. Runs are serialized by PR with cancellation disabled.
+
+Merged PRs do not need classification. Later edits publish an explicit not-required success without changing labels. Closed, unmerged PRs keep their existing verdict. Reopening a PR starts fresh classification.
 
 The pinned labeler has GitHub API limits: the files endpoint returns at most 3,000 files and a PR holds at most 100 labels. The policy reports an error for a diff over 3,000 files, fewer than eight free label slots before classification, or a full label list afterward. It never treats a partial classification as success. Remove unnecessary labels or split the diff, then rerun.
 
