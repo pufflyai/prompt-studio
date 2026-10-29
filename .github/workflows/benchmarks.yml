@@ -141,7 +141,7 @@ jobs:
           while IFS=$'\t' read -r sha ref; do
             dir="$temp/checkouts/$sha"
             git worktree add --detach "$dir" "$sha"
-            (cd "$dir" && node scripts/ci/install-native-dependencies.ts)
+            (cd "$dir" && bun scripts/ci/install-native-dependencies.ts)
             args+=("--checkout" "$dir=$sha=$ref")
           done < <(jq -r '.[] | [.sha, .ref] | @tsv' <<< "$CHECKOUTS")
           bun packages/benchmarks/src/cli.ts run "${args[@]}" \

@@ -105,7 +105,7 @@ export const createTestMatrices = (
   const appMatrix = functional.flatMap((priority) =>
     fileRows(
       app.filter((file) => priorityFromFile(file) === priority),
-      priority === "P1" ? 2 : 6,
+      priority === "P1" ? 2 : 12,
       priority,
     ),
   );

@@ -126,7 +126,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
 - It versions the packages on a tag, never on `main`.
 - It builds and publishes the npm packages, containers, and signed desktop apps for Linux x64 and Apple Silicon. Nightly publishing does not wait for the deep validation.
 - **Production validation** runs on the same files:
-  - P0, P1 and P2 on Linux, macOS and Windows, with up to six P2 app shards
+  - P0, P1 and P2 on Linux, macOS and Windows, with up to twelve P2 app shards
   - P1 and P2 against the signed desktop apps
   - P3 performance measurements
   - container service checks

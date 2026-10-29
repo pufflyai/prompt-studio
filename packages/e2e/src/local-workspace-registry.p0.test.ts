@@ -58,6 +58,63 @@ test("closes owned connections while an upstream metadata request remains pendin
   await aborted.promise;
 });
 
+test("a cancelled metadata request does not block a later package resolution", async () => {
+  const { root, name, writePackage } = await fixture();
+  const entered = Promise.withResolvers<void>();
+  const aborted = Promise.withResolvers<void>();
+  const settled = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let requests = 0;
+  const upstream = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: async (request) => {
+      if (++requests === 1) {
+        request.signal.addEventListener(
+          "abort",
+          () => {
+            aborted.resolve();
+            release.resolve();
+          },
+          { once: true },
+        );
+        entered.resolve();
+        try {
+          await release.promise;
+          return new Response("Unavailable", { status: 503 });
+        } finally {
+          settled.resolve();
+        }
+      }
+      return Response.json({ versions: { "0.25.0": { name, version: "0.25.0" } } });
+    },
+  });
+  cleanups.push(async () => {
+    release.resolve();
+    await upstream.stop(true);
+  });
+  const registry = await startLocalWorkspaceRegistry({
+    configPath: join(root, ".npmrc"),
+    outputRoot: join(root, "packed"),
+    packagePaths: [await writePackage("0.26.0")],
+    upstreamOrigin: upstream.url.origin,
+  });
+  cleanups.push(registry.close);
+  const controller = new AbortController();
+  const abandoned = fetch(`${registry.origin}/${name}`, { signal: controller.signal }).catch((error: unknown) => error);
+  await entered.promise;
+  controller.abort();
+  expect(await abandoned).toBeInstanceOf(Error);
+  await aborted.promise;
+  await settled.promise;
+
+  const resolved = await fetch(`${registry.origin}/${name}`).catch((error: unknown) => error);
+  expect(resolved).toBeInstanceOf(Response);
+  const metadata = await (resolved as Response).json();
+  expect(metadata.versions["0.25.0"].version).toBe("0.25.0");
+  expect(metadata.versions["0.26.0"].version).toBe("0.26.0");
+});
+
 test("closes a published tarball while its response body remains pending", async () => {
   const { root } = await fixture();
   const bodyReadStarted = Promise.withResolvers<void>();
@@ -82,7 +139,7 @@ test("closes a published tarball while its response body remains pending", async
   });
   const path = "/@pstdio/remote/-/remote-1.tgz";
   const realFetch = globalThis.fetch;
-  const observingFetch = spyOn(globalThis, "fetch").mockImplementation(async (...args) => {
+  const observeBody = async (...args: Parameters<typeof fetch>) => {
     const response = await realFetch(...args);
     if (String(args[0]) === new URL(path, upstream.url).href) {
       const readBody = response.arrayBuffer.bind(response);
@@ -93,7 +150,10 @@ test("closes a published tarball while its response body remains pending", async
       };
     }
     return response;
-  });
+  };
+  const observingFetch = spyOn(globalThis, "fetch").mockImplementation(
+    Object.assign(observeBody, { preconnect: realFetch.preconnect }),
+  );
   const response = fetch(`${registry.origin}${path}`).catch((error: unknown) => error);
   let closing: Promise<void> | undefined;
   cleanups.push(async () => {
@@ -105,6 +165,33 @@ test("closes a published tarball while its response body remains pending", async
   closing = registry.close();
   await closing;
   expect(await response).toBeInstanceOf(Error);
+});
+
+test("published versions become available after a temporary upstream failure", async () => {
+  const { root, name, writePackage } = await fixture();
+  let requests = 0;
+  const upstream = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () =>
+      ++requests === 1
+        ? new Response("Unavailable", { status: 503 })
+        : Response.json({ versions: { "0.25.0": { name, version: "0.25.0" } } }),
+  });
+  cleanups.push(async () => upstream.stop(true));
+  const registry = await startLocalWorkspaceRegistry({
+    configPath: join(root, ".npmrc"),
+    outputRoot: join(root, "packed"),
+    packagePaths: [await writePackage("0.26.0")],
+    upstreamOrigin: upstream.url.origin,
+  });
+  cleanups.push(registry.close);
+  const unavailable = await fetch(`${registry.origin}/${name}`).then((response) => response.json());
+  expect(unavailable.versions["0.26.0"].version).toBe("0.26.0");
+  expect(unavailable.versions["0.25.0"]).toBeUndefined();
+  const recovered = await fetch(`${registry.origin}/${name}`).then((response) => response.json());
+  expect(recovered.versions["0.25.0"].version).toBe("0.25.0");
+  expect(recovered.versions["0.26.0"].version).toBe("0.26.0");
 });
 
 describe("local workspace package registry", () => {

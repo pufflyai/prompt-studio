@@ -39,6 +39,22 @@ test(
       const titleBar = app.page.locator("[data-window-title-bar]");
       const maximize = titleBar.getByRole("button", { name: "Enter Main fullscreen", exact: true });
       await expect(maximize).toBeVisible();
+      if (process.platform !== "darwin") {
+        const nativeArea = await app.lifecyclePage.evaluate(() => {
+          const overlay = (navigator as Navigator & { windowControlsOverlay: { getTitlebarAreaRect: () => DOMRect } })
+            .windowControlsOverlay;
+          return overlay.getTitlebarAreaRect().toJSON() as { x: number; width: number };
+        });
+        await expect
+          .poll(async () => {
+            const buttons = await titleBar.getByRole("button").all();
+            const bounds = await Promise.all(buttons.map((button) => button.boundingBox()));
+            return bounds.every(
+              (box) => box && box.x >= nativeArea.x && box.x + box.width <= nativeArea.x + nativeArea.width,
+            );
+          })
+          .toBe(true);
+      }
       await maximize.click();
       await expect(titleBar).toBeHidden();
       await app.page.getByRole("button", { name: "Exit Main fullscreen", exact: true }).click();

@@ -65,3 +65,31 @@ test("production cannot pass without native UI quarantine execution", () => {
     ).outcome,
   ).toBe("failure");
 });
+
+test("production accepts every supported harness version and requires the Windows Pi lanes", () => {
+  const scope = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
+  const plan = plannedCiJobs(scope);
+  const harnesses = ["harness-codex", "harness-claude-code", "harness-open-code", "harness-pi", "harness-pi, Windows"];
+  const observed = plan
+    .filter((job) => job.id !== "harness_cli_support")
+    .flatMap((job) => job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })));
+  for (const harness of harnesses) {
+    const [name, os] = harness.split(", ");
+    for (const version of ["minimum", "latest"]) {
+      observed.push({
+        name: `harness_cli_support / ${name} (${version}${os ? `, ${os}` : ""})`,
+        status: "completed",
+        conclusion: "success",
+      });
+    }
+  }
+  expect(evaluateCiGate(plan, observed, false, true)).toMatchObject({ outcome: "success", failures: [] });
+  expect(
+    evaluateCiGate(
+      plan,
+      observed.filter((job) => !job.name.includes("minimum, Windows")),
+      false,
+      true,
+    ).outcome,
+  ).toBe("failure");
+});

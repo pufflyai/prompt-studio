@@ -176,6 +176,8 @@ When an assertion waits for child-process or socket output, await the operation 
 
 Bun tests preload `scripts/test-setup.ts`. It removes inherited `PSTDIO_*` runtime settings, creates a temporary home, and restores the environment around each test. Tests that need runtime settings must supply them inside their setup or to the process they start. Do not run tests that mutate `process.env` concurrently in one process.
 
+The local workspace registry caches only completed, successful published metadata. Each client owns its pending upstream request, which is cancelled when that client disconnects. A failed or abandoned request must not leave another installer waiting on the same lookup. Packaged core-default fixtures retain setup logs under `packages/e2e/test-results/packaged-core-extensions`, outside the disposable runtime home, so timeout artifacts show the last active install phase.
+
 Windows CI passes `--timeout=15000` to its Bun test commands, including package scripts run through Lerna. Tests and lifecycle hooks get a 15 s default. Explicit test limits and custom runners retain their own limits. Other CI platforms retain their existing defaults. This temporary allowance accounts for hosted Windows runner variance; ADR 0044 records the evidence and removal criteria.
 
 The UI and Vite launchers also remove inherited runtime settings. Each run allocates loopback ports and uses an isolated home and in-memory database. Test controls use the `E2E_` prefix:
@@ -323,6 +325,8 @@ To review a timeout:
 When tests are added, review the job allowance or sharding. Do not lengthen the per-test limit because a suite has more tests.
 
 Hosted Intel macOS runners run the packaged and desktop suites two to three times slower than other platforms, and one Intel run can take twice as long as another. Every Intel suite therefore allows 60 seconds per test: the desktop Playwright suites (approved on 2026-10-10, together with Windows) and the packaged CLI suite, whose limit `packages/e2e/src/packaged/packaged-test-timeout.ts` sets and `run-packaged-cli-tests.ts` passes to `bun test --timeout` (approved on 2026-10-12, after tests that pass in 11 to 23 seconds on Intel timed out at 30 seconds on a slow runner). Other platforms keep 30 seconds. Tests that set their own longer limit keep it.
+
+On 2026-10-28 the user approved a 60-second Windows allowance for two packaged cases: Planner board panning and three-host extension synchronization. In [release run 40688319361](https://github.com/pufflyai/prompt-studio/actions/runs/40688319361), the ARM64 board case reached edge-scrolling verification at 29.48 seconds and timed out at 30 seconds; the x64 three-host case also reached its 30-second limit. These named allowances cover setup, behavior checks and cleanup. Other platforms, other cases and performance budgets retain their existing limits. P2 browser workloads use twelve shards and retain the 18-minute job allowance.
 
 ## Desktop benchmarks
 

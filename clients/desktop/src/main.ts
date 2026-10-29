@@ -226,6 +226,7 @@ const bootstrap = async () => {
     void quitFlow.requestQuit();
   });
   registerDesktopIpc({
+    titleBarGeometrySource: window.webContents,
     isFullScreen: () => window.isFullScreen(),
     setTitleBarAppearance: async (appearance) => {
       await windowController?.setTitleBarAppearance(appearance);

@@ -13463,7 +13463,7 @@
       "source": "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx",
       "suite": "ui",
       "title": "Components/Param Editor/Harness run options",
-      "sourceHash": "d761a891eb5e6e0a911ed105b0904716605f8ee7284278211c5754b818a73562",
+      "sourceHash": "aa2fc0fba82d17932f0e55320df005cc5534672ad24ec871527fe70aa9c26a35",
       "component": "HarnessParamEditorStory"
     },
     {
@@ -13473,7 +13473,7 @@
       "source": "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx",
       "suite": "ui",
       "title": "Components/Param Editor/Harness run options",
-      "sourceHash": "d761a891eb5e6e0a911ed105b0904716605f8ee7284278211c5754b818a73562",
+      "sourceHash": "aa2fc0fba82d17932f0e55320df005cc5534672ad24ec871527fe70aa9c26a35",
       "component": "HarnessParamEditorStory"
     },
     {
@@ -13483,7 +13483,7 @@
       "source": "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx",
       "suite": "ui",
       "title": "Components/Param Editor/Harness run options",
-      "sourceHash": "d761a891eb5e6e0a911ed105b0904716605f8ee7284278211c5754b818a73562",
+      "sourceHash": "aa2fc0fba82d17932f0e55320df005cc5534672ad24ec871527fe70aa9c26a35",
       "component": "HarnessParamEditorStory"
     },
     {
@@ -13493,7 +13493,7 @@
       "source": "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx",
       "suite": "ui",
       "title": "Components/Param Editor/Harness run options",
-      "sourceHash": "d761a891eb5e6e0a911ed105b0904716605f8ee7284278211c5754b818a73562",
+      "sourceHash": "aa2fc0fba82d17932f0e55320df005cc5534672ad24ec871527fe70aa9c26a35",
       "component": "HarnessParamEditorStory"
     },
     {
@@ -13503,7 +13503,7 @@
       "source": "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx",
       "suite": "ui",
       "title": "Components/Param Editor/Harness run options",
-      "sourceHash": "d761a891eb5e6e0a911ed105b0904716605f8ee7284278211c5754b818a73562",
+      "sourceHash": "aa2fc0fba82d17932f0e55320df005cc5534672ad24ec871527fe70aa9c26a35",
       "component": "HarnessParamEditorStory"
     },
     {
@@ -13513,7 +13513,7 @@
       "source": "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx",
       "suite": "ui",
       "title": "Components/Param Editor/Harness run options",
-      "sourceHash": "d761a891eb5e6e0a911ed105b0904716605f8ee7284278211c5754b818a73562",
+      "sourceHash": "aa2fc0fba82d17932f0e55320df005cc5534672ad24ec871527fe70aa9c26a35",
       "component": "HarnessParamEditorStory"
     },
     {
@@ -16411,7 +16411,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "7dab581fcd2d7289d2698e08287f93fda14a0667856fb0d8a4fe2fea052bb4ac",
+      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16422,7 +16422,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "7dab581fcd2d7289d2698e08287f93fda14a0667856fb0d8a4fe2fea052bb4ac",
+      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16433,7 +16433,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "7dab581fcd2d7289d2698e08287f93fda14a0667856fb0d8a4fe2fea052bb4ac",
+      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16444,7 +16444,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "7dab581fcd2d7289d2698e08287f93fda14a0667856fb0d8a4fe2fea052bb4ac",
+      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16455,7 +16455,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "7dab581fcd2d7289d2698e08287f93fda14a0667856fb0d8a4fe2fea052bb4ac",
+      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16466,7 +16466,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "7dab581fcd2d7289d2698e08287f93fda14a0667856fb0d8a4fe2fea052bb4ac",
+      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16477,7 +16477,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "7dab581fcd2d7289d2698e08287f93fda14a0667856fb0d8a4fe2fea052bb4ac",
+      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16488,7 +16488,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "7dab581fcd2d7289d2698e08287f93fda14a0667856fb0d8a4fe2fea052bb4ac",
+      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16499,7 +16499,18 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "7dab581fcd2d7289d2698e08287f93fda14a0667856fb0d8a4fe2fea052bb4ac",
+      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
+      "component": "WindowTitleBar",
+      "componentImport": "./window-title-bar"
+    },
+    {
+      "id": "ui-components-navigation-window-title-bar--embedded-native-geometry",
+      "name": "Embedded Native Geometry",
+      "exportName": "EmbeddedNativeGeometry",
+      "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
+      "suite": "ui",
+      "title": "Components/Navigation/Window Title Bar",
+      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },

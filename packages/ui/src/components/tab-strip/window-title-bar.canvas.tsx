@@ -158,3 +158,12 @@ export const WindowsDark: Story = {
   ...Windows,
   globals: { theme: "pstdio-dark" },
 };
+export const EmbeddedNativeGeometry: Story = {
+  id: "components-navigation-window-title-bar--embedded-native-geometry",
+  tags: ["!manifest"],
+  render: () => (
+    <Box css={{ "--pstdio-title-bar-area-x": "10%", "--pstdio-title-bar-area-width": "80%" }}>
+      <Example platform="linux" />
+    </Box>
+  ),
+};
