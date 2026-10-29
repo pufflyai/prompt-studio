@@ -13,6 +13,12 @@ export const publishedDesktopTargets = (channel: string) =>
     .filter((row) => channel !== "nightly" || row.platform !== "win32")
     .map((row) => row.target);
 
+export const productionDesktopCheckPlatforms = (channel: string) =>
+  productionDesktopPlatforms(channel).flatMap((row) => {
+    const shards = row.target === "darwin-x64" ? 2 : 1;
+    return Array.from({ length: shards }, (_, index) => ({ ...row, shard: index + 1, shards }));
+  });
+
 export const productionToolchainPlatforms = (channel: string) =>
   [
     { os: "ubuntu-24.04", platform_pkg: "cli-linux-x64" },
