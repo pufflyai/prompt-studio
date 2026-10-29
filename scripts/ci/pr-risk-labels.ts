@@ -1,6 +1,5 @@
 export interface PullRequest {
   state: string;
-  merged: boolean;
   user: { login: string };
   head: { sha: string; ref: string; repo: { full_name: string } | null };
   base: { sha: string; ref: string; repo: { full_name: string } };
@@ -98,15 +97,7 @@ const isReleaseMetadata = async (api: PolicyApi, pull: PullRequest) => {
 
 export async function prepare(api: PolicyApi) {
   const pull = await api.readPull();
-  if (pull.state !== "open") {
-    if (pull.merged) {
-      await api.publish(pull.head.sha, {
-        state: "success",
-        description: "Merged PR; area classification is not required",
-      });
-    }
-    return;
-  }
+  if (pull.state !== "open") return;
   const snapshot = snapshotOf(pull);
   await api.publish(snapshot.head, { state: "pending", description: "Synchronizing PR area labels" });
   try {

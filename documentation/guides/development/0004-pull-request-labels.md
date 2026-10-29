@@ -29,7 +29,7 @@ The PR author owns `waiting-for-release`. Add it to an extension PR that uses SD
 
 For open PRs, the workflow publishes pending before classification, then success, failure, or error on the evaluated PR head commit. It evaluates immediately after label synchronization; bot label events are not needed. Manually deleting an area label triggers reclassification and cannot clear the rule. A changed head or base during classification produces an error on the old evaluated head, never success on a newer commit. Runs are serialized by PR with cancellation disabled.
 
-Merged PRs do not need classification. Later edits publish an explicit not-required success without changing labels. Closed, unmerged PRs keep their existing verdict. Reopening a PR starts fresh classification.
+Runs that find the PR closed before classification do not change labels or publish commit statuses. A status belongs to a commit SHA and may also gate an open PR. Reopening a PR starts fresh classification. A run that starts while open and observes closure during classification still reports a changed-snapshot error on its captured head.
 
 The pinned labeler has GitHub API limits: the files endpoint returns at most 3,000 files and a PR holds at most 100 labels. The policy reports an error for a diff over 3,000 files, fewer than eight free label slots before classification, or a full label list afterward. It never treats a partial classification as success. Remove unnecessary labels or split the diff, then rerun.
 

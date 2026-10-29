@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { finish, type PullRequest, prepare, type Status } from "./pr-risk-labels";
 
 function fixture(labels: string[] = []) {
-  let pull: PullRequest = {
+  let pull: PullRequest & { merged: boolean } = {
     state: "open",
     merged: false,
     user: { login: "contributor" },
@@ -50,7 +50,7 @@ function fixture(labels: string[] = []) {
       pull.user.login = "github-actions[bot]";
       pull.head.ref = "changeset-release/main";
     },
-    setPull: (next: Partial<PullRequest>) => {
+    setPull: (next: Partial<typeof pull>) => {
       pull = { ...pull, ...next };
     },
   };
@@ -63,11 +63,23 @@ async function prepareOpen(api: Parameters<typeof prepare>[0]) {
 }
 
 describe("SDK and extension separation", () => {
-  test("merged pull requests do not start area classification or retain an error", async () => {
+  test("closed merged pull requests preserve the existing commit verdict", async () => {
     const { api, statuses, setPull } = fixture(["sdk", "extensions"]);
+    await api.publish("head", { state: "error", description: "Previous classification error" });
     setPull({ state: "closed", merged: true });
     expect(await prepare(api)).toBeUndefined();
-    expect(statuses.map(({ sha, state }) => [sha, state])).toEqual([["head", "success"]]);
+    expect(statuses.map(({ sha, state }) => [sha, state])).toEqual([["head", "error"]]);
+  });
+
+  test("a closed pull request cannot overwrite an open pull request verdict on the same commit", async () => {
+    const open = fixture(["sdk", "extensions"]);
+    const closed = fixture();
+    closed.setPull({ state: "closed", merged: true });
+    closed.api.publish = open.api.publish;
+    await finish(open.api, await prepareOpen(open.api), "success", "sdk,extensions");
+    expect(open.statuses.at(-1)?.state).toBe("failure");
+    expect(await prepare(closed.api)).toBeUndefined();
+    expect(open.statuses.map(({ state }) => state)).toEqual(["pending", "failure"]);
   });
 
   test("closed unmerged pull requests keep their existing area verdict", async () => {
