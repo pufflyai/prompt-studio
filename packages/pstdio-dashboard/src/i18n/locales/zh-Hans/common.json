@@ -25,6 +25,7 @@
     "finish": "完成",
     "back": "返回",
     "saveError": "无法保存设置",
+    "title": "初始设置",
     "customizations": "自定义",
     "dontShow": "不显示初始设置"
   }
