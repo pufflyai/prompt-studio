@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 // Lists every registered theme, light themes first, like the Change Theme picker.
-export const AppearanceSettingsPanel = (props: { workbench: WorkbenchCore }) => {
+export const AppearanceSettingsSection = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const [openRelated, setOpenRelated] = useState(
     () => workbench.preferences.getValue(openRelatedResourcesPreference) !== false,
@@ -35,13 +35,10 @@ export const AppearanceSettingsPanel = (props: { workbench: WorkbenchCore }) => 
   };
 
   return (
-    <Stack gap="md" padding="lg" maxW="720px">
-      <Stack gap="2xs">
-        <Text textStyle="heading/S">{t("appearance.title")}</Text>
-        <Text textStyle="paragraph/S/regular" color="fg.muted">
-          {t("appearance.description")}
-        </Text>
-      </Stack>
+    <Stack as="section" gap="md">
+      <Text as="h2" textStyle="label/M/medium">
+        {t("appearance.title")}
+      </Text>
       <Stack gap="0" borderWidth="1px" borderColor="border.subtle" borderRadius="md" py="xs">
         <ParamEditorRow
           param={themeParam}

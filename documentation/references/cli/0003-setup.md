@@ -13,13 +13,15 @@ The runtime is one background process that serves the API and the dashboard on t
 | `pst close` | Stop the runtime. It refuses while work is still running. |
 | `pst logs` | Print the end of the runtime log file, or its path. |
 
-## First-launch setup (0.46)
+## Project setup (0.46)
 
-Creating your first project opens a setup dialog for choosing harnesses and default
+Creating a project opens a setup dialog for choosing harnesses and default
 extensions after you choose its folder. Finishing or skipping setup opens the
-project workspace. Opening an existing project does not start setup.
+project workspace. Completing or skipping setup does not hide it for the next
+project. Opening a project from the project list does not start setup.
 You can choose several harnesses, continue without one, or choose **Skip setup**.
 **Settings → Customizations → Don’t show onboarding** hides the flow on this host.
+Appearance controls are in a separate section of Customizations.
 Extension installation continues in the background after setup closes.
 
 The unreleased 0.46 CLI exposes the same choices:
@@ -35,7 +37,7 @@ pst onboarding show
 
 `harnesses` with no `--harness` saves an empty selection. `complete` with no `--work`
 keeps only Base Themes and Prompt Studio Skills. `show` clears the visibility
-preference; it does not reset completed setup. Skipping does not install choices
+preference so setup opens again when you create a project. Skipping does not install choices
 that have not been submitted. Jobs already accepted by the runtime continue.
 
 ## Automatic start

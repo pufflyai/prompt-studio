@@ -85,7 +85,6 @@
   },
   "appearance": {
     "title": "모양",
-    "description": "Prompt Studio의 모양을 선택합니다. Alt+Shift+T로도 테마를 바꿀 수 있습니다.",
     "theme": "테마",
     "themeHelper": "모든 프로젝트에 적용됩니다.",
     "openRelatedResources": "관련 리소스 열기",

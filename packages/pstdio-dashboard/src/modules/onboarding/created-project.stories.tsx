@@ -9,7 +9,8 @@ import { expect, userEvent, within } from "storybook/test";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createOnboardingModule } from "./module";
 
-const CreatedProject = () => {
+const CreatedProject = (props: { previouslyCompleted: boolean }) => {
+  const { previouslyCompleted } = props;
   const [workbench] = useState(() => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
@@ -30,7 +31,7 @@ const CreatedProject = () => {
     selectDashboardProject(workbench, { id: "project-1", name: "Notes" });
     workbench.pageLocations.setProject("project-1");
     workbench.pageLocations.navigate({ kind: "page", page: workbenchPages.start });
-    let state: OnboardingState = { completed: false, hidden: false, harnesses: null, workAreas: null };
+    let state: OnboardingState = { completed: previouslyCompleted, hidden: false, harnesses: null, workAreas: null };
     const onboarding = createOnboardingModule({
       read: async () => ({ state, detectedHarnesses: [], platform: "linux" }),
       update: async (request) => {
@@ -53,11 +54,13 @@ const CreatedProject = () => {
 const meta = {
   title: "Onboarding/Created project",
   component: CreatedProject,
+  args: { previouslyCompleted: false },
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof CreatedProject>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Setup: Story = {};
+export const PreviouslyCompleted: Story = { args: { previouslyCompleted: true } };
 export const Finish: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);

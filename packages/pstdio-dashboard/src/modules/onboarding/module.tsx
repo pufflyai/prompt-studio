@@ -3,7 +3,6 @@ import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdi
 import type { OnboardingInfo } from "pstdio-api-contracts";
 import { getApiClient } from "@/lib/api";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { Customizations } from "./customizations";
 import { Onboarding } from "./onboarding";
 
 const modeId = "dashboard.onboarding";
@@ -21,7 +20,7 @@ export const createOnboardingModule = (
     const isCurrent = () => getDashboardSelectedProjectId(context) === projectId;
     const loaded = await client.read();
     if (!isCurrent()) return;
-    if (loaded.state.completed || loaded.state.hidden) return;
+    if (loaded.state.hidden) return;
     info = loaded;
     complete = () => {
       if (!isCurrent()) return;
@@ -71,21 +70,6 @@ export const createOnboardingModule = (
             contentMaxWidth: "calc(100vw - {spacing.xl})",
             contentMaxHeight: "calc(100dvh - {spacing.xl})",
           },
-        }),
-        ctx.views.registerView({
-          id: "dashboard.settings.customizations",
-          title: "Customizations",
-          body: { kind: "react", render: () => <Customizations /> },
-        }),
-        ctx.settings.registerPanel({
-          id: "customizations",
-          title: "Customizations",
-          section: "workbench",
-          kind: "view",
-          scope: "global",
-          order: 30,
-          icon: "SlidersHorizontal",
-          viewId: "dashboard.settings.customizations",
         }),
       ];
     },

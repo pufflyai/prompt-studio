@@ -25,6 +25,7 @@
     "finish": "완료",
     "back": "뒤로",
     "saveError": "설정을 저장하지 못했습니다",
+    "title": "초기 설정",
     "customizations": "사용자 지정",
     "dontShow": "초기 설정 표시 안 함"
   }
