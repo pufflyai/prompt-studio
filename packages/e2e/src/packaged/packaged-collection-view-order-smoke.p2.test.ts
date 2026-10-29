@@ -64,53 +64,48 @@ const verifyOrder = async (page: Page, projectId: string, boardId: string) => {
 
 setupPackagedSmokeTests();
 
-for (const collection of [
-  { name: "Kanban", id: "pstdio.pstdio-planner.view.tickets", path: "extensions/pstdio.pstdio-planner/tickets" },
-  { name: "data table", id: WORKSPACES_COLLECTION_ID, path: "workspaces" },
-]) {
-  test(`packaged ${collection.name} view tabs save pointer and keyboard order`, async () => {
-    const startedAt = Date.now();
-    const phase = (name: string) => console.log(`Packaged view order: ${name} (${Date.now() - startedAt}ms)`);
-    const root = mkdtempSync(join(tmpdir(), "packaged-collection-view-order-"));
-    let child: ChildProcess | undefined;
-    let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
-    try {
-      const runtime = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner") });
-      child = runtime.child;
-      phase("runtime ready");
-      const folder = join(root, "project");
-      mkdirSync(folder);
-      const creatingProject = (async () => {
-        const response = await fetch(`${runtime.baseUrl}/v1/projects`, {
-          method: "POST",
-          headers: { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" },
-          body: JSON.stringify(folderProjectInput({ name: "Saved view order" }, folder)),
-        });
-        expect(response.status).toBe(201);
-        const { id } = (await response.json()) as { id: string };
-        phase("project created");
-        return id;
-      })();
-      const openingPage = chromium.launch(PACKAGED_DASHBOARD_BROWSER).then((opened) => {
-        browser = opened;
-        return opened.newPage({ extraHTTPHeaders: runtimeAuthorization(runtime.descriptor) });
+test("packaged Kanban and data table view tabs save pointer and keyboard order", async () => {
+  const startedAt = Date.now();
+  const phase = (name: string) => console.log(`Packaged view order: ${name} (${Date.now() - startedAt}ms)`);
+  const root = mkdtempSync(join(tmpdir(), "packaged-collection-view-order-"));
+  let child: ChildProcess | undefined;
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  try {
+    const runtime = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner") });
+    child = runtime.child;
+    phase("runtime ready");
+    const folder = join(root, "project");
+    mkdirSync(folder);
+    const creatingProject = (async () => {
+      const response = await fetch(`${runtime.baseUrl}/v1/projects`, {
+        method: "POST",
+        headers: { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" },
+        body: JSON.stringify(folderProjectInput({ name: "Saved view order" }, folder)),
       });
-      const [projectSetup, browserSetup] = await Promise.allSettled([creatingProject, openingPage]);
-      if (projectSetup.status === "rejected") throw projectSetup.reason;
-      if (browserSetup.status === "rejected") throw browserSetup.reason;
-      const id = projectSetup.value;
-      const page = browserSetup.value;
-      await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-      await signInBrowser(page, runtime.descriptor, `/projects/${id}/${collection.path}`);
-      phase("browser signed in");
-      if (collection.name === "Kanban") {
-        await page.getByRole("option", { name: "Tickets", exact: true }).click();
-      }
-      await verifyOrder(page, id, collection.id);
-    } finally {
-      await browser?.close();
-      if (child) await stopProcess(child);
-      rmSync(root, { recursive: true, force: true });
-    }
-  }, 30_000);
-}
+      expect(response.status).toBe(201);
+      const { id } = (await response.json()) as { id: string };
+      phase("project created");
+      return id;
+    })();
+    const openingPage = chromium.launch(PACKAGED_DASHBOARD_BROWSER).then((opened) => {
+      browser = opened;
+      return opened.newPage({ extraHTTPHeaders: runtimeAuthorization(runtime.descriptor) });
+    });
+    const [projectSetup, browserSetup] = await Promise.allSettled([creatingProject, openingPage]);
+    if (projectSetup.status === "rejected") throw projectSetup.reason;
+    if (browserSetup.status === "rejected") throw browserSetup.reason;
+    const id = projectSetup.value;
+    const page = browserSetup.value;
+    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
+    phase("browser signed in");
+    await page.getByRole("option", { name: "Tickets", exact: true }).click();
+    await verifyOrder(page, id, "pstdio.pstdio-planner.view.tickets");
+    await page.goto(`${runtime.baseUrl}/projects/${id}/workspaces`);
+    await verifyOrder(page, id, WORKSPACES_COLLECTION_ID);
+  } finally {
+    await browser?.close();
+    if (child) await stopProcess(child);
+    rmSync(root, { recursive: true, force: true });
+  }
+}, 30_000);
