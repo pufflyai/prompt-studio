@@ -1,12 +1,10 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { AgentInfo } from "pstdio-api-contracts";
 import { createDashboardResource } from "@/shared/app/resources";
 import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
 import type { RecentProjectResource } from "@/shared/recents/recent-project-resources";
 import { StartAboutPanel } from "./start-about-panel";
 import { type StartAction, StartActionList } from "./start-action-list";
-import { StartHarnessStatus } from "./start-harness-status";
 import { StartRecentList } from "./start-recent-list";
 
 const recentResource = (
@@ -47,11 +45,10 @@ const missingGitError =
 
 interface StartPagePreviewProps {
   setupError?: string;
-  harnesses?: AgentInfo[];
 }
 
 const StartPagePreview = (props: StartPagePreviewProps) => {
-  const { setupError, harnesses } = props;
+  const { setupError } = props;
 
   return (
     <Stack w="full" maxW="52rem" pt="4xl" pb="3xl" gap="3xl">
@@ -63,9 +60,6 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
       </Stack>
       {setupError && <ProjectSetupStatus error={setupError} onRetry={() => undefined} />}
       <StartAboutPanel />
-      {!setupError && harnesses && (
-        <StartHarnessStatus agents={harnesses} onReviewExtensions={() => undefined} onCheckAgain={() => undefined} />
-      )}
       <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
         <Box flex="1" minW="0" w="full">
           <StartActionList actions={actions} />
@@ -90,11 +84,9 @@ type Story = StoryObj<typeof StartPagePreview>;
 
 export const Default: Story = {};
 
-export const NoAgentAvailable: Story = { args: { harnesses: [] } };
-
 /** First run without Git or network: the default extensions, including every agent harness, did not install. */
 export const SetupDidNotFinish: Story = {
-  args: { setupError: missingGitError, harnesses: [] },
+  args: { setupError: missingGitError },
 };
 
 export const NoRecentResources: Story = {
