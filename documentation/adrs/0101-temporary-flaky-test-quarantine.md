@@ -28,6 +28,8 @@ On 2026-10-27, the native OpenCode empty-PATH detection case returned unavailabl
 
 The #1499 Linux x64 merge group also exhausted the packaged attached-recovery case before reaching recovery: its cold Claude dependency install never finished before the unchanged 30-second deadline. The complete case passed on main with identical Linux application and test sources in run 40547961144; the PR changes Windows CI storage only. This Linux x64 case joins the existing packaged desktop evidence lane with all cold installs and recovery assertions retained. Its separate registry entry requires an installer cause fix and ten independent cold passes before removal.
 
+The complete native battery on 2026-10-30 also confirmed two Intel macOS flakes with unchanged application and case sources: navigation restore passed before a later runtime-descriptor timeout, and packaged Planner board panning exhausted 30 seconds before passing under the same allowance. Both are registered for darwin-x64 only. Compiled CLI quarantine executes registered cases on any affected native platform, once on its first shard; failures remain separate from the required execution report.
+
 ## Limitations
 
 Quarantine temporarily removes these specific cases from merge protection on the affected platforms. It does not prove the product works there. Other platforms and the packaged released-data upgrade contract remain blocking. Every quarantined case still executes without retries or prewarming, at its existing limit, and retains first-attempt evidence. A quarantine failure must be reported separately from stable CI success.
