@@ -1,6 +1,37 @@
 import { expect, test } from "bun:test";
 import { join } from "node:path";
-import { bunTestSelection, narrowStablePattern, quarantinePattern } from "./test-quarantine";
+import {
+  browserQuarantineReportPath,
+  bunTestSelection,
+  narrowStablePattern,
+  playwrightQuarantineSelection,
+  quarantinePattern,
+} from "./test-quarantine";
+
+test("Windows launch flakes execute once in quarantine and remain stable on other platforms", () => {
+  const runner = "packaged-desktop-benchmark";
+  const directory = "clients/desktop/src/e2e";
+  const stable = playwrightQuarantineSelection(runner, directory, false, "win32", "x64");
+  const quarantine = playwrightQuarantineSelection(runner, directory, true, "win32", "x64");
+  const linux = playwrightQuarantineSelection(runner, directory, false, "linux", "x64");
+  if (!("grepInvert" in stable && "grep" in quarantine && "grepInvert" in linux))
+    throw new Error("Unexpected stable/quarantine selection");
+  for (const name of [
+    "warm attach restores the workbench within budget",
+    "cold start with an empty home shows the workbench within budget",
+  ]) {
+    const title = `packaged-launch.p3.bench.ts ${name}`;
+    expect(stable.grepInvert!.test(title)).toBe(true);
+    expect(quarantine.grep!.test(title)).toBe(true);
+    expect(linux.grepInvert.test(title)).toBe(false);
+  }
+  expect(quarantine.grep!.test("packaged-launch.p3.bench.ts sidecar crash shows recovery within budget")).toBe(false);
+  expect(quarantine.repeatEach).toBe(1);
+  expect(quarantine.retries).toBe(0);
+  expect(browserQuarantineReportPath(runner)).toEndWith(
+    join("clients", "desktop", "test-results", "packaged-benchmarks-quarantine.json"),
+  );
+});
 
 const cases = [
   { runner: "bun", file: "packages/db/a.test.ts", name: "keeps data (cold)", platforms: ["linux"] },

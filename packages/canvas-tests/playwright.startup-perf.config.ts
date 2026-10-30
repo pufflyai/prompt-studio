@@ -1,5 +1,4 @@
 import { defineConfig, devices } from "@playwright/test";
-import { benchmarkSampleCount } from "pstdio-benchmarks";
 
 export default defineConfig({
   testDir: "./src/performance",
@@ -7,7 +6,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  repeatEach: benchmarkSampleCount(3),
+  repeatEach: 1,
   reporter: "list",
   webServer: {
     command: "bun ../../extensions/canvas/scripts/serve-verification.ts",

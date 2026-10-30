@@ -295,7 +295,7 @@ describe("Claude asking the person a question", () => {
 
   test("sends other tool requests to the approval channel with Claude's camelCase reply", async () => {
     const { child, written, emit } = controlledChild();
-    const planInput = { plan: "Ship it" };
+    const planInput = { command: "bun test" };
     const session = resumeClaudeCodeSession(
       {
         agentSessionId: "session-abc",
@@ -313,7 +313,7 @@ describe("Claude asking the person a question", () => {
     emit({
       type: "control_request",
       request_id: "req-plan",
-      request: { subtype: "can_use_tool", tool_name: "ExitPlanMode", input: planInput, tool_use_id: "toolu_plan" },
+      request: { subtype: "can_use_tool", tool_name: "Bash", input: planInput, tool_use_id: "toolu_plan" },
     });
     await waitForStreamIo();
 

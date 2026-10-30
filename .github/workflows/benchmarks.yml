@@ -1,7 +1,7 @@
 name: Benchmarks
 run-name: Benchmarks ${{ inputs.release_tag || inputs.commits || github.event.pull_request.head.sha }} on ${{ inputs.platforms || 'linux-x64' }}
 
-# Every run measures the given commits on the same runner, alternating them sample by sample.
+# Every run measures each given commit and suite once on the same runner.
 # The Performance pages in the pstdio-dev extension start these runs and read their artifacts.
 on:
   workflow_dispatch:
@@ -16,8 +16,8 @@ on:
         description: Platforms separated by commas (linux-x64, darwin-arm64, darwin-x64, win32-x64).
         default: linux-x64
       samples:
-        description: Samples per commit and suite.
-        default: "10"
+        description: Samples per commit and suite. Must be 1; CI never repeats tests.
+        default: "1"
       release_tag:
         description: Release to attach the results to. The release workflow sets it after publishing.
         default: ""
@@ -29,6 +29,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'latest' || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   plan:
@@ -54,9 +58,13 @@ jobs:
           COMMITS: ${{ inputs.commits || github.event.pull_request.head.sha }}
           PLATFORMS: ${{ inputs.platforms || 'linux-x64' }}
           SUITES: ${{ github.event_name == 'pull_request' && 'storage,runtime' || inputs.suites }}
-          SAMPLES: ${{ github.event_name == 'pull_request' && '2' || inputs.samples }}
+          SAMPLES: ${{ github.event_name == 'pull_request' && '1' || inputs.samples }}
         run: |
           set -euo pipefail
+          if [ "${SAMPLES:-1}" != "1" ]; then
+            echo "CI executes each benchmark once; samples must be 1" >&2
+            exit 1
+          fi
           checkouts='[]'
           IFS=',' read -ra refs <<< "$COMMITS"
           for ref in "${refs[@]}"; do
@@ -87,7 +95,7 @@ jobs:
           {
             echo "checkouts=$checkouts"
             echo "include=$include"
-            echo "samples=${SAMPLES:-10}"
+            echo "samples=1"
           } >> "$GITHUB_OUTPUT"
 
   benchmark:
@@ -155,6 +163,16 @@ jobs:
         with:
           name: benchmark-results-${{ matrix.platform }}-${{ matrix.suite }}
           path: ${{ runner.temp }}/benchmark-results/*.json
+          if-no-files-found: error
+
+      - name: Preserve ordered desktop benchmark quarantine evidence
+        if: ${{ !cancelled() && matrix.suite == 'desktop' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-desktop-evidence-${{ matrix.platform }}
+          path: |
+            ${{ runner.temp }}/checkouts/*/clients/desktop/test-results/packaged-benchmarks*.json
+            ${{ runner.temp }}/checkouts/*/test-results/quarantine/packaged-desktop-benchmark
           if-no-files-found: error
 
   # The release workflow starts this run after it publishes, so benchmarks never hold a release.

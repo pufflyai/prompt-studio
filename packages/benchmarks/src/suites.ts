@@ -35,11 +35,9 @@ export const suites: BenchmarkSuite[] = [
     sample: (context, files) => [
       {
         command: display(context, [
-          "bunx",
-          "playwright",
-          "test",
-          "--config",
-          "playwright.benchmark.config.ts",
+          "bun",
+          "run",
+          "test:benchmark",
           ...files.map((file) => file.replace("clients/desktop/", "")),
         ]),
         cwd: "clients/desktop",

@@ -12,6 +12,46 @@ const reading = {
 };
 const backend = { id: "runtime", pid: 12, origin: null, token: null, scope: "local" as const };
 
+test("a pending backend response does not skip the next native collection", async () => {
+  const replies: Array<(response: Response) => void> = [];
+  const server = Bun.serve({
+    port: 0,
+    fetch: () => new Promise<Response>((resolve) => replies.push(resolve)),
+  });
+  let now = 0;
+  let reads = 0;
+  const capture = new PerformanceCaptureCollector({
+    hostVersion: "test",
+    platform: process.platform,
+    intervalMs: 2000,
+    backend: () => ({ ...backend, origin: server.url.origin, token: "test" }),
+    readProcess: async () => ({ ...reading, cpuTimeMs: ++reads * 20 }),
+    now: () => now,
+  });
+  const pending: Promise<void>[] = [];
+  try {
+    pending.push(capture.sample(() => []));
+    while (!replies.length) await Bun.sleep(1);
+    now = 2000;
+    pending.push(capture.sample(() => []));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(reads).toBe(2);
+    while (replies.length < 2) await Bun.sleep(1);
+    // A later reply may finish first; captures must still retain their collection order.
+    replies[1]!(new Response("unavailable", { status: 503 }));
+    replies[0]!(new Response("unavailable", { status: 503 }));
+    await Promise.all(pending);
+    expect(capture.snapshot().samples.map((sample) => sample.elapsedMs)).toEqual([0, 2000]);
+    expect(capture.snapshot().samples.map((sample) => sample.processes[0]?.cpuTimeMs)).toEqual([20, 40]);
+    expect(capture.snapshot().samples[1]?.processes[0]?.cpuPercent).toBe(1);
+  } finally {
+    capture.stop();
+    for (const reply of replies) reply(new Response(null, { status: 503 }));
+    server.stop(true);
+    await Promise.allSettled(pending);
+  }
+});
+
 test("timestamps each collection before reading native process metrics", async () => {
   let now = 0;
   const capture = new PerformanceCaptureCollector({
