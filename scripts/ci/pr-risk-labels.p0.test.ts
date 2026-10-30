@@ -2,8 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { finish, type PullRequest, prepare, type Status } from "./pr-risk-labels";
 
 function fixture(labels: string[] = []) {
-  let pull: PullRequest = {
+  let pull: PullRequest & { merged: boolean } = {
     state: "open",
+    merged: false,
     user: { login: "contributor" },
     head: { sha: "head", ref: "feature/example", repo: { full_name: "owner/repo" } },
     base: { sha: "base", ref: "main", repo: { full_name: "owner/repo" } },
@@ -49,17 +50,59 @@ function fixture(labels: string[] = []) {
       pull.user.login = "github-actions[bot]";
       pull.head.ref = "changeset-release/main";
     },
-    setPull: (next: Partial<PullRequest>) => {
+    setPull: (next: Partial<typeof pull>) => {
       pull = { ...pull, ...next };
     },
   };
 }
 
+async function prepareOpen(api: Parameters<typeof prepare>[0]) {
+  const snapshot = await prepare(api);
+  if (!snapshot) throw new Error("Expected an open pull request");
+  return snapshot;
+}
+
 describe("SDK and extension separation", () => {
+  test("closed merged pull requests preserve the existing commit verdict", async () => {
+    const { api, statuses, setPull } = fixture(["sdk", "extensions"]);
+    await api.publish("head", { state: "error", description: "Previous classification error" });
+    setPull({ state: "closed", merged: true });
+    expect(await prepare(api)).toBeUndefined();
+    expect(statuses.map(({ sha, state }) => [sha, state])).toEqual([["head", "error"]]);
+  });
+
+  test("a closed pull request cannot overwrite an open pull request verdict on the same commit", async () => {
+    const open = fixture(["sdk", "extensions"]);
+    const closed = fixture();
+    closed.setPull({ state: "closed", merged: true });
+    closed.api.publish = open.api.publish;
+    await finish(open.api, await prepareOpen(open.api), "success", "sdk,extensions");
+    expect(open.statuses.at(-1)?.state).toBe("failure");
+    expect(await prepare(closed.api)).toBeUndefined();
+    expect(open.statuses.map(({ state }) => state)).toEqual(["pending", "failure"]);
+  });
+
+  test("closed unmerged pull requests keep their existing area verdict", async () => {
+    const { api, statuses, setPull } = fixture(["sdk", "extensions"]);
+    await api.publish("head", { state: "failure", description: "Mixed SDK and extension changes" });
+    setPull({ state: "closed" });
+    expect(await prepare(api)).toBeUndefined();
+    expect(statuses.map(({ sha, state }) => [sha, state])).toEqual([["head", "failure"]]);
+  });
+
+  test("reopened pull requests require fresh area classification", async () => {
+    const { api, statuses, setPull } = fixture(["sdk", "extensions"]);
+    setPull({ state: "closed" });
+    await prepare(api);
+    setPull({ state: "open" });
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
+    expect(statuses.slice(-2).map(({ state }) => state)).toEqual(["pending", "failure"]);
+  });
+
   test("allows the fixed release group to update SDK and extension versions together", async () => {
     const { api, statuses, release } = fixture(["sdk", "extensions"]);
     release();
-    await finish(api, await prepare(api), "success", "sdk,extensions");
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
     expect(statuses.at(-1)?.state).toBe("success");
   });
 
@@ -73,7 +116,7 @@ describe("SDK and extension separation", () => {
       { filename: "bun.lock", status: "modified" },
     ]);
     setPull({ changed_files: 4 });
-    await finish(api, await prepare(api), "success", "sdk,extensions");
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
     expect(statuses.at(-1)?.state).toBe("success");
   });
 
@@ -87,7 +130,7 @@ describe("SDK and extension separation", () => {
       ref === "new-main"
         ? { ...(await original(path, "base")), scripts: { build: "new-build-command" } }
         : original(path, ref);
-    await finish(api, await prepare(api), "success", "sdk,extensions");
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
     expect(statuses.at(-1)?.state).toBe("success");
   });
 
@@ -104,7 +147,7 @@ describe("SDK and extension separation", () => {
     release();
     setFiles([{ filename, status }]);
     setPull({ changed_files: 1 });
-    await finish(api, await prepare(api), "success", "sdk,extensions");
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
     expect(statuses.at(-1)?.state).toBe("failure");
   });
 
@@ -120,7 +163,7 @@ describe("SDK and extension separation", () => {
     const base = await api.readManifest("", "base");
     const head = await api.readManifest("", "head");
     setManifests({ base, head: { ...head, ...change } });
-    await finish(api, await prepare(api), "success", "sdk,extensions");
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
     expect(statuses.at(-1)?.state).toBe("failure");
   });
 
@@ -132,7 +175,7 @@ describe("SDK and extension separation", () => {
     if (change === "branch") pull.head.ref = "feature/mixed-change";
     if (change === "fork") pull.head.repo = { full_name: "contributor/repo" };
     setPull(pull);
-    await finish(api, await prepare(api), "success", "sdk,extensions");
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
     expect(statuses.at(-1)?.state).toBe("failure");
   });
 
@@ -140,7 +183,7 @@ describe("SDK and extension separation", () => {
     const { api, statuses, release, setPull } = fixture(["sdk", "extensions"]);
     release();
     setPull({ changed_files: 3 });
-    await finish(api, await prepare(api), "success", "sdk,extensions");
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
     expect(statuses.at(-1)?.state).toBe("error");
   });
 
@@ -153,7 +196,7 @@ describe("SDK and extension separation", () => {
       setPull(change === "head" ? { head: { ...pull.head, sha: "new-head" } } : { state: "closed" });
       return original(path, ref);
     };
-    await finish(api, await prepare(api), "success", "sdk,extensions");
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
     expect(statuses.at(-1)).toMatchObject({ sha: "head", state: "error" });
   });
 
@@ -165,7 +208,7 @@ describe("SDK and extension separation", () => {
     [["sdk", "extensions", "breaking-change"], "failure"],
   ] as const)("evaluates synchronized labels %j", async (labels, state) => {
     const { api, statuses } = fixture([...labels]);
-    const snapshot = await prepare(api);
+    const snapshot = await prepareOpen(api);
     await finish(api, snapshot, "success", labels.join(","));
     expect(statuses.map((status) => [status.sha, status.state])).toEqual([
       ["head", "pending"],
@@ -175,7 +218,7 @@ describe("SDK and extension separation", () => {
 
   test("uses the current classification after SDK changes are reverted", async () => {
     const { api, statuses, setPull } = fixture(["sdk", "extensions"]);
-    const snapshot = await prepare(api);
+    const snapshot = await prepareOpen(api);
     setPull({ labels: [{ name: "extensions" }, { name: "needs-migration" }] });
     await finish(api, snapshot, "success", "extensions,needs-migration");
     expect(statuses.at(-1)?.state).toBe("success");
@@ -183,7 +226,7 @@ describe("SDK and extension separation", () => {
 
   test.each(["failure", "cancelled", "skipped"])("never passes when classification is %s", async (outcome) => {
     const { api, statuses } = fixture();
-    await finish(api, await prepare(api), outcome, "");
+    await finish(api, await prepareOpen(api), outcome, "");
     expect(statuses.at(-1)?.state).toBe("error");
   });
 
@@ -194,7 +237,7 @@ describe("SDK and extension separation", () => {
     { state: "closed" },
   ])("does not approve a changed PR snapshot %j", async (change) => {
     const { api, statuses, setPull } = fixture();
-    const snapshot = await prepare(api);
+    const snapshot = await prepareOpen(api);
     setPull(change);
     await finish(api, snapshot, "success", "");
     expect(statuses.at(-1)).toMatchObject({ sha: "head", state: "error" });
@@ -202,7 +245,7 @@ describe("SDK and extension separation", () => {
 
   test("manual removal during classification cannot clear the block", async () => {
     const { api, statuses, setPull } = fixture(["sdk", "extensions"]);
-    const snapshot = await prepare(api);
+    const snapshot = await prepareOpen(api);
     setPull({ labels: [{ name: "extensions" }] });
     await finish(api, snapshot, "success", "sdk,extensions");
     expect(statuses.at(-1)?.state).not.toBe("success");
@@ -210,7 +253,7 @@ describe("SDK and extension separation", () => {
 
   test("reports errors when the current PR cannot be read", async () => {
     const { api, statuses } = fixture();
-    const snapshot = await prepare(api);
+    const snapshot = await prepareOpen(api);
     api.readPull = async () => {
       throw new Error("API unavailable");
     };
@@ -228,13 +271,13 @@ describe("SDK and extension separation", () => {
 
 test("a silently skipped labeler cannot reuse an earlier passing status", async () => {
   const { api, statuses } = fixture();
-  await finish(api, await prepare(api), "success", undefined);
+  await finish(api, await prepareOpen(api), "success", undefined);
   expect(statuses.at(-1)?.state).toBe("error");
 });
 
 test("label saturation during a run cannot hide a truncated area label", async () => {
   const { api, statuses, setPull } = fixture();
-  const snapshot = await prepare(api);
+  const snapshot = await prepareOpen(api);
   setPull({ labels: Array.from({ length: 100 }, (_, index) => ({ name: `manual-${index}` })) });
   await finish(api, snapshot, "success", "");
   expect(statuses.at(-1)?.state).toBe("error");
