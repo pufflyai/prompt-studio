@@ -88,10 +88,10 @@ describe("createExtensionIgnoreMatcher", () => {
     try {
       const matcher = createExtensionIgnoreMatcher(root);
       for (const path of [
-        "storybook-static/index.html",
-        "storybook-static/assets/preview.js",
+        "canvas-test-static/index.html",
+        "canvas-test-static/assets/preview.js",
         "__test-tmp__/canvas/entry.tsx",
-        "nested/storybook-static/iframe.html",
+        "nested/canvas-test-static/iframe.html",
         "nested/__test-tmp__/fixture.json",
       ])
         expect(matcher.ignores(path)).toBe(true);

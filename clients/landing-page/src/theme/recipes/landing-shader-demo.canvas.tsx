@@ -1,0 +1,158 @@
+import { Box, Button, HStack, Stack, Text, Textarea, useSlotRecipe } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import { createGlyphIcon, ScrollArea, Slider } from "@pstdio/ui";
+import { useState } from "react";
+import { landingStorySlotRecipe } from "./landing-story";
+import { landingToolDemoSlotRecipe } from "./landing-tool-demo";
+
+const icons = ["star", "cloud-add", "global", "grid-4", "code", "component"].map((name) => ({
+  name,
+  icon: createGlyphIcon(name),
+}));
+const ShaderDemo = (props: { withControls: boolean; connected: boolean }) => {
+  const { withControls, connected } = props;
+  const styles = useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});
+  const story = useSlotRecipe({ recipe: landingStorySlotRecipe })({});
+  const [selected, setSelected] = useState(icons[0]);
+  const [scale, setScale] = useState(16);
+  const [speed, setSpeed] = useState(1.8);
+  return (
+    <Box css={story.page}>
+      {!connected && (
+        <Box css={styles.prompt}>
+          <Text>Add sliders to adjust the scale and speed.</Text>
+          <Button variant="subtle" size="lg">
+            Try the change
+          </Button>
+        </Box>
+      )}
+      {connected && (
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>Your icon set</Box>
+          <Box css={story.panelBody}>
+            <Box css={styles.iconPicker}>
+              {icons.map((item) => (
+                <Button
+                  key={item.name}
+                  size="2xl"
+                  variant="ghost"
+                  aria-label={`Use ${item.name}`}
+                  aria-pressed={selected.name === item.name}
+                  onClick={() => setSelected(item)}
+                >
+                  <Box css={styles.tileSymbol}>
+                    <item.icon />
+                  </Box>
+                </Button>
+              ))}
+            </Box>
+            <Text textStyle="label/S/regular">Icon set → {selected.name} → Shader preview</Text>
+          </Box>
+        </Box>
+      )}
+      <Box css={[story.panels, styles.shaderPanels]}>
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>icon-matrix.frag</Box>
+          <Box css={story.panelBody}>
+            <ScrollArea css={styles.shaderScroll} showHorizontalScrollbar>
+              <Textarea
+                css={styles.shaderCode}
+                aria-label="Fragment shader code"
+                wrap="off"
+                spellCheck={false}
+                defaultValue={`vec3 shade(vec2 uv) {
+  vec2 cell = uv * u_scale;
+  float phase = mod(floor(cell.y) + u_time * 2.0, 18.0);
+  float trail = exp(-phase * 0.32) * smoothstep(0.0, 0.8, phase);
+  float icon = texture2D(u_icon, cell).a;
+  vec3 green = vec3(0.04, 0.65, 0.28);
+  return green * icon * (0.035 + trail);
+}\n${Array.from({ length: 20 }, (_, index) => `// Shader note ${index + 1}`).join("\n")}`}
+              />
+            </ScrollArea>
+          </Box>
+        </Box>
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>Preview</Box>
+          <Box css={story.panelBody}>
+            {withControls && (
+              <Stack gap="lg">
+                <Stack gap="sm">
+                  <HStack css={styles.toolbar} textStyle="label/S/regular">
+                    <Text>Scale</Text>
+                    <Text>{scale}</Text>
+                  </HStack>
+                  <Slider
+                    aria-label={["Shader scale"]}
+                    min={4}
+                    max={36}
+                    step={1}
+                    value={[scale]}
+                    onValueChange={({ value }) => setScale(value[0])}
+                  />
+                </Stack>
+                <Stack gap="sm">
+                  <HStack css={styles.toolbar} textStyle="label/S/regular">
+                    <Text>Speed</Text>
+                    <Text>{speed.toFixed(1)}×</Text>
+                  </HStack>
+                  <Slider
+                    aria-label={["Shader speed"]}
+                    min={0}
+                    max={4}
+                    step={0.1}
+                    value={[speed]}
+                    onValueChange={({ value }) => setSpeed(value[0])}
+                  />
+                </Stack>
+              </Stack>
+            )}
+            <Box css={styles.shaderCanvas}>
+              <Box
+                height="64"
+                display="grid"
+                gridTemplateColumns="repeat(8, minmax(0, 1fr))"
+                placeItems="center"
+                p="md"
+                role="img"
+                aria-label="Icon matrix preview"
+              >
+                {Array.from({ length: 64 }, (_, index) => (
+                  <Box key={index} color="fg.success" opacity={0.15 + ((index * 7) % 11) / 13}>
+                    <selected.icon />
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+const meta = {
+  title: "Theme/Landing Shader Demo",
+  component: ShaderDemo,
+  args: { withControls: false, connected: true },
+  parameters: { layout: "fullscreen" },
+} satisfies CanvasMeta<typeof ShaderDemo>;
+export default meta;
+type Story = CanvasVariant<typeof meta>;
+export const Editor: Story = {
+  id: "theme-landing-shader-demo--editor",
+};
+export const WithControls: Story = {
+  id: "theme-landing-shader-demo--with-controls",
+  args: { withControls: true, connected: false },
+};
+export const NarrowPanel: Story = {
+  id: "theme-landing-shader-demo--narrow-panel",
+  args: { withControls: true, connected: false },
+  decorators: [
+    (Story) => (
+      <Box width="80">
+        <Story />
+      </Box>
+    ),
+  ],
+};
