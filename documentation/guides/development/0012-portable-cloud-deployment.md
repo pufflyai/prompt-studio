@@ -335,10 +335,25 @@ PS-787's revision report. Credentials remain in private operator configuration.
 
 ### Finite monthly workload
 
-Price thirty complete reference runs plus one ten-owner scale run per month. Keep
-all thirty reference result copies: current relay inventory, those copies, the
-scale increment and 1 GiB for protected key/state backups fit a 180 GiB storage cap.
-This is a storage allowance for the estimate, not a reduced benchmark workload.
+Budget traffic for thirty complete reference runs plus one ten-owner scale run per
+month. Repeated transfers do not imply thirty users or thirty retained datasets.
+The reference profile uses one primary account with two projects. The separate scale
+profile uses ten extension owners on one account; it is not a ten-user benchmark.
+
+| Storage observation | GiB | Scope |
+| --- | ---: | --- |
+| Reference test endpoint | 5.162 | 10,000 records, 5 GiB of files and retained record history. |
+| Ten-owner scale increment | 1.442 | 100,000 records after 100,000 edits; no additional file payload. |
+| Both isolated test endpoints together | 6.605 | Measured test storage, separate from production. |
+| Existing production bucket | 16.644 | Live metadata listing at the inspection time. |
+
+The 180 GiB figure below is an optional fixture-retention stress ceiling. It counts
+thirty independent full reference copies, the existing production inventory, the
+scale increment and 1 GiB backup allowance: 173.955 GiB rounded up. That amount was
+not stored, provisioned or required by the ten-owner test. It is not expected user
+storage. The current Spaces subscription costs the same US$5 while retained data
+stays within its included 250 GiB, whether the test footprint is 6.605 GiB or the
+larger retention stress case is used.
 
 The recorded calls total 60,830 for this scenario. Budget traffic as follows:
 
@@ -371,11 +386,12 @@ These are finite reference-workload limits, not an audit of unrelated subscripti
 
 The first column allocates the two services' API-confirmed 80 GiB App Platform transfer
 pool and the Spaces subscription's 250 GiB storage/1,024 GiB transfer allowances.
-The second credits none of those shared allowances and charges the full 180 GiB
-storage allowance again at the overage rate. This keeps the estimate useful when
-other projects consume the shared pool.
+The combined stress column credits none of those shared allowances and charges
+the optional 180 GiB fixture-retention ceiling again at the overage rate. It combines
+exhausted shared allowances with deliberately excessive fixture retention; it is
+not a forecast of normal user storage.
 
-| Item | With allocated allowances, USD/month | With no shared allowance credit, USD/month | Basis |
+| Item | With allocated allowances, USD/month | Combined allowance/retention stress, USD/month | Basis |
 | --- | ---: | ---: | --- |
 | Relay | 5.00 | 5.00 | Verified single `basic-xxs` container; [App Platform pricing](https://docs.digitalocean.com/products/app-platform/details/pricing/). |
 | Account manager | 5.00 | 5.00 | Same verified container size and price. |
@@ -391,12 +407,14 @@ other projects consume the shared pool.
 The allocated-allowance model leaves US$8.74 below the US$50 target for this finite
 workload under the observed tax treatment. It includes a job reserve, backup
 storage and both traffic paths. The no-credit stress case exceeds the target by
-US$2.32: exhausted shared allowances require a new budget. At a hypothetical 25%
-added tax, the two models become US$51.58 and US$65.40, so neither passes. Actual
+US$2.32: exhausted shared allowances combined with the optional 180 GiB
+fixture-retention stress ceiling exceed the budget. At a hypothetical 25% added
+tax, the two models become US$51.58 and US$65.40, so neither passes. Actual
 PostHog paid features, extra containers, larger database plans or higher usage also
 require repricing.
 
-The deployed versions and prices are verified facts. The monthly repetition,
-180 GiB retention cap, traffic headroom and analytics limits are the estimate's
-explicit operating assumptions. Local correctness/timing measurements do not prove
-that the hosted 512 MiB instances meet a latency, memory or availability target.
+The deployed versions and prices are verified facts. Monthly traffic repetition,
+headroom and analytics limits are explicit operating assumptions. The optional
+180 GiB fixture-retention ceiling is a separate stress case. Local correctness
+and timing measurements do not prove that hosted 512 MiB instances meet a latency,
+memory or availability target.
