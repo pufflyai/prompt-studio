@@ -89,6 +89,25 @@ test(
       const layout = cli(["canvas", "layout", "read", "--canvas", "shared-components"]);
       expect(layout.status).toBe(0);
       expect(JSON.parse(layout.stdout).camera.zoom).toBeGreaterThan(0);
+      // Critical: the installed package must supply the selected graph without a source checkout.
+      const assets = await fetch(`${url}/extensions/commands/pstdio.canvas.command.preview.assets/execute`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          source: "api",
+          params: { source: "packages/ui/src/components/primitives/button.canvas.tsx", cached: [] },
+        }),
+      });
+      expect(assets.status).toBe(200);
+      const result = await assets.json();
+      expect(result.outcome.ok).toBe(true);
+      const { entry, modules, files } = result.outcome.value;
+      expect(modules).toContain(entry);
+      expect(modules.length).toBeGreaterThan(0);
+      for (const name of modules) {
+        const code = Bun.gunzipSync(Buffer.from(files[name], "base64"));
+        expect(code.byteLength).toBeGreaterThan(0);
+      }
       const skills = await (await fetch(`${url}/skills`, { headers })).json();
       expect(skills).toContainEqual(
         expect.objectContaining({
@@ -99,7 +118,7 @@ test(
           ]),
         }),
       );
-      // Critical: a clean optional install must render a real frame from its packaged archive.
+      // Critical: packaged assets must also reach an opaque preview through the real webview command bridge.
       const button = listed.find((canvas: { id: string }) => canvas.id === "stories-ui-components-inputs-button");
       expect(button).toBeDefined();
       browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);

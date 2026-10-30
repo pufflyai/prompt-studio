@@ -1,7 +1,8 @@
-import { writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { gzipSync } from "node:zlib";
-import type { FrameGraph } from "../src/frames/selection";
+import type { FrameManifest } from "../src/frames/module-graph";
 import type { NativeBuildOutput } from "./native-build-output";
 
 export interface FrameArchiveInputs {
@@ -11,68 +12,63 @@ export interface FrameArchiveInputs {
   nativeSources: Record<string, string>;
   catalogSource: string;
 }
-export const publishFrameArchive = async (root: string, outputs: NativeBuildOutput[], inputs: FrameArchiveInputs) => {
-  const scripts: Record<string, string> = {};
-  const styles: string[] = [];
-  const styleNames = outputs
-    .filter((output) => output.type === "asset" && output.fileName.endsWith(".css"))
-    .map((output) => output.fileName);
-  const chunks = outputs.filter((output) => output.type === "chunk");
+const bindSources = (manifest: FrameManifest, sources: Map<string, string>, inputs: FrameArchiveInputs) => {
   const chunkFor = (source: string) => {
-    const chunk = chunks.find((chunk) => Object.hasOwn(chunk.modules ?? {}, source));
-    if (!chunk) throw new Error(`Missing compiled preview source: ${source}`);
-    return chunk.fileName;
+    const chunk = sources.get(resolve(inputs.repoRoot, source));
+    if (!chunk) throw new Error(`Preview source has no emitted module: ${source}`);
+    return chunk;
   };
-  const graph: FrameGraph = {
-    entry: chunks.find((chunk) => chunk.isEntry)!.fileName,
-    catalog: chunkFor(inputs.catalogSource),
-    sources: Object.fromEntries(
-      Object.entries(inputs.sources).map(([source, suite]) => [
-        source,
-        {
-          script: chunkFor(resolve(inputs.repoRoot, source)),
-          ...(!source.endsWith(".mdx") ? { project: chunkFor(inputs.projects[suite]!) } : {}),
-        },
-      ]),
-    ),
-    modules: Object.fromEntries(
-      chunks.map((chunk) => [
-        chunk.fileName,
-        {
-          imports: chunk.imports,
-          dynamicImports: chunk.dynamicImports,
-          styles: [...(chunk.viteMetadata?.importedCss ?? [])].map((name) => {
-            const index = styleNames.indexOf(name);
-            if (index < 0) throw new Error(`Missing compiled stylesheet: ${name}`);
-            return index;
-          }),
-        },
-      ]),
-    ),
-  };
-  for (const [name, source] of Object.entries(inputs.nativeSources))
-    graph.sources[`$native:${name}`] = { script: chunkFor(source) };
-  const ownedStyles = new Set(Object.values(graph.modules).flatMap((module) => module.styles));
-  if (styleNames.some((_name, index) => !ownedStyles.has(index)))
-    throw new Error("Preview styles must have an owning module");
-  for (const output of outputs) {
-    if (output.type === "chunk")
-      scripts[output.fileName] = output.code.replace(
-        /(["'`])\.\/([^"'`]+\.js)\1/g,
-        (_match, quote, file) => `${quote}canvas-preview:${file}${quote}`,
-      );
-    else if (output.fileName.endsWith(".css")) styles.push(String(output.source));
+  for (const [source, suite] of Object.entries(inputs.sources)) {
+    const project = inputs.projects[suite];
+    manifest.sources[source] = {
+      script: chunkFor(source),
+      ...(!source.endsWith(".mdx") && project ? { project: chunkFor(project) } : {}),
+    };
   }
-  const entry = outputs.find((file) => file.type === "chunk" && file.isEntry)!.fileName;
-  const encode = (source: string) => gzipSync(source).toString("base64");
-  const payload = {
-    scripts: Object.fromEntries(Object.entries(scripts).map(([name, source]) => [name, encode(source)])),
-    styles: styles.map(encode),
-    entry: `canvas-preview:${entry}`,
-    graph,
-  };
-  await writeFile(
-    resolve(root, "frame-bundle.ts"),
-    `// Generated source-component preview modules.\nexport default ${JSON.stringify(payload)} as import("../../frames/assets").FrameArchive;\n`,
-  );
+  for (const [name, source] of Object.entries(inputs.nativeSources))
+    manifest.sources[`$native:${name}`] = { script: chunkFor(source) };
+  manifest.catalog = chunkFor(inputs.catalogSource);
+};
+const chunkStyles = (output: NativeBuildOutput) => {
+  if (output.type !== "chunk" || !output.viteMetadata?.importedCss.size) return {};
+  return { css: [...output.viteMetadata.importedCss] };
+};
+const verifyStyleOwners = (manifest: FrameManifest) => {
+  const owned = new Set(Object.values(manifest.modules).flatMap((module) => module.css ?? []));
+  const missing = manifest.styles.filter((name) => !owned.has(name));
+  if (missing.length) throw new Error(`Compiled styles have no dependency owner: ${missing.join(", ")}`);
+};
+export const publishFrameArchive = async (root: string, outputs: NativeBuildOutput[], inputs: FrameArchiveInputs) => {
+  const directory = resolve(root, "frame-modules");
+  await rm(directory, { recursive: true, force: true });
+  await mkdir(directory, { recursive: true });
+  const entry = outputs.find((file) => file.type === "chunk" && file.isEntry)!;
+  const manifest: FrameManifest = { entry: entry.fileName, catalog: "", sources: {}, modules: {}, styles: [] };
+  const sources = new Map<string, string>();
+  for (const output of outputs) {
+    if (output.type !== "chunk" && !output.fileName.endsWith(".css")) continue;
+    const code =
+      output.type === "chunk"
+        ? output.code.replace(
+            /(["'`])\.\/([^"'`]+\.js)\1/g,
+            (_match, quote, file) => `${quote}canvas-preview:${file}${quote}`,
+          )
+        : String(output.source);
+    const name = `${createHash("sha256").update(code).digest("hex")}.txt`;
+    await writeFile(resolve(directory, name), gzipSync(code).toString("base64"));
+    manifest.modules[output.fileName] = {
+      file: `src/catalog/generated/frame-modules/${name}`,
+      imports: output.type === "chunk" ? (output.imports ?? []) : [],
+      dynamicImports: output.type === "chunk" ? (output.dynamicImports ?? []) : [],
+      bytes: Buffer.byteLength(code),
+      ...chunkStyles(output),
+    };
+    if (output.type === "chunk")
+      for (const source of Object.keys(output.modules ?? {})) sources.set(source.split("?")[0], output.fileName);
+    else manifest.styles.push(output.fileName);
+  }
+  bindSources(manifest, sources, inputs);
+  verifyStyleOwners(manifest);
+  await writeFile(resolve(root, "frame-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  await rm(resolve(root, "frame-bundle.ts"), { force: true });
 };

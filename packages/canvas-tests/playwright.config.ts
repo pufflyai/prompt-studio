@@ -11,7 +11,11 @@ export default defineConfig({
   retries: 0,
   forbidOnly: !!process.env.CI,
   outputDir: "test-results",
-  webServer: { command: "bun src/scripts/preview-server.ts", url: "http://127.0.0.1:43187", timeout: 60_000 },
+  webServer: {
+    command: "bun ../../extensions/canvas/scripts/serve-verification.ts",
+    url: "http://127.0.0.1:43187",
+    timeout: 60_000,
+  },
   reporter: [["html", { open: "never", outputFolder: "playwright-report" }], ["list"]],
   use: {
     baseURL: "http://127.0.0.1:43187",

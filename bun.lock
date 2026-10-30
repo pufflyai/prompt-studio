@@ -460,6 +460,7 @@
         "@playwright/test": "^1.60.0",
         "@pstdio/ui": "workspace:*",
         "@pstdio/workbench": "workspace:*",
+        "pstdio-benchmarks": "workspace:*",
         "pstdio-dashboard": "workspace:*",
       },
     },
