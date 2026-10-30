@@ -5,15 +5,15 @@ const packages = [
   { name: "pstdio-api", dir: "packages/pstdio-api", dependencies: [] },
   { name: "pstdio-dashboard", dir: "packages/pstdio-dashboard", dependencies: [] },
   { name: "@pstdio/ui", dir: "packages/ui", dependencies: [] },
-  { name: "storybook-tests", dir: "packages/storybook-tests", dependencies: [] },
+  { name: "canvas-tests", dir: "packages/canvas-tests", dependencies: [] },
   { name: "e2e", dir: "packages/e2e", dependencies: [] },
 ];
 const files = [
   "packages/pstdio-api/src/state.p0.test.ts",
   "packages/pstdio-api/src/isolation.p1.test.ts",
-  "packages/storybook-tests/src/ui/ui/menu.p1.spec.ts",
-  "packages/storybook-tests/src/ui/pstdio-dashboard/navigation.p1.spec.ts",
-  "packages/storybook-tests/src/ui/ui/menu-permutations.p2.spec.ts",
+  "packages/canvas-tests/src/ui/ui/menu.p1.spec.ts",
+  "packages/canvas-tests/src/ui/pstdio-dashboard/navigation.p1.spec.ts",
+  "packages/canvas-tests/src/ui/ui/menu-permutations.p2.spec.ts",
   "packages/e2e/src/ui/startup.p1.spec.ts",
   "packages/e2e/src/ui/session.p1.spec.ts",
   "packages/e2e/src/ui/feature.p2.spec.ts",
@@ -35,7 +35,7 @@ test("queue matrices keep priority rows separate and exclude production permutat
 
 test("component builds follow affected workspace owners and discover new tests automatically", () => {
   const plan = createTestMatrices(
-    [...files, "packages/storybook-tests/src/ui/ui/new-control.p1.spec.ts"],
+    [...files, "packages/canvas-tests/src/ui/ui/new-control.p1.spec.ts"],
     packages,
     ["@pstdio/ui"],
     ["P0", "P1"],

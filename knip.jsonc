@@ -87,15 +87,26 @@
         "src/**/*.bench.ts",
         "src/**/*.diagnostic.ts",
         "src/**/*.typecheck.ts",
+        "src/**/*.canvas.tsx",
         "*.test.ts",
         "*.test.tsx",
         "scripts/**/*.ts",
         "bin/**/*.cjs"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}", "scripts/**/*.ts", "bin/**/*.cjs"],
-      "ignore": ["dist/**", "storybook-static/**"]
+      "ignore": ["dist/**", "canvas-test-static/**"]
     },
-    "packages/storybook-tests": {
+    "packages/canvas": {
+      "entry": [
+        "src/index.ts",
+        "src/indexer.ts",
+        "src/native-preview-runtime.tsx",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx"
+      ],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/canvas-tests": {
       "entry": ["playwright.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts", "src/scripts/*.ts"],
       "project": ["playwright.config.ts", "src/**/*.ts"],
       "ignore": ["playwright-report/**", "test-results/**"],
@@ -159,7 +170,8 @@
         "src/**/*.test.ts",
         // The isolated conformance runner launches these by path.
         "src/**/*.integration.ts",
-        "src/**/*.fixture.ts"
+        "src/**/*.fixture.ts",
+        "src/**/*.canvas.tsx"
       ],
       "project": ["src/**/*.ts"],
       "ignore": ["dist/**"],
@@ -186,7 +198,8 @@
         "src/**/*.test.ts",
         // The isolated conformance runner and durability tests launch these by path.
         "src/**/*.integration.ts",
-        "src/**/*.fixture.ts"
+        "src/**/*.fixture.ts",
+        "src/**/*.canvas.tsx"
       ],
       "project": ["drizzle.config.ts", "scripts/**/*.ts", "src/**/*.ts"],
       "ignore": ["dist/**", "vendor/**"]
@@ -194,15 +207,15 @@
     "packages/pstdio-dashboard": {
       "entry": [
         "vite.config.ts",
-        ".storybook/**/*.{ts,tsx}",
+        ".canvas/**/*.{ts,tsx}",
         "src/main.tsx",
-        "src/**/*.stories.tsx",
+        "src/**/*.canvas.tsx",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
         "*.test.ts"
       ],
-      "project": ["*.ts", ".storybook/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
-      "ignore": ["dist/**", "storybook-static/**"]
+      "project": ["*.ts", ".canvas/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
+      "ignore": ["dist/**", "canvas-test-static/**"]
     },
     "packages/pstdio-extension-testbench": {
       "entry": [
@@ -226,7 +239,8 @@
         "src/index.ts",
         "src/bridge/guest/bootstrap.ts",
         "src/**/*.test.ts",
-        "src/**/*.fixture.ts"
+        "src/**/*.fixture.ts",
+        "src/**/*.canvas.tsx"
       ],
       "project": ["scripts/**/*.ts", "src/**/*.{ts,tsx}"],
       "ignore": ["dist/**"],
@@ -249,11 +263,11 @@
     "packages/pstdio-workbench": {
       "entry": [
         "package.json",
-        ".storybook/**/*.{ts,tsx}",
+        ".canvas/**/*.{ts,tsx}",
         "rolldown.*.config.ts",
         "src/index.ts",
         "src/{core,react,storage,testing,extensions,webview-runtime}/index.ts",
-        "src/**/*.stories.tsx",
+        "src/**/*.canvas.tsx",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
         // The packaged browser test bundles these two public-consumer entries by path.
@@ -261,8 +275,8 @@
         "src/react/settings/settings-lifetime-guest.fixture.ts",
         "src/**/*.typecheck.ts"
       ],
-      "project": [".storybook/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
-      "ignore": ["dist/**", "storybook-static/**"],
+      "project": [".canvas/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
+      "ignore": ["dist/**", "canvas-test-static/**"],
       // The build inlines private contracts and extensions (build-entries.ts); sync types also enter via tsconfig.build.json.
       "ignoreDependencies": ["pstdio-sync-contracts", "rimless", "zod"]
     },
@@ -273,25 +287,43 @@
         "vite.monaco.config.ts",
         "rolldown.*.config.ts",
         "playwright.*.config.ts",
-        ".storybook/**/*.{ts,tsx}",
+        ".canvas/**/*.{ts,tsx}",
         "scripts/**/*.ts",
         // Keep in sync with build-entries.ts and vite.monaco.config.ts.
         "src/index.ts",
         "src/theme/index.ts",
         "src/components/{canvas,dependency-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
-        "src/**/*.stories.tsx",
+        "src/**/*.canvas.tsx",
         "*.test.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx"
       ],
-      "project": ["*.ts", ".storybook/**/*.{ts,tsx}", "scripts/**/*.ts", "src/**/*.{ts,tsx}"],
-      "ignore": ["dist/**", "storybook-static/**"]
+      "project": ["*.ts", ".canvas/**/*.{ts,tsx}", "scripts/**/*.ts", "src/**/*.{ts,tsx}"],
+      "ignore": ["dist/**", "canvas-test-static/**"],
+      // The Canvas builder resolves the MDX compiler from this authoring workspace.
+      "ignoreDependencies": ["@mdx-js/mdx"]
     },
     "packages/workbench-fixture": {
       // Views are webview entries that extension.ts references by path.
-      "entry": ["extension.ts", "*.test.ts", "src/**/*.test.ts", "src/views/*.tsx"],
+      "entry": ["extension.ts", "src/**/*.canvas.tsx", "*.test.ts", "src/**/*.test.ts", "src/views/*.tsx"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    "extensions/canvas": {
+      "entry": [
+        "extension.ts",
+        "src/view/main.tsx",
+        // Native preview modules are lazy entries named by the data-only registry.
+        "src/canvases/{component-controls,component-surfaces,documentation,foundations,interactive-previews}.tsx",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "scripts/**/*.{ts,tsx}"
+      ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-base-themes": {
+      "entry": ["package.json", "extension.ts", "*.test.ts", ".canvas/**/*.{ts,tsx}", "stories/**/*.{ts,tsx}"],
+      "project": ["*.ts", ".canvas/**/*.{ts,tsx}", "stories/**/*.{ts,tsx}"]
     },
     "extensions/*": {
       // Tests launch fixture scripts by path.
@@ -301,7 +333,8 @@
         "*.test.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
-        "src/**/*.fixture.ts"
+        "src/**/*.fixture.ts",
+        "src/**/*.canvas.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"],
       // Harnesses resolve these native executables through package metadata rather than imports.
@@ -313,7 +346,14 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-artifacts": {
-      "entry": ["package.json", "extension.ts", "*.test.ts", "src/**/*.test.ts", "src/{view,open-artifact}.tsx"],
+      "entry": [
+        "package.json",
+        "extension.ts",
+        "*.test.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/{view,open-artifact}.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-planner": {
@@ -327,17 +367,23 @@
         "src/views/status-settings-panel.tsx",
         "src/views/ticket-review-requests.tsx",
         "src/commands/reorder-ticket.diagnostic.ts",
-        "src/timeline/view/entry.tsx"
+        "src/timeline/view/entry.tsx",
+        "src/**/*.canvas.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-skills": {
       // The skill's example extensions are typechecked source.
-      "entry": ["extension.ts", "*.test.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"],
+      "entry": [
+        "extension.ts",
+        "src/**/*.canvas.tsx",
+        "*.test.ts",
+        "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"
+      ],
       "project": ["*.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"]
     },
     "infra/local/extensions/*": {
-      "entry": ["extension.ts", "*.test.ts"],
+      "entry": ["extension.ts", "src/**/*.canvas.tsx", "*.test.ts"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "clients/desktop": {
@@ -345,7 +391,7 @@
         "forge.config.ts",
         "vite.config.ts",
         "playwright*.config.ts",
-        ".storybook/**/*.{ts,tsx}",
+        ".canvas/**/*.{ts,tsx}",
         "scripts/**/*.{ts,tsx}",
         // Built by the build:main and build:preload scripts.
         "src/main.ts",
@@ -357,9 +403,9 @@
         "src/**/*.bench.ts",
         "src/**/*.test.ts",
         "src/**/*.spec.ts",
-        "src/**/*.stories.tsx"
+        "src/**/*.canvas.tsx"
       ],
-      "project": ["*.ts", ".storybook/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
+      "project": ["*.ts", ".canvas/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
       "ignore": ["dist/**", "out/**"],
       // forge.config.ts names these makers as strings.
       "ignoreDependencies": ["@electron-forge/maker-deb", "@electron-forge/maker-squirrel", "@electron-forge/maker-zip"]
@@ -368,6 +414,8 @@
       "entry": [
         "package.json",
         "astro.config.*",
+        ".canvas/**/*.{ts,tsx}",
+        "src/**/*.canvas.tsx",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
         "src/pages/**/*.{astro,md,mdx,ts,tsx}",

@@ -12,7 +12,7 @@ The harness extension owns commands, native dispatch, capabilities and state. Th
 
 ## Design source
 
-The [Pencil design system](../../../design/prompt-studio-design-system.pen) defines these frames:
+The the live Canvas designs defines these frames:
 
 - `O7AEX`: draft, slash completion, selected goal and submitted objective.
 - `bNCZX`: provider details and unavailable status.
@@ -139,7 +139,7 @@ This confirmation path applies to Codex structured proposals. Claude's live `Exi
 
 ## Acceptance for implementation
 
-- Storybook covers draft, submitted objective, native details, unavailable state, conditional combinations and lifecycle states from Pencil.
+- Canvas covers draft, submitted objective, native details, unavailable state, conditional combinations and lifecycle states from Pencil.
 - Playwright covers caret completion, keyboard selection, close behavior, provider changes, inline edit and narrow layouts.
 - Adapter tests prove native dispatch, acknowledged state changes, capability gating, explicit composition rules and event ownership.
 - No inferred goal loop, provider-name switches in the workbench, duplicate persisted native state, hidden second prompt, argument modal or Reset to default action.

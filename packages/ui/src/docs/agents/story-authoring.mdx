@@ -1,32 +1,25 @@
-import { Meta } from "@storybook/addon-docs/blocks";
+import { Meta } from "@pstdio/canvas";
 
-<Meta title="Agent Guide/Story Authoring" />
+<Meta title="Agent Guide/Preview Authoring" />
 
-# Story Authoring
+# Preview authoring
 
-Stories are executable documentation for agents and visual review for humans.
+Canvas examples are executable documentation and live design references. Keep them beside their components in `*.canvas.tsx` files.
 
-## Canonical story order
+## Useful variants
 
-Place the three most useful stories first because Storybook MCP surfaces the first few examples prominently.
+Start with the default useful state, then common configurations and supported edge states: empty, loading, disabled, selected, long content, and errors. Group related states as variants of one component frame.
 
-1. Default or primary usage.
-2. Common configured usage.
-3. Important edge state such as empty, loading, disabled, selected, long content, or error.
+## Source contents
 
-## Manifest curation
-
-Keep canonical component and pattern stories in the manifest. Exclude performance, regression-only, fixture-library, and internal instruction stories with `tags: ["!manifest"]`.
-
-## Story contents
-
-- Use realistic Prompt Studio data.
-- Keep stories deterministic and local.
-- Add `play` functions for meaningful interactions.
+- Use realistic, synthetic data and deterministic local fixtures.
+- Preserve stable IDs and existing exports when updating examples.
+- Use Canvas-owned authoring types with an explicit stable variant ID. Keep props, providers, and deterministic setup beside the example. Critical behavioral assertions live in Playwright tests.
 - Avoid tests that assert generated wording or bundled copy.
-- Prefer colocated fixtures when story files start to grow.
+- Split growing fixtures into nearby source files.
 
-## Metadata
+## Metadata and validation
 
-Use concise `parameters.docs.description.component` and story descriptions when a component needs usage guidance beyond props and examples. Keep descriptions practical: when to use it, required host state, and important constraints.
+Use concise component and variant descriptions when usage needs more explanation than props and examples provide. Rebuild the Canvas catalog, verify source coverage, and test only critical interaction risks in the isolated browser. A successful initial render does not prove every user flow.
 
+Examples are design fixtures, not test cases. Add Playwright checks only for critical user behavior; avoid cosmetic, prop, viewport, and theme permutations.

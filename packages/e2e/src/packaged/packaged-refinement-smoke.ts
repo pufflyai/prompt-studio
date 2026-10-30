@@ -17,7 +17,7 @@ export const expectPackagedRefinement = async (input: {
     return response.json();
   };
   expect(await readPolicy()).toMatchObject({
-    outcome: { status: "success", value: { generateArtifactPrototype: true } },
+    outcome: { status: "success", value: { updateCanvasDesign: true } },
   });
   const settingsRes = await fetch(`${baseUrl}/v1/projects/${projectId}/extensions`, { headers });
   const { extensions } = await settingsRes.json();
@@ -25,7 +25,7 @@ export const expectPackagedRefinement = async (input: {
     (extension: { installName: string }) => extension.installName === "pstdio-planner",
   );
   expect(plannerExtension).toBeDefined();
-  const settingUrl = `${baseUrl}/v1/projects/${projectId}/extensions/${plannerExtension.id}/settings/refinement.generateArtifactPrototype`;
+  const settingUrl = `${baseUrl}/v1/projects/${projectId}/extensions/${plannerExtension.id}/settings/refinement.updateCanvasDesign`;
   const disabled = await fetch(settingUrl, {
     method: "PUT",
     headers: { ...headers, "content-type": "application/json" },
@@ -33,6 +33,6 @@ export const expectPackagedRefinement = async (input: {
   });
   expect(disabled.status).toBe(200);
   expect(await readPolicy()).toMatchObject({
-    outcome: { status: "success", value: { generateArtifactPrototype: false } },
+    outcome: { status: "success", value: { updateCanvasDesign: false } },
   });
 };

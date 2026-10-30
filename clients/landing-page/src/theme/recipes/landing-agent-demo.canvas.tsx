@@ -1,0 +1,125 @@
+import { Box, Button, Code, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import { SessionIndicator } from "@pstdio/ui";
+import { KanbanRendererBoard } from "@pstdio/ui/kanban-renderer";
+import { Check, CircleDashed } from "lucide-react";
+import { useState } from "react";
+import { landingStorySlotRecipe } from "./landing-story";
+import { landingToolDemoSlotRecipe } from "./landing-tool-demo";
+
+const AgentDemo = () => {
+  const story = useSlotRecipe({ recipe: landingStorySlotRecipe })({});
+  const styles = useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});
+  const [completed, setCompleted] = useState(false);
+  const task = {
+    id: "TOOL-16",
+    cardProps: {
+      eyebrow: "TOOL-16",
+      title: "Use the icon set in the shader preview",
+      customSlots: [
+        <HStack key="session" css={styles.sessionStatus} data-status={completed ? "completed" : "in_progress"}>
+          <SessionIndicator status={completed ? "completed" : "in_progress"} boxSize="icon-sm" />
+          <Text textStyle="label/XS/regular">Codex · Build</Text>
+        </HStack>,
+      ],
+    },
+  };
+  const columns = [
+    { id: "running", label: "In progress", color: "blue", items: completed ? [] : [task] },
+    { id: "review", label: "Ready for review", color: "green", items: completed ? [task] : [] },
+  ].map((column) => ({ ...column, canCreate: false, actions: [] }));
+  return (
+    <Box css={story.page}>
+      <Box css={story.visual}>
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>Tool development</Box>
+          <Box height="80">
+            <KanbanRendererBoard columns={columns} />
+          </Box>
+        </Box>
+      </Box>
+      <Box css={story.panels}>
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>Agent sessions</Box>
+          <Box css={story.panelBody}>
+            <Text textStyle="label/M/medium">Use the icon set in the shader preview</Text>
+            <Button variant="subtle" onClick={() => setCompleted(!completed)}>
+              {completed ? "Start session" : "Complete session"}
+            </Button>
+          </Box>
+        </Box>
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>When a session completes</Box>
+          <Stack css={story.panelBody}>
+            <Text textStyle="mono/XS">session.completed</Text>
+            <HStack gap="sm">
+              {completed ? <Check size={16} /> : <CircleDashed size={16} />}
+              <Text>Move task to Ready for review</Text>
+            </HStack>
+            <HStack gap="sm">
+              {completed ? <Check size={16} /> : <CircleDashed size={16} />}
+              <Text>Start a review session</Text>
+            </HStack>
+          </Stack>
+        </Box>
+      </Box>
+      <Box css={story.panels}>
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>Ticket commands</Box>
+          <Stack css={story.panelBody}>
+            <Text textStyle="label/M/medium">Create a ticket</Text>
+            <Code whiteSpace="pre-wrap" overflowWrap="anywhere">
+              {'pst tickets create --content "# Add a color picker" --status "Queued"'}
+            </Code>
+            <Text textStyle="label/M/medium">Update ticket status</Text>
+            <Code whiteSpace="pre-wrap" overflowWrap="anywhere">
+              {'pst tickets update --id TOOL-16 --status "Ready for review"'}
+            </Code>
+            <Text textStyle="label/M/medium">List tickets</Text>
+            <Code whiteSpace="pre-wrap" overflowWrap="anywhere">
+              {'pst tickets list --status "Queued"'}
+            </Code>
+          </Stack>
+        </Box>
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>Agent skills</Box>
+          <Stack css={story.panelBody}>
+            <Text textStyle="label/M/medium">Implement a ticket</Text>
+            <Text>Read the requirements, make the change, run the checks, and update the ticket.</Text>
+            <Text textStyle="label/M/medium">Review a change</Text>
+            <Text>Check the change against the ticket, test edge cases, and record findings.</Text>
+          </Stack>
+        </Box>
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>Scheduled work</Box>
+          <Stack css={story.panelBody}>
+            <Text textStyle="label/M/medium">Pick up queued tickets · Weekdays at 09:00</Text>
+            <Text>Choose an unblocked ticket and start an agent with the implementation skill.</Text>
+            <Text textStyle="label/M/medium">Prepare a review summary · Weekdays at 16:00</Text>
+            <Text>Summarize tickets ready for review, their checks, and open questions.</Text>
+          </Stack>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+const meta = {
+  title: "Theme/Landing Agent Demo",
+  component: AgentDemo,
+  parameters: { layout: "fullscreen" },
+} satisfies CanvasMeta<typeof AgentDemo>;
+export default meta;
+type Story = CanvasVariant<typeof meta>;
+export const Desktop: Story = {
+  id: "theme-landing-agent-demo--desktop",
+};
+export const NarrowPanel: Story = {
+  id: "theme-landing-agent-demo--narrow-panel",
+  decorators: [
+    (Story) => (
+      <Box width="80">
+        <Story />
+      </Box>
+    ),
+  ],
+};

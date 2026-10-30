@@ -7,6 +7,7 @@ export const autoBuildStoryConfiguration: Omit<AutoBuildFormProps, "onClose" | "
   eligible: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["ready"] }] },
   prompt: "Implement the calculator feature.",
   host: {
+    extensionId: "pstdio.pstdio-planner",
     call: async () =>
       ({
         harnesses: [{ id: "codex", name: "Codex", availability: { type: "INSTALLED" } }],

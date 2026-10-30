@@ -18,4 +18,4 @@ Do not use page, screen, or canvas coordinates as a viewport anchor. Panning and
 
 Right click away from the top left, then repeat after horizontal panning and zooming. Check the menu rectangle against the click position. Repeat near a viewport edge and inside an extension iframe. Select an action and confirm that it receives the intended track and milestone.
 
-The corrected implementation is [Planner's background menu](../../extensions/pstdio-planner/src/timeline/view/background-menu.tsx). Its [Storybook examples](../../extensions/pstdio-planner/src/timeline/view/background-menu.stories.tsx) keep the positioning case visible.
+The corrected implementation is [Planner's background menu](../../extensions/pstdio-planner/src/timeline/view/background-menu.tsx). Its [Canvas examples](../../extensions/pstdio-planner/src/timeline/view/background-menu.canvas.tsx) keep the positioning case visible.

@@ -8,7 +8,7 @@ export const scopeFixture = () => ({
     { name: "pstdio-db", dir: "packages/pstdio-db", dependencies: [] },
     { name: "@pstdio/ui", dir: "packages/ui", dependencies: [] },
     { name: "pstdio-dashboard", dir: "packages/pstdio-dashboard", dependencies: ["@pstdio/ui"] },
-    { name: "storybook-tests", dir: "packages/storybook-tests", dependencies: ["@pstdio/ui", "pstdio-dashboard"] },
+    { name: "canvas-tests", dir: "packages/canvas-tests", dependencies: ["@pstdio/ui", "pstdio-dashboard"] },
     { name: "e2e", dir: "packages/e2e", dependencies: ["example", "pstdio-dashboard"] },
   ],
   tests: [
@@ -21,8 +21,8 @@ export const scopeFixture = () => ({
     "packages/e2e/src/ui/feature.p2.spec.ts",
     "packages/e2e/src/packaged/startup.p1.test.ts",
     "packages/e2e/src/packaged/feature.p2.test.ts",
-    "packages/storybook-tests/src/ui/ui/menu.p1.spec.ts",
-    "packages/storybook-tests/src/ui/ui/menu-permutations.p2.spec.ts",
-    "packages/storybook-tests/src/ui/pstdio-dashboard/navigation.p1.spec.ts",
+    "packages/canvas-tests/src/ui/ui/menu.p1.spec.ts",
+    "packages/canvas-tests/src/ui/ui/menu-permutations.p2.spec.ts",
+    "packages/canvas-tests/src/ui/pstdio-dashboard/navigation.p1.spec.ts",
   ],
 });

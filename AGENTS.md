@@ -96,12 +96,10 @@ Clearly describe it as a temporary workaround, not the intended design.
 
 ## Visual design rules
 
+- For UI tickets, follow Planner's `updateCanvasDesign` policy. When enabled and Canvas is available, update the relevant design before creating or implementing the ticket and follow the `canvas` skill. Link the canvas page, exact preview names, and source paths in the ticket. If disabled or unavailable, follow the project's existing design workflow and record why the Canvas step was skipped. Explicit user instructions take precedence.
+- Canvas source lives in `extensions/canvas/src/canvases/`. Preserve existing designs and stable IDs.
 - Read [design/DESIGN.md](design/DESIGN.md) before working on UI or design. Follow its shared interaction patterns.
-- Pencil `.pen` designs define how the `@pstdio/ui` component library must look. This includes colors, text styles, spacing, corner roundness, component states, and layout. Make the code match the design.
-- The main design system file is [`design/prompt-studio-design-system.pen`](design/prompt-studio-design-system.pen). Open and edit `.pen` files only with the Pencil CLI. Never edit them by hand.
-- Website and landing page frames live in [`design/prompt-studio-website.pen`](design/prompt-studio-website.pen). Pencil cannot share components between files, so this file keeps copies of the design-system components it uses. Update those copies when the design system changes.
-- If the design and code do not match, update the code to match the design. If the design is wrong, fix it in Pencil first, then update the code.
-- Storybook defines component **APIs and props**. Pencil defines how components **look**.
+- Live canvases define appearance, component states, and example prop usage. When following the Canvas workflow, update the design first and make the implementation match it.
 
 ## Styling rules
 
@@ -109,7 +107,7 @@ Build the UI with the design system. Do not create one-off styles.
 
 - Build screens with exported `@pstdio/ui` components. Use a basic Chakra component directly only when `@pstdio/ui` has no matching component.
 - Apply styles with Chakra recipes and theme tokens in `packages/ui/src/theme`. Use recipe `variant` and `size` props, semantic color tokens, `textStyles`, and `layerStyles`.
-- If the current recipes and tokens cannot create a visual from the `.pen` design, add the missing variant or token to `packages/ui/src/theme`. This makes it available to every caller.
+- If the current recipes and tokens cannot create a visual from the live canvas, add the missing variant or token to `packages/ui/src/theme`. This makes it available to every caller.
 
 Do not use:
 
@@ -130,7 +128,7 @@ Follow these steps **every time**:
 
 Do not write:
 
-- Tests for UI changes. Use storybook stories instead.
+- Exhaustive UI permutations and cosmetic-only assertions. Keep Canvas examples for exploration; add automated browser checks only for critical behavior, with the risk identified in the test.
 - Tests for changes that only affect configuration.
 - Tests for changes that only affect documentation.
 - Tests that assert literal bundled copy.
@@ -170,7 +168,7 @@ For code changes, run targeted tests and the relevant package checks, such as ty
 
 For documentation-only changes, check the content, links, paths, and formatting. Do not run application tests or full validation merely because a documentation path appears in a source comment, prompt, or test fixture.
 
-Always validate UI changes using Playwright.
+Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies.
 
 ### 5. Test packaged files
 
@@ -203,8 +201,8 @@ A pull request may contain only one migration entry. If the tools create more th
 ## Fixing bugs
 
 - Always reproduce a bug before fixing it.
-- Always write a test that proves the bug stays fixed.
-- Always validate UI changes using Playwright.
+- Add a regression test when it protects meaningful supported behavior. Visual-only bugs follow the critical browser-check policy below.
+- Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies.
 
 ## Git
 
@@ -243,14 +241,14 @@ A pull request may contain only one migration entry. If the tools create more th
 - Run one group with `bun test:p0`, `bun test:p1`, `bun test:p2`, or `bun test:p3`. Use `--scope <workspace>` and `--runner <kind>` for targeted work. Discovery owns membership; do not add test filename lists to workflows.
 - Put each test **next to the file it tests**.
 - Avoid mocks. Test real behavior when possible.
-- For a bug fix, add a test that reproduces the bug before changing the code.
+- For a meaningful behavioral bug, add a reproducing regression test before changing code. Visual-only changes follow the critical-check policy.
 - Test behavior that users can use and rules the product still supports.
 - When removing a feature, delete or update its tests. Do not add tests that only prove the feature is gone.
 - Write failure-case tests only for rules the product still supports, such as validation, permissions, and error handling. Never use them to prove deleted code stays gone.
 
 Do not write:
 
-- Tests for UI changes. Use storybook stories instead.
+- Exhaustive UI permutations and cosmetic-only assertions. Keep Canvas examples for exploration; add automated browser checks only for critical behavior, with the risk identified in the test.
 - Tests for changes that only affect configuration.
 - Tests for changes that only affect documentation.
 - Tests that assert literal bundled copy.
@@ -272,9 +270,9 @@ Run `bun run dev:playwright`. Open the dashboard URL printed by the command with
 Build each feature with the [test-driven workflow](#required-workflow-test-driven-development). While you develop, run only the tests relevant to your change. When the feature is ready:
 
 1. **Open the PR.** Push the branch and open a draft PR, as described in [Git](#git).
-2. **Run all tests.** Run `bun run test`. It runs every package's tests, builds what the E2E suites need, then runs the E2E script, CLI, UI and Vite terminal suites. Run it again after merging `main` into the branch, because a merge can combine changes that each passed alone. Fix every failure your PR causes and push the fix.
+2. **Run required tests.** For behavioral features and meaningful regressions, run `bun run test`. It runs every package's tests, builds what the E2E suites need, then runs the E2E script, CLI, UI, Vite terminal and critical Canvas suites. Routine copy, spacing, cosmetic and documentation changes use the scoped verification policy above; they do not require this full command or browser runs. Explicit user-requested validation still applies. Run it again after merging `main` into the branch, because a merge can combine changes that each passed alone. Fix every failure your PR causes and push the fix.
    - If a test fails for a reason unrelated to your PR, check that it also fails on `main`. Then look for an open PR that already fixes it. If there is none, open a separate PR that fixes it. Link that PR in your PR's description. Do not fix unrelated failures in your PR.
-3. **Mark the PR ready.** Run `gh pr ready` only when CI is green on the latest commit and all tests pass, apart from unrelated failures that have a linked fix PR. See [CI completion](#ci-completion).
+3. **Mark the PR ready.** Run `gh pr ready` only when CI is green on the latest commit and all required local tests pass, apart from unrelated failures that have a linked fix PR. See [CI completion](#ci-completion).
 4. **Answer review comments.** Read every review comment on the PR, including inline comments on the code. `gh pr view <number> --comments` shows the conversation, and `gh api repos/pufflyai/prompt-studio/pulls/<number>/comments` shows the inline comments. Fix the valid ones and reply to each comment. After a fix, rerun the affected tests and wait for CI on the new commit.
 
 Documentation-only PRs skip step 2.

@@ -17,12 +17,13 @@ Refine a Planner ticket by adding researched detail and applying a template when
    - Bug: reproduction, proof, cause, and fix, as the Bug reports section of the `create-ticket` skill describes. Do not refine a bug that is not reproduced; ask for the missing details instead.
    - Other tickets: scope, the real files or modules to touch, and the tests that prove the work.
    - `depends_on` in frontmatter for tickets that must finish first. Do not express waiting with a Blocked status. See [Dependencies](https://prompt.studio/docs/extensions/planner/cli/#dependencies). Priority and type stay in tags.
-5. Read the project workflow options with `pst pstdio-planner refinement-policy`. See [Refinement options](https://prompt.studio/docs/extensions/planner/#refinement-options). People can toggle **Generate an artifact prototype for UX features** in the Project Planner extension settings. Check `pst --help` for the `pstdio-artifacts` commands. For a new feature with UX changes, when `generateArtifactPrototype` is enabled and Artifacts is installed and enabled for this project:
-   - Create an interactive HTML prototype of the proposed user flow with the publish-artifact skill. Use sample data and cover the main interactions and relevant empty or error states.
-   - Publish it with `pst pstdio-artifacts publish --file_path <file> --label "UX prototype"` and add the returned dashboard URL and a short walkthrough to the ticket. See [Publish a page](https://prompt.studio/docs/extensions/artifacts/#publish-a-page).
-   - Update an existing ticket prototype with its saved `--url` so its revision history stays together.
-   - Do not finish refinement or mark the proposal ready until the prototype is published and linked.
-     If the option is off or Artifacts is unavailable, record the reason in the ticket. Do not install it automatically. If the policy cannot be read, resolve or report the failure before completing refinement. Tickets without a new UX feature do not require a prototype.
+5. Read the project workflow options with `pst pstdio-planner refinement-policy`. People can toggle **Update canvas designs for UI changes** in Project Planner settings. For tickets that add or change UI, when `updateCanvasDesign` is enabled:
+   - Follow the project’s canvas skill. Update the relevant live canvas design before completing refinement or changing production UI. Reuse existing canvases and preserve unrelated designs. Use safe sample data and cover the proposed interactions and relevant empty or error states.
+   - Add the canvas page link, exact preview names, source paths, and a short walkthrough to the ticket. For alternatives, preserve the original and give each variation a distinct name.
+   - Complete the canvas skill's source handoff before finishing refinement. For Git projects, push the reviewed design source and record its branch and commit SHA so a new implementation workspace can fetch and include it. A page link alone does not carry uncommitted changes.
+   - Do not publish an artifact prototype for this requirement. The canvas design replaces that step.
+   - Do not finish refinement or mark a proposal ready until the canvas is updated and linked. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically.
+   If the option is off, record why the design step was skipped. If the policy cannot be read, resolve or report the failure before completing refinement. Tickets without UI changes do not require a canvas update.
 6. Save the ticket with `pst tickets save --id <shorthand>`.
 7. Put open questions, assumptions, and risks in a review request, not in the ticket. Follow the Review request section of the `create-proposal` skill for proposals and the Review requests section of the `create-ticket` skill for other tickets. First list open requests with `pst pstdio-planner review-requests list --ticket <shorthand> --open-only`. Cancel an open request only when refinement made it wrong, and do not ask the same question twice.
 8. Mark a proposal ready for review with `pst tickets proposal-refined --id <shorthand>`.
@@ -31,3 +32,7 @@ Refine a Planner ticket by adding researched detail and applying a template when
 ## Status
 
 Refinement does not change ticket status. Run `pst tickets update --status` only when the user asks for a status change.
+
+## Critical UI verification
+
+Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies. Keep Canvas examples for exploration. A visual example does not require a matching automated test. Name the critical risk covered by any new browser check. Ordinary relevant unit, type, and build checks still apply.

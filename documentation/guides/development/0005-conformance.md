@@ -5,7 +5,7 @@ created: "2026-08-18T17:03:48.668Z"
 
 # Extension conformance and regression coverage
 
-Extension Lab, the extension testbench, packaged smoke checks, Storybook, and Playwright form one vertical conformance suite. Tests follow user-visible invariants across the SDK, extension normalization, workbench, and dashboard.
+Extension Lab, the extension testbench, packaged smoke checks, Canvas, and Playwright form one vertical conformance suite. Tests follow user-visible invariants across the SDK, extension normalization, workbench, and dashboard.
 
 ## Fixture matrix
 
@@ -40,7 +40,7 @@ Extension Lab, the extension testbench, packaged smoke checks, Storybook, and Pl
 1. SDK typechecks cover valid pages, slots, modes, placements, and explicit navigation targets.
 2. Normalization rejects invalid refs and relationships with stable diagnostics.
 3. Workbench tests assert complete placement owner identities, not incidental widget order.
-4. Every UI behavior change has a runnable Storybook or dashboard journey.
+4. Every UI behavior change has a runnable Canvas or dashboard journey.
 5. Playwright validates the visible page, mode, Sidenav, URL, breadcrumb, and stale-panel cleanup where applicable.
 6. Packaged smoke tests use the same public extension metadata as development.
 7. Full validation must pass without increasing a timeout.

@@ -19,10 +19,7 @@
     "release:prepare": "bun scripts/prepare-release.ts",
     "release:verify": "bun scripts/verify-release-set.ts",
     "start": "electron dist/main.js",
-    "prestorybook": "bun run --cwd ../../packages/ui build",
-    "storybook": "storybook dev -p 6009",
-    "prebuild-storybook": "bun run --cwd ../../packages/ui build",
-    "build-storybook": "storybook build",
+    "prebuild:preview-tests": "bun run --cwd ../../packages/ui build",
     "test": "bun ../../scripts/ci/run-bun-tests.ts --pass-with-no-tests --silent --path-ignore-patterns='**/e2e/**'",
     "test:electron": "bun run build && playwright test --config playwright.config.ts",
     "test:benchmark": "bun ../../scripts/ci/run-desktop-benchmarks.ts",
@@ -53,7 +50,6 @@
     "@electron/fuses": "2",
     "@electron/windows-sign": "1.2.2",
     "@playwright/test": "1.60.0",
-    "@storybook/react-vite": "^10.6.0",
     "@types/bun": "1.4.4",
     "@types/node": "25.5.2",
     "@types/react": "19.2.14",
@@ -62,11 +58,11 @@
     "@vitejs/plugin-react": "5.1.1",
     "electron": "43.8.1",
     "fflate": "0.8.3",
-    "pstdio-benchmarks": "workspace:*",
-    "storybook": "^10.6.0",
     "typescript": "6.0.2",
     "vite": "7.3.7",
     "workbench-fixture": "workspace:*",
-    "pstdio-scripts": "workspace:*"
+    "pstdio-scripts": "workspace:*",
+    "@pstdio/canvas": "workspace:*",
+    "pstdio-benchmarks": "workspace:*"
   }
 }

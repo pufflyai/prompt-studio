@@ -22,7 +22,7 @@ A clean fix needs Storybook to skip linked workspace packages or accept an inclu
 
 ## Temporary workaround
 
-`packages/pstdio-workbench/.storybook/main.ts` wraps the Storybook plugins with Vite's public `withFilter` helper. The filter lets the `storybook:react-docgen-plugin` transform run only for files in the workbench `src` folder. Prop tables for workbench components stay the same. Components from other packages get no prop table in this Storybook, which is correct, because the ui Storybook documents them.
+`packages/pstdio-workbench/.canvas/main.ts` wraps the Storybook plugins with Vite's public `withFilter` helper. The filter lets the `storybook:react-docgen-plugin` transform run only for files in the workbench `src` folder. Prop tables for workbench components stay the same. Components from other packages get no prop table in this Storybook, which is correct, because the ui Storybook documents them.
 
 The trade-off is a dependency on the plugin name `storybook:react-docgen-plugin`. If Storybook renames the plugin, the filter matches nothing and docgen runs on every linked file again. Nothing breaks, but cold starts become slow again.
 

@@ -1,0 +1,156 @@
+import { Box, Stack } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import rawConversationMessages from "../mocks/full-conversation-normalized.json";
+import { ChatPrimitives } from "./ai-conversation";
+import { ChatMessage } from "./ai-message";
+import { ChatPanel } from "./chat-panel";
+import { MessagePartsRenderer } from "./message-parts-renderer";
+import type { SessionMessage } from "./message-types";
+import { getMessageOrigin, mergeReasoningToolOnlyMessages } from "./message-types";
+
+const conversationMessages = rawConversationMessages as unknown as SessionMessage[];
+const meta: CanvasMeta<typeof ChatPrimitives.Root> = {
+  title: "Patterns/Chat/AI Conversation",
+  component: ChatPrimitives.Root,
+  parameters: {
+    layout: "padded",
+  },
+};
+export default meta;
+type Story = CanvasVariant<typeof ChatPrimitives.Root>;
+const storyMessages = mergeReasoningToolOnlyMessages(conversationMessages).slice(-18);
+const statusColorPrompt = [
+  "```ts",
+  "const STATUS_INDICATOR_COLOR_BY_STATUS: Record<string, string> = {",
+  '  gray: "gray.400",',
+  '  red: "red.400",',
+  '  orange: "orange.400",',
+  '  yellow: "yellow.400",',
+  '  green: "green.400",',
+  '  teal: "teal.400",',
+  '  blue: "blue.400",',
+  '  cyan: "cyan.400",',
+  '  purple: "purple.400",',
+  '  pink: "pink.400",',
+  "};",
+  "```",
+  "instead of the above, use the correct status colors",
+].join("\n");
+const multilineUserMessageConversation: SessionMessage[] = [
+  {
+    id: "status-color-user-message",
+    role: "user",
+    parts: [{ type: "text", text: statusColorPrompt }],
+  },
+  {
+    id: "status-color-assistant-message",
+    role: "assistant",
+    parts: [
+      {
+        type: "text",
+        text: "I'll update the status indicator colors to use the semantic status tokens.",
+      },
+    ],
+  },
+];
+const tallStatusColorPrompt = [
+  "Please replace this status indicator color map with the correct semantic status colors.",
+  "",
+  "```ts",
+  "const STATUS_INDICATOR_COLOR_BY_STATUS: Record<string, string> = {",
+  ...Array.from(
+    { length: 72 },
+    (_, index) => `  status${String(index + 1).padStart(2, "0")}: getStatusColor(statuses[${index}], theme),`,
+  ),
+  "};",
+  "```",
+  "",
+  "Keep the result typed, preserve the existing status order, and explain the mapping after the code change.",
+].join("\n");
+const tallStickyUserMessageConversation: SessionMessage[] = [
+  {
+    id: "tall-status-color-user-message",
+    role: "user",
+    parts: [{ type: "text", text: tallStatusColorPrompt }],
+  },
+  {
+    id: "tall-status-color-assistant-message-1",
+    role: "assistant",
+    parts: [
+      {
+        type: "text",
+        text: "I'll replace the raw color palette map with the status color tokens and keep the mapping stable.",
+      },
+    ],
+  },
+  {
+    id: "tall-status-color-assistant-message-2",
+    role: "assistant",
+    parts: [
+      {
+        type: "text",
+        text: "The important behavior is that the expanded prompt can be reviewed without losing access to the rest of the conversation below it.",
+      },
+    ],
+  },
+  {
+    id: "tall-status-color-assistant-message-3",
+    role: "assistant",
+    parts: [
+      {
+        type: "text",
+        text: "Once the prompt scroll reaches its boundary, the conversation should continue scrolling so the assistant responses remain reachable.",
+      },
+    ],
+  },
+];
+const ConversationPreview = () => {
+  return (
+    <Box h="640px" maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" overflow="hidden">
+      <ChatPrimitives.Root>
+        <ChatPrimitives.Viewport>
+          <Stack gap="sm">
+            {storyMessages.map((message) => (
+              <ChatMessage.Root key={message.id} from={getMessageOrigin(message.role)}>
+                <ChatMessage.Content from={getMessageOrigin(message.role)}>
+                  <MessagePartsRenderer message={message} />
+                </ChatMessage.Content>
+              </ChatMessage.Root>
+            ))}
+          </Stack>
+        </ChatPrimitives.Viewport>
+        <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" />
+      </ChatPrimitives.Root>
+    </Box>
+  );
+};
+export const FullConversationPreview: Story = {
+  id: "patterns-chat-ai-conversation--full-conversation-preview",
+  render: () => <ConversationPreview />,
+};
+export const MultilineUserMessageShowMore: Story = {
+  id: "patterns-chat-ai-conversation--multiline-user-message-show-more",
+  render: () => (
+    <Box h="520px" maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" overflow="hidden">
+      <ChatPanel
+        messages={multilineUserMessageConversation}
+        emptyStateTitle="No messages yet"
+        emptyStateDescription="Send a message to start this session."
+        chatInputPlaceholder="Type a message..."
+      />
+    </Box>
+  ),
+};
+export const TallUserMessageScrollHandoff: Story = {
+  id: "patterns-chat-ai-conversation--tall-user-message-scroll-handoff",
+  render: () => (
+    <Box h="520px" maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" overflow="hidden">
+      <ChatPanel
+        messages={tallStickyUserMessageConversation}
+        emptyStateTitle="No messages yet"
+        emptyStateDescription="Send a message to start this session."
+        chatInputPlaceholder="Type a message..."
+      />
+    </Box>
+  ),
+};

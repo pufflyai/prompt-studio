@@ -44,7 +44,7 @@ export const testRunner = (file: string) => {
   if (file.endsWith(".integration.ts")) return "integration";
   if (file.endsWith(".spec.ts")) {
     if (file.startsWith("clients/desktop/")) return "desktop";
-    if (file.startsWith("packages/storybook-tests/")) return "component";
+    if (file.startsWith("packages/canvas-tests/")) return "component";
     if (file.startsWith("packages/e2e/src/packaged/")) return "packaged-browser";
     if (file.startsWith("packages/e2e/src/vite-terminal/")) return "vite";
     return "app";
