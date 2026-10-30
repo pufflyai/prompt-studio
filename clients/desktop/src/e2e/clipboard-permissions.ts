@@ -41,7 +41,8 @@ export const expectClipboardPermissions = async (electronApp: ElectronApplicatio
     await focusWorkbench(electronApp, window);
     await extensionCopy.focus();
     await expect(extensionCopy).toBeFocused();
-    await extensionCopy.click();
+    // A real key press supplies the clipboard user gesture without native iframe mouse hit testing.
+    await extensionCopy.press("Enter");
     await expect(extensionCopy).toHaveText("Copied extension draft");
     expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe("Extension draft");
     expect(
@@ -70,7 +71,7 @@ export const expectClipboardPermissions = async (electronApp: ElectronApplicatio
     await focusWorkbench(electronApp, window);
     await embeddedCopy.focus();
     await expect(embeddedCopy).toBeFocused();
-    await embeddedCopy.click();
+    await embeddedCopy.press("Enter");
     await expect(embeddedCopy).toHaveText("denied");
     expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe("Extension draft");
   });
