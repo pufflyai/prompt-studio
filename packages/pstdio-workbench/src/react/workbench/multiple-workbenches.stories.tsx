@@ -1,5 +1,6 @@
 import { Box, Button, ChakraProvider, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import { ScopedDialog as Dialog, ScopedMenu as Menu, Portal, psTheme, useFileIconThemePreference } from "@pstdio/ui";
+import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
@@ -8,8 +9,12 @@ import { createLocalStorageWorkbenchPersistence } from "../../storage";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { Workbench } from "./workbench";
 
-const Editor = (props: { name: string; calls: ReturnType<typeof createWorkbenchStore<{ count: number }>> }) => {
-  const { name, calls } = props;
+const Editor = (props: {
+  name: string;
+  calls: ReturnType<typeof createWorkbenchStore<{ count: number }>>;
+  richText?: boolean;
+}) => {
+  const { name, calls, richText } = props;
   const { fileIconThemePreference, setFileIconThemePreference } = useFileIconThemePreference();
   const [draft, setDraft] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -24,6 +29,11 @@ const Editor = (props: { name: string; calls: ReturnType<typeof createWorkbenchS
         {name} choose icons
       </Button>
       <Input aria-label={`${name} draft`} value={draft} onChange={(event) => setDraft(event.target.value)} />
+      {richText ? (
+        <Box role="group" aria-label={`${name} rich text`}>
+          <MarkdownEditor defaultState="" isEditable fullWidth scrollable={false} />
+        </Box>
+      ) : null}
       <Text role="status">
         {name} shortcut calls: {count}
       </Text>
@@ -66,7 +76,7 @@ const Editor = (props: { name: string; calls: ReturnType<typeof createWorkbenchS
   );
 };
 
-const createExample = (name: string, active: boolean) => {
+const createExample = (name: string, active: boolean, richText = false) => {
   const page = { kind: "page", extensionId: "multiple", id: "editor" } as const;
   const workbench = createWorkbench({
     active,
@@ -103,7 +113,7 @@ const createExample = (name: string, active: boolean) => {
   workbench.views.registerView({
     id: "editor",
     title: name,
-    body: { kind: "react", render: () => <Editor name={name} calls={calls} /> },
+    body: { kind: "react", render: () => <Editor name={name} calls={calls} richText={richText} /> },
   });
   workbench.pages.registerPage({
     id: "editor",
@@ -118,8 +128,11 @@ const createExample = (name: string, active: boolean) => {
   return workbench;
 };
 
-const MultipleWorkbenches = () => {
-  const [workbenches] = useState(() => [createExample("A", true), createExample("B", false)]);
+const MultipleWorkbenches = (props: { richText?: boolean }) => {
+  const [workbenches] = useState(() => [
+    createExample("A", true, props.richText),
+    createExample("B", false, props.richText),
+  ]);
   const select = (selected: WorkbenchCore) => {
     for (const workbench of workbenches) if (workbench !== selected) workbench.activation.setActive(false);
     selected.activation.setActive(true);
@@ -193,3 +206,5 @@ const StandaloneExample = () => {
 };
 
 export const Standalone: Story = { render: () => <StandaloneExample /> };
+
+export const RichTextEditors: Story = { args: { richText: true } };

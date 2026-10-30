@@ -1,3 +1,4 @@
+import { useUiScope } from "@/utils/ui-scope";
 import "./LinkEditorPlugin.css";
 
 import { Box } from "@chakra-ui/react";
@@ -46,6 +47,7 @@ function LinkEditor({
   isLinkEditMode: boolean;
   setIsLinkEditMode: Dispatch<boolean>;
 }): React.JSX.Element {
+  const surfaceActive = useUiScope()?.active ?? true;
   const editorRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const updateLinkEditorRef = useRef<() => void>(() => undefined);
@@ -217,7 +219,7 @@ function LinkEditor({
   };
 
   return (
-    <Box ref={editorRef} zIndex="tooltip" className={`link-editor ${isActive ? "active" : ""}`}>
+    <Box hidden={!surfaceActive} ref={editorRef} zIndex="tooltip" className={`link-editor ${isActive ? "active" : ""}`}>
       <LinkEditorContent
         isActive={isActive}
         isLinkEditMode={isLinkEditMode}

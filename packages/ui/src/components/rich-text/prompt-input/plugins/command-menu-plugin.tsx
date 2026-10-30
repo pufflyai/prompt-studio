@@ -1,10 +1,11 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { LexicalTypeaheadMenuPlugin, MenuOption } from "@lexical/react/LexicalTypeaheadMenuPlugin";
 import { $createTextNode, $getSelection, $setSelection } from "lexical";
-import { useEffect, useState } from "react";
+import { type RefObject, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ListRow } from "@/components/list-row/list-row";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { useTypeaheadScope } from "../../shared/use-typeahead-scope";
 import { matchCommandQuery } from "./command-query";
 
 export interface PromptCommand {
@@ -25,6 +26,7 @@ class CommandOption extends MenuOption {
 }
 
 interface CommandMenuProps {
+  anchor: RefObject<HTMLElement | null>;
   options: CommandOption[];
   selectedIndex: number | null;
   onSelect: (option: CommandOption, index: number) => void;
@@ -32,6 +34,7 @@ interface CommandMenuProps {
 }
 
 const CommandMenu = (props: CommandMenuProps) => {
+  useTypeaheadScope(props.anchor);
   const { options, selectedIndex, onSelect, onHighlight } = props;
   const styles = useSlotRecipe({ key: "menu" })();
   useEffect(() => {
@@ -101,6 +104,7 @@ export const CommandMenuPlugin = (props: { commands: PromptCommand[] }) => {
         return anchor.current
           ? createPortal(
               <CommandMenu
+                anchor={anchor}
                 options={options}
                 selectedIndex={selectedIndex}
                 onHighlight={setHighlightedIndex}
