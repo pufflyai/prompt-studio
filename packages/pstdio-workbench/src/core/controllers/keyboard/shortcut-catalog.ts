@@ -53,7 +53,11 @@ export const isShortcutBindingAvailable = (
   binding: RegisteredKeybinding,
   targets: () => KeyboardPresentation[] = () => core.keyboard.visibleTargets(),
 ) =>
-  isContextual(binding) ? targets().some((target) => applicable(core, binding, target)) : applicable(core, binding);
+  isContextual(binding)
+    ? targets().some(
+        (target) => (binding.targetScope !== "resource" || target.resource) && applicable(core, binding, target),
+      )
+    : applicable(core, binding);
 
 /** A tooltip for one direct action does not need discovery labels or layered shortcuts. */
 export const directShortcutHint = (

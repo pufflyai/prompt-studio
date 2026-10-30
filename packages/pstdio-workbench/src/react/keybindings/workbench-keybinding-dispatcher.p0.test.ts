@@ -49,6 +49,25 @@ test("rebinding a generated layer shortcut to a direct chord retains its identit
   expect(calls).toBe(1);
 });
 
+test("resource shortcuts require a resource while panel shortcuts allow an empty panel", () => {
+  const workbench = createWorkbench();
+  workbench.layout.registerWidget({ id: "empty", title: "Empty", region: "main", rendererId: "test" });
+  workbench.layout.openWidget("empty", { region: "main" });
+  for (const targetScope of ["resource", "panel"] as const) {
+    workbench.commands.registerCommand({ id: targetScope, label: targetScope }, { execute() {} });
+    workbench.keybindings.registerKeybinding({
+      id: targetScope,
+      action: { kind: "command", commandId: targetScope },
+      keybinding: targetScope === "resource" ? "Alt+R" : "Alt+P",
+      targetScope,
+    });
+  }
+  expect(workbench.keyboard.visibleTargets()).toHaveLength(1);
+  const registrations = createWorkbenchHotkeyRegistrations({ workbench });
+  expect(registrations.find((entry) => entry.id === "resource")?.enabled).toBe(false);
+  expect(registrations.find((entry) => entry.id === "panel")?.enabled).toBe(true);
+});
+
 test("direct shortcuts recheck live visibility when matched and executed", async () => {
   const workbench = createWorkbench();
   let visible = false;
