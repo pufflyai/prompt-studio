@@ -5876,7 +5876,7 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "e78b9abc3e8ad3056affe7ada1b9a41c72e7ee63150110647212049c3b0a3cd4",
+      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -5887,7 +5887,18 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "e78b9abc3e8ad3056affe7ada1b9a41c72e7ee63150110647212049c3b0a3cd4",
+      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
+      "component": "WorkbenchStory",
+      "componentImport": "../../examples/workbench-story"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-keyboard--shortcut-preview",
+      "name": "Shortcut Preview",
+      "exportName": "ShortcutPreview",
+      "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Keyboard",
+      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -5898,7 +5909,7 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "e78b9abc3e8ad3056affe7ada1b9a41c72e7ee63150110647212049c3b0a3cd4",
+      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -5909,7 +5920,7 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "e78b9abc3e8ad3056affe7ada1b9a41c72e7ee63150110647212049c3b0a3cd4",
+      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -5920,7 +5931,7 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "e78b9abc3e8ad3056affe7ada1b9a41c72e7ee63150110647212049c3b0a3cd4",
+      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -5931,7 +5942,7 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "e78b9abc3e8ad3056affe7ada1b9a41c72e7ee63150110647212049c3b0a3cd4",
+      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6146,7 +6157,7 @@
       "source": "packages/pstdio-workbench/src/react/region/empty-panel.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Empty panel",
-      "sourceHash": "04ebff8106874918a3dbb35d764da19911fde38f01c3838cd333c329d61f7a81",
+      "sourceHash": "d662f20ce88bc238407f355774df4037b28eefd645f0992e436dd33d55647879",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6157,7 +6168,7 @@
       "source": "packages/pstdio-workbench/src/react/region/empty-panel.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Empty panel",
-      "sourceHash": "04ebff8106874918a3dbb35d764da19911fde38f01c3838cd333c329d61f7a81",
+      "sourceHash": "d662f20ce88bc238407f355774df4037b28eefd645f0992e436dd33d55647879",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6168,7 +6179,7 @@
       "source": "packages/pstdio-workbench/src/react/region/empty-panel.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Empty panel",
-      "sourceHash": "04ebff8106874918a3dbb35d764da19911fde38f01c3838cd333c329d61f7a81",
+      "sourceHash": "d662f20ce88bc238407f355774df4037b28eefd645f0992e436dd33d55647879",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6179,7 +6190,7 @@
       "source": "packages/pstdio-workbench/src/react/region/empty-panel.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Empty panel",
-      "sourceHash": "04ebff8106874918a3dbb35d764da19911fde38f01c3838cd333c329d61f7a81",
+      "sourceHash": "d662f20ce88bc238407f355774df4037b28eefd645f0992e436dd33d55647879",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6190,7 +6201,18 @@
       "source": "packages/pstdio-workbench/src/react/region/empty-panel.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Empty panel",
-      "sourceHash": "04ebff8106874918a3dbb35d764da19911fde38f01c3838cd333c329d61f7a81",
+      "sourceHash": "d662f20ce88bc238407f355774df4037b28eefd645f0992e436dd33d55647879",
+      "component": "WorkbenchStory",
+      "componentImport": "../../examples/workbench-story"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-core-api-empty-panel--shortcut-preview",
+      "name": "Shortcut Preview",
+      "exportName": "ShortcutPreview",
+      "source": "packages/pstdio-workbench/src/react/region/empty-panel.canvas.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Core API/Empty panel",
+      "sourceHash": "d662f20ce88bc238407f355774df4037b28eefd645f0992e436dd33d55647879",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6201,7 +6223,7 @@
       "source": "packages/pstdio-workbench/src/react/region/empty-panel.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Empty panel",
-      "sourceHash": "04ebff8106874918a3dbb35d764da19911fde38f01c3838cd333c329d61f7a81",
+      "sourceHash": "d662f20ce88bc238407f355774df4037b28eefd645f0992e436dd33d55647879",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6212,7 +6234,7 @@
       "source": "packages/pstdio-workbench/src/react/region/empty-panel.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Empty panel",
-      "sourceHash": "04ebff8106874918a3dbb35d764da19911fde38f01c3838cd333c329d61f7a81",
+      "sourceHash": "d662f20ce88bc238407f355774df4037b28eefd645f0992e436dd33d55647879",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6223,7 +6245,7 @@
       "source": "packages/pstdio-workbench/src/react/region/empty-panel.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Empty panel",
-      "sourceHash": "04ebff8106874918a3dbb35d764da19911fde38f01c3838cd333c329d61f7a81",
+      "sourceHash": "d662f20ce88bc238407f355774df4037b28eefd645f0992e436dd33d55647879",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6234,7 +6256,7 @@
       "source": "packages/pstdio-workbench/src/react/region/empty-panel.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Empty panel",
-      "sourceHash": "04ebff8106874918a3dbb35d764da19911fde38f01c3838cd333c329d61f7a81",
+      "sourceHash": "d662f20ce88bc238407f355774df4037b28eefd645f0992e436dd33d55647879",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -6245,7 +6267,7 @@
       "source": "packages/pstdio-workbench/src/react/region/empty-panel.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Empty panel",
-      "sourceHash": "04ebff8106874918a3dbb35d764da19911fde38f01c3838cd333c329d61f7a81",
+      "sourceHash": "d662f20ce88bc238407f355774df4037b28eefd645f0992e436dd33d55647879",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
