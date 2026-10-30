@@ -120,11 +120,6 @@ export const startRelayPersonalHistory = (input: {
       await shared!.synchronize();
       attemptSignal.throwIfAborted();
       await publish();
-      deps.eventBus.emit("extension_events", "set", {
-        id: crypto.randomUUID(),
-        projectId: config.workbenchId,
-        eventId: "pstdio.event.storage-changed",
-      });
     },
     onError: () =>
       apiLogger.warn(

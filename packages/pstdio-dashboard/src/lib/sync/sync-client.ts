@@ -23,11 +23,11 @@ export const createDashboardSyncWriterProvider = (collections = getRuntimeCollec
       truncateAndWrite: () => undefined,
       upsert: (row) => {
         const eventId = typeof row.eventId === "string" ? row.eventId : undefined;
+        const projectId = typeof row.projectId === "string" ? row.projectId : undefined;
         if (eventId === "pstdio.event.storage-changed") {
-          publishExtensionEventReset(collections);
+          publishExtensionEventReset({ projectId }, collections);
           return;
         }
-        const projectId = typeof row.projectId === "string" ? row.projectId : undefined;
         if (eventId) publishExtensionEvent({ id: eventId, projectId }, collections);
       },
       remove: () => undefined,
@@ -55,7 +55,7 @@ export const startSync = (apiUrl: string, callbacks: SyncCallbacks = {}, options
     heartbeatThreshold: HEARTBEAT_THRESHOLD,
     ...callbacks,
     onConnected: () => {
-      publishExtensionEventReset(collections);
+      publishExtensionEventReset({}, collections);
       callbacks.onConnected?.();
     },
   });
