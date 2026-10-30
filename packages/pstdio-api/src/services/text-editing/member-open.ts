@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { TextEditingRequest } from "pstdio-api-contracts/extension-kernel";
 import { validateTextEditorFrame, validateTextEditorState } from "pstdio-sync/text";
-import { grantTextSource, validateTextGrant } from "./admission";
+import { grantTextSource, validateTextGrant, validateTextPresentation } from "./admission";
 import { textFailure } from "./errors";
 import { textHandle } from "./handles";
 import { roomAddress, runTextMember, wireTextSnapshot } from "./members";
@@ -109,6 +109,8 @@ export const openTextMember = (
   request: OpenRequest,
 ) =>
   runTextMember(member, async () => {
+    requireCurrentMember(connection, member);
+    await validateTextPresentation(deps, connection);
     requireCurrentMember(connection, member);
     const grant = await memberGrant(deps, connection, member, request);
     const loaded = await validateTextGrant(deps, connection, grant);

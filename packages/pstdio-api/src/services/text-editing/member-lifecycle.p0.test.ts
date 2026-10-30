@@ -171,3 +171,49 @@ test("abandon drains an already-admitted text frame before releasing its room", 
     await Promise.allSettled([saving, abandoned]);
   }
 });
+
+test("an opening request cannot claim a same-ID successor while presentation lookup is pending", async () => {
+  const f = await setup();
+  const catalog = f.deps.extensionRuntimeCatalog;
+  const get = catalog.get.bind(catalog);
+  const entered = Promise.withResolvers<void>();
+  const resume = Promise.withResolvers<void>();
+  let pause = true;
+  catalog.get = async (projectId) => {
+    const result = await get(projectId);
+    if (pause) {
+      pause = false;
+      entered.resolve();
+      await resume.promise;
+    }
+    return result;
+  };
+  const opening = f.open().catch((error) => error);
+  await entered.promise;
+  const abandoned = f.text.request(f.address, { operation: "abandon", memberId: f.memberId });
+  await f.text.request(f.address, { operation: "register", memberId: f.memberId });
+  const successor = f.text.request(f.address, {
+    operation: "open",
+    memberId: f.memberId,
+    input: { sourceId: "body", params: {} },
+  });
+  resume.resolve();
+  try {
+    expect(await opening).toMatchObject({ code: "session_closed" });
+    await abandoned;
+    const current = await successor;
+    const document = new Y.Doc();
+    try {
+      Y.applyUpdate(document, Buffer.from(current.snapshot.state, "base64"));
+      expect(document.getText("content").toString()).toBe("Editor owned");
+    } finally {
+      document.destroy();
+    }
+    await f.text.disconnect(f.address);
+    expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "example.context" })).toEqual([]);
+    expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "thirdparty.editor" })).toEqual([]);
+  } finally {
+    resume.resolve();
+    await Promise.allSettled([opening, abandoned, successor]);
+  }
+});

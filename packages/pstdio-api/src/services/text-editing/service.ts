@@ -78,7 +78,6 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
         return grant ? { token: grant.token } : undefined;
       }
       case "open": {
-        await validateTextPresentation(deps, connection);
         const member = connection.members.get(input.memberId);
         if (!member) throw textFailure("session_closed", "Register the member before opening its source");
         const result = await openTextMember(deps, connection, member, input);
