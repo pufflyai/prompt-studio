@@ -165,6 +165,16 @@ jobs:
           path: ${{ runner.temp }}/benchmark-results/*.json
           if-no-files-found: error
 
+      - name: Preserve ordered desktop benchmark quarantine evidence
+        if: ${{ !cancelled() && matrix.suite == 'desktop' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-desktop-evidence-${{ matrix.platform }}
+          path: |
+            ${{ runner.temp }}/checkouts/*/clients/desktop/test-results/packaged-benchmarks*.json
+            ${{ runner.temp }}/checkouts/*/test-results/quarantine/packaged-desktop-benchmark
+          if-no-files-found: error
+
   # The release workflow starts this run after it publishes, so benchmarks never hold a release.
   release_assets:
     needs: benchmark

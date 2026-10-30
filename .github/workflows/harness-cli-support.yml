@@ -69,12 +69,13 @@ jobs:
           VERSION: ${{ matrix.version }}
           MINIMUM_LANE_SCHEDULED: ${{ contains(fromJSON(inputs.versions), 'minimum') }}
         run: |
-          export CLI_MINIMUM_VERSION=$(bun -e "console.log((await import('./extensions/$EXTENSION/src/detection.ts')).MINIMUM_VERSION)")
+          CLI_MINIMUM_VERSION=$(bun -e "console.log((await import('./extensions/$EXTENSION/src/detection.ts')).MINIMUM_VERSION)")
           if [ "$VERSION" = minimum ]; then
-            export CLI_RESOLVED_VERSION="$CLI_MINIMUM_VERSION"
+            CLI_RESOLVED_VERSION="$CLI_MINIMUM_VERSION"
           else
-            export CLI_RESOLVED_VERSION=$(npm view "$PACKAGE@latest" version)
+            CLI_RESOLVED_VERSION=$(npm view "$PACKAGE@latest" version)
           fi
+          export CLI_MINIMUM_VERSION CLI_RESOLVED_VERSION
           bun scripts/ci/harness-cli-validation.ts plan
 
       - name: Install the agent CLI
