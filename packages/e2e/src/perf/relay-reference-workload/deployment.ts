@@ -83,6 +83,7 @@ export const deploy = async (image: string, log: (message: string) => void, sign
     (await run([...compose, "port", service, String(target)])).split(":").at(-1)!;
   try {
     log(`Starting owned Compose deployment ${project}`);
+    log(`Compose configuration for manual cleanup: ${join(directory, "compose.json")}`);
     await run([...compose, "up", "-d", "--wait", "relay-db", "objects"]);
     await run([...compose, "run", "--rm", "bucket"]);
     await run([...compose, "up", "-d", "--wait", "relay"]);

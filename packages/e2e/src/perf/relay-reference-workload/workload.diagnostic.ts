@@ -3,6 +3,7 @@ import { cpus, release, totalmem } from "node:os";
 import { join, resolve } from "node:path";
 import { deploy } from "./deployment";
 import type { OwnerInput } from "./device";
+import { runLargeSave } from "./large-save";
 import { runScenario } from "./scenario";
 import { observeTraffic } from "./traffic";
 
@@ -12,6 +13,8 @@ if (!image)
   throw new Error(
     "Usage: bun packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts <output-directory> <built-relay-image>",
   );
+const selection = process.argv[4];
+if (selection && !["reference", "scale", "large-save"].includes(selection)) throw new Error("Unknown workload");
 await mkdir(output, { recursive: true });
 const logs: string[] = [];
 const log = (message: string) => {
@@ -36,6 +39,14 @@ const metadata = {
   source,
   dirty: Bun.spawnSync(["git", "status", "--porcelain"], { cwd: root, stdout: "pipe" }).stdout.length > 0,
   diagnosticHashes: hashes,
+  syncSourceHashes: Object.fromEntries(
+    await Promise.all(
+      ["record-stream.ts", "record-stream-reader.ts"].map(async (name) => [
+        name,
+        await hash(join(root, "packages/pstdio-sync/src/relay", name)),
+      ]),
+    ),
+  ),
   cleanupOperatorSourceHash: await hash(join(root, "services/relay/src/runtime.ts")),
   bun: Bun.version,
   os: release(),
@@ -55,16 +66,18 @@ const main = async () => {
       relayImage: await deployment.metadata(),
       cleanupOperatorBundleHash: deployment.operatorHash,
     };
-    for (const name of ["reference", "scale"] as const) {
+    for (const name of ["reference", "scale", "large-save"] as const) {
+      if (selection && selection !== name) continue;
       log(`Starting ${name} workload`);
-      const result = await runScenario({
-        name,
+      const parameters = {
         deployment,
         directory: join(output, "temporary-devices"),
         traffic,
         log,
         units,
-      });
+      };
+      const result =
+        name === "large-save" ? await runLargeSave(parameters) : await runScenario({ ...parameters, name });
       results.push(result);
       await Bun.write(join(output, `${name}.json`), JSON.stringify({ metadata: provenance, ...result }, null, 2));
     }

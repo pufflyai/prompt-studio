@@ -215,7 +215,7 @@ bun packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts \
   pstdio-relay:measurement
 ```
 
-The run keeps both workloads fixed:
+The run keeps these workloads fixed:
 
 - Reference: two projects with 5,000 records each, three devices, and 5 GiB of
   distinct files: one 1 GiB file and eight 512 MiB files. A second account syncs
@@ -226,6 +226,10 @@ The run keeps both workloads fixed:
   owner also receives 10,000 edits. This separate account runs on the same relay
   after the reference workload; raw server totals are cumulative, and the output
   reports the scale workload's additional object and table storage separately.
+- Large save: one grouped save of eight 150,002-byte record values after a small
+  founding state. It must use a blob-backed update frame, replace the latest state
+  using the default trigger, and produce the same values on three devices. Pass
+  `large-save` as the final command argument to run only this focused check.
 
 The runner keeps the normal relay limits, seven-day grace period, and production
 latest-state trigger. R23 counts the encrypted state envelope, chunk blobs, large-save
@@ -250,6 +254,59 @@ cleanup using the exact Compose project and configuration printed by Docker.
 Local results establish a measured workload, not unlimited capacity, a hosted SLA,
 or Spaces compatibility. A host with a large shared Docker memory limit does not
 establish that the cheapest App Platform instance can sustain the same workload.
+
+### Local results, 2026-10-30
+
+The corrected reference run passed on an Apple M5 with 32 GiB RAM, Bun 1.4.4 and
+Docker Desktop. It took 553.533 seconds. Three independent fixture clients verified
+all record values and complete file digests. The second account synced in 163.360 ms
+inside the 1 GiB file's 7.413-second, 205-part transfer window.
+
+| Encrypted payload unit | Stored bytes | R23 limit bytes |
+| --- | ---: | ---: |
+| Project 1 record stream | 87,115,658 | 102,101,101 |
+| Project 2 record stream | 87,129,586 | 102,122,815 |
+| Project 1 files | 3,221,225,637 | 6,442,451,274 |
+| Project 2 files | 2,147,483,780 | 4,294,967,560 |
+
+Each project received 10,000 edits. The second account's small stream also passed.
+All 217 physical objects reconciled to 5,542,956,490 bytes, with no unknown,
+missing or mismatched objects, missing mappings or unfinished uploads. This uses the
+existing storage-bound benchmark's encrypted-payload interpretation of R23. SQL
+allocation is reported separately: 1,507,328 table/index bytes and a 9,567,255-byte
+PostgreSQL database at the reference endpoint. These local allocations do not prove
+hosted instance capacity. Raw evidence is attached to PS-787's change request report.
+
+The separate ten-owner run also passed in 3,114.578 seconds. It verified all 100,000
+records after 100,000 edits on each of three devices. Every owner retained two state
+rows, 68 update rows and 31 chunk objects. Per-owner stored record bytes ranged from
+154,831,287 to 154,906,469, below the corresponding limits of 202,891,835 to
+203,000,987 bytes. Scale added 1,010 objects and 1,548,790,489 bytes. Cumulative
+physical storage was 1,227 objects and 7,091,746,979 bytes, all reconciled. Cumulative
+table/index allocation was 3,588,096 bytes; database size was 11,951,127 bytes.
+
+| Client phase | Reference requests | Reference response-body bytes | Scale requests | Scale response-body bytes |
+| --- | ---: | ---: | ---: | ---: |
+| Initial follower download | 25 | 5,385,472,201 | 100 | 167,709,191 |
+| Joined device catch-up | 26 | 96,302,278 | 200 | 711,587,637 |
+| Fresh device download after edits | 39 | 5,465,013,053 | 220 | 711,594,447 |
+
+These are complete relay client-call counts for each phase, including state and blob
+reads. They are not S3 operation counts. No client request failed in either run.
+
+The reference and scale runs used relay source base `48b14bc13` and the recorded
+measurement-source hashes. They exercised inline grouped updates. A later focused
+large-save run verified the client compaction fixes: one blob-backed frame, three
+devices, six physical objects and 2,404,755 stored bytes below its 3,607,028-byte limit.
+It passed in 1.261 seconds on the same relay image. Regression tests also verify
+compaction when a new device inherits a large update tail after an interrupted
+latest-state upload. Each result retains its own source and image provenance.
+
+The combined fixture-client process reached a peak physical footprint reported as
+`14.2G` by macOS `sample`. That process holds several simulated devices; it is not a measurement
+of one production device. The run used a shared Docker VM with a 15.6 GiB limit and
+no exclusive timing window. It proves this finite workload's local correctness and
+storage figures, without a general memory, latency or hosted-capacity acceptance claim.
 
 ## Monthly estimate, priced 2026-10-30
 
@@ -283,6 +340,15 @@ This is an allowance, not a measured bound on HTTP overhead. App Platform egress
 the included pool is $0.02/GiB. Spaces includes 1,024 GiB/month outbound, then
 $0.01/GiB; inbound is free. Do not assume a Spaces-to-App-Platform transfer exemption.
 Object verification and client downloads both read from Spaces, so count both paths.
+
+Across all reference phases, 1,877 client calls consumed 11,044,401,888 response-body
+bytes. The planning formula gives 12.859 GiB per complete run. Thirty repetitions per
+month give 385.775 GiB; with an otherwise unused 80 GiB team pool, App Platform
+traffic adds about $6.12. The subtotal becomes $36.27, or $45.33 at an illustrative
+25% tax rate. This scenario assumes retained data does not accumulate 30 distinct
+5 GiB projects. Spaces traffic must also include verification reads and downloads;
+its separate 1,024 GiB allowance must be checked against the actual request metrics.
+The local runner does not measure provider billing counters.
 
 At zero extra traffic, illustrative tax rates of 0%, 20% and 25% give totals of
 $30.15, $36.18 and $37.69. These scenarios fit the US$50 target. They do not prove the
