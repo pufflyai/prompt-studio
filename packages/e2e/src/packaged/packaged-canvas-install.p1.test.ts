@@ -7,6 +7,7 @@ import { type Browser, chromium } from "@playwright/test";
 import { packExtension } from "pstdio-extensions/distribution";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
+import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
@@ -18,8 +19,17 @@ setupPackagedSmokeTests();
 test(
   "installs Canvas from the catalog with working commands and its authoring skill",
   async () => {
+    const startedAt = performance.now();
+    const phase = (name: string) =>
+      console.log(`Packaged Canvas: ${name} (${Math.round(performance.now() - startedAt)}ms)`);
     const root = mkdtempSync(join(tmpdir(), "packaged-canvas-"));
-    const packed = await packExtension(join(import.meta.dirname, "../../../../extensions/canvas"));
+    const source = await preparePackagedExtensionSource(
+      root,
+      join(import.meta.dirname, "../../../../extensions/canvas"),
+      { offline: true },
+    );
+    const packed = await packExtension(source);
+    phase("archive prepared");
     const registry = Bun.serve({
       hostname: "127.0.0.1",
       port: 0,
@@ -46,6 +56,7 @@ test(
     try {
       const started = await startPackagedServe(root, { PSTDIO_EXTENSION_RELEASE_REF: `psx:${registry.url.origin}` });
       child = started.child;
+      phase("runtime ready");
       const repo = join(root, "project");
       mkdirSync(repo);
       const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
@@ -55,6 +66,7 @@ test(
         body: JSON.stringify(folderProjectInput({ name: "Canvas consumer" }, repo)),
       });
       expect(created.status).toBe(201);
+      phase("project created");
       const project = (await created.json()) as { id: string };
       const url = `${started.baseUrl}/v1/projects/${project.id}`;
       const before = await (await fetch(`${url}/extensions`, { headers })).json();
@@ -65,6 +77,7 @@ test(
         body: JSON.stringify({ source: { kind: "catalog", name: "canvas" } }),
       });
       expect(installed.status).toBe(201);
+      phase("extension installed");
       const after = await (await fetch(`${url}/extensions`, { headers })).json();
       expect(after.extensions).toContainEqual(
         expect.objectContaining({ installName: "canvas", enabled: true, extensionId: "pstdio.canvas" }),
@@ -101,6 +114,7 @@ test(
       expect(assets.status).toBe(200);
       const result = await assets.json();
       expect(result.outcome.ok).toBe(true);
+      phase("preview assets loaded");
       const { entry, modules, files } = result.outcome.value;
       expect(modules).toContain(entry);
       expect(modules.length).toBeGreaterThan(0);
@@ -128,6 +142,7 @@ test(
       await page.goto(new URL(button.href, started.baseUrl).href);
       const viewer = page.frameLocator('iframe[title="UI Canvas"]');
       await viewer.locator('iframe[data-frame-ready="true"]').waitFor();
+      phase("preview ready");
       expect(await viewer.locator("[data-ui-canvas-error]").count()).toBe(0);
       await viewer
         .getByRole("button", { name: /^Theme for / })
@@ -145,6 +160,7 @@ test(
         };
       });
       expect(colors.message).not.toBe(colors.background);
+      phase("theme checked");
     } finally {
       await browser?.close();
       if (child) await stopProcess(child);
