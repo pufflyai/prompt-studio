@@ -35,10 +35,9 @@ interface Snapshot {
 const snapshotOf = (pull: PullRequest) => ({ head: pull.head.sha, base: pull.base.sha, baseRef: pull.base.ref });
 
 const generatedCanvasOutputs = new Set([
-  "frame-bundle.ts",
+  "frame-manifest.json",
   "frame-themes.json",
   "migration-ledger.json",
-  "native-manifest.json",
   "source-information.json",
   "stories.json",
 ]);

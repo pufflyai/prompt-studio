@@ -22,7 +22,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./packaged-native-markdown-smoke";
 // The Markdown fixture resolves and projects a registered text source without a file-view save handler.
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
-// packaged-canvas-install.p1.test.ts checks optional Canvas installation, module assets, rendered previews, themes, and its skill outside a checkout.
+// packaged-canvas-install.p1.test.ts checks optional Canvas module assets, previews, themes, and skills without local build fingerprints.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
 // placeholder actions and status-item popover views through the compiled host.
 // scripts/verify/public-package-consumer.ts checks legacy hidden headers and explicit page/tab presentation in the built workbench.

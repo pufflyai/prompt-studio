@@ -55,7 +55,10 @@ export const publishFrameArchive = async (root: string, outputs: NativeBuildOutp
           )
         : String(output.source);
     const name = `${createHash("sha256").update(code).digest("hex")}.txt`;
-    await writeFile(resolve(directory, name), gzipSync(code).toString("base64"));
+    const bytes = gzipSync(code);
+    // The gzip OS field describes file metadata we do not use. Keep builds portable.
+    bytes[9] = 255;
+    await writeFile(resolve(directory, name), bytes.toString("base64"));
     manifest.modules[output.fileName] = {
       file: `src/catalog/generated/frame-modules/${name}`,
       imports: output.type === "chunk" ? (output.imports ?? []) : [],
