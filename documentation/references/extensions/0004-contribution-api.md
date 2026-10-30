@@ -373,6 +373,10 @@ Pressed and selected controls, such as an open panel's toggle, use
 `editor.selectionBackground`, the app mixes the theme's text color into its
 background instead, so pressed controls stand out from the main background.
 
+Subtle surfaces, such as user chat messages, use `sideBar.background`. Most
+themes set `input.background` to `editor.background`, so it cannot separate
+these surfaces from the main background.
+
 ## Views: filter, sort, and display
 
 Kanban and data table bodies share one view model. A view stores:
