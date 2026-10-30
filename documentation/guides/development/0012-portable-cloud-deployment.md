@@ -196,3 +196,96 @@ failure must stop the upgrade. Do not automatically run older images against a n
 schema: database rollback requires a tested restore or a compatible forward fix.
 
 Keep backups of every database and test a recovery before relying on it.
+
+## Reference workload measurement
+
+PS-787 adds a manual [reference workload](../../../packages/e2e/src/perf/relay-reference-workload/run.ts).
+It uses this guide's Compose relay, migration job, PostgreSQL and real RustFS object
+storage. It replaces public ingress with loopback ports and uses disposable signed
+identities. It does not create cloud resources or open the user's local database.
+The three clients use independent new fixture databases and digest-checked file stores.
+The account manager and Google login are outside this local measurement.
+
+Build the relay image from the revision you want to measure, then run from the repository root:
+
+```sh
+docker build -f infra/relay/Dockerfile --target runtime -t pstdio-relay:measurement .
+bun packages/e2e/src/perf/relay-reference-workload/run.ts \
+  .pstdio/extension-storage/pstdio.pstdio-artifacts/relay-measurement \
+  pstdio-relay:measurement
+```
+
+The run keeps both workloads fixed:
+
+- Reference: two projects with 5,000 records each, three devices, and 5 GiB of
+  distinct files: one 1 GiB file and eight 512 MiB files. A second account syncs
+  during the first file's actual multipart transfer. Each project receives 10,000
+  record edits in groups of 100. A joined device catches up, then a fresh device
+  downloads the result. Every record value and every file digest is checked.
+- Scale: ten extension owners with 10,000 records each on three devices. Each
+  owner also receives 10,000 edits. This separate account runs on the same relay
+  after the reference workload; raw server totals are cumulative, and the output
+  reports the scale workload's additional object and table storage separately.
+
+The runner keeps the normal relay limits, seven-day grace period, and production
+latest-state trigger. R23 counts the encrypted state envelope, chunk blobs, large-save
+frame blobs and retained updates. File blobs have a separate bound so the large files
+cannot hide record-history growth. Covered frame blobs count once in the grace copy.
+Physical object keys and lengths must match the database; unclassified blobs,
+unmatched objects and unfinished uploads prevent a passing result.
+
+Output includes per-owner limits, every relay table's row count and allocated bytes,
+object listings, first-download/catch-up request counts, source hashes and raw HTTP
+observations. Request counts cover calls made by the production client. Response
+bytes count application bodies consumed by the client; cancelled acknowledgments and
+HTTP/TLS overhead are excluded. They are a traffic lower bound, not billed wire bytes.
+Keep explicit overhead headroom when estimating monthly traffic.
+
+Allow roughly 30 GiB of free disk for the full file workload. The runner discards a
+verified follower's fixture files before downloading the third device's copy. It
+removes only its named Compose project, volumes and temporary device files, including
+on SIGINT/SIGTERM. Result files remain. A forced process kill can require manual
+cleanup using the exact Compose project and configuration printed by Docker.
+
+Local results establish a measured workload, not unlimited capacity, a hosted SLA,
+or Spaces compatibility. A host with a large shared Docker memory limit does not
+establish that the cheapest App Platform instance can sustain the same workload.
+
+## Monthly estimate, priced 2026-10-30
+
+These are planning inputs, not a reading of the hosted service's invoice. Refresh the
+linked prices on each measurement date. The initial configuration is one relay, one
+account manager and two logical databases on one PostgreSQL server.
+
+| Item | Monthly USD | Assumption and source |
+| --- | ---: | --- |
+| Relay | 5.00 | One shared 512 MiB container; [App Platform prices](https://docs.digitalocean.com/products/app-platform/details/pricing/). |
+| Account manager | 5.00 | One shared 512 MiB container; same pricing source. |
+| Databases | 15.15 | One basic 1 GiB PostgreSQL node at the published starting storage size; [database prices](https://www.digitalocean.com/pricing/managed-databases). |
+| Object storage | 5.00 | Standard subscription includes 250 GiB across buckets; [Spaces prices](https://docs.digitalocean.com/products/spaces/details/pricing/). |
+| Traffic | Usage dependent | Budget from measured bodies plus overhead; see below. |
+| Landing page | 0.00 | A static site within the free tier and 1 GiB monthly transfer. A paid site or higher traffic changes this line. |
+| PostHog | 0.00 | One analytics project below 1 million events/month; [free allowance](https://posthog.com/pricing). Other products and paid plans require their own inputs. |
+| Taxes | Billing-location dependent | Apply the team's actual rate and exemption status; [tax rules](https://docs.digitalocean.com/platform/billing/taxes/). |
+| Subtotal before traffic and taxes | 30.15 | No high-availability replica, dedicated egress IP, paid support or extra container. |
+
+The Terraform module currently selects the legacy `basic-xxs` slug. Its published
+allowance is 40 GiB per container, pooled across the team; use 80 GiB for the two
+services when pricing that configuration. The current 512 MiB plan has a different
+slug and allowance. Confirm the real deployed plan before using either allowance.
+Migration jobs are billed while running and must be added for the actual deployment
+frequency. A separate protected manager key backup must also fit the operator's
+existing storage and scheduling costs; this estimate does not provision a backup job.
+
+For a conservative planning scenario, multiply measured relay response-body bytes by
+1.25 and add 1 KiB per client request before applying the monthly repetition count.
+This is an allowance, not a measured bound on HTTP overhead. App Platform egress above
+the included pool is $0.02/GiB. Spaces includes 1,024 GiB/month outbound, then
+$0.01/GiB; inbound is free. Do not assume a Spaces-to-App-Platform transfer exemption.
+Object verification and client downloads both read from Spaces, so count both paths.
+
+At zero extra traffic, illustrative tax rates of 0%, 20% and 25% give totals of
+$30.15, $36.18 and $37.69. These scenarios fit the US$50 target. They do not prove the
+actual tax-inclusive bill: the team's tax location, existing plans, measured monthly
+frequency, job charges, key-backup costs and small-instance capacity still need to be
+matched to the live deployment. No paid resource was created for this measurement.
