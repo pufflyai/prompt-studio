@@ -1,13 +1,17 @@
+import { useUiScope } from "@pstdio/ui";
 import { type RefObject, useEffect } from "react";
 import type { WorkbenchCore } from "../../core";
 import type { KeyboardState } from "../../core/controllers/keyboard/keyboard-controller";
 
-const focusSelectedPresentation = (selected: Pick<KeyboardState, "selectedId" | "selectedRegion">) => {
+const focusSelectedPresentation = (
+  selected: Pick<KeyboardState, "selectedId" | "selectedRegion">,
+  surface: ParentNode,
+) => {
   const instance = selected.selectedId
-    ? document.querySelector<HTMLElement>(`[data-workbench-presentation="${CSS.escape(selected.selectedId)}"]`)
+    ? surface.querySelector<HTMLElement>(`[data-workbench-presentation="${CSS.escape(selected.selectedId)}"]`)
     : null;
   const region = selected.selectedRegion
-    ? document.querySelector<HTMLElement>(`[data-workbench-region="${selected.selectedRegion}"]`)
+    ? surface.querySelector<HTMLElement>(`[data-workbench-region="${selected.selectedRegion}"]`)
     : null;
   const root = instance ?? region;
   const candidates = [
@@ -37,14 +41,21 @@ export const useKeyboardModeFocus = (
   content: RefObject<HTMLDivElement | null>,
   heading: RefObject<HTMLElement | null>,
 ) => {
+  const scope = useUiScope();
+  const active = scope?.active ?? true;
+  const surface = scope?.root;
   useEffect(() => {
-    if (state.active || !state.restoreFocus || !state.selectedId) return;
+    if (!active || state.active || !state.restoreFocus || !state.selectedId) return;
     const selected = { selectedId: state.selectedId, selectedRegion: state.selectedRegion };
-    if (focusSelectedPresentation(selected)) return;
+    if (focusSelectedPresentation(selected, surface?.current ?? document)) return;
     // A tab header can be ready before its editor mounts. Keep the focus request until the view is ready.
     const observer = new MutationObserver(() => {
       const current = workbench.keyboard.store.getState();
-      if (current.active || current.selectedId !== selected.selectedId || focusSelectedPresentation(selected))
+      if (
+        current.active ||
+        current.selectedId !== selected.selectedId ||
+        focusSelectedPresentation(selected, surface?.current ?? document)
+      )
         observer.disconnect();
     });
     const cancel = () => observer.disconnect();
@@ -54,18 +65,24 @@ export const useKeyboardModeFocus = (
       observer.disconnect();
       document.removeEventListener("pointerdown", cancel);
     };
-  }, [state.active, state.restoreFocus, state.selectedId, state.selectedRegion, workbench]);
+  }, [state.active, state.restoreFocus, state.selectedId, state.selectedRegion, workbench, active, surface]);
   useEffect(() => {
     const activation = workbench.layout.onDidActivatePanel((panel) => {
       const current = workbench.keyboard.store.getState();
-      if (!current.active || current.selection || current.selectedId === panel.instanceId) return;
+      if (
+        !workbench.activation.isActive() ||
+        !current.active ||
+        current.selection ||
+        current.selectedId === panel.instanceId
+      )
+        return;
       workbench.keyboard.selectPresentation(panel.instanceId);
       heading.current?.focus({ preventScroll: true });
     });
     return () => activation.dispose();
   }, [workbench, heading]);
   useEffect(() => {
-    if (!state.active) return;
+    if (!active || !state.active) return;
     const pointer = (event: PointerEvent) => {
       if (content.current?.contains(event.target as Node)) return;
       if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select,[contenteditable="true"]'))
@@ -85,5 +102,5 @@ export const useKeyboardModeFocus = (
       document.removeEventListener("pointerdown", pointer, true);
       document.removeEventListener("focusin", focus);
     };
-  }, [state.active, workbench, content, heading]);
+  }, [state.active, workbench, content, heading, active]);
 };

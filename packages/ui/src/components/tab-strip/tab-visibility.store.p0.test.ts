@@ -50,3 +50,22 @@ describe("createTabVisibilityStore", () => {
     expect(store.getState().tabOverrides).toEqual({});
   });
 });
+
+test("tab visibility uses the supplied host storage and stays separate across hosts", () => {
+  const memory = () => {
+    const values = new Map<string, string>();
+    return {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+    };
+  };
+  const a = memory();
+  const b = memory();
+  const open = (storage: ReturnType<typeof memory>) => createTabVisibilityStore({ storageKey: "main", storage });
+  open(a).getState().setTab("editor", "hidden");
+  open(b).getState().setTab("preview", "hidden");
+  expect(open(a).getState().tabOverrides).toEqual({ editor: "hidden" });
+  expect(open(b).getState().tabOverrides).toEqual({ preview: "hidden" });
+});

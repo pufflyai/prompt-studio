@@ -20,6 +20,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
 // placeholder actions and status-item popover views through the compiled host.
+// scripts/verify/workbench-package-consumer.ts checks packaged activation, scoped status persistence and overlay exports.
 // scripts/verify/public-package-consumer.ts checks legacy hidden headers and explicit page/tab presentation in the built workbench.
 // packaged-session-tools.p1.spec.ts checks draft/session/tool tab restoration across navigation and reload, creation, closure and New session tools.
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.

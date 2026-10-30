@@ -19,6 +19,8 @@ export type WorkbenchStoragePersistenceKind =
   | "tree";
 
 export interface CreateWorkbenchStoragePersistenceInput {
+  /** Stable project or workbench scope for independent view state. */
+  scope?: string;
   debounceMs?: number;
   eventTarget?: {
     addEventListener(type: "pagehide", listener: () => void): void;

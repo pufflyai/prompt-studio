@@ -1,5 +1,5 @@
-import { Box, Dialog, Input, Portal, Text, useSlotRecipe } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
+import { Box, Input, Text, useSlotRecipe } from "@chakra-ui/react";
+import { ScopedDialog as Dialog, Portal, ScrollArea, useUiScope } from "@pstdio/ui";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { shortcutMenuEntries, shortcutPathLabels } from "../../core/controllers/keyboard/shortcut-menu";
@@ -13,6 +13,7 @@ import { useShortcutCatalog } from "./use-shortcut-catalog";
 
 export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
+  const active = useUiScope()?.active ?? true;
   const { state, catalog } = useShortcutCatalog(workbench);
   useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const bubble = useSlotRecipe({ key: "keyboardBubble" })();
@@ -43,14 +44,15 @@ export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
     setQuery("");
     setSearch(false);
     setBrowseDirection(undefined);
-    if (state.active) queueMicrotask(() => heading.current?.focus({ preventScroll: true }));
-  }, [state.path, selection, state.active]);
+    if (active && state.active) queueMicrotask(() => heading.current?.focus({ preventScroll: true }));
+  }, [state.path, selection, state.active, active]);
   useLayoutEffect(() => {
-    if (search) queryInput.current?.focus();
-  }, [search]);
+    if (active && search) queryInput.current?.focus();
+  }, [search, active]);
   useLayoutEffect(() => {
-    if (browseDirection && browseDirection !== "active") focusKeyboardChoice(content.current, browseDirection);
-  }, [browseDirection]);
+    if (active && browseDirection && browseDirection !== "active")
+      focusKeyboardChoice(content.current, browseDirection);
+  }, [browseDirection, active]);
   const entries = selection?.choices ?? shortcutMenuEntries(catalog, state.path);
   const filtered =
     search && !selection

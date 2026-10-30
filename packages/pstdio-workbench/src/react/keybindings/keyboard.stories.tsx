@@ -1,4 +1,5 @@
-import { Dialog } from "@chakra-ui/react";
+import { ScopedDialog as Dialog } from "@pstdio/ui";
+
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "storybook/test";
 import { WorkbenchStory } from "../../examples/workbench-story";

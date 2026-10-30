@@ -1,5 +1,4 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
-
 import {
   applyFileIconThemePreference,
   defaultFileIconThemePreferences,
@@ -7,6 +6,7 @@ import {
   isFileIconThemePreference,
 } from "./apply-file-icon-theme-preference";
 import { createBrowserStorage } from "./browser-storage";
+import { useUiScope } from "./ui-scope";
 
 const STORAGE_KEY = "file-icon-theme-preference";
 
@@ -38,12 +38,18 @@ const getInitialPreference = (themes: readonly FileIconThemePreferenceOption[]) 
 };
 
 export const FileIconThemePreferenceProvider = (props: FileIconThemePreferenceProviderProps) => {
+  const active = useUiScope()?.active ?? true;
   const { children, themePreferences = defaultFileIconThemePreferences } = props;
   const [fileIconThemePreference, setFileIconThemePreference] = useState<string | null>(() =>
     getInitialPreference(themePreferences),
   );
 
   useEffect(() => {
+    const stored = createBrowserStorage().getItem(STORAGE_KEY);
+    if (active && isFileIconThemePreference(stored, themePreferences) && stored !== fileIconThemePreference) {
+      setFileIconThemePreference(stored);
+      return;
+    }
     const resolved = isFileIconThemePreference(fileIconThemePreference, themePreferences)
       ? fileIconThemePreference
       : getDefaultFileIconThemePreference(themePreferences);
@@ -53,9 +59,9 @@ export const FileIconThemePreferenceProvider = (props: FileIconThemePreferencePr
       return;
     }
 
+    if (!active) return;
     applyFileIconThemePreference(resolved, themePreferences);
-    if (typeof window !== "undefined" && resolved) createBrowserStorage().setItem(STORAGE_KEY, resolved);
-  }, [fileIconThemePreference, themePreferences]);
+  }, [fileIconThemePreference, themePreferences, active]);
 
   const activeFileIconTheme = themePreferences.find((theme) => theme.id === fileIconThemePreference);
 
@@ -65,7 +71,10 @@ export const FileIconThemePreferenceProvider = (props: FileIconThemePreferencePr
         fileIconThemePreference,
         fileIconThemePreferences: themePreferences,
         activeFileIconTheme,
-        setFileIconThemePreference,
+        setFileIconThemePreference: (preference) => {
+          createBrowserStorage().setItem(STORAGE_KEY, preference);
+          setFileIconThemePreference(preference);
+        },
       }}
     >
       {children}

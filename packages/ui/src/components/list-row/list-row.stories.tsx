@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Kbd, Menu, Portal, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import {
   ChevronDown,
@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { ListRow } from "./list-row";
 import type { ListRowItem } from "./list-row.types";
 

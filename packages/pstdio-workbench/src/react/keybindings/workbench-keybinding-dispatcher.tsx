@@ -21,6 +21,7 @@ export const WorkbenchKeybindingDispatcher = (props: WorkbenchKeybindingDispatch
   useEffect(() => {
     const refresh = () => setRegistrations(createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds }));
     const subscriptions = [
+      workbench.activation.store,
       workbench.keybindings.store,
       workbench.context.store,
       workbench.commands.store,

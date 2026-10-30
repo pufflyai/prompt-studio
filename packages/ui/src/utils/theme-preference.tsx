@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
-
 import {
   applyThemePreference,
+  applyThemePreferenceToElement,
   defaultThemePreferences,
   getThemePreferenceMode,
   isThemePreference,
@@ -10,6 +10,7 @@ import {
   type ThemePreferenceOption,
 } from "./apply-theme-preference";
 import { createBrowserStorage } from "./browser-storage";
+import { useUiScope } from "./ui-scope";
 
 /** The key, or key prefix for scoped choices, under which the provider saves the chosen theme. */
 const themePreferenceStorageKey = "theme-preference";
@@ -90,6 +91,8 @@ export const getInitialThemePreference = (
 };
 
 export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => {
+  const surface = useUiScope();
+  const active = surface?.active ?? true;
   const { children, storage = browserStorage, themePreferences = defaultThemePreferences } = props;
   const storageKey = props.preferenceScope
     ? `${themePreferenceStorageKey}:${props.preferenceScope}`
@@ -130,6 +133,9 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
       return;
     }
 
+    if (surface?.root.current)
+      applyThemePreferenceToElement(surface.root.current, shownPreview ?? resolvedThemePreference, themePreferences);
+    if (!active) return;
     applyThemePreference(shownPreview ?? themePreference, themePreferences);
     const hasPendingStoredTheme =
       storedPreference &&
@@ -138,6 +144,8 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
       !isThemePreference(storedPreference, themePreferences);
     if (!hasPendingStoredTheme && !props.defaultPreference) storeThemePreference(storage, storageKey, themePreference);
   }, [
+    active,
+    surface?.root,
     resolvedThemePreference,
     shownPreview,
     storage,

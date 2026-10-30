@@ -166,3 +166,38 @@ test("a failed keybinding reports its command once and consumes the rejection", 
     { title: "Save project failed", message: "Connection lost", level: "error" },
   ]);
 });
+
+test("only the active workbench executes shortcuts, including registrations captured before switching", async () => {
+  const a = createWorkbench();
+  const b = createWorkbench({ active: false });
+  let aCalls = 0;
+  let bCalls = 0;
+  a.commands.registerCommand(
+    { id: "shared", label: "Shared action" },
+    {
+      execute: () => {
+        aCalls++;
+      },
+    },
+  );
+  b.commands.registerCommand(
+    { id: "shared", label: "Shared action" },
+    {
+      execute: () => {
+        bCalls++;
+      },
+    },
+  );
+  for (const workbench of [a, b])
+    workbench.keybindings.registerKeybinding({ action: { kind: "command", commandId: "shared" }, keybinding: "Alt+J" });
+  const old = createWorkbenchHotkeyRegistrations({ workbench: a }).find((entry) => entry.id === "shared")!;
+  expect(createWorkbenchHotkeyRegistrations({ workbench: b })).toEqual([]);
+  a.activation.setActive(false);
+  b.activation.setActive(true);
+  await old.execute();
+  await createWorkbenchHotkeyRegistrations({ workbench: b })
+    .find((entry) => entry.id === "shared")!
+    .execute();
+  expect(aCalls).toBe(0);
+  expect(bCalls).toBe(1);
+});

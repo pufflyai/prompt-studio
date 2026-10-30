@@ -52,6 +52,7 @@ export const normalizeWorkbenchKeybinding = (keybinding: KeybindingSequence): Ke
 
 export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyRegistrationsInput) => {
   const { workbench, disabled = false, commandIds } = input;
+  if (!workbench.activation.isActive()) return [];
   const allowedCommandIds = commandIds ? new Set(commandIds) : undefined;
   const catalog = workbench.keyboard.catalog(true);
 
@@ -72,11 +73,7 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
           ignoreInputs: !keybinding.allowInInputs,
           requestId: JSON.stringify([getNavigationTargetKey(action), keybinding.keybinding]),
           execute: async () => {
-            if (
-              workbench.keyboard.catalog(true).find((entry) => entry.id === workbench.keybindings.getId(keybinding))
-                ?.disabled !== false
-            )
-              return;
+            if (!isLiveShortcut(workbench, workbench.keybindings.getId(keybinding))) return;
             if (workbench.keyboard.store.getState().active || keybinding.targetScope)
               return workbench.keyboard.invoke(workbench.keybindings.getId(keybinding));
             if (action.args === undefined && hasCommandParameters(record.command.params)) {
@@ -104,6 +101,7 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
         ignoreInputs: !keybinding.allowInInputs,
         requestId: JSON.stringify([getNavigationTargetKey(action), keybinding.keybinding]),
         execute: () => {
+          if (!workbench.activation.isActive()) return Promise.resolve();
           if (
             workbench.keyboard.catalog(true).find((entry) => entry.id === workbench.keybindings.getId(keybinding))
               ?.disabled !== false
@@ -119,3 +117,7 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
     ];
   });
 };
+
+const isLiveShortcut = (workbench: WorkbenchCore, id: string) =>
+  workbench.activation.isActive() &&
+  workbench.keyboard.catalog(true).find((entry) => entry.id === id)?.disabled === false;

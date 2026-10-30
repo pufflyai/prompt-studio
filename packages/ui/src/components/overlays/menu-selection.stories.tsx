@@ -1,8 +1,9 @@
-import { Button, Icon, Menu, Stack, Text } from "@chakra-ui/react";
+import { Button, Icon, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Check, GitBranch, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import { ResourceActionMenu } from "./resource-context-menu";
 import { SearchableMenu } from "./searchable-menu";
 

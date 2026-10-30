@@ -1,9 +1,9 @@
-import { Box, Icon, Menu, Stack } from "@chakra-ui/react";
+import { Box, Icon, Stack } from "@chakra-ui/react";
 import { FileText, Folder, Settings, Star } from "lucide-react";
 import type { ReactNode } from "react";
-
 import { ItemSection } from "@/components/layout/item-section";
 import { ListRow } from "@/components/list-row/list-row";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 
 type StoryFn = () => ReactNode;
 

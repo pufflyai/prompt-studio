@@ -1,7 +1,9 @@
-import { Box, Dialog, Portal, Stack } from "@chakra-ui/react";
+import { Box, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { HarnessParamEditor } from "./harness-param-editor";
 import type { HarnessParamValues } from "./harness-param-values";
 import { ParamEditor } from "./param-editor";

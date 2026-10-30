@@ -1,8 +1,9 @@
-import { Button, Dialog, Stack } from "@chakra-ui/react";
+import { Button, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, within } from "storybook/test";
 import { ListRow } from "@/components/list-row/list-row";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { SearchModalContent } from "./search-modal-content";
 
 const ProjectListDialog = (props: { showSearch: boolean }) => {

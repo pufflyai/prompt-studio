@@ -73,7 +73,7 @@ export const createLocalStorageLayoutPersistence = (
       : undefined);
   let timer: ReturnType<typeof setTimeout> | undefined;
 
-  const generationKey = workbenchStoragePersistenceKey(input.namespace, "layout-generation", undefined);
+  const generationKey = workbenchStoragePersistenceKey(input.namespace, "layout-generation", input.scope);
   const getGeneration = () => {
     const persisted = readJson<unknown>(storage, generationKey);
     return typeof persisted === "object" &&

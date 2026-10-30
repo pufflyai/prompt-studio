@@ -1,5 +1,6 @@
 import { Box, ColorPicker, type ColorPickerValueChangeDetails, Flex, parseColor } from "@chakra-ui/react";
 import { type FocusEvent as ReactFocusEvent, useEffect, useRef, useState } from "react";
+import { useUiScope } from "@/utils/ui-scope";
 import { ParamEditorLabel } from "../param-editor-label";
 import { ParamEditorReadOnlyValue } from "../param-editor-read-only-value";
 
@@ -17,6 +18,7 @@ interface ColorInputProps {
 }
 
 export const ColorInput = (props: ColorInputProps) => {
+  const surfaceActive = useUiScope()?.active ?? true;
   const {
     id,
     defaultValue,
@@ -50,6 +52,7 @@ export const ColorInput = (props: ColorInputProps) => {
       return rootRef.current?.contains(node) || contentRef.current?.contains(node);
     };
 
+    if (!surfaceActive) return;
     const handleOutsideInteraction = (event: FocusEvent | PointerEvent) => {
       if (isInsidePicker(event.target)) return;
 
@@ -65,7 +68,7 @@ export const ColorInput = (props: ColorInputProps) => {
       document.removeEventListener("pointerdown", handleOutsideInteraction, true);
       document.removeEventListener("click", handleOutsideInteraction, true);
     };
-  }, [open]);
+  }, [open, surfaceActive]);
 
   const handleChange = (newColor: string) => {
     setValue(newColor);

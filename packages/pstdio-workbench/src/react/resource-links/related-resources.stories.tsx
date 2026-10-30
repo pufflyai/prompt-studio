@@ -1,5 +1,5 @@
-import { Dialog } from "@chakra-ui/react";
 import type { ResourceAnchorPage, ResourceRef } from "@pstdio/sdk/extensions";
+import { ScopedDialog as Dialog } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { RelatedResources } from "./related-resources";

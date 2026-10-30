@@ -1,4 +1,5 @@
 import { Box, Center, Stack, Text } from "@chakra-ui/react";
+import { useUiScope } from "@pstdio/ui";
 import { resolvePageParams } from "pstdio-api-contracts";
 import { createWebviewDiagnostics, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
@@ -12,6 +13,7 @@ type BridgeWebviewFrameProps = Omit<ExtensionFrameProps, "onDiagnostics" | "onEr
 /** A bridged webview that shows one failure message, in theme colors, when it cannot load. */
 export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
   const { view, workbench, ...frameProps } = props;
+  const surface = useUiScope();
   const keyboard = useWebviewKeyboardShortcuts(workbench);
   const [pageState, setPageState] = useState(workbench.pages.store.getState);
   useEffect(() => workbench.pages.store.subscribe((state) => setPageState(state)), [workbench]);
@@ -48,6 +50,12 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
         view={view}
         {...frameProps}
         {...keyboard}
+        themeRoot={() => surface?.root.current ?? null}
+        onKeyboardEvent={(event) => {
+          if (!workbench.activation.isActive()) return;
+          if (frameProps.onKeyboardEvent) frameProps.onKeyboardEvent(event);
+          else document.dispatchEvent(new KeyboardEvent("keydown", { ...event, bubbles: true, cancelable: true }));
+        }}
         props={{ ...frameProps.props, ...pageProps }}
         onReady={() => {
           diagnostics.onReady();

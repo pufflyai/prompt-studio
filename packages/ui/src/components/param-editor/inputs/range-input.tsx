@@ -1,7 +1,8 @@
-import { Box, Button, Flex, Icon, Popover, type SliderValueChangeDetails, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Icon, type SliderValueChangeDetails, Stack, Text } from "@chakra-ui/react";
 import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Slider } from "@/components/primitives/slider";
+import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
 import type { RangeValue } from "../param-editor.types";
 import { ParamEditorControlItem } from "../param-editor-control-item";
 import { ParamEditorReadOnlyValue } from "../param-editor-read-only-value";

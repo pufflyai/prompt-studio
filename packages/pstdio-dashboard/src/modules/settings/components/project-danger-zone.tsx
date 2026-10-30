@@ -1,5 +1,5 @@
 import { Box, Button, Card, HStack, Icon, Stack } from "@chakra-ui/react";
-import { DeleteConfirmationModal, toaster } from "@pstdio/ui";
+import { DeleteConfirmationModal, useToaster } from "@pstdio/ui";
 import { useMutation } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
 import { useState } from "react";
@@ -13,6 +13,7 @@ interface ProjectDangerZoneProps {
 }
 
 export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
+  const toaster = useToaster();
   const { projectId, projectName, onDeleted } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const deleteProject = useMutation({

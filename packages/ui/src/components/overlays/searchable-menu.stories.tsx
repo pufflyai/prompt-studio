@@ -1,10 +1,12 @@
-import { Box, Button, Dialog, Icon, Menu, Portal, Stack } from "@chakra-ui/react";
+import { Box, Button, Icon, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { FolderGit2, GitBranch } from "lucide-react";
 import { useRef, useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { ListRow } from "@/components/list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "@/components/overlays/searchable-menu";
+import { ScopedDialog as Dialog, ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 
 const branchItems: SearchableMenuItem[] = Array.from({ length: 18 }, (_, index) => {
   const branchName = index === 0 ? "main" : `feature/searchable-menu-${index}`;

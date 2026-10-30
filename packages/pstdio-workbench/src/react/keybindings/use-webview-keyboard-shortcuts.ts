@@ -14,6 +14,7 @@ export const useWebviewKeyboardShortcuts = (workbench: WorkbenchCore | undefined
     }
     const refresh = () => setShortcuts(createWebviewKeyboardShortcuts(workbench).shortcuts);
     const dispose = [
+      workbench.activation.store,
       workbench.keybindings.store,
       workbench.commands.store,
       workbench.context.store,
