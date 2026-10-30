@@ -64,7 +64,12 @@ export const publishFrameArchive = async (root: string, outputs: NativeBuildOutp
     else if (output.fileName.endsWith(".css")) styles.push(String(output.source));
   }
   const entry = outputs.find((file) => file.type === "chunk" && file.isEntry)!.fileName;
-  const encode = (source: string) => gzipSync(source).toString("base64");
+  const encode = (source: string) => {
+    const bytes = gzipSync(source);
+    // The gzip OS field describes file metadata we do not use. Keep builds portable.
+    bytes[9] = 255;
+    return bytes.toString("base64");
+  };
   const payload = {
     scripts: Object.fromEntries(Object.entries(scripts).map(([name, source]) => [name, encode(source)])),
     styles: styles.map(encode),

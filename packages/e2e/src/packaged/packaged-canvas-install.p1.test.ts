@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium } from "@playwright/test";
-import { packExtension } from "pstdio-extensions/distribution";
+import { packExtension, readExtensionPackage } from "pstdio-extensions/distribution";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
@@ -20,6 +20,11 @@ test(
   async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-canvas-"));
     const packed = await packExtension(join(import.meta.dirname, "../../../../extensions/canvas"));
+    const { files } = await readExtensionPackage(packed.bytes);
+    expect(files.has("src/catalog/generated/native-manifest.json")).toBe(false);
+    for (const asset of ["frame-bundle.ts", "frame-themes.json", "stories.json", "source-information.json"]) {
+      expect(files.get(`src/catalog/generated/${asset}`)?.size).toBeGreaterThan(0);
+    }
     const registry = Bun.serve({
       hostname: "127.0.0.1",
       port: 0,
