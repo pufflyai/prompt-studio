@@ -29,7 +29,7 @@ test("Windows launch flakes execute once in quarantine and remain stable on othe
   expect(quarantine.repeatEach).toBe(1);
   expect(quarantine.retries).toBe(0);
   expect(browserQuarantineReportPath(runner)).toEndWith(
-    "clients/desktop/test-results/packaged-benchmarks-quarantine.json",
+    join("clients", "desktop", "test-results", "packaged-benchmarks-quarantine.json"),
   );
 });
 

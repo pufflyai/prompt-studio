@@ -34,6 +34,8 @@ Quarantine temporarily removes these specific cases from merge protection on the
 
 On 2026-10-30, the user required single execution and quarantine of confirmed flakes. CI no longer repeats performance cases or runs multiple reliability refs to obtain a pass. Windows x64 warm-attach and cold-start launch benchmarks run once in a separate non-blocking test step, with a required execution report; their existing budgets, assertions and execution allowances remain unchanged. Other native platforms remain blocking. Reproduce and repair the cause before restoring a case to the stable gate.
 
+The full P0–P2 battery also exposed an intermittent session-row menu case on Linux x64: after touch-hold and right-click menu dismissal, clicking Session B left Session A selected. The unchanged case and menu-action sources passed the main-branch nightly. It now runs once in source-UI quarantine with its complete Sessions, workspace and ticket assertions and existing timeout.
+
 ## Removal
 
 For each case, reproduce and fix its cause, then meet its registered removal criterion and restore it to the stable lane. Do not remove a supported contract to clear quarantine. Delete this mechanism when the register is empty. Remove the reliability refs after the recorded qualification is no longer needed.

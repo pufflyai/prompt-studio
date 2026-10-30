@@ -415,5 +415,19 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/41026983012"
     ],
     "removeWhen": "Fix native settling collection and Windows process/file-handle cleanup, then verify the unchanged cold workload in the first Windows execution before restoring the stable gate."
+  },
+  {
+    "runner": "playwright-ui",
+    "file": "packages/e2e/src/ui/tree-resource-actions.p2.spec.ts",
+    "name": "session row menus keep their subject across Sessions, workspace and ticket navigation",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-907 / resource context menus",
+    "reason": "After touch-hold and right-click menu dismissal, the next Session B row click intermittently leaves Session A selected in the Side Panel. The unchanged case and context-menu action sources passed the main-branch nightly; preserve the complete Sessions/workspace/ticket workload and existing assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40995061329/job/123869212960",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41039156248/job/124007476594"
+    ],
+    "removeWhen": "Repair context-menu dismissal and session-row activation, then verify the complete subject-preservation workload in a first-attempt Linux x64 execution without retries or increasing the existing timeout."
   }
 ]
