@@ -2,10 +2,10 @@ import { Box, Text } from "@chakra-ui/react";
 import { type ThemePreferenceOption, useThemePreference } from "@pstdio/ui";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CanvasItem } from "../canvases/definitions";
-import themes from "../catalog/generated/frame-themes.json";
 import { PreviewSource } from "../catalog/source-information";
 import { Button } from "../components/themed-primitives";
 import type { CanvasRuntime } from "../controller/runtime";
+import { frameThemePreferences } from "../frame-themes";
 import { type FrameBootstrap, frameBootstrap, frameDocument } from "./assets";
 import { FrameLoading } from "./frame-loading";
 import { navigateFrame } from "./navigation";
@@ -21,8 +21,6 @@ const sendCatalog = (frame: HTMLIFrameElement | null, nonce: string, source: str
     (error) => postFrame(frame, { nonce, type: "catalog", source, error: String(error) }),
   );
 };
-
-const frameThemes = [...themes, { id: "pstdio-light", mode: "light" }, { id: "pstdio-dark", mode: "dark" }];
 
 export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }) => {
   const { item, runtime } = props;
@@ -40,7 +38,7 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
   const selected = useSyncExternalStore(runtime.subscribe, () => runtime.get().themes[item.id] ?? "app");
   const app = useThemePreference();
   const appTheme = app.themePreferences.find((theme) => theme.id === app.themePreference);
-  const theme = selected === "app" ? appTheme : frameThemes.find((theme) => theme.id === selected);
+  const theme = selected === "app" ? appTheme : frameThemePreferences.find((theme) => theme.id === selected);
   const sentTheme = useRef<typeof theme>(undefined);
   useEffect(() => {
     let active = true;

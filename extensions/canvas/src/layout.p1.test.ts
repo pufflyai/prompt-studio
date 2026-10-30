@@ -1,10 +1,17 @@
 import { expect, test } from "bun:test";
-import { readLayout } from "./layout";
+import themes from "./catalog/generated/frame-themes.json";
+import { readLayout, updateLayout } from "./layout";
 
 const items = [
   { id: "original", position: { x: 0, y: 0 } },
   { id: "new-design", position: { x: 400, y: 0 } },
 ];
+test("retains every compiled preview theme when saving and reopening a layout", () => {
+  for (const theme of themes) {
+    const saved = updateLayout(readLayout(null, items), { themes: { original: theme.id } }, items);
+    expect(readLayout(JSON.parse(JSON.stringify(saved)), items).themes.original).toBe(theme.id);
+  }
+});
 test("keeps source membership while reusing valid saved positions", () => {
   const saved = {
     version: 1,

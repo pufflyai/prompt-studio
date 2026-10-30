@@ -1,11 +1,13 @@
+import themes from "./catalog/generated/frame-themes.json";
+
+export const frameThemePreferences = [
+  { id: "pstdio-light", title: "Light", mode: "light" },
+  { id: "pstdio-dark", title: "Dark", mode: "dark" },
+  ...themes,
+] as const;
 export const frameThemes = [
   { id: "app", title: "Follow app" },
-  { id: "pstdio-light", title: "Light" },
-  { id: "pstdio-dark", title: "Dark" },
-  { id: "solarized-light", title: "Solarized Light" },
-  { id: "solarized-dark", title: "Solarized Dark" },
-  { id: "dracula", title: "Dracula" },
-  { id: "monokai", title: "Monokai" },
-] as const;
+  ...frameThemePreferences.map(({ id, title }) => ({ id, title })),
+];
 export type FrameTheme = (typeof frameThemes)[number]["id"];
 export const isFrameTheme = (value: unknown): value is FrameTheme => frameThemes.some((theme) => theme.id === value);

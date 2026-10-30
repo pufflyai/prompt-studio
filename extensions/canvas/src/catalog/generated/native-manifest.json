@@ -214,14 +214,14 @@
     "extensions/canvas/src/controller/geometry.ts": "ea6ca5fcccb7ceacb839bafbb50ef2e47ac67309c098ac547c5f305340c47e08",
     "extensions/canvas/src/controller/grid.ts": "a9e9bf71a334f53ba154f6d21a9dc19f8c4dee585506a4ca9612b5915df3c12b",
     "extensions/canvas/src/controller/runtime.ts": "b606f2f6cb259106c23d184f4db4d78d84f6896fefbfcfb67821ba212e71e84d",
-    "extensions/canvas/src/frame-themes.ts": "f3df25778aeb68ab4683023dded6d96749552ce7bc2389054a8e83a53e5e05a4",
+    "extensions/canvas/src/catalog/generated/frame-themes.json": "2c9b60463b9b8142b60178031e82cfc09cabbd318f84ecf9f9efb718695f337a",
+    "extensions/canvas/src/frame-themes.ts": "ebd9bc6fca2aa459e4f2655dc9ab58f37826263eab5dcd87bf63a75e0317cd1d",
     "extensions/canvas/src/layout.ts": "13c6580742bada1318be8d0ae480689447508ab3e79fb4cb57a9794f9b3e74c7",
     "extensions/canvas/src/controller/item-movement.ts": "1bea67f678528aed5caa46bdbb957c8db587fec799fe1a3eae8250e0035fc1b4",
     "extensions/canvas/src/view/canvas-viewport.tsx": "f34dc76b1ee2bf594e2fecc55ab8e5804315c91b97f7e5d758f02227cf90a26c",
-    "extensions/canvas/src/catalog/generated/frame-themes.json": "2c9b60463b9b8142b60178031e82cfc09cabbd318f84ecf9f9efb718695f337a",
     "extensions/canvas/src/catalog/source-information.tsx": "03eb9492874c24557a052f49f91f1e8ff660734f633408bfca6f53ed8237020b",
     "extensions/canvas/src/frames/navigation.ts": "6e6d7167f556b7b63682423d99f07cb687e9c1520cdc102d007a997fdf8c246a",
-    "extensions/canvas/src/frames/frame.tsx": "acd262345e80ad1b59a27abdde85d07d6fae56f707787821d757144455b65c33",
+    "extensions/canvas/src/frames/frame.tsx": "eee5a035dcd13ba6b9e65d56d8954f1027911159f5b85a91680da31b72e086fe",
     "extensions/canvas/src/view/frame-theme-picker.tsx": "7088a8fdac2ae1f364bd02405fb876e25a6db1b7592df3ee74036b7d0a831d00",
     "extensions/canvas/src/view/frame-variant-picker.tsx": "66c5939f693a3e470994947c8a3e807e256c167232a5825667ca2c7f67454b5d",
     "extensions/canvas/src/view/item-frame.tsx": "b0ac7ab005e62be42cebe7768ff0dcfe026a90700fe0750258a4e48865820101",
@@ -2381,9 +2381,9 @@
     "packages/canvas/src/native-preview-runtime.tsx": "3c46fed360b95b7c7292be3a0669aca9f7969a204106476fbf443783746408ff"
   },
   "outputs": {
-    "frame-bundle.ts": "9af3c5daaa39c0fb67effda30e6a7d35c76fca3d2af31f737887eb313088ed29"
+    "frame-bundle.ts": "0cff80e3146cd493c1e4c7ebd137ec7bb1294b445c00c54943f88134095d04ef"
   },
   "stories": 1633,
   "documents": 36,
-  "bytes": 61750227
+  "bytes": 61750076
 }
