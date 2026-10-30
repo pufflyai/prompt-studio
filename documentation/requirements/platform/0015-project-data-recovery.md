@@ -1,24 +1,25 @@
 # PRD: Restore project files without a Git host
 
-Status: Proposed, awaiting a scope decision. Created: 2026-10-30. Owner: platform.
-Ticket: PS-960, under PS-716. This is a design for review, not an accepted change to
-[PRD 0014](0014-local-first-sync.md). No runtime behavior changes with this document.
+Status: Proposed implementation design. Created: 2026-10-30. Owner: platform.
+Ticket: PS-960, under PS-716. Coverage was decided by the user on 2026-10-30:
+**everything in the project folder should be synced**. This document and
+[PRD 0014](0014-local-first-sync.md) reflect that decision. Runtime work is not yet
+implemented by this documentation change.
 
 ## Outcome and boundary
 
-A person opens a cloud project on a new device, chooses a new folder, and gets the
-files that reached Cloud, including saved edits and new files. Git and a Git hosting
-account are optional. The product explains what it retains and what is still local.
+A person opens a cloud project on a new device, chooses a new folder, and gets every
+project-folder file that reached Cloud. Saved edits, new files and local Git data
+come back without a Git hosting service. No commit or push is required.
 
 This fits the [mission](../../../MISSION.md): storage, encryption and recovery belong
-in core because every tool needs them. The Cloud extension owns coverage and progress
+in core because every tool needs them. The Cloud extension owns progress and recovery
 UI through public APIs. Extensions keep owning their records and declared files.
 
-This proposal adds automatic capture and explicit restoration of project folders.
-It does not continuously apply downloaded source edits to an existing working folder.
-An editor buffer must be saved to disk to enter a capture. Terminals, running agents
-and processes cannot be restored. A restored session remains history on its original
-device; it does not resume execution on the new one.
+Automatic upload and download keep a recoverable copy on the user's devices. This
+first outcome does not continuously apply remote source edits to an active folder.
+Editor buffers must be saved to disk. Terminal and process execution do not move to
+another device; their saved files do. Existing session history keeps its device owner.
 
 ## Current behavior and cause
 
@@ -46,245 +47,204 @@ Source checked at `0c7e0548297e30bb10c133b7223d8a78dc4a7e71`:
 PS-960 has no linked prerequisite tickets. Its assigned base contains these modules;
 `update-stack` confirmed that base without adding dependency commits.
 
-## Proposed coverage
+## Complete folder coverage
 
-“Retained” means available from a completed upload, within the coverage below.
-It never means every byte on the source machine. Show exclusions before enabling
-folder capture, and keep them inspectable afterward. Existing record sync continues.
+The project folder is the inclusion boundary. There are no default or user-defined
+path exclusions in this first outcome. `.gitignore`, extension cache declarations,
+filename patterns and Git tracked/untracked state do not filter the captured tree.
 
-| Data | Proposed treatment and owner |
+| Data inside the project folder | Required treatment |
 | --- | --- |
-| Project and extension records, resource identities, published extension versions, declared shared artifacts | Keep the current owners and project-key encryption. Do not copy their storage files into a second backup. |
-| Ordinary files and directories in the default project folder | Capture saved bytes, relative paths, empty directories and executable bits, including untracked files and dotfiles except the exclusions below. Use the project key; project members can read them. |
-| Local workspaces belonging to this project, including worktrees outside the project folder | Capture each root separately using the user's private-project-data key. Enumerate roots from existing workspace records, not by searching the disk. Do not share private work with project members. |
-| Remote or unavailable workspace roots | Report as unavailable until their owning device/provider can capture them. Do not claim a workspace record proves its files are retained. |
-| Git repositories and submodules inside an included root | Offer separate opt-in portable Git recovery using the source user's private key, including for a shared project folder. Review historical and staged content separately; current file exclusions cannot filter Git objects. No Git host is needed. |
-| `.pstdio/extension-storage/` files outside declared shared mounts | Capture as private files, except extension-declared caches and the recovery service's own scratch data. Include drafts, report evidence and ticket checkouts. Keep publisher boundaries. |
-| Declared shared mounts inside private or excluded storage paths | Keep the existing shared owner. The coverage map identifies that owner; the folder scanner neither republishes nor materializes those paths. |
-| Dependencies and caches | Exclude `node_modules/`, runtime caches, and extension-declared caches by default. Do not exclude generic names such as `build/` or `dist/` without a coverage rule: they may hold user work. |
-| Secrets and machine setup | Exclude `.env` and `.env.*`, private-key files (`*.key`, `*.pem`, `*.p12`, `*.pfx`), credential stores, sockets, device files, and runtime credentials. List the matching paths and reasons locally. A filename filter cannot detect every secret inside ordinary source files. |
-| Prompt Studio installation and device bindings | Do not copy the runtime database, installed caches, absolute folder bindings or `.pstdio/config.json`. Recover records through their current owners and regenerate device bindings. |
-| Local extension overrides under `.pstdio/extensions/` | Excluded and shown explicitly, following R43. Ordinary extension source elsewhere in the project remains an ordinary file. Installing or executing extensions is a separate explicit workflow. |
-| Files outside declared roots | Excluded. Do not follow symlinks into the rest of the machine. |
+| Saved source, binaries, new files, dotfiles, empty directories and executable bits | Include. No commit or push is needed. |
+| `.git`, nested repositories and submodule files | Include automatically, including objects, index, refs, reflogs, config and hooks. No separate Git opt-in. |
+| `.env`, key files and other credential-bearing files | Include, encrypted on the client before transfer. No secret-pattern exclusions. |
+| `node_modules`, build output, caches and ignored files | Include. Size, quota or transfer problems block completion; they do not create an exclusion. |
+| `.pstdio/config.json`, `.pstdio/extensions` and all `.pstdio/extension-storage` content | Include, including local extension code, caches, drafts, reports and nested workspace files. Preserve publisher paths. |
+| Files already represented by extension records or declared mounts | Include their actual on-disk bytes. The scanner is read-only and does not republish them through the extension's live record owner. |
+| Symlinks | Retain the link and its exact target text without following it. An external target does not become part of the project folder. |
+| Unreadable, changing or unsupported entries | Report the entry as pending or blocked. Do not skip it and mark the folder complete. |
 
-Coverage rules are encrypted project data, with private workspace additions kept private.
-Do not treat `.gitignore` as a recovery policy: it commonly excludes work people still
-need. Show its ignored paths during coverage inspection without excluding them solely
-for that reason. Users can exclude additional files or opt in excluded dependency or
-secret-pattern files after inspecting the affected paths and their audience. Runtime
-credentials, special files and installation/device state remain excluded.
+Preserve supported file metadata, including permissions and link information. If the
+source or destination cannot retain an entry or its required metadata, explain the
+limitation and keep the operation incomplete. A socket or device entry is not a
+running process that can be copied; detecting one must produce an explicit unsupported
+entry rather than a successful partial backup.
 
-Resolve path ownership before reading file bytes. A private subtree inside a shared
-root must not enter a project-key manifest, even through an alias or nested workspace.
-The most restrictive owner wins for overlaps; hard-linked files are read as separate
-entries only under their permitted roots. A parent scanner skips child workspace roots.
-Local paths and detailed errors stay local or encrypted.
+Files outside the project folder are outside this requirement. Workspace records
+still recover through private project data, but a workspace path outside the folder
+does not imply its files are retained. Show that boundary. Do not search the whole
+machine or follow links to copy unrelated folders. Referenced Git administration
+needed to restore an included worktree is handled explicitly below.
 
-Record safe relative symlinks without following them. Reject links that escape the
-root, absolute links, and paths that cannot be represented on the destination. Restore
-never writes through a link. Report case collisions, reserved names, unsupported link
-types and permissions before materialization; do not silently rename or drop entries.
-Owner IDs, ACLs and platform-specific extended attributes are excluded in this first
-outcome and appear in coverage. Hard links restore as independent files.
+## Ownership and encryption
 
-## Git policy
+A complete folder can contain private workspaces, credentials and historical private
+files inside `.git`. Keep the entire per-source folder capture in the source user's
+private project data, encrypted with that user's private-project-data key (R13).
+Only that user's devices can read it. Membership in a shared project does not grant
+access to another member's raw folder capture. Do not split a Git object graph by
+current pathname or copy private subtrees into a shared manifest.
 
-Do not upload a raw `.git` directory or a worktree's pointer to another device's path.
-Offer Git recovery separately from ordinary file capture, with a private audience and
-explicit consent for history and staged content. An object graph can contain deleted
-secrets, ignored files and private subtrees absent from today's working folder.
-Preserving commit IDs requires that graph; silently filtering its objects cannot
-preserve the original commits. File exclusion rules do not sanitize Git history.
+Existing shared records and declared shared files keep their current public APIs,
+owners and project-key encryption. File recovery is a captured filesystem state,
+not another live writer of extension records. Restore must not race the existing
+file projection or run extension migrations on half-restored files.
 
-Before consent, inspect all reachable trees and index entries for excluded paths and
-show the additional coverage locally. Other excluded content needs a separate opt-in
-for private Git retention. Hard-excluded credentials or installation/device state
-anywhere in the graph block its capture; do not upload the graph, rewrite history or
-claim complete Git recovery. Filename review still cannot identify secrets embedded
-in arbitrary source bytes. Ordinary file capture remains available with a clear
-Git-not-retained reason when consent is absent or a graph is blocked.
+Relay document and blob IDs are opaque. Filenames, paths, content hashes, Git refs,
+configuration and file bytes stay encrypted. The relay stores and routes ciphertext;
+it does not inspect folders. Logs and transport errors contain no readable paths or
+content. This extends the current encryption and access rules, not the trust of
+other project members.
 
-For an admitted graph, capture reachable objects and refs, detached HEAD, and the
-staged index entries and their objects. Keep this in a private companion manifest;
-shared manifests contain neither its objects nor private branch/path metadata.
-Rebuild an independent repository on restore, with the captured branch, index and
-working files. This preserves unpushed commits, staged-only content, saved unstaged
-edits and new files within the admitted coverage. A submodule is captured as its own
-repository and files; its parent does not supply missing objects. Missing objects or
-unavailable submodules make Git recovery incomplete, not successfully backed up.
+## Git and device-specific files
 
-Exclude hooks, credential-bearing remotes, machine Git configuration, locks, reflogs
-and unreachable objects. Retain no authentication material. Recovery does not require
-or contact a remote. A user can set a remote again afterward. Report these exclusions
-and do not promise recovery of deleted branches or reflog-only commits. If Git is not
-available, ordinary files still capture, with Git recovery explicitly incomplete.
+Capture `.git` like every other path. Retain all its files, including local-only
+objects, staged data, reflogs, hooks and configuration. Do not substitute a clone,
+rewrite history, filter historical secrets or require a second consent step. The
+private audience above covers both current files and historical objects.
+
+A worktree or submodule can use a `.git` file that points to administration outside
+the folder. Automatically capture the referenced administration and required object
+stores as private Git recovery dependencies, with cycle detection and source identity.
+Inventory these dependencies separately from folder entries. If they are unavailable,
+the folder bytes can still be retained, but functional Git recovery stays incomplete.
+This exception does not mean following arbitrary filesystem symlinks.
+
+Restoration retains captured original bytes. Where worktree pointers or device bindings
+need a new path, retain the original in the recovery store and record the local mapping
+and changed materialized paths in the restore result. Rebuild Git administration links
+inside the restored recovery layout; never leave a dependency on the source device.
+Do not silently discard config or hooks. Recovery itself must not execute retained
+hooks, scripts, provisioning, automations or local extension code. Installation,
+activation and execution follow the normal trust and setup flow after recovery.
 
 ## Capture and encrypted storage
 
-Use one core recovery owner for each existing project/default-workspace or private
-workspace identity on its source device. Keep source devices separate: a restored
-device creates its own source entry, rather than overwriting another device's copy.
-There is no global “newest device wins” tree and no wall-clock conflict rule.
+Use one core recovery owner for each source device's project folder. Each publishes
+one current complete manifest through an encrypted private document. List source
+identity, capture interval, relative paths, entry types, metadata, content digests,
+chunk references and Git recovery dependencies. An encrypted private catalog discovers
+these sources. Existing workspace/device identities provide ownership; no second
+stored project status is needed.
 
-Each owner publishes one current immutable manifest through an encrypted document.
-The manifest lists coverage rules, capture interval, source identity, parent capture,
-relative paths, types, lengths, content digests and chunk references. Portable Git state
-belongs to the private companion manifest, even when working files are project-shared.
-An encrypted catalog discovers the owners using the same project/private visibility
-split as the data. Relay document and blob IDs are opaque and reveal no paths, hashes,
-branch names or project names. Use the existing keys, authorization and latest-state
-transport. The relay stores and routes ciphertext; it never scans or merges a tree.
+Keep separate source copies when devices edit independently. A restored device
+publishes its own source entry. Never let one device's upload overwrite another's
+unsent work through an arbitrary latest-device or wall-clock rule.
 
-Split large contents into independently encrypted bounded chunks and transfer them
-through resumable blob storage. Reuse unchanged chunks within the same encryption
-space; do not expose plaintext hashes or deduplicate across accounts on the server.
-Persist the local manifest and ciphertext references durably before acknowledging a
-capture. Keep this core data under the runtime's project storage, not in extension
-source or new folders directly under the linked project's `.pstdio/` directory.
+Read every entry. Watch filesystem changes, including writes by external tools, to
+schedule capture. Reconcile with a full scan on startup, reconnect, watcher overflow
+and an explicit “Back up now” action. Persist pending work across restarts. Watch
+notifications are hints, not proof that all entries were scanned.
 
-Watch filesystem changes to schedule scans, including writes from external editors
-and tools. Reconcile with a full scan on startup, reconnect, watcher overflow and an
-explicit “Back up now” action. Watch events are hints; correctness cannot depend on
-receiving every event. Persist pending work across restarts. Do not publish a new
-complete manifest until all included files and Git state have been read and every
-referenced blob has been acknowledged by the relay (R21).
+Read changing files and Git state again before completing capture. A scan error is
+never interpreted as a deletion. A successful complete scan represents a deletion
+by absence from the new manifest. A rename is a removed path and an added path that
+can reuse content. Unreadable or continuously changing entries keep current work
+pending while the previous complete capture remains restorable.
 
-Detect files or Git refs changing during capture and rescan those entries. Report
-unreadable, changing, oversized or quota-blocked entries. A scan failure is never
-interpreted as a deletion. A successful scan represents deletions by absence from
-the new complete manifest; a rename is a removed path and an added path that can reuse
-content. Changing exclusions changes declared coverage, not a fabricated file delete.
+Ordinary scans are not one atomic instant across unrelated external writes. Show
+the capture interval. Preserve platform atomic multi-file save boundaries (R4).
+Include database files if present, but do not promise an application-consistent image
+of a running external database. Its changing or unverified files remain pending.
 
-Ordinary filesystem scans do not provide a single atomic instant across unrelated
-external writes. Show the capture interval. Capture saves made through an atomic
-Prompt Studio file operation at that operation's boundary; do not split that save
-across visible manifests (R4). This is file recovery, not a disk image or an
-application-consistent backup of arbitrary databases. Explain that open database files
-need their application's export before capture.
+Split large files into independently encrypted bounded chunks and use resumable blob
+storage. Reuse unchanged chunks only within the same encryption space. Do not expose
+plaintext hashes or deduplicate across accounts on the relay. Persist manifests and
+ciphertext references durably; publish a completed cloud manifest only after all
+referenced blobs are acknowledged (R21). Interrupted transfers resume with the same
+references. Failure never replaces the previous completed capture with a partial one.
 
-Keep the previous completed cloud capture while a new one uploads. Interrupted
-transfers resume against durable blob references; failure leaves the previous capture
-restorable and marks newer work pending. R20/R21's grace period protects referenced
-blobs during replacement. The relay retains only current state plus that grace copy,
-not an archive of all captures. Client recovery history remains under R53; do not
-promise that its current implementation already snapshots these new file owners.
+Keep the recovery service's own cache, manifests and staging outside captured roots.
+If the configured runtime home overlaps the project folder, relocate that service's
+working storage outside it before capture or report a setup error. Do not silently
+exclude a project subtree or recursively back up the capture's own output.
 
-## Several devices and restoration
+R20/R21's grace period protects referenced blobs during replacement. Relay retention
+is latest state plus the grace copy, not a permanent history of captures. Define
+participation of these owners in R53's client history during implementation; do not
+claim the existing snapshot code already covers folder captures.
 
-Devices download completed manifests and their included bytes into the local recovery
-store even before a project folder is chosen, preserving offline access under R1.
-This does not project remote bytes into an active working folder. A project may have
-several source copies with different unsent work; list each source device, workspace,
-capture interval and coverage. Let the person select the source to restore. Never
-collapse them into one arbitrary latest tree. A missing source device does not prevent
-restoring its last completed capture.
+## Download and restore
 
-Restore to a new, absent destination. An existing destination, even an empty folder,
-is refused without writes. Offer a new sibling folder or the existing attach workflow;
-attaching local work is not restoration and does not replace it. No overlay, implicit
-three-way merge, file replacement, or cloud deletion is applied to existing work.
-The same rule applies when a device already has an attached project folder: restoring
-another source produces a separate workspace and keeps the current folder attached.
+Each user's devices automatically download their completed source captures and bytes
+into a local recovery store, even before choosing a project folder. This preserves
+offline recovery under R1. It does not project another device's edits or deletions
+into an active folder. List source devices and capture intervals so a person can
+choose a recoverable copy without depending on the source device being online.
 
-Before writing, validate the whole manifest, ownership, path boundaries and destination
-capabilities, then verify all required blobs and Git objects. Restore into an exclusively
-created staging directory beside the destination on the same filesystem. Persist an
-operation journal, resume verified downloads after interruption, and recheck boundaries
-at writes. Final publication must refuse replacement if another process creates the
-destination. Use a platform-supported no-replace operation; a check followed by an
-ordinary replacing rename is insufficient. An interrupted operation never attaches a
-partial folder or reports it ready.
+Restore into a new, absent destination. Refuse an existing destination without writes,
+even when empty. Offer a new sibling folder or the existing attach workflow. Attaching
+local work is not restoration. When the project already has a folder, restore another
+source as a separate workspace and keep the current folder attached.
 
-Bind the finished folder to the local project/workspace only after verification and
-publication. Regenerate device configuration and expose restored files for inspection.
-Recovery itself never executes restored hooks, scripts, provisioning or local extension
-code. Launching project tools follows the normal trust and setup flow afterward.
-Private workspace roots restore separately, with new local workspace identities and
-source references; their old sessions retain their original owner/device identities.
-Cancel removes only staging files owned by the operation, never pre-existing work.
+Validate the entire manifest and destination capabilities before publication. Check
+path traversal, case collisions, reserved names, permissions and unsupported entry
+types. Preserve symlink target text, but never follow restored links for writes.
+Use a sibling staging directory on the same filesystem, an operation journal and
+resumable verified downloads. Publish with a platform-supported no-replace operation;
+a check followed by an ordinary replacing rename is insufficient. Concurrent creation
+of the destination must preserve that work and leave restoration incomplete.
 
-## Coverage and progress contract
+Attach only after all entries and Git dependencies are verified and publication is
+complete. Reconcile local device bindings without erasing the retained original files.
+Pause live file projection and extension setup until restoration and binding are
+complete. The resulting setup flow must respect the execution boundary above.
+Cancel removes only staging owned by the operation. A partial folder is never ready.
 
-Extend the existing derived sync state rather than storing a second project status.
-Cloud UI and CLI/API must expose the same coverage and recovery operations:
+## Progress and interfaces
 
-- Included roots, their audience, exclusions with reasons, and unavailable roots.
-- Last completed capture per source, capture interval, included file/byte counts,
-  and bytes/files pending or blocked since that capture.
-- Distinct progress for existing records, retained files, local download and folder
-  restoration. Record sync completion cannot imply file backup completion.
-- Errors with the affected local path and action needed, such as freeing space,
-  changing coverage or installing Git. Transport errors contain no readable paths.
+Extend the existing derived sync state. Cloud UI and CLI/API expose the same data:
 
-An initial upload with missing entries is incomplete. A previous complete capture may
-remain available while current coverage has pending work; label both facts. Never
-call a partial set “all project data.” No folder is needed to use downloaded records.
-Offline restoration works only when every included blob for the selected capture is
-local; otherwise show what still needs downloading.
+- The project-folder boundary, source device, audience and Git dependencies.
+- Last completed capture, its interval and counts, plus files and bytes pending since.
+- Per-entry read, transfer, quota, integrity or metadata problems, with an action needed.
+- Separate progress for records, folder upload, local download and restoration.
 
-Core owns scanning, manifests, transfer, authorization and restore operations. Public
-SDK/API methods let the Cloud extension and agents inspect coverage, request capture,
-list sources, download, restore, cancel and observe progress. CLI commands call those
-same methods. Exact method names and additive/deprecation steps need an API review
-before implementation; do not silently change the released `clone` input contract.
+A record download cannot imply that folder bytes are complete. Show a previous
+completed copy alongside newer pending work. No files disappear from the denominator
+because of ignore rules, credentials, size limits or errors. Offline restoration is
+ready only when every required entry is available locally. Records remain usable
+without a folder.
 
-## Reconcile PRD 0014 before implementation
+Core owns scanning, manifests, transfer, authorization and restoration. The public
+SDK/API supports inspection, capture, source listing, download, restore, cancellation
+and progress. CLI commands use the same methods; the Cloud extension owns its UI.
+Keep additions next to released folder APIs and follow extension API deprecation
+rules; do not silently change the existing `clone` input contract.
 
-Approval must explicitly accept the following changes together. Until then PRD 0014
-continues to exclude working trees, and PS-825's existing flow remains authoritative.
+## PRD reconciliation and delivery
 
-| PRD 0014 contract | Proposed amendment |
-| --- | --- |
-| R1, R7, R46 | Full recovery includes the declared folder coverage and completed per-source captures, with independent pending/upload/download/restore progress. “Full” never hides exclusions. |
-| R2 and the working-tree non-goal | Keep CRDT merging for existing shared data. Add captured working trees for explicit restoration; do not CRDT-merge or continuously project their source file bytes. |
-| R4 | Publish complete manifests, preserve platform atomic file-save boundaries, and state the limits of scanning external writes. |
-| R8, R9, R13, R26 | Reuse client encryption and project/private authorization; keep private workspace paths and bytes out of shared captures. |
-| R17–R25, R28 | Keep opaque latest-state/blob storage and grace retention. Implement bounded, resumable file transfer; report quota failures without silently narrowing coverage. |
-| R34 and the 2026-10-21 new-device decision | Add restore-from-Cloud as the general folder path. Clone and attach remain explicit alternatives; a remote is never required for recovery. |
-| R38, R40, R43 | Add private workspace and opt-in Git-history recovery without moving sessions or automatically installing/activating local overrides. Historical code coverage requires separate consent. |
-| R53, R55 | Define file-owner participation in local recovery history during implementation; keep Cloud UI in its extension on the public API. |
+The user's coverage instruction replaces the previous working-tree exclusion in
+PRD 0014. R57–R59 record complete folder coverage, its private audience and the first
+restore workflow. R2 distinguishes shared editable files from captured source trees;
+R43 retains local override files without activating their code as published extensions.
+There is no outstanding coverage decision or separate Git-history approval gate.
 
-The 5 GiB reference workload, 1 GiB file and hosting target still apply. Measure
-transfer memory, interrupted-transfer overhead and encrypted storage on that workload;
-do not increase budgets or shrink the workload to fit this design.
+PS-960 supplies the design requested by its ticket. Runtime implementation still
+needs core capture/manifests and Git dependencies, bounded transfer and progress,
+safe restore APIs, then Cloud UI and the new-device flow. UI work follows Canvas
+policy; this documentation correction changes no visual implementation. Update user
+guides when behavior ships. The 5 GiB workload, 1 GiB file and hosting target still
+apply; measure full contents rather than shrinking coverage or raising budgets.
 
-## Validation and delivery sequence
+Implementation acceptance must prove:
 
-First accept or amend this design and PRD 0014's boundary. Then plan implementation
-work with real dependencies: core coverage/manifests and portable Git capture;
-bounded encrypted transfer and derived progress; safe restore and public APIs;
-Cloud UI and new-device folder flow. Use Canvas policy for that UI work. Canvas is
-skipped for this document-only design because it changes no visual implementation.
-Update user guides and storage references only when their behavior ships.
-
-Before the implementation is delivered, prove these supported outcomes:
-
-1. Two isolated runtimes recover a non-Git project with text, binary, empty-directory
-   and executable entries, without any Git host or source device online.
-2. Saved edits and new files restore. An explicitly admitted private Git graph restores
-   staged-only content, unpushed and detached commits. Historical excluded paths and
-   staged secrets cannot bypass coverage or leak into shared data. Include refs shared
-   by linked worktrees in that review. Blocked graphs, withheld consent, missing
-   submodules and unavailable Git are reported.
-3. External writes, missed watcher events, restarts, deletes, renames and unreadable
-   files produce the defined manifests and pending state. Multi-file platform saves
-   never become visible halfway through.
-4. Interrupted chunk transfers and capture replacement preserve the previous complete
-   copy. Quota, disk and integrity failures never mark incomplete data complete.
-5. Concurrent offline work on two devices remains independently restorable; neither
-   source overwrites the other. Reset/new devices recover both authorized sources.
-6. Existing destinations and concurrent destination creation preserve local work.
-   Traversal, symlink escapes, case collisions and interrupted publication cannot
-   write outside staging, replace user work or attach a partial folder.
-7. Private workspace bytes, extension drafts and nested private roots stay private.
-   Declared shared files retain one owner. Relay dumps reveal no known names or bytes.
-8. CLI/API and one critical Playwright folder/download scenario expose the same choices,
-   errors and progress, including offline and incomplete recovery. The 1 GiB transfer
-   does not block small record updates or another account.
-
-## Decision needed
-
-Accept or amend the coverage table, private workspace capture, portable Git policy,
-per-source manifests, and restore-only-to-new-folder rule, and authorize the listed
-PRD 0014 amendments. This ticket and its research explicitly require that decision
-before runtime implementation. This proposed PRD alone does not make it.
+1. Two isolated runtimes recover all non-Git text, binary, hidden and new files,
+   directories and supported metadata with no Git host or online source device.
+2. `.gitignore` entries, `.env`, keys, `node_modules`, caches, `.pstdio` configuration,
+   local extension sources, drafts and declared artifact bytes all recover automatically.
+   No opt-in or ignore rule removes them. Unsupported entries remain visible blockers.
+3. Full Git state restores saved edits, staged content, unpushed and detached commits,
+   reflogs and local config. Linked worktrees and submodules recover without source
+   paths; blocked external dependencies never appear as functional Git recovery.
+4. Watcher loss, restarts, deletes, renames, unreadable and changing files produce the
+   specified state. Interrupted transfers preserve the previous complete capture;
+   quota, disk and integrity failures never mark partial data complete.
+5. Independent device copies remain restorable, and only the owner's devices can
+   decrypt folder captures, including private paths embedded in Git history. Relay
+   dumps reveal no known names, credentials or bytes.
+6. Existing destinations, concurrent creation, traversal, symlinks, case collisions
+   and interrupted publication preserve local work and cannot attach partial folders.
+   Restored hooks, scripts and local overrides never execute during recovery.
+7. CLI/API and a critical Playwright folder/download scenario expose the same choices,
+   errors and progress. A 1 GiB file does not block record sync or another account.
