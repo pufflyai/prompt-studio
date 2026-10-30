@@ -415,5 +415,47 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/41026983012"
     ],
     "removeWhen": "Fix native settling collection and Windows process/file-handle cleanup, then verify the unchanged cold workload in the first Windows execution before restoring the stable gate."
+  },
+  {
+    "runner": "playwright-ui",
+    "file": "packages/e2e/src/ui/tree-resource-actions.p2.spec.ts",
+    "name": "session row menus keep their subject across Sessions, workspace and ticket navigation",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-907 / resource context menus",
+    "reason": "After touch-hold and right-click menu dismissal, the next Session B row click intermittently leaves Session A selected in the Side Panel. The unchanged case and context-menu action sources passed the main-branch nightly; preserve the complete Sessions/workspace/ticket workload and existing assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40995061329/job/123869212960",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41039156248/job/124007476594"
+    ],
+    "removeWhen": "Repair context-menu dismissal and session-row activation, then verify the complete subject-preservation workload in a first-attempt Linux x64 execution without retries or increasing the existing timeout."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-navigation-customization.p2.spec.ts",
+    "name": "restores each project's navigation order, placement, and visibility after relaunch",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-907 / desktop navigation customization",
+    "reason": "The identical packaged navigation-restore case passed on Intel macOS in the initial full battery, then exhausted its existing 60-second allowance waiting for a runtime descriptor in the revised battery. Production app and case sources are unchanged between these revisions. Preserve both launches and every navigation assertion.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41039156248/job/124007475195",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754056"
+    ],
+    "removeWhen": "Identify and fix the variable startup/descriptor phase, then verify the full two-launch navigation workload in a first-attempt Intel macOS execution within its existing allowance."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-board-panning-smoke.p2.test.ts",
+    "name": "packaged Planner board pans with a mouse and keeps ticket and column actions",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-907 / packaged Planner gestures",
+    "reason": "The unchanged board-panning case exhausted its 30-second allowance on Intel macOS in the initial full battery, then passed in the revised full battery with identical runtime/case code and the same allowance. Keep runtime setup, panning, edge scrolling, ticket creation and column actions intact; the slow phase remains unidentified.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41039156248/job/124007476657",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754962"
+    ],
+    "removeWhen": "Identify and fix the variable slow phase, then verify the complete packaged board workload in a first-attempt Intel macOS execution within the unchanged allowance."
   }
 ]

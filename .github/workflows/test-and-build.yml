@@ -1,39 +1,58 @@
-name: Focused launch quarantine
+name: Intel macOS quarantine verification
 on:
   workflow_dispatch:
+    inputs:
+      source_sha:
+        required: true
+        type: string
 permissions:
   contents: read
 jobs:
-  windows:
-    runs-on: windows-2025
+  intel:
+    runs-on: macos-15-intel
     timeout-minutes: 30
     env:
       NX_DAEMON: 'false'
       PLAYWRIGHT_TRACE: 'off'
+      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
-      - run: bun scripts/ci/install-native-dependencies.ts
-      - run: bun run build -- --scope @pstdio/desktop --include-dependencies
-      - run: bun run --cwd clients/desktop package -- --arch=x64
-      - name: List stable launch selection without executing it again
-        working-directory: clients/desktop
-        run: bunx playwright test --config playwright.benchmark.config.ts --list packaged-launch.p3.bench.ts
-      - name: Run Windows launch quarantine once
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Build native app and test dependencies
+        run: bun run build -- --scope @pstdio/desktop --scope e2e --include-dependencies
+      - name: Package the Intel app and compiled CLI
+        run: bun run --cwd clients/desktop package -- --arch=x64
+      - name: Prepare Chromium outside case deadlines
+        run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke.ts"; preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
+      - name: Execute registered Intel compiled CLI case once
         continue-on-error: true
-        run: bun scripts/ci/run-quarantined-tests.ts packaged-desktop-benchmark --scope @pstdio/desktop --prebuilt
-      - name: Require every quarantined case exactly once
+        run: bun scripts/ci/run-quarantined-tests.ts packaged-bun --scope e2e --prebuilt
+      - name: Require first-attempt compiled CLI report
         if: '!cancelled()'
-        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop-benchmark --scope @pstdio/desktop
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun --scope e2e
+      - name: Execute registered Intel desktop case once
+        if: '!cancelled()'
+        continue-on-error: true
+        run: bun scripts/ci/run-quarantined-tests.ts packaged-desktop --scope @pstdio/desktop --prebuilt
+      - name: Require first-attempt desktop report
+        if: '!cancelled()'
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop --scope @pstdio/desktop
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: launch-quarantine-evidence
+          name: intel-quarantine-evidence
           path: |
+            packages/e2e/test-results
             clients/desktop/test-results
             test-results/quarantine

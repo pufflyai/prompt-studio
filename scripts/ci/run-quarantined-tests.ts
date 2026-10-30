@@ -11,6 +11,24 @@ import {
 } from "./test-quarantine";
 import { readWorkspacePackages } from "./workspace-packages";
 
+export const quarantineTestCommand = (
+  runner: string,
+  owner: string,
+  script: string,
+  files: string[],
+  platform = process.platform,
+) => {
+  const command = ["bun", "run", script, ...files.map((file) => `./${file}`)];
+  // This is a Bun fixture allowance. Playwright owns its native configuration.
+  if (
+    runner === "bun" &&
+    platform === "win32" &&
+    ["pstdio-db", "harness-codex", "pstdio-planner", "@pstdio/desktop"].includes(owner)
+  )
+    command.push("--timeout=15000");
+  return command;
+};
+
 export const quarantineGroups = (
   registry: typeof quarantineRegistry,
   packages: ReturnType<typeof readWorkspacePackages>,
@@ -127,13 +145,7 @@ if (import.meta.main) {
     };
     const script = scripts[runner] ?? "test";
     if (!manifest.scripts?.[script]) throw new Error(`Missing ${script} runner for ${owner.name}`);
-    const command = ["bun", "run", script, ...files.map((file) => `./${file}`)];
-    // Preserve the existing Windows fixture allowances; source test limits stay unchanged elsewhere.
-    if (
-      process.platform === "win32" &&
-      ["pstdio-db", "harness-codex", "pstdio-planner", "@pstdio/desktop"].includes(owner.name)
-    )
-      command.push("--timeout=15000");
+    const command = quarantineTestCommand(runner, owner.name, script, files);
     return [
       {
         owner: owner.name,
