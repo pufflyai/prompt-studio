@@ -75,12 +75,27 @@ const Editor = (props: {
   );
 };
 
-const createExample = (name: string, active: boolean, richText = false) => {
+const createExampleStorage = () => {
+  const values = new Map<string, string>();
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+  };
+};
+
+const createExample = (
+  storage: ReturnType<typeof createExampleStorage>,
+  name: string,
+  active: boolean,
+  richText = false,
+) => {
   const page = { kind: "page", extensionId: "multiple", id: "editor" } as const;
   const workbench = createWorkbench({
     active,
     startPage: page,
-    ...createLocalStorageWorkbenchPersistence({ namespace: "multiple-workbenches", scope: name }),
+    ...createLocalStorageWorkbenchPersistence({ namespace: "multiple-workbenches", scope: name, storage }),
   });
   workbench.fileIconThemes.register(
     ["icons.one", "icons.two"].map((id) => ({
@@ -128,10 +143,10 @@ const createExample = (name: string, active: boolean, richText = false) => {
 };
 
 const MultipleWorkbenches = (props: { richText?: boolean }) => {
-  const [workbenches] = useState(() => [
-    createExample("A", true, props.richText),
-    createExample("B", false, props.richText),
-  ]);
+  const [workbenches] = useState(() => {
+    const storage = createExampleStorage();
+    return [createExample(storage, "A", true, props.richText), createExample(storage, "B", false, props.richText)];
+  });
   const select = (selected: WorkbenchCore) => {
     for (const workbench of workbenches) if (workbench !== selected) workbench.activation.setActive(false);
     selected.activation.setActive(true);
@@ -182,7 +197,7 @@ export const RetainedProjects: Story = {
 };
 
 const StandaloneExample = () => {
-  const [workbench] = useState(() => createExample("A", true));
+  const [workbench] = useState(() => createExample(createExampleStorage(), "A", true));
   return <Workbench workbench={workbench} />;
 };
 
