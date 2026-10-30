@@ -308,50 +308,95 @@ of one production device. The run used a shared Docker VM with a 15.6 GiB limit 
 no exclusive timing window. It proves this finite workload's local correctness and
 storage figures, without a general memory, latency or hosted-capacity acceptance claim.
 
-## Monthly estimate, priced 2026-10-30
+## Existing deployment and monthly estimate, verified 2026-10-30
 
-These are planning inputs, not a reading of the hosted service's invoice. Refresh the
-linked prices on each measurement date. The initial configuration is one relay, one
-account manager and two logical databases on one PostgreSQL server.
+The existing production deployment is active at `https://base.prompt.studio` in
+Amsterdam. Read-only provider API inspection confirmed two `basic-xxs` services,
+each with one shared CPU and 512 MiB RAM. The active deployment was created on
+2026-10-28. Its immutable service images match the Cloud repository's production inputs:
 
-| Item | Monthly USD | Assumption and source |
-| --- | ---: | --- |
-| Relay | 5.00 | One shared 512 MiB container; [App Platform prices](https://docs.digitalocean.com/products/app-platform/details/pricing/). |
-| Account manager | 5.00 | One shared 512 MiB container; same pricing source. |
-| Databases | 15.15 | One basic 1 GiB PostgreSQL node at the published starting storage size; [database prices](https://www.digitalocean.com/pricing/managed-databases). |
-| Object storage | 5.00 | Standard subscription includes 250 GiB across buckets; [Spaces prices](https://docs.digitalocean.com/products/spaces/details/pricing/). |
-| Traffic | Usage dependent | Budget from measured bodies plus overhead; see below. |
-| Landing page | 0.00 | A static site within the free tier and 1 GiB monthly transfer. A paid site or higher traffic changes this line. |
-| PostHog | 0.00 | One analytics project below 1 million events/month; [free allowance](https://posthog.com/pricing). Other products and paid plans require their own inputs. |
-| Taxes | Billing-location dependent | Apply the team's actual rate and exemption status; [tax rules](https://docs.digitalocean.com/platform/billing/taxes/). |
-| Subtotal before traffic and taxes | 30.15 | No high-availability replica, dedicated egress IP, paid support or extra container. |
+| Service | Active image digest |
+| --- | --- |
+| Relay | `sha256:1da1a81261d1e440be84945a7804be6a8695e7683512cc2d30141b0a4f1e5187` |
+| Account manager | `sha256:a835ea6009d228daf5e27e96d84c05047f5fee7b0057a4dfab74a4d32d7852b1` |
 
-The Terraform module currently selects the legacy `basic-xxs` slug. Its published
-allowance is 40 GiB per container, pooled across the team; use 80 GiB for the two
-services when pricing that configuration. The current 512 MiB plan has a different
-slug and allowance. Confirm the real deployed plan before using either allowance.
-Migration jobs are billed while running and must be added for the actual deployment
-frequency. A separate protected manager key backup must also fit the operator's
-existing storage and scheduling costs; this estimate does not provision a backup job.
+The database is an online PostgreSQL 16 server in `ams3`, size
+`db-s-1vcpu-1gb`, with one node and 10 GiB disk. The existing landing app is a
+static site. Its October invoice preview shows it inside the free allowance.
+The September invoice and October preview both charge zero added tax. This is
+observed billing treatment, not a claim about a legal exemption or future tax rules.
 
-For a conservative planning scenario, multiply measured relay response-body bytes by
-1.25 and add 1 KiB per client request before applying the monthly repetition count.
-This is an allowance, not a measured bound on HTTP overhead. App Platform egress above
-the included pool is $0.02/GiB. Spaces includes 1,024 GiB/month outbound, then
-$0.01/GiB; inbound is free. Do not assume a Spaces-to-App-Platform transfer exemption.
-Object verification and client downloads both read from Spaces, so count both paths.
+The relay bucket listing contained 15,033 objects and 17,871,016,297 bytes across
+16 pages. This is a live listing observed during the inspection, not an atomic
+relay/SQL reconciliation. The local workload audits above provide that separate
+correctness evidence. No object content was read, no deployment was changed and no
+paid resource was created. Sanitized provider and billing evidence is attached to
+PS-787's revision report. Credentials remain in private operator configuration.
 
-Across all reference phases, 1,877 client calls consumed 11,044,401,888 response-body
-bytes. The planning formula gives 12.859 GiB per complete run. Thirty repetitions per
-month give 385.775 GiB; with an otherwise unused 80 GiB team pool, App Platform
-traffic adds about $6.12. The subtotal becomes $36.27, or $45.33 at an illustrative
-25% tax rate. This scenario assumes retained data does not accumulate 30 distinct
-5 GiB projects. Spaces traffic must also include verification reads and downloads;
-its separate 1,024 GiB allowance must be checked against the actual request metrics.
-The local runner does not measure provider billing counters.
+### Finite monthly workload
 
-At zero extra traffic, illustrative tax rates of 0%, 20% and 25% give totals of
-$30.15, $36.18 and $37.69. These scenarios fit the US$50 target. They do not prove the
-actual tax-inclusive bill: the team's tax location, existing plans, measured monthly
-frequency, job charges, key-backup costs and small-instance capacity still need to be
-matched to the live deployment. No paid resource was created for this measurement.
+Price thirty complete reference runs plus one ten-owner scale run per month. Keep
+all thirty reference result copies: current relay inventory, those copies, the
+scale increment and 1 GiB for protected key/state backups fit a 180 GiB storage cap.
+This is a storage allowance for the estimate, not a reduced benchmark workload.
+
+The recorded calls total 60,830 for this scenario. Budget traffic as follows:
+
+- App Platform outbound: consumed response bodies plus all offered request bodies,
+  times 1.25, plus 1 KiB per call: 585.714 GiB/month. Count both client downloads and
+  relay-to-Spaces upload forwarding; assume no upload-transfer exemption.
+- Spaces outbound: consumed response bodies plus all offered request bodies, times
+  1.25, plus 1 KiB per call: 585.714 GiB/month. The offered bodies reserve an extra
+  durable verification read for uploads. The relay verifies uploaded objects by
+  reading them back. Count client downloads as well; assume no transfer exemption.
+
+These are explicit planning allowances from the measured bodies, not provider wire
+counters or a proven upper bound on internal reads. Cancelled acknowledgements and
+HTTP/TLS overhead are absent from the raw body counters. Reprice if actual traffic,
+retention, read amplification or monthly repetition exceeds these allowances.
+
+Reserve US$1/month for migration jobs. At the inspected per-second price, thirty
+deployments with two ten-minute jobs each cost about US$0.075 before any minimum
+charges; the reserve also covers sixty US$0.01 job minimums. The current invoice
+preview charges US$0.01 for manager migration jobs and zero for relay migration
+jobs. Standard managed database backups are part of the database plan; existing
+backup objects share the storage allowance. This estimate creates no backup job.
+
+PostHog is priced within one analytics project's published free allowance: at most
+one million analytics events and 5,000 recordings per month, with no paid platform
+package or other paid product. Landing transfer stays within its 1 GiB free tier.
+These are finite reference-workload limits, not an audit of unrelated subscriptions.
+
+### Inclusive cost model
+
+The first column allocates the two services' API-confirmed 80 GiB App Platform transfer
+pool and the Spaces subscription's 250 GiB storage/1,024 GiB transfer allowances.
+The second credits none of those shared allowances and charges the full 180 GiB
+storage allowance again at the overage rate. This keeps the estimate useful when
+other projects consume the shared pool.
+
+| Item | With allocated allowances, USD/month | With no shared allowance credit, USD/month | Basis |
+| --- | ---: | ---: | --- |
+| Relay | 5.00 | 5.00 | Verified single `basic-xxs` container; [App Platform pricing](https://docs.digitalocean.com/products/app-platform/details/pricing/). |
+| Account manager | 5.00 | 5.00 | Same verified container size and price. |
+| Databases and standard backups | 15.15 | 15.15 | Verified basic 1 GiB node/10 GiB disk; [database pricing](https://www.digitalocean.com/pricing/managed-databases). |
+| Object and backup storage | 5.00 | 8.60 | Full subscription plus, in the second column, 180 GiB at US$0.02/GiB; [Spaces pricing](https://docs.digitalocean.com/products/spaces/details/pricing/). |
+| Traffic | 10.11 | 17.57 | App Platform US$0.02/GiB; Spaces US$0.01/GiB; both transfer paths counted. |
+| Migration-job reserve | 1.00 | 1.00 | Monthly job limits above; actual running jobs are billed per second. |
+| Landing page | 0.00 | 0.00 | Existing static app is in its free allowance; maintain the stated transfer limit. |
+| PostHog | 0.00 | 0.00 | Stated event/recording limits within the [free allowance](https://posthog.com/pricing). |
+| Added taxes | 0.00 | 0.00 | Observed zero charge on inspected invoices; [billing tax rules](https://docs.digitalocean.com/platform/billing/taxes/). |
+| **Total** | **41.26** | **52.32** | Uses unrounded values before rounding the final total. |
+
+The allocated-allowance model leaves US$8.74 below the US$50 target for this finite
+workload under the observed tax treatment. It includes a job reserve, backup
+storage and both traffic paths. The no-credit stress case exceeds the target by
+US$2.32: exhausted shared allowances require a new budget. At a hypothetical 25%
+added tax, the two models become US$51.58 and US$65.40, so neither passes. Actual
+PostHog paid features, extra containers, larger database plans or higher usage also
+require repricing.
+
+The deployed versions and prices are verified facts. The monthly repetition,
+180 GiB retention cap, traffic headroom and analytics limits are the estimate's
+explicit operating assumptions. Local correctness/timing measurements do not prove
+that the hosted 512 MiB instances meet a latency, memory or availability target.
