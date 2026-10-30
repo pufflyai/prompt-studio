@@ -29,6 +29,8 @@ export interface KeyboardState {
   selectedId?: string;
   selectedRegion?: KeyboardPresentation["region"];
   restoreFocus: boolean;
+  /** Holding the preview key shows the chords that work outside shortcut mode, and the chord that enters it. */
+  preview: boolean;
 }
 export interface KeyboardActionChoice extends KeyboardChoice {
   choose(): void | Promise<void>;
@@ -37,7 +39,7 @@ export interface KeyboardActionChoice extends KeyboardChoice {
 export const createKeyboardController = (getCore: () => WorkbenchCore) => {
   const store = createWorkbenchStore<KeyboardState>({
     name: "workbench.keyboard",
-    initialState: { active: false, path: [], message: "", restoreFocus: false },
+    initialState: { active: false, path: [], message: "", restoreFocus: false, preview: false },
   });
   const strips: KeyboardTabStrips = new Map();
   const emptyPanels: KeyboardEmptyPanels = new Map();
@@ -164,6 +166,9 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       });
     },
     close: stop,
+    setPreview(preview: boolean) {
+      if (store.getState().preview !== preview) store.setState({ preview });
+    },
     finish() {
       const core = getCore();
       const selected = presentations().find((tab) => tab.id === store.getState().selectedId);

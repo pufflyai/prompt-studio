@@ -14,6 +14,12 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const VisiblePanels: Story = { args: { workbench: createKeyboardWorkbench() } };
 export const CrowdedTabs: Story = { args: { workbench: createKeyboardWorkbench(12) } };
+export const ShortcutPreview: Story = {
+  args: { workbench: createKeyboardWorkbench() },
+  play: async () => {
+    await userEvent.keyboard("{Alt>}");
+  },
+};
 const menu = createKeyboardWorkbench();
 menu.keyboard.open();
 export const KeyboardBubble: Story = { args: { workbench: menu } };

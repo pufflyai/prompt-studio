@@ -15,12 +15,12 @@ test("rebinding a generated layer shortcut to a direct chord retains its identit
   );
   workbench.keybindings.registerKeybinding({
     action: { kind: "command", commandId: "test.rebound" },
-    layer: "help",
+    layer: "settings",
     keybinding: "Q",
   });
   const declared = workbench.keybindings
     .listKeybindings()
-    .find((binding) => binding.layer === "help" && binding.keybinding === "Q")!;
+    .find((binding) => binding.layer === "settings" && binding.keybinding === "Q")!;
   const id = workbench.keybindings.getId(declared);
   await workbench.keyboard.setAssignment(id, { layer: "direct", keybinding: "Alt+J" });
   const registration = createWorkbenchHotkeyRegistrations({ workbench }).find((entry) => entry.id === "test.rebound")!;

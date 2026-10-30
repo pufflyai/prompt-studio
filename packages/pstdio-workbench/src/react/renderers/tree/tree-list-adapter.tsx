@@ -16,6 +16,8 @@ import { createTreeActionItems, createTreeContextMenuItems, type TreeActionParam
 
 interface TreeNodeRenderContext {
   workbench: WorkbenchCore;
+  /** Row and section actions give way to keyboard hints while shortcut mode or its preview shows them. */
+  shortcutHints?: boolean;
   onCommandError?: (error: unknown) => void;
   onRequestParams?: (request: TreeActionParamsRequest) => void;
 }
@@ -165,14 +167,14 @@ const toTreeListNode = (
     disabled: node.disabled,
     rowVariant: node.rowVariant,
     inlineInput: node.inlineInput,
-    showContextMenuTrigger: node.showContextMenuTrigger,
+    showContextMenuTrigger: node.showContextMenuTrigger && !context.shortcutHints,
     canHide: node.canHide,
     canReorder: node.canReorder,
     canDrag: node.canDrag,
     canDrop: node.canDrop,
     hiddenByDefault: node.hiddenByDefault,
     actions: createTreeActionItems({
-      actions: node.actions,
+      actions: context.shortcutHints ? undefined : node.actions,
       workbench: context.workbench,
       context: commandContext,
       onCommandError: context.onCommandError,
@@ -221,7 +223,7 @@ export const toTreeListSection = (
     label: section.label,
     menuLabel: section.menuLabel,
     actions: createTreeActionItems({
-      actions: section.actions,
+      actions: context.shortcutHints ? undefined : section.actions,
       workbench: context.workbench,
       onCommandError: context.onCommandError,
       onRequestParams: context.onRequestParams,

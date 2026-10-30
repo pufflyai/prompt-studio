@@ -220,13 +220,21 @@ test("programmatic tab selection stays outside shortcut mode while keyboard navi
   expect(core.focus.getActiveRegion()).toBe("secondary");
 });
 
-test("a numbered tab chord starts navigation, plain digits continue, and Enter finishes in that tab", async () => {
+test("a numbered tab chord selects that tab without entering shortcut mode", async () => {
   const { core, ticket } = setup();
   const first = ticket("A");
-  const second = ticket("B");
+  ticket("B");
   await core.commands.executeCommand("workbench.keyboard.selectTab", { number: 1 });
   expect(core.layout.getLayout().activeWidgetId).toBe(first.widgetId);
-  expect(core.keyboard.store.getState().active).toBe(true);
+  expect(core.keyboard.store.getState().active).toBe(false);
+  expect(core.focus.getActiveRegion()).toBe("main");
+});
+
+test("in shortcut mode, plain digits select numbered tabs and Enter finishes in that tab", async () => {
+  const { core, ticket } = setup();
+  ticket("A");
+  const second = ticket("B");
+  core.keyboard.open();
   await core.keyboard.press("2");
   expect(core.layout.getLayout().activeWidgetId).toBe(second.widgetId);
   expect(core.keyboard.store.getState().active).toBe(true);
@@ -301,12 +309,12 @@ test("a completed contributed action exits mode before accepting more shortcut k
   core.keybindings.registerKeybinding({
     id: "sticky",
     action: { kind: "command", commandId: "test" },
-    layer: "help",
+    layer: "settings",
     keybinding: "T",
     sticky: true,
   });
   core.keyboard.open();
-  await core.keyboard.press("h");
+  await core.keyboard.press("s");
   await core.keyboard.press("t");
   await core.keyboard.press("t");
   expect(calls).toBe(1);
@@ -371,6 +379,45 @@ test("hints match typed arguments and show the remaining layer path", async () =
   expect(core.keyboard.hint({ kind: "command", commandId: "open", args: { id: "one" } })).toBe("G → P");
   await core.keyboard.press("g");
   expect(core.keyboard.hint({ kind: "command", commandId: "open", args: { id: "one" } })).toBe("P");
+});
+
+test("the preview hints only chords that work outside shortcut mode", () => {
+  const { core } = setup();
+  for (const id of ["sequence", "chord"]) core.commands.registerCommand({ id, label: id }, { execute() {} });
+  core.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "sequence" },
+    keybinding: "P",
+    layer: "go",
+  });
+  core.keybindings.registerKeybinding({ action: { kind: "command", commandId: "chord" }, keybinding: "Alt+Shift+J" });
+  core.keyboard.setPreview(true);
+  expect(core.keyboard.hint({ kind: "command", commandId: "chord" })).toBe("Alt+Shift+J");
+  expect(core.keyboard.hint({ kind: "command", commandId: "sequence" })).toBeUndefined();
+  expect(core.keyboard.store.getState().active).toBe(false);
+  core.keyboard.open();
+  expect(core.keyboard.hint({ kind: "command", commandId: "sequence" })).toBe("G → P");
+});
+
+test("deprecated Help layer bindings join Current view", async () => {
+  const { core } = setup();
+  let calls = 0;
+  core.commands.registerCommand(
+    { id: "docs", label: "Docs" },
+    {
+      execute: () => {
+        calls++;
+      },
+    },
+  );
+  core.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "docs" },
+    keybinding: "D",
+    layer: "help",
+  });
+  core.keyboard.open();
+  await core.keyboard.press("a");
+  await core.keyboard.press("d");
+  expect(calls).toBe(1);
 });
 
 test("current action resolves hidden resource parameters from the chosen target", async () => {
@@ -530,14 +577,14 @@ test("layer assignments reject strict prefixes while keeping exact-key conflicts
     id: "short",
     sourceExtensionId: "one",
     action: { kind: "command", commandId: "short" },
-    layer: "help",
+    layer: "settings",
     keybinding: "Q",
   });
   core.keybindings.registerKeybinding({
     id: "long",
     sourceExtensionId: "two",
     action: { kind: "command", commandId: "long" },
-    layer: "help",
+    layer: "settings",
     keybinding: "Z",
   });
   await expect(core.keyboard.setAssignment("long", { keybinding: "Q S" })).rejects.toThrow("prefix");
@@ -562,12 +609,12 @@ test("contributed terminal and longer paths require an explicit action choice", 
     );
     core.keybindings.registerKeybinding({
       action: { kind: "command", commandId: id! },
-      layer: "help",
+      layer: "settings",
       keybinding: keybinding!,
     });
   }
   core.keyboard.open();
-  await core.keyboard.press("h");
+  await core.keyboard.press("s");
   await core.keyboard.press("q");
   expect(calls).toEqual([]);
   expect(core.keyboard.store.getState().selection?.title).toBe("Choose action");

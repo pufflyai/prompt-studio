@@ -179,3 +179,16 @@ test("repeat cannot enter a global shortcut twice", async () => {
   await bridge.dispatch({ id: bridge.shortcuts.find((shortcut) => shortcut.key === "K")!.id, repeat: true });
   expect(calls).toBe(0);
 });
+
+test("only chords that hold Alt, Ctrl or Cmd are offered while typing", () => {
+  const workbench = createWorkbench();
+  workbench.commands.registerCommand({ id: "plain", label: "Plain" }, { execute() {} });
+  workbench.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "plain" },
+    keybinding: "Shift+J",
+    allowInInputs: true,
+  });
+  const { shortcuts } = createWebviewKeyboardShortcuts(workbench);
+  expect(shortcuts.length).toBeGreaterThan(0);
+  expect(shortcuts.every((shortcut) => shortcut.altKey || shortcut.ctrlKey || shortcut.metaKey)).toBe(true);
+});

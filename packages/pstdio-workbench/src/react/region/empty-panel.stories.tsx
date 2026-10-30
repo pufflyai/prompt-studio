@@ -1,6 +1,6 @@
 import { Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench, type WorkbenchPanelRegion } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -85,6 +85,14 @@ export const TopAlignedCards: Story = {
       workbench.shell.setRegionOpen("secondary", false);
       return workbench;
     })(),
+  },
+};
+
+export const ShortcutPreview: Story = {
+  args: { workbench: createEmptyWorkbench() },
+  play: async ({ canvasElement }) => {
+    await userEvent.keyboard("{Alt>}");
+    await waitFor(() => expect(canvasElement.querySelector('[aria-label="Available tabs"] kbd')).not.toBeNull());
   },
 };
 
