@@ -203,7 +203,7 @@ void [invalidAttribute, invalidColumn];
         module: "ESNext",
         moduleResolution: "Bundler",
         target: "ES2022",
-        lib: ["ES2022", "ESNext.Disposable", "DOM", "DOM.Iterable"],
+        lib: ["ES2022", "ES2023.Intl", "ESNext.Disposable", "DOM", "DOM.Iterable"],
         jsx: "react-jsx",
         types: react ? ["node", "vite/client"] : [],
       },

@@ -413,3 +413,4 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0015 — Anchor context menus in their viewport](../lessons-learned/0015-anchor-context-menus-in-their-viewport.md)
 - [0016 — Bun promise assertions can deadlock Windows pipe reads](../lessons-learned/0016-bun-expect-rejects-blocks-pipe-reads.md)
 - [0017 — Unreaped processes look alive](../lessons-learned/0017-unreaped-processes-look-alive.md)
+- [0019 — Generated files bury pull requests](../lessons-learned/0019-generated-files-bury-pull-requests.md)
