@@ -528,5 +528,19 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/41052259182/job/124051160816"
     ],
     "removeWhen": "Identify and fix native account-worker startup/completion variance, then verify the complete Windows x64 authentication case in a first attempt within its unchanged 15000 ms allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio/scripts/local-pstdio-install.p0.test.ts",
+    "name": "installs a dev-server wrapper that runs the local CLI with dev server env",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-980 / local CLI wrapper fixture",
+    "reason": "On Apple Silicon the unchanged POSIX shell fixture passed in 4775.62 ms in a complete source run, then exceeded its existing 5000 ms limit at 5009.11 ms in the merged-source run. The fixture checks wrapper environment and arguments through a fake Bun executable; it does not start the application. The slow phase is not yet established.",
+    "evidence": [
+      "RP-85: local full-suite pass and first failure, unchanged wrapper/test source hashes",
+      "https://github.com/pufflyai/prompt-studio/pull/1571"
+    ],
+    "removeWhen": "Identify and fix the delayed fixture phase on Apple Silicon, then use independent normal CI observations within the existing 5000 ms limit to restore the stable gate. Preserve every environment and argument assertion; do not retry or run reliability loops."
   }
 ]
