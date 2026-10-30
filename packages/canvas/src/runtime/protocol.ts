@@ -1,13 +1,11 @@
+import type { CanvasTheme } from "../compose";
 import type { FrameBootstrap } from "./assets";
 
 // The messages between a UI Canvas frame and its host. They match the protocol the UI Canvas
 // extension speaks; the extension reads these types from this package once it adopts it.
 export const frameProtocol = "pstdio.canvas.preview";
 
-export interface FrameTheme {
-  id: string;
-  mode: "light" | "dark";
-}
+export type { CanvasTheme as FrameTheme } from "../compose";
 
 export interface FrameItem {
   preview?: { source: string; exportName: string; viewportHeight?: number };
@@ -20,7 +18,7 @@ export interface FrameRequest {
   requestId?: string;
   error?: string;
   item?: FrameItem;
-  theme?: FrameTheme;
+  theme?: CanvasTheme;
   /** The answer to a nested frame's `assets` request. */
   bootstrap?: FrameBootstrap;
 }

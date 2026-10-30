@@ -120,7 +120,7 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     if (!active || !loaded || !item) return;
     const minimumHeight = loaded.fullscreen ? (item.preview?.viewportHeight ?? 960) : 0;
     reactRoot.render(
-      <CanvasThemeContext.Provider value={theme.mode}>
+      <CanvasThemeContext.Provider value={theme}>
         <Boundary>
           <Ready loaded={loaded} minimumHeight={minimumHeight} />
         </Boundary>

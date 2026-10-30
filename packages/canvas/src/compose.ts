@@ -8,14 +8,21 @@ type Props<T> =
       : T extends { args: infer P }
         ? P
         : T;
-export type CanvasTheme = "light" | "dark";
+/**
+ * The theme the host chose for a frame. Canvas passes it through unchanged; each project applies
+ * it with its own theme provider. `tokens` carries a theme's own values, such as a VS Code theme's.
+ */
+export interface CanvasTheme {
+  id: string;
+  mode: "light" | "dark";
+  tokens?: Record<string, string>;
+}
 export interface CanvasContext {
   args: Record<string, any>;
-  /** The frame's theme switch. Decorators use it to set the project's own theme provider. */
   theme: CanvasTheme;
 }
 /** Provided by the frame runtime; previews outside a frame render light. */
-export const CanvasThemeContext = createContext<CanvasTheme>("light");
+export const CanvasThemeContext = createContext<CanvasTheme>({ id: "light", mode: "light" });
 export type CanvasRender<T = any> = (args: Props<T>, context: CanvasContext) => ReactNode;
 export type CanvasDecorator = (Preview: (props?: any) => ReactNode, context: CanvasContext) => ReactNode;
 /** An object frame: Canvas renders `render(args)`, or the canvas `component` with `args`. */
