@@ -31,7 +31,7 @@ Before every commit, run `git status` and `git diff --cached --stat`. If generat
 | Webview runtime bundle | `packages/pstdio-extensions/src/bridge/webview-runtime/runtime.bundle.js` | Its source in `packages/pstdio-extensions/src/bridge` changes. Rebuild it from that source. |
 | Codex protocol types | `extensions/harness-codex/src/protocol/**` | The supported Codex app-server protocol changes. They are copied from Codex's ts-rs output; do not edit them by hand. |
 
-The `pr-guards` CI check enforces this list. It fails a PR that adds or changes a generated file outside these exceptions. The UI Canvas preview catalog is never committed; Canvas and CI build it from source.
+The UI Canvas preview catalog is never committed; Canvas and CI build it from source.
 
 ## Large changes
 
