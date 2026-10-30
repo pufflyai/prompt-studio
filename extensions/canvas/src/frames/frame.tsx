@@ -5,7 +5,7 @@ import type { CanvasItem } from "../canvases/definitions";
 import { PreviewSource } from "../catalog/source-information";
 import { Button } from "../components/themed-primitives";
 import type { CanvasRuntime } from "../controller/runtime";
-import { frameThemePreferences } from "../frame-themes";
+import { frameThemePreferences, resolveFrameTheme } from "../frame-themes";
 import { type FrameBootstrap, frameBootstrap, frameDocument } from "./assets";
 import { FrameLoading } from "./frame-loading";
 import { navigateFrame } from "./navigation";
@@ -38,7 +38,12 @@ export const FramePreview = (props: FramePreviewProps) => {
   const [ready, setReady] = useState(false);
   const [imported, setImported] = useState(false);
   const [error, setError] = useState("");
-  const selected = useSyncExternalStore(runtime.subscribe, () => runtime.get().themes[item.id] ?? "app");
+  const selected = useSyncExternalStore(runtime.subscribe, () =>
+    resolveFrameTheme(
+      runtime.get().themes[item.id],
+      item.preview?.kind === "story" ? item.preview.defaultTheme : undefined,
+    ),
+  );
   const app = useThemePreference();
   const appTheme = app.themePreferences.find((theme) => theme.id === app.themePreference);
   const theme = selected === "app" ? appTheme : frameThemePreferences.find((theme) => theme.id === selected);

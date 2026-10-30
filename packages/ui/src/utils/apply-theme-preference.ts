@@ -1,3 +1,5 @@
+import { promptContrastThemes } from "../theme/custom/prompt-contrast";
+
 export type ThemePreference = string;
 export type ThemePreferenceMode = "light" | "dark";
 export type ThemePreferenceTokens = Record<string, string>;
@@ -11,8 +13,9 @@ export interface ThemePreferenceOption {
 }
 
 export const defaultThemePreferences = [
-  { id: "pstdio-light", mode: "light" },
-  { id: "pstdio-dark", mode: "dark" },
+  { id: "pstdio-light", title: "Prompt Light", mode: "light" },
+  { id: "pstdio-dark", title: "Prompt Dark", mode: "dark" },
+  ...promptContrastThemes,
 ] satisfies ThemePreferenceOption[];
 
 export const isThemePreference = (

@@ -84,3 +84,8 @@ type Story = CanvasVariant<typeof meta>;
 export const CheckmarksAndAlignment: Story = {
   id: "components-overlays-menu-selection--checkmarks-and-alignment",
 };
+
+export const PaleSelection: Story = {
+  id: "components-overlays-menu-selection--pale-selection",
+  defaultTheme: "vscode-flat-dark",
+};

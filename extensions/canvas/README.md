@@ -33,7 +33,7 @@ Canvases use the diamond icon in navigation, resource search, breadcrumbs, and t
 
 Frames show a shared loading panel and spinner while their compiled preview starts. Each canvas starts at most four frames at once, prioritizing selected and visible frames. A slot is released when the preview runtime boots, before asynchronous fixture setup. Offscreen frames continue loading and loaded frames stay mounted to retain drafts.
 
-Each frame has a **Theme** menu: Follow app, Light, Dark, Solarized Light, Solarized Dark, Dracula, or Monokai. Its choice is saved independently. Theme changes preserve mounted inputs and local state. The canvas shell follows the workbench. Physical touch and trackpad behavior depends on the browser; automation does not prove those device behaviors.
+Each frame has a **Theme** menu with Follow app, Prompt Light, Prompt Dark, Prompt Contrast Light, Prompt Contrast Dark, Solarized Light, Solarized Dark, Dracula, and Monokai. Its choice is saved independently. Theme changes preserve mounted inputs and local state. The canvas shell follows the workbench. Physical touch and trackpad behavior depends on the browser; automation does not prove those device behaviors.
 
 ## Edit source
 

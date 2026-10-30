@@ -28,6 +28,7 @@ export interface CatalogStory {
   sourceHash: string;
   component?: string;
   componentImport?: string;
+  defaultTheme?: string;
 }
 export const sourceFiles = async (root = repoRoot) => {
   // Git includes new source files without traversing every installed dependency and build output.
@@ -91,6 +92,7 @@ export const collectStoryCatalog = async () => {
         sourceHash: hash,
         component: csf.component,
         componentImport: csf.componentImport,
+        ...(story.defaultTheme ? { defaultTheme: story.defaultTheme } : {}),
       });
     }
   }

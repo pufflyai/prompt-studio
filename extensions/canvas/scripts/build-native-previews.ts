@@ -42,7 +42,9 @@ const buildPreviews = async (stories: Awaited<ReturnType<typeof generateStoryCat
   await mkdir(scratch, { recursive: true });
   const files = [...new Set(stories.map((entry) => entry.source))];
   const declarations: string[] = [];
-  const { createThemePreferenceFromVsCodeTheme } = await import(resolve(repoRoot, "packages/ui/dist/theme.js"));
+  const { createThemePreferenceFromVsCodeTheme, defaultThemePreferences } = await import(
+    resolve(repoRoot, "packages/ui/dist/index.js")
+  );
   const { canvasVsCodeThemes } = await import(
     resolve(repoRoot, "packages/ui/src/theme/custom/vscode-theme.canvas-fixture.ts")
   );
@@ -61,7 +63,10 @@ const buildPreviews = async (stories: Awaited<ReturnType<typeof generateStoryCat
         .join(" "),
     })),
   );
-  await writeFile(resolve(generatedRoot, "frame-themes.json"), JSON.stringify([...frameThemes, ...canvasVsCodeThemes]));
+  await writeFile(
+    resolve(generatedRoot, "frame-themes.json"),
+    JSON.stringify([...defaultThemePreferences, ...frameThemes, ...canvasVsCodeThemes]),
+  );
   declarations.push(
     `const __UI_CANVAS_PROJECTS__={${Object.entries(suites)
       .map(

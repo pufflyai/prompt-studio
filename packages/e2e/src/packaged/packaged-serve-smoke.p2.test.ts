@@ -24,6 +24,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
 // placeholder actions and status-item popover views through the compiled host.
 // scripts/verify/public-package-consumer.ts checks legacy hidden headers and explicit page/tab presentation in the built workbench.
+// It also imports the packed SDK's browser-free theme converter and checks both packed UI contrast palettes.
 // packaged-session-tools.p1.spec.ts checks draft/session/tool tab restoration across navigation and reload, creation, closure and New session tools.
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
 // packaged-main-fullscreen.p2.spec.ts checks panel/fullscreen shortcuts and mode completion through the bundled opaque guest runtime.

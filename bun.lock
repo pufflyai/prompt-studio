@@ -717,6 +717,7 @@
         "@tanstack/hotkeys": "^0.7.1",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-paths": "workspace:*",
+        "pstdio-theme": "workspace:*",
         "rimless": "0.8.3",
         "tar-stream": "3.2.2",
         "zod": "^4.1.12",
@@ -804,6 +805,13 @@
         "pg": "^8.20.0",
         "typescript": "6.0.2",
         "yjs": "^13.6.29",
+      },
+    },
+    "packages/pstdio-theme": {
+      "name": "pstdio-theme",
+      "devDependencies": {
+        "@types/bun": "1.4.4",
+        "typescript": "6.0.2",
       },
     },
     "packages/pstdio-workbench": {
@@ -964,6 +972,7 @@
         "pstdio-api-contracts": "workspace:*",
         "pstdio-benchmarks": "workspace:*",
         "pstdio-file-types": "workspace:*",
+        "pstdio-theme": "workspace:*",
         "react": "19.2.4",
         "react-dom": "19.2.4",
         "react-test-renderer": "19.2.4",
@@ -4182,6 +4191,8 @@
     "pstdio-sync": ["pstdio-sync@workspace:packages/pstdio-sync"],
 
     "pstdio-sync-contracts": ["pstdio-sync-contracts@workspace:packages/pstdio-sync-contracts"],
+
+    "pstdio-theme": ["pstdio-theme@workspace:packages/pstdio-theme"],
 
     "pstdio-wt": ["pstdio-wt@workspace:packages/pstdio-wt"],
 

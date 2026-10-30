@@ -27,7 +27,7 @@ export const checkFrameSelection = async (surface: Frame, page: Page) => {
   const frame = await form.locator("iframe").elementHandle();
   const originalDocument = await frame!.contentFrame();
   await form.getByRole("button", { name: "Theme for" }).click();
-  await surface.getByRole("menuitem", { name: "Dark", exact: true }).click();
+  await surface.getByRole("menuitem", { name: "Prompt Dark", exact: true }).click();
   await expect(document.locator("html")).toHaveClass(/dark/);
   await expect(controls.frameLocator("iframe").locator("html")).not.toHaveClass(/dark/);
   await expect(document.getByRole("textbox", { name: "Project name" })).toHaveValue("Retained selection draft");
