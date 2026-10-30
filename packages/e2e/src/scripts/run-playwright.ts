@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { prepareUiFixtures } from "./prepare-ui-fixtures";
 
 export const sanitizeForwardedArgs = (argv: string[]) => argv.filter((arg) => arg !== "--silent");
 
@@ -52,21 +53,30 @@ export const getPlaywrightCommand = (args: string[], priority = process.env.CI_P
 export const runPlaywright = async (
   command: { cmd: string; args: string[] },
   env: NodeJS.ProcessEnv,
-  options: { stdio: "inherit" | "pipe" } = { stdio: "inherit" },
+  options: { stdio: "inherit" | "pipe"; prepare?: (env: NodeJS.ProcessEnv, signal: AbortSignal) => Promise<void> } = {
+    stdio: "inherit",
+  },
 ) => {
   const runFolder = mkdtempSync(join(tmpdir(), "pstdio-e2e-run-"));
   let child: ChildProcess | undefined;
+  const preparation = new AbortController();
   // A child can announce readiness before spawn returns. Own interruption before starting it.
-  const forward = (signal: NodeJS.Signals) => child?.kill(signal);
+  const forward = (signal: NodeJS.Signals) => {
+    preparation.abort(signal);
+    child?.kill(signal);
+  };
   process.on("SIGINT", forward);
   process.on("SIGTERM", forward);
   try {
+    const runEnv = {
+      ...env,
+      E2E_HOME: env.E2E_HOME ?? join(runFolder, "home"),
+      E2E_BUN_CACHE_DIR: env.E2E_BUN_CACHE_DIR ?? join(runFolder, "bun-cache"),
+    };
+    await options.prepare?.(runEnv, preparation.signal);
+    preparation.signal.throwIfAborted();
     const runningChild = spawn(command.cmd, command.args, {
-      env: {
-        ...env,
-        E2E_HOME: env.E2E_HOME ?? join(runFolder, "home"),
-        E2E_BUN_CACHE_DIR: env.E2E_BUN_CACHE_DIR ?? join(runFolder, "bun-cache"),
-      },
+      env: runEnv,
       stdio: options.stdio,
     });
     child = runningChild;
@@ -84,6 +94,9 @@ export const runPlaywright = async (
       });
     });
     return { exitCode, output };
+  } catch (error) {
+    if (preparation.signal.aborted) return { exitCode: preparation.signal.reason === "SIGINT" ? 130 : 143, output: "" };
+    throw error;
   } finally {
     process.off("SIGINT", forward);
     process.off("SIGTERM", forward);
@@ -136,7 +149,11 @@ const run = async () => {
   const runId = process.env.E2E_RUN_ID ?? createRunId();
   const command = getPlaywrightCommand(forwardedArgs);
 
-  const { exitCode } = await runPlaywright(command, buildPlaywrightEnv(process.env, { apiPort, dashboardPort }, runId));
+  const { exitCode } = await runPlaywright(
+    command,
+    buildPlaywrightEnv(process.env, { apiPort, dashboardPort }, runId),
+    { stdio: "inherit", prepare: prepareUiFixtures },
+  );
   process.exit(exitCode);
 };
 
