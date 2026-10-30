@@ -53,6 +53,12 @@ export const monitorCiGates = async (
     const suite = jobs.filter((job) => job.name.startsWith(prefix));
     const independent = suite.filter((job) => !isGateJob(job.name));
     const snapshot = JSON.stringify(independent.map((job) => [job.id, job.status, job.conclusion]));
+    if (snapshot !== previous) {
+      const pending = independent.filter((job) => job.status !== "completed").map((job) => job.name);
+      console.log(
+        `CI results: ${independent.length - pending.length}/${independent.length} finished; pending: ${pending.join(", ") || "none"}`,
+      );
+    }
     const staticObserved =
       !plan.some((expected) => expected.id === "static_checks") ||
       independent.some((job) => matchesJob(job.name, "static_checks"));
@@ -63,7 +69,10 @@ export const monitorCiGates = async (
       independent.every((job) => job.status === "completed") &&
       snapshot === previous;
     const decision = evaluateCiGate(plan, suite, env.CI_PROFILE !== "production", settled);
-    if (decision.outcome !== "pending") return { ...decision, runId, attempt, sha: run.head_sha, plan, jobs };
+    if (decision.outcome !== "pending") {
+      console.log(`CI gate: ${decision.outcome}; settled: ${settled}`);
+      return { ...decision, runId, attempt, sha: run.head_sha, plan, jobs };
+    }
     previous = snapshot;
     await wait();
   }
