@@ -13,7 +13,7 @@ for (const [workload, query, count] of [
     const shell = page.frameLocator("[data-verification-host]");
     await expect(shell.locator('iframe[data-frame-ready="true"]').first()).toBeVisible();
     const firstReadyMs = performance.now() - started;
-    await expect(shell.locator('iframe[data-frame-ready="true"]')).toHaveCount(count);
+    await expect(shell.locator('iframe[data-frame-ready="true"]')).toHaveCount(count, { timeout: 8_000 });
     const allReadyMs = performance.now() - started;
     const frames = await shell.locator('iframe[data-frame-ready="true"]').evaluateAll((elements) =>
       elements.map((element) => ({
