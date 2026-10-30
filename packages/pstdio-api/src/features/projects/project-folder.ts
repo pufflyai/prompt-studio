@@ -14,6 +14,7 @@ import {
   rootProviderId,
 } from "../workspaces/workspace-provider-service";
 import type { ProjectsRouteDeps } from "./deps";
+import { restoreProjectArtifacts } from "./project-artifacts";
 
 const creations = new Map<string, Promise<unknown>>();
 export const withFolderCreation = async <T>(path: string | null, create: () => Promise<T>) => {
@@ -89,6 +90,7 @@ const initializeLocalProjectWorkspace = async (
       }),
     );
     deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "runtime_refresh" });
+    await traceSetupPhase("project.files", context, () => restoreProjectArtifacts(deps, projectId, workspace.id));
     const provisioned = await traceSetupPhase("project.provision", context, () =>
       runWorkspaceProvisioning(deps, { projectId, workspace, repoPath: rootPath }),
     );

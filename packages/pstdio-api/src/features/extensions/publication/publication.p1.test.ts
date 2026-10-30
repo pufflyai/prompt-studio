@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { createNativeAccount } from "../../../services/account/native-account";
 import { createNativeStore } from "../../../services/account/native-store";
 import { createExtensionDocumentSync } from "../../../services/relay/documents";
+import { projectSyncStatus } from "../../../services/relay/project-status";
 import { startPublishedExtensions } from "../../../services/relay/publications";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createStorageApi } from "../command-environment/storage";
@@ -272,4 +273,90 @@ test("a synced set that fails to activate keeps the current set and waits until 
   }
   expect(attempts).toBe(failedAttempts);
   expect((await sourceFor(2)).installedSource.id).toBe(before.installedSource.id);
+});
+
+test("retry keeps project files unavailable until the published extension activates", async () => {
+  const app = apps[2]!;
+  const project = await app.deps.projectService.create({ name: "Activation retry" });
+  const release = Promise.withResolvers<void>();
+  const retried = Promise.withResolvers<void>();
+  const failed = Promise.withResolvers<void>();
+  const downloaded = Promise.withResolvers<void>();
+  const activated = Promise.withResolvers<void>();
+  let attempts = 0;
+  const health = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch() {
+      if (++attempts === 1) return new Response(null, { status: 503 });
+      retried.resolve();
+      await release.promise;
+      return new Response("ready");
+    },
+  });
+  let connection: ReturnType<typeof startPublishedExtensions> | undefined;
+  let syncPeer: ReturnType<typeof documentPeer> | undefined;
+  try {
+    syncPeer = documentPeer([project.id]);
+    const source = createTestExtensionSource({
+      root,
+      installName: "activation-retry",
+      name: "activation-retry",
+      displayName: "Activation retry",
+    });
+    await writeFile(
+      join(source, "extension.ts"),
+      `
+      if (!(await fetch(${JSON.stringify(health.url.href)})).ok) throw new Error("Activation unavailable");
+      export default {};
+    `,
+    );
+    const asset = await app.deps.assetTransferService.stage(
+      publishedOwner(project.id),
+      crypto.randomUUID(),
+      await packExtension(source),
+    );
+    const catalog = await openPublishedCatalog(app.deps, project.id);
+    await catalog.select(
+      { extensionId: "test.activation-retry", revision: asset.sha256, version: "0.0.0", enabled: true },
+      asset,
+      (await catalog.read("test.activation-retry")).revision,
+    );
+    connection = startPublishedExtensions({
+      config: { ...config, workbenchId: project.id, managerOrigin: syncPeer.origin, relayOrigin: syncPeer.origin },
+      deps: app.deps,
+      access,
+      signal: controller.signal,
+      statusChanged: () => {
+        void connection
+          ?.status()
+          .then((status) => {
+            if (status.needsAttention) failed.resolve();
+            else if (status.downloaded) activated.resolve();
+            if (status.needsAttention && status.downloaded) downloaded.resolve();
+          })
+          .catch(failed.reject);
+      },
+    });
+    await failed.promise;
+    connection.wake();
+    await downloaded.promise;
+    expect((await connection.status()).downloaded).toBe(true);
+    connection.retry();
+    await retried.promise;
+    const pending = await connection.status();
+    expect(pending.needsAttention).toBe(true);
+    expect(projectSyncStatus([pending]).offlineReady).toBe(false);
+    expect(await app.deps.extensionService.listProjectExtensionInstances(project.id)).toHaveLength(0);
+    release.resolve();
+    await activated.promise;
+    expect(projectSyncStatus([await connection.status()]).offlineReady).toBe(true);
+    expect(await app.deps.extensionService.listProjectExtensionInstances(project.id)).toHaveLength(1);
+  } finally {
+    release.resolve();
+    connection?.close();
+    await connection?.done;
+    await syncPeer?.close();
+    await health.stop(true);
+  }
 });

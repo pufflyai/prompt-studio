@@ -378,7 +378,7 @@ These defaults were chosen on 2026-10-19 so the phase tickets could be refined. 
 - Core renumbers duplicate resource numbers after offline edits (R49). The resource whose ID sorts first keeps the number, and the other gets the next free number and keeps the old one as an alias. Planner and Reports only read the current number from core.
 - The grace period for previous latest states and unused blobs is 7 days, set by the operator.
 - A device uploads a new latest state when the updates after the current one exceed 1 MiB or 1,000 updates.
-- A cloud project's data downloads without a local folder. The device asks for a folder, and offers to clone the project's git remote, the first time something needs files.
+- A cloud project's data downloads without a local folder. Opening the project waits for download readiness, automatically attaches a managed local folder, and restores notes and declared artifact files. Existing local bindings are preserved. Setup shows progress and failures can be retried. This does not require Git or clone the project's source repository.
 - Cloud devices run in the user's own cloud account from the released runtime image. Prompt Studio does not host or bill them in phase 2.
 
 ## Decisions made on 2026-10-21

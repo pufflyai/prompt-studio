@@ -36,6 +36,8 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
 // packaged-cloud-extension-set-smoke.p2.test.ts checks offline number collisions, aliases and later allocations across three compiled hosts.
 // packaged-document-sync-smoke.p1.test.ts checks encrypted large-save blobs trigger record-stream compaction.
+// packaged-two-device-sync-smoke.p2.test.ts opens a recovered cloud project in the picker and restores its managed files.
+// packaged-cloud-notes-onboarding.p2.test.ts checks local folder ownership and the actual Notes plus/save/sync flow.
 // packaged-board-panning-smoke.p2.test.ts retains card opening and dragging; the UI Card Gestures story covers nested-control pointer ownership.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
