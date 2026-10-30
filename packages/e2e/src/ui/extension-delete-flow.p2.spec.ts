@@ -78,9 +78,7 @@ test("delete extension flow survives clicks inside the confirmation modal", asyn
 
   await bypassOnboarding(page, project.id);
   await page.goto(`/projects/${project.id}`);
-  await page.getByText("Settings", { exact: true }).last().click();
-  const overlay = page.getByRole("dialog").last();
-  await overlay.getByText("Extensions", { exact: true }).first().click();
+  await page.getByRole("option", { name: "Extensions", exact: true }).click();
 
   const row = page.getByTestId("extension-entry").filter({ hasText: displayName });
   await expect(row).toBeVisible();
@@ -92,7 +90,7 @@ test("delete extension flow survives clicks inside the confirmation modal", asyn
   const dialog = page.getByRole("dialog").last();
   await expect(dialog.getByText("Delete extension?")).toBeVisible();
 
-  // Clicking controls inside the modal keeps it (and the settings overlay) open.
+  // Clicking controls inside the modal keeps it (and the extension page) open.
   await dialog.getByText("Also delete this extension's data", { exact: false }).click();
   await expect(page.getByRole("dialog").last().locator("input[type='checkbox']")).toBeChecked();
   await expect(page.getByText("Delete extension?")).toBeVisible();

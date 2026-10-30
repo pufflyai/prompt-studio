@@ -70,13 +70,11 @@ test.beforeAll(async ({ request }) => {
 const openLocalExtensionToggle = async (page: import("@playwright/test").Page) => {
   await bypassOnboarding(page, projectId);
   await page.goto(`/projects/${projectId}`);
-  await page.getByText("Settings", { exact: true }).last().click();
-  const settings = page.getByRole("dialog").last();
-  await settings.getByText("Extensions", { exact: true }).first().click();
+  await page.getByRole("option", { name: "Extensions", exact: true }).click();
 
   const localRow = page.getByTestId("extension-entry").filter({ hasText: "Local Example" });
   await expect(localRow).toBeVisible();
-  return { localRow, settings, toggle: localRow.locator("input[type='checkbox']") };
+  return { localRow, toggle: localRow.locator("input[type='checkbox']") };
 };
 
 const holdProjectExtensionReads = async (page: import("@playwright/test").Page) => {
@@ -130,10 +128,9 @@ const expectSettingsViewToLoad = async (
   await expect(page.frameLocator(`iframe[title="${label}"]`).getByText(content, { exact: true })).toBeVisible();
 };
 
-const expectExtensionSettingsViewsToLoad = async (
-  page: import("@playwright/test").Page,
-  settings: import("@playwright/test").Locator,
-) => {
+const expectExtensionSettingsViewsToLoad = async (page: import("@playwright/test").Page) => {
+  await page.getByText("Settings", { exact: true }).last().click();
+  const settings = page.getByRole("dialog").last();
   await expect(settings.getByRole("option", { name: "Templates", exact: true })).toBeVisible();
   await expectSettingsViewToLoad(page, settings, "Lab (global)", "Greeting tone");
   await expectSettingsViewToLoad(page, settings, "Lab (project)", "Counter step");
@@ -148,7 +145,7 @@ const expectExtensionSettingsViewsToLoad = async (
 test.describe
   .serial("repo-local extension toggle", () => {
     test("disables the extension", async ({ page }) => {
-      const { settings, toggle } = await openLocalExtensionToggle(page);
+      const { toggle } = await openLocalExtensionToggle(page);
       await expect(toggle).toBeChecked();
 
       const heldReads = await holdProjectExtensionReads(page);
@@ -162,7 +159,7 @@ test.describe
       expect(existsSync(join(repoPath, ".pstdio", "extensions", localExtensionName))).toBe(true);
       await heldReads.wait();
       await heldReads.release();
-      await expectExtensionSettingsViewsToLoad(page, settings);
+      await expectExtensionSettingsViewsToLoad(page);
 
       const listResponse = await page.request.get(`${apiBase}/v1/projects/${projectId}/extensions`);
       const list = (await listResponse.json()) as {
@@ -172,7 +169,7 @@ test.describe
     });
 
     test("enables the extension again", async ({ page }) => {
-      const { settings, toggle } = await openLocalExtensionToggle(page);
+      const { toggle } = await openLocalExtensionToggle(page);
       await expect(toggle).not.toBeChecked();
 
       const heldReads = await holdProjectExtensionReads(page);
@@ -185,7 +182,7 @@ test.describe
       await expect(toggle).toBeChecked();
       await heldReads.wait();
       await heldReads.release();
-      await expectExtensionSettingsViewsToLoad(page, settings);
+      await expectExtensionSettingsViewsToLoad(page);
     });
 
     test("uninstalls the extension and removes its repo folder", async ({ page }) => {
