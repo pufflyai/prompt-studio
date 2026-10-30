@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -30,10 +30,15 @@ export const Default = { args: { title: "Usage this month" } };
 `,
 };
 
-/** Creates a throwaway project that resolves React from this package's dependencies. */
+/**
+ * Creates a throwaway project with its own `node_modules` that links this package's React. The
+ * root keeps the temporary folder's path as given, which on macOS goes through a symbolic link.
+ */
 export const createTestProject = (files: Record<string, string>, options: { git?: boolean } = {}) => {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-canvas-")));
-  symlinkSync(resolve(import.meta.dir, "../../node_modules"), join(root, "node_modules"), "dir");
+  const root = mkdtempSync(join(tmpdir(), "pstdio-canvas-"));
+  mkdirSync(join(root, "node_modules"));
+  for (const name of ["react", "react-dom"])
+    symlinkSync(resolve(import.meta.dir, "../../node_modules", name), join(root, "node_modules", name), "dir");
   writeProjectFiles(root, files);
   if (options.git) Bun.spawnSync(["git", "init", "--quiet"], { cwd: root });
   return { root, dispose: () => rmSync(root, { recursive: true, force: true }) };

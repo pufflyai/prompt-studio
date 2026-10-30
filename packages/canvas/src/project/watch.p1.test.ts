@@ -49,3 +49,29 @@ test("picks up a new canvas file", async () => {
   const second = await nextManifest(out, first.builtAt);
   expect(second.canvases.map((canvas) => canvas.id)).toContain("src/badge.canvas.tsx");
 });
+
+test("a build that keeps failing runs again only after an input changes", async () => {
+  const project = createTestProject(sampleProject);
+  cleanups.push(project.dispose);
+  // An output path that is a file makes every build fail before it starts.
+  writeProjectFiles(project.root, { "blocked-output": "" });
+  const exitCodes: number[] = [];
+  const watcher = watchCanvases({
+    root: project.root,
+    out: "blocked-output",
+    intervalMs: 50,
+    onBuild: (code) => exitCodes.push(code),
+  });
+  cleanups.push(watcher.close);
+
+  await watcher.started;
+  await Bun.sleep(500);
+  expect(exitCodes).toHaveLength(1);
+  expect(exitCodes[0]).not.toBe(0);
+
+  writeProjectFiles(project.root, {
+    "src/card.canvas.tsx": "export const Default = () => <section>Edited</section>;\n",
+  });
+  for (let attempt = 0; attempt < 60 && exitCodes.length < 2; attempt++) await Bun.sleep(50);
+  expect(exitCodes).toHaveLength(2);
+});

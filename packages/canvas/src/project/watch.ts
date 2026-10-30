@@ -1,5 +1,9 @@
-import { resolve } from "node:path";
-import { type CanvasBuildOptions, isCurrent, readManifest, resolveOut } from "./build";
+import { stat } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { type CanvasBuildOptions, isCurrent, readManifest, resolveOut, resolveRoot } from "./build";
+import { listCanvasFiles } from "./discover";
+import { inputPath } from "./inputs";
+import type { CanvasBuildManifest } from "./manifest";
 
 const CLI = resolve(import.meta.dir, "../../bin/pstdio-canvas.ts");
 
@@ -10,8 +14,20 @@ export interface CanvasWatchOptions extends Omit<CanvasBuildOptions, "force"> {
   onBuild?: (exitCode: number) => void;
 }
 
+// The files a build depends on, with their modification times. A failed build is retried only
+// after this changes, so a broken setup never rebuilds in a loop.
+const inputState = async (root: string, manifest: CanvasBuildManifest | undefined) => {
+  const files = [
+    ...(await listCanvasFiles(root)).map((file) => join(root, file)),
+    join(root, "package.json"),
+    ...Object.keys(manifest?.inputs ?? {}).map((key) => inputPath(root, key)),
+  ];
+  const times = await Promise.all(files.map(async (file) => (await stat(file).catch(() => undefined))?.mtimeMs));
+  return JSON.stringify(files.map((file, index) => [file, times[index]]));
+};
+
 /**
- * Rebuilds the canvases whenever a canvas file or a file the last build read changes.
+ * Rebuilds the canvases whenever a canvas file or an input of the last build changes.
  *
  * It checks the last build's own inputs instead of registering a recursive `fs.watch`: on Linux
  * that walks every folder, including `node_modules` symlinks (lesson 0012). Each build runs in a
@@ -19,9 +35,10 @@ export interface CanvasWatchOptions extends Omit<CanvasBuildOptions, "force"> {
  * and would miss newly installed packages.
  */
 export const watchCanvases = (options: CanvasWatchOptions) => {
-  const root = resolve(options.root);
+  const root = resolveRoot(options.root);
   const out = resolveOut(root, options.out);
   let stopped = false;
+  let failedState: string | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let child: ReturnType<typeof Bun.spawn> | undefined;
   const build = async () => {
@@ -32,10 +49,14 @@ export const watchCanvases = (options: CanvasWatchOptions) => {
     const exitCode = await child.exited;
     child = undefined;
     options.onBuild?.(exitCode);
+    return exitCode;
   };
   const check = async () => {
     const manifest = await readManifest(out);
-    if (!stopped && !(manifest && (await isCurrent(root, manifest)))) await build();
+    if (!stopped && !(manifest && (await isCurrent(root, manifest)))) {
+      const state = await inputState(root, manifest);
+      if (state !== failedState) failedState = (await build()) === 0 ? undefined : state;
+    }
     if (!stopped) timer = setTimeout(check, options.intervalMs ?? 500);
   };
   const started = check();

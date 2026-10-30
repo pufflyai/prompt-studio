@@ -1,5 +1,5 @@
-import { relative, resolve } from "node:path";
-import { buildCanvases, resolveOut } from "./build";
+import { relative } from "node:path";
+import { buildCanvases, resolveOut, resolveRoot } from "./build";
 import { discoverCanvases } from "./discover";
 import type { CanvasBuildManifest } from "./manifest";
 import { watchCanvases } from "./watch";
@@ -29,7 +29,7 @@ const report = (manifest: CanvasBuildManifest, built: boolean, out: string) => {
 /** Runs the `pstdio-canvas` command and returns its exit code. */
 export const runCli = async (args: string[]) => {
   const [command] = args;
-  const root = resolve(option(args, "root") ?? process.cwd());
+  const root = resolveRoot(option(args, "root") ?? process.cwd());
   const out = option(args, "out");
   switch (command) {
     case "list":

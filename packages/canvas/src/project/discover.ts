@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { indexCanvasFile } from "./index-canvas-file";
 import type { CanvasEntry } from "./manifest";
@@ -21,11 +21,13 @@ const listWithGit = (root: string) => {
     .filter((path) => path && existsSync(join(root, path)));
 };
 
-const scan = async (root: string) => {
+// Skipped folders are never entered: polling must not walk installed packages or build output.
+const scan = async (root: string, folder = ""): Promise<string[]> => {
   const files: string[] = [];
-  for await (const path of new Bun.Glob("**/*.canvas.{tsx,jsx}").scan({ cwd: root, dot: true, onlyFiles: true })) {
-    const posix = toPosix(path);
-    if (!posix.split("/").some((part) => SKIPPED_FOLDERS.has(part))) files.push(posix);
+  for (const entry of await readdir(join(root, folder), { withFileTypes: true })) {
+    const path = folder ? `${folder}/${entry.name}` : entry.name;
+    if (entry.isDirectory() && !SKIPPED_FOLDERS.has(entry.name)) files.push(...(await scan(root, path)));
+    else if (entry.isFile() && CANVAS_FILE.test(entry.name)) files.push(path);
   }
   return files;
 };

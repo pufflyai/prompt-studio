@@ -24,9 +24,43 @@ const entrySource = (root: string, canvases: CanvasEntry[]) => {
   return `import { mountFrameRuntime } from ${JSON.stringify(RUNTIME)};\nmountFrameRuntime({\n${lines.join("\n")}\n});\n`;
 };
 
+// Frames load modules from blob URLs, so a relative asset URL has nothing to resolve against.
+// Bun emits images, fonts and media as files; the archive inlines them as data URLs.
+export const ASSET_TYPES: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  avif: "image/avif",
+  svg: "image/svg+xml",
+  ico: "image/x-icon",
+  woff: "font/woff",
+  woff2: "font/woff2",
+  ttf: "font/ttf",
+  otf: "font/otf",
+  eot: "application/vnd.ms-fontobject",
+  mp4: "video/mp4",
+  webm: "video/webm",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+};
+const loader = Object.fromEntries(Object.keys(ASSET_TYPES).map((extension) => [`.${extension}`, "file" as const]));
+
 // Canvas and preview files are entry points too, so each gets its own CSS bundle and a frame
 // loads only the styles of the canvas it shows.
-const runBuild = async (root: string, entry: string, canvases: CanvasEntry[], outdir?: string) =>
+const runBuild = async (root: string, entry: string, canvases: CanvasEntry[], outdir?: string) => {
+  // Bun names modules and metafile paths relative to the working folder; keep them project-relative.
+  const previous = process.cwd();
+  process.chdir(root);
+  try {
+    return await bunBuild(root, entry, canvases, outdir);
+  } finally {
+    process.chdir(previous);
+  }
+};
+
+const bunBuild = (root: string, entry: string, canvases: CanvasEntry[], outdir?: string) =>
   Bun.build({
     entrypoints: [entry, ...new Set(canvases.flatMap((canvas) => [...ownFiles(root, canvas)]))],
     ...(outdir ? { outdir } : {}),
@@ -39,6 +73,7 @@ const runBuild = async (root: string, entry: string, canvases: CanvasEntry[], ou
     modulePreload: false,
     define: { "process.env.NODE_ENV": '"production"' },
     naming: { entry: "[name]-[hash].[ext]", chunk: "chunk-[hash].[ext]", asset: "[name]-[hash].[ext]" },
+    loader,
     plugins: [projectReact(root)],
   });
 
