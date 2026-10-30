@@ -4,6 +4,30 @@ import { createWorkbench } from "../../workbench-core";
 import { createCommandRegistry } from "../commands/command-registry";
 import { createKeybindingRegistry } from "./keybinding-registry";
 
+test("direct input dispatch does not enumerate unassigned navigation actions", () => {
+  const commands = createCommandRegistry();
+  commands.registerCommand({ id: "direct", label: "Direct" }, { execute() {} });
+  const keybindings = createKeybindingRegistry({
+    commands,
+    context: createContextKeyService(),
+    actions: () => {
+      throw new Error("Navigation discovery is not needed to dispatch an assigned chord");
+    },
+  });
+  keybindings.registerKeybinding({ action: { kind: "command", commandId: "direct" }, keybinding: "Alt+J" });
+  expect(keybindings.listActiveKeybindings()).toMatchObject([{ keybinding: "Alt+J" }]);
+});
+
+test("assigning a chord makes a discovered command active without an explicit binding", async () => {
+  const core = createWorkbench();
+  core.commands.registerCommand({ id: "discovered", label: "Discovered" }, { execute() {} });
+  expect(core.keybindings.listActiveKeybindings().some((binding) => binding.id === "discovered")).toBe(false);
+  await core.keyboard.setAssignment("discovered", { layer: "direct", keybinding: "Alt+J" });
+  expect(core.keybindings.listActiveKeybindings()).toContainEqual(
+    expect.objectContaining({ id: "discovered", keybinding: "Alt+J" }),
+  );
+});
+
 test("extension navigation actions retain their owner in the shortcut catalog", () => {
   const core = createWorkbench();
   core.navigationTrees.registerContribution({

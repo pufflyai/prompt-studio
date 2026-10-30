@@ -170,7 +170,23 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     },
 
     listActiveKeybindings() {
-      return listCatalog()
+      const bindings = [...store.getState().keybindings].sort(byContributionPriority);
+      const declared = new Set(bindings.map(getId));
+      const assigned = new Set(
+        Object.entries(readShortcutPreferences(deps.preferences?.()).overrides)
+          .filter(
+            ([id, value]) =>
+              !declared.has(id) &&
+              !value.disabled &&
+              (!value.layer || value.layer === "direct") &&
+              Boolean(value.keybinding?.trim()),
+          )
+          .map(([id]) => id),
+      );
+      // Generated discovery actions have no chord until a person assigns one.
+      // Input dispatch must not enumerate page/menu providers on every layout change.
+      if (assigned.size) bindings.push(...listCatalog().filter((binding) => assigned.has(getId(binding))));
+      return bindings
         .map(resolve)
         .filter(
           (binding) =>
