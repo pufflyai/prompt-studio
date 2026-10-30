@@ -129,7 +129,11 @@ export const suites: BenchmarkSuite[] = [
       "packages/ui/src/components/chat-ui/performance/chat-panel.p3.bench.ts",
       "packages/ui/src/components/chat-ui/performance/chat-rendering.p3.bench.ts",
     ],
-    prepare: () => [{ command: ["bunx", "playwright", "install", "chromium"], cwd: "packages/ui" }],
+    prepare: () => [
+      // UI stories import the SDK through its published entry points.
+      { command: ["bun", "run", "build", "--", "--scope", "@pstdio/sdk", "--include-dependencies"] },
+      { command: ["bunx", "playwright", "install", "chromium"], cwd: "packages/ui" },
+    ],
     sample: (_context, files) => [
       {
         command: [

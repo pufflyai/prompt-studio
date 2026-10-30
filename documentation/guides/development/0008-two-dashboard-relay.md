@@ -79,7 +79,7 @@ The host discovers all enabled extensions and initializes their owner scopes thr
 
 Each connection runs one synchronization at a time. Local committed journal entries wake it. Versioned WebSocket hints also wake it; hints contain no records. The journal, receipts and snapshots own the state. Incoming assets are verified before publication, multipart upload staging uses temporary disk files, and failed source opening removes its spool. Shutdown aborts requests and closes connections before closing the local database.
 
-The platform invalidates extension views after local commits and incoming snapshots. Native views and webview query subscriptions use the normal host refresh path. Extension builders need no synchronization event, refresh listener, relay configuration, or storage opt-in. The controls fixture deliberately uses only ordinary `ctx.storage.get/set` calls and declares no refresh events.
+The platform invalidates extension views after committed storage changes, local or downloaded. A sync round that changes nothing sends no refresh. Writes that land close together send one storage change per project, and only that project's views reload. Reconnecting still reloads every view. Views reload for any owner's change in their project, because a view can read another extension's data through its public commands. Native views and webview query subscriptions use the normal host refresh path. Extension builders need no synchronization event, refresh listener, relay configuration, or storage opt-in. The controls fixture deliberately uses only ordinary `ctx.storage.get/set` calls and declares no refresh events.
 
 ## Verification scope
 

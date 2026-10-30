@@ -195,7 +195,7 @@
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/performance/components/developer-tools-panel.canvas.tsx": {
-      "script": "developer-tools-panel.canvas-ChFJ9dQl.js",
+      "script": "developer-tools-panel.canvas-Ddt6zj6p.js",
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/performance/components/performance-popover-content.canvas.tsx": {
@@ -227,7 +227,7 @@
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/sessions/components/session-chat-draft.canvas.tsx": {
-      "script": "session-chat-draft.canvas-Dlnq2ven.js",
+      "script": "session-chat-draft.canvas-ZMi5pGOn.js",
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/sessions/components/session-chat-notices.canvas.tsx": {
@@ -259,7 +259,7 @@
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/settings/components/beta-features-panel.canvas.tsx": {
-      "script": "beta-features-panel.canvas-Dc5phwMY.js",
+      "script": "beta-features-panel.canvas-8cB8kPsL.js",
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/settings/components/extension-connections-card.canvas.tsx": {
@@ -299,7 +299,7 @@
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/sidenav/dashboard-sidenav.canvas.tsx": {
-      "script": "dashboard-sidenav.canvas-hVvWE04R.js",
+      "script": "dashboard-sidenav.canvas-T0QBLmSJ.js",
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/start/components/start-harness-status.canvas.tsx": {
@@ -315,11 +315,11 @@
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/updates/components/update-channel-panel.canvas.tsx": {
-      "script": "update-channel-panel.canvas-D7zR1E5u.js",
+      "script": "update-channel-panel.canvas-yhyecJDX.js",
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/workspaces/collections/workspace-list.canvas.tsx": {
-      "script": "workspace-list.canvas-CjFR8tBK.js",
+      "script": "workspace-list.canvas-tae1_xEU.js",
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/workspaces/components/workspace-provider-form.canvas.tsx": {
@@ -327,7 +327,7 @@
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/workspaces/workspace-files.canvas.tsx": {
-      "script": "workspace-files.canvas-D3n48_PU.js",
+      "script": "workspace-files.canvas-DswoNdh8.js",
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/modules/workspaces/workspace-navigation.canvas.tsx": {
@@ -363,7 +363,7 @@
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-dashboard/src/shared/workbench/search-overlays.canvas.tsx": {
-      "script": "search-overlays.canvas-n67xBMOE.js",
+      "script": "search-overlays.canvas-CeaFy301.js",
       "project": "preview-OoakHRBx.js"
     },
     "packages/pstdio-workbench/src/examples/api/api.canvas.tsx": {
@@ -1590,7 +1590,7 @@
   },
   "modules": {
     "ui.js": {
-      "file": "src/catalog/generated/frame-modules/2336c615c47361ad83fe76cc0874ef56266fb9f6e6fe2617daf99c203d8bc7e7.txt",
+      "file": "src/catalog/generated/frame-modules/2260a615a4c07431747936db0266ffbdde0c8751d9fa5aa5e76260b58ff8d8c0.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
@@ -1655,7 +1655,7 @@
         "backend-connection-status.canvas-DV4CZidN.js",
         "desktop-quit-confirmation.canvas-D2rcPMJ5.js",
         "keyboard-shortcuts-widget.canvas-ioy1gZqe.js",
-        "developer-tools-panel.canvas-ChFJ9dQl.js",
+        "developer-tools-panel.canvas-Ddt6zj6p.js",
         "performance-popover-content.canvas-C1YESji5.js",
         "desktop-project-tabs.canvas-EVnaEY9s.js",
         "project-folder-choice.canvas-DxwWfbR1.js",
@@ -1663,7 +1663,7 @@
         "project-selection.canvas-qTv5xjKL.js",
         "harness-param-inline-controls.canvas-CCFfxNzZ.js",
         "session-attachment-controls.canvas-CG7gFtQS.js",
-        "session-chat-draft.canvas-Dlnq2ven.js",
+        "session-chat-draft.canvas-ZMi5pGOn.js",
         "session-chat-notices.canvas-COXfb9qK.js",
         "session-harness-access.canvas-3dyv1Cvt.js",
         "session-harness-unavailable.canvas-CM7CnjCX.js",
@@ -1671,7 +1671,7 @@
         "session-workspace-menu.canvas-KdnBm-bE.js",
         "appearance-settings-panel.canvas-C3XfLA0u.js",
         "available-extension-detail.canvas-DnhVnrr1.js",
-        "beta-features-panel.canvas-Dc5phwMY.js",
+        "beta-features-panel.canvas-8cB8kPsL.js",
         "extension-connections-card.canvas-B-SlUEHv.js",
         "extension-detail.canvas-C9Qsv5aI.js",
         "extension-folder-drop-zone.canvas-BHdcStIA.js",
@@ -1681,14 +1681,14 @@
         "machine-tokens-panel.canvas-IUAGS7ts.js",
         "project-defaults-card.canvas-DzcbO7y8.js",
         "skill-viewer.canvas-D1yhzFH7.js",
-        "dashboard-sidenav.canvas-hVvWE04R.js",
+        "dashboard-sidenav.canvas-T0QBLmSJ.js",
         "start-harness-status.canvas-Bw0dxR4q.js",
         "start-widget.canvas-CtmTJjH0.js",
         "start-page-layout.canvas-CTZEH2wJ.js",
-        "update-channel-panel.canvas-D7zR1E5u.js",
-        "workspace-list.canvas-CjFR8tBK.js",
+        "update-channel-panel.canvas-yhyecJDX.js",
+        "workspace-list.canvas-tae1_xEU.js",
         "workspace-provider-form.canvas-CpEKo4ct.js",
-        "workspace-files.canvas-D3n48_PU.js",
+        "workspace-files.canvas-DswoNdh8.js",
         "workspace-navigation.canvas-DNSsr5ok.js",
         "harness-browser-progress.canvas-z5vDGodJ.js",
         "dashboard-param-field.canvas-CTXdLU9j.js",
@@ -1697,7 +1697,7 @@
         "workspace-agent-menu.canvas-BVZSH_v3.js",
         "paused-extension-view.canvas-XAr5f6eO.js",
         "project-setup-status.canvas-DnmQncaf.js",
-        "search-overlays.canvas-n67xBMOE.js",
+        "search-overlays.canvas-CeaFy301.js",
         "api.canvas-BfAcD3nA.js",
         "data-table-renderer.canvas-DcJ9kSox.js",
         "data-table-scrolling.canvas-4a3gdTmx.js",
@@ -3223,8 +3223,8 @@
       "dynamicImports": [],
       "bytes": 303
     },
-    "beta-features-panel.canvas-Dc5phwMY.js": {
-      "file": "src/catalog/generated/frame-modules/f9eb7ecdec86702b861c8056bbc27660b1a1a929f5934bde419d44c5d2fb11c0.txt",
+    "beta-features-panel.canvas-8cB8kPsL.js": {
+      "file": "src/catalog/generated/frame-modules/5d026af811c97f5cc4e868e4dcc3dccdf09c39053fd6fe782119cb459771a274.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
@@ -3234,7 +3234,7 @@
         "workbench-nySouSCM.js",
         "settings-resources-BbLNaXBp.js",
         "synced-settings-gxnVrPmp.js",
-        "module-CPXNtd_4.js"
+        "module-B-7_qSBS.js"
       ],
       "dynamicImports": [],
       "bytes": 1855
@@ -5497,8 +5497,8 @@
       "dynamicImports": [],
       "bytes": 263
     },
-    "dashboard-sidenav.canvas-hVvWE04R.js": {
-      "file": "src/catalog/generated/frame-modules/cb9a46797206ef931362be7acac1fb722b44e914a51670aebc3e500c8fb46a4e.txt",
+    "dashboard-sidenav.canvas-T0QBLmSJ.js": {
+      "file": "src/catalog/generated/frame-modules/5bba9982caa8d248d43f9b7ba283180124c2e2c79e6e2d0f56e673e8253c2356.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
@@ -5518,16 +5518,16 @@
         "api-CjCu4b1B.js",
         "project-context-C0dKoVxR.js",
         "dashboard-navigation-contribution-Btg3avI-.js",
-        "module-CPXNtd_4.js",
+        "module-B-7_qSBS.js",
         "commands-BzDNBFSB.js",
-        "module-CXUBYF0-.js",
+        "module-Dcf1psJE.js",
         "dashboard-rows-DSQj3ECz.js",
         "project-data-CnkpUY2P.js",
         "desktop-project-tabs-controller-DUWf6pJg.js",
         "module-CWTLrySQ.js",
         "dashboard-workspaces-BYVk_eqj.js",
-        "module-ovofE_Qg.js",
-        "module-ClSMPkOw.js",
+        "module-D9tU9dgw.js",
+        "module-BS9Upw9C.js",
         "module-ju66yCGB.js",
         "workspace-views-story-BB5dLh8q.js"
       ],
@@ -6038,8 +6038,8 @@
       "dynamicImports": [],
       "bytes": 5324
     },
-    "developer-tools-panel.canvas-ChFJ9dQl.js": {
-      "file": "src/catalog/generated/frame-modules/57aa32fc59f7cc9c50dbc16dcf693cd443cdcfe674c574c949d0c7c7921f3943.txt",
+    "developer-tools-panel.canvas-Ddt6zj6p.js": {
+      "file": "src/catalog/generated/frame-modules/4a0904115e8bfc11ee082204b57510d36c82c8a37887f05b08267b1aadfb3942.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
@@ -6049,8 +6049,8 @@
         "workbench-nySouSCM.js",
         "settings-resources-BbLNaXBp.js",
         "synced-settings-gxnVrPmp.js",
-        "module-CPXNtd_4.js",
-        "module-Dz4otA2T.js"
+        "module-B-7_qSBS.js",
+        "module-BjXP8CAb.js"
       ],
       "dynamicImports": [],
       "bytes": 2158
@@ -7099,14 +7099,14 @@
       "dynamicImports": [],
       "bytes": 2090
     },
-    "extension-webview-broadcast-B-Bm0WLA.js": {
-      "file": "src/catalog/generated/frame-modules/e85f512626b13b7c478848b14a1348300d55d284df9f6f05841aaed1dca422c2.txt",
+    "extension-webview-broadcast-DB-TvGkJ.js": {
+      "file": "src/catalog/generated/frame-modules/fb17d7251fb035ffae2738bb78d2d984296045543696aac6488af165b34c3f70.txt",
       "imports": [
         "collections-hhDolRgv.js",
         "runtime-state-DQnBFoUK.js"
       ],
       "dynamicImports": [],
-      "bytes": 472
+      "bytes": 486
     },
     "extension-webview-host-capabilities-BN3dqWZR.js": {
       "file": "src/catalog/generated/frame-modules/072547234c4e95cd1a2b1c047181c87e13642cd6c542c503daaf48e5cf3f27c8.txt",
@@ -9799,30 +9799,8 @@
       "dynamicImports": [],
       "bytes": 1117
     },
-    "module-B2I1Ozig.js": {
-      "file": "src/catalog/generated/frame-modules/85389b1f22bf9c5556b6c7f0139086f4d315d3464586f2cce502cc32d5c15489.txt",
-      "imports": [],
-      "dynamicImports": [],
-      "bytes": 6235
-    },
-    "module-BicqV3G3.js": {
-      "file": "src/catalog/generated/frame-modules/000433a8010545bb4365ac2f499a2404db921da8534720aeb4dcbab9fb7a2f84.txt",
-      "imports": [
-        "webview-host-capabilities-DbISL7Il.js",
-        "bridge-webview-renderer-p9aFDcZi.js",
-        "runtime-html-B7kRIoHE.js"
-      ],
-      "dynamicImports": [],
-      "bytes": 5895
-    },
-    "module-BxlpsnKK.js": {
-      "file": "src/catalog/generated/frame-modules/9c02a7abc5043f760c6723b2ce0605ae9e439e075de0d13c248e0daaf838b268.txt",
-      "imports": [],
-      "dynamicImports": [],
-      "bytes": 7844
-    },
-    "module-CPXNtd_4.js": {
-      "file": "src/catalog/generated/frame-modules/645123a4cea36c9c6c14c26f8c1e3d848a69ce477d42d0a2898b2754f2dfe78c.txt",
+    "module-B-7_qSBS.js": {
+      "file": "src/catalog/generated/frame-modules/731c221314c7ec7bf697307396d9b2664187d04a789d3b7c721dd57511df9cf7.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
@@ -9858,7 +9836,7 @@
         "use-agents-DhdQaemR.js",
         "use-action-error-BSyCryBe.js",
         "api-q9Y_FHNB.js",
-        "extension-webview-broadcast-B-Bm0WLA.js",
+        "extension-webview-broadcast-DB-TvGkJ.js",
         "available-extension-detail-CjpoqB7T.js",
         "extension-detail-B48xGgl7.js",
         "extensions-panel-view-DBleGu9j.js",
@@ -9874,6 +9852,82 @@
         "skill-viewer-BX0kkjSe.js"
       ],
       "bytes": 30010
+    },
+    "module-B2I1Ozig.js": {
+      "file": "src/catalog/generated/frame-modules/85389b1f22bf9c5556b6c7f0139086f4d315d3464586f2cce502cc32d5c15489.txt",
+      "imports": [],
+      "dynamicImports": [],
+      "bytes": 6235
+    },
+    "module-BS9Upw9C.js": {
+      "file": "src/catalog/generated/frame-modules/d1fefe89cab77dbdf7a6b7d9cb20601852f85dc98d4cd3d1bb43514e0ef4a198.txt",
+      "imports": [
+        "rolldown-runtime-XKyaHtl9.js",
+        "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
+        "workspace-badge-B0bqYC-f-CW0jY6mP.js",
+        "extensions-BzdE7lRw.js",
+        "resource-registry-6ek1WPbL.js",
+        "workbench-core-BMpttPHr.js",
+        "widget-ids-rjRctbN6.js",
+        "collections-hhDolRgv.js",
+        "api-CjCu4b1B.js",
+        "project-context-C0dKoVxR.js",
+        "dashboard-navigation-contribution-Btg3avI-.js",
+        "commands-BzDNBFSB.js",
+        "dashboard-rows-DSQj3ECz.js",
+        "resources-Cby7lUfV.js",
+        "dashboard-workspaces-BYVk_eqj.js"
+      ],
+      "dynamicImports": [
+        "session-widget-DR0VGyJP.js"
+      ],
+      "bytes": 20224
+    },
+    "module-BicqV3G3.js": {
+      "file": "src/catalog/generated/frame-modules/000433a8010545bb4365ac2f499a2404db921da8534720aeb4dcbab9fb7a2f84.txt",
+      "imports": [
+        "webview-host-capabilities-DbISL7Il.js",
+        "bridge-webview-renderer-p9aFDcZi.js",
+        "runtime-html-B7kRIoHE.js"
+      ],
+      "dynamicImports": [],
+      "bytes": 5895
+    },
+    "module-BjXP8CAb.js": {
+      "file": "src/catalog/generated/frame-modules/db894e33a70a36754254fb6ef06a1c40ba6c1b736453c604f756b4220880c1e5.txt",
+      "imports": [
+        "rolldown-runtime-XKyaHtl9.js",
+        "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
+        "preview-core~foundations~activity.canvas~canvas-gestures.canvas~canvas.canvas~attachment-li~dm5vbkf1-C1-uxSWN.js",
+        "preview-core~entry~desktop-starting-state.canvas~markdown-editor-BJaLDk32~activity.canvas~q~fwqjtivi-DDgmYLQ3.js",
+        "preview-core~entry~preview~assembly-cursor.canvas~documentation~MermaidComponent-Ck1BdLu3~m~eyuj0cmm-MG-KcTGP.js",
+        "tooltip-Drs_bdZy-C_9fqkoa.js",
+        "scroll-area-ZHp84XPy-CJMdJZTG.js",
+        "gauge-C_Ud8FVx.js",
+        "triangle-alert-B4QMJPDu.js",
+        "prism-BLkcH5BQ-kyXpYE-t.js",
+        "schemas-Cy8-o-RB.js",
+        "iso-BhGzIC5Q.js",
+        "useQuery-DTkPWQ1L.js",
+        "useTranslation-DjPpN6qI.js",
+        "workbench-core-BMpttPHr.js",
+        "widget-ids-rjRctbN6.js",
+        "use-workbench-store--ae9lYix.js",
+        "settings-resources-BbLNaXBp.js",
+        "project-context-C0dKoVxR.js",
+        "module-B-7_qSBS.js",
+        "commands-BzDNBFSB.js",
+        "paused-extensions-CREOQYKj.js",
+        "performance-popover-content-VGTd0kEw.js"
+      ],
+      "dynamicImports": [],
+      "bytes": 15312
+    },
+    "module-BxlpsnKK.js": {
+      "file": "src/catalog/generated/frame-modules/9c02a7abc5043f760c6723b2ce0605ae9e439e075de0d13c248e0daaf838b268.txt",
+      "imports": [],
+      "dynamicImports": [],
+      "bytes": 7844
     },
     "module-CWTLrySQ.js": {
       "file": "src/catalog/generated/frame-modules/84ed2a1f3a347c6bcf658deb8c85a18a36416855184988acf795d5a741b7e668.txt",
@@ -9901,31 +9955,6 @@
       "dynamicImports": [],
       "bytes": 8740
     },
-    "module-CXUBYF0-.js": {
-      "file": "src/catalog/generated/frame-modules/c0586c8fe5b6f4fb947d820f11820ab6fe31627cc0887dc6060691722054ba23.txt",
-      "imports": [
-        "rolldown-runtime-XKyaHtl9.js",
-        "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
-        "dist-SpFhiBZr.js",
-        "workbench-core-BMpttPHr.js",
-        "widget-ids-rjRctbN6.js",
-        "resource-icons-CBNQA2bt.js",
-        "use-workbench-store--ae9lYix.js",
-        "collections-hhDolRgv.js",
-        "api-CjCu4b1B.js",
-        "synced-settings-gxnVrPmp.js",
-        "project-context-C0dKoVxR.js",
-        "dashboard-navigation-contribution-Btg3avI-.js",
-        "commands-BzDNBFSB.js",
-        "extension-navigation-target-BIJt5UvY.js",
-        "use-action-error-BSyCryBe.js",
-        "api-q9Y_FHNB.js",
-        "extension-webview-broadcast-B-Bm0WLA.js",
-        "resources-Cby7lUfV.js"
-      ],
-      "dynamicImports": [],
-      "bytes": 7221
-    },
     "module-Ca7JNKMw.js": {
       "file": "src/catalog/generated/frame-modules/30377e9a8015c5386cebda1b2fdfb3398efffb2bb6cb41dd9fec9ec383d72d42.txt",
       "imports": [
@@ -9943,30 +9972,6 @@
       "dynamicImports": [],
       "bytes": 16089
     },
-    "module-ClSMPkOw.js": {
-      "file": "src/catalog/generated/frame-modules/904daaaf3a94949bfec9d8f7c91c3551c5efe1e9314901f4cbac39427ca60de3.txt",
-      "imports": [
-        "rolldown-runtime-XKyaHtl9.js",
-        "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
-        "workspace-badge-B0bqYC-f-CW0jY6mP.js",
-        "extensions-BzdE7lRw.js",
-        "resource-registry-6ek1WPbL.js",
-        "workbench-core-BMpttPHr.js",
-        "widget-ids-rjRctbN6.js",
-        "collections-hhDolRgv.js",
-        "api-CjCu4b1B.js",
-        "project-context-C0dKoVxR.js",
-        "dashboard-navigation-contribution-Btg3avI-.js",
-        "commands-BzDNBFSB.js",
-        "dashboard-rows-DSQj3ECz.js",
-        "resources-Cby7lUfV.js",
-        "dashboard-workspaces-BYVk_eqj.js"
-      ],
-      "dynamicImports": [
-        "session-widget-CdU12NcI.js"
-      ],
-      "bytes": 20224
-    },
     "module-CvyfeqwI.js": {
       "file": "src/catalog/generated/frame-modules/e4737510f77f902490225919aab816d2b16ba11897261bc271936d0d6d3479a7.txt",
       "imports": [
@@ -9980,41 +9985,75 @@
       "dynamicImports": [],
       "bytes": 5440
     },
+    "module-D9tU9dgw.js": {
+      "file": "src/catalog/generated/frame-modules/3f82ee82cd70b63fddf536678cec18c0fc9ee25aa5ba8f2f232635c39310fab4.txt",
+      "imports": [
+        "rolldown-runtime-XKyaHtl9.js",
+        "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
+        "preview-core~entry~preview~MermaidComponent-Ck1BdLu3~markdown-editor-BJaLDk32~model-swap-se~chb605z5-D6oOHatV.js",
+        "preview-core~markdown-editor-BJaLDk32~dependency-timeline.canvas~collection-badge.canvas~ka~dtnkte4c-Du_LbFW3.js",
+        "preview-core~entry~preview~MermaidComponent-Ck1BdLu3~markdown-editor-BJaLDk32~activity.canv~ha51y04d-DSqWwEUS.js",
+        "empty-state-J96iLli9-BEreuCM9.js",
+        "dist-SpFhiBZr.js",
+        "useQuery-DTkPWQ1L.js",
+        "useMutation-BaHzRKwL.js",
+        "workspace-providers-DypuEh_y.js",
+        "extensions-BzdE7lRw.js",
+        "resource-registry-6ek1WPbL.js",
+        "resource-ref-BATP5um6.js",
+        "workbench-core-BMpttPHr.js",
+        "widget-ids-rjRctbN6.js",
+        "resource-actions-Dwb_M-fy.js",
+        "diff-size-BR8D-bcL-XRcMjGm7.js",
+        "file-renderer-view-BjMAOpdg.js",
+        "terminal-module-DDNg81ca.js",
+        "collections-hhDolRgv.js",
+        "api-CjCu4b1B.js",
+        "project-context-C0dKoVxR.js",
+        "commands-BzDNBFSB.js",
+        "api-q9Y_FHNB.js",
+        "extension-webview-broadcast-DB-TvGkJ.js",
+        "dashboard-rows-DSQj3ECz.js",
+        "resources-Cby7lUfV.js",
+        "dashboard-workspaces-BYVk_eqj.js",
+        "workspace-provider-form-DQOmUebX.js",
+        "workspace-navigation-DQsDwPPS.js"
+      ],
+      "dynamicImports": [
+        "workspace-widget-Cgi2JBnl.js"
+      ],
+      "bytes": 32364
+    },
     "module-DQCbyk2V.js": {
       "file": "src/catalog/generated/frame-modules/2b9fc7724d5a23a5e46e2604913438977720a1d3a7e8332091437cadb289945d.txt",
       "imports": [],
       "dynamicImports": [],
       "bytes": 9563
     },
-    "module-Dz4otA2T.js": {
-      "file": "src/catalog/generated/frame-modules/162c48f05df988dd31a1aba4d42b2fb15bad01549d17c7071913a6daec0ae50f.txt",
+    "module-Dcf1psJE.js": {
+      "file": "src/catalog/generated/frame-modules/ce3f8d9ffe00774ce6b028149d2a0da40af7621359b3e51323cb7c46999863d9.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
-        "preview-core~foundations~activity.canvas~canvas-gestures.canvas~canvas.canvas~attachment-li~dm5vbkf1-C1-uxSWN.js",
-        "preview-core~entry~desktop-starting-state.canvas~markdown-editor-BJaLDk32~activity.canvas~q~fwqjtivi-DDgmYLQ3.js",
-        "preview-core~entry~preview~assembly-cursor.canvas~documentation~MermaidComponent-Ck1BdLu3~m~eyuj0cmm-MG-KcTGP.js",
-        "tooltip-Drs_bdZy-C_9fqkoa.js",
-        "scroll-area-ZHp84XPy-CJMdJZTG.js",
-        "gauge-C_Ud8FVx.js",
-        "triangle-alert-B4QMJPDu.js",
-        "prism-BLkcH5BQ-kyXpYE-t.js",
-        "schemas-Cy8-o-RB.js",
-        "iso-BhGzIC5Q.js",
-        "useQuery-DTkPWQ1L.js",
-        "useTranslation-DjPpN6qI.js",
+        "dist-SpFhiBZr.js",
         "workbench-core-BMpttPHr.js",
         "widget-ids-rjRctbN6.js",
+        "resource-icons-CBNQA2bt.js",
         "use-workbench-store--ae9lYix.js",
-        "settings-resources-BbLNaXBp.js",
+        "collections-hhDolRgv.js",
+        "api-CjCu4b1B.js",
+        "synced-settings-gxnVrPmp.js",
         "project-context-C0dKoVxR.js",
-        "module-CPXNtd_4.js",
+        "dashboard-navigation-contribution-Btg3avI-.js",
         "commands-BzDNBFSB.js",
-        "paused-extensions-CREOQYKj.js",
-        "performance-popover-content-VGTd0kEw.js"
+        "extension-navigation-target-BIJt5UvY.js",
+        "use-action-error-BSyCryBe.js",
+        "api-q9Y_FHNB.js",
+        "extension-webview-broadcast-DB-TvGkJ.js",
+        "resources-Cby7lUfV.js"
       ],
       "dynamicImports": [],
-      "bytes": 15312
+      "bytes": 7221
     },
     "module-j0BlM0tv.js": {
       "file": "src/catalog/generated/frame-modules/08e0aebf22ade9961e0d1966e1cff61f10ed1a2bad2ab0db5d0d6f47ec443d4a.txt",
@@ -10048,45 +10087,6 @@
       ],
       "dynamicImports": [],
       "bytes": 5431
-    },
-    "module-ovofE_Qg.js": {
-      "file": "src/catalog/generated/frame-modules/d70521347958aa81b5c843f83c003e217eccb49b283d7cf32d3d82ab070bb55c.txt",
-      "imports": [
-        "rolldown-runtime-XKyaHtl9.js",
-        "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
-        "preview-core~entry~preview~MermaidComponent-Ck1BdLu3~markdown-editor-BJaLDk32~model-swap-se~chb605z5-D6oOHatV.js",
-        "preview-core~markdown-editor-BJaLDk32~dependency-timeline.canvas~collection-badge.canvas~ka~dtnkte4c-Du_LbFW3.js",
-        "preview-core~entry~preview~MermaidComponent-Ck1BdLu3~markdown-editor-BJaLDk32~activity.canv~ha51y04d-DSqWwEUS.js",
-        "empty-state-J96iLli9-BEreuCM9.js",
-        "dist-SpFhiBZr.js",
-        "useQuery-DTkPWQ1L.js",
-        "useMutation-BaHzRKwL.js",
-        "workspace-providers-DypuEh_y.js",
-        "extensions-BzdE7lRw.js",
-        "resource-registry-6ek1WPbL.js",
-        "resource-ref-BATP5um6.js",
-        "workbench-core-BMpttPHr.js",
-        "widget-ids-rjRctbN6.js",
-        "resource-actions-Dwb_M-fy.js",
-        "diff-size-BR8D-bcL-XRcMjGm7.js",
-        "file-renderer-view-BjMAOpdg.js",
-        "terminal-module-DDNg81ca.js",
-        "collections-hhDolRgv.js",
-        "api-CjCu4b1B.js",
-        "project-context-C0dKoVxR.js",
-        "commands-BzDNBFSB.js",
-        "api-q9Y_FHNB.js",
-        "extension-webview-broadcast-B-Bm0WLA.js",
-        "dashboard-rows-DSQj3ECz.js",
-        "resources-Cby7lUfV.js",
-        "dashboard-workspaces-BYVk_eqj.js",
-        "workspace-provider-form-DQOmUebX.js",
-        "workspace-navigation-DQsDwPPS.js"
-      ],
-      "dynamicImports": [
-        "workspace-widget-C3zOxtFU.js"
-      ],
-      "bytes": 32316
     },
     "monaco-CNyIuvWl.js": {
       "file": "src/catalog/generated/frame-modules/992e035e898dda35c6c92e723f8dfc10ac3021f4ee742b64735c87dd1f947e1c.txt",
@@ -12459,8 +12459,8 @@
       "dynamicImports": [],
       "bytes": 1588
     },
-    "search-overlays.canvas-n67xBMOE.js": {
-      "file": "src/catalog/generated/frame-modules/7faefb123f6da1e51e1b26bf0dd8a5c662575b1307143e418995624ed5ad6316.txt",
+    "search-overlays.canvas-CeaFy301.js": {
+      "file": "src/catalog/generated/frame-modules/b2ab1d44e0bac8953f9c81c499fcaa453419b5ce2143b3071d55970b0c4a0e6e.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
@@ -12470,7 +12470,7 @@
         "synced-settings-gxnVrPmp.js",
         "project-context-C0dKoVxR.js",
         "commands-BzDNBFSB.js",
-        "module-CXUBYF0-.js",
+        "module-Dcf1psJE.js",
         "project-story-fixture-P4JDx-pG.js",
         "module-CWTLrySQ.js"
       ],
@@ -12612,8 +12612,8 @@
       "dynamicImports": [],
       "bytes": 3913
     },
-    "session-chat-draft.canvas-Dlnq2ven.js": {
-      "file": "src/catalog/generated/frame-modules/6c9a2b15fe9d607df98de11247c541d7fa4cd6769ffe2b2551240acd35c159bb.txt",
+    "session-chat-draft.canvas-ZMi5pGOn.js": {
+      "file": "src/catalog/generated/frame-modules/4591419f646930204225501aba1c079f06cc8abe851c0dd90456363cb33be79b.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
@@ -12625,8 +12625,8 @@
         "project-context-C0dKoVxR.js",
         "commands-BzDNBFSB.js",
         "dashboard-workspaces-BYVk_eqj.js",
-        "module-ovofE_Qg.js",
-        "module-ClSMPkOw.js"
+        "module-D9tU9dgw.js",
+        "module-BS9Upw9C.js"
       ],
       "dynamicImports": [],
       "bytes": 2866
@@ -12738,8 +12738,8 @@
       "dynamicImports": [],
       "bytes": 954
     },
-    "session-widget-CdU12NcI.js": {
-      "file": "src/catalog/generated/frame-modules/6a6d6c6d5c0a6b2d691f5620e87ad0de2035a1003e6ed5f4c479c3490e80c638.txt",
+    "session-widget-DR0VGyJP.js": {
+      "file": "src/catalog/generated/frame-modules/b486a03c2420b8b814876507fc353cb740f236b3e71670c59a58769ba39fa623.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
@@ -12777,9 +12777,9 @@
         "harness-param-inline-controls-BblEB0Rx.js",
         "api-file-url-CuACt6VF.js",
         "dashboard-workspaces-BYVk_eqj.js",
-        "module-ovofE_Qg.js",
+        "module-D9tU9dgw.js",
         "workspace-navigation-DQsDwPPS.js",
-        "module-ClSMPkOw.js",
+        "module-BS9Upw9C.js",
         "session-chat-notices-Besf_ofV.js",
         "session-harness-sign-in-qOL_vSi3.js",
         "session-harness-unavailable-PjSz24E_.js",
@@ -14474,8 +14474,8 @@
       "dynamicImports": [],
       "bytes": 932
     },
-    "update-channel-panel.canvas-D7zR1E5u.js": {
-      "file": "src/catalog/generated/frame-modules/43766b21d54e81fb088439a2ca30259e1c09c9b30ee7e5661940d5289bbf06da.txt",
+    "update-channel-panel.canvas-yhyecJDX.js": {
+      "file": "src/catalog/generated/frame-modules/de09911c168dd0f52ab471621589bf7385515f116631f1243a951a10f5e8ddd3.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
@@ -14490,8 +14490,8 @@
         "workbench-nySouSCM.js",
         "settings-resources-BbLNaXBp.js",
         "synced-settings-gxnVrPmp.js",
-        "module-CPXNtd_4.js",
-        "module-Dz4otA2T.js"
+        "module-B-7_qSBS.js",
+        "module-BjXP8CAb.js"
       ],
       "dynamicImports": [],
       "bytes": 5269
@@ -15397,8 +15397,8 @@
       "dynamicImports": [],
       "bytes": 3942
     },
-    "workspace-files.canvas-D3n48_PU.js": {
-      "file": "src/catalog/generated/frame-modules/2c0a869f9e84d8f85127dfbe0de37024c84116ee7a1bdcd88b0e85b7c9cfb539.txt",
+    "workspace-files.canvas-DswoNdh8.js": {
+      "file": "src/catalog/generated/frame-modules/638a27d27bdb2973d091573513fca08f3cedc2ff6f7ae53b2de52a3b487ac778.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
@@ -15408,7 +15408,7 @@
         "workbench-nySouSCM.js",
         "project-context-C0dKoVxR.js",
         "dashboard-workspaces-BYVk_eqj.js",
-        "module-ovofE_Qg.js",
+        "module-D9tU9dgw.js",
         "workspace-navigation-DQsDwPPS.js"
       ],
       "dynamicImports": [],
@@ -15437,8 +15437,8 @@
       "dynamicImports": [],
       "bytes": 1845
     },
-    "workspace-list.canvas-CjFR8tBK.js": {
-      "file": "src/catalog/generated/frame-modules/ec0ced70f1419ab6332175153a4c0d2fe38d196c7f3f295a8a51ee5839fead2a.txt",
+    "workspace-list.canvas-tae1_xEU.js": {
+      "file": "src/catalog/generated/frame-modules/464ae886264cc27db6fefc038db1e33aa0c253cc12bc89d2015e180f44ed178f.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
@@ -15448,7 +15448,7 @@
         "collections-hhDolRgv.js",
         "project-context-C0dKoVxR.js",
         "dashboard-workspaces-BYVk_eqj.js",
-        "module-ovofE_Qg.js",
+        "module-D9tU9dgw.js",
         "workspace-navigation-DQsDwPPS.js",
         "workspace-views-story-BB5dLh8q.js"
       ],
@@ -15564,8 +15564,8 @@
       "dynamicImports": [],
       "bytes": 569
     },
-    "workspace-widget-C3zOxtFU.js": {
-      "file": "src/catalog/generated/frame-modules/578745863ead87878329c5845fa68172dca1434798f9db486d2d6410ec4d5126.txt",
+    "workspace-widget-Cgi2JBnl.js": {
+      "file": "src/catalog/generated/frame-modules/00133d5a9ec95d3d78cf20601c6d625bd465c17dfa5db9235963cc167a219ae4.txt",
       "imports": [
         "rolldown-runtime-XKyaHtl9.js",
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
@@ -15578,7 +15578,7 @@
         "useQueries-DlGLXuks.js",
         "diff-size-BR8D-bcL-XRcMjGm7.js",
         "file-renderer-view-BjMAOpdg.js",
-        "module-ovofE_Qg.js"
+        "module-D9tU9dgw.js"
       ],
       "dynamicImports": [],
       "bytes": 3705

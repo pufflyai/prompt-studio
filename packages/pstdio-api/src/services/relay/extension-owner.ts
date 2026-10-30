@@ -14,7 +14,6 @@ export const startRelayExtension = async (input: {
   source: Awaited<ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>>[number];
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
-  notify: () => void;
   statusChanged: () => void;
   contextKey: string;
   snapshot: Awaited<ReturnType<ExtensionsRouteDeps["extensionRuntimeCatalog"]["get"]>>;
@@ -85,7 +84,6 @@ export const startRelayExtension = async (input: {
         await refreshFiles();
         await documents.synchronize(attemptSignal);
         await refreshFiles();
-        input.notify();
       },
       onError: () =>
         apiLogger.warn(
