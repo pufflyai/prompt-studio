@@ -7,7 +7,7 @@ import { resolvePiCommand } from "./cli";
 test("a private Pi script runs with bundled Bun and does not pass Bun mode to child tools", async () => {
   const root = mkdtempSync(join(tmpdir(), "pi-private-"));
   const entry = join(root, "cli.ts");
-  writeFileSync(entry, 'console.log(JSON.stringify({version:"0.73.1",bunMode:process.env.BUN_BE_BUN??null}));');
+  writeFileSync(entry, 'console.log(JSON.stringify({version:"0.79.0",bunMode:process.env.BUN_BE_BUN??null}));');
   try {
     const resolved = resolvePiCommand({ which: () => null, managed: () => entry });
     const child = Bun.spawn([...resolved.command, "--version"], {
@@ -15,7 +15,7 @@ test("a private Pi script runs with bundled Bun and does not pass Bun mode to ch
       stdout: "pipe",
       stderr: "pipe",
     });
-    expect(JSON.parse(await new Response(child.stdout).text())).toEqual({ version: "0.73.1", bunMode: null });
+    expect(JSON.parse(await new Response(child.stdout).text())).toEqual({ version: "0.79.0", bunMode: null });
     expect(await child.exited).toBe(0);
     expect(resolvePiCommand({ which: () => "/global/pi", managed: () => entry }).command).toEqual(["/global/pi"]);
   } finally {
