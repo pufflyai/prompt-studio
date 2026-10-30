@@ -1,14 +1,12 @@
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useSyncExternalStore } from "react";
 import {
   applyFileIconThemePreference,
   defaultFileIconThemePreferences,
   type FileIconThemePreferenceOption,
   isFileIconThemePreference,
 } from "./apply-file-icon-theme-preference";
-import { createBrowserStorage } from "./browser-storage";
-import { useUiScope } from "./ui-scope";
-
-const STORAGE_KEY = "file-icon-theme-preference";
+import { getFileIconPreferenceStore } from "./file-icon-preference-store";
+import { createPreferenceSurfaceOwner } from "./preference-surface-owner";
 
 // The bundled Seti theme is the preferred default; fall back to whatever is registered first.
 const getDefaultFileIconThemePreference = (themes: readonly FileIconThemePreferenceOption[]) =>
@@ -28,41 +26,20 @@ interface FileIconThemePreferenceProviderProps {
   themePreferences?: readonly FileIconThemePreferenceOption[];
 }
 
-const getInitialPreference = (themes: readonly FileIconThemePreferenceOption[]) => {
-  if (typeof window === "undefined") return getDefaultFileIconThemePreference(themes);
-
-  const stored = createBrowserStorage().getItem(STORAGE_KEY);
-  if (isFileIconThemePreference(stored, themes)) return stored;
-
-  return getDefaultFileIconThemePreference(themes);
-};
+const subscribeServer = () => () => {};
+const emptyChoice = () => null;
 
 export const FileIconThemePreferenceProvider = (props: FileIconThemePreferenceProviderProps) => {
-  const active = useUiScope()?.active ?? true;
   const { children, themePreferences = defaultFileIconThemePreferences } = props;
-  const [fileIconThemePreference, setFileIconThemePreference] = useState<string | null>(() =>
-    getInitialPreference(themePreferences),
+  const store = getFileIconPreferenceStore();
+  const choice = useSyncExternalStore(
+    store?.subscribe ?? subscribeServer,
+    store?.getSnapshot ?? emptyChoice,
+    emptyChoice,
   );
-
-  useEffect(() => {
-    const stored = createBrowserStorage().getItem(STORAGE_KEY);
-    if (active && isFileIconThemePreference(stored, themePreferences) && stored !== fileIconThemePreference) {
-      setFileIconThemePreference(stored);
-      return;
-    }
-    const resolved = isFileIconThemePreference(fileIconThemePreference, themePreferences)
-      ? fileIconThemePreference
-      : getDefaultFileIconThemePreference(themePreferences);
-
-    if (resolved !== fileIconThemePreference) {
-      setFileIconThemePreference(resolved);
-      return;
-    }
-
-    if (!active) return;
-    applyFileIconThemePreference(resolved, themePreferences);
-  }, [fileIconThemePreference, themePreferences, active]);
-
+  const fileIconThemePreference = isFileIconThemePreference(choice, themePreferences)
+    ? choice
+    : getDefaultFileIconThemePreference(themePreferences);
   const activeFileIconTheme = themePreferences.find((theme) => theme.id === fileIconThemePreference);
 
   return (
@@ -72,12 +49,13 @@ export const FileIconThemePreferenceProvider = (props: FileIconThemePreferencePr
         fileIconThemePreferences: themePreferences,
         activeFileIconTheme,
         setFileIconThemePreference: (preference) => {
-          createBrowserStorage().setItem(STORAGE_KEY, preference);
-          setFileIconThemePreference(preference);
+          store?.setChoice(preference);
         },
       }}
     >
-      {children}
+      <iconSurfaces.Owner>
+        <FileIconThemePreferenceSurface>{children}</FileIconThemePreferenceSurface>
+      </iconSurfaces.Owner>
     </FileIconThemePreferenceContext>
   );
 };
@@ -90,4 +68,16 @@ export const useFileIconThemePreference = () => {
   }
 
   return context;
+};
+
+const iconSurfaces = createPreferenceSurfaceOwner();
+
+export const FileIconThemePreferenceSurface = (props: { children: ReactNode }) => {
+  const { fileIconThemePreference, fileIconThemePreferences } = useFileIconThemePreference();
+  const { scope, surfaces, count } = iconSurfaces.useSurface();
+  useEffect(() => {
+    if (scope ? scope.active : count === 0 && !surfaces?.getSnapshot())
+      applyFileIconThemePreference(fileIconThemePreference, fileIconThemePreferences);
+  }, [fileIconThemePreference, fileIconThemePreferences, scope, surfaces, count]);
+  return props.children;
 };

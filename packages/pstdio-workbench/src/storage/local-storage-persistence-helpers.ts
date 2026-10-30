@@ -36,6 +36,16 @@ export const workbenchStoragePersistenceKey = (
   scope: string | undefined,
 ) => `${namespace}:${kind}:${scope ?? "global"}`;
 
+/** Preserve the legacy host key while keeping every explicit scope distinct. */
+export const workbenchHostStorageKey = (
+  namespace: string,
+  kind: "status-bar" | "layout-generation",
+  scope: string | undefined,
+) =>
+  scope === undefined
+    ? workbenchStoragePersistenceKey(namespace, kind, undefined)
+    : `${namespace}:${kind}:scope:${JSON.stringify(scope)}`;
+
 const createMemoryStorage = (): WorkbenchStorageLike => {
   const map = new Map<string, string>();
   return {

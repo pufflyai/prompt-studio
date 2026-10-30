@@ -2,6 +2,20 @@ import { expect, test } from "bun:test";
 import { createMemoryWorkbenchPageLocationBrowser } from "./controllers/page-location/page-location-memory";
 import { createWorkbench } from "./workbench-core";
 
+test("workbench history works on HTTP origins without randomUUID", async () => {
+  const previous = globalThis.crypto;
+  Object.defineProperty(globalThis, "crypto", {
+    value: { getRandomValues: previous.getRandomValues.bind(previous) },
+    configurable: true,
+  });
+  try {
+    const workbench = createWorkbench({ pageLocationBrowser: createMemoryWorkbenchPageLocationBrowser() });
+    await workbench.dispose();
+  } finally {
+    Object.defineProperty(globalThis, "crypto", { value: previous, configurable: true });
+  }
+});
+
 test("background navigation leaves the window history with the active workbench", async () => {
   const startPage = { extensionId: "pstdio", kind: "page", id: "start" } as const;
   const browser = createMemoryWorkbenchPageLocationBrowser();

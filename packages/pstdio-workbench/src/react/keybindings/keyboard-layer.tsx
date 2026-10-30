@@ -15,7 +15,8 @@ import { useShortcutCatalog } from "./use-shortcut-catalog";
 export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const active = useUiScope()?.active ?? true;
-  const { state, catalog } = useShortcutCatalog(workbench);
+  const state = useWorkbenchStore(workbench.keyboard.store, (state) => state);
+  const { catalog } = useShortcutCatalog(workbench, active && (state.active || state.preview));
   useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const bubble = useSlotRecipe({ key: "keyboardBubble" })();
   const palette = useSlotRecipe({ key: "palette" })();
@@ -46,8 +47,13 @@ export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
     setQuery("");
     setSearch(false);
     setBrowseDirection(undefined);
-    if (active && state.active) queueMicrotask(() => heading.current?.focus({ preventScroll: true }));
-  }, [state.path, selection, state.active, active]);
+  }, [state.path, selection, state.active]);
+  useEffect(() => {
+    if (active && state.active && !search && !browseDirection)
+      queueMicrotask(() => {
+        if (workbench.activation.isActive()) heading.current?.focus({ preventScroll: true });
+      });
+  }, [active, state.active, search, browseDirection, workbench]);
   useLayoutEffect(() => {
     if (active && search) queryInput.current?.focus();
   }, [search, active]);

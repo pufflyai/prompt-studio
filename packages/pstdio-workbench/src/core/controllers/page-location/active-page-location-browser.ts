@@ -25,7 +25,7 @@ const entryKey = (entry: WorkbenchPageBrowserEntry) => JSON.stringify(unwrap(ent
 
 /** One window history projects the active owner's history once the browser is shared. */
 const createWindowHistory = (browser: WorkbenchPageLocationBrowser) => {
-  const windowId = crypto.randomUUID();
+  const windowId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
   const owners = new Set<BrowserOwner>();
   const entries = [entryKey(browser.current())];
   let index = 0;

@@ -1,5 +1,6 @@
 import { getKeybindingSteps, type RegisteredKeybinding } from "../../registries/keybindings/keybinding-registry";
 import { sharedShortcutLayer, shortcutLayers } from "../../registries/keybindings/shortcut-preferences";
+import type { NavigationTarget } from "../../registries/navigation/navigation-registry";
 import { getNavigationTargetKey } from "../../registries/navigation/navigation-target-key";
 import { scopeWorkbenchResourceContextValues } from "../../registries/resources/resource-registry";
 import { matchesContextExpression } from "../../shared/context/context-key-service";
@@ -26,7 +27,8 @@ export interface ResolvedShortcut {
 }
 export const shortcutLabel = (core: WorkbenchCore, binding: RegisteredKeybinding) =>
   binding.label ?? shortcutActionLabel(core, binding.action);
-const applicable = (core: WorkbenchCore, binding: RegisteredKeybinding, target?: KeyboardPresentation) => {
+type AvailabilityCore = Pick<WorkbenchCore, "context" | "commands" | "keyboard">;
+const applicable = (core: AvailabilityCore, binding: RegisteredKeybinding, target?: KeyboardPresentation) => {
   const values = target
     ? scopeWorkbenchResourceContextValues(core.context.snapshot(), target.resource)
     : core.context.snapshot();
@@ -42,6 +44,34 @@ const applicable = (core: WorkbenchCore, binding: RegisteredKeybinding, target?:
     core.commands.isCommandEnabled(binding.action.commandId, args, context)
   );
 };
+const isContextual = (binding: RegisteredKeybinding) =>
+  binding.targetScope ? binding.targetScope !== "project" : binding.layer === "current";
+
+/** Direct input dispatch only needs the assigned binding's live availability. */
+export const isShortcutBindingAvailable = (
+  core: AvailabilityCore,
+  binding: RegisteredKeybinding,
+  targets: () => KeyboardPresentation[] = () => core.keyboard.visibleTargets(),
+) =>
+  isContextual(binding)
+    ? targets().some(
+        (target) => (binding.targetScope !== "resource" || target.resource) && applicable(core, binding, target),
+      )
+    : applicable(core, binding);
+
+/** A tooltip for one direct action does not need discovery labels or layered shortcuts. */
+export const directShortcutHint = (
+  core: AvailabilityCore & Pick<WorkbenchCore, "keybindings">,
+  action: NavigationTarget,
+) => {
+  const key = getNavigationTargetKey(action);
+  const binding = core.keybindings
+    .listActiveKeybindings()
+    .reverse()
+    .find((binding) => getNavigationTargetKey(binding.action) === key && isShortcutBindingAvailable(core, binding));
+  return binding ? getKeybindingSteps(binding.keybinding).join(" ") : undefined;
+};
+
 export const resolveShortcutCatalog = (
   core: WorkbenchCore,
   visibleTargets = visibleKeyboardTargets(core),
@@ -59,7 +89,7 @@ export const resolveShortcutCatalog = (
     const navigates = binding.action.kind === "page" || navigation.has(getNavigationTargetKey(binding.action));
     const prefix: string[] = [];
     if (binding.layer) prefix.push(shortcutLayers[sharedShortcutLayer(binding.layer)]);
-    const contextual = binding.targetScope ? binding.targetScope !== "project" : binding.layer === "current";
+    const contextual = isContextual(binding);
     let targets = contextual ? visibleTargets.filter((target) => applicable(core, binding, target)) : [];
     if (binding.targetScope === "resource") {
       const resources = new Set<string>();

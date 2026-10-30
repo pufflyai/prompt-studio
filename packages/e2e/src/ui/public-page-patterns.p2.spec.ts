@@ -185,9 +185,11 @@ test("Pigeon sends a local message and keeps it in Sent", async ({ page }) => {
   await inbox.getByRole("textbox", { name: "Message body", exact: true }).fill("The examples are ready.");
   const saved = waitForExampleSave(page, "pigeon", "sent", "Showcase review");
   await inbox.getByRole("button", { name: "Send", exact: true }).click();
+  const folderSaved = waitForExampleSave(page, "pigeon", "folder", "Sent");
   await folders.getByRole("button", { name: "Sent", exact: true }).click();
   await expect(inbox.getByText("Showcase review", { exact: true })).toBeVisible();
   await saved;
+  await folderSaved;
   await page.reload();
   await expect(inbox.getByText("Showcase review", { exact: true })).toBeVisible();
   await inbox.getByText("Showcase review", { exact: true }).click();

@@ -19,6 +19,8 @@ interface ColorInputProps {
 
 export const ColorInput = (props: ColorInputProps) => {
   const surfaceActive = useUiScope()?.active ?? true;
+  const activeRef = useRef(surfaceActive);
+  activeRef.current = surfaceActive;
   const {
     id,
     defaultValue,
@@ -79,7 +81,7 @@ export const ColorInput = (props: ColorInputProps) => {
     const root = event.currentTarget;
 
     setTimeout(() => {
-      if (!root.contains(root.ownerDocument.activeElement)) setOpen(false);
+      if (activeRef.current && !root.contains(root.ownerDocument.activeElement)) setOpen(false);
     });
   };
 
@@ -118,10 +120,16 @@ export const ColorInput = (props: ColorInputProps) => {
 
   const rootProps = {
     value: parseColor(value),
-    open,
-    onOpenChange: (details: { open: boolean }) => setOpen(details.open),
-    onFocusOutside: () => setOpen(false),
-    onInteractOutside: () => setOpen(false),
+    open: surfaceActive && open,
+    onOpenChange: (details: { open: boolean }) => {
+      if (surfaceActive) setOpen(details.open);
+    },
+    onFocusOutside: () => {
+      if (surfaceActive) setOpen(false);
+    },
+    onInteractOutside: () => {
+      if (surfaceActive) setOpen(false);
+    },
     onBlur: handleBlur,
     onValueChange: (details: ColorPickerValueChangeDetails) => handleChange(details.value.toString("hex")),
     disabled: readOnly,

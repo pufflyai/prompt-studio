@@ -33,7 +33,12 @@ export const attachBenchmarkPerformance = async (app: PackagedApp, name: string,
             ),
         );
       },
-      { message: "Benchmark requires backend and workbench CPU/memory capture" },
+      {
+        message: "Benchmark requires backend and workbench CPU/memory capture",
+        // Observe the final sample throughout the existing deadline. The default
+        // one-second backoff can stop polling before a two-second probe completes.
+        intervals: [100],
+      },
     )
     .toBe(true)
     .catch((error: unknown) => {

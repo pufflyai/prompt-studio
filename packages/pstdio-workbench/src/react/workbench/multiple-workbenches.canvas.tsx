@@ -1,11 +1,20 @@
 import { Box, Button, ChakraProvider, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
-import { ScopedDialog as Dialog, ScopedMenu as Menu, Portal, psTheme, useFileIconThemePreference } from "@pstdio/ui";
+import {
+  ScopedDialog as Dialog,
+  ScopedMenu as Menu,
+  Portal,
+  psTheme,
+  useFileIconThemePreference,
+  useThemePreference,
+} from "@pstdio/ui";
+import { ColorInput } from "@pstdio/ui/param-editor";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createWorkbench, createWorkbenchStore, type WorkbenchCore } from "../../core";
 import { createLocalStorageWorkbenchPersistence } from "../../storage";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { Workbench } from "./workbench";
 
 const Editor = (props: {
@@ -28,6 +37,7 @@ const Editor = (props: {
         {name} choose icons
       </Button>
       <Input aria-label={`${name} draft`} value={draft} onChange={(event) => setDraft(event.target.value)} />
+      <ColorInput id="color" name={`${name} color`} defaultValue="#ff0000" description="" onChange={() => {}} />
       {richText ? (
         <Box role="group" aria-label={`${name} rich text`} minH="xs">
           <MarkdownEditor defaultState="" isEditable fullWidth scrollable={false} />
@@ -143,10 +153,18 @@ const createExample = (
 };
 
 const MultipleWorkbenches = (props: { richText?: boolean }) => {
-  const [workbenches] = useState(() => {
+  const [workbenches, setWorkbenches] = useState<WorkbenchCore[]>([]);
+  useEffect(() => {
     const storage = createExampleStorage();
-    return [createExample(storage, "A", true, props.richText), createExample(storage, "B", false, props.richText)];
-  });
+    const examples = [
+      createExample(storage, "A", true, props.richText),
+      createExample(storage, "B", false, props.richText),
+    ];
+    setWorkbenches(examples);
+    return () => {
+      for (const workbench of examples) void workbench.dispose();
+    };
+  }, [props.richText]);
   const select = (selected: WorkbenchCore) => {
     for (const workbench of workbenches) if (workbench !== selected) workbench.activation.setActive(false);
     selected.activation.setActive(true);
@@ -163,7 +181,7 @@ const MultipleWorkbenches = (props: { richText?: boolean }) => {
           <Button
             size="sm"
             onClick={() =>
-              workbenches[0]!.notifications.show({
+              workbenches[0]?.notifications.show({
                 id: "same-error",
                 level: "error",
                 title: "A background failure",
@@ -197,8 +215,15 @@ export const RetainedProjects: Story = {
 };
 
 const StandaloneExample = () => {
-  const [workbench] = useState(() => createExample(createExampleStorage(), "A", true));
-  return <Workbench workbench={workbench} />;
+  const [workbench, setWorkbench] = useState<WorkbenchCore>();
+  useEffect(() => {
+    const example = createExample(createExampleStorage(), "A", true);
+    setWorkbench(example);
+    return () => {
+      void example.dispose();
+    };
+  }, []);
+  return workbench ? <Workbench workbench={workbench} /> : null;
 };
 
 export const Standalone: Story = {
@@ -209,4 +234,26 @@ export const Standalone: Story = {
 export const RichTextEditors: Story = {
   id: "pstdio-workbench-reference-core-api-multiple-workbenches--rich-text-editors",
   args: { richText: true },
+};
+
+const ThemeControls = () => {
+  const { themePreference, toggleThemePreference } = useThemePreference();
+  return <Button onClick={toggleThemePreference}>Outer theme: {themePreference}</Button>;
+};
+
+const InheritedThemeExample = () => {
+  const [generation, setGeneration] = useState(0);
+  const [storage] = useState(createExampleStorage);
+  return (
+    <WorkbenchThemeProvider themeStorage={storage}>
+      <ThemeControls />
+      <Button onClick={() => setGeneration(generation + 1)}>Remount workbenches</Button>
+      <MultipleWorkbenches key={generation} />
+    </WorkbenchThemeProvider>
+  );
+};
+
+export const InheritedTheme: Story = {
+  id: "pstdio-workbench-reference-core-api-multiple-workbenches--inherited-theme",
+  render: () => <InheritedThemeExample />,
 };

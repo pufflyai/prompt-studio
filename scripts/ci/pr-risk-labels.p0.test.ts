@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { finish, type PullRequest, prepare, type Status } from "./pr-risk-labels";
+import { finish, type PullRequest, type PullRequestFile, prepare, type Status } from "./pr-risk-labels";
 
 function fixture(labels: string[] = []) {
   let pull: PullRequest & { merged: boolean } = {
@@ -12,7 +12,7 @@ function fixture(labels: string[] = []) {
     labels: labels.map((name) => ({ name })),
   };
   const statuses: Array<{ sha: string } & Status> = [];
-  let files = [
+  let files: PullRequestFile[] = [
     { filename: "packages/sdk/package.json", status: "modified" },
     { filename: "extensions/example/package.json", status: "modified" },
   ];
@@ -61,6 +61,70 @@ async function prepareOpen(api: Parameters<typeof prepare>[0]) {
   if (!snapshot) throw new Error("Expected an open pull request");
   return snapshot;
 }
+
+describe("generated Canvas catalog refreshes", () => {
+  test("keeps extension source moved outside the extension directory separate", async () => {
+    const { api, statuses, setFiles, setPull } = fixture(["sdk", "extensions"]);
+    setFiles([
+      { filename: "packages/sdk/src/client/projects.ts", status: "modified" },
+      { filename: "extensions/canvas/src/catalog/generated/frame-bundle.ts", status: "modified" },
+      { filename: "moved-package.json", status: "renamed", previous_filename: "extensions/canvas/package.json" },
+    ]);
+    setPull({ changed_files: 3 });
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
+    expect(statuses.at(-1)?.state).toBe("failure");
+  });
+
+  test("allows SDK changes with a refresh of the generated Canvas catalog", async () => {
+    const { api, statuses, setFiles, setPull } = fixture(["sdk", "extensions"]);
+    const generated = [
+      "frame-bundle.ts",
+      "frame-themes.json",
+      "migration-ledger.json",
+      "native-manifest.json",
+      "source-information.json",
+      "stories.json",
+    ];
+    setFiles([
+      { filename: "packages/sdk/src/client/projects.ts", status: "modified" },
+      ...generated.map((name) => ({
+        filename: `extensions/canvas/src/catalog/generated/${name}`,
+        status: "modified",
+      })),
+    ]);
+    setPull({ changed_files: generated.length + 1 });
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
+    expect(statuses.at(-1)?.state).toBe("success");
+  });
+
+  test.each([
+    ["extensions/canvas/src/canvases/previews.tsx", "modified"],
+    ["extensions/canvas/scripts/build-native-previews.ts", "modified"],
+    ["extensions/canvas/src/catalog/generated/custom.ts", "modified"],
+    ["extensions/example/extension.ts", "modified"],
+    ["extensions/canvas/src/catalog/generated/frame-bundle.ts", "added"],
+    ["extensions/canvas/src/catalog/generated/frame-bundle.ts", "removed"],
+    ["extensions/canvas/src/catalog/generated/frame-bundle.ts", "renamed"],
+  ])("keeps authored extension changes separate from SDK changes: %s (%s)", async (filename, status) => {
+    const { api, statuses, setFiles, setPull } = fixture(["sdk", "extensions"]);
+    setFiles([
+      { filename: "packages/sdk/src/client/projects.ts", status: "modified" },
+      { filename: "extensions/canvas/src/catalog/generated/stories.json", status: "modified" },
+      { filename, status },
+    ]);
+    setPull({ changed_files: 3 });
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
+    expect(statuses.at(-1)?.state).toBe("failure");
+  });
+
+  test("cannot allow a generated catalog refresh from an incomplete diff", async () => {
+    const { api, statuses, setFiles, setPull } = fixture(["sdk", "extensions"]);
+    setFiles([{ filename: "extensions/canvas/src/catalog/generated/frame-bundle.ts", status: "modified" }]);
+    setPull({ changed_files: 2 });
+    await finish(api, await prepareOpen(api), "success", "sdk,extensions");
+    expect(statuses.at(-1)?.state).toBe("error");
+  });
+});
 
 describe("SDK and extension separation", () => {
   test("closed merged pull requests preserve the existing commit verdict", async () => {

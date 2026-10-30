@@ -16,10 +16,11 @@ export const collectChakraThemeVariables = (root?: HTMLElement | null) => {
 
 export const resolveActiveTheme = (fallback: ThemePreference, root?: HTMLElement | null): ThemePreference => {
   if (typeof document === "undefined") return fallback;
-  const value = (root ?? document.documentElement).getAttribute("data-theme");
+  const target = root ?? document.documentElement;
+  const value = target.getAttribute("data-theme");
   if (value === "dark" || value === "light") return value;
 
-  const colorMode = document.documentElement.getAttribute("data-color-mode");
+  const colorMode = target.getAttribute("data-color-mode");
   return colorMode === "dark" || colorMode === "light" ? colorMode : fallback;
 };
 

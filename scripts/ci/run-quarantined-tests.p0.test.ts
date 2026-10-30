@@ -1,5 +1,18 @@
 import { expect, test } from "bun:test";
-import { quarantineGroups } from "./run-quarantined-tests";
+import { quarantineGroups, quarantineTestCommand } from "./run-quarantined-tests";
+
+test("Windows Playwright quarantine preserves its configured allowance instead of Bun's fixture override", () => {
+  const files = ["src/e2e/packaged-launch.p3.bench.ts"];
+  expect(
+    quarantineTestCommand("packaged-desktop-benchmark", "@pstdio/desktop", "test:benchmark", files, "win32"),
+  ).toEqual(["bun", "run", "test:benchmark", `./${files[0]}`]);
+  expect(quarantineTestCommand("packaged-desktop", "@pstdio/desktop", "test:packaged", files, "win32")).not.toContain(
+    "--timeout=15000",
+  );
+  expect(quarantineTestCommand("bun", "harness-pi", "test", files, "win32")).toContain("--timeout=15000");
+  expect(quarantineTestCommand("bun", "@pstdio/desktop", "test", files, "win32")).toContain("--timeout=15000");
+  expect(quarantineTestCommand("bun", "@pstdio/desktop", "test", files, "linux")).not.toContain("--timeout=15000");
+});
 
 const packages = [
   { name: "database", dir: "packages/db", dependencies: [] },

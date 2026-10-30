@@ -19,7 +19,7 @@ const { positionals, values } = parseArgs({
     checkout: { type: "string", multiple: true },
     suites: { type: "string", default: suiteIds.join(",") },
     suite: { type: "string" },
-    samples: { type: "string", default: "10" },
+    samples: { type: "string", default: "1" },
     sha: { type: "string", default: "" },
     cache: { type: "string", default: join(repoRoot, "__test-tmp__", "benchmarks") },
     out: { type: "string", default: "benchmark-results" },
@@ -55,6 +55,7 @@ if (command === "verify") {
   if (!suite) throw new Error(usage);
   if (!(await sampleSuite(context(), suite, resolve(values.out)))) process.exitCode = 1;
 } else if (command === "run") {
+  if (process.env.CI && Number(values.samples) !== 1) throw new Error("CI executes each benchmark once");
   const failures = await run({
     checkouts: (values.checkout ?? []).map(parseCheckout),
     suites: listOf(values.suites),

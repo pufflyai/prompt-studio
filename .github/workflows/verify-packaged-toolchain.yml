@@ -94,15 +94,15 @@ jobs:
           bun run --cwd scripts verify:packages --profile "${{ inputs.profile }}"
           --shard "${{ matrix.shard }}/${{ matrix.shards }}"
           ${{ inputs.artifact_run_id != '' && '--prebuilt' || '' }}
-      - name: Run quarantined Windows compiled CLI cases
-        if: inputs.profile == 'full' && runner.os == 'Windows' && matrix.shard == 1 && !cancelled() && steps.toolchain.outcome == 'success'
+      - name: Run quarantined compiled CLI cases
+        if: inputs.profile == 'full' && matrix.shard == 1 && !cancelled() && steps.toolchain.outcome == 'success'
         continue-on-error: true
         env:
           E2E_TEST_LANE: quarantine
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/${{ runner.os == 'Windows' && 'pstdio.exe' || 'pstdio' }}
         run: bun scripts/ci/run-quarantined-tests.ts packaged-bun --scope e2e --prebuilt
       - name: Require every compiled CLI quarantine case to have executed
-        if: inputs.profile == 'full' && runner.os == 'Windows' && matrix.shard == 1 && !cancelled() && steps.toolchain.outcome == 'success'
+        if: inputs.profile == 'full' && matrix.shard == 1 && !cancelled() && steps.toolchain.outcome == 'success'
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun --scope e2e
       - name: Preserve packaged toolchain evidence
         if: always()

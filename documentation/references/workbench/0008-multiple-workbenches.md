@@ -24,9 +24,15 @@ The host must keep exactly one workbench active. Closing a workbench is a separa
 
 ## Saved view state
 
-Pass a distinct, stable `scope` to `createLocalStorageWorkbenchPersistence` for each retained project. Use the same storage object and namespace for the window. Tree expansion, status order, and layout write generations belong to that scope. User preferences remain shared and are updated from the current stored values.
+Pass a distinct, stable `scope` to `createLocalStorageWorkbenchPersistence` for each retained project. Use the same storage object and namespace for the window. Tree expansion, status order, and layout write generations belong to that scope. User preferences remain shared. Explicit scopes, including `"global"`, have distinct status-order and write-generation keys; leaving the scope unset preserves the existing host keys.
 
 `createLocalStorageWorkbenchPersistence` supplies `storageScope` to `createWorkbench`. `Workbench` uses that identity to scope UI host storage. Hosts with other persistence adapters can set `storageScope` directly on `createWorkbench`. Leaving it unset preserves existing standalone storage keys. This covers collection filters, table settings, and tab visibility. Continue to supply `HostStorageProvider` when the host stores UI state outside browser storage. Diff viewers own their transient selection, search, and expansion state per component.
+
+## Theme ownership
+
+An enclosing `WorkbenchThemeProvider` owns its preference storage, contributions, and controls. Nested workbenches reuse that context and apply it to their own roots. Remounting a workbench does not reset the enclosing choice. Only an active surface applies document styling.
+
+Without an enclosing provider, providers using the same theme storage adapter and preference key share one live choice per window. Mode preference keys remain separate. File-icon choices are shared per window. A provider whose contributions do not include the chosen theme displays a fallback without saving it over the choice. Failed browser storage writes preserve the choice for the current window session.
 
 ## Custom views and overlays
 

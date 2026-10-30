@@ -116,7 +116,11 @@ export {
   type ThemePreferenceOption,
   type ThemePreferenceTokens,
 } from "@/utils/apply-theme-preference";
-export { FileIconThemePreferenceProvider, useFileIconThemePreference } from "@/utils/file-icon-theme-preference";
+export {
+  FileIconThemePreferenceProvider,
+  FileIconThemePreferenceSurface,
+  useFileIconThemePreference,
+} from "@/utils/file-icon-theme-preference";
 export { getFileTypeIcon } from "@/utils/get-file-type-icon";
 export { type HostStorage, HostStorageProvider, useHostStorage } from "@/utils/host-storage";
 export { installPrismGlobal } from "@/utils/prism";
@@ -126,6 +130,7 @@ export {
   getInitialThemePreference,
   ThemePreferenceProvider,
   type ThemePreferenceStorage,
+  ThemePreferenceSurface,
   useThemePreference,
 } from "@/utils/theme-preference";
 export { HostStorageScope } from "./utils/host-storage";

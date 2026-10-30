@@ -31,8 +31,9 @@ const focusSelectedPresentation = (
         getComputedStyle(element).visibility !== "hidden" &&
         !element.matches(':disabled,[type="hidden"]'),
     );
-  (focus ?? root)?.focus({ preventScroll: true });
-  return Boolean(focus && document.activeElement === focus);
+  const target = focus ?? root;
+  target?.focus({ preventScroll: true });
+  return Boolean(target && document.activeElement === target);
 };
 
 export const useKeyboardModeFocus = (
@@ -47,18 +48,21 @@ export const useKeyboardModeFocus = (
   useEffect(() => {
     if (!active || state.active || !state.restoreFocus || !state.selectedId) return;
     const selected = { selectedId: state.selectedId, selectedRegion: state.selectedRegion };
-    if (focusSelectedPresentation(selected, surface?.current ?? document)) return;
+    const restore = () => {
+      if (!focusSelectedPresentation(selected, surface?.current ?? document)) return false;
+      workbench.keyboard.completeFocusRestore();
+      return true;
+    };
+    if (restore()) return;
     // A tab header can be ready before its editor mounts. Keep the focus request until the view is ready.
     const observer = new MutationObserver(() => {
       const current = workbench.keyboard.store.getState();
-      if (
-        current.active ||
-        current.selectedId !== selected.selectedId ||
-        focusSelectedPresentation(selected, surface?.current ?? document)
-      )
-        observer.disconnect();
+      if (current.active || current.selectedId !== selected.selectedId || restore()) observer.disconnect();
     });
-    const cancel = () => observer.disconnect();
+    const cancel = () => {
+      observer.disconnect();
+      workbench.keyboard.completeFocusRestore();
+    };
     observer.observe(document.body, { childList: true, subtree: true });
     document.addEventListener("pointerdown", cancel, { once: true });
     return () => {

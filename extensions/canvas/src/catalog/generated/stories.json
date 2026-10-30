@@ -8058,7 +8058,7 @@
       "source": "packages/pstdio-workbench/src/react/workbench/multiple-workbenches.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Multiple workbenches",
-      "sourceHash": "d4c6da0fee0b2233877ebebedd681bb22372d82452c1b3e23e845791a1f7924d",
+      "sourceHash": "f256d0da9868d5bbb25a02d07040fe74d1632ff53166821eef70f53e7e549a8c",
       "component": "MultipleWorkbenches"
     },
     {
@@ -8068,7 +8068,7 @@
       "source": "packages/pstdio-workbench/src/react/workbench/multiple-workbenches.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Multiple workbenches",
-      "sourceHash": "d4c6da0fee0b2233877ebebedd681bb22372d82452c1b3e23e845791a1f7924d",
+      "sourceHash": "f256d0da9868d5bbb25a02d07040fe74d1632ff53166821eef70f53e7e549a8c",
       "component": "MultipleWorkbenches"
     },
     {
@@ -8078,7 +8078,17 @@
       "source": "packages/pstdio-workbench/src/react/workbench/multiple-workbenches.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Core API/Multiple workbenches",
-      "sourceHash": "d4c6da0fee0b2233877ebebedd681bb22372d82452c1b3e23e845791a1f7924d",
+      "sourceHash": "f256d0da9868d5bbb25a02d07040fe74d1632ff53166821eef70f53e7e549a8c",
+      "component": "MultipleWorkbenches"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-core-api-multiple-workbenches--inherited-theme",
+      "name": "Inherited Theme",
+      "exportName": "InheritedTheme",
+      "source": "packages/pstdio-workbench/src/react/workbench/multiple-workbenches.canvas.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Core API/Multiple workbenches",
+      "sourceHash": "f256d0da9868d5bbb25a02d07040fe74d1632ff53166821eef70f53e7e549a8c",
       "component": "MultipleWorkbenches"
     },
     {
