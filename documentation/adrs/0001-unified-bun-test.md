@@ -38,7 +38,7 @@ Maintaining two test frameworks adds unnecessary tooling complexity.
 
 The Storybook test runner checks stories without `play` for rendering errors. A `play` function adds assertions for interactions and state changes. Rendering alone does not prove those behaviors. See the [Storybook runner contract](https://storybook.js.org/docs/writing-tests/integrations/test-runner).
 
-Add `play` functions to stories that cover important interactions. See [Storybook Play Coverage](../guides/development/0003-storybook-coverage.md).
+Add `play` functions to stories that cover important interactions. See [Storybook Play Coverage](../guides/development/0003-canvas-coverage.md).
 
 ### Lost: vitest watch mode integration
 
@@ -60,7 +60,7 @@ bun run storybook          # start dev server
 bun run test-storybook     # run interaction tests against it
 
 # CI
-bun run build-storybook    # build static storybook
-bunx http-server storybook-static -p 6006 &
+bun run build:preview-tests    # build static storybook
+bunx http-server canvas-test-static -p 6006 &
 bun run test-storybook --url http://localhost:6006
 ```

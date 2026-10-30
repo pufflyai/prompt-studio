@@ -10,8 +10,8 @@ Run from the repository root:
 
 ```sh
 bun run dev:playwright -- --desktop
-bun run --cwd packages/e2e src/perf/planner-moves.stress.ts
-bun run --cwd extensions/pstdio-planner src/commands/reorder-ticket.stress.fixture.ts
+bun run --cwd packages/e2e src/perf/planner-moves.diagnostic.ts
+bun run --cwd extensions/pstdio-planner src/commands/reorder-ticket.diagnostic.ts
 bun run dev:playwright:down
 ```
 

@@ -30,6 +30,8 @@ export const installKeyboardShortcuts = (
       event.target.closest(
         'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"]',
       );
+    // Global chords hold a modifier; plain editor chords remain available outside text fields.
+    if (editable && !event.altKey && !event.ctrlKey && !event.metaKey) return;
     const shortcut = shortcuts().find(
       (candidate) => (!editable || candidate.allowInInputs !== false) && matchesKeyboardShortcut(event, candidate),
     );

@@ -1,5 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "include": [".storybook/**/*.ts", ".storybook/**/*.tsx", "stories/**/*.ts", "stories/**/*.tsx", "themes/**/*.json"],
-  "compilerOptions": { "resolveJsonModule": true, "types": ["bun", "vite/client"] }
-}

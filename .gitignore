@@ -187,7 +187,7 @@ clients/desktop/.sidecar
 clients/desktop/out
 clients/desktop/test-results
 
-*/**/storybook-static
+*/**/canvas-test-static
 
 packages/pstdio/README.md
 packages/pstdio/.readme.generated

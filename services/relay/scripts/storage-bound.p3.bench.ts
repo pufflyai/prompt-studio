@@ -1,3 +1,4 @@
+import { findBudgetFailures, relayStorageBudget } from "pstdio-benchmarks";
 // Manual benchmark for PRD 0014 R23: relay storage for one document after 10,000 updates.
 // Run with `bun run --cwd services/relay bench:storage-bound`. It is not part of CI.
 // It starts throwaway PostgreSQL and RustFS containers on loopback ports and removes them afterwards.
@@ -115,14 +116,22 @@ try {
   const elapsedMs = Math.round(performance.now() - started);
   await fixture.close();
   console.table(samples);
-  const passed = samples.every((sample) => sample.stored < sample.limit);
+  const failures = findBudgetFailures(
+    samples.map((sample, index) => ({
+      name: `Stored bytes sample ${index + 1}`,
+      unit: "share",
+      value: sample.stored / sample.limit,
+      budget: relayStorageBudget.value,
+    })),
+  );
+  const passed = !failures.length;
   // Stored bytes must stay below the limit, so the budget for their ratio is 1.
   recordMeasurement({
     metric: "stored-to-limit",
     label: "Peak stored bytes as a share of the limit",
     unit: "share",
     value: Math.max(...samples.map((sample) => sample.stored / sample.limit)),
-    budget: 1,
+    budget: relayStorageBudget.value,
   });
   recordMeasurement({ metric: "updates", label: "Apply 10,000 updates", unit: "ms", value: elapsedMs });
   console.log(
@@ -133,6 +142,7 @@ try {
         workload: { updates, updatesPerState, updateBytes, gracePeriod: "7 days (default)" },
         metrics: { maxStoredToLimit: Math.max(...samples.map((sample) => sample.stored / sample.limit)), elapsedMs },
         passed,
+        failures,
       },
       null,
       2,

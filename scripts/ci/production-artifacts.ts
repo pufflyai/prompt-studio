@@ -54,6 +54,7 @@ export const productionPolicyFiles = () =>
     "scripts/verify/verify-packages.ts",
     "scripts/verify/packaged-build.ts",
     "scripts/verify/packaged-runtime-smoke.ts",
+    "scripts/verify/packaged-runtime-tests.ts",
     ".github/workflows/test-and-build.yml",
     ".github/workflows/release-packages.yml",
     ".github/workflows/release-desktop.yml",

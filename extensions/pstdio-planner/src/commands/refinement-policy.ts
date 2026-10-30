@@ -6,6 +6,6 @@ export const refinementPolicyCommand = defineCommand({
   cli: { examples: ["pst pstdio-planner refinement-policy"] },
   async run(ctx, _params) {
     const settings = await ctx.settings.all();
-    return { generateArtifactPrototype: settings["refinement.generateArtifactPrototype"] };
+    return { updateCanvasDesign: settings["refinement.updateCanvasDesign"] };
   },
 });

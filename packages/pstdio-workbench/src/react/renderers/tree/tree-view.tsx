@@ -155,8 +155,10 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   );
   const [paramsRequest, setParamsRequest] = useState<TreeActionParamsRequest | null>(null);
 
+  const shortcutHints = useWorkbenchStore(workbench.keyboard.store, (state) => state.active || state.preview);
   const adapterContext = {
     workbench,
+    shortcutHints,
     onCommandError: onOpenResourceError,
     onRequestParams: setParamsRequest,
   };

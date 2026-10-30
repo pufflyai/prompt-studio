@@ -9,7 +9,7 @@ test("required matrix identities come from discovered priority rows", () => {
   const plan = plannedCiJobs(scope);
   expect(plan.find((job) => job.id === "database_tests_P0")?.priority).toBe("P0");
   expect(plan.find((job) => job.id === "database_tests_P1")?.priority).toBe("P1");
-  expect(plan.find((job) => job.id === "storybooks_P1")?.count).toBe(scope.componentMatrix.length);
+  expect(plan.find((job) => job.id === "components_P1")?.count).toBe(scope.componentMatrix.length);
   expect(plan.find((job) => job.id === "e2e_P1")?.count).toBe(scope.appMatrix.length);
   const observed = plan.flatMap((job) =>
     job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })),
@@ -45,7 +45,7 @@ test("queue native owners provide delivered integrity while production requires 
     ).outcome,
   ).toBe("failure");
   const production = plannedCiJobs(resolveCiScope({ ...input, event: "workflow_dispatch", profile: "production" }));
-  expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(6);
+  expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(7);
 });
 
 test("production cannot pass without native UI quarantine execution", () => {
@@ -60,6 +60,26 @@ test("production cannot pass without native UI quarantine execution", () => {
     evaluateCiGate(
       plan,
       observed.filter((job) => job.name !== "quarantined_native_ui_tests"),
+      false,
+      true,
+    ).outcome,
+  ).toBe("failure");
+});
+
+test("production requires both Windows ARM packaged runtime shards", () => {
+  const scope = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
+  const plan = plannedCiJobs(scope);
+  const names = plan.find((job) => job.id === "packaged_toolchain")!.names!;
+  expect(names).toContain("packaged_toolchain / verify (cli-win-arm64 1/2)");
+  expect(names).toContain("packaged_toolchain / verify (cli-win-arm64 2/2)");
+  const observed = plan.flatMap((job) =>
+    job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })),
+  );
+  expect(evaluateCiGate(plan, observed, false, true).outcome).toBe("success");
+  expect(
+    evaluateCiGate(
+      plan,
+      observed.filter((job) => job.name !== "packaged_toolchain / verify (cli-win-arm64 2/2)"),
       false,
       true,
     ).outcome,

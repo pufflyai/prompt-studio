@@ -7,6 +7,7 @@ import { collectVerifications } from "./collect-verifications";
 import { getHostPlatformPackage, resolveCompiledBinaryPath, runCompiledBunSmoke } from "./compiled-bun-smoke";
 import { packagedBuildCommand, packagedVerificationProfile } from "./packaged-build";
 import { preparePackagedSmokeBrowser } from "./packaged-runtime-smoke";
+import { runPackagedRuntimeTests } from "./packaged-runtime-tests";
 import { verifyPublicPackages } from "./public-package-consumer";
 import { verifyPublishedTypeExports } from "./published-type-exports";
 
@@ -17,6 +18,8 @@ const platformBinaries = verifyPlatformPackage ? [platformPackage] : config.plat
 const buildCommand = packagedBuildCommand(process.argv.includes("--prebuilt"));
 const profileIndex = process.argv.indexOf("--profile");
 const profileName = profileIndex < 0 ? "full" : process.argv[profileIndex + 1]!;
+const shardIndex = process.argv.indexOf("--shard");
+const shard = shardIndex < 0 ? undefined : (process.argv[shardIndex + 1] ?? "");
 const profile = packagedVerificationProfile(profileName, process.platform);
 console.log(`Packaged verification profile: ${profileName} on ${process.platform}-${process.arch}`);
 console.log(
@@ -70,12 +73,7 @@ if (!buildFailed && (process.env.CI_PRIORITY !== "P1" || errors.length === 0)) {
               id: "run packaged e2e",
               run: () => {
                 preparePackagedSmokeBrowser(hostBinaryPath);
-                const result = spawnSync("bun", ["run", "test:packaged:cli"], {
-                  cwd: "./packages/e2e",
-                  stdio: "inherit",
-                  env: { ...process.env, E2E_PACKAGED_BINARY_PATH: hostBinaryPath },
-                });
-                if (result.status !== 0) throw new Error(`Packaged e2e failed (${result.status})`);
+                runPackagedRuntimeTests({ cwd: "./packages/e2e", binaryPath: hostBinaryPath, shard });
               },
             },
           ]

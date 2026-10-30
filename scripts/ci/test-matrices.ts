@@ -27,13 +27,13 @@ const componentRows = (files: string[], packages: WorkspacePackage[], owners: st
   const sourceOwners = packages.filter(
     (pkg) =>
       owners.includes(pkg.name) &&
-      files.some((file) => file.startsWith(`packages/storybook-tests/src/ui/${pkg.dir.split("/").at(-1)}/`)),
+      files.some((file) => file.startsWith(`packages/canvas-tests/src/ui/${pkg.dir.split("/").at(-1)}/`)),
   );
   const selected = files.filter((file) => {
     if (testRunner(file) !== "component") return false;
     const owner = file.split("/")[4];
     if (sourceOwners.length) return sourceOwners.some((pkg) => pkg.dir === `packages/${owner}`);
-    return owners.includes("storybook-tests");
+    return owners.includes("canvas-tests");
   });
   return priorities.flatMap((priority) => {
     const matching = selected.filter((file) => priorityFromFile(file) === priority);
@@ -44,7 +44,7 @@ const componentRows = (files: string[], packages: WorkspacePackage[], owners: st
       files: JSON.stringify(
         matching
           .filter((file) => file.split("/")[4] === owner)
-          .map((file) => file.replace("packages/storybook-tests/", "")),
+          .map((file) => file.replace("packages/canvas-tests/", "")),
       ),
     }));
   });

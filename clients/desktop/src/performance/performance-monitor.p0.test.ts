@@ -248,6 +248,48 @@ test("starting the same enabled monitor twice does not duplicate its endpoint or
   expect(harness.endpoint.closed).toBe(1);
 });
 
+test("the first periodic capture stays on schedule when the baseline metrics read is slow", async () => {
+  const harness = createHarness(true);
+  let now = 0;
+  let firstDue = 0;
+  let tick: (() => void) | undefined;
+  const sampledAt: number[] = [];
+  const readMetrics = harness.options.readMetrics;
+  harness.options.now = () => now;
+  harness.options.readMetrics = () => {
+    now += 1_900;
+    return readMetrics();
+  };
+  harness.options.schedule = (callback, intervalMs) => {
+    firstDue = now + intervalMs;
+    tick = callback;
+    return () => {};
+  };
+  harness.options.createCapture = () => ({
+    sample: async (readProcesses) => {
+      sampledAt.push(now);
+      readProcesses();
+    },
+    snapshot: () => ({
+      version: 2,
+      id: "capture",
+      startedAt: new Date(0).toISOString(),
+      hostVersion: "test",
+      platform: "darwin",
+      sampleIntervalMs: 2_000,
+      samples: [],
+      droppedSamples: 0,
+    }),
+    close: async () => {},
+  });
+  await harness.monitor.start();
+  now = firstDue;
+  tick!();
+  expect(sampledAt).toEqual([0, 2_000]);
+  expect(harness.monitor.snapshot()?.measurementWindowMs).toBe(100);
+  await harness.monitor.stop();
+});
+
 test("failed startup releases capture and sampling before a later retry", async () => {
   const harness = createHarness();
   let capturesClosed = 0;

@@ -2,6 +2,9 @@
 // Workspace-internal dependencies each package may declare. Additions here are
 // intentional architecture changes — update the docs when this map changes.
 export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
+  "@pstdio/canvas": [],
+  canvas: ["@pstdio/sdk", "@pstdio/ui"],
+  "social-radar": ["@pstdio/sdk", "@pstdio/ui", "@pstdio/canvas"],
   "pstdio-service-telemetry": [],
   // The benchmark result writer is a dependency-free leaf. Packages declare it only as a development
   // dependency for their benchmark files.
@@ -72,8 +75,9 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-paths",
     "pstdio-wt",
   ],
-  "@pstdio/ui": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-file-types", "pstdio-benchmarks"],
+  "@pstdio/ui": ["@pstdio/canvas", "@pstdio/sdk", "pstdio-api-contracts", "pstdio-file-types", "pstdio-benchmarks"],
   "@pstdio/workbench": [
+    "@pstdio/canvas",
     "@pstdio/sdk",
     "@pstdio/ui",
     "pstdio-api-contracts",
@@ -81,7 +85,14 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-sync-contracts",
     "pstdio-benchmarks",
   ],
-  "pstdio-dashboard": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions", "@pstdio/workbench"],
+  "pstdio-dashboard": [
+    "@pstdio/canvas",
+    "@pstdio/sdk",
+    "@pstdio/ui",
+    "pstdio-api-contracts",
+    "pstdio-extensions",
+    "@pstdio/workbench",
+  ],
   // The testbench also declares the extensions its tests load from source,
   // so changing one marks the testbench as affected.
   "pstdio-extension-testbench": [
@@ -122,9 +133,10 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "storage-scale-fixture",
     "pstdio-scripts",
   ],
-  "storybook-tests": ["@pstdio/ui", "@pstdio/workbench", "pstdio-dashboard"],
-  "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],
+  "canvas-tests": ["@pstdio/ui", "@pstdio/workbench", "pstdio-dashboard"],
+  "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions", "pstdio-benchmarks"],
   "@pstdio/desktop": [
+    "@pstdio/canvas",
     "@pstdio/ui",
     "pstdio",
     "pstdio-api-contracts",
@@ -135,7 +147,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-benchmarks",
     "pstdio-scripts",
   ],
-  "@pstdio/landing-page": ["@pstdio/ui"],
+  "@pstdio/landing-page": ["@pstdio/canvas", "@pstdio/ui"],
   "motion-lab": ["@pstdio/sdk", "@pstdio/ui"],
 };
 

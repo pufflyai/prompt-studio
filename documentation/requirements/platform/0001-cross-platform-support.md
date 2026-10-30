@@ -140,7 +140,7 @@ the packaged suite. The production app does not use it.
 | --- | --- | --- |
 | Pull request | `pull_request` without the `ci:full` label | Linux only. `static_checks` and `lint_and_test` run for the packages changed since the target branch. Database, relay, published-extension, license, Docker, and harness CLI jobs run only when the changed files need them. A change outside every package, other than Markdown, `design/`, or `LICENSE`, turns on all of these jobs. No native desktop or CLI build runs. |
 | Merge queue | `merge_group` | The full stage, the same jobs as a push to `main`. Desktop builds are unsigned. |
-| Full | Push to `main`, manual run, or a pull request with `ci:full` | Every job. This adds Windows unit, database, and npm-shim tests, a compiled Windows CLI, the Linux e2e, Storybook, and packaged suites, unsigned desktop source and packaged tests on Linux, Apple Silicon, and Windows, and `verify-packaged-toolchain.yml` on Linux, Intel macOS, and Windows. |
+| Full | Push to `main`, manual run, or a pull request with `ci:full` | Every job. This adds Windows unit, database, and npm-shim tests, a compiled Windows CLI, the Linux e2e, Canvas, and packaged suites, unsigned desktop source and packaged tests on Linux, Apple Silicon, and Windows, and `verify-packaged-toolchain.yml` on Linux, Intel macOS, and Windows. |
 
 `ci_passed` is the required check. A pull request may skip jobs it does not need.
 The merge queue and the full stage fail if any job is skipped. Signed builds, notarization, the Intel

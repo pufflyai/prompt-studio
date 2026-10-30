@@ -9,12 +9,14 @@ const roots: string[] = [];
 const platform = process.platform === "win32" ? "win32" : "darwin";
 const executable = platform === "win32" ? "pstdio.exe" : "pstdio";
 
-const createArtifact = (overrides: Partial<Record<"platform" | "arch" | "version" | "checksum", string>> = {}) => {
+const createArtifact = (
+  overrides: Partial<Record<"platform" | "arch" | "version" | "checksum", string>> = {},
+  content: string | Uint8Array = "compiled-runtime",
+) => {
   const resourcesPath = mkdtempSync(join(tmpdir(), "pstdio-desktop-sidecar-"));
   roots.push(resourcesPath);
   const binDir = join(resourcesPath, "bin");
   const binaryPath = join(binDir, executable);
-  const content = "compiled-runtime";
   mkdirSync(binDir, { recursive: true });
   writeFileSync(binaryPath, content);
   chmodSync(binaryPath, 0o755);
@@ -88,6 +90,45 @@ describe("desktop sidecar artifact", () => {
     expect(validated).toBe(false);
     version.resolve("0.25.2");
     await expect(completion).resolves.toBe(artifact.binaryPath);
+  });
+
+  test("checks every byte across complete reads and a partial final read", async () => {
+    const content = Uint8Array.from({ length: 3 * 65_536 + 17 }, (_, index) => index % 251);
+    const artifact = createArtifact({}, content);
+    const input = {
+      resourcesPath: artifact.resourcesPath,
+      platform,
+      arch: "x64",
+      appVersion: "0.25.2",
+      readVersion: () => "0.25.2",
+    } as const;
+    await expect(validateSidecarArtifact(input)).resolves.toBe(artifact.binaryPath);
+
+    content[content.length - 1]! ^= 1;
+    writeFileSync(artifact.binaryPath, content);
+    await expect(validateSidecarArtifact(input)).rejects.toThrow(
+      expect.objectContaining({ code: "checksum_mismatch" }),
+    );
+  });
+
+  test("cancels checksum verification before asking the binary for its version", async () => {
+    const artifact = createArtifact({}, new Uint8Array(4 * 1024 * 1024));
+    const controller = new AbortController();
+    let versionRead = false;
+    const validation = validateSidecarArtifact({
+      resourcesPath: artifact.resourcesPath,
+      platform,
+      arch: "x64",
+      appVersion: "0.25.2",
+      signal: controller.signal,
+      readVersion: () => {
+        versionRead = true;
+        return "0.25.2";
+      },
+    });
+    setImmediate(() => controller.abort());
+    await expect(validation).rejects.toThrow();
+    expect(versionRead).toBe(false);
   });
 
   test.each([

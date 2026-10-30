@@ -32,7 +32,7 @@ export const plannedCiJobs = (scope: Scope) => {
   jobs.push(...matrixPlan("database_tests", scope.databaseMatrix, (row) => `${row.package} ${row.shard}`));
   jobs.push(...matrixPlan("bun_contracts", scope.bunContractMatrix, (row) => row.shard));
   jobs.push(...matrixPlan("integration_contracts", scope.integrationMatrix, (row) => row.package));
-  jobs.push(...matrixPlan("storybooks", scope.componentMatrix, (row) => row.package));
+  jobs.push(...matrixPlan("components", scope.componentMatrix, (row) => row.package));
   if (["merge_queue", "full"].includes(scope.stage)) {
     jobs.push(...matrixPlan("e2e", scope.appMatrix, (row) => `${row.shard}/${row.total}`));
     jobs.push(...matrixPlan("packaged_and_vite_e2e", scope.packagedMatrix, (row) => `${row.suite} ${row.shard}`));
@@ -45,7 +45,9 @@ export const plannedCiJobs = (scope: Scope) => {
     if (scope.production)
       add(
         "packaged_toolchain",
-        scope.toolchainMatrix.map((row) => `packaged_toolchain / verify (${row.platform_pkg})`),
+        scope.toolchainMatrix.map(
+          (row) => `packaged_toolchain / verify (${row.platform_pkg} ${row.shard}/${row.shards})`,
+        ),
         "P2",
       );
   }

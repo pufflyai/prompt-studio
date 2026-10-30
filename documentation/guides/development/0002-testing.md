@@ -6,7 +6,7 @@ Use Bun 1.4.4 and Node 24, matching CI. Install dependencies with `bun install -
 
 When upgrading Bun, align the root `packageManager` pin, Bun engine requirements, all `@types/bun` dependencies, the lockfile, and every Docker image, including `infra/local/Dockerfile`. Update the local Bun executable and current setup documentation to the same version before validating.
 
-Repository type checks use the TypeScript 7 checker built into Bun 1.4.4. Keep using each package's `typecheck` script: the dashboard checks both project references with `bun check -b`, UI uses `tsconfig.build.json`, and base themes also check `tsconfig.storybook.json`. Chakra token generation still runs before dashboard checking. TypeScript 6.0.2 remains installed for compiler API users and Rolldown declaration emit. Public package and provider consumers check the same positive and negative fixtures with both TypeScript 6.0.2 and `bun check`, so the faster checker preserves the supported consumer contract.
+Repository type checks use the TypeScript 7 checker built into Bun 1.4.4. Keep using each package's `typecheck` script: the dashboard checks both project references with `bun check -b`, UI uses `tsconfig.build.json`, and base themes also check `tsconfig.canvas.json`. Chakra token generation still runs before dashboard checking. TypeScript 6.0.2 remains installed for compiler API users and Rolldown declaration emit. Public package and provider consumers check the same positive and negative fixtures with both TypeScript 6.0.2 and `bun check`, so the faster checker preserves the supported consumer contract.
 
 Editors using the workspace TypeScript version still show TypeScript 6 diagnostics. Run the package's `typecheck` script to see the required TypeScript 7 result; the two versions can differ in generic inference and removed configuration options.
 
@@ -44,7 +44,7 @@ bun test <path-to-test> # from the owning package directory
 bun run --cwd packages/<name> test
 bun run --cwd packages/<name> lint
 bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts
-bun run --cwd packages/storybook-tests test:browser -- src/ui/<name>.spec.ts
+bun run --cwd packages/canvas-tests test:browser -- src/ui/<name>.spec.ts
 ```
 
 Run a single dashboard test through the package script, because the dashboard runner needs two flags:
@@ -57,7 +57,7 @@ The script runs `bun test --conditions production --tsconfig-override tsconfig.a
 
 Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks described in `AGENTS.md`. Documentation-reference-only edits do not.
 
-During implementation, run targeted tests. Before marking a draft PR ready, follow [Finishing a pull request](../../../AGENTS.md#finishing-a-pull-request), including the full test run after integrating main. Run full validation only when explicitly requested. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs unit packages through Lerna, then the E2E script, CLI, UI, Vite terminal, and separate Storybook suites. `bun run test:e2e` runs app checks; `bun run test:storybook` runs component server checks and browser interactions. Lerna excludes both browser packages from its unit pass. Packaged and desktop tests run separately in CI.
+During implementation, run targeted tests. Before marking a draft PR ready, follow [Finishing a pull request](../../../AGENTS.md#finishing-a-pull-request), including the full test run after integrating main for behavioral features and meaningful regressions. Routine copy, spacing, cosmetic and documentation changes require only relevant scoped checks, without a full command or browser runs. Explicit user-requested validation still applies. Run full validation only when explicitly requested. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs unit packages through Lerna, then the E2E script, CLI, UI, Vite terminal, and separate Canvas suites. `bun run test:e2e` runs app checks; `bun run test:canvas` runs component server checks and browser interactions. Lerna excludes both browser packages from its unit pass. Packaged and desktop tests run separately in CI.
 
 Install browser dependencies before running browser tests:
 
@@ -67,7 +67,7 @@ bun run --cwd packages/e2e playwright install --with-deps chromium firefox webki
 
 For manual app validation, use `bun run dev:playwright`, open the printed dashboard URL, and stop it with `bun run dev:playwright:down`. Do not start a development server directly or use the developer database.
 
-Run `bun run --cwd packages/e2e test:smoke` for basic dashboard browser E2E. It runs the real dashboard with isolated runtime data, without starting Storybook. The discovered startup P1 file covers empty and selected project flows and project switching. Keyboard/theme permutations remain in their P2 suite. These tests also run in the full UI suite.
+Run `bun run --cwd packages/e2e test:smoke` for basic dashboard browser E2E. It runs the real dashboard with isolated runtime data, without starting Canvas. The discovered startup P1 file covers empty and selected project flows and project switching. Keyboard/theme permutations remain in their P2 suite. These tests also run in the full UI suite.
 
 API tests retain one fresh Bun process per file and at most two active files, with the existing 30-second per-test limit. Run focused API regressions with `bun run --cwd packages/pstdio-api test --files='["src/app-config.p0.test.ts"]'`. Unknown, duplicate, or empty explicit file selections fail. Without `--files`, the driver selects every API test file. `--shard=1/4` partitions that selection; optional `--timings=path.json` balances complete files from recorded durations. Timing files use Bun's `{ "version": 1, "files": { "src/example.test.ts": 120 } }` format. Missing durations use a measured fallback; no test is dropped because of elapsed time.
 
@@ -144,8 +144,6 @@ Run `bun run --cwd scripts verify:published-extensions` to typecheck and test ev
 
 Published-extension checks and public-package consumer checks use a one-day minimum release age for fresh installs. This keeps a third-party publish in progress from selecting packages whose matching dependencies are not available yet. Prompt Studio packages in the Changesets release group are exempt, so these checks can use the SDK and UI immediately after a release. The repository's frozen-lockfile install is unchanged. See [Bun's minimum release age](https://bun.sh/docs/pm/cli/install#minimum-release-age).
 
-Keep the Storybook development tools in Artifacts, Base Themes and Planner pinned to the same tested release. A fresh install must not select a newly eligible Storybook parent while its exact-version companion packages are still inside the age window. Update the tools and their extension lockfiles together; keep the one-day policy.
-
 On pull requests, the CI job runs for selected extension, SDK, UI, API contract, and shared-tooling code changes. Complete queue and production functional profiles include it. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
 
 ## Extension smoke checks
@@ -215,17 +213,19 @@ Tests install local fixture extensions from `packages/e2e/src/default-extensions
 
 Playwright uses one worker and no retries. CI rejects focused Playwright tests (`test.only`). UI and Vite traces are recorded on the first run and retained on failure. This follows [Playwright's trace modes](https://playwright.dev/docs/test-use-options#recording-options).
 
-Queue CI runs CLI contracts and up to two P1 app browser shards independently. Production adds up to six P2 app shards. Component owner/priority rows build and run independently in `packages/storybook-tests`. Each app shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Docker build breadth runs in production. Both images copy the root Bun configuration and every workspace manifest so frozen installs use the same workspace graph and linking rules as the checkout. Local extension source stays outside the build context.
+Queue CI runs CLI contracts and up to two P1 app browser shards independently. Production adds up to six P2 app shards. Component owner/priority rows build and run independently in `packages/canvas-tests`. Each app shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Docker build breadth runs in production. Both images copy the root Bun configuration and every workspace manifest so frozen installs use the same workspace graph and linking rules as the checkout. Local extension source stays outside the build context.
 
-Evidence artifact names end in `-attempt-<run_attempt>` so a manual rerun keeps the earlier evidence. UI shards upload `ui-e2e-results-<shard>-attempt-<run_attempt>`; packaged/Vite uploads `packaged-vite-e2e-<suite>-results-attempt-<run_attempt>`. Component rows upload `component-results-<owner>-<priority>-attempt-<run_attempt>`. Desktop test rows upload `desktop-test-results-<target>-shard-<index>-of-<total>-attempt-<run_attempt>`; release rows upload `test-results-desktop-<target>-attempt-<run_attempt>`. Windows update checks upload `windows-installation-readiness-attempt-<run_attempt>`. Native toolchain checks upload `packaged-toolchain-<platform_pkg>-attempt-<run_attempt>` with test results and traces. Their timestamped build and verification output remains in the GitHub job log.
+Evidence artifact names end in `-attempt-<run_attempt>` so a manual rerun keeps the earlier evidence. UI shards upload `ui-e2e-results-<shard>-attempt-<run_attempt>`; packaged/Vite uploads `packaged-vite-e2e-<suite>-results-attempt-<run_attempt>`. Component rows upload `component-results-<owner>-<priority>-attempt-<run_attempt>`. Desktop test rows upload `desktop-test-results-<target>-shard-<index>-of-<total>-attempt-<run_attempt>`; release rows upload `test-results-desktop-<target>-attempt-<run_attempt>`. Windows update checks upload `windows-installation-readiness-attempt-<run_attempt>`. Native toolchain checks upload `packaged-toolchain-<platform_pkg>-shard-<index>-of-<total>-attempt-<run_attempt>` with test results and traces. Their timestamped build and verification output remains in the GitHub job log.
 
 Intel Mac desktop CI runs its packaged smoke files in two required Playwright shards under the existing 20-minute job allowance. Both jobs build a real native app; source Electron tests, native cleanup tests, existing quarantine execution and shared build archives belong to shard one. Other desktop targets use one complete shard. Published desktop targets remain unique physical platforms. The normal developer command still runs the complete unsharded suite.
+
+Windows ARM64 packaged runtime checks use two Bun file shards within the existing 30-minute job allowance. Other native toolchains use one shard. Both ARM64 shards remain required; each keeps compiled-file integrity, public package contracts and compiled CLI smoke. Windows compiled CLI quarantine runs once per platform on its first shard. `bun run --cwd scripts verify:packages --profile full --shard 1/2` selects one runtime shard; omit `--shard` to run the complete suite. Released candidates still use `--prebuilt`, so neither shard rebuilds their immutable binary.
 
 Packaged toolchain checks run through the CI runner with direct arguments and the operating system's default shell. Do not wrap Windows verification in a Git Bash pipeline: it gives child processes an inherited Ctrl+C-ignore attribute, preventing the real terminal interruption check from exercising normal Windows signal handling.
 
 Windows packaged-toolchain CI opts into a ReFS Dev Drive owned by the job and sets `TEMP` and `TMP` to a folder on it. Other Windows jobs keep `TEMP` and `TMP` on `RUNNER_TEMP`, preserving their existing database and detached-process fixtures. The opt-in puts cold packaged runtime homes and install caches on storage that writes many small files quickly. Every fixture still creates a fresh home and cache, and cleanup stays inside its existing test allowance. On the `C:` system volume, the only volume on Windows ARM64 runners, cold extension installs exceed that allowance. [ADR 0114](../../adrs/0114-temporary-windows-ci-job-temp-directory.md) records the temporary storage override and its removal check.
 
-App reports and traces are under `packages/e2e/playwright-report` and `packages/e2e/test-results`; component reports use those folder names under `packages/storybook-tests`. Desktop results are under `clients/desktop/test-results`. Each packaged test home attaches complete redacted copies of `logs.jsonl` and `desktop-runtime.log` as files before removal. Startup errors include the last 50 runtime output lines. Electron traces start before the lifecycle-page wait, after the sidecar startup wait has protected process isolation; an unavailable attachment states why a trace could not start or be saved. Missing evidence warns without replacing the original build or test failure.
+App reports and traces are under `packages/e2e/playwright-report` and `packages/e2e/test-results`; component reports use those folder names under `packages/canvas-tests`. Desktop results are under `clients/desktop/test-results`. Each packaged test home attaches complete redacted copies of `logs.jsonl` and `desktop-runtime.log` as files before removal. Startup errors include the last 50 runtime output lines. Electron traces start before the lifecycle-page wait, after the sidecar startup wait has protected process isolation; an unavailable attachment states why a trace could not start or be saved. Missing evidence warns without replacing the original build or test failure.
 
 Linux UI, CLI, and packaged/Vite jobs use the official `mcr.microsoft.com/playwright:v1.60.0-noble` image. They run as user 1001, matching the owner of GitHub's mounted home directory; Firefox rejects a root process using that user's home. The image includes browser binaries and system libraries, so these jobs do not install Ubuntu packages or browsers during setup. Keep the image version aligned with the installed Playwright version when updating dependencies. Desktop jobs still run on their native Linux and macOS runners.
 
@@ -263,11 +263,11 @@ E2E_MANUAL_MARKETPLACE_LIFECYCLE=1 bun run --cwd packages/e2e test:ui -- src/ui/
 
 Normal UI runs skip that lifecycle check. The separate extension automation toggle test still runs automatically.
 
-App UI tests in `packages/e2e` never build or start Storybook. Component browser interactions live in the private `packages/storybook-tests` package, while story source stays beside its component. This suite starts only Storybook servers; it has no application API, database, or app web server.
+App UI tests in `packages/e2e` never build or start Canvas. Component browser interactions live in the private `packages/canvas-tests` package, while story source stays beside its component. This suite starts only Canvas servers; it has no application API, database, or app web server.
 
-Run critical component contracts with `bun test:p1 --runner component`. The command builds the selected owners and serves their static Storybooks. To run a single spec, build its owner with `bun run --cwd packages/pstdio-workbench build-storybook`, then use `STORYBOOK_PACKAGES=pstdio-workbench bun run --cwd packages/storybook-tests test:browser -- src/ui/pstdio-workbench/panel-tabs.p1.spec.ts`. Static output lives under each owner's `storybook-static` directory. Servers load a real story before tests begin, preserve story play completion waits, and keep the existing 60-second startup allowance. Reports and traces live under `packages/storybook-tests/playwright-report` and `packages/storybook-tests/test-results`.
+Run critical component contracts with `bun test:p1 --runner component`. The command builds the selected owners and serves their static Canvas previews. To run a single spec, build its owner with `bun run --cwd packages/pstdio-workbench build:preview-tests`, then use `CANVAS_TEST_PACKAGES=pstdio-workbench bun run --cwd packages/canvas-tests test:browser -- src/ui/pstdio-workbench/panel-tabs.p1.spec.ts`. Static output lives under each owner's `canvas-test-static` directory. Servers load a real story before tests begin, preserve story play completion waits, and keep the existing 60-second startup allowance. Reports and traces live under `packages/canvas-tests/playwright-report` and `packages/canvas-tests/test-results`.
 
-Read the first failure and its trace. Check setup, teardown, and server logs before attributing the failure to an assertion. Storybook startup failures include the tail of the server output. Readiness checks must cancel stalled HTTP requests within their deadline.
+Read the first failure and its trace. Check setup, teardown, and server logs before attributing the failure to an assertion. Canvas startup failures include the tail of the server output. Readiness checks must cancel stalled HTTP requests within their deadline.
 
 Keep the existing job and test time limits. A timeout needs an investigation of the slow phase; see [Time limits](#time-limits). A passing rerun alone does not explain the failure.
 
@@ -287,7 +287,7 @@ Non-recursive watcher tests remove dependency trees from another process while r
 
 The **Patterns/Chat/Chat Panel Streaming Ready** story opens an overflowing conversation while paragraphs arrive on every animation frame. Its play check requires the transcript to appear before the stream stops. Initial tail readiness owns one settling window per conversation mount; streamed layout changes update its DOM measurements without restarting that window. Use Chromium CPU throttling to inspect this case on a slow renderer.
 
-Use the **Patterns/Chat/Chat Panel Rendering** Storybook stories to inspect long turns. `RenderingWorkloads` starts with an empty chat and prepares fixtures before the measured mount. `LongTurnScrolling` checks bounded responses, sticky user context, expansion, scrolling, hidden-page recovery, session switching, and tail following during streaming. `ContinuousScrolling` checks the sticky message on each animation frame while scrolling up and down within one large response. A check that waits for scrolling to settle does not cover this behavior.
+Use the **Patterns/Chat/Chat Panel Rendering** Canvas stories to inspect long turns. `RenderingWorkloads` starts with an empty chat and prepares fixtures before the measured mount. `LongTurnScrolling` checks bounded responses, sticky user context, expansion, scrolling, hidden-page recovery, session switching, and tail following during streaming. `ContinuousScrolling` checks the sticky message on each animation frame while scrolling up and down within one large response. A check that waits for scrolling to settle does not cover this behavior.
 
 The fixed workloads in `packages/ui/src/components/chat-ui/performance/chat-rendering-fixtures.ts` are:
 
@@ -296,7 +296,7 @@ The fixed workloads in `packages/ui/src/components/chat-ui/performance/chat-rend
 - Long turns: one rich user message followed by 1,000 or 5,000 rich responses. Each response has one Markdown repetition, reasoning, and three tools.
 - Large response: one user message and one response containing 100 repetitions of rich Markdown.
 
-Run `CPU_THROTTLE=1 bun run --cwd packages/ui perf:chat -- chat-rendering.p3.perf.ts` for native Chromium measurements. Repeat with `CPU_THROTTLE=4` for throttled measurements. The existing config runs each workload three times in fresh contexts. Record viewport size, browser version, hardware, commit, and any competing work. Compare the same fixtures and settings before and after a change; report medians and ranges rather than one sample.
+Use [Write a benchmark](0016-writing-benchmarks.md) for the shared runner, sample count, CPU throttling and retained-heap helper. The standalone chat config keeps its three-sample default. Record viewport size, browser version, hardware, commit, and competing work; compare the same fixed fixtures.
 
 The measurement excludes module loading, fixture construction, API requests, and database work. It measures mount, scrolling to the middle, session switching, and streaming one response in 384-character chunks. Readiness requires a visible chat viewport and three animation frames. Each phase attaches a CPU profile, script/layout/style/task times, long tasks, and mounted row/editor/table/DOM counts to the Playwright report. These component timings are not end-to-end session-opening timings. A stopped or timed-out measurement is incomplete, not a performance result. Existing budgets and execution allowances remain unchanged.
 
@@ -336,52 +336,7 @@ On 2026-10-28 the user approved a 60-second Windows allowance for two packaged c
 
 ## Desktop benchmarks
 
-The [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) describe advisory targets, including a 2-second M5 cold start and 1 GB average memory. Regular performance coverage runs in nightly CI and stable-release validation. Agents **SHOULD** run relevant benchmarks locally when they expect significant performance impact from a change. The existing CI budgets below use hosted hardware and a visible-workbench milestone; dedicated M5, aggregate-download, and average-memory checks are not implemented yet.
-
-Every benchmark, including these, also reports to the shared result format that the Benchmarks workflow and the Performance pages use. See [Benchmark results](../../references/performance/0006-benchmark-results.md).
-
-Desktop budgets live in `clients/desktop/src/e2e/*.bench.ts`. Run them against a packaged app:
-
-```bash
-bun run --cwd clients/desktop package
-bun run --cwd clients/desktop test:benchmark
-```
-
-The release workflow runs them in a separate step before the functional packaged suite. One worker runs files in name order and tests in declaration order. Intel macOS runs only the benchmark tagged `@essential`, the cold start, so it measures the first launch of the freshly signed app, including macOS launch checks. Other platforms run the cold start after the warm-attach and recovery launches. Before benchmarks were separated, it ran after two other packaged launches there too, so their budgets do not cover first-launch checks. The functional packaged suite and package checks still run after a benchmark failure, and the job still fails. The Windows signing workflow runs the benchmarks the same way. Benchmarks run without Electron traces, because trace screenshots and DOM snapshots add renderer work. Use the traced functional suite or a separate profile to diagnose a failure.
-
-Each benchmark attaches `benchmark-<name>.json` before checking its budgets. It records the scenario, workload, measured process, start and end events, every metric with its unit and budget, the source revision, the sidecar checksum, and the runner. A metric must be below its budget. A missing or non-finite measurement fails the benchmark. `test-results/packaged-benchmarks.json` collects the run.
-
-| Benchmark | Measured interval | Budget |
-| --- | --- | --- |
-| Cold start (empty home) | Process spawn to visible workbench root; process spawn to visible startup window | 8 s cold start (10 s on Windows, 28 s on Intel macOS); startup window 1.5 s on macOS (10 s on Intel), 1 s on Linux and Windows |
-| Warm attach | Process spawn against a persistent runtime with one open project to visible workbench root; startup window as above | 3 s; startup window as above |
-| Sidecar crash recovery | Runtime kill to visible recovery heading | 500 ms |
-| Idle workbench, monitoring off or on | Renderer CPU share over 10 s after a 2 s settle | See the renderer table below; Electron main at most 10% of one core with monitoring on |
-| Idle extension preview | Workbench and Lab renderer CPU share over 10 s after a 2 s settle | See the renderer table below |
-| Long streaming replay | Renderer CPU share from submitting the replay to an already open session until the API reports completion and Step 30 is visible | See the renderer table below |
-
-Renderer benchmarks took 10–17 seconds each on Apple Silicon, within the existing 30-second packaged test limit. Linux and Windows release runs have not been measured yet.
-
-Renderer benchmarks read Chrome DevTools Protocol `Performance.getMetrics` deltas for each measured renderer and attach the raw counter deltas. `ScriptDuration` and `TaskDuration` are main-thread proxies. They are not OS CPU, GPU, or paint measurements. Each budget is the share of measured wall time the renderer may spend in scripts or tasks.
-
-| Check | Window | Budget (script / task) | Apple Silicon baseline, 3 runs |
-| --- | --- | --- | --- |
-| Idle workbench, monitoring off | 10 s after a 2 s settle | 2% / 5% | ≤ 0.04% / ≤ 0.11% |
-| Idle workbench, monitoring on | 10 s after a 2 s settle | 2% / 5% | ≤ 0.01% / ≤ 0.07% |
-| Idle extension preview (workbench and Lab frame) | 10 s after a 2 s settle | 2% / 5% each | ≤ 0.05% / ≤ 0.15% |
-| Long streaming replay | about 6 s, until the session completes | 85% / 120% | 28–38% / 51–68% |
-
-The idle budgets catch a constant render or polling loop. On 2026-10-10 the release rehearsals measured the streaming replay at up to 69% script and 99% task time on Apple Silicon, Linux, and Windows runners. The user approved budgets about 20% above those values. A task budget above 100% no longer limits anything, so script time is the remaining streaming guard.
-
-The idle benchmarks turn monitoring on and off through the Settings switch, so the dashboard's slow-frame observer and frame counter run during the monitoring-on measurements. Monitoring itself runs in Electron main, which renderer metrics cannot see, so the monitoring-on benchmark also records the main process share from the snapshot. On Apple Silicon it measured 0.1–0.8% while idle with monitoring on.
-
-`clients/desktop/src/e2e/packaged-performance-monitoring.p2.spec.ts` covers the monitoring feature without budgets. A reload test forces a 120 ms frame before and after reloading the workbench and requires both to reach the snapshot. An extension process test opens the fixture's Lab webview and requires a process that hosts only that extension, separate from the workbench process. It then pauses the extension from the status bar popover and requires the snapshot to list it in `pausedExtensionIds` and no process to host its frames. A snapshot test reads the snapshot through the preload and through `pst performance` to prove that a person and an agent receive the same measurements, then checks that turning monitoring off stops the endpoint.
-
-The fake agent replays the long conversation when a prompt contains `__fake_long_stream__`: 30 assistant turns, 8 text updates each at 25 ms intervals, and one tool result per turn.
-
-The streaming benchmark opens an empty session before submitting that prompt. Its counter interval covers the full replay, including the last rendered turn. It does not wait for Step 1 to be visible: auto-follow can move that row out of view before an assertion sees it.
-
-`packages/e2e/src/ui/performance-monitoring.p2.spec.ts` covers the same feature in a browser tab. It turns on the Settings switch and checks that the status bar meter appears. It opens the popover, which shows the desktop-only CPU note and lists the fixture extension's open view. It pauses the extension, checks the placeholder, and resumes it. Last, it checks that the switch survives a reload and that **Show performance** opens the setting while monitoring is off. This spec has no time budget.
+Use [Write a benchmark](0016-writing-benchmarks.md#desktop-benchmarks) for packaging commands, shared helpers, sampling, desktop workloads and budget evidence. The [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) remain the advisory product targets. Regular performance coverage runs in nightly CI and stable-release validation.
 
 ## Live provider tests
 
@@ -393,3 +348,11 @@ E2E_AGENTS=opencode bun run --cwd packages/e2e test:ui -- src/ui/session-follow-
 ```
 
 They require the selected provider and its credentials. They are separate from ordinary fixture-based CI coverage.
+
+## Critical UI checks
+
+Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies.
+
+Keep Canvas examples for design exploration without a corresponding test per example. Identify the critical risk in each retained browser test. Avoid exhaustive variant, viewport, and theme matrices; remove duplicate checks already covered by owning-package tests. Ordinary relevant unit, type, and build checks still apply. Fixed performance workloads and budgets remain unchanged.
+
+Run `bun run test:canvas` for the native Canvas fixture harness and critical browser checks. It uses the live preview renderer and sandbox. Test failures retain Playwright reports, traces, and screenshots.

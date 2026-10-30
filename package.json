@@ -17,7 +17,7 @@
     "verify:lockfile": "bun run --cwd scripts verify:lockfile",
     "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" lerna run build",
     "analyze-bundle": "lerna run analyze-bundle --stream",
-    "test": "lerna run test --ignore e2e --ignore storybook-tests && bun run build -- --scope e2e --include-dependencies && bun run test:e2e && bun run test:storybook",
+    "test": "lerna run test --ignore e2e --ignore canvas-tests && bun run build -- --scope e2e --include-dependencies && bun run test:e2e && bun run test:canvas",
     "test:coverage": "lerna run test:coverage --stream -- --coverage-reporter=lcov",
     "test:e2e": "bun run --cwd packages/e2e test",
     "extension:bench:workbench": "bun run --cwd packages/pstdio-extension-testbench dev",
@@ -26,7 +26,7 @@
     "lint": "lerna run lint --concurrency 2",
     "format": "biome check --write .",
     "format:check": "biome check .",
-    "clean": "find . -type d \\( -name node_modules -o -name dist -o -name dist-monaco -o -name .cache -o -name storybook-static -o -name __test-tmp__ -o -name .nx -o -name .publish -o -name .temp -o -name coverage -o -name .nyc_output -o -name test-results -o -name playwright-report -o -name .astro -o -name .playwright-mcp \\) -prune -exec rm -rf '{}' + && rm -rf packages/e2e/screenshots clients/desktop/out clients/desktop/.sidecar packages/pstdio-db/vendor",
+    "clean": "find . -type d \\( -name node_modules -o -name dist -o -name dist-monaco -o -name .cache -o -name canvas-test-static -o -name __test-tmp__ -o -name .nx -o -name .publish -o -name .temp -o -name coverage -o -name .nyc_output -o -name test-results -o -name playwright-report -o -name .astro -o -name .playwright-mcp \\) -prune -exec rm -rf '{}' + && rm -rf packages/e2e/screenshots clients/desktop/out clients/desktop/.sidecar packages/pstdio-db/vendor",
     "reset": "bun run clean && bun install && bun run build",
     "knip": "knip --no-config-hints",
     "pstdio:local:add": "bun run --cwd packages/pstdio local:add",
@@ -40,22 +40,20 @@
     "test:planner-stress": "bun run --cwd packages/e2e test:planner-stress",
     "dev:api": "bun run --cwd packages/pstdio-api dev",
     "dev:landing-page": "bun run --cwd clients/landing-page dev",
-    "storybook:ui": "bun run --cwd packages/ui storybook",
     "studio:db": "bun run --cwd packages/pstdio-db studio",
     "dev:desktop": "bun ./scripts/dev/dev-desktop.ts",
     "report:e2e": "bun run --cwd packages/e2e report",
-    "storybook:dashboard": "bun run --cwd packages/pstdio-dashboard storybook",
-    "build-storybook:dashboard": "bun run --cwd packages/pstdio-dashboard build-storybook",
     "validate:changesets": "bun run --cwd scripts validate:changesets",
     "verify:translations": "bun run --cwd scripts verify:translations",
     "changeset": "changeset",
     "release": "bun run build && changeset publish",
     "dev:relay": "bun scripts/dev/relay-local.ts",
-    "test:storybook": "bun run --cwd packages/storybook-tests test",
+    "test:canvas": "bun run --cwd packages/canvas-tests test",
     "test:p0": "bun scripts/ci/run-priority-tests.ts p0",
     "test:p1": "bun scripts/ci/run-priority-tests.ts p1",
     "test:p2": "bun scripts/ci/run-priority-tests.ts p2",
-    "test:p3": "bun scripts/ci/run-priority-tests.ts p3"
+    "test:p3": "bun scripts/ci/run-priority-tests.ts p3",
+    "verify:benchmarks": "bun packages/benchmarks/src/cli.ts verify"
   },
   "engines": {
     "bun": ">=1.4.4"
@@ -85,7 +83,8 @@
     "cross-env": "10.1.0",
     "knip": "6.3.0",
     "lerna": "9.0.7",
-    "node-gyp": "12.2.0"
+    "node-gyp": "12.2.0",
+    "@pstdio/canvas": "workspace:*"
   },
   "packageManager": "bun@1.4.4",
   "overrides": {

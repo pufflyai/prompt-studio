@@ -229,3 +229,55 @@ test("queue removal reports retain the real failure after remaining jobs were ca
     await server.stop(true);
   }
 });
+
+test("a cancelled validation monitor reports its own failed gate instead of an older run", async () => {
+  const { createApi } = await import("./merge-queue-removals");
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const path = new URL(request.url).pathname;
+      if (path.endsWith("/runs"))
+        return Response.json({
+          workflow_runs: [
+            {
+              id: 2,
+              conclusion: "cancelled",
+              created_at: "2026-10-30T09:30:00Z",
+              head_branch: "gh-readonly-queue/main/pr-1381-a",
+              html_url: "https://github.com/owner/repo/actions/runs/2",
+            },
+            {
+              id: 1,
+              conclusion: "failure",
+              created_at: "2026-10-29T09:30:00Z",
+              head_branch: "gh-readonly-queue/main/pr-1381-b",
+              html_url: "https://github.com/owner/repo/actions/runs/1",
+            },
+          ],
+        });
+      return Response.json({
+        jobs: path.includes("/runs/2/")
+          ? [
+              { name: "build_clients", conclusion: "success" },
+              { name: "validation_results", conclusion: "cancelled" },
+              { name: "ci_passed", conclusion: "failure" },
+            ]
+          : [{ name: "build_clients", conclusion: "failure" }],
+      });
+    },
+  });
+  try {
+    const api = createApi({
+      apiUrl: server.url.origin,
+      graphqlUrl: server.url.origin,
+      repository: "owner/repo",
+      token: "fixture-token",
+    });
+    expect(await api.readFailedRun(1381, "2026-10-30T10:17:00Z")).toEqual({
+      url: "https://github.com/owner/repo/actions/runs/2",
+      jobs: ["validation_results", "ci_passed"],
+    });
+  } finally {
+    await server.stop(true);
+  }
+});

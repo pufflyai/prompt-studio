@@ -105,7 +105,7 @@ Future model-related changes must preserve these boundaries:
 
 1. API and database tests prove that creation and follow-up persist `last_selected_model` correctly.
 2. Provider tests prove that OpenCode receives `{ providerID, id }` for creation and `{ providerID, modelID }` for messages.
-3. Storybook stories cover new-session selection and restoring the last selected model. Validate UI changes with Playwright, following the repository workflow.
+3. Canvas stories cover new-session selection and restoring the last selected model. Validate UI changes with Playwright, following the repository workflow.
 4. Integration coverage proves model propagation from an external linked project, using controlled provider fixtures rather than real agent processes in CI.
 
 Current implementation references:

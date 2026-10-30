@@ -113,9 +113,9 @@ Build the native binary before timing, then select it to prevent another build:
 bun run --cwd scripts build:host
 bun run --cwd packages/e2e perf:storage-scale:build
 export E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
-bun packages/e2e/src/perf/storage-scale.ts --help
-bun packages/e2e/src/perf/storage-scale.ts --fixture rich --output /path/evidence/rich --emit-fixture --timing-owner /path/owner.json
-bun packages/e2e/src/perf/storage-scale.ts --fixture rich --output /path/evidence/rich --home /path/native-rich --seed --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --help
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output /path/evidence/rich --emit-fixture --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output /path/evidence/rich --home /path/native-rich --seed --timing-owner /path/owner.json
 ```
 
 Repeat with `small` and a different home. Add `--churn` only to a separate fresh
@@ -221,8 +221,8 @@ A complete operation/background/profile shard retains ten cold and ten warm
 samples. Choose shards to split independent jobs without reducing this count:
 
 ```sh
-bun packages/e2e/src/perf/storage-scale.ts --fixture rich --output /path/evidence/board --home /path/native-rich --measure --profile native --operation board --background idle --timing-owner /path/owner.json
-bun packages/e2e/src/perf/storage-scale.ts --fixture small --output /path/evidence/edit --home /path/isolated-small --container-config /path/runtime.json --measure --profile combined --operation direct-sdk-first-write --background idle --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output /path/evidence/board --home /path/native-rich --measure --profile native --operation board --background idle --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/edit --home /path/isolated-small --container-config /path/runtime.json --measure --profile combined --operation direct-sdk-first-write --background idle --timing-owner /path/owner.json
 ```
 
 Omit operation/background selectors for the complete profile matrix. Use distinct
@@ -300,8 +300,8 @@ not stand in for compiled two-device or foreground latency evidence.
 ## Focused layer diagnostics
 
 ```sh
-bun packages/e2e/src/perf/storage-scale.ts --fixture rich --output /path/evidence/sync-10000 --layer sync --rows 10000 --timing-owner /path/owner.json
-bun packages/e2e/src/perf/storage-scale.ts --fixture small --output /path/evidence/db-100000 --layer database --rows 100000 --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output /path/evidence/sync-10000 --layer sync --rows 10000 --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/db-100000 --layer database --rows 100000 --timing-owner /path/owner.json
 ```
 
 Frozen scaling counts are rich 1,000/10,000 and small 1,000/10,000/100,000. These
@@ -372,6 +372,21 @@ CPU time, and peak and settled memory. Missing required native readings, incompl
 history and sampling gaps fail coverage. Container runtimes remain remote to the
 host sampler; local CPU or memory never substitutes for container evidence.
 
+Desktop schedules its two-second capture timer before the baseline Electron metrics
+read. A slow baseline read must not add a second delay before the first periodic
+sample. The CPU measurement window starts after that read and reports its actual
+duration separately from the capture cadence.
+
+The collector timestamps the start of collection before invoking native readers.
+Desktop supplies its Electron metrics reader to that same operation, so the cost
+of the read does not shift the sample's start timestamp. CLI sampling uses the
+same collector with no Electron processes.
+
+Desktop verifies the complete sidecar checksum through sequential asynchronous
+reads into one reusable 64 KiB buffer. This avoids allocating a new native buffer
+for every chunk on the main thread. Cancellation stops further reads and closes
+the file before verification can continue to the version check.
+
 CPU and memory summaries state whether they cover a process born during capture
 or only observed readings. The environment row records the compiled binary's
 version and SHA-256 alongside the source revision and runner details. Collection
@@ -381,7 +396,11 @@ do not claim application capture coverage.
 
 The normal completion path observes memory after one existing sampling interval
 of post-workload idle time. It exports the operation end and minimum idle interval;
-this does not assert heap stability or force garbage collection. Immediate crashes
+this does not assert heap stability or force garbage collection.
+The settling check compares the operation end with each reading's recorded wall-clock
+timestamp. Monotonic elapsed times describe sampling intervals and gaps; they do not
+reconstruct wall-clock observation times.
+Immediate crashes
 keep their kill boundary. Their missing exit or settling readings remain explicit
 coverage failures instead of fabricated memory values. Observation and cleanup
 still fit within the existing case cap.

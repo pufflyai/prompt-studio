@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { open } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
@@ -86,9 +87,23 @@ const readBinaryVersion = async (path: string, signal?: AbortSignal) => {
 };
 
 const readBinaryChecksum = async (path: string, signal?: AbortSignal) => {
+  signal?.throwIfAborted();
   const hash = createHash("sha256");
-  for await (const chunk of createReadStream(path, { signal })) hash.update(chunk);
-  return hash.digest("hex");
+  const file = await open(path, "r");
+  try {
+    // Native Electron buffer allocation is expensive; reuse one bounded buffer for the whole binary.
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    while (true) {
+      signal?.throwIfAborted();
+      const { bytesRead } = await file.read(buffer, 0, buffer.length, null);
+      if (bytesRead === 0) break;
+      hash.update(buffer.subarray(0, bytesRead));
+    }
+    signal?.throwIfAborted();
+    return hash.digest("hex");
+  } finally {
+    await file.close();
+  }
 };
 
 type ValidateSidecarArtifactInput = {

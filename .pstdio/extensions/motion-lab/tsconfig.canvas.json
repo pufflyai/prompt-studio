@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*.canvas.tsx", ".canvas/preview.tsx", "src/**/*.d.ts"],
+  "exclude": []
+}

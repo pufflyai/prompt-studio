@@ -8,19 +8,21 @@ export const createWebviewKeyboardShortcuts = (workbench: WorkbenchCore, command
   const registrations = createWorkbenchHotkeyRegistrations({ workbench, commandIds }).filter(
     (registration) => registration.enabled && getKeybindingSteps(registration.hotkey).length === 1,
   );
-  const shortcuts: WebviewKeyboardShortcut[] = registrations.map((registration) => {
-    const parsed = parseHotkey(getKeybindingSteps(registration.hotkey)[0]!);
-    return {
-      id: registration.requestId!,
-      allowInInputs: !registration.ignoreInputs,
-      entry: registration.entry,
-      key: parsed.key,
-      ctrlKey: parsed.ctrl,
-      metaKey: parsed.meta,
-      altKey: parsed.alt,
-      shiftKey: parsed.shift,
-    };
-  });
+  const shortcuts: WebviewKeyboardShortcut[] = registrations
+    .map((registration) => {
+      const parsed = parseHotkey(getKeybindingSteps(registration.hotkey)[0]!);
+      return {
+        id: registration.requestId!,
+        allowInInputs: !registration.ignoreInputs,
+        entry: registration.entry,
+        key: parsed.key,
+        ctrlKey: parsed.ctrl,
+        metaKey: parsed.meta,
+        altKey: parsed.alt,
+        shiftKey: parsed.shift,
+      };
+    })
+    .filter((shortcut) => !shortcut.allowInInputs || shortcut.altKey || shortcut.ctrlKey || shortcut.metaKey);
   return {
     shortcuts,
     async dispatch(request: WebviewKeyboardShortcutRequest) {

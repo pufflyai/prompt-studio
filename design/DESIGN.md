@@ -4,7 +4,7 @@
 
 These conventions apply to the app and its extensions. Add a rule only when a designer could reasonably choose differently and Prompt Studio needs one consistent choice.
 
-Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs in [Storybook](../documentation/guides/development/0003-storybook-coverage.md), and motion values in the [shared theme](../packages/ui/src/theme/primitives/motion.ts). See the [motion decision](../documentation/adrs/0070-production-motion-on-theme-tokens.md) for implementation details.
+Appearance, component states, and prop examples belong in [Canvas](../extensions/canvas/README.md), and motion values in the [shared theme](../packages/ui/src/theme/primitives/motion.ts). See the [motion decision](../documentation/adrs/0070-production-motion-on-theme-tokens.md) for implementation details.
 
 ## 1. Navigation
 

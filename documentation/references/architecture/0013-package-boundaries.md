@@ -45,10 +45,12 @@ layer-map change.
    it imports no Electron, UI, database or client code. Desktop, CLI and E2E
    declare their own dependency on it. Native sampling stays in the host.
 
-   The private `pstdio-benchmarks` package writes benchmark measurements in the shared
-   result format and runs benchmark suites. It has no workspace dependencies. Packages
-   with benchmarks declare it as a development dependency; only benchmark and
-   performance test files import it.
+   The private `pstdio-benchmarks` package owns benchmark measurements, suite membership,
+   sampling, budget policy and shared browser helpers. It has no workspace dependencies.
+   Packages with benchmarks declare it as a development dependency. `pstdio-scripts`
+   also declares it as a development dependency so priority dispatch and CI coverage
+   use the same suite registry. Production entry points do not import it. Its root
+   export provides shared tooling; the writer-only entry avoids loading other helpers.
 
    `storage-scale-fixture` is a private test utility with no workspace dependencies.
    The scale benchmarks in `pstdio-sync`, `pstdio-db` and `e2e` declare it as a
@@ -132,11 +134,11 @@ layer-map change.
    on `main`, or on a pull request labeled `ci:full`; see
    [CI scope](../../requirements/platform/0001-cross-platform-support.md#ci-scope).
 
-   The private `storybook-tests` package owns component browser interactions and
-   their Storybook servers. It declares `@pstdio/ui`, `@pstdio/workbench`, and
+   The private `canvas-tests` package owns component browser interactions and
+   their Canvas servers. It declares `@pstdio/ui`, `@pstdio/workbench`, and
    `pstdio-dashboard` as development dependencies because it loads their stories.
    Story sources stay with those owners. It does not depend on the API, database,
-   CLI, or `e2e`. App E2E never starts or builds Storybook.
+   CLI, or `e2e`. App E2E never starts or builds Canvas.
 
    `e2e` and `@pstdio/desktop` declare the private `pstdio-scripts` workspace as a
    development dependency. Their Playwright configs use its `./test-quarantine`
@@ -229,3 +231,7 @@ access check must preserve that authority boundary. See the
   import.
 
 The database uses the contract-layer `ResourceRef` type for persisted resource values. The UI library imports the SDK's public serializable control types and adds separate React-node and browser-file variants. These are type dependencies; the UI library still owns no routing, query, or extension-host policy. The SDK declaration rollup includes the private contract types, so installed UI declarations resolve through public packages.
+
+## Canvas authoring tooling
+
+The private `@pstdio/canvas` package owns preview composition, documentation blocks, and source indexing. UI packages and repository preview builds may use it as development tooling; it has no application-layer dependencies. Published extensions may use its type-only imports inside colocated `.canvas.tsx` examples without declaring a runtime dependency. Runtime imports still require a declared, allowed dependency. Published extension type checks exclude `.canvas.tsx` examples; the repository Canvas type-check command checks them through each owner’s `tsconfig.canvas.json` (or the UI examples configuration). This keeps repository examples independent of extension installation and published SDK/UI versions.

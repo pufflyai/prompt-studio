@@ -156,6 +156,20 @@
         "ref": "{hostRelease}"
       },
       "default": false
+    },
+    {
+      "installName": "canvas",
+      "extensionId": "pstdio.canvas",
+      "displayName": "UI Canvas",
+      "description": "Explore interactive UI examples, variants and independently themed canvas frames.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/canvas",
+        "ref": "{hostRelease}"
+      },
+      "default": false,
+      "bundleSource": false
     }
   ]
 }

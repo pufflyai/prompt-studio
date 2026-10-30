@@ -109,6 +109,7 @@ test("queues two follow-ups without stopping the active session and keeps a fail
     route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Could not send" }) }),
   );
   await editor.fill("Keep this draft");
+  await expect(send).toHaveAttribute("aria-label", "Queue message");
   await send.click();
   // The failed message stays in the conversation; closing it puts the text back in the composer.
   await expect(page.getByText("Message not sent")).toBeVisible();

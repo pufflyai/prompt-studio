@@ -4,11 +4,15 @@ Core extensions have their own versions and changelogs. The host, SDK, UI,
 workbench and desktop keep their shared stable release policy. SDK and UI can
 also publish [packages-only previews](0014-sdk-ui-previews.md).
 
-PSX is not deployed yet. Until it is, stable hosts include their catalog extension
+PSX is not deployed yet. Until it is, stable hosts include most catalog extension
 sources and lockfiles as bundled packages, built from the host release checkout.
-Installing them does not require Git. Users receive extension changes with
+Installing bundled entries does not require Git. Large optional catalogs such as
+UI Canvas set `bundleSource: false` and stay outside the core CLI. Install those
+from the matching Git release when Git is available, or from a downloaded extension
+package with `pst extensions add <package.tgz>`. Users receive catalog changes with
 the next host release. PSX support is in the host but only runs when
-`PSTDIO_EXTENSION_RELEASE_REF` is set to `psx:<registry URL>`.
+`PSTDIO_EXTENSION_RELEASE_REF` is set to `psx:<registry URL>`; configured hosts can
+download compatible packages directly from the registry.
 
 ## Release a fix
 

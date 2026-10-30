@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { benchmarkSampleCount } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { git } from "pstdio-wt";
 import { cleanupWorkspaceWorktree } from "./worktree-cleanup";
@@ -9,10 +10,10 @@ import { cleanupWorkspaceWorktree } from "./worktree-cleanup";
 // BENCH_ROOT selects the filesystem; /tmp can be a RAM disk and is not the default.
 const count = 28;
 const filesPerWorkspace = Number(process.env.BENCH_FILES ?? 5000);
-const repeats = Number(process.env.BENCH_REPEATS ?? 3);
+const repeats = benchmarkSampleCount(3);
 const limits = (process.env.BENCH_LIMITS ?? "1,2,4,8,28").split(",").map(Number);
 if (![filesPerWorkspace, repeats, ...limits].every((value) => Number.isSafeInteger(value) && value > 0)) {
-  throw new Error("BENCH_FILES, BENCH_REPEATS, and BENCH_LIMITS must contain positive integers.");
+  throw new Error("BENCH_FILES, BENCHMARK_SAMPLES, and BENCH_LIMITS must contain positive integers.");
 }
 const base = resolve(process.env.BENCH_ROOT ?? ".bench-worktree-cleanup");
 mkdirSync(base, { recursive: true });

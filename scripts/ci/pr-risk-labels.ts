@@ -97,10 +97,10 @@ const isReleaseMetadata = async (api: PolicyApi, pull: PullRequest) => {
 
 export async function prepare(api: PolicyApi) {
   const pull = await api.readPull();
+  if (pull.state !== "open") return;
   const snapshot = snapshotOf(pull);
   await api.publish(snapshot.head, { state: "pending", description: "Synchronizing PR area labels" });
   try {
-    if (pull.state !== "open") throw new Error("The pull request is no longer open");
     // GitHub's files API stops at 3,000. A partial diff cannot prove separation.
     if (pull.changed_files > 3000) throw new Error("The PR exceeds GitHub's 3,000-file classification limit");
     // Leave room for all eight managed labels without the labeler's truncation.

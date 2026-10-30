@@ -22,6 +22,8 @@ const apiProxy = apiToken
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Preview test artifacts contain HTML too; only the app is a development entry.
+  optimizeDeps: { entries: ["index.html"] },
   server: {
     proxy: apiProxy,
   },
