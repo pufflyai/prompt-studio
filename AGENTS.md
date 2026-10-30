@@ -15,6 +15,7 @@ Use [NONFUNCTIONAL_REQUIREMENTS.md](NONFUNCTIONAL_REQUIREMENTS.md) as planning g
 - A PR is not complete until all applicable CI checks pass on its latest commit. See [CI completion](#ci-completion).
 - If you get stuck, read the relevant [lessons learned](documentation/lessons-learned/) before trying another approach.
 - **NEVER commit generated files** unless they are listed as an exception in [Generated files](#generated-files).
+- **Changes of 2,000 or more added lines need a person's approval first.** See [Large changes](#large-changes).
 
 ## Generated files
 
@@ -32,6 +33,16 @@ Before every commit, run `git status` and `git diff --cached --stat`. If generat
 | Canvas preview catalog (temporary) | `extensions/canvas/src/catalog/generated/**` | Only in a PR whose purpose is to refresh it, never in a feature PR. Ticket PS-985 removes it from Git. |
 
 The Canvas catalog rewrites about 1,000 content-hashed files whenever shared UI changes. Do not run `catalog:build` in a feature PR. If the Canvas freshness test fails because of your change, say so in the PR and leave the refresh to a separate PR until PS-985 lands.
+
+## Large changes
+
+If a change will add 2,000 or more lines to a PR, or commits the project to adding that much later, a person must approve it before you write it. Examples: a new package or extension, vendored or copied code, generated output, a large fixture, or a design that keeps adding files with every change. Count every added line, including lockfiles, translations and tests.
+
+1. Stop before writing the code.
+2. Create a review request with `pst pstdio-planner request-human --request '{"kind":"decision"}'`. Explain why the change needs that much code, the expected size, and the smaller alternatives you considered.
+3. Wait for the answer. Write the change only if the person approves it, and link the request in the PR description.
+
+When a change grows past 2,000 added lines while you work, stop and ask the same way. Check the size with `git diff --shortstat origin/main...HEAD`.
 
 # Language
 
