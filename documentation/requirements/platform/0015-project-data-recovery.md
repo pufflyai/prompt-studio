@@ -299,7 +299,7 @@ shrink the benchmark workload or raise budgets.
 
 Implementation acceptance must prove:
 
-1. Two isolated runtimes recover all non-Git text, binary, hidden and new files,
+1. Two isolated runtimes recover all included non-Git text, binary, hidden and new files,
    directories and supported metadata with no Git host or online source device.
 2. The starter `.pstignore` skips nested `node_modules` folders and copies itself.
    `.env`, keys and other Git-ignored files recover unless explicitly excluded in
