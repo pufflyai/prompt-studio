@@ -1,4 +1,6 @@
-import type { PerformanceProcess, PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
+import type { PerformanceCaptureSample, PerformanceProcessSample, PerformanceSnapshot } from "@pstdio/sdk/extensions";
+
+type PerformanceProcess = PerformanceSnapshot["processes"][number];
 
 const process = (
   input: Partial<PerformanceProcess> & Pick<PerformanceProcess, "pid" | "role">,
@@ -13,34 +15,19 @@ const process = (
   ...input,
 });
 
-// One process per extension, so the stories show one row each.
-const extension = (pid: number, installedExtensionId: string, cpu: number, views = 1, workingSet = 80_000) =>
+// One process per extension, so the stories show one row each. Webview ids carry the extension name.
+const extension = (pid: number, name: string, cpu: number, views = 1, workingSet = 80_000) =>
   process({
     pid,
     role: "extension-frames",
     cpuPercent: cpu,
     averageCpuPercent: cpu,
     extensionFrames: Array.from({ length: views }, (_, index) => ({
-      installedExtensionId,
-      webviewId: `view-${index}`,
+      installedExtensionId: `installed-${name}`,
+      webviewId: `pstdio.${name}.view.view-${index + 1}`,
     })),
     memoryKiB: { workingSet, peakWorkingSet: workingSet, privateBytes: null },
   });
-
-export const extensionNames: Record<string, string> = {
-  shader: "Shader Lab",
-  motion: "Motion Lab",
-  notes: "Notes",
-  radar: "Social Radar",
-  tickets: "Tickets",
-  pencil: "Pencil",
-  lab: "Extension Lab",
-  font: "Font Editor",
-  reports: "Reports",
-  artifacts: "Artifacts",
-  loops: "Loops",
-  glass: "Glass Lab",
-};
 
 const frames: PerformanceSnapshot["frames"] = [
   {
@@ -166,4 +153,113 @@ export const browserSnapshot: PerformanceSnapshot = {
   measurementWindowMs: null,
   capabilities: { processMetrics: false, idleWakeups: false, privateMemory: false, slowFrames: "long-animation-frame" },
   frames: [frames[1]!],
+};
+
+const backendProcess = (
+  sequence: number,
+  startId: string,
+  cpu: number,
+  megabytes: number,
+): PerformanceProcessSample => ({
+  pid: startId === "backend-2" ? 52 : 51,
+  processStartId: startId,
+  role: "backend",
+  cpuPercent: cpu,
+  cpuTimeMs: sequence * 40,
+  residentBytes: megabytes * 1_300_000,
+  peakResidentBytes: null,
+  physicalFootprintBytes: megabytes * 1_000_000,
+  peakPhysicalFootprintBytes: (megabytes + 40) * 1_000_000,
+  privateCommittedBytes: null,
+  heapUsedBytes: null,
+  externalBytes: null,
+});
+
+const workbenchProcess = (sequence: number, cpu: number): PerformanceProcessSample => ({
+  pid: 11,
+  processStartId: "workbench-1",
+  role: "workbench",
+  cpuPercent: cpu,
+  cpuTimeMs: sequence * 60,
+  residentBytes: 310_000_000,
+  peakResidentBytes: 340_000_000,
+  physicalFootprintBytes: 280_000_000,
+  peakPhysicalFootprintBytes: 300_000_000,
+  privateCommittedBytes: null,
+  heapUsedBytes: null,
+  externalBytes: null,
+});
+
+type BackendReading = { durationMs: number | null; state?: PerformanceCaptureSample["backend"]["state"] };
+
+const capture = (readings: BackendReading[], restartAt?: number): Extract<PerformanceSnapshot, { version: 2 }> => ({
+  ...smoothSnapshot,
+  version: 2,
+  capture: {
+    version: 2,
+    id: "capture-1",
+    startedAt: "2026-10-02T12:04:00.000Z",
+    hostVersion: "0.46.0",
+    platform: "darwin",
+    sampleIntervalMs: 2_000,
+    droppedSamples: 0,
+    samples: readings.map((reading, index) => ({
+      sequence: index + 1,
+      capturedAt: new Date(Date.parse("2026-10-02T12:04:02.000Z") + index * 2_000).toISOString(),
+      elapsedMs: (index + 1) * 2_000,
+      intervalMs: 2_000,
+      processes: [
+        backendProcess(
+          index,
+          restartAt !== undefined && index >= restartAt ? "backend-2" : "backend-1",
+          3 + (index % 4),
+          420 + index * 6,
+        ),
+        workbenchProcess(index, 5 + (index % 3)),
+      ],
+      backend: {
+        runtimeId: "runtime-1",
+        scope: "local",
+        state: reading.state ?? "reply",
+        durationMs: reading.durationMs,
+        observedForMs: reading.durationMs ?? 5_000,
+        runtime: null,
+      },
+    })),
+  },
+});
+
+const replies = [9, 11, 8, 14, 10, 9, 12, 40, 75, 18, 11, 9, 10, 12, 9].map((durationMs) => ({ durationMs }));
+
+export const backendSnapshot = capture(replies);
+export const reconnectingSnapshot = capture([
+  ...replies.slice(0, 11),
+  ...Array.from({ length: 4 }, () => ({ durationMs: null, state: "timeout" as const })),
+]);
+export const restartedSnapshot = capture(
+  [...replies.slice(0, 8), { durationMs: null, state: "unavailable" as const }, ...replies.slice(9)],
+  9,
+);
+
+// Chromium usually runs every extension view in one renderer process.
+export const sharedProcessSnapshot: PerformanceSnapshot = {
+  ...smoothSnapshot,
+  processes: [
+    process({ pid: 11, role: "workbench", cpuPercent: 6, averageCpuPercent: 6 }),
+    process({
+      pid: 40,
+      role: "extension-frames",
+      cpuPercent: 18,
+      averageCpuPercent: 18,
+      extensionFrames: [
+        ...["scribble", "kiln", "boombox"].map((view) => ({
+          installedExtensionId: "installed-lab",
+          webviewId: `pstdio.extension-lab.view.${view}`,
+        })),
+        { installedExtensionId: "installed-notes", webviewId: "pstdio.pstdio-notes.view.editor" },
+        { installedExtensionId: "installed-performance", webviewId: "pstdio.pstdio-performance.view.meter" },
+      ],
+      memoryKiB: { workingSet: 214_000, peakWorkingSet: 240_000, privateBytes: null },
+    }),
+  ],
 };

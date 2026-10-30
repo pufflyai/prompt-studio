@@ -84,6 +84,16 @@ const runLayer = async (kind: Workload, root: string, layer: string, emit: (data
   }
 };
 
+// Only paths that start the compiled runtime measure it, so only they need it built and record its identity.
+const emitArtifact = (emit: (data: object) => void) => {
+  if (!existsSync(PACKAGED_BINARY_PATH)) throw new Error("Build the compiled binary separately before benchmarking");
+  emit({
+    phase: "artifact",
+    version: execFileSync(PACKAGED_BINARY_PATH, ["--version"], { encoding: "utf8" }).trim(),
+    sha256: createHash("sha256").update(readFileSync(PACKAGED_BINARY_PATH)).digest("hex"),
+  });
+};
+
 const runPreparation = async (
   preparation: string,
   root: string,
@@ -162,10 +172,6 @@ unsupported controls and missing phase evidence remain explicit coverage failure
       freeMemory: freemem(),
       bun: Bun.version,
       commit: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", timeout: 1_000 }).trim(),
-      artifact: {
-        version: execFileSync(PACKAGED_BINARY_PATH, ["--version"], { encoding: "utf8" }).trim(),
-        sha256: createHash("sha256").update(readFileSync(PACKAGED_BINARY_PATH)).digest("hex"),
-      },
       powerMode: "unrecorded",
       physicalLowerSpecEvidence: "unavailable",
       limits: process.resourceUsage(),
@@ -186,11 +192,12 @@ unsupported controls and missing phase evidence remain explicit coverage failure
       process.argv.includes(flag),
     );
     if (preparation) {
+      if (preparation !== "--emit-fixture") emitArtifact(emit);
       await runPreparation(preparation, root, home, kind, emit);
       return;
     }
     if (!home) throw new Error("Pass a disposable --home");
-    if (!existsSync(PACKAGED_BINARY_PATH)) throw new Error("Build the compiled binary separately before benchmarking");
+    emitArtifact(emit);
     const profile = option("--profile", "native") as Profile;
     if (!(profile in contract.profiles)) throw new Error("Unknown CPU profile");
     const container = configuredContainer(home);
