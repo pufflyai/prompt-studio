@@ -1,5 +1,6 @@
 import {
   accountEvents,
+  defineArtifactMount,
   defineCommand,
   defineExtension,
   defineHook,
@@ -19,6 +20,20 @@ const read = defineCommand({
       caption: await records.read(records.id("caption")),
     };
   },
+});
+const documents = defineArtifactMount({ id: "documents", path: "documents", label: "Documents" });
+const writeFile = defineCommand({
+  id: "write-file",
+  title: "Write shared file",
+  mutating: true,
+  params: { path: params.text({ required: true }), content: params.text({ required: true }) },
+  run: (ctx, input) => ctx.artifacts.mount(documents.id).writeText(input.path, input.content),
+});
+const readFile = defineCommand({
+  id: "read-file",
+  title: "Read shared file",
+  params: { path: params.text({ required: true }) },
+  run: (ctx, input) => ctx.artifacts.mount(documents.id).readText(input.path),
 });
 
 const stage = defineCommand({
@@ -147,6 +162,7 @@ const queryRecords = defineCommand({
   },
 });
 export default defineExtension({
+  artifactMounts: [documents],
   storageIndexes: [
     {
       name: "ready",
@@ -158,6 +174,8 @@ export default defineExtension({
   resourceKinds: [defineResourceKind({ id: "note", prefix: "NR" })],
   commands: [
     read,
+    writeFile,
+    readFile,
     stage,
     commit,
     outcome,
