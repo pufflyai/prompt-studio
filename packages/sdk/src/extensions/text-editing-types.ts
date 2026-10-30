@@ -25,6 +25,7 @@ export interface TextEditingSnapshot {
 export interface TextEditingDraft {
   readonly text: Y.Text;
   commit(): Promise<void>;
+  /** Discard an unsubmitted or definitively refused draft. In-flight and uncertain admissions keep recovery. */
   cancel(): void;
 }
 export interface TextEditingSession {

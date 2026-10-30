@@ -1,10 +1,11 @@
 import * as Y from "yjs";
+import { textEditingError } from "./text-editing-codec";
 import type { TextEditingDraft } from "./text-editing-types";
 
 /** Preserve the original causal history until a frozen authored delta is acknowledged. */
 export const createTextEditingDraft = (input: {
   state: Uint8Array;
-  commit: (source: Uint8Array, update: Uint8Array, memberId: string) => Promise<void>;
+  commit: (source: Uint8Array, update: Uint8Array, memberId: string, admitted: () => void) => Promise<void>;
   finished: () => void;
   cancelled?: () => void;
 }) => {
@@ -16,13 +17,15 @@ export const createTextEditingDraft = (input: {
   let changed = false;
   let frozen = false;
   let done = false;
-  let retired = false;
+  let refused = false;
+  let uncertain = false;
   let update: Uint8Array | undefined;
   let work: Promise<void> | undefined;
   document.on("update", () => {
     changed = true;
   });
   const finish = () => {
+    if (done) return;
     done = true;
     input.finished();
     document.destroy();
@@ -33,12 +36,19 @@ export const createTextEditingDraft = (input: {
       if (done) return Promise.resolve();
       if (work) return work;
       frozen = true;
+      refused = false;
       update ??= Y.encodeStateAsUpdate(document, vector);
       work = input
-        .commit(original, update, memberId)
+        .commit(original, update, memberId, finish)
         .then(finish)
         .catch((error: unknown) => {
-          retired = !!error && typeof error === "object" && "code" in error && error.code === "source_retired";
+          if (done) throw error;
+          const failure = textEditingError(error);
+          // A read-only refusal precedes admission. It cannot settle an earlier lost acknowledgement.
+          refused =
+            failure.code === "source_retired" ||
+            (!uncertain && failure.code === "source_read_only" && !failure.retryable);
+          if (!refused) uncertain = true;
           throw error;
         })
         .finally(() => {
@@ -47,7 +57,7 @@ export const createTextEditingDraft = (input: {
       return work;
     },
     cancel() {
-      if ((!frozen || retired) && !done) {
+      if ((!frozen || refused) && !work && !done) {
         input.cancelled?.();
         finish();
       }

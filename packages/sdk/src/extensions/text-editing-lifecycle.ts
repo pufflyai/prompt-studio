@@ -20,6 +20,11 @@ interface LifecycleInput {
 export const createTextEditingLifecycle = (input: LifecycleInput) => {
   const finalizers = new Set<() => void | Promise<void>>();
   const drafts = new Set<ReturnType<typeof createTextEditingDraft>>();
+  const draftMembers = new Set<string>();
+  const releaseDraft = async (memberId: string) => {
+    await input.host.call("editing.text", { operation: "abandon", memberId });
+    draftMembers.delete(memberId);
+  };
   let closing = false;
   let closed = false;
   let closingWork: Promise<void> | undefined;
@@ -37,6 +42,7 @@ export const createTextEditingLifecycle = (input: LifecycleInput) => {
           throw textEditingFailure("draft_active", "Finish or cancel the active text draft before closing");
         await Promise.all([...drafts].filter((draft) => draft.frozen()).map((draft) => draft.draft.commit()));
         while (input.fences.pending()) await input.flush(input.fences.prefix());
+        await Promise.all([...draftMembers].map(releaseDraft));
       })
       .catch((error) => {
         if (preparing === active) {
@@ -73,8 +79,9 @@ export const createTextEditingLifecycle = (input: LifecycleInput) => {
       let draftMember: string | undefined;
       const draft = createTextEditingDraft({
         state: input.sourceState(),
-        commit: async (source, update, memberId) => {
+        commit: async (source, update, memberId, admitted) => {
           draftMember = memberId;
+          draftMembers.add(memberId);
           ticket ??= input.fences.author();
           input.publish();
           try {
@@ -89,8 +96,10 @@ export const createTextEditingLifecycle = (input: LifecycleInput) => {
             });
             input.receive(joined.snapshot);
             input.fences.complete(ticket, joined.snapshot.revision);
+            admitted();
             input.publish();
             await input.host.call("editing.text", { operation: "close", handle: joined.handle });
+            draftMembers.delete(memberId);
           } catch (error) {
             input.failed(error);
             throw error;
@@ -98,8 +107,7 @@ export const createTextEditingLifecycle = (input: LifecycleInput) => {
         },
         cancelled: () => {
           if (ticket !== undefined) input.fences.cancel(ticket);
-          if (draftMember)
-            void input.host.call("editing.text", { operation: "abandon", memberId: draftMember }).catch(input.failed);
+          if (draftMember) void releaseDraft(draftMember).catch(input.failed);
         },
         finished: () => {
           drafts.delete(draft);

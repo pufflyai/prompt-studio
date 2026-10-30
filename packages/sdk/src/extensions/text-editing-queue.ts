@@ -24,6 +24,7 @@ export const createTextEditingFences = (initialRevision: number) => {
   return {
     author: () => ++authored,
     prefix: () => authored,
+    settled: (prefix: number) => prefix <= acknowledged,
     pending: () => acknowledged < authored,
     through(prefix: number) {
       if (prefix <= acknowledged) return Promise.resolve(revision);

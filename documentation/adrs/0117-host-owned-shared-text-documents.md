@@ -280,7 +280,12 @@ The runtime build parses its result as a classic script without executing it.
 A draft retains its original causal history. Commit freezes the admitted delta and
 retries that same delta until acknowledgement. Later mutations of a retained raw
 Yjs recovery copy cannot alter the frozen submission. Retired-source failures retain
-recovery data and fail waiting fences until explicit cancellation. History adoption
+recovery data and fail waiting fences until explicit cancellation. A definitive
+read-only refusal before admission also permits explicit cancellation, unless an
+earlier attempt has unknown admission. In-flight requests cannot be cancelled.
+A delivered durable acknowledgement settles the draft before member cleanup;
+cleanup failure cannot reopen or replay that acknowledged draft. The lifecycle
+retains failed cleanup membership until close or abandon succeeds. History adoption
 rechecks edits authored during asynchronous opens before replacing a replica.
 
 Members register before opening, so an in-flight open participates in normal close.

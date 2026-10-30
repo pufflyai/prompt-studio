@@ -129,7 +129,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
   }
   const flushPrefix = (prefix: number) => {
     if (lifecycle.closed()) return Promise.reject(textEditingFailure("session_closed", "This text session is closed"));
-    if (blocked()) return Promise.reject(state.error);
+    if (blocked() && !fences.settled(prefix)) return Promise.reject(state.error);
     const fence = fences.through(prefix);
     drive();
     return fence;
