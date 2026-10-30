@@ -12,9 +12,10 @@ const themeTokenMap = {
   "editor.lineHighlightBackground": ["colors.bg.hover"],
   "editor.selectionBackground": ["colors.bg.active"],
   "editorWidget.background": ["colors.bg.panel"],
-  "sideBar.background": ["colors.bg.panel"],
+  // Like the default themes, subtle surfaces such as user messages use the side bar color, one step
+  // away from the editor background. Most themes set `input.background` to the editor background.
+  "sideBar.background": ["colors.bg.panel", "colors.bg.subtle"],
   "panel.background": ["colors.bg.panel"],
-  "input.background": ["colors.bg.subtle"],
   "input.foreground": ["colors.fg"],
   "input.border": ["colors.border"],
   "dropdown.background": ["colors.bg.panel"],
