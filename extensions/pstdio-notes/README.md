@@ -12,6 +12,8 @@ pst extensions add pstdio-notes
 
 Install Notes once for your user, then turn it on in each project that should use it. Installing from a project turns it on there. Notes needs a ready local default workspace with file access; creating and editing notes needs write access.
 
+On a new machine, sign in and select your cloud project. Prompt Studio downloads its content, prepares a local project folder, and restores synced notes automatically. You do not need to attach a folder or clone a Git repository to use Notes.
+
 ## Write notes
 
 Select **Notes** in the project sidebar to open its page. Use its chevron to expand your notes and folders. The tree starts collapsed and stays in the project sidebar when you open a note. Open a note to edit it in the Markdown editor. The editor shows headings, lists, links, tables, and code blocks as formatted text, and saves as you type.
