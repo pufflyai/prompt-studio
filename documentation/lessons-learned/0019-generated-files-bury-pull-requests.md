@@ -14,4 +14,5 @@ PR #1577 moved the performance widget into an extension. Its real change was abo
 
 - Never commit generated files. Only the exceptions in [Generated files](../../AGENTS.md#generated-files) may be committed.
 - Before every commit, check `git diff --cached --stat` for generated paths and unstage them.
-- When a check demands a generated file, report the check instead of committing the file. A check that requires committed generated output is a design problem to fix (PS-985 for the Canvas catalog), not a reason to commit it.
+- When a check demands a generated file, report the check instead of committing the file. A check that requires committed generated output is a design problem to fix, not a reason to commit it. The Canvas catalog is now ignored by Git and built from source, and PS-987 makes Canvas build each project's previews itself.
+- The `pr-guards` CI check fails PRs that add generated files or 2,000+ lines without a person's approval.
