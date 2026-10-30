@@ -16,10 +16,15 @@ export const useResizableSplitRootSize = (
     if (!element) return;
 
     const updateRootSize = () => {
-      setSize({
-        rootSize: element.getBoundingClientRect()[dimension],
-        separatorSize: separatorRef.current?.getBoundingClientRect()[dimension] ?? 0,
-      });
+      const rootSize = element.getBoundingClientRect()[dimension];
+      const separatorSize = separatorRef.current?.getBoundingClientRect()[dimension] ?? 0;
+      // ResizeObserver also reports the other axis. It must not rerender a split
+      // whose bounds did not change, for example during a nested panel's animation.
+      setSize((previous) =>
+        previous.rootSize === rootSize && previous.separatorSize === separatorSize
+          ? previous
+          : { rootSize, separatorSize },
+      );
     };
 
     updateRootSize();
