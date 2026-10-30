@@ -22,7 +22,6 @@ export const dashboardWidgetIds = {
   createProject: "dashboard-workbench.create-project",
   projectFolder: "dashboard-workbench.project-folder",
   sessionBubble: "dashboard-workbench.session-bubble",
-  performance: "dashboard-workbench.performance",
 } as const;
 
 import { WORKSPACES_COLLECTION_ID } from "pstdio-api-contracts";

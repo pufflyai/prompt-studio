@@ -161,6 +161,7 @@
         "pstdio-base-themes",
         "pstdio-dashboard",
         "pstdio-notes",
+        "pstdio-performance",
         "pstdio-planner",
         "pstdio-reports",
         "pstdio-skills",
@@ -358,6 +359,16 @@
         "src/**/*.test.ts",
         "src/**/*.canvas.tsx",
         "src/{view,open-artifact}.tsx"
+      ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-performance": {
+      "entry": [
+        "package.json",
+        "extension.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/{meter,details}-view.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
