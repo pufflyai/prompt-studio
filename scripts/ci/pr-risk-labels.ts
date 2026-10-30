@@ -34,40 +34,6 @@ interface Snapshot {
 
 const snapshotOf = (pull: PullRequest) => ({ head: pull.head.sha, base: pull.base.sha, baseRef: pull.base.ref });
 
-const generatedCanvasOutputs = new Set([
-  "frame-manifest.json",
-  "frame-themes.json",
-  "migration-ledger.json",
-  "source-information.json",
-  "stories.json",
-]);
-
-const canvasModulePath = /^extensions\/canvas\/src\/catalog\/generated\/frame-modules\/[a-f0-9]{64}\.txt$/;
-
-const isGeneratedCanvasFileChange = (file: PullRequestFile) => {
-  if (file.status === "renamed")
-    return canvasModulePath.test(file.filename) && canvasModulePath.test(file.previous_filename ?? "");
-  if (file.previous_filename) return false;
-  if (canvasModulePath.test(file.filename)) return ["added", "modified", "removed"].includes(file.status);
-  const prefix = "extensions/canvas/src/catalog/generated/";
-  return (
-    file.status === "modified" &&
-    file.filename.startsWith(prefix) &&
-    generatedCanvasOutputs.has(file.filename.slice(prefix.length))
-  );
-};
-
-// Host and SDK edits change these compiled previews even when no extension source changes.
-const isGeneratedCanvasRefresh = async (api: PolicyApi, pull: PullRequest) => {
-  const files = await api.readChangedFiles();
-  if (files.length !== pull.changed_files || files.length === 0)
-    throw new Error("Incomplete generated Canvas diff; rerun classification");
-  const extensionFiles = files.filter(
-    (file) => file.filename.startsWith("extensions/") || file.previous_filename?.startsWith("extensions/"),
-  );
-  return extensionFiles.length > 0 && extensionFiles.every(isGeneratedCanvasFileChange);
-};
-
 const dependencyFields = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
 const releaseVersion = /^(?:\^|~)?\d+\.\d+\.\d+(?:-[\w.-]+)?$/;
 
@@ -187,8 +153,6 @@ export async function finish(
           state: "success",
           description: "Generated release metadata contains no SDK or extension implementation changes",
         };
-      } else if (await isGeneratedCanvasRefresh(api, current)) {
-        status = { state: "success", description: "SDK changes refresh only generated Canvas outputs" };
       } else {
         status = { state: "failure", description: "Split SDK and extension changes into separate PRs" };
       }

@@ -31,4 +31,3 @@
 
 # Generated files: collapse in review diffs and exclude from language stats.
 bun.lock linguist-generated=true
-extensions/canvas/src/catalog/generated/** linguist-generated=true
