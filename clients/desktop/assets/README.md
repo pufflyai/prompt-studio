@@ -25,6 +25,4 @@ Finder window background of the macOS DMG. appdmg combines them into one Retina
 image. Do not draw the app or Applications icons into the artwork; Finder draws
 the real ones at the positions set in `forge.config.ts`.
 
-The source is the `Desktop · macOS installer · Background` frame in
-`design/prompt-studio-website.pen`. Change the frame with the Pencil CLI, then
-export it at scale 1 and 2 to these two files and commit them together.
+Keep the artwork consistent with Landing Page in the live Canvas catalog. Export updates at scale 1 and 2 to these two files and commit them together.

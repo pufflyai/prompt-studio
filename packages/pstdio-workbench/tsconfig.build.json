@@ -25,8 +25,8 @@
   "exclude": [
     "**/*.test.ts",
     "**/*.test.tsx",
-    "**/*.stories.ts",
-    "**/*.stories.tsx",
+    "**/*.canvas.ts",
+    "**/*.canvas.tsx",
     "**/*.storybook.ts",
     "src/examples",
     "../pstdio-api-contracts/src/**/*.test.ts",

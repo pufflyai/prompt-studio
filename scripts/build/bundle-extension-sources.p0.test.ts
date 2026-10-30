@@ -14,6 +14,7 @@ test.each(["1.0.0", "0.46.0-nightly.20261028030226"])("bundles host catalog sour
     write("packages/pstdio-api/files/extension-catalog.json", JSON.stringify({ extensions: [
       { installName: "demo", origin: { url: "https://example.com/repository", path: "extensions/demo", ref: "{hostRelease}" } },
       { installName: "external", origin: { url: "https://example.com/third-party", path: "not-shipped", ref: "main" } },
+      { installName: "download", bundleSource: false, origin: { url: "https://example.com/repository", path: "not-shipped", ref: "{hostRelease}" } },
     ] }));
     write("extensions/demo/package.json", JSON.stringify({ publisher: "test", name: "demo", version, main: "extension.ts", files: ["extension.ts"], engines: { pstdio: "^0.3.0" } }));
     write("extensions/demo/extension.ts", "export default {};");

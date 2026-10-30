@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { recordPageMemory, throttleChromiumCpu } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
+import { openPerformancePreview } from "./canvas-preview";
 
 const workloads = ["Rich turns", "Plain turns", "1000 responses", "5000 responses", "Large response"];
 
@@ -15,18 +16,16 @@ for (const workload of workloads) {
         window.__longTasks?.push(...list.getEntries().map((entry) => ({ duration: entry.duration })));
       }).observe({ type: "longtask", buffered: true });
     });
-    await page.goto(
-      "/iframe.html?id=patterns-chat-chat-panel-rendering--rendering-workloads&globals=theme:pstdio-light",
-    );
-    await page.getByRole("button", { name: workload, exact: true }).waitFor();
-    await page.evaluate(() => document.fonts.ready);
+    const preview = await openPerformancePreview(page, "patterns-chat-chat-panel-rendering--rendering-workloads");
+    await preview.getByRole("button", { name: workload, exact: true }).waitFor();
+    await preview.evaluate(() => document.fonts.ready);
     const samples = [];
     for (const phase of ["mount", "middle", "switch", "stream"]) {
       if (phase === "stream" && workload === "Large response") continue;
       await cdp.send("Profiler.enable");
       await cdp.send("Profiler.start");
       const before = await cdp.send("Performance.getMetrics");
-      const startedAt = await page.evaluate(
+      const startedAt = await preview.evaluate(
         ({ phase, workload }) => {
           window.__longTasks = [];
           const startedAt = performance.now();
@@ -49,8 +48,8 @@ for (const workload of workloads) {
         { phase, workload },
       );
       if (phase === "stream")
-        await page.waitForFunction(() => performance.getEntriesByName("chat-rendering:stream-complete").length > 0);
-      await page.waitForFunction(() => {
+        await preview.waitForFunction(() => performance.getEntriesByName("chat-rendering:stream-complete").length > 0);
+      await preview.waitForFunction(() => {
         const viewport = document.querySelector(
           '[data-testid="rendering-chat"] [data-scope="scroll-area"][data-part="viewport"]',
         );
@@ -60,13 +59,13 @@ for (const workload of workloads) {
           viewport.querySelector("[data-chat-message-list-item]")
         );
       });
-      await page.evaluate(
+      await preview.evaluate(
         () =>
           new Promise<void>((resolve) =>
             requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
           ),
       );
-      const snapshot = await page.evaluate(
+      const snapshot = await preview.evaluate(
         (start) => ({
           elapsedMs: performance.now() - start,
           responses: document.querySelectorAll('[data-chat-message-list-item="response"]').length,

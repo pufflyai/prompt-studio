@@ -1,0 +1,10 @@
+[
+  {
+    "id": "preview-build",
+    "command": ["bun", "x", "--no-install", "lerna", "run", "build:previews", "--scope", "canvas-tests"]
+  },
+  {
+    "id": "preview-browser",
+    "command": ["bun", "run", "test:browser"]
+  }
+]

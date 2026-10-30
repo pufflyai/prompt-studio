@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createWindowsUnitPlan } from "./run-windows-unit-tests";
 
-const packages = ["one", "two", "three", "four", "pstdio-wt", "pstdio-api", "pstdio-db", "e2e", "storybook-tests"].map(
+const packages = ["one", "two", "three", "four", "pstdio-wt", "pstdio-api", "pstdio-db", "e2e", "canvas-tests"].map(
   (name) => ({ name, dir: `packages/${name}`, dependencies: [], scripts: { test: "bun runner.ts" } }),
 );
 const files = [
@@ -21,7 +21,7 @@ test("global Windows shards execute each file once without creating empty packag
     "packages/pstdio-api/src/session.p1.test.ts",
     "packages/pstdio-db/src/db.p0.test.ts",
     "packages/e2e/src/helpers.p0.test.ts",
-    "packages/storybook-tests/src/helpers.p0.test.ts",
+    "packages/canvas-tests/src/helpers.p0.test.ts",
     "packages/one/src/full.p3.test.ts",
     "packages/one/src/service.p2.integration.ts",
   ];

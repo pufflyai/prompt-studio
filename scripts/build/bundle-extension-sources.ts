@@ -10,7 +10,7 @@ export const bundleExtensionSources = async (root: string) => {
   const repository = typeof repositoryData.repository === "string" ? repositoryData.repository : repositoryData.repository.url;
   const normalizeUrl = (url: string) => url.replace(/^git\+/, "").replace(/\.git\/?$/, "").replace(/\/$/, "");
   const catalog = JSON.parse(await readFile(join(root, "packages/pstdio-api/files/extension-catalog.json"), "utf8")) as {
-    extensions: Array<{ installName: string; origin: { url: string; path: string; ref: string } }>;
+    extensions: Array<{ installName: string; bundleSource?: boolean; origin: { url: string; path: string; ref: string } }>;
   };
   const destination = join(root, "packages/pstdio/files/extension-sources");
   await rm(destination, { recursive: true, force: true });
@@ -21,6 +21,7 @@ export const bundleExtensionSources = async (root: string) => {
     sources: [],
   };
   for (const entry of catalog.extensions) {
+    if (entry.bundleSource === false) continue;
     if (entry.origin.ref !== "{hostRelease}" || normalizeUrl(entry.origin.url) !== normalizeUrl(repository)) continue;
     const packed = await packExtensionSource(join(root, entry.origin.path));
     await writeFile(join(destination, `${encodeURIComponent(entry.installName)}.tgz`), packed.bytes);

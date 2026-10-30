@@ -62,7 +62,7 @@ Shared mode placements have one cache entry per project and mode. Page cache ent
 
 ## Validation
 
-Storybook's core guides describe host integration; extension guides use public SDK declarations. Use the repository's Docker workflow and Playwright for dashboard behavior. The release gates are `bun run validate` and `bun run --cwd scripts verify:packages`.
+Canvas's core guides describe host integration; extension guides use public SDK declarations. Use the repository's Docker workflow and Playwright for dashboard behavior. The release gates are `bun run validate` and `bun run --cwd scripts verify:packages`.
 
 ### Commit and host effects
 

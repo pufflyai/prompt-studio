@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Exclude generated Storybook and test output from extension source archives.
+Exclude generated Canvas and test output from extension source archives.
