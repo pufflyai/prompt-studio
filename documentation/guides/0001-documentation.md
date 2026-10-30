@@ -9,6 +9,7 @@ The [design rules](../../design/DESIGN.md) guide interactions. The [nonfunctiona
 - [Install Prompt Studio](getting-started/0001-install.md)
 - [Set up repository development](development/0001-setup.md)
 - [Run tests and validate changes](development/0002-testing.md)
+- [Write a benchmark](development/0016-writing-benchmarks.md)
 - [Understand CI stages: PRs, merge queue, main, nightly and stable releases](development/0015-ci-stages.md)
 - [Build and smoke-test the relay](development/0006-relay.md)
 - [Develop private account authority](development/0007-account-manager.md)

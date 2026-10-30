@@ -20,7 +20,7 @@ Useful environment variables:
 
 | Variable | Meaning |
 | --- | --- |
-| `SUBNAV_SAMPLES` | Number of fresh contexts; defaults to 30. Small diagnostic runs are pilots. |
+| `BENCHMARK_SAMPLES` | Number of fresh contexts; defaults to 30. Small diagnostic runs are pilots. |
 | `SUBNAV_LABEL` | Result folder name; defaults to `current`. |
 | `E2E_PACKAGED_BINARY_PATH` | Use an already compiled binary instead of rebuilding. |
 | `SUBNAV_PLANNER_SOURCE` | Install a separately prepared Planner source with a matching standalone lockfile, for controlled comparisons. |

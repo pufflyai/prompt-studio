@@ -1,8 +1,9 @@
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { verifyBenchmarkCoverage } from "./coverage";
 import { type Checkout, run } from "./run";
 import { currentPlatform, findSuites, prepareSuite, sampleSuite } from "./steps";
-import { suiteIds } from "./suites";
+import { suiteIds, suites } from "./suites";
 
 const usage = `Usage:
   bun src/cli.ts run --checkout <dir>=<sha>[=<ref>]... --suites <ids> --samples <n> --out <dir>
@@ -38,9 +39,12 @@ const parseCheckout = (value: string): Checkout => {
 };
 
 const command = positionals[0];
-if (command === "describe") {
+if (command === "verify") {
+  verifyBenchmarkCoverage(repoRoot, suites);
+  console.log("Every benchmark belongs to exactly one suite.");
+} else if (command === "describe") {
   const available = findSuites(suiteIds, platform);
-  console.log(JSON.stringify(available.map(({ id, label, source }) => ({ id, label, source }))));
+  console.log(JSON.stringify(available.map(({ id, label, files }) => ({ id, label, source: files.join(", ") }))));
 } else if (command === "prepare") {
   let passed = true;
   for (const suite of findSuites(listOf(values.suites), platform))

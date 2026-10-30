@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { workbenchBudgets } from "pstdio-benchmarks";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import {
   budgetMisses,
-  collectRepeatSamples,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -12,7 +12,7 @@ import {
 
 const headerSelector = '[data-workbench-panel-header="secondary"]';
 
-test("opens one Panel tab within the interaction budget", async ({ page, request }, testInfo) => {
+test("opens one Panel tab within the interaction budget", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Panel tabs performance");
   await preparePerfPage(page, project.id);
@@ -52,9 +52,8 @@ test("opens one Panel tab within the interaction budget", async ({ page, request
 
   await reportPageMemory(page, "panel-tabs");
 
-  const results = collectRepeatSamples(testInfo, "panel-tabs", [result.duration]);
-  if (!results) return;
-  expect(results).toHaveLength(testInfo.project.repeatEach);
+  const results = [result.duration];
+  expect(results).toHaveLength(1);
   // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 664 ms) plus about 20%.
-  expect(budgetMisses("panel-tabs", "open-panel", results, 800)).toEqual([]);
+  expect(budgetMisses("panel-tabs", "open-panel", results, workbenchBudgets.panelTabs.value)).toEqual([]);
 });

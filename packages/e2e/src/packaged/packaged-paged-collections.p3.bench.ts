@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { collectionBudget } from "pstdio-benchmarks";
 import { folderProjectInput } from "../helpers/folder-project";
 import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
@@ -65,7 +66,7 @@ test("public paged views render bounded rows and preserve page navigation", asyn
                 name: process.env.RUNNER_NAME,
                 runId: process.env.GITHUB_RUN_ID,
               },
-              metrics: evidence.map((sample) => ({ ...sample, unit: "ms", budget: 1000 })),
+              metrics: evidence.map((sample) => ({ ...sample, unit: "ms", budget: collectionBudget.value })),
             },
             null,
             2,

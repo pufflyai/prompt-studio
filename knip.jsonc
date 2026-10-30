@@ -120,9 +120,8 @@
         "src/scripts/serve-ui.ts",
         "src/scripts/bun-process-cleanup.ts",
         "src/**/*.spec.ts",
-        "src/**/*.perf.ts",
+        "src/**/*.diagnostic.ts",
         "src/**/*.bench.ts",
-        "src/perf/planner-moves.stress.ts",
         "src/perf/planner-moves.validation.ts",
         // These diagnostics compile or launch fixture modules by path.
         "src/perf/storage-scale-container-setup.ts",
@@ -367,7 +366,7 @@
         "src/views/tags-settings-panel.tsx",
         "src/views/status-settings-panel.tsx",
         "src/views/ticket-review-requests.tsx",
-        "src/commands/reorder-ticket.stress.fixture.ts",
+        "src/commands/reorder-ticket.diagnostic.ts",
         "src/timeline/view/entry.tsx",
         "src/**/*.canvas.tsx"
       ],

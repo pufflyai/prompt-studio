@@ -1,17 +1,18 @@
 import { defineConfig, devices } from "@playwright/test";
+import { benchmarkSampleCount } from "pstdio-benchmarks";
 
 const port = Number(process.env.UI_CANVAS_PORT ?? "6008");
 const runId = process.env.UI_PERF_RUN_ID ?? `ui-chat-perf-${Date.now()}-${process.pid}`;
 
 export default defineConfig({
   testDir: "./src/components/chat-ui/performance",
-  testMatch: "**/*.perf.ts",
+  testMatch: "**/*.p3.bench.ts",
   timeout: Number(process.env.UI_PERF_TEST_TIMEOUT_MS ?? "60000"),
   expect: { timeout: 20_000 },
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  repeatEach: Number(process.env.PERF_REPEAT_EACH ?? "3"),
+  repeatEach: benchmarkSampleCount(3),
   outputDir: `test-results/${runId}`,
   reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
   use: {

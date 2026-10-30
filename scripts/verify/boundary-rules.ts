@@ -134,7 +134,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-scripts",
   ],
   "canvas-tests": ["@pstdio/ui", "@pstdio/workbench", "pstdio-dashboard"],
-  "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],
+  "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions", "pstdio-benchmarks"],
   "@pstdio/desktop": [
     "@pstdio/canvas",
     "@pstdio/ui",

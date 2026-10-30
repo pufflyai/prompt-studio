@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { recordPageMemory, throttleChromiumCpu } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { openPerformancePreview } from "./canvas-preview";
 
@@ -6,8 +7,9 @@ const workloads = ["Rich turns", "Plain turns", "1000 responses", "5000 response
 
 for (const workload of workloads) {
   test(`measures ${workload.toLowerCase()} rendering`, async ({ page }, testInfo) => {
-    const browserSession = await page.context().newCDPSession(page);
-    await browserSession.send("Emulation.setCPUThrottlingRate", { rate: Number(process.env.CPU_THROTTLE ?? "4") });
+    const cdp = await page.context().newCDPSession(page);
+    await throttleChromiumCpu(page);
+    await cdp.send("Performance.enable");
     await page.addInitScript(() => {
       window.__longTasks = [];
       new PerformanceObserver((list) => {
@@ -15,9 +17,6 @@ for (const workload of workloads) {
       }).observe({ type: "longtask", buffered: true });
     });
     const preview = await openPerformancePreview(page, "patterns-chat-chat-panel-rendering--rendering-workloads");
-    const cdp = browserSession;
-    await cdp.send("Emulation.setCPUThrottlingRate", { rate: Number(process.env.CPU_THROTTLE ?? "4") });
-    await cdp.send("Performance.enable");
     await preview.getByRole("button", { name: workload, exact: true }).waitFor();
     await preview.evaluate(() => document.fonts.ready);
     const samples = [];
@@ -92,9 +91,7 @@ for (const workload of workloads) {
       const metric = `${workload.toLowerCase().replaceAll(" ", "-")}/${phase}`;
       const label = `${workload}, ${phase}`;
       recordMeasurement({ metric, label, unit: "ms", value: snapshot.elapsedMs });
-      const heap = after.metrics.find((entry) => entry.name === "JSHeapUsedSize")?.value;
-      if (heap !== undefined)
-        recordMeasurement({ metric: `${metric}/js-heap`, label: `${label}, page heap`, unit: "bytes", value: heap });
+      await recordPageMemory(page, { metric: `${metric}/js-heap`, label: `${label}, page heap` });
       expect(snapshot.responses).toBeLessThan(30);
       expect(snapshot.elapsedMs).toBeGreaterThan(0);
     }

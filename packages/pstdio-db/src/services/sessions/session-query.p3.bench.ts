@@ -1,3 +1,4 @@
+import { benchmarkSampleCount, benchmarkSampleIndex } from "pstdio-benchmarks";
 import { recordMeasurement, recordPeakMemory } from "pstdio-benchmarks/writer";
 import { createDb } from "../../db/connection.pglite";
 import { sessions, workspace_sessions } from "../../db/schemas.pg";
@@ -36,8 +37,9 @@ try {
     );
   }
 
-  for (let repeat = 0; repeat < 3; repeat++) {
-    const strategies = repeat % 2 === 0 ? (["history", "badge"] as const) : (["badge", "history"] as const);
+  for (let repeat = 0; repeat < benchmarkSampleCount(3); repeat++) {
+    const strategies =
+      (benchmarkSampleIndex() + repeat) % 2 === 0 ? (["history", "badge"] as const) : (["badge", "history"] as const);
     for (const strategy of strategies) {
       let queries = 0;
       let returnedRows = 0;

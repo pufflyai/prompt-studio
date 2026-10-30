@@ -66,7 +66,7 @@ if (import.meta.main) {
     measurementPolicy: "Use each benchmark's fixed default workload and existing operation budgets unchanged",
   };
   await Bun.write(`${directory}/metadata.json`, JSON.stringify(metadata, null, 2));
-  const report = await runCiChecks(checks, { priority: "P3", concurrency: 1, env: { UI_PERF_ASSERT_BUDGETS: "1" } });
+  const report = await runCiChecks(checks, { priority: "P3", concurrency: 1 });
   await Bun.write(`${directory}/results.json`, JSON.stringify(report, null, 2));
   if (report.outcome !== "success") process.exitCode = 1;
 }

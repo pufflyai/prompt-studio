@@ -1,10 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
+import { workbenchBudgets } from "pstdio-benchmarks";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import { showSidenavEntry } from "../ui/helpers/sidenav-navigation";
 import {
   afterTwoFrames,
   budgetMisses,
-  collectRepeatSamples,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -35,7 +35,7 @@ const settleWhenNavShows = (page: Page, collection: Collection) =>
     observer.observe(nav, { attributes: true, childList: true, subtree: true });
   }, collection);
 
-test("navigates global collections within the interaction budget", async ({ page, request }, testInfo) => {
+test("navigates global collections within the interaction budget", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Sidenav header performance");
   await waitForTicketsView(request, project.id);
@@ -72,16 +72,15 @@ test("navigates global collections within the interaction budget", async ({ page
 
   await reportPageMemory(page, "sidenav-header");
 
-  const results = collectRepeatSamples(testInfo, "sidenav-header", samples);
-  if (!results) return;
-  expect(results).toHaveLength(testInfo.project.repeatEach * collections.length);
+  const results = samples;
+  expect(results).toHaveLength(collections.length);
   const misses = collections.flatMap((collection) =>
     budgetMisses(
       "sidenav-header",
       collection,
       results.filter((result) => result.collection === collection).map((result) => result.duration),
       // Set on 2026-10-26 from hosted ubuntu-24.04 runs (slowest 336 ms) plus about 20%.
-      425,
+      workbenchBudgets.sidenavHeader.value,
     ),
   );
   expect(misses).toEqual([]);

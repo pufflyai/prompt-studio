@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
+import type { BenchmarkMetric } from "pstdio-benchmarks";
+import { rendererBudgets } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
-import type { BenchmarkMetric } from "../testing/benchmark-budget";
 import { test } from "../testing/packaged-fixture";
 import { recordBenchmark } from "./benchmark-record";
 import { disposePackagedApp, type PackagedApp } from "./packaged-app-helpers";
@@ -17,10 +18,16 @@ import {
 // Idle budgets catch a constant render loop. The 2026-10-10 release rehearsals measured the
 // streaming replay at up to 69% script and 99% task time; the approved budgets sit about 20%
 // above that. A task share above 1 no longer limits anything, so script time is the guard.
-const IDLE_BUDGET: RendererBudget = { scriptShare: 0.02, taskShare: 0.05 };
-const STREAMING_BUDGET: RendererBudget = { scriptShare: 0.85, taskShare: 1.2 };
+const IDLE_BUDGET: RendererBudget = {
+  scriptShare: rendererBudgets.idleScript.value,
+  taskShare: rendererBudgets.idleTask.value,
+};
+const STREAMING_BUDGET: RendererBudget = {
+  scriptShare: rendererBudgets.streamingScript.value,
+  taskShare: rendererBudgets.streamingTask.value,
+};
 // Monitoring runs in Electron main, which renderer CDP metrics cannot see.
-const MONITORING_MAIN_CPU_BUDGET = 10;
+const MONITORING_MAIN_CPU_BUDGET = rendererBudgets.monitoringMainCpu.value;
 
 for (const monitoring of [false, true]) {
   const state = monitoring ? "on" : "off";

@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 import { cpus, totalmem } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium, expect } from "@playwright/test";
+import { benchmarkSampleCount, findBudgetFailures, isBelowBudget, subnavBudgets } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { PROVISIONED_CHROMIUM } from "../packaged/packaged-chromium";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
@@ -16,10 +17,13 @@ import {
 import { startSubnavBenchmarkFixture, subnavFixtureRoot } from "./subnav-benchmark-fixture";
 
 // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 293 / 1,263 / 1,089 ms) plus about 20%.
-export const SUBNAV_BUDGETS = { structureMs: 375, dataMs: 1_525, editorMs: 1_325 };
-const sampleCount = Number(process.env.SUBNAV_SAMPLES ?? 30);
+const SUBNAV_BUDGETS = {
+  structureMs: subnavBudgets.structureMs.value,
+  dataMs: subnavBudgets.dataMs.value,
+  editorMs: subnavBudgets.editorMs.value,
+};
+const sampleCount = benchmarkSampleCount(30);
 const label = process.env.SUBNAV_LABEL ?? "current";
-if (!Number.isInteger(sampleCount) || sampleCount < 1) throw new Error("SUBNAV_SAMPLES must be a positive integer");
 const fixture = await startSubnavBenchmarkFixture();
 let browser: Browser | undefined;
 const samples: SubnavSample[] = [];
@@ -142,10 +146,11 @@ try {
           : {}),
         requestsComplete: summarize(rows.map((row) => row.lastRequestMs)),
         requestDuration: summarize(rows.flatMap((row) => row.requests.map((request) => request.durationMs))),
-        structureMisses: rows.filter((row) => row.structureMs >= SUBNAV_BUDGETS.structureMs).length,
-        dataMisses: rows.filter((row) => row.dataMs > SUBNAV_BUDGETS.dataMs).length,
-        editorMisses: rows.filter((row) => row.editorMs !== undefined && row.editorMs >= SUBNAV_BUDGETS.editorMs)
-          .length,
+        structureMisses: rows.filter((row) => !isBelowBudget(row.structureMs, SUBNAV_BUDGETS.structureMs)).length,
+        dataMisses: rows.filter((row) => !isBelowBudget(row.dataMs, SUBNAV_BUDGETS.dataMs)).length,
+        editorMisses: rows.filter(
+          (row) => row.editorMs !== undefined && !isBelowBudget(row.editorMs, SUBNAV_BUDGETS.editorMs),
+        ).length,
       };
     }),
   );
@@ -161,6 +166,34 @@ try {
     record("dataMs", "data", sample.dataMs);
     record("editorMs", "editor", sample.editorMs);
   }
+  errors.push(
+    ...samples.flatMap((sample) =>
+      findBudgetFailures([
+        {
+          name: `${sample.destination}/${sample.visit} structure`,
+          unit: "ms",
+          value: sample.structureMs,
+          budget: SUBNAV_BUDGETS.structureMs,
+        },
+        {
+          name: `${sample.destination}/${sample.visit} data`,
+          unit: "ms",
+          value: sample.dataMs,
+          budget: SUBNAV_BUDGETS.dataMs,
+        },
+        ...(sample.destination === "ticket"
+          ? [
+              {
+                name: `${sample.destination}/${sample.visit} editor`,
+                unit: "ms" as const,
+                value: sample.editorMs ?? Number.NaN,
+                budget: SUBNAV_BUDGETS.editorMs,
+              },
+            ]
+          : []),
+      ]),
+    ),
+  );
   const report = {
     label,
     measuredAt: new Date().toISOString(),

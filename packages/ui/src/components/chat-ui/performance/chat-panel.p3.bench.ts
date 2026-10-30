@@ -1,4 +1,5 @@
 import { expect, type Frame, type Page, test } from "@playwright/test";
+import { chatBudgets, findBudgetFailures, recordPageMemory, throttleChromiumCpu } from "pstdio-benchmarks";
 import { type BenchmarkMeasurement, recordMeasurement } from "pstdio-benchmarks/writer";
 import { openPerformancePreview } from "./canvas-preview";
 import type { ChatMountMetric } from "./chat-mount-metrics";
@@ -34,29 +35,16 @@ const VARIANT_IDS = {
 } as const;
 
 const BUDGETS = {
-  largeConversationReadyMs: Number(process.env.UI_PERF_LARGE_CONVERSATION_READY_MS ?? "20000"),
-  sessionSwitchMs: Number(process.env.UI_PERF_SESSION_SWITCH_MS ?? "10000"),
-  streamingCompleteMs: Number(process.env.UI_PERF_STREAMING_COMPLETE_MS ?? "30000"),
-  totalLongTaskMs: Number(process.env.UI_PERF_TOTAL_LONG_TASK_MS ?? "20000"),
+  largeConversationReadyMs: chatBudgets.largeConversationReadyMs.value,
+  sessionSwitchMs: chatBudgets.sessionSwitchMs.value,
+  streamingCompleteMs: chatBudgets.streamingCompleteMs.value,
+  totalLongTaskMs: chatBudgets.totalLongTaskMs.value,
 };
-const shouldAssertBudgets = process.env.UI_PERF_ASSERT_BUDGETS === "1";
 
 // Records the scenario time and the heap the page keeps afterwards, after garbage collection.
 const recordScenario = async (page: Frame, timing: Omit<BenchmarkMeasurement, "unit">) => {
   recordMeasurement({ ...timing, unit: "ms" });
-  const session = await page.page().context().newCDPSession(page.page());
-  await session.send("HeapProfiler.collectGarbage");
-  await session.send("Performance.enable");
-  const { metrics } = await session.send("Performance.getMetrics");
-  await session.detach();
-  const heap = metrics.find((entry) => entry.name === "JSHeapUsedSize")?.value;
-  if (heap !== undefined)
-    recordMeasurement({
-      metric: `${timing.metric}/js-heap`,
-      label: `${timing.label}, page heap`,
-      unit: "bytes",
-      value: heap,
-    });
+  await recordPageMemory(page.page(), { metric: `${timing.metric}/js-heap`, label: `${timing.label}, page heap` });
 };
 
 const calculateStats = (samples: number[]): PerfStats => {
@@ -79,12 +67,6 @@ const installLongTaskObserver = async (page: Page) => {
       window.__longTasks?.push(...list.getEntries().map((entry) => ({ duration: entry.duration })));
     }).observe({ type: "longtask", buffered: true });
   });
-};
-
-const throttleChromiumCpu = async (page: Page) => {
-  const rate = Number(process.env.CPU_THROTTLE ?? "4");
-  const session = await page.context().newCDPSession(page);
-  await session.send("Emulation.setCPUThrottlingRate", { rate });
 };
 
 const waitForMark = async (page: Frame, markName: string, startMarkName?: string) => {
@@ -135,15 +117,8 @@ const getProfilerStats = async (page: Frame, scenario: string) => {
   };
 };
 
-const expectWithinBudget = (value: number, budget: number) => {
-  if (shouldAssertBudgets) {
-    expect(value).toBeLessThanOrEqual(budget);
-    return;
-  }
-
-  expect(Number.isFinite(value)).toBe(true);
-  expect(value).toBeGreaterThanOrEqual(0);
-};
+const expectWithinBudget = (value: number, budget: number) =>
+  expect(findBudgetFailures([{ name: "Chat scenario", unit: "ms", value, budget }])).toEqual([]);
 
 const openPreview = async (page: Page, variantId: string) => {
   await installLongTaskObserver(page);
@@ -222,7 +197,7 @@ test.describe("chat panel performance", () => {
     console.info("session-switching-profiler", profiler);
 
     // Set on 2026-10-26 from hosted ubuntu-24.04 runs (slowest 407 ms) plus about 20%.
-    expect(switchStartDelay).toBeLessThan(500);
+    expectWithinBudget(switchStartDelay, chatBudgets.switchStartMs.value);
     expectWithinBudget(switchMetric?.totalMs ?? 0, BUDGETS.sessionSwitchMs);
     expectWithinBudget(longTasks, BUDGETS.totalLongTaskMs);
     expect(await preview.getByTestId("chat-perf-message-count").textContent()).toContain("1000 messages");

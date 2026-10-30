@@ -1,6 +1,5 @@
-import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { type APIRequestContext, expect, type Page, type TestInfo } from "@playwright/test";
+import { type APIRequestContext, expect, type Page } from "@playwright/test";
+import { findBudgetFailures, recordPageMemory, throttleChromiumCpu } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { prepareDashboard } from "../ui/helpers/workspace-files";
 
@@ -40,38 +39,11 @@ export const budgetMisses = (metric: string, interaction: string, samples: numbe
       budget,
     });
   }
-  return summary.max <= budget ? [] : [`${metric} ${interaction}: slowest ${summary.max} ms exceeds ${budget} ms`];
+  return findBudgetFailures(samples.map((value) => ({ name: `${metric} ${interaction}`, unit: "ms", value, budget })));
 };
 
-// Garbage collection first, so the figure is the heap the page keeps after its interactions.
-export const reportPageMemory = async (page: Page, metric: string) => {
-  const session = await page.context().newCDPSession(page);
-  await session.send("HeapProfiler.collectGarbage");
-  await session.send("Performance.enable");
-  const { metrics } = await session.send("Performance.getMetrics");
-  await session.detach();
-  const heap = metrics.find((entry) => entry.name === "JSHeapUsedSize")?.value;
-  if (heap === undefined) return;
-  recordMeasurement({
-    metric: `${metric}/js-heap`,
-    label: `${metricLabel(metric, "page heap")}`,
-    unit: "bytes",
-    value: heap,
-  });
-};
-
-// Each repeat runs as its own test, so samples wait in the run's output folder until the last
-// repeat returns all of them.
-export const collectRepeatSamples = <T>(testInfo: TestInfo, metric: string, samples: T[]) => {
-  const path = join(testInfo.project.outputDir, "perf-samples", `${metric}.jsonl`);
-  mkdirSync(dirname(path), { recursive: true });
-  appendFileSync(path, samples.map((sample) => `${JSON.stringify(sample)}\n`).join(""));
-  if (testInfo.repeatEachIndex < testInfo.project.repeatEach - 1) return undefined;
-  return readFileSync(path, "utf8")
-    .trim()
-    .split("\n")
-    .map((line) => JSON.parse(line) as T);
-};
+export const reportPageMemory = (page: Page, metric: string) =>
+  recordPageMemory(page, { metric: `${metric}/js-heap`, label: metricLabel(metric, "page heap") });
 
 // Records long tasks and the input event on a marked element in the page clock.
 const installInteractionClock = (page: Page) =>
@@ -133,12 +105,6 @@ export const afterTwoFrames = (page: Page) =>
   page.evaluate(
     () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
   );
-
-const throttleChromiumCpu = async (page: Page) => {
-  const rate = Number(process.env.CPU_THROTTLE ?? "4");
-  const session = await page.context().newCDPSession(page);
-  await session.send("Emulation.setCPUThrottlingRate", { rate });
-};
 
 // The planner registers its views after the project starts, and a sample must not include that boot.
 export const waitForTicketsView = (request: APIRequestContext, projectId: string) =>
