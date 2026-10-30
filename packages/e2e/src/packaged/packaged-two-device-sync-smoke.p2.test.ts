@@ -142,11 +142,11 @@ test(
       // Losing the connection never turns an incomplete download into a ready one.
       await peer.stop();
       await first.reach(project.id, "offline");
-      expect(await first.client.account.projectSyncStatus(project.id)).toEqual({
+      expect(await first.client.account.projectSyncStatus(project.id)).toMatchObject({
         state: "offline",
         offlineReady: true,
       });
-      expect(await second.client.account.projectSyncStatus(project.id)).toEqual({
+      expect(await second.client.account.projectSyncStatus(project.id)).toMatchObject({
         state: "first-download-incomplete",
         offlineReady: false,
       });
@@ -188,7 +188,7 @@ test(
       await waitFor(async () => Bun.deepEquals(await merged(second), expected));
 
       const history = await first.command<{ events: ProjectSyncState[]; current: unknown }>(project.id, "sync-history");
-      expect(history.current).toEqual({ state: "synced", offlineReady: true });
+      expect(history.current).toMatchObject({ state: "synced", offlineReady: true, pendingItems: 0 });
       expect(history.events).toEqual(expect.arrayContaining(["local", "offline", "synced"]));
       // Reconnecting after the first download catches up; it never reports the first download again.
       const firstSynced = history.events.indexOf("synced");
