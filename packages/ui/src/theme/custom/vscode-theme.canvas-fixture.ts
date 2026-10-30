@@ -1,4 +1,4 @@
-import { createThemePreferenceFromVsCodeTheme } from "../src/theme/custom/vscode-theme";
+import { createThemePreferenceFromVsCodeTheme } from "./vscode-theme";
 
 // Plain VS Code colors, without app overrides, so stories show how imported themes map to tokens.
 // Like most VS Code themes, these set `input.background` to `editor.background`.

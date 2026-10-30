@@ -8587,6 +8587,61 @@
       "componentImport": "./chat-panel"
     },
     {
+      "id": "ui-patterns-chat-message-surfaces--light",
+      "name": "Light",
+      "exportName": "Light",
+      "source": "packages/ui/src/components/chat-ui/components/chat-message-surfaces.canvas.tsx",
+      "suite": "ui",
+      "title": "Patterns/Chat/Message Surfaces",
+      "sourceHash": "5ceb4897f0e988d7de321f549481b19686b02bc16dff0a247b25be4f4bc49c87",
+      "component": "ChatPanel",
+      "componentImport": "./chat-panel"
+    },
+    {
+      "id": "ui-patterns-chat-message-surfaces--dark",
+      "name": "Dark",
+      "exportName": "Dark",
+      "source": "packages/ui/src/components/chat-ui/components/chat-message-surfaces.canvas.tsx",
+      "suite": "ui",
+      "title": "Patterns/Chat/Message Surfaces",
+      "sourceHash": "5ceb4897f0e988d7de321f549481b19686b02bc16dff0a247b25be4f4bc49c87",
+      "component": "ChatPanel",
+      "componentImport": "./chat-panel"
+    },
+    {
+      "id": "ui-patterns-chat-message-surfaces--vs-code-monokai",
+      "name": "Vs Code Monokai",
+      "exportName": "VsCodeMonokai",
+      "source": "packages/ui/src/components/chat-ui/components/chat-message-surfaces.canvas.tsx",
+      "suite": "ui",
+      "title": "Patterns/Chat/Message Surfaces",
+      "sourceHash": "5ceb4897f0e988d7de321f549481b19686b02bc16dff0a247b25be4f4bc49c87",
+      "component": "ChatPanel",
+      "componentImport": "./chat-panel"
+    },
+    {
+      "id": "ui-patterns-chat-message-surfaces--vs-code-dracula",
+      "name": "Vs Code Dracula",
+      "exportName": "VsCodeDracula",
+      "source": "packages/ui/src/components/chat-ui/components/chat-message-surfaces.canvas.tsx",
+      "suite": "ui",
+      "title": "Patterns/Chat/Message Surfaces",
+      "sourceHash": "5ceb4897f0e988d7de321f549481b19686b02bc16dff0a247b25be4f4bc49c87",
+      "component": "ChatPanel",
+      "componentImport": "./chat-panel"
+    },
+    {
+      "id": "ui-patterns-chat-message-surfaces--vs-code-solarized-light",
+      "name": "Vs Code Solarized Light",
+      "exportName": "VsCodeSolarizedLight",
+      "source": "packages/ui/src/components/chat-ui/components/chat-message-surfaces.canvas.tsx",
+      "suite": "ui",
+      "title": "Patterns/Chat/Message Surfaces",
+      "sourceHash": "5ceb4897f0e988d7de321f549481b19686b02bc16dff0a247b25be4f4bc49c87",
+      "component": "ChatPanel",
+      "componentImport": "./chat-panel"
+    },
+    {
       "id": "ui-patterns-chat-activity-layout--workspace-activity",
       "name": "Workspace Activity",
       "exportName": "WorkspaceActivity",

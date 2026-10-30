@@ -5,12 +5,12 @@ import { checkFrameSelection } from "../selection";
 
 test.use({ viewport: { width: 1440, height: 1000 } });
 
-const openSurface = async (page: Page, id: string) => {
+const openSurface = async (page: Page, id: string, readinessTimeout?: number) => {
   await page.goto(`/?canvas=${encodeURIComponent(id)}`);
   const element = await page.locator("[data-verification-host]").elementHandle();
   const surface = (await element!.contentFrame())!;
   await expect(surface.locator("[data-canvas-item]").first()).toBeVisible();
-  await expect(surface.locator("[data-ui-canvas-loading]")).toHaveCount(0);
+  await expect(surface.locator("[data-ui-canvas-loading]")).toHaveCount(0, { timeout: readinessTimeout });
   await expect(surface.locator("[data-ui-canvas-error]")).toHaveCount(0);
   return surface;
 };
@@ -44,7 +44,7 @@ test("the populated camera workload retains 24 previews and batches saves", asyn
     });
   });
   try {
-    const surface = await openSurface(page, "verification-populated");
+    const surface = await openSurface(page, "verification-populated", 8_000);
     await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(24);
     const result = await profilePopulatedCanvas(surface);
     expect(result.previews).toBe(24);

@@ -47,7 +47,9 @@ const buildPreviews = async (
   const files = [...new Set([...stories, ...documents].map((entry) => entry.source))];
   const declarations: string[] = [];
   const { createThemePreferenceFromVsCodeTheme } = await import(resolve(repoRoot, "packages/ui/dist/theme.js"));
-  const { canvasVsCodeThemes } = await import(resolve(repoRoot, "packages/ui/.canvas/vscode-themes.ts"));
+  const { canvasVsCodeThemes } = await import(
+    resolve(repoRoot, "packages/ui/src/theme/custom/vscode-theme.canvas-fixture.ts")
+  );
   const frameThemes = await Promise.all(
     ["solarized-light", "solarized-dark", "dracula", "monokai"].map(async (id) => ({
       ...createThemePreferenceFromVsCodeTheme({

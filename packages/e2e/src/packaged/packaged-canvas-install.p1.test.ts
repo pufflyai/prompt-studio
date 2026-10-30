@@ -110,6 +110,22 @@ test(
       const viewer = page.frameLocator('iframe[title="UI Canvas"]');
       await viewer.locator('iframe[data-frame-ready="true"]').waitFor();
       expect(await viewer.locator("[data-ui-canvas-error]").count()).toBe(0);
+      await viewer
+        .getByRole("button", { name: /^Theme for / })
+        .first()
+        .click();
+      await viewer.getByRole("menuitem", { name: "Monokai (VS Code colors)", exact: true }).click();
+      const element = await viewer.locator('iframe[data-frame-ready="true"]').first().elementHandle();
+      const preview = (await element!.contentFrame())!;
+      await preview.waitForFunction(() => document.documentElement.getAttribute("data-theme") === "vscode-monokai");
+      const colors = await preview.evaluate(() => {
+        const style = getComputedStyle(document.documentElement);
+        return {
+          background: style.getPropertyValue("--chakra-colors-bg"),
+          message: style.getPropertyValue("--chakra-colors-bg-subtle"),
+        };
+      });
+      expect(colors.message).not.toBe(colors.background);
     } finally {
       await browser?.close();
       if (child) await stopProcess(child);

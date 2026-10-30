@@ -1,6 +1,6 @@
 import { Box, Theme } from "@chakra-ui/react";
 import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
-import { canvasVsCodeThemes } from "../../../../.canvas/vscode-themes";
+import { canvasVsCodeThemes } from "../../../theme/custom/vscode-theme.canvas-fixture";
 import { defaultThemePreferences, type ThemePreferenceOption } from "../../../utils/apply-theme-preference";
 import { ChatPanel } from "./chat-panel";
 
