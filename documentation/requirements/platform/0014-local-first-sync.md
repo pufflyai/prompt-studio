@@ -4,6 +4,11 @@ Status: Proposed. Created: 2026-10-19. Owner: platform. This PRD replaces the
 synchronization contracts PRD (0007) as the source of truth for Prompt Studio Cloud.
 Ticket PS-716 tracks the work.
 
+On 2026-10-30 the user chose project-folder sync with a separate `.pstignore` file.
+PS-960's [project file recovery design](0015-project-data-recovery.md) defines that
+scope under R57–R59. The design is proposed implementation work; it is not shipped
+behavior. It replaces the earlier working-tree exclusion.
+
 ## Purpose
 
 A person should be able to use Prompt Studio on several machines as if they were one,
@@ -58,8 +63,8 @@ anything.
     removed. A list of distinct values never gains a duplicate, and a moved item ends in
     one place. List items that are objects with an `id` are matched by that ID, and
     their fields merge like any object.
-  - A string merges character by character once it contains a line break. Files merge
-    the same way.
+  - A string merges character by character once it contains a line break. Declared
+    shared editable files merge the same way. Whole-folder captures follow R57–R59.
   - Any other value, such as a number, a boolean or a single-line string, is replaced
     as a whole.
 
@@ -226,8 +231,10 @@ anything.
 
 - R43. The extensions a cloud project uses, with their versions, sync with the project,
   so every device runs the same code for it. A local override, such as a repo-local copy
-  someone is editing, never syncs its code. Data it writes syncs like any project data,
-  but its data migrations do not run: migrations run only from the synced version.
+  someone is editing, is not published or activated on other devices by extension sync.
+  Its on-disk files are included in folder recovery (R57); recovery does not execute
+  them. Data it writes syncs like any project data, but its data migrations do not
+  run: migrations run only from the synced version.
 - R44. Extension data migrations give the same result when two devices run them. Records
   a migration creates get their IDs from R50, so both devices create the same records
   instead of duplicates. A device with an older version of an extension can read that
@@ -239,7 +246,8 @@ anything.
 
 - R46. After resetting or replacing a device, or installing Prompt Studio on a new one, a
   user logs in with Google and gets every cloud project back. Their private project data
-  comes back too once it syncs in phase 2.
+  comes back too once it syncs in phase 2. R57–R59 add full project-folder recovery
+  without a Git host; a clone is not a substitute for the stored folder copy.
 - R53. Each device keeps at most three recovery snapshots of every cloud project:
   one captured hourly, one every 12 hours, and one daily. Show their actual capture
   times. Use the disk capacity the device supports, with no fixed snapshot byte
@@ -248,6 +256,31 @@ anything.
   snapshot through the CLI and API. The app has no restore screen (decided
   2026-10-24). A restore is a normal edit, so it syncs to every device. This policy
   was decided on 2026-10-22 and replaces daily snapshots retained for 30 days.
+- R57. Everything inside a cloud project's folder is retained unless excluded by its
+  root `.pstignore`. `.gitignore` does not control sync. A new folder enrollment with
+  no inherited policy creates a missing `.pstignore` with `node_modules/`; never
+  overwrite an existing policy or recreate one the user later deletes. Restored
+  captures inherit their policy, including deliberate absence. Empty or deleted
+  policies include all files.
+  `.env`, keys, hidden and Git-ignored files, local extension code and `.pstdio` data
+  are included unless users add matching rules. Always sync `.pstignore` itself.
+  Show exclusions and matching rules separately from pending or blocked files.
+  Unreadable, unsupported, changing or quota-blocked included entries keep the copy incomplete.
+  Symlinks retain their target text without following it outside the folder. Capture
+  required external Git administration explicitly when a worktree needs it, bounded
+  by the owning repository's already registered canonical roots. Project pointers
+  alone do not authorize reading unrelated local directories.
+- R58. A complete folder capture belongs to the source user's private project data.
+  Only that user's devices receive its decryption key. Shared project membership does
+  not expose another user's credentials or private workspaces inside a folder or Git
+  history. Existing shared record and declared-file owners remain unchanged. Folder
+  captures follow R15/R37: device removal stops future access and rotates future keys;
+  it cannot erase downloaded copies or prevent decryption with previously received keys.
+- R59. Capture and download folder changes automatically, with complete per-source
+  manifests and resumable encrypted blobs. Restore to a new folder without overwriting
+  existing local work. Preserve independent device copies and report upload, download
+  and restoration progress separately from record sync. This first outcome does not
+  continuously apply source-file edits to an active folder or execute restored code.
 
 ### Running the relay
 
@@ -260,7 +293,7 @@ anything.
 
 | Phase | Includes | Requirements |
 | --- | --- | --- |
-| 1. One user, many devices | Encrypted CRDT sync of project data and files, latest state backup, Google login connects everything, early access, device list, sync state, Cloud UI as an extension, extension and automation sync, reset recovery | R1 to R31, R34, R35, R37 (devices), R43 to R56 |
+| 1. One user, many devices | Encrypted CRDT sync of project data and files, full folder recovery, latest state backup, Google login connects everything, early access, device list, sync state, Cloud UI as an extension, extension and automation sync, reset recovery | R1 to R31, R34, R35, R37 (devices), R43 to R59 |
 | 2. Sessions follow you | Private project data (workspace, session and transcript sync), remote commands, cloud devices | R32, R33, R38 to R42 |
 | 3. Teams | Team accounts, members, per-project membership, member removal | R36, R37 (members) |
 
@@ -271,11 +304,13 @@ Phase 1 builds the split between project keys and private-data keys (R13) from t
 
 ## Non-goals
 
-- Conflict screens or keeping both versions of a conflicting edit. Clients merge.
+- Conflict screens or keeping both versions of a shared CRDT edit. Clients merge those
+  edits; independent per-device folder captures follow R59.
 - Version history on the relay.
 - Queued commands for offline devices.
 - Moving a running session to another device.
-- Syncing working trees, terminals, processes, credentials or caches.
+- Live source-file collaboration and moving terminal or process execution. Files in
+  project folders, including credentials and caches, are covered by R57–R59.
 - Protecting data from someone who controls both the account manager and the relay.
 - Old-client compatibility, history migration or backfill. Alpha relay data has no
   users.
@@ -354,6 +389,11 @@ Phase 1 is done when:
 - A test dump of the relay database and object storage, searched for known titles, file
   names, record text and file bytes from the test project, finds none of them.
 - A reset device recovers every cloud project after Google login.
+- A new device restores the project-folder contents included by `.pstignore` without
+  a Git host, including `.env` and other Git-ignored files. The starter policy excludes
+  `node_modules/`; custom exclusions, negation and policy changes behave as documented.
+  Unsupported or missing included entries prevent a complete status. Only the owner's devices can decrypt
+  folder captures, and existing destination work is preserved (R57–R59).
 - An account without early access can log in, gets no cloud projects and sees Cloud
   sync as coming soon. An account with early access gets the full Cloud UI.
 - A project made local is edited on two devices and then synced again. Both devices end
@@ -393,3 +433,16 @@ These came from the Cloud and Workspaces design review. The designs are in PR #1
 - A project records its git remote when it becomes a cloud project, so a new device can offer to clone it when it first needs files (R34, PS-825).
 - A bundled Workspaces extension shows the user's workspaces grouped by the device they live on, using the private project data from R38 (PS-876).
 - "Personal space" is now called "private project data" in the product, docs and tickets. A new machine gets its cloud projects back in phase 1 (PS-825); private project data comes back in phase 2 (PS-826).
+
+## Decisions made on 2026-10-30
+
+- Project-folder sync uses a separate root `.pstignore`, independent of `.gitignore`.
+  The starter file excludes `node_modules/`. `.env` files remain included unless users
+  add a rule. Users control further exclusions in that file. R57–R59 replace the earlier
+  working-tree exclusion and the narrower coverage proposed during PS-960 refinement.
+- Whole-folder captures are private to the source user's devices because they can
+  contain credentials and private workspaces. Existing shared records and declared
+  files retain their shared owners.
+- Restore from the stored folder copy is the general new-device path. Clone and
+  attach remain explicit alternatives. Live collaboration on source files is not part of this
+  first recovery outcome. This is planned behavior, not a claim that it is shipped.
