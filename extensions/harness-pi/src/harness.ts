@@ -1,7 +1,7 @@
 import type { AgentModel, HarnessContext, HarnessProvider, HarnessStartInput } from "@pstdio/sdk/extensions";
 import { l10n, params, reconcileMessageHistory } from "@pstdio/sdk/extensions";
 import { getPiAuthentication, runPiAccountWorker } from "./authentication";
-import { detectPi } from "./detection";
+import { detectPi, requirePiCommand } from "./detection";
 import { readPiHistory } from "./history";
 import { type PiProcessOptions, piRequest } from "./process";
 import { startPiTurn } from "./turn";
@@ -9,17 +9,22 @@ import { startPiTurn } from "./turn";
 export const createPiHarness = (options: PiProcessOptions = {}) => {
   const operations = new Map<{ stop(): Promise<void> }, string | undefined>();
   const run = (ctx: HarnessContext, input: HarnessStartInput & { agentSessionId?: string }) => {
-    const turn = startPiTurn(input, {
-      ...options,
-      env: {
-        ...options.env,
-        PSTDIO_SESSION_ID: input.sessionId,
-        ...(ctx.projectId ? { PSTDIO_PROJECT_ID: ctx.projectId } : {}),
-      },
+    input.signal?.throwIfAborted();
+    return request(ctx, async (signal) => {
+      const command = await requirePiCommand(ctx, { ...options, cwd: input.cwd, signal });
+      input.signal?.throwIfAborted();
+      const turn = startPiTurn(input, {
+        ...command,
+        env: {
+          ...command.env,
+          PSTDIO_SESSION_ID: input.sessionId,
+          ...(ctx.projectId ? { PSTDIO_PROJECT_ID: ctx.projectId } : {}),
+        },
+      });
+      operations.set(turn, ctx.projectId);
+      void turn.done.finally(() => operations.delete(turn)).catch(() => {});
+      return turn.session;
     });
-    operations.set(turn, ctx.projectId);
-    void turn.done.finally(() => operations.delete(turn)).catch(() => {});
-    return turn.session;
   };
   const request = async <T>(ctx: HarnessContext, action: (signal: AbortSignal) => Promise<T>) => {
     const controller = new AbortController();
@@ -82,11 +87,8 @@ export const createPiHarness = (options: PiProcessOptions = {}) => {
     resume: (ctx, input) => run(ctx, input),
     getMessages: (ctx, input) =>
       request(ctx, async (signal) => {
-        const data = await piRequest("get_state", ["--session", input.agentSessionId], {
-          ...options,
-          signal,
-          cwd: input.cwd,
-        });
+        const command = await requirePiCommand(ctx, { ...options, signal, cwd: input.cwd });
+        const data = await piRequest("get_state", ["--session", input.agentSessionId], command);
         if (typeof data.sessionFile !== "string") throw new Error("Pi did not return its session history file.");
         return readPiHistory(data.sessionFile);
       }),
