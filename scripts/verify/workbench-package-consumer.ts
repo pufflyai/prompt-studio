@@ -11,12 +11,40 @@ const values = new Map<string, string>();
 const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
 const firstState = createLocalStorageWorkbenchPersistence({ namespace: "window", scope: "first", storage });
 const secondState = createLocalStorageWorkbenchPersistence({ namespace: "window", scope: "second", storage });
-const first = createWorkbench(firstState);
-const second = createWorkbench({ ...secondState, active: false });
+const startPage = { kind: "page", extensionId: "consumer", id: "start" } as const;
+let nativeEntry: { url: string; state?: unknown } = { url: "/" };
+let popstate: ((entry: typeof nativeEntry) => void) | undefined;
+const browser = {
+  current: () => nativeEntry,
+  push: (entry: typeof nativeEntry) => { nativeEntry = entry; },
+  replace: (entry: typeof nativeEntry) => { nativeEntry = entry; },
+  back() {},
+  forward() {},
+  onPopState(listener: (entry: typeof nativeEntry) => void) {
+    popstate = listener;
+    return { dispose() { popstate = undefined; } };
+  },
+};
+const first = createWorkbench({ ...firstState, startPage, pageLocationBrowser: browser });
+const second = createWorkbench({ ...secondState, startPage, pageLocationBrowser: browser, active: false });
 firstState.statusBarPersistence.setOrder(["first", "second"]);
 secondState.statusBarPersistence.setOrder(["second", "first"]);
 if (first.host.storageScope !== "first" || second.host.storageScope !== "second") throw new Error("Workbench lost storage ownership");
 if (firstState.statusBarPersistence.getOrder()?.[0] !== "first") throw new Error("Another workbench overwrote the status order");
+for (const [project, core] of [["first", first], ["second", second]] as const) {
+  core.modes.registerMode({ id: "project", activate() {} });
+  for (const id of ["start", "editor"]) core.pages.registerPage({
+    id, ref: { ...startPage, id }, path: id, modeId: "project", main: { kind: "panels" }, slots: [],
+  });
+  if (!core.pageLocations.boot(project).ok) throw new Error("Consumer page did not open");
+}
+first.pageLocations.navigate({ kind: "page", page: { ...startPage, id: "editor" } });
+for (const entry of [nativeEntry, { url: "/outside", state: null }]) {
+  nativeEntry = entry;
+  popstate?.(entry);
+  if (first.pages.store.getState().location?.page.id !== "editor" || nativeEntry !== entry)
+    throw new Error("Unchanged or unknown native history navigated the active workbench");
+}
 first.activation.setActive(false);
 second.activation.setActive(true);
 if (first.activation.isActive() || !second.activation.isActive()) throw new Error("Workbench activation did not switch");

@@ -48,6 +48,7 @@ const createWindowHistory = (browser: WorkbenchPageLocationBrowser) => {
   const subscription = browser.onPopState((entry) => {
     const stamp = windowState(entry);
     const nextIndex = stamp?.windowId === windowId ? stamp.position : entries.indexOf(entryKey(entry));
+    if (shared && (nextIndex < 0 || nextIndex === index)) return;
     const direction = nextIndex > index ? 1 : -1;
     if (nextIndex >= 0) index = nextIndex;
     const owner = [...owners].find((owner) => owner.active());
