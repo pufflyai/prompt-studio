@@ -1,6 +1,7 @@
 import { type NavigationTargetPage, type PageLocation, type PageRef, workbenchPages } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { dashboardExtensionsPage } from "@/shared/app/resources";
 import { canonicalDashboardPageTarget } from "@/shared/extensions/resource-identity";
 export const pageTargetFromLocation = (location: PageLocation): NavigationTargetPage => ({
   kind: "page",
@@ -53,3 +54,6 @@ export const openWorkspacesPage = (
     ...(resource ? { resource } : {}),
     ...(parent ? { parent } : {}),
   });
+
+export const openExtensionsPage = (ctx: WorkbenchModuleContext) =>
+  navigateDashboardPage(ctx, { page: dashboardExtensionsPage });

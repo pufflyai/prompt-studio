@@ -1507,17 +1507,17 @@
     },
     {
       "id": "dashboard-projectsettings-availableextensiondetail--contributions",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/available-extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/available-extension-detail.canvas.tsx",
       "exportName": "Contributions"
     },
     {
       "id": "dashboard-projectsettings-availableextensiondetail--repository-source",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/available-extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/available-extension-detail.canvas.tsx",
       "exportName": "RepositorySource"
     },
     {
       "id": "dashboard-projectsettings-availableextensiondetail--installing",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/available-extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/available-extension-detail.canvas.tsx",
       "exportName": "Installing"
     },
     {
@@ -1547,197 +1547,197 @@
     },
     {
       "id": "dashboard-projectsettings-extensionconnectionscard--connected",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-connections-card.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-connections-card.canvas.tsx",
       "exportName": "Connected"
     },
     {
       "id": "dashboard-projectsettings-extensiondetail--harness-unavailable",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-detail.canvas.tsx",
       "exportName": "HarnessUnavailable"
     },
     {
       "id": "dashboard-projectsettings-extensiondetail--long-harness-reason",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-detail.canvas.tsx",
       "exportName": "LongHarnessReason"
     },
     {
       "id": "dashboard-projectsettings-extensiondetail--loaded",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-detail.canvas.tsx",
       "exportName": "Loaded"
     },
     {
       "id": "dashboard-projectsettings-extensiondetail--custom-workflow-settings",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-detail.canvas.tsx",
       "exportName": "CustomWorkflowSettings"
     },
     {
       "id": "dashboard-projectsettings-extensiondetail--failed-to-load",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-detail.canvas.tsx",
       "exportName": "FailedToLoad"
     },
     {
       "id": "dashboard-projectsettings-extensiondetail--disabled",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-detail.canvas.tsx",
       "exportName": "Disabled"
     },
     {
       "id": "dashboard-projectsettings-extensiondetail--conflicting-source-folder",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-detail.canvas.tsx",
       "exportName": "ConflictingSourceFolder"
     },
     {
       "id": "dashboard-projectsettings-extensiondetail--local-changes-waiting",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-detail.canvas.tsx",
       "exportName": "LocalChangesWaiting"
     },
     {
       "id": "dashboard-projectsettings-extensiondetail--upgrade-available",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-detail.canvas.tsx",
       "exportName": "UpgradeAvailable"
     },
     {
       "id": "dashboard-projectsettings-extensiondetail--failed-catalog-extension",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-detail.canvas.tsx",
       "exportName": "FailedCatalogExtension"
     },
     {
       "id": "dashboard-projectsettings-extensiondetail--incompatible-api",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-detail.canvas.tsx",
       "exportName": "IncompatibleApi"
     },
     {
       "id": "dashboard-projectsettings-extensiondetail--incompatible-local-source",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-detail.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-detail.canvas.tsx",
       "exportName": "IncompatibleLocalSource"
     },
     {
       "id": "dashboard-projectsettings-extensionfolderdropzone--idle",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-folder-drop-zone.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-folder-drop-zone.canvas.tsx",
       "exportName": "Idle"
     },
     {
       "id": "dashboard-projectsettings-extensionfolderdropzone--drag-over",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-folder-drop-zone.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-folder-drop-zone.canvas.tsx",
       "exportName": "DragOver"
     },
     {
       "id": "dashboard-projectsettings-extensionfolderdropzone--uploading",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-folder-drop-zone.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-folder-drop-zone.canvas.tsx",
       "exportName": "Uploading"
     },
     {
       "id": "dashboard-settings-extension-replacement-confirmation--existing-extension",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-replacement-confirmation.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-replacement-confirmation.canvas.tsx",
       "exportName": "ExistingExtension"
     },
     {
       "id": "dashboard-projectsettings-extensionsettingsform--loaded",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-settings-form.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-settings-form.canvas.tsx",
       "exportName": "Loaded"
     },
     {
       "id": "dashboard-projectsettings-extensionsettingsform--loading-options",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-settings-form.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-settings-form.canvas.tsx",
       "exportName": "LoadingOptions"
     },
     {
       "id": "dashboard-projectsettings-extensionsettingsform--options-failed",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-settings-form.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-settings-form.canvas.tsx",
       "exportName": "OptionsFailed"
     },
     {
       "id": "dashboard-projectsettings-extensionsettingsform--saved-value-not-listed",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-settings-form.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-settings-form.canvas.tsx",
       "exportName": "SavedValueNotListed"
     },
     {
       "id": "dashboard-projectsettings-extensionsettingsform--no-options",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extension-settings-form.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extension-settings-form.canvas.tsx",
       "exportName": "NoOptions"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--populated",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "Populated"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--harness-unavailable",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "HarnessUnavailable"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--harness-check-unknown",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "HarnessCheckUnknown"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--harness-and-extension-issues",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "HarnessAndExtensionIssues"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--long-harness-reason",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "LongHarnessReason"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--harness-disabled",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "HarnessDisabled"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--empty",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "Empty"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--mutating",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "Mutating"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--installing-multiple-available-extensions",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "InstallingMultipleAvailableExtensions"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--health-popover-open",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "HealthPopoverOpen"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--failed-catalog-extension",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "FailedCatalogExtension"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--failed-local-extension",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "FailedLocalExtension"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--upgrades-available",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "UpgradesAvailable"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--upgrading-one-extension",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "UpgradingOneExtension"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--upgrading-all",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "UpgradingAll"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--nothing-to-upgrade",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "NothingToUpgrade"
     },
     {
       "id": "dashboard-projectsettings-extensionspanel--adding-local-folder",
-      "source": "packages/pstdio-dashboard/src/modules/settings/components/extensions-panel.canvas.tsx",
+      "source": "packages/pstdio-dashboard/src/modules/extensions/components/extensions-panel.canvas.tsx",
       "exportName": "AddingLocalFolder"
     },
     {

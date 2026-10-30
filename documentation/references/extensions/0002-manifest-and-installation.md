@@ -223,7 +223,7 @@ two copies of the same extension apart.
 
 `PSTDIO_HOME` may override `~/.pstdio`.
 
-Packages under `$PSTDIO_HOME/extensions/<install-name>/` are discovered for each project and appear in Settings > Extensions as disabled until they are explicitly enabled through the dashboard, CLI, SDK, or API.
+Packages under `$PSTDIO_HOME/extensions/<install-name>/` are discovered for each project and appear in Extensions as disabled until they are explicitly enabled through the dashboard, CLI, SDK, or API.
 
 Extensions are toggled on or off per project. The source is shared. If one project needs a customized variant, copy the extension folder, change `package.json#name` so the derived id is distinct, modify it, and enable that copy for the project.
 

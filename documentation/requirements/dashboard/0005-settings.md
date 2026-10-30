@@ -7,7 +7,7 @@ created: "2026-03-10T20:12:05Z"
 
 ## Purpose
 
-Users can open a project folder and use its tools without first configuring an agent. Settings expose host runtime controls and project-scoped extension, folder, skill, and template settings through the shared workbench settings surface.
+Users can open a project folder and use its tools without first configuring an agent. Settings expose host runtime controls and project-scoped folder, skill, and template settings through the shared workbench settings surface.
 
 ## Settings surface
 
@@ -16,7 +16,7 @@ Settings open in the workbench overlay. Dashboard contributions register section
 | Scope | Panels |
 | --- | --- |
 | Global | Workbench → Runtime, Appearance, Update channel (desktop only), Developer tools; Experimental → Beta features |
-| Project | Extensions, Project folder, Skills, Templates, Machine tokens (beta), Danger zone |
+| Project | Project folder, Skills, Templates, Machine tokens (beta), Danger zone |
 
 Developer tools holds the device-local switches for performance monitoring and the connection status indicator. Machine tokens shows only while its Beta features switch is on.
 
@@ -40,7 +40,7 @@ Extensions can contribute settings through public APIs. Template editors call co
 
 ## Extension and agent boundaries
 
-The Extensions panel manages installed sources and project instances, including enablement, settings, contributions, connections, and available automation controls. Static contributions and installed source state must be inspected independently of a currently open view.
+The Extensions page has its own entry in the project nav panel, outside the Settings overlay. It manages installed sources and project instances, including enablement, settings, contributions, connections, and available automation controls. Static contributions and installed source state must be inspected independently of a currently open view.
 
 Agents are harness contributions from enabled extensions. The core does not maintain the old `agent_configs` table or an Agents settings panel for manually editing executable paths. Use [agent CLI commands](../../references/cli/0002-agents.md) and the [harness architecture](../../references/architecture/0002-agents.md) for discovery and setup.
 
@@ -56,6 +56,7 @@ Use [manual Playwright validation](../../guides/development/0001-setup.md#playwr
 
 Implementation owners:
 
+- [Extensions page](../../../packages/pstdio-dashboard/src/modules/extensions/extensions-page.tsx)
 - [Settings registration](../../../packages/pstdio-dashboard/src/modules/settings/settings-contributions.tsx)
 - [Settings module](../../../packages/pstdio-dashboard/src/modules/settings/module.tsx)
 - [Settings API](../../../packages/pstdio-api/src/features/settings/routes.ts)

@@ -107,11 +107,11 @@ export default defineExtension({ commands: [writeReport], schedules: [nightlyRep
 ```
 
 The dashboard shows schedules as automations. People turn each one on or off per
-project on the extension's page in **Settings → Extensions**. Automations are on
+project on the extension's page in **Extensions**. Automations are on
 by default. Set `disabled: true` to ship one turned off. A person's choice always
 wins over the default, and the scheduler skips automations that are off.
 
-To check a schedule, open your extension in **Settings → Extensions** and find it under automations. If it is missing, check that the schedule is listed in `defineExtension({ schedules })` and that `pst extensions check` reports no errors. Hooks and scheduled commands write only to storage here, so add a read command if you want to see their results from `pst`.
+To check a schedule, open your extension in **Extensions** and find it under automations. If it is missing, check that the schedule is listed in `defineExtension({ schedules })` and that `pst extensions check` reports no errors. Hooks and scheduled commands write only to storage here, so add a read command if you want to see their results from `pst`.
 
 Use settings for project policy and storage for data that must survive a restart.
 See the [extension API](../../references/extensions/0001-api.md) for command outcomes, schedules, and context APIs.
