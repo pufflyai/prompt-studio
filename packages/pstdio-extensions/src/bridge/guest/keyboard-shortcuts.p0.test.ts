@@ -150,3 +150,20 @@ test("numbered tab chords match shifted digit keys without consuming AltGraph in
   target.dispatchEvent(keydown("4", { code: "Digit4", altKey: true, shiftKey: true, getModifierState: () => true }));
   expect(requests).toEqual([{ id: "tab4", repeat: false }]);
 });
+
+test("typing without Alt, Ctrl or Cmd never looks up shortcuts", () => {
+  const target = new EventTarget();
+  let lookups = 0;
+  installKeyboardShortcuts(
+    target,
+    () => {
+      lookups++;
+      return [leader];
+    },
+    () => {},
+  );
+  for (const key of ["a", "Z", " ", "/", "Enter"]) target.dispatchEvent(keydown(key, { shiftKey: key === "Z" }));
+  expect(lookups).toBe(0);
+  target.dispatchEvent(keydown(" ", { altKey: true, shiftKey: true }));
+  expect(lookups).toBe(1);
+});
