@@ -5848,16 +5848,6 @@
       "componentImport": "../../examples/workbench-story"
     },
     {
-      "id": "workbench-note--close-and-reopen",
-      "name": "Close And Reopen",
-      "exportName": "CloseAndReopen",
-      "source": "packages/pstdio-workbench/src/react/header/retained-document-presence.canvas.tsx",
-      "suite": "workbench",
-      "title": "pstdio-workbench/Guides/Header presence/Retained views",
-      "sourceHash": "56b3bb7bc5f23895f1ce28367f020a1d158f9bad5f1155bd13d8670be02cf286",
-      "component": "RetainedDocumentPresence"
-    },
-    {
       "id": "workbench-pstdio-workbench-reference-core-api-browser-panel-controls--sidenav-open",
       "name": "Sidenav Open",
       "exportName": "SidenavOpen",
@@ -5878,16 +5868,6 @@
       "sourceHash": "d02d91546f7d07db9a3bab41f146861ad1d15ae6b23f4486e7936cc236bc41e2",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
-    },
-    {
-      "id": "workbench-pstdio-workbench-guides-header-presence--across-open-tabs",
-      "name": "Across Open Tabs",
-      "exportName": "AcrossOpenTabs",
-      "source": "packages/pstdio-workbench/src/react/header/workbench-presence.canvas.tsx",
-      "suite": "workbench",
-      "title": "pstdio-workbench/Guides/Header presence",
-      "sourceHash": "5ebf92f22b7bfd149556e88a3f36cbed26e991caed01ad541d2f7cfa63a5a99c",
-      "component": "OpenTabPresence"
     },
     {
       "id": "workbench-pstdio-workbench-reference-keyboard--visible-panels",
@@ -7176,49 +7156,6 @@
       "componentImport": "./file-renderer-path-header"
     },
     {
-      "id": "workbench-manual-markdown--explicit-save",
-      "name": "Explicit Save",
-      "exportName": "ExplicitSave",
-      "source": "packages/pstdio-workbench/src/react/renderers/file/manual-markdown-file-editor.canvas.tsx",
-      "suite": "workbench",
-      "title": "Renderers/Manual Markdown File Editor",
-      "sourceHash": "52bb673cfa4fcbdd27697f7035d52761dfa82025d3980ce13dd40dd5682f6d39",
-      "component": "ManualMarkdownFile"
-    },
-    {
-      "id": "workbench-renderers-native-markdown-file-editor--editing",
-      "name": "Editing",
-      "exportName": "Editing",
-      "source": "packages/pstdio-workbench/src/react/renderers/file/native-markdown-file-editor.canvas.tsx",
-      "suite": "workbench",
-      "title": "Renderers/Native Markdown File Editor",
-      "sourceHash": "b4bade862d136818dfe62d20b53be2eb8b63de843bdda30f1ac498c5a9547617",
-      "component": "NativeMarkdownFileEditor",
-      "componentImport": "./native-markdown-file-editor"
-    },
-    {
-      "id": "workbench-renderers-native-markdown-file-editor--reconnecting",
-      "name": "Reconnecting",
-      "exportName": "Reconnecting",
-      "source": "packages/pstdio-workbench/src/react/renderers/file/native-markdown-file-editor.canvas.tsx",
-      "suite": "workbench",
-      "title": "Renderers/Native Markdown File Editor",
-      "sourceHash": "b4bade862d136818dfe62d20b53be2eb8b63de843bdda30f1ac498c5a9547617",
-      "component": "NativeMarkdownFileEditor",
-      "componentImport": "./native-markdown-file-editor"
-    },
-    {
-      "id": "workbench-renderers-native-markdown-file-editor--strict-effects",
-      "name": "Strict Effects",
-      "exportName": "StrictEffects",
-      "source": "packages/pstdio-workbench/src/react/renderers/file/native-markdown-file-editor.canvas.tsx",
-      "suite": "workbench",
-      "title": "Renderers/Native Markdown File Editor",
-      "sourceHash": "b4bade862d136818dfe62d20b53be2eb8b63de843bdda30f1ac498c5a9547617",
-      "component": "NativeMarkdownFileEditor",
-      "componentImport": "./native-markdown-file-editor"
-    },
-    {
       "id": "workbench-renderers-kanban-move-preview--move-before-save",
       "name": "Move Before Save",
       "exportName": "MoveBeforeSave",
@@ -7650,16 +7587,6 @@
       "title": "pstdio-workbench/Guides/Navigation recovery",
       "sourceHash": "e6a38ce3fbf38b951c905eb09cea17301491d861de7ed1fa54d3ca05e8db3222",
       "component": "NavigationRecovery"
-    },
-    {
-      "id": "workbench-research--pending-save",
-      "name": "Pending Save",
-      "exportName": "PendingSave",
-      "source": "packages/pstdio-workbench/src/react/renderers/tree/tree-params-dialog.canvas.tsx",
-      "suite": "workbench",
-      "title": "pstdio-workbench/Guides/Tree rename parameters",
-      "sourceHash": "d97ae227c2097a8421d84ec87e75ec9f7f4fbd1755f10fd2a3ee416746ecb524",
-      "component": "PendingTreeRename"
     },
     {
       "id": "workbench-pstdio-workbench-guides-tree-resource-actions--sidenav",
@@ -11019,17 +10946,6 @@
       "suite": "ui",
       "title": "Components/Data Display/Data Table Display",
       "sourceHash": "5ba02f3eb63356f7250f885f25458d77345f2ad2945fceb0cddb5bf35cf7f340",
-      "component": "DataTable",
-      "componentImport": "./data-table"
-    },
-    {
-      "id": "ui-components-data-display-data-table-draft-transactions--removed-target",
-      "name": "Removed Target",
-      "exportName": "RemovedTarget",
-      "source": "packages/ui/src/components/data-table/data-table-draft-transactions.canvas.tsx",
-      "suite": "ui",
-      "title": "Components/Data Display/DataTable/Draft Transactions",
-      "sourceHash": "3fc880c02edd8e876175b8d754c76940e97a7cf2f7610f266595b9817aadb3a8",
       "component": "DataTable",
       "componentImport": "./data-table"
     },
@@ -14842,50 +14758,6 @@
       "sourceHash": "7a50f6432131a23d5274a085e377de9562834328efb4a77763367cef8dcdb6dc"
     },
     {
-      "id": "ui-primitives-document-participants--connected",
-      "name": "Connected",
-      "exportName": "Connected",
-      "source": "packages/ui/src/components/primitives/document-participants.canvas.tsx",
-      "suite": "ui",
-      "title": "Primitives/DocumentParticipants",
-      "sourceHash": "158586ab6379940164cd45a96a8c5642b7ffe1dcfee1b75739a5ca4243385716",
-      "component": "DocumentParticipants",
-      "componentImport": "./document-participants"
-    },
-    {
-      "id": "ui-primitives-document-participants--offline",
-      "name": "Offline",
-      "exportName": "Offline",
-      "source": "packages/ui/src/components/primitives/document-participants.canvas.tsx",
-      "suite": "ui",
-      "title": "Primitives/DocumentParticipants",
-      "sourceHash": "158586ab6379940164cd45a96a8c5642b7ffe1dcfee1b75739a5ca4243385716",
-      "component": "DocumentParticipants",
-      "componentImport": "./document-participants"
-    },
-    {
-      "id": "ui-primitives-document-participants--narrow",
-      "name": "Narrow",
-      "exportName": "Narrow",
-      "source": "packages/ui/src/components/primitives/document-participants.canvas.tsx",
-      "suite": "ui",
-      "title": "Primitives/DocumentParticipants",
-      "sourceHash": "158586ab6379940164cd45a96a8c5642b7ffe1dcfee1b75739a5ca4243385716",
-      "component": "DocumentParticipants",
-      "componentImport": "./document-participants"
-    },
-    {
-      "id": "ui-primitives-document-participants--leave",
-      "name": "Leave",
-      "exportName": "Leave",
-      "source": "packages/ui/src/components/primitives/document-participants.canvas.tsx",
-      "suite": "ui",
-      "title": "Primitives/DocumentParticipants",
-      "sourceHash": "158586ab6379940164cd45a96a8c5642b7ffe1dcfee1b75739a5ca4243385716",
-      "component": "DocumentParticipants",
-      "componentImport": "./document-participants"
-    },
-    {
       "id": "ui-components-drop-indicator--horizontal",
       "name": "Horizontal",
       "exportName": "Horizontal",
@@ -15749,8 +15621,9 @@
       "source": "packages/ui/src/components/rich-text/collaborative-markdown-editor/collaborative-markdown-editor.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Editors/Collaborative Markdown Editor",
-      "sourceHash": "75adf5c584ba48ed794c5210cd09144e22e1b9d12c7a6c139b7583cbc6765cde",
-      "component": "SingleEditorExample"
+      "sourceHash": "137097db084ce29c9c3e4fe8b51d4836717ac7a6f45abba1cca13163ca33e36a",
+      "component": "CollaborativeMarkdownEditor",
+      "componentImport": "./collaborative-markdown-editor"
     },
     {
       "id": "ui-patterns-editors-collaborative-markdown-editor--single-editor",
@@ -15759,8 +15632,9 @@
       "source": "packages/ui/src/components/rich-text/collaborative-markdown-editor/collaborative-markdown-editor.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Editors/Collaborative Markdown Editor",
-      "sourceHash": "75adf5c584ba48ed794c5210cd09144e22e1b9d12c7a6c139b7583cbc6765cde",
-      "component": "SingleEditorExample"
+      "sourceHash": "137097db084ce29c9c3e4fe8b51d4836717ac7a6f45abba1cca13163ca33e36a",
+      "component": "CollaborativeMarkdownEditor",
+      "componentImport": "./collaborative-markdown-editor"
     },
     {
       "id": "ui-patterns-editors-lazy-markdown-editor--default",
@@ -15772,72 +15646,6 @@
       "sourceHash": "dd2e60bbcdfc95ae5614e36a98f9962e9f4110a9652fd7dac313e950d1c47dee",
       "component": "LazyMarkdownEditor",
       "componentImport": "./lazy-markdown-editor"
-    },
-    {
-      "id": "ui-patterns-editors-markdown-editor-collaboration--shared-editing",
-      "name": "Shared Editing",
-      "exportName": "SharedEditing",
-      "source": "packages/ui/src/components/rich-text/markdown-editor/markdown-editor-collaboration.canvas.tsx",
-      "suite": "ui",
-      "title": "Patterns/Editors/Markdown Editor/Collaboration",
-      "sourceHash": "9971613cfce21c1a3ba3715c48a609bc2d1a714fc3a4c93aef1be18363d883a7",
-      "component": "MarkdownEditor",
-      "componentImport": "./markdown-editor"
-    },
-    {
-      "id": "ui-patterns-editors-markdown-editor-collaboration--empty-note",
-      "name": "Empty Note",
-      "exportName": "EmptyNote",
-      "source": "packages/ui/src/components/rich-text/markdown-editor/markdown-editor-collaboration.canvas.tsx",
-      "suite": "ui",
-      "title": "Patterns/Editors/Markdown Editor/Collaboration",
-      "sourceHash": "9971613cfce21c1a3ba3715c48a609bc2d1a714fc3a4c93aef1be18363d883a7",
-      "component": "MarkdownEditor",
-      "componentImport": "./markdown-editor"
-    },
-    {
-      "id": "ui-patterns-editors-markdown-editor-collaboration--shared-table-editing",
-      "name": "Shared Table Editing",
-      "exportName": "SharedTableEditing",
-      "source": "packages/ui/src/components/rich-text/markdown-editor/markdown-editor-collaboration.canvas.tsx",
-      "suite": "ui",
-      "title": "Patterns/Editors/Markdown Editor/Collaboration",
-      "sourceHash": "9971613cfce21c1a3ba3715c48a609bc2d1a714fc3a4c93aef1be18363d883a7",
-      "component": "MarkdownEditor",
-      "componentImport": "./markdown-editor"
-    },
-    {
-      "id": "ui-patterns-editors-markdown-editor-collaboration--same-tick-remote-first",
-      "name": "Same Tick Remote First",
-      "exportName": "SameTickRemoteFirst",
-      "source": "packages/ui/src/components/rich-text/markdown-editor/markdown-editor-collaboration.canvas.tsx",
-      "suite": "ui",
-      "title": "Patterns/Editors/Markdown Editor/Collaboration",
-      "sourceHash": "9971613cfce21c1a3ba3715c48a609bc2d1a714fc3a4c93aef1be18363d883a7",
-      "component": "MarkdownEditor",
-      "componentImport": "./markdown-editor"
-    },
-    {
-      "id": "ui-patterns-editors-markdown-editor-collaboration--same-tick-local-first",
-      "name": "Same Tick Local First",
-      "exportName": "SameTickLocalFirst",
-      "source": "packages/ui/src/components/rich-text/markdown-editor/markdown-editor-collaboration.canvas.tsx",
-      "suite": "ui",
-      "title": "Patterns/Editors/Markdown Editor/Collaboration",
-      "sourceHash": "9971613cfce21c1a3ba3715c48a609bc2d1a714fc3a4c93aef1be18363d883a7",
-      "component": "MarkdownEditor",
-      "componentImport": "./markdown-editor"
-    },
-    {
-      "id": "ui-patterns-editors-markdown-editor-collaboration--same-tick-both-editors",
-      "name": "Same Tick Both Editors",
-      "exportName": "SameTickBothEditors",
-      "source": "packages/ui/src/components/rich-text/markdown-editor/markdown-editor-collaboration.canvas.tsx",
-      "suite": "ui",
-      "title": "Patterns/Editors/Markdown Editor/Collaboration",
-      "sourceHash": "9971613cfce21c1a3ba3715c48a609bc2d1a714fc3a4c93aef1be18363d883a7",
-      "component": "MarkdownEditor",
-      "componentImport": "./markdown-editor"
     },
     {
       "id": "ui-patterns-editors-markdown-editor-source-preservation--lossless-editing",
@@ -15858,39 +15666,6 @@
       "suite": "ui",
       "title": "Patterns/Editors/Markdown Editor/Source Preservation",
       "sourceHash": "88d7776a49e48f9e57c95ff5ac32abf20ee55f62c2c20da4c60bfa286d729343",
-      "component": "MarkdownEditor",
-      "componentImport": "./markdown-editor"
-    },
-    {
-      "id": "ui-patterns-editors-markdown-editor-presence--remote-selection",
-      "name": "Remote Selection",
-      "exportName": "RemoteSelection",
-      "source": "packages/ui/src/components/rich-text/markdown-editor/markdown-editor-presence.canvas.tsx",
-      "suite": "ui",
-      "title": "Patterns/Editors/Markdown Editor/Presence",
-      "sourceHash": "6e4a75167dc20bce84350aa3cc5f8b515e310ca9bfae8ff58007e83e43b47e2a",
-      "component": "MarkdownEditor",
-      "componentImport": "./markdown-editor"
-    },
-    {
-      "id": "ui-patterns-editors-markdown-editor-presence--narrow",
-      "name": "Narrow",
-      "exportName": "Narrow",
-      "source": "packages/ui/src/components/rich-text/markdown-editor/markdown-editor-presence.canvas.tsx",
-      "suite": "ui",
-      "title": "Patterns/Editors/Markdown Editor/Presence",
-      "sourceHash": "6e4a75167dc20bce84350aa3cc5f8b515e310ca9bfae8ff58007e83e43b47e2a",
-      "component": "MarkdownEditor",
-      "componentImport": "./markdown-editor"
-    },
-    {
-      "id": "ui-patterns-editors-markdown-editor-presence--scrolling",
-      "name": "Scrolling",
-      "exportName": "Scrolling",
-      "source": "packages/ui/src/components/rich-text/markdown-editor/markdown-editor-presence.canvas.tsx",
-      "suite": "ui",
-      "title": "Patterns/Editors/Markdown Editor/Presence",
-      "sourceHash": "6e4a75167dc20bce84350aa3cc5f8b515e310ca9bfae8ff58007e83e43b47e2a",
       "component": "MarkdownEditor",
       "componentImport": "./markdown-editor"
     },
