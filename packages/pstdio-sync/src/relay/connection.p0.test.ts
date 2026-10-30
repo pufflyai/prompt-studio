@@ -414,3 +414,42 @@ test("a permanent synchronization error during access renewal retires its attemp
     await server.stop(true);
   }
 });
+
+test("a planned access renewal reconnects at once without reporting the connection offline", async () => {
+  const controller = new AbortController();
+  let opens = 0;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 426 });
+    },
+    websocket: {
+      open(client) {
+        opens++;
+        client.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+      },
+      message() {},
+    },
+  });
+  const changes: { connected: boolean; busy: boolean }[] = [];
+  const connection = createRelayConnection({
+    origin: server.url.origin,
+    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    access: async () => ({ token: "short-access", expiresAt: new Date(Date.now() + 200).toISOString() }),
+    signal: controller.signal,
+    synchronize: async () => {},
+    onStatusChange: () => changes.push(connection.status()),
+  });
+  try {
+    // Four access lifetimes: each renewal reconnects without the one-second failure backoff.
+    await Bun.sleep(900);
+    expect(opens).toBeGreaterThanOrEqual(4);
+    expect(changes.some((change) => !change.connected)).toBe(false);
+  } finally {
+    controller.abort();
+    await server.stop(true);
+    await connection.done;
+  }
+});

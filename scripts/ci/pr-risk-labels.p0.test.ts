@@ -67,7 +67,7 @@ describe("generated Canvas catalog refreshes", () => {
     const { api, statuses, setFiles, setPull } = fixture(["sdk", "extensions"]);
     setFiles([
       { filename: "packages/sdk/src/client/projects.ts", status: "modified" },
-      { filename: "extensions/canvas/src/catalog/generated/frame-bundle.ts", status: "modified" },
+      { filename: "extensions/canvas/src/catalog/generated/frame-manifest.json", status: "modified" },
       { filename: "moved-package.json", status: "renamed", previous_filename: "extensions/canvas/package.json" },
     ]);
     setPull({ changed_files: 3 });
@@ -78,10 +78,9 @@ describe("generated Canvas catalog refreshes", () => {
   test("allows SDK changes with a refresh of the generated Canvas catalog", async () => {
     const { api, statuses, setFiles, setPull } = fixture(["sdk", "extensions"]);
     const generated = [
-      "frame-bundle.ts",
+      "frame-manifest.json",
       "frame-themes.json",
       "migration-ledger.json",
-      "native-manifest.json",
       "source-information.json",
       "stories.json",
     ];
@@ -102,9 +101,9 @@ describe("generated Canvas catalog refreshes", () => {
     ["extensions/canvas/scripts/build-native-previews.ts", "modified"],
     ["extensions/canvas/src/catalog/generated/custom.ts", "modified"],
     ["extensions/example/extension.ts", "modified"],
-    ["extensions/canvas/src/catalog/generated/frame-bundle.ts", "added"],
-    ["extensions/canvas/src/catalog/generated/frame-bundle.ts", "removed"],
-    ["extensions/canvas/src/catalog/generated/frame-bundle.ts", "renamed"],
+    ["extensions/canvas/src/catalog/generated/frame-manifest.json", "added"],
+    ["extensions/canvas/src/catalog/generated/frame-manifest.json", "removed"],
+    ["extensions/canvas/src/catalog/generated/frame-manifest.json", "renamed"],
   ])("keeps authored extension changes separate from SDK changes: %s (%s)", async (filename, status) => {
     const { api, statuses, setFiles, setPull } = fixture(["sdk", "extensions"]);
     setFiles([
@@ -119,7 +118,7 @@ describe("generated Canvas catalog refreshes", () => {
 
   test("cannot allow a generated catalog refresh from an incomplete diff", async () => {
     const { api, statuses, setFiles, setPull } = fixture(["sdk", "extensions"]);
-    setFiles([{ filename: "extensions/canvas/src/catalog/generated/frame-bundle.ts", status: "modified" }]);
+    setFiles([{ filename: "extensions/canvas/src/catalog/generated/frame-manifest.json", status: "modified" }]);
     setPull({ changed_files: 2 });
     await finish(api, await prepareOpen(api), "success", "sdk,extensions");
     expect(statuses.at(-1)?.state).toBe("error");

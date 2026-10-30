@@ -67,7 +67,6 @@ const createRelaySocket = (input: RelaySocketInput) => {
     const changed = connected !== next;
     connected = next;
     if (changed) input.onStatusChange?.();
-    if (changed && next) input.onReady?.();
   };
   const wake = (synchronize?: TargetedSync) => {
     if (synchronize && connected && !input.signal.aborted) {
@@ -154,6 +153,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
       if (message === "ready") {
         ready = true;
         setConnected(true);
+        input.onReady?.();
         onReady();
       }
       if (typeof message === "function") wake(message);
@@ -189,11 +189,11 @@ const createRelaySocket = (input: RelaySocketInput) => {
         input.onError?.();
       }
       clearTimeout(expiry);
-      setConnected(false);
       if (!input.signal.aborted && renewal) {
         input.onDisconnect?.("renewal");
         continue;
       }
+      setConnected(false);
       input.onDisconnect?.("offline");
       attempt.abort();
       await running;
