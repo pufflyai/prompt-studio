@@ -5876,7 +5876,7 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
+      "sourceHash": "b94897a84ec9a9264038fdc33ac034f1da79b913e2f3e5a02562958bb78e1d97",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -5887,7 +5887,7 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
+      "sourceHash": "b94897a84ec9a9264038fdc33ac034f1da79b913e2f3e5a02562958bb78e1d97",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -5898,7 +5898,7 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
+      "sourceHash": "b94897a84ec9a9264038fdc33ac034f1da79b913e2f3e5a02562958bb78e1d97",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -5909,7 +5909,7 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
+      "sourceHash": "b94897a84ec9a9264038fdc33ac034f1da79b913e2f3e5a02562958bb78e1d97",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -5920,7 +5920,7 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
+      "sourceHash": "b94897a84ec9a9264038fdc33ac034f1da79b913e2f3e5a02562958bb78e1d97",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -5931,7 +5931,7 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
+      "sourceHash": "b94897a84ec9a9264038fdc33ac034f1da79b913e2f3e5a02562958bb78e1d97",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -5942,7 +5942,7 @@
       "source": "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx",
       "suite": "workbench",
       "title": "pstdio-workbench/Reference/Keyboard",
-      "sourceHash": "32cd33762930ffd2786e194958bf58163436def87b0ad0c141f7cde73187d8ac",
+      "sourceHash": "b94897a84ec9a9264038fdc33ac034f1da79b913e2f3e5a02562958bb78e1d97",
       "component": "WorkbenchStory",
       "componentImport": "../../examples/workbench-story"
     },
@@ -7757,7 +7757,7 @@
       "source": "packages/pstdio-workbench/src/react/resource-links/related-resources.canvas.tsx",
       "suite": "workbench",
       "title": "Workbench/Resource links",
-      "sourceHash": "a11c8a27c3ce9a891fb0d690268d6f222ed7e330e0d9505ff8743ac6045463e6",
+      "sourceHash": "b497e61570a62a8248c710c9be6a8aa27aae461ba9e86b67774459bbcc23d246",
       "component": "RelatedResources",
       "componentImport": "./related-resources"
     },
@@ -7768,7 +7768,7 @@
       "source": "packages/pstdio-workbench/src/react/resource-links/related-resources.canvas.tsx",
       "suite": "workbench",
       "title": "Workbench/Resource links",
-      "sourceHash": "a11c8a27c3ce9a891fb0d690268d6f222ed7e330e0d9505ff8743ac6045463e6",
+      "sourceHash": "b497e61570a62a8248c710c9be6a8aa27aae461ba9e86b67774459bbcc23d246",
       "component": "RelatedResources",
       "componentImport": "./related-resources"
     },
@@ -7779,7 +7779,7 @@
       "source": "packages/pstdio-workbench/src/react/resource-links/related-resources.canvas.tsx",
       "suite": "workbench",
       "title": "Workbench/Resource links",
-      "sourceHash": "a11c8a27c3ce9a891fb0d690268d6f222ed7e330e0d9505ff8743ac6045463e6",
+      "sourceHash": "b497e61570a62a8248c710c9be6a8aa27aae461ba9e86b67774459bbcc23d246",
       "component": "RelatedResources",
       "componentImport": "./related-resources"
     },
@@ -7790,7 +7790,7 @@
       "source": "packages/pstdio-workbench/src/react/resource-links/related-resources.canvas.tsx",
       "suite": "workbench",
       "title": "Workbench/Resource links",
-      "sourceHash": "a11c8a27c3ce9a891fb0d690268d6f222ed7e330e0d9505ff8743ac6045463e6",
+      "sourceHash": "b497e61570a62a8248c710c9be6a8aa27aae461ba9e86b67774459bbcc23d246",
       "component": "RelatedResources",
       "componentImport": "./related-resources"
     },
@@ -8052,6 +8052,36 @@
       "componentImport": "../../examples/workbench-story"
     },
     {
+      "id": "workbench-pstdio-workbench-reference-core-api-multiple-workbenches--retained-projects",
+      "name": "Retained Projects",
+      "exportName": "RetainedProjects",
+      "source": "packages/pstdio-workbench/src/react/workbench/multiple-workbenches.canvas.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Core API/Multiple workbenches",
+      "sourceHash": "b70363051b811616a8906093670c5ae6c641353c5e096a21c1efe93a42f9c3d9",
+      "component": "MultipleWorkbenches"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-core-api-multiple-workbenches--standalone",
+      "name": "Standalone",
+      "exportName": "Standalone",
+      "source": "packages/pstdio-workbench/src/react/workbench/multiple-workbenches.canvas.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Core API/Multiple workbenches",
+      "sourceHash": "b70363051b811616a8906093670c5ae6c641353c5e096a21c1efe93a42f9c3d9",
+      "component": "MultipleWorkbenches"
+    },
+    {
+      "id": "workbench-pstdio-workbench-reference-core-api-multiple-workbenches--rich-text-editors",
+      "name": "Rich Text Editors",
+      "exportName": "RichTextEditors",
+      "source": "packages/pstdio-workbench/src/react/workbench/multiple-workbenches.canvas.tsx",
+      "suite": "workbench",
+      "title": "pstdio-workbench/Reference/Core API/Multiple workbenches",
+      "sourceHash": "b70363051b811616a8906093670c5ae6c641353c5e096a21c1efe93a42f9c3d9",
+      "component": "MultipleWorkbenches"
+    },
+    {
       "id": "workbench-pstdio-workbench-guides-project-switch--keeps-shell-mounted",
       "name": "Keeps Shell Mounted",
       "exportName": "KeepsShellMounted",
@@ -8145,7 +8175,7 @@
       "source": "packages/ui/src/components/activity/activity.canvas.tsx",
       "suite": "ui",
       "title": "Components/Data Display/Activity",
-      "sourceHash": "b3d2c1efda3dd7a546ba7ebcd2ba7079bf4c197fb200eb711fe20b09cf22dffa"
+      "sourceHash": "ce68402c60a71e8a889fe4fc039570615efb62675a245bcca54ba12b154559cd"
     },
     {
       "id": "ui-components-layout-canvas-gestures--nested-canvases",
@@ -12536,7 +12566,7 @@
       "source": "packages/ui/src/components/layout/item-section.canvas.tsx",
       "suite": "ui",
       "title": "Components/Layout/Item Section",
-      "sourceHash": "e3f20f1d4d79e4551195615ccf2b20e531c24303d1da6591b665b29c38cce42a",
+      "sourceHash": "4deb4382c52443810b676d2da5489171b78a200e4cc6c843817458f0369b3c5f",
       "component": "ItemSection",
       "componentImport": "@/components/layout/item-section"
     },
@@ -12547,7 +12577,7 @@
       "source": "packages/ui/src/components/layout/item-section.canvas.tsx",
       "suite": "ui",
       "title": "Components/Layout/Item Section",
-      "sourceHash": "e3f20f1d4d79e4551195615ccf2b20e531c24303d1da6591b665b29c38cce42a",
+      "sourceHash": "4deb4382c52443810b676d2da5489171b78a200e4cc6c843817458f0369b3c5f",
       "component": "ItemSection",
       "componentImport": "@/components/layout/item-section"
     },
@@ -12558,7 +12588,7 @@
       "source": "packages/ui/src/components/layout/item-section.canvas.tsx",
       "suite": "ui",
       "title": "Components/Layout/Item Section",
-      "sourceHash": "e3f20f1d4d79e4551195615ccf2b20e531c24303d1da6591b665b29c38cce42a",
+      "sourceHash": "4deb4382c52443810b676d2da5489171b78a200e4cc6c843817458f0369b3c5f",
       "component": "ItemSection",
       "componentImport": "@/components/layout/item-section"
     },
@@ -12752,7 +12782,7 @@
       "source": "packages/ui/src/components/list-row/list-row.canvas.tsx",
       "suite": "ui",
       "title": "Components/Data Display/List Row",
-      "sourceHash": "6937466ce0d08a657cbef183d189d9386f2e775514abdfaeecc14038b89b9d31",
+      "sourceHash": "a9a23d8d0cab56133ddc9032d2c86228f083b8a79d78602865a11b7d590b9005",
       "component": "ListRow",
       "componentImport": "./list-row"
     },
@@ -12763,7 +12793,7 @@
       "source": "packages/ui/src/components/list-row/list-row.canvas.tsx",
       "suite": "ui",
       "title": "Components/Data Display/List Row",
-      "sourceHash": "6937466ce0d08a657cbef183d189d9386f2e775514abdfaeecc14038b89b9d31",
+      "sourceHash": "a9a23d8d0cab56133ddc9032d2c86228f083b8a79d78602865a11b7d590b9005",
       "component": "ListRow",
       "componentImport": "./list-row"
     },
@@ -12774,7 +12804,7 @@
       "source": "packages/ui/src/components/list-row/list-row.canvas.tsx",
       "suite": "ui",
       "title": "Components/Data Display/List Row",
-      "sourceHash": "6937466ce0d08a657cbef183d189d9386f2e775514abdfaeecc14038b89b9d31",
+      "sourceHash": "a9a23d8d0cab56133ddc9032d2c86228f083b8a79d78602865a11b7d590b9005",
       "component": "ListRow",
       "componentImport": "./list-row"
     },
@@ -12785,7 +12815,7 @@
       "source": "packages/ui/src/components/list-row/list-row.canvas.tsx",
       "suite": "ui",
       "title": "Components/Data Display/List Row",
-      "sourceHash": "6937466ce0d08a657cbef183d189d9386f2e775514abdfaeecc14038b89b9d31",
+      "sourceHash": "a9a23d8d0cab56133ddc9032d2c86228f083b8a79d78602865a11b7d590b9005",
       "component": "ListRow",
       "componentImport": "./list-row"
     },
@@ -12796,7 +12826,7 @@
       "source": "packages/ui/src/components/list-row/list-row.canvas.tsx",
       "suite": "ui",
       "title": "Components/Data Display/List Row",
-      "sourceHash": "6937466ce0d08a657cbef183d189d9386f2e775514abdfaeecc14038b89b9d31",
+      "sourceHash": "a9a23d8d0cab56133ddc9032d2c86228f083b8a79d78602865a11b7d590b9005",
       "component": "ListRow",
       "componentImport": "./list-row"
     },
@@ -12807,7 +12837,7 @@
       "source": "packages/ui/src/components/list-row/list-row.canvas.tsx",
       "suite": "ui",
       "title": "Components/Data Display/List Row",
-      "sourceHash": "6937466ce0d08a657cbef183d189d9386f2e775514abdfaeecc14038b89b9d31",
+      "sourceHash": "a9a23d8d0cab56133ddc9032d2c86228f083b8a79d78602865a11b7d590b9005",
       "component": "ListRow",
       "componentImport": "./list-row"
     },
@@ -12818,7 +12848,7 @@
       "source": "packages/ui/src/components/list-row/list-row.canvas.tsx",
       "suite": "ui",
       "title": "Components/Data Display/List Row",
-      "sourceHash": "6937466ce0d08a657cbef183d189d9386f2e775514abdfaeecc14038b89b9d31",
+      "sourceHash": "a9a23d8d0cab56133ddc9032d2c86228f083b8a79d78602865a11b7d590b9005",
       "component": "ListRow",
       "componentImport": "./list-row"
     },
@@ -13005,7 +13035,7 @@
       "source": "packages/ui/src/components/notification-center/notification-center.canvas.tsx",
       "suite": "ui",
       "title": "Components/Feedback/Notification Center",
-      "sourceHash": "f29a9920c9d6ee8a474296d3f10c4cdcfbc5575c00d9d4d837e373a82b9d1792",
+      "sourceHash": "3628ab4114536463eaf0c1a70728b0449fc8307f94138df0ffc7a3ca39594ab7",
       "component": "NotificationCenter",
       "componentImport": "./notification-center"
     },
@@ -13016,7 +13046,7 @@
       "source": "packages/ui/src/components/notification-center/notification-center.canvas.tsx",
       "suite": "ui",
       "title": "Components/Feedback/Notification Center",
-      "sourceHash": "f29a9920c9d6ee8a474296d3f10c4cdcfbc5575c00d9d4d837e373a82b9d1792",
+      "sourceHash": "3628ab4114536463eaf0c1a70728b0449fc8307f94138df0ffc7a3ca39594ab7",
       "component": "NotificationCenter",
       "componentImport": "./notification-center"
     },
@@ -13027,7 +13057,7 @@
       "source": "packages/ui/src/components/notification-center/notification-center.canvas.tsx",
       "suite": "ui",
       "title": "Components/Feedback/Notification Center",
-      "sourceHash": "f29a9920c9d6ee8a474296d3f10c4cdcfbc5575c00d9d4d837e373a82b9d1792",
+      "sourceHash": "3628ab4114536463eaf0c1a70728b0449fc8307f94138df0ffc7a3ca39594ab7",
       "component": "NotificationCenter",
       "componentImport": "./notification-center"
     },
@@ -13038,7 +13068,7 @@
       "source": "packages/ui/src/components/notification-center/notification-center.canvas.tsx",
       "suite": "ui",
       "title": "Components/Feedback/Notification Center",
-      "sourceHash": "f29a9920c9d6ee8a474296d3f10c4cdcfbc5575c00d9d4d837e373a82b9d1792",
+      "sourceHash": "3628ab4114536463eaf0c1a70728b0449fc8307f94138df0ffc7a3ca39594ab7",
       "component": "NotificationCenter",
       "componentImport": "./notification-center"
     },
@@ -13049,7 +13079,7 @@
       "source": "packages/ui/src/components/notification-center/notification-center.canvas.tsx",
       "suite": "ui",
       "title": "Components/Feedback/Notification Center",
-      "sourceHash": "f29a9920c9d6ee8a474296d3f10c4cdcfbc5575c00d9d4d837e373a82b9d1792",
+      "sourceHash": "3628ab4114536463eaf0c1a70728b0449fc8307f94138df0ffc7a3ca39594ab7",
       "component": "NotificationCenter",
       "componentImport": "./notification-center"
     },
@@ -13060,7 +13090,7 @@
       "source": "packages/ui/src/components/notification-center/notification-center.canvas.tsx",
       "suite": "ui",
       "title": "Components/Feedback/Notification Center",
-      "sourceHash": "f29a9920c9d6ee8a474296d3f10c4cdcfbc5575c00d9d4d837e373a82b9d1792",
+      "sourceHash": "3628ab4114536463eaf0c1a70728b0449fc8307f94138df0ffc7a3ca39594ab7",
       "component": "NotificationCenter",
       "componentImport": "./notification-center"
     },
@@ -13071,7 +13101,7 @@
       "source": "packages/ui/src/components/notification-center/notification-center.canvas.tsx",
       "suite": "ui",
       "title": "Components/Feedback/Notification Center",
-      "sourceHash": "f29a9920c9d6ee8a474296d3f10c4cdcfbc5575c00d9d4d837e373a82b9d1792",
+      "sourceHash": "3628ab4114536463eaf0c1a70728b0449fc8307f94138df0ffc7a3ca39594ab7",
       "component": "NotificationCenter",
       "componentImport": "./notification-center"
     },
@@ -13323,7 +13353,7 @@
       "source": "packages/ui/src/components/overlays/menu-selection.canvas.tsx",
       "suite": "ui",
       "title": "Components/Overlays/Menu Selection",
-      "sourceHash": "07729ef08b7ae458a7fc7403117b9716916afaa892f7203bd6a19ba553549de4",
+      "sourceHash": "a86c79a92fe9b6cc7ff42210b584c3e5f810d23cd3efb8d4944e4a878d4d095d",
       "component": "SelectionMenus"
     },
     {
@@ -13443,7 +13473,7 @@
       "source": "packages/ui/src/components/overlays/search-modal-content.canvas.tsx",
       "suite": "ui",
       "title": "Overlays/Search modal content",
-      "sourceHash": "84a00137c69a3f395fb9ef940c54b30ae97b138c0bed86b5c4b20c1a92cfc460",
+      "sourceHash": "50f70f8c4d1f7a094eeb0aa035740a21359980ed364c847b334baeae270b327c",
       "component": "ProjectListDialog"
     },
     {
@@ -13453,7 +13483,7 @@
       "source": "packages/ui/src/components/overlays/search-modal-content.canvas.tsx",
       "suite": "ui",
       "title": "Overlays/Search modal content",
-      "sourceHash": "84a00137c69a3f395fb9ef940c54b30ae97b138c0bed86b5c4b20c1a92cfc460",
+      "sourceHash": "50f70f8c4d1f7a094eeb0aa035740a21359980ed364c847b334baeae270b327c",
       "component": "ProjectListDialog"
     },
     {
@@ -13463,7 +13493,7 @@
       "source": "packages/ui/src/components/overlays/searchable-menu.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Searchable Menu",
-      "sourceHash": "d724a3ed438bdc24bbd0f544e758a8b777f827a03fc96f9c2e343f36bebf6b31",
+      "sourceHash": "eac6c7edb5e3be3b66699da4ddda0c66e2cdf3dcad0d649b2e75f07e124174f6",
       "component": "SearchableMenu",
       "componentImport": "@/components/overlays/searchable-menu"
     },
@@ -13474,7 +13504,7 @@
       "source": "packages/ui/src/components/overlays/searchable-menu.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Searchable Menu",
-      "sourceHash": "d724a3ed438bdc24bbd0f544e758a8b777f827a03fc96f9c2e343f36bebf6b31",
+      "sourceHash": "eac6c7edb5e3be3b66699da4ddda0c66e2cdf3dcad0d649b2e75f07e124174f6",
       "component": "SearchableMenu",
       "componentImport": "@/components/overlays/searchable-menu"
     },
@@ -13485,7 +13515,7 @@
       "source": "packages/ui/src/components/overlays/searchable-menu.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Searchable Menu",
-      "sourceHash": "d724a3ed438bdc24bbd0f544e758a8b777f827a03fc96f9c2e343f36bebf6b31",
+      "sourceHash": "eac6c7edb5e3be3b66699da4ddda0c66e2cdf3dcad0d649b2e75f07e124174f6",
       "component": "SearchableMenu",
       "componentImport": "@/components/overlays/searchable-menu"
     },
@@ -13496,7 +13526,7 @@
       "source": "packages/ui/src/components/overlays/searchable-menu.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Searchable Menu",
-      "sourceHash": "d724a3ed438bdc24bbd0f544e758a8b777f827a03fc96f9c2e343f36bebf6b31",
+      "sourceHash": "eac6c7edb5e3be3b66699da4ddda0c66e2cdf3dcad0d649b2e75f07e124174f6",
       "component": "SearchableMenu",
       "componentImport": "@/components/overlays/searchable-menu"
     },
@@ -13540,7 +13570,7 @@
       "source": "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx",
       "suite": "ui",
       "title": "Components/Param Editor/Harness run options",
-      "sourceHash": "aa2fc0fba82d17932f0e55320df005cc5534672ad24ec871527fe70aa9c26a35",
+      "sourceHash": "458e372f32487801bba6a5ba54d70b1993c45c9b7ea209f7c8a71bc723862b4f",
       "component": "HarnessParamEditorStory"
     },
     {
@@ -13550,7 +13580,7 @@
       "source": "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx",
       "suite": "ui",
       "title": "Components/Param Editor/Harness run options",
-      "sourceHash": "aa2fc0fba82d17932f0e55320df005cc5534672ad24ec871527fe70aa9c26a35",
+      "sourceHash": "458e372f32487801bba6a5ba54d70b1993c45c9b7ea209f7c8a71bc723862b4f",
       "component": "HarnessParamEditorStory"
     },
     {
@@ -13560,7 +13590,7 @@
       "source": "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx",
       "suite": "ui",
       "title": "Components/Param Editor/Harness run options",
-      "sourceHash": "aa2fc0fba82d17932f0e55320df005cc5534672ad24ec871527fe70aa9c26a35",
+      "sourceHash": "458e372f32487801bba6a5ba54d70b1993c45c9b7ea209f7c8a71bc723862b4f",
       "component": "HarnessParamEditorStory"
     },
     {
@@ -13570,7 +13600,7 @@
       "source": "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx",
       "suite": "ui",
       "title": "Components/Param Editor/Harness run options",
-      "sourceHash": "aa2fc0fba82d17932f0e55320df005cc5534672ad24ec871527fe70aa9c26a35",
+      "sourceHash": "458e372f32487801bba6a5ba54d70b1993c45c9b7ea209f7c8a71bc723862b4f",
       "component": "HarnessParamEditorStory"
     },
     {
@@ -13580,7 +13610,7 @@
       "source": "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx",
       "suite": "ui",
       "title": "Components/Param Editor/Harness run options",
-      "sourceHash": "aa2fc0fba82d17932f0e55320df005cc5534672ad24ec871527fe70aa9c26a35",
+      "sourceHash": "458e372f32487801bba6a5ba54d70b1993c45c9b7ea209f7c8a71bc723862b4f",
       "component": "HarnessParamEditorStory"
     },
     {
@@ -13590,7 +13620,7 @@
       "source": "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx",
       "suite": "ui",
       "title": "Components/Param Editor/Harness run options",
-      "sourceHash": "aa2fc0fba82d17932f0e55320df005cc5534672ad24ec871527fe70aa9c26a35",
+      "sourceHash": "458e372f32487801bba6a5ba54d70b1993c45c9b7ea209f7c8a71bc723862b4f",
       "component": "HarnessParamEditorStory"
     },
     {
@@ -14167,7 +14197,7 @@
       "source": "packages/ui/src/components/param-editor/param-editor-label.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Param Editor/Label",
-      "sourceHash": "86e7f50deaedd540f4f4646f2ccdcf438caae98d6a24196d85473af1569cd37b",
+      "sourceHash": "2f8ef931ca1c5c99c310b1584cdd39a4b565c137ffe867038c83029998e8b464",
       "component": "ParamEditorLabel",
       "componentImport": "./param-editor-label"
     },
@@ -14178,7 +14208,7 @@
       "source": "packages/ui/src/components/param-editor/param-editor-label.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Param Editor/Label",
-      "sourceHash": "86e7f50deaedd540f4f4646f2ccdcf438caae98d6a24196d85473af1569cd37b",
+      "sourceHash": "2f8ef931ca1c5c99c310b1584cdd39a4b565c137ffe867038c83029998e8b464",
       "component": "ParamEditorLabel",
       "componentImport": "./param-editor-label"
     },
@@ -14189,7 +14219,7 @@
       "source": "packages/ui/src/components/param-editor/param-editor-label.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Param Editor/Label",
-      "sourceHash": "86e7f50deaedd540f4f4646f2ccdcf438caae98d6a24196d85473af1569cd37b",
+      "sourceHash": "2f8ef931ca1c5c99c310b1584cdd39a4b565c137ffe867038c83029998e8b464",
       "component": "ParamEditorLabel",
       "componentImport": "./param-editor-label"
     },
@@ -14200,7 +14230,7 @@
       "source": "packages/ui/src/components/param-editor/param-editor-label.canvas.tsx",
       "suite": "ui",
       "title": "Patterns/Param Editor/Label",
-      "sourceHash": "86e7f50deaedd540f4f4646f2ccdcf438caae98d6a24196d85473af1569cd37b",
+      "sourceHash": "2f8ef931ca1c5c99c310b1584cdd39a4b565c137ffe867038c83029998e8b464",
       "component": "ParamEditorLabel",
       "componentImport": "./param-editor-label"
     },
@@ -14950,7 +14980,7 @@
       "source": "packages/ui/src/components/primitives/info-card.canvas.tsx",
       "suite": "ui",
       "title": "Components/Data Display/Info Card",
-      "sourceHash": "010c20da31de5c75261cdf69fcdfc528daf7954361774a04d1738bd3d887bfb1",
+      "sourceHash": "5a21aa408800ccb90cb58916548f86438206b2f357c9c9aebf063c07766e2938",
       "component": "InfoCard",
       "componentImport": "@/components/primitives/info-card"
     },
@@ -14961,7 +14991,7 @@
       "source": "packages/ui/src/components/primitives/info-card.canvas.tsx",
       "suite": "ui",
       "title": "Components/Data Display/Info Card",
-      "sourceHash": "010c20da31de5c75261cdf69fcdfc528daf7954361774a04d1738bd3d887bfb1",
+      "sourceHash": "5a21aa408800ccb90cb58916548f86438206b2f357c9c9aebf063c07766e2938",
       "component": "InfoCard",
       "componentImport": "@/components/primitives/info-card"
     },
@@ -14972,7 +15002,7 @@
       "source": "packages/ui/src/components/primitives/info-card.canvas.tsx",
       "suite": "ui",
       "title": "Components/Data Display/Info Card",
-      "sourceHash": "010c20da31de5c75261cdf69fcdfc528daf7954361774a04d1738bd3d887bfb1",
+      "sourceHash": "5a21aa408800ccb90cb58916548f86438206b2f357c9c9aebf063c07766e2938",
       "component": "InfoCard",
       "componentImport": "@/components/primitives/info-card"
     },
@@ -14983,7 +15013,7 @@
       "source": "packages/ui/src/components/primitives/info-card.canvas.tsx",
       "suite": "ui",
       "title": "Components/Data Display/Info Card",
-      "sourceHash": "010c20da31de5c75261cdf69fcdfc528daf7954361774a04d1738bd3d887bfb1",
+      "sourceHash": "5a21aa408800ccb90cb58916548f86438206b2f357c9c9aebf063c07766e2938",
       "component": "InfoCard",
       "componentImport": "@/components/primitives/info-card"
     },
@@ -16488,7 +16518,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
+      "sourceHash": "54704f085152859ac4cedde520f86cca00089b8b6f57e1d372c19e0b65e2c61c",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16499,7 +16529,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
+      "sourceHash": "54704f085152859ac4cedde520f86cca00089b8b6f57e1d372c19e0b65e2c61c",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16510,7 +16540,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
+      "sourceHash": "54704f085152859ac4cedde520f86cca00089b8b6f57e1d372c19e0b65e2c61c",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16521,7 +16551,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
+      "sourceHash": "54704f085152859ac4cedde520f86cca00089b8b6f57e1d372c19e0b65e2c61c",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16532,7 +16562,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
+      "sourceHash": "54704f085152859ac4cedde520f86cca00089b8b6f57e1d372c19e0b65e2c61c",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16543,7 +16573,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
+      "sourceHash": "54704f085152859ac4cedde520f86cca00089b8b6f57e1d372c19e0b65e2c61c",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16554,7 +16584,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
+      "sourceHash": "54704f085152859ac4cedde520f86cca00089b8b6f57e1d372c19e0b65e2c61c",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16565,7 +16595,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
+      "sourceHash": "54704f085152859ac4cedde520f86cca00089b8b6f57e1d372c19e0b65e2c61c",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16576,7 +16606,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
+      "sourceHash": "54704f085152859ac4cedde520f86cca00089b8b6f57e1d372c19e0b65e2c61c",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
@@ -16587,7 +16617,7 @@
       "source": "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx",
       "suite": "ui",
       "title": "Components/Navigation/Window Title Bar",
-      "sourceHash": "e7b80630a39f428e6196f44eb32949e5c9fda1361fa6631e47034a85aba7f138",
+      "sourceHash": "54704f085152859ac4cedde520f86cca00089b8b6f57e1d372c19e0b65e2c61c",
       "component": "WindowTitleBar",
       "componentImport": "./window-title-bar"
     },
