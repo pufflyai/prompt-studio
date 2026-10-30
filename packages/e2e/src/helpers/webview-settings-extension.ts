@@ -1,16 +1,11 @@
-import { cpSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { installBuiltSdk } from "./installed-sdk";
 
 export const writeWebviewSettingsExtension = (root: string) => {
   const source = join(root, "extensions", "settings-fixture");
-  const sdk = join(source, "node_modules", "@pstdio", "sdk");
-  mkdirSync(sdk, { recursive: true });
-  cpSync(join(import.meta.dirname, "../../../sdk/dist"), join(sdk, "dist"), { recursive: true });
-  writeFileSync(
-    join(sdk, "package.json"),
-    JSON.stringify({ name: "@pstdio/sdk", type: "module", exports: { "./extensions": "./dist/extensions/index.js" } }),
-  );
+  mkdirSync(source, { recursive: true });
   writeFileSync(
     join(source, "package.json"),
     JSON.stringify({
@@ -55,5 +50,6 @@ export default defineExtensionView({ render({ mount, host, propsStore }) {
 } });
 `,
   );
+  installBuiltSdk(source);
   return source;
 };

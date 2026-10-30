@@ -6,19 +6,14 @@ import { join } from "node:path";
 import { expect as browserExpect, chromium } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { installBuiltSdk } from "../helpers/installed-sdk";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
 const writeExtension = (root: string) => {
   const source = join(root, "extensions", "resource-removal");
-  const sdk = join(source, "node_modules", "@pstdio", "sdk");
-  mkdirSync(sdk, { recursive: true });
-  cpSync(join(import.meta.dirname, "../../../sdk/dist"), join(sdk, "dist"), { recursive: true });
-  writeFileSync(
-    join(sdk, "package.json"),
-    JSON.stringify({ name: "@pstdio/sdk", type: "module", exports: { "./extensions": "./dist/extensions/index.js" } }),
-  );
+  mkdirSync(source, { recursive: true });
   writeFileSync(
     join(source, "package.json"),
     JSON.stringify({
@@ -31,6 +26,7 @@ const writeExtension = (root: string) => {
     }),
   );
   cpSync(join(import.meta.dirname, "../fixtures/resource-removal/extension.ts"), join(source, "extension.ts"));
+  installBuiltSdk(source);
 };
 
 setupPackagedSmokeTests();
