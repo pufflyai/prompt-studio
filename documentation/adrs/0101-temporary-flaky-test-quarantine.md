@@ -28,12 +28,24 @@ On 2026-10-27, the native OpenCode empty-PATH detection case returned unavailabl
 
 The #1499 Linux x64 merge group also exhausted the packaged attached-recovery case before reaching recovery: its cold Claude dependency install never finished before the unchanged 30-second deadline. The complete case passed on main with identical Linux application and test sources in run 40547961144; the PR changes Windows CI storage only. This Linux x64 case joins the existing packaged desktop evidence lane with all cold installs and recovery assertions retained. Its separate registry entry requires an installer cause fix and ten independent cold passes before removal.
 
+The complete native battery on 2026-10-30 also confirmed two Intel macOS flakes with unchanged application and case sources: navigation restore passed before a later runtime-descriptor timeout, and packaged Planner board panning exhausted 30 seconds before passing under the same allowance. Both are registered for darwin-x64 only. Compiled CLI quarantine executes registered cases on any affected native platform, once on its first shard; failures remain separate from the required execution report.
+
 ## Limitations
 
 Quarantine temporarily removes these specific cases from merge protection on the affected platforms. It does not prove the product works there. Other platforms and the packaged released-data upgrade contract remain blocking. Every quarantined case still executes without retries or prewarming, at its existing limit, and retains first-attempt evidence. A quarantine failure must be reported separately from stable CI success.
 
-Full reliability runs use ten independent refs at the same commit under `test/ci-reliability/`. The normal full workflow handles them. Ref-specific concurrency prevents cancellation between those runs. Nx disables caching for test, conformance and coverage targets; dependency builds retain caching. The global cache-bypass flag is avoided because it also rebuilds test dependencies. Changes during qualification require ten new runs on the final commit.
+On 2026-10-30, the user required single execution and quarantine of confirmed flakes. CI no longer repeats performance cases or runs multiple reliability refs to obtain a pass. Windows x64 warm-attach and cold-start launch benchmarks run once in a separate non-blocking test step, with a required execution report; their existing budgets, assertions and execution allowances remain unchanged. Other native platforms remain blocking. Reproduce and repair the cause before restoring a case to the stable gate.
+
+The full P0–P2 battery also exposed an intermittent session-row menu case on Linux x64: after touch-hold and right-click menu dismissal, clicking Session B left Session A selected. The unchanged case and menu-action sources passed the main-branch nightly. It now runs once in source-UI quarantine with its complete Sessions, workspace and ticket assertions and existing timeout.
 
 ## Removal
 
 For each case, reproduce and fix its cause, then meet its registered removal criterion and restore it to the stable lane. Do not remove a supported contract to clear quarantine. Delete this mechanism when the register is empty. Remove the reliability refs after the recorded qualification is no longer needed.
+
+Installed harness compatibility resolves and pins npm versions before execution. When `latest` equals `minimum` and both lanes are scheduled, the required minimum lane owns their single execution; a latest-only invocation still executes. The Windows x64 Pi 0.73.1 cold detection/model case runs once in its version-specific quarantine before the blocking tool/session-resume case. Its report must prove exactly one first attempt; the 3000 ms probe remains unchanged.
+
+The final full battery additionally confirmed Intel macOS harness-submenu dismissal and compiled collection-view restart flakes. Both complete cases passed in the prior battery with unchanged sources. Their exact darwin-x64 cases join the existing native quarantine lanes; other platforms remain blocking and no deadline or assertion changes.
+
+The merged-source full battery also confirmed Windows x64 delayed detached-process progress and Pi browser-authentication flakes: both unchanged cases passed in the prior battery. Only the 1500 ms startup variant and browser-completion case are quarantined; immediate detached startup and Pi login cancellation remain blocking. Their existing 30000 ms API and 15000 ms Windows unit allowances are preserved.
+
+Desktop benchmarks retain one complete ordered Playwright invocation: launch cases (including quarantined warm attach and cold start) precede renderer cases. The runner classifies the resulting first-attempt report: stable/setup failures block CI, quarantined failures remain visible in a separate mandatory report. Comparison artifacts retain all measurements and the quarantine evidence. No second invocation repeats or moves the cold scenario after renderer work.

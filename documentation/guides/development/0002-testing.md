@@ -219,7 +219,7 @@ Evidence artifact names end in `-attempt-<run_attempt>` so a manual rerun keeps 
 
 Intel Mac desktop CI runs its packaged smoke files in two required Playwright shards under the existing 20-minute job allowance. Both jobs build a real native app; source Electron tests, native cleanup tests, existing quarantine execution and shared build archives belong to shard one. Other desktop targets use one complete shard. Published desktop targets remain unique physical platforms. The normal developer command still runs the complete unsharded suite.
 
-Windows ARM64 packaged runtime checks use two Bun file shards within the existing 30-minute job allowance. Other native toolchains use one shard. Both ARM64 shards remain required; each keeps compiled-file integrity, public package contracts and compiled CLI smoke. Windows compiled CLI quarantine runs once per platform on its first shard. `bun run --cwd scripts verify:packages --profile full --shard 1/2` selects one runtime shard; omit `--shard` to run the complete suite. Released candidates still use `--prebuilt`, so neither shard rebuilds their immutable binary.
+Windows ARM64 packaged runtime checks use two Bun file shards within the existing 30-minute job allowance. Other native toolchains use one shard. Both ARM64 shards remain required; each keeps compiled-file integrity, public package contracts and compiled CLI smoke. Compiled CLI quarantine runs once per platform on its first shard. `bun run --cwd scripts verify:packages --profile full --shard 1/2` selects one runtime shard; omit `--shard` to run the complete suite. Released candidates still use `--prebuilt`, so neither shard rebuilds their immutable binary.
 
 Packaged toolchain checks run through the CI runner with direct arguments and the operating system's default shell. Do not wrap Windows verification in a Git Bash pipeline: it gives child processes an inherited Ctrl+C-ignore attribute, preventing the real terminal interruption check from exercising normal Windows signal handling.
 
@@ -243,14 +243,14 @@ The Apple Silicon desktop row runs its registered packaged cases in a separate s
 
 Run registered cases locally with `E2E_TEST_LANE=quarantine bun run --cwd packages/pstdio-db test`, `E2E_TEST_LANE=quarantine bun run --cwd scripts test`, or `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:browser`. Use the normal package scripts for the stable lane. Direct `bun test <file>` remains available for diagnosis and does not apply quarantine selection.
 
-Windows compiled CLI quarantine runs after native package verification against that same binary. For diagnosis, set `E2E_PACKAGED_BINARY_PATH` to the compiled executable and run `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:cli`. The API quarantine step runs its registered file in an isolated source-conditions process, with the same 30-second test allowance as normal API shards.
+Compiled CLI quarantine runs after native package verification against that same binary. For diagnosis, set `E2E_PACKAGED_BINARY_PATH` to the compiled executable and run `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:cli`. The API quarantine step runs its registered file in an isolated source-conditions process, with the same 30-second test allowance as normal API shards.
 
-For ten full CI validations, create ten refs under `test/ci-reliability/<batch>/` at the same final commit. Each push starts the normal full workflow, including native builds, all browser engines, package consumers, and quarantine. The ref is part of the concurrency key, so independent runs cannot cancel each other. Nx test targets disable result caching; dependency builds still use their caches. Count first attempts and record all failures. If a fix changes the commit, start a new ten-run qualification on that commit. A test passing on a later attempt does not erase its earlier failure.
+Each CI pipeline executes each test once per applicable platform, including performance and quarantine cases. Do not repeat a test or create multiple reliability refs to obtain a passing result. Quarantine confirmed flakes with first-failure evidence, an owner and a removal criterion; keep their limits and assertions, and require their separate execution report. A later pass does not erase an earlier failure.
 
-To investigate a failure, keep retries disabled and repeat the affected spec:
+To investigate a failure, keep retries disabled and run only the affected spec once:
 
 ```bash
-bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.p2.spec.ts --repeat-each=5
+bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.p2.spec.ts
 ```
 
 To run one CI shard locally, use `bun run --cwd packages/e2e test:ui -- --shard=2/3`. Keep the same shard total when comparing runs.
@@ -348,6 +348,12 @@ E2E_AGENTS=opencode bun run --cwd packages/e2e test:ui -- src/ui/session-follow-
 ```
 
 They require the selected provider and its credentials. They are separate from ordinary fixture-based CI coverage.
+
+Installed harness compatibility resolves and pins npm versions before execution. When `latest` equals `minimum` and both lanes are scheduled, the required minimum lane owns their single execution; a latest-only invocation still executes. The Windows x64 Pi 0.73.1 cold detection/model case runs once in its version-specific quarantine before the blocking tool/session-resume case. Its report must prove exactly one first attempt; the 3000 ms probe remains unchanged.
+
+The final full battery additionally confirmed Intel macOS harness-submenu dismissal and compiled collection-view restart flakes. Both complete cases passed in the prior battery with unchanged sources. Their exact darwin-x64 cases join the existing native quarantine lanes; other platforms remain blocking and no deadline or assertion changes.
+
+Desktop benchmarks retain one complete ordered Playwright invocation: launch cases (including quarantined warm attach and cold start) precede renderer cases. The runner classifies the resulting first-attempt report: stable/setup failures block CI, quarantined failures remain visible in a separate mandatory report. Comparison artifacts retain all measurements and the quarantine evidence. No second invocation repeats or moves the cold scenario after renderer work.
 
 ## Critical UI checks
 

@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { benchmarkSampleCount, suites } from "pstdio-benchmarks";
+import { suites } from "pstdio-benchmarks";
 import { e2eRunId, serveWebServer } from "./src/serve-web-server";
 import { uiOrigin } from "./src/ui-server";
 
@@ -13,7 +13,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  repeatEach: benchmarkSampleCount(3),
+  repeatEach: 1,
   outputDir: `test-results/perf-${e2eRunId}`,
   reporter: [["html", { open: "never", outputFolder: `playwright-report/perf-${e2eRunId}` }], ["list"]],
   use: {

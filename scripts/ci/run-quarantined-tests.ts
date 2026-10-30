@@ -11,6 +11,24 @@ import {
 } from "./test-quarantine";
 import { readWorkspacePackages } from "./workspace-packages";
 
+export const quarantineTestCommand = (
+  runner: string,
+  owner: string,
+  script: string,
+  files: string[],
+  platform = process.platform,
+) => {
+  const command = ["bun", "run", script, ...files.map((file) => `./${file}`)];
+  // This is a Bun fixture allowance. Playwright owns its native configuration.
+  if (
+    runner === "bun" &&
+    platform === "win32" &&
+    ["pstdio-db", "harness-codex", "harness-pi", "pstdio-planner", "@pstdio/desktop"].includes(owner)
+  )
+    command.push("--timeout=15000");
+  return command;
+};
+
 export const quarantineGroups = (
   registry: typeof quarantineRegistry,
   packages: ReturnType<typeof readWorkspacePackages>,
@@ -35,7 +53,11 @@ if (import.meta.main) {
   const root = resolve(import.meta.dir, "../..");
   const args = process.argv.slice(2);
   const runner = args[0] ?? "bun";
-  if (!["bun", "packaged-bun", "playwright", "playwright-ui", "packaged-desktop"].includes(runner))
+  if (
+    !["bun", "packaged-bun", "playwright", "playwright-ui", "packaged-desktop", "packaged-desktop-benchmark"].includes(
+      runner,
+    )
+  )
     throw new Error("Choose a quarantine runner");
   const scopeAt = args.indexOf("--scope");
   const scope = scopeAt < 0 ? undefined : args[scopeAt + 1];
@@ -78,7 +100,7 @@ if (import.meta.main) {
     const result = await runCiChecks(setup, { priority: "P2", concurrency: 1 });
     if (result.outcome !== "success") process.exit(1);
   }
-  if (runner === "packaged-desktop" && !args.includes("--prebuilt")) {
+  if (runner.startsWith("packaged-desktop") && !args.includes("--prebuilt")) {
     const result = await runCiChecks(
       [{ id: "package-quarantine-desktop", cwd: root, command: ["bun", "run", "--cwd", "clients/desktop", "package"] }],
       { priority: "P2", concurrency: 1 },
@@ -119,16 +141,11 @@ if (import.meta.main) {
       playwright: "test:packaged:browser",
       "playwright-ui": "test:ui",
       "packaged-desktop": "test:packaged",
+      "packaged-desktop-benchmark": "test:benchmark",
     };
     const script = scripts[runner] ?? "test";
     if (!manifest.scripts?.[script]) throw new Error(`Missing ${script} runner for ${owner.name}`);
-    const command = ["bun", "run", script, ...files.map((file) => `./${file}`)];
-    // Preserve the existing Windows fixture allowances; source test limits stay unchanged elsewhere.
-    if (
-      process.platform === "win32" &&
-      ["pstdio-db", "harness-codex", "pstdio-planner", "@pstdio/desktop"].includes(owner.name)
-    )
-      command.push("--timeout=15000");
+    const command = quarantineTestCommand(runner, owner.name, script, files);
     return [
       {
         owner: owner.name,

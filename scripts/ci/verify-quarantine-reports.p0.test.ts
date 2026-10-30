@@ -25,7 +25,15 @@ test("every workflow job verifies the same quarantine lanes it runs", () => {
     const jobs = workflow.jobs ?? (workflow.runs ? { action: workflow.runs } : {});
     return Object.entries(jobs).flatMap(([job, { steps = [] }]) => {
       const commands = steps.flatMap((step) => step.run ?? []);
-      const run = lanes(commands, "run-quarantined-tests");
+      const orderedDesktop = commands.some(
+        (command) =>
+          command.includes("bun run test:benchmark") ||
+          command.includes("bun run --cwd clients/desktop test:benchmark"),
+      );
+      const run = [
+        ...lanes(commands, "run-quarantined-tests"),
+        ...(orderedDesktop ? ["packaged-desktop-benchmark @pstdio/desktop"] : []),
+      ].sort();
       const verified = lanes(commands, "verify-quarantine-reports");
       return JSON.stringify(run) === JSON.stringify(verified) ? [] : [{ file, job, run, verified }];
     });

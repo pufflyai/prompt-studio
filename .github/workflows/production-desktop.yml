@@ -108,11 +108,21 @@ jobs:
       - name: Measure fixed workloads without traces or retries
         if: inputs.kind == 'performance'
         working-directory: clients/desktop
-        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.benchmark.config.ts
+        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:benchmark
       - name: Test every packaged functional case
         if: inputs.kind == 'functional'
         working-directory: clients/desktop
         run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged
+      - name: Require first-attempt launch quarantine execution
+        if: ${{ !cancelled() && inputs.kind == 'performance' && matrix.platform == 'win32' }}
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop-benchmark --scope @pstdio/desktop
+      - name: Run quarantined packaged functional cases once
+        if: ${{ !cancelled() && inputs.kind == 'functional' }}
+        continue-on-error: true
+        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun scripts/ci/run-quarantined-tests.ts packaged-desktop --scope @pstdio/desktop --prebuilt
+      - name: Require first-attempt functional quarantine execution
+        if: ${{ !cancelled() && inputs.kind == 'functional' }}
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop --scope @pstdio/desktop
       - name: Attest actual consumer inputs and outcome
         if: always()
         env:
