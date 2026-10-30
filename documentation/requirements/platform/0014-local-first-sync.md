@@ -4,6 +4,10 @@ Status: Proposed. Created: 2026-10-19. Owner: platform. This PRD replaces the
 synchronization contracts PRD (0007) as the source of truth for Prompt Studio Cloud.
 Ticket PS-716 tracks the work.
 
+PS-960's [proposed project file recovery design](0015-project-data-recovery.md)
+describes a possible scope addition. It is awaiting a decision and does not change
+this PRD's working-tree exclusion or the current new-device folder contract.
+
 ## Purpose
 
 A person should be able to use Prompt Studio on several machines as if they were one,
