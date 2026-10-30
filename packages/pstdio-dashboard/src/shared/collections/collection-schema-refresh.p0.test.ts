@@ -33,7 +33,10 @@ test("content changes skip saved-view reads while schema events and reset still 
     publishExtensionEvent({ projectId: "project", id: "schema.changed" });
     await Bun.sleep(20);
     expect(reads).toBe(2);
-    publishExtensionEventReset();
+    publishExtensionEventReset({ projectId: "other" });
+    await Bun.sleep(20);
+    expect(reads).toBe(2);
+    publishExtensionEventReset({ projectId: "project" });
     await Bun.sleep(20);
     expect(reads).toBe(3);
   } finally {
