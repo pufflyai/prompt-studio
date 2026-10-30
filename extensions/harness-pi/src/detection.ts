@@ -2,7 +2,7 @@ import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { resolvePiCommand } from "./cli";
 import type { PiProcessOptions } from "./process";
 
-export const MINIMUM_VERSION = "0.73.1";
+export const MINIMUM_VERSION = "0.79.0";
 
 export const detectPi = async (ctx: HarnessContext, options: PiProcessOptions = {}) => {
   try {
@@ -26,4 +26,13 @@ export const detectPi = async (ctx: HarnessContext, options: PiProcessOptions = 
   } catch {
     return { available: false, reason: "Install Pi or check the runtime PATH." };
   }
+};
+
+export const requirePiCommand = async (ctx: HarnessContext, options: PiProcessOptions = {}) => {
+  const resolved = options.command ? { command: options.command, env: {} } : resolvePiCommand();
+  const processOptions = { ...options, command: resolved.command, env: { ...options.env, ...resolved.env } };
+  const detection = await detectPi(ctx, processOptions);
+  if (!detection.available) throw new Error(detection.reason);
+  options.signal?.throwIfAborted();
+  return processOptions;
 };

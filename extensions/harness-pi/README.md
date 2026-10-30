@@ -4,7 +4,7 @@ Run the Pi coding agent from Prompt Studio. Install this optional extension to u
 
 ## Install and sign in
 
-Prompt Studio installs a private, pinned Pi CLI with this optional extension, using its Bun installer. An existing CLI on the runtime's PATH takes precedence. The private CLI runs with Prompt Studio's bundled Bun; no global Node installation or terminal setup is needed. Pi 0.73.1 or newer is required.
+Prompt Studio installs a private, pinned `@earendil-works/pi-coding-agent` CLI with this optional extension, using its Bun installer. An existing CLI on the runtime's PATH takes precedence. The private CLI runs with Prompt Studio's bundled Bun; no global Node installation or terminal setup is needed. Pi 0.79.0 or newer is required. Upgrade older global installations to `@earendil-works/pi-coding-agent` to receive Pi's security fixes.
 
 Open a chat and choose **Sign in** in the session background, or use `/login`. Choose a provider and its browser or API-key method. Browser links, native provider choices, and masked code/key input stay in the chat. Complete browser sign-in and the session refreshes without restarting Prompt Studio. Use `/logout` to remove a stored account.
 
@@ -33,5 +33,7 @@ Continuing a conversation resumes the same native Pi session. History stays in P
 Pi runs its configured tools with the access granted to the Pi process. This harness does not provide tool approval dialogs, interactive Pi extension dialogs, live steering, native slash commands beyond the host account commands, or session forking. Configure Pi itself for the tools and resources you want it to load.
 
 Project skills are copied to `.pi/skills` before workspace sessions start. `pst agents setup` installs them into the current project too.
+
+Pi loads project instructions, skills, settings, and native extensions only after you save a trust decision for that workspace in Pi. Run Pi interactively in the workspace and use `/trust`, then restart the Prompt Studio session. Account discovery uses the same saved decision before loading project providers.
 
 See [Pi's documentation](https://github.com/earendil-works/pi/tree/main/packages/coding-agent) for provider setup, models, skills and tools.

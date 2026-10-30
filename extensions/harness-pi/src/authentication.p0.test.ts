@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ProjectTrustStore } from "@earendil-works/pi-coding-agent";
 import { runPiAccountWorker } from "./authentication";
 
 const fixture = async () => {
@@ -21,6 +22,24 @@ const fixture = async () => {
     close: () => rmSync(root, { recursive: true, force: true }),
   };
 };
+
+test("Pi account discovery loads project providers only after native project trust is saved", async () => {
+  const { root, options, close } = await fixture();
+  try {
+    const extension = await Bun.file(join(root, "extensions/browser.ts")).text();
+    await Bun.write(
+      join(root, ".pi/extensions/project.ts"),
+      extension.replaceAll("fixture-browser", "fixture-project"),
+    );
+    const untrusted = await runPiAccountWorker({ type: "status" }, options);
+    expect(untrusted?.providers.map((provider) => provider.id)).not.toContain("fixture-project");
+    new ProjectTrustStore(root).set(root, true);
+    const trusted = await runPiAccountWorker({ type: "status" }, options);
+    expect(trusted?.providers.map((provider) => provider.id)).toContain("fixture-project");
+  } finally {
+    close();
+  }
+});
 
 test("native Pi browser completion wins over a pending manual-code prompt", async () => {
   const { root, options, close } = await fixture();
