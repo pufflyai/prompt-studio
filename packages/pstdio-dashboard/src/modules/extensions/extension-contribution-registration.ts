@@ -101,7 +101,8 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
     const menuResult = buildDashboardExtensionMenuRegistrations(input.metadata);
     const kanban = createDashboardKanbanAdapter(input);
     disposables.push({
-      dispose: subscribeToExtensionEventReset(() => {
+      dispose: subscribeToExtensionEventReset((reset) => {
+        if (reset.projectId !== undefined && reset.projectId !== input.projectId) return;
         for (const view of input.metadata.views) input.ctx.views.refreshView(view.id);
       }),
     });

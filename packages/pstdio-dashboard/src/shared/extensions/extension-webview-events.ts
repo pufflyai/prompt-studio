@@ -8,7 +8,9 @@ export const subscribeWebviewExtensionEvents = (host: HostEventPublisher, projec
   const stopEvents = subscribeToExtensionEventFeed((event) => {
     if (event.projectId === projectId) emit({ type: "changed", id: event.id });
   });
-  const stopReset = subscribeToExtensionEventReset(() => emit({ type: "reset" }));
+  const stopReset = subscribeToExtensionEventReset((reset) => {
+    if (reset.projectId === undefined || reset.projectId === projectId) emit({ type: "reset" });
+  });
   return () => {
     stopEvents();
     stopReset();
