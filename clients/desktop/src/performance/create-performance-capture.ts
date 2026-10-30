@@ -14,7 +14,8 @@ export const createDesktopCapture = (input: {
     backend: input.backend,
     readProcess: (pid, signal) => {
       observer ??= createProcessObserver({ executable: input.executable });
-      return observer.read(pid, signal);
+      const started = performance.now();
+      return observer.read(pid, signal).finally(() => console.info("OBSERVER_DURATION", performance.now() - started));
     },
     intervalMs: 2000,
     platform: process.platform,
