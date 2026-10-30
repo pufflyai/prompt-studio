@@ -3,6 +3,7 @@ import { localContributionIdPattern } from "./extension-kernel/contribution-id";
 import { serializableJsonObjectSchema } from "./extensions/common";
 import { pageParamValueSchema } from "./extensions/page-params-schema";
 import { extensionResourceRefSchema } from "./extensions/resource-ref";
+import { viewRefSchema } from "./extensions/workbench-refs-metadata";
 import { nativeDocumentSourceSchema } from "./native-document-source";
 
 export const textDocumentRefSchema = z.strictObject({
@@ -26,6 +27,7 @@ export const nativeFileContentSchema = z
   .object({
     documentSource: nativeDocumentSourceSchema.optional(),
     textDocument: textDocumentRefSchema.optional(),
+    textEditor: viewRefSchema.partial({ extensionId: true }).optional(),
     fileName: z.string().optional(),
     filePath: z.string().optional(),
     mimeType: z.string().optional(),

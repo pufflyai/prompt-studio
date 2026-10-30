@@ -27,6 +27,7 @@ import type { createSessionService } from "../services/session-service";
 import type { createSettingsService } from "../services/settings-service";
 import type { createSkillService } from "../services/skill-service";
 import type { createSyncService } from "../services/sync-service";
+import type { createTextEditingService } from "../services/text-editing/service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { createAutomationService } from "./automation/automation-service";
@@ -72,6 +73,7 @@ export interface RouteDeps {
   fileService: ReturnType<typeof createFileService>;
   notificationService: ReturnType<typeof createNotificationService>;
   nativeDocuments: ReturnType<typeof createNativeDocumentService>;
+  textEditing: ReturnType<typeof createTextEditingService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionAutomationPreferencesService: ReturnType<typeof createExtensionAutomationPreferencesService>;
   resourceLinksService: ReturnType<typeof createResourceLinksDBService>;

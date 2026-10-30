@@ -14,6 +14,7 @@ import type { NavigationTarget } from "./navigation-target";
 import type { PageLocation, PageParamValue } from "./pages";
 import type { ResourceRef } from "./resources";
 import type { ExtensionHarnessInput } from "./sessions";
+import type { TextEditingRequest, TextEditingResult } from "./text-editing";
 import type { WebviewEditingSessionParams, WebviewEditingSnapshot } from "./webview-editing";
 
 export type { ExtensionBlobRef } from "./context";
@@ -26,6 +27,7 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "commands.execute",
   "commands.stream",
   "editing.session",
+  "editing.text",
   "harnesses.read",
   "resources.actions",
   "navigation.open",
@@ -231,6 +233,7 @@ export interface WebviewHostCapabilityParams {
   "commands.execute": WebviewCommandsExecuteParams;
   "commands.stream": WebviewCommandsStreamParams;
   "editing.session": WebviewEditingSessionParams;
+  "editing.text": TextEditingRequest;
   "page.params.update": WebviewPageParamsUpdateParams;
   "navigation.open": WebviewNavigationOpenParams;
   "placement.close": Record<string, never>;
@@ -274,6 +277,7 @@ export interface WebviewHostCapabilityResults {
   "commands.execute": { outcome: CommandOutcome };
   "commands.stream": { operation: "start" | "cancel" | "ack"; accepted: true };
   "editing.session": WebviewEditingSnapshot | undefined;
+  "editing.text": TextEditingResult;
   "page.params.update": { location: PageLocation };
   "navigation.open": void;
   "placement.close": void;
@@ -321,20 +325,22 @@ export interface WebviewResourceAction {
 export type WebviewHostCapabilityResult<
   Capability extends WebviewHostCapability,
   Params extends WebviewHostCapabilityParams[Capability] = WebviewHostCapabilityParams[Capability],
-> = Capability extends "account.read" | "account.manage"
-  ? Params extends { op: keyof ExtensionAccountApi }
-    ? WebviewAccountResult<Params>
-    : WebviewHostCapabilityResults[Capability]
-  : Capability extends "artifacts.read"
-    ? Params extends { op: "list" }
-      ? WebviewArtifactFile[]
-      : Params extends { op: "readText" | "imageUrl" }
-        ? string
-        : WebviewHostCapabilityResults[Capability]
-    : Capability extends "terminal.session"
-      ? Params extends { operation: "open" }
-        ? Extract<TerminalSessionResult, { operation: "open" }>
-        : Params extends { operation: "write" | "resize" | "kill" | "subscribe" }
-          ? Exclude<TerminalSessionResult, { operation: "open" }>
-          : TerminalSessionResult
-      : WebviewHostCapabilityResults[Capability];
+> = Capability extends "editing.text"
+  ? TextEditingResult<Extract<Params, TextEditingRequest>>
+  : Capability extends "account.read" | "account.manage"
+    ? Params extends { op: keyof ExtensionAccountApi }
+      ? WebviewAccountResult<Params>
+      : WebviewHostCapabilityResults[Capability]
+    : Capability extends "artifacts.read"
+      ? Params extends { op: "list" }
+        ? WebviewArtifactFile[]
+        : Params extends { op: "readText" | "imageUrl" }
+          ? string
+          : WebviewHostCapabilityResults[Capability]
+      : Capability extends "terminal.session"
+        ? Params extends { operation: "open" }
+          ? Extract<TerminalSessionResult, { operation: "open" }>
+          : Params extends { operation: "write" | "resize" | "kill" | "subscribe" }
+            ? Exclude<TerminalSessionResult, { operation: "open" }>
+            : TerminalSessionResult
+        : WebviewHostCapabilityResults[Capability];

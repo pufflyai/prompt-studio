@@ -1,6 +1,7 @@
 import * as Y from "yjs";
 import { decodeBytes, encodeBytes, isEmptyDocument } from "../shared";
 import { ownTextDeletions, ownTextInsertions } from "./text-document-edits";
+import { textDocumentKeys } from "./text-document-keys";
 import {
   loadTextCheckpoint,
   type TextAdoptionReceipt,
@@ -9,7 +10,7 @@ import {
   validateMappingContent,
 } from "./text-document-receipts";
 
-const seedMap = "text-seeds";
+const seedMap = textDocumentKeys.seeds;
 const seedId = async (state: Uint8Array) => {
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new Uint8Array(state)));
   return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");

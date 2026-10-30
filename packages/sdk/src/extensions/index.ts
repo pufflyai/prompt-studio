@@ -198,6 +198,8 @@ export type {
   NotificationStatus,
   UpdateNotificationInput,
 } from "./resource-compat";
+export { createTextEditingClient } from "./text-editing-client";
+export type * from "./text-editing-types";
 export { isWebviewCapabilityError, type WebviewCapabilityError } from "./webview-capability-error";
 export type { WebviewPageClient } from "./webview-page-client";
 export type { WebviewPerformanceClient } from "./webview-performance-client";

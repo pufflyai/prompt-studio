@@ -33,6 +33,7 @@ import { createAppAccount } from "./services/account/app-account";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
 import { createNativeDocumentService } from "./services/native-documents/documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/native-documents/file-source";
+import { resolveNativeTextAccess } from "./services/native-documents/source-access";
 import { initializeNativeSource } from "./services/native-documents/source-binding";
 import { upgradeNativeSources } from "./services/native-documents/source-upgrade";
 import { createPersonalHistoryService } from "./services/personal-history/service";
@@ -41,6 +42,7 @@ import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
 import { upgradeArtifactFileProjections } from "./services/shared-files/artifact-projection-upgrade";
 import { createSkillService } from "./services/skill-service";
+import { createTextEditingService } from "./services/text-editing/service";
 import type { AppBindings } from "./types";
 
 const AUTOMATION_RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -87,6 +89,28 @@ const registerAppRuntime = (
   registerApi(app, deps, {
     security: apiSecurity(input.host, runtimeDeps),
     terminalOrigins: input.config.transport.terminalOrigins,
+  });
+};
+
+const nativePresenceIdentity = async (account: ReturnType<typeof createAppAccount>["accountService"]) => {
+  const { login } = await account.status();
+  return { label: (login?.email ?? "Local editor").slice(0, 64), deviceName: hostname().slice(0, 64) };
+};
+
+const createAppNativeDocuments = (
+  deviceId: string,
+  account: ReturnType<typeof createAppAccount>["accountService"],
+  getDeps: () => RouteDeps,
+  storage: RouteDeps["extensionStorageService"],
+) => {
+  return createNativeDocumentService({
+    deviceId: deviceId,
+    presenceIdentity: () => nativePresenceIdentity(account),
+    storage,
+    load: (input) => loadNativeMarkdownFile(getDeps(), input),
+    access: (input) => resolveNativeTextAccess(getDeps(), input),
+    initialize: (loaded) => initializeNativeSource(getDeps(), loaded),
+    save: (input) => saveNativeMarkdownFile(getDeps(), input),
   });
 };
 
@@ -215,6 +239,13 @@ const buildApp = async (
   const terminalSupervisor = createAppTerminalSupervisor();
   const account = createAppAccount(input.config, dbs.environmentDBService, projectService);
 
+  const nativeDocuments = createAppNativeDocuments(
+    environmentId,
+    account.accountService,
+    () => deps,
+    extensionStorageDBService,
+  );
+
   deps = {
     personalHistoryService: createPersonalHistoryService({
       eventBus,
@@ -246,16 +277,12 @@ const buildApp = async (
     fileService,
     boardViewsService: boardViewsDBService,
     notificationService,
-    nativeDocuments: createNativeDocumentService({
-      deviceId: environmentId,
-      presenceIdentity: async () => {
-        const { login } = await account.accountService.status();
-        return { label: (login?.email ?? "Local editor").slice(0, 64), deviceName: hostname().slice(0, 64) };
-      },
-      storage: extensionStorageDBService,
+    nativeDocuments,
+    textEditing: createTextEditingService({
+      documents: nativeDocuments,
       load: (input) => loadNativeMarkdownFile(deps, input),
-      initialize: (loaded) => initializeNativeSource(deps, loaded),
-      save: (input) => saveNativeMarkdownFile(deps, input),
+      access: (input) => resolveNativeTextAccess(deps, input),
+      catalog: extensionRuntimeCatalog,
     }),
     installedExtensionSourcesService: installedExtensionSourcesDBService,
     extensionAutomationPreferencesService,

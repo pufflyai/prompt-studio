@@ -30,6 +30,7 @@ import { createSettingsRoutes } from "./features/settings/routes";
 import { createSkillRoutes } from "./features/skills/routes";
 import { createSyncRoutes } from "./features/sync/routes";
 import { createTerminalRoutes } from "./features/terminal/routes";
+import { createTextEditingRoutes } from "./features/text-editing/routes";
 import { createBoardViewsRoutes } from "./features/views/routes";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
@@ -190,6 +191,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
   app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createExtensionRoutes(deps));
   app.route("/v1", createNativeDocumentRoutes(deps.nativeDocuments));
+  app.route("/v1", createTextEditingRoutes(deps.textEditing));
   app.route("/v1", createAgentRoutes(deps, { allowedOrigins: terminalOrigins }));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createNotificationsRoutes(deps));

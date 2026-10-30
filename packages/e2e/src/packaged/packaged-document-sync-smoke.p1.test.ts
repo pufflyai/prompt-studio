@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import type { StorageRecord } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { createSyncSpace } from "pstdio-sync";
+import { createSyncSpace } from "pstdio-sync/encryption";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { createPackagedSyncPeer, packagedProjectKey } from "./packaged-sync-relay.fixture";

@@ -58,15 +58,22 @@ const invoke = async (
   };
 };
 
-export const loadTextSource = async (deps: ExtensionsRouteDeps, input: ProviderTarget) => {
+export const resolveTextProvider = async (deps: ExtensionsRouteDeps, input: ProviderTarget) => {
   const result = await invoke(deps, input, "resolve", {});
-  const resolved = resolution.parse(result.value);
-  const owner = { workbenchId: input.projectId, extensionId: input.extensionId };
+  return {
+    resolved: resolution.parse(result.value),
+    owner: { workbenchId: input.projectId, extensionId: input.extensionId },
+    fileStorageVersions: result.fileStorageVersions,
+  };
+};
+
+export const loadTextSource = async (deps: ExtensionsRouteDeps, input: ProviderTarget) => {
+  const { resolved, owner, fileStorageVersions } = await resolveTextProvider(deps, input);
   const binding = await resolveNativeLoadedSource(deps, {
     owner,
     source: resolved.source,
     content: resolved.content,
-    versions: result.fileStorageVersions,
+    versions: fileStorageVersions,
   });
   return {
     ...binding,

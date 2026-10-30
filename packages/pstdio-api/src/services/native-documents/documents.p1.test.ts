@@ -15,10 +15,14 @@ import { initializeNativeSource, resolveNativeLoadedSource } from "./source-bind
 let extension: Awaited<ReturnType<typeof createWorkspaceContextFixture>>;
 const services: ReturnType<typeof createNativeDocumentService>[] = [];
 const createService = (
-  options: Omit<Parameters<typeof createNativeDocumentService>[0], "deviceId" | "presenceIdentity" | "initialize">,
+  options: Omit<
+    Parameters<typeof createNativeDocumentService>[0],
+    "deviceId" | "presenceIdentity" | "initialize" | "access"
+  >,
 ) => {
   const service = createNativeDocumentService({
     ...options,
+    access: options.load,
     initialize: (loaded) =>
       initializeNativeSource({ ...extension.deps, extensionStorageService: options.storage }, loaded),
     deviceId: "fixture-device",

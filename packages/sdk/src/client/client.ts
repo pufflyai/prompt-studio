@@ -18,6 +18,7 @@ import { createSessionClient, type SessionClient } from "./sessions";
 import { createSettingsClient, type SettingsClient } from "./settings";
 import { createSkillClient, type SkillClient } from "./skills";
 import { createSyncClient, type SyncClient } from "./sync";
+import { createTextTransportClient, type TextEditingTransportClient } from "./text-editing";
 import { createWorkspaceClient, type WorkspaceClient } from "./workspaces";
 
 export type PstdioClient = {
@@ -34,6 +35,7 @@ export type PstdioClient = {
   automation: AutomationClient;
   notifications: NotificationsClient;
   nativeDocuments: NativeDocumentsClient;
+  textEditing: TextEditingTransportClient;
   extensions: ExtensionClient;
   settings: SettingsClient;
   linkIcons: LinkIconsClient;
@@ -58,6 +60,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     automation: createAutomationClient(request),
     notifications: createNotificationsClient(request),
     nativeDocuments: createNativeDocumentsClient(request),
+    textEditing: createTextTransportClient(request),
     extensions: createExtensionClient(request, streams),
     settings: createSettingsClient(request),
     linkIcons: createLinkIconsClient(request),

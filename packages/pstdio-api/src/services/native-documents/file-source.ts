@@ -51,9 +51,10 @@ const resolveFile = async (
   return { view, load, save, renderer, slot };
 };
 
-/** The registered extension resolves its source; browsers supply view identities, never source paths. */
-export const loadNativeMarkdownFile = async (deps: ExtensionsRouteDeps, input: FileTarget) => {
-  if ("textDocument" in input) return loadTextSource(deps, input);
+export const resolveNativeFilePresentation = async (
+  deps: ExtensionsRouteDeps,
+  input: NativeDocumentTarget & { projectId: string; signal?: AbortSignal },
+) => {
   const { view, load, save, renderer, slot } = await resolveFile(deps, input);
   const result = await executeProjectExtensionCommand(deps, {
     projectId: input.projectId,
@@ -72,7 +73,18 @@ export const loadNativeMarkdownFile = async (deps: ExtensionsRouteDeps, input: F
   const parsed = nativeFileContentSchema.safeParse(result.outcome.value ?? {});
   if (!parsed.success)
     throw new NativeDocumentSourceError(502, "native_document_load_failed", "The file view returned invalid content");
-  const content = parsed.data;
+  return {
+    view,
+    save,
+    content: parsed.data,
+    fileStorageVersions: z.record(z.string(), z.string()).parse(result.outcome.data?.fileStorageVersions ?? {}),
+  };
+};
+
+/** The registered extension resolves its source; browsers supply view identities, never source paths. */
+export const loadNativeMarkdownFile = async (deps: ExtensionsRouteDeps, input: FileTarget) => {
+  if ("textDocument" in input) return loadTextSource(deps, input);
+  const { view, save, content, fileStorageVersions } = await resolveNativeFilePresentation(deps, input);
   if (content.textDocument) {
     if (content.documentSource)
       throw new NativeDocumentSourceError(
@@ -103,7 +115,6 @@ export const loadNativeMarkdownFile = async (deps: ExtensionsRouteDeps, input: F
       "This file view does not use the shared Markdown editor",
     );
   const owner = { workbenchId: input.projectId, extensionId: view.extensionId };
-  const fileStorageVersions = z.record(z.string(), z.string()).parse(result.outcome.data?.fileStorageVersions ?? {});
   const binding = await resolveNativeLoadedSource(deps, {
     owner,
     source: content.documentSource,

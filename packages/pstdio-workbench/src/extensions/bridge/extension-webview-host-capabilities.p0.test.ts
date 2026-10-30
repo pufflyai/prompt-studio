@@ -9,6 +9,7 @@ const requests = {
   "resources.actions": { operation: "list", resource: { type: "ticket", id: "one" } },
   "commands.execute": { commandId: "notes.read" },
   "editing.session": { operation: "close", sessionId: "editor" },
+  "editing.text": {operation:"current"},
   "commands.stream": { operation: "cancel", streamId: "stream" },
   "navigation.open": { target: { kind: "page", page: { kind: "page", id: "notes" } } },
   "page.params.update": { params: {} },
@@ -376,4 +377,13 @@ test("account capabilities route reads and changes to the host account and valid
     code: "invalid_params",
   });
   expect(calls).toHaveLength(5);
+});
+
+
+test("text editing validates scoped operations before passing them to the host adapter",async()=>{
+ const calls:unknown[]=[];
+ const capabilities=createExtensionWebviewHostCapabilities({textEditing:{request:async input=>{calls.push(input);return{token:"selected"} as never;}}});
+ expect(await capabilities["editing.text"]({operation:"current"})).toEqual({token:"selected"});
+ await expect(Promise.resolve().then(()=>capabilities["editing.text"]({operation:"current",extensionId:"foreign.owner"}))).rejects.toMatchObject({code:"invalid_params"});
+ expect(calls).toEqual([{operation:"current"}]);
 });

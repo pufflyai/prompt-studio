@@ -48,6 +48,7 @@ export * from "./settings";
 export * from "./skills";
 export { createStorageId, createStorageMigration } from "./storage-identities";
 export { createStoragePositions } from "./storage-positions";
+export * from "./text-editing";
 export * from "./workspace-collection";
 export * from "./workspace-diffs";
 export * from "./workspaces";

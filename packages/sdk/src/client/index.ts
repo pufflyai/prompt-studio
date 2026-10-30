@@ -5,6 +5,7 @@ export type {
   HarnessAuthenticationQuestion,
   ProjectSyncState,
   ProjectSyncStatus,
+  TextEditingConnectionInput,
 } from "pstdio-api-contracts";
 export type { AccountClient, AccountDevice, AccountStatus, DeviceLogin } from "./account";
 export type { AgentAuthenticationOptions } from "./agent-authentication";
@@ -45,4 +46,5 @@ export {
   type SyncWriter,
   type SyncWriterProvider,
 } from "./sync";
+export type { TextEditingConnection, TextEditingTransportClient } from "./text-editing";
 export type { WorkspaceClient } from "./workspaces";

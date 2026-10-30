@@ -1,6 +1,6 @@
 import type { NativeDocumentSource } from "../../native-document-source";
 import type { ExtensionContextBase } from "./context";
-import type { ContributionDefinition } from "./contribution-identity";
+import type { ContributionDefinition, ViewRef } from "./contribution-identity";
 import type { JsonObject } from "./json";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { ResourceRef } from "./resources";
@@ -34,4 +34,6 @@ export interface TextSourceDefinition<Schema extends ParamObjectSchema = ParamOb
 
 export interface TextFilePresentation {
   textDocument?: TextDocumentRef;
+  /** Select an installed editing.text webview for this source. Omission keeps native Markdown. */
+  textEditor?: ViewRef;
 }

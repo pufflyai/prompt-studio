@@ -12,7 +12,7 @@ describe("extension runtime html", () => {
 
     expect(scriptUrl).toContain("runtime.bundle.js");
     expect(html).toContain(scriptUrl.replaceAll("&", "&amp;"));
-    expect(html).toContain("<script src=");
+    expect(html).toContain('<script type="text/javascript" src=');
     expect(html).not.toContain("use-credentials");
     expect(html).not.toContain('type="module"');
   });
@@ -20,8 +20,13 @@ describe("extension runtime html", () => {
   test("can inline the runtime bundle into the host document", () => {
     const html = renderInlineExtensionRuntimeHtml('window.runtimeLoaded = "</script>";');
 
-    expect(html).toContain("<script>");
+    expect(html).toContain('<script type="text/javascript">');
     expect(html).toContain("<\\/script>");
-    expect(html).not.toContain("<script src=");
+    expect(html).not.toContain('<script type="text/javascript" src=');
   });
+});
+
+test("the packaged webview runtime remains executable as a classic script", async () => {
+  const { getExtensionRuntimeScript } = await import("./index");
+  expect(() => new Function(getExtensionRuntimeScript())).not.toThrow();
 });

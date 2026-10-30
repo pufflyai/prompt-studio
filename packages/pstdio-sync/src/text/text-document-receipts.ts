@@ -6,8 +6,9 @@ import {
   characterKey,
   validateTextCharacterRange,
 } from "./text-document-characters";
+import { textDocumentKeys } from "./text-document-keys";
 
-export const textAdoptionsKey = "text-adoptions";
+export const textAdoptionsKey = textDocumentKeys.adoptions;
 type MappingRun = [
   client: number,
   clock: number,

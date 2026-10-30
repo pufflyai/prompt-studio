@@ -7,8 +7,6 @@ import {
   type StorageOwner,
   StorageRevisionChangedError,
 } from "pstdio-sync";
-import { readTextDocumentSeed } from "pstdio-sync/text";
-import * as Y from "yjs";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
 import { createNativeFileProjector } from "./file-projection";
@@ -17,22 +15,9 @@ import { createNativeProjectionQueue } from "./projection-queue";
 import { watchNativeProjections } from "./projection-watch";
 import { validateReplaySource } from "./replay-source";
 import { integrateNativeRoom } from "./room-integration";
+import { createNativeRoomSnapshot, type Room, type RoomRequest } from "./room-snapshot";
 import { createNativeSessionPresence } from "./session-presence";
 import { nativeAdmissionTarget, validateWritableSource } from "./validate-writable-source";
-
-interface Room {
-  target: NativeTextTarget;
-  editable: boolean;
-  owner: StorageOwner;
-  documentKey: string;
-  queue: Promise<unknown>;
-  closeWatchers: Set<() => void>;
-}
-interface RoomRequest {
-  projectId: string;
-  roomId: string;
-  documentKey?: string;
-}
 
 const recoverSource = async (documentKey: string, action: () => Promise<unknown>) => {
   try {
@@ -55,10 +40,25 @@ const recoverSource = async (documentKey: string, action: () => Promise<unknown>
   }
 };
 
+const validateRecovery = (
+  input: { sourceState?: Uint8Array; pendingUpdate?: Uint8Array; access?: "read" | "write" },
+  loaded: Awaited<ReturnType<typeof loadNativeMarkdownFile>>,
+  editable: boolean,
+) => {
+  if (input.pendingUpdate && !input.sourceState)
+    throw new NativeDocumentRoomError("invalid_frame", "Pending editor frames need their original history");
+  if (input.access !== undefined && input.sourceState && !editable)
+    throw new NativeDocumentSourceError(403, "source_read_only", "A read-only session cannot supply recovery history");
+  validateReplaySource(input.sourceState, loaded.documentKey, loaded.lifetime);
+  if (input.pendingUpdate && !editable)
+    throw new NativeDocumentSourceError(403, "source_read_only", "The text source is read only");
+};
+
 /** Acknowledgements follow both room persistence and canonical integration. */
 export const createNativeDocumentService = (deps: {
   storage: ExtensionsRouteDeps["extensionStorageService"];
   load: (input: Parameters<typeof loadNativeMarkdownFile>[1]) => ReturnType<typeof loadNativeMarkdownFile>;
+  access: Parameters<typeof validateWritableSource>[0];
   save: (input: Parameters<typeof saveNativeMarkdownFile>[1]) => ReturnType<typeof saveNativeMarkdownFile>;
   initialize: (loaded: Awaited<ReturnType<typeof loadNativeMarkdownFile>>) => Promise<void>;
   deviceId: string;
@@ -67,7 +67,10 @@ export const createNativeDocumentService = (deps: {
   const storage = deps.storage;
   const projection = createNativeFileProjector(deps);
   const files = createNativeProjectionQueue({
-    reconcile: projection.reconcile,
+    reconcile: async (address) => {
+      await projection.reconcile(address);
+      return (await storage.nativeFileProjections.read(address))?.completedRevision ?? 0;
+    },
     failed: ({ documentKey }, error) =>
       apiLogger.warn(
         { event: "native_document.projection.pending", documentKey, error },
@@ -90,39 +93,7 @@ export const createNativeDocumentService = (deps: {
   const canonical = (room: Pick<Room, "owner" | "documentKey">) =>
     storage.openNativeTextDocument({ owner: room.owner, fileId: room.documentKey });
   const integrate = (owner: StorageOwner, roomId: string) => integrateNativeRoom(storage, owner, roomId);
-  const snapshot = async (room: Room, roomId: string) => {
-    const { state, revision } = await canonical(room).snapshot();
-    const document = new Y.Doc();
-    try {
-      Y.applyUpdate(document, state);
-      const seedId = (await readTextDocumentSeed(document)).id;
-      const source = await storage.nativeRooms.read({ owner: room.owner, roomId });
-      try {
-        const sourceSeedId = (await readTextDocumentSeed(source.document)).id;
-        if (sourceSeedId === seedId) {
-          // Persist the history sent to this browser before it can anchor its next edit.
-          // Received updates retain their existing provenance rather than becoming local intent.
-          await storage.nativeRooms.receive({
-            owner: room.owner,
-            roomId,
-            update: Y.encodeStateAsUpdate(document, Y.encodeStateVector(source.document)),
-          });
-        }
-        if (room.editable) void files.request(room).catch(() => {});
-        return {
-          state,
-          revision,
-          seedId,
-          sourceSeedId,
-          ...(sourceSeedId !== seedId && { sourceState: Y.encodeStateAsUpdate(source.document) }),
-        };
-      } finally {
-        source.document.destroy();
-      }
-    } finally {
-      document.destroy();
-    }
-  };
+  const snapshot = createNativeRoomSnapshot(storage, files);
   const roomFor = (request: RoomRequest) => {
     const room = rooms.get(request.roomId);
     if (
@@ -140,6 +111,12 @@ export const createNativeDocumentService = (deps: {
       room.queue = result.catch(() => {});
       return result;
     });
+  const release = async (room: Room, roomId: string) => {
+    await storage.nativeRooms.remove({ owner: room.owner, roomId });
+    presence.closeRoom(roomId);
+    for (const close of room.closeWatchers) close();
+    rooms.delete(roomId);
+  };
   return {
     sources: {
       current(owner: StorageOwner) {
@@ -178,27 +155,25 @@ export const createNativeDocumentService = (deps: {
         signal?: AbortSignal;
         sourceState?: Uint8Array;
         pendingUpdate?: Uint8Array;
+        access?: "read" | "write";
       },
     ) {
       return track(async () => {
-        if (input.pendingUpdate && !input.sourceState)
-          throw new NativeDocumentRoomError("invalid_frame", "Pending editor frames need their original history");
         const loaded = await deps.load(input);
-        validateReplaySource(input.sourceState, loaded.documentKey, loaded.lifetime);
-        if (input.pendingUpdate && loaded.content.editable === false)
-          throw new NativeDocumentSourceError(403, "source_read_only", "The text source is read only");
+        const editable = loaded.content.editable !== false && input.access !== "read";
+        validateRecovery(input, loaded, editable);
         await deps.initialize(loaded);
         const text = canonical(loaded);
         const { id: roomId } = await storage.nativeRooms.create({
           owner: loaded.owner,
           documentKey: loaded.documentKey,
           target: loaded.projectionTarget,
-          writable: loaded.content.editable !== false,
+          writable: editable,
           state: input.sourceState ?? (await text.exportUpdate()),
         });
         const room: Room = {
           target: nativeAdmissionTarget(input),
-          editable: loaded.content.editable !== false,
+          editable,
           owner: loaded.owner,
           documentKey: loaded.documentKey,
           queue: Promise.resolve(),
@@ -218,14 +193,14 @@ export const createNativeDocumentService = (deps: {
           roomId,
           owner: room.owner,
           documentKey: room.documentKey,
-          content: loaded.content,
+          content: { ...loaded.content, editable },
           ...initial,
         };
       });
     },
     submit(input: RoomRequest & { update: Uint8Array }) {
       return run(input, async (room) => {
-        await validateWritableSource(deps.load, room);
+        await validateWritableSource(deps.access, room);
         await storage.nativeRooms.apply({
           owner: room.owner,
           roomId: input.roomId,
@@ -237,6 +212,23 @@ export const createNativeDocumentService = (deps: {
     },
     snapshot(input: RoomRequest) {
       return run(input, (room) => snapshot(room, input.roomId));
+    },
+    project(input: RoomRequest & { revision: number }) {
+      return run(input, async (room) => {
+        await validateWritableSource(deps.access, room);
+        const current = await canonical(room).snapshot();
+        if (input.revision > current.revision)
+          throw new NativeDocumentRoomError("invalid_frame", "Projection exceeds the durable revision");
+        if (((await storage.nativeFileProjections.read(room))?.completedRevision ?? 0) < input.revision)
+          await files.through(room, input.revision);
+        return { revision: input.revision };
+      });
+    },
+    release(input: RoomRequest) {
+      return run(input, async (room) => {
+        await integrate(room.owner, input.roomId);
+        await release(room, input.roomId);
+      });
     },
     flush(input: RoomRequest) {
       return run(input, (room) => files.request(room));
@@ -260,10 +252,7 @@ export const createNativeDocumentService = (deps: {
       return run(input, async (room) => {
         await integrate(room.owner, input.roomId);
         if (room.editable) await files.request(room);
-        await storage.nativeRooms.remove({ owner: room.owner, roomId: input.roomId });
-        presence.closeRoom(input.roomId);
-        for (const close of room.closeWatchers) close();
-        rooms.delete(input.roomId);
+        await release(room, input.roomId);
       });
     },
     recover() {

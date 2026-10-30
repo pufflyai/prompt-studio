@@ -123,12 +123,13 @@ const createAppCloser = (input: {
   sessionQueueLifecycle: RouteDeps["sessionQueueLifecycle"];
   harnessRegistry: RouteDeps["harnessRegistry"];
   nativeDocuments: Pick<RouteDeps["nativeDocuments"], "dispose">;
+  textEditing: Pick<RouteDeps["textEditing"], "dispose">;
 }) => {
   let closePromise: Promise<void> | null = null;
   return async () => {
     closePromise ??= (async () => {
       const hooksStopped = input.closeSessionHooks();
-      const nativeDocumentsStopped = input.nativeDocuments.dispose();
+      const nativeDocumentsStopped = input.textEditing.dispose().finally(() => input.nativeDocuments.dispose());
       try {
         input.startupAbort.abort();
         const queueStopped = input.sessionQueueLifecycle.close();
@@ -239,6 +240,7 @@ export const startAppLifecycle = async (input: {
     sessionQueueLifecycle: input.deps.sessionQueueLifecycle,
     harnessRegistry: input.deps.harnessRegistry,
     nativeDocuments: input.deps.nativeDocuments,
+    textEditing: input.deps.textEditing,
     startupDone,
     getStartupBackgroundDone: () => Promise.all(startupBackgroundTasks).then(() => undefined),
   });

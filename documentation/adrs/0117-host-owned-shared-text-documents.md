@@ -5,8 +5,8 @@ Proposed: 2026-10-17
 ## Status
 
 Accepted design for PS-776. Implementation is incomplete. Source-provider and
-projection ownership work is in progress; public editor sessions, authorization
-parity, installed editor acceptance and release validation remain open.
+projection ownership repairs and public session primitives are implemented. Native
+bridge adoption, installed editor acceptance and release validation remain open.
 
 This record was recovered from the retained implementation branch as 0117 because
 main had independently assigned 0116 to the Firefox test-home decision.
@@ -178,8 +178,11 @@ Acknowledgements and peer snapshots read durable text without waiting for file
 handlers. One background worker per source coalesces projection requests and
 flushes again when edits arrive during a save. File errors retain the room and
 pending projection, leave editor streams connected, and report the failed file
-work. Explicit flush and room close wait for the worker; close removes its room
-only after a successful flush. Shutdown drains admitted edits and file workers.
+work. Legacy low-level flush and room close keep waiting for the worker. Public session
+flush waits only for the captured durable edit prefix. Its project operation waits
+for the corresponding completed revision, without waiting for later edits. Public
+close releases a room after canonical integration; the handler row retains unfinished
+projection responsibility. Shutdown drains admitted edits and file workers.
 The projection worker follows exact durable-document commit events independently
 of room membership. A handler row's `completed_revision` identifies the last
 canonical revision it projected. Startup pages registered handlers whose canonical
@@ -242,6 +245,50 @@ An already initialized root wins after an interrupted cleanup. Preserve original
 on failure, log the cause once, and keep startup running. An affected mount must
 refuse materialization while its original JSON remains unimported; requests must
 not retry the upgrade. Replay this change on a stopped real-home copy before merge.
+
+## Public text admission and lifecycle
+
+Source ownership and presentation ownership are separate. A file provider can select
+an installed `editing.text` webview through `textEditor`. The host resolves that
+selection and issues an opaque placement-bound grant. A bare source reference is
+local to the actual calling extension. It cannot nominate another publisher.
+Authenticated client consumers resolve a file or provider under ordinary project
+access and use the same grant/session service without impersonating an extension.
+
+Initial admission validates complete source bytes and observed revisions before
+binding a source. Ongoing operations re-run the owner's resolver to check access,
+source identity and lifetime. They do not turn physical byte observations into a new
+text authority. Full byte validation during these checks would race the host's own
+background projection. The projection worker separately validates physical copies
+and observed revisions in its serialized save path. This keeps typing and durable
+acknowledgement independent of physical saves while preserving current access checks.
+
+New public frames are validated in an isolated document before entering the durable
+journal. Only plain source-text edits are accepted; host metadata, unrelated roots,
+missing causal history and non-text content are rejected. Recovery history is itself
+a mutation admission, even when no separate pending update is supplied, and requires
+current write access. Exact duplicate submit/draft receipts can settle after write
+permission is withdrawn. Their durable payload stays fixed while current editable
+permission is overlaid; identity/lifetime and presentation checks still apply.
+
+The SDK lazily loads its Yjs-backed session and owns its replica, batch queue and
+captured durability fences. Yjs 13 is a normal external runtime dependency shared
+with UI. Library code splitting does not install browser module-preload scaffolding;
+otherwise rebundling SDK helpers would break the classic opaque-iframe bootstrap.
+The runtime build parses its result as a classic script without executing it.
+
+A draft retains its original causal history. Commit freezes the admitted delta and
+retries that same delta until acknowledgement. Later mutations of a retained raw
+Yjs recovery copy cannot alter the frozen submission. Retired-source failures retain
+recovery data and fail waiting fences until explicit cancellation. History adoption
+rechecks edits authored during asynchronous opens before replacing a replica.
+
+Members register before opening, so an in-flight open participates in normal close.
+The host prepares every member, SDK finalizers commit or cancel local drafts, and
+close waits for all authored edits, including frames queued behind a held ACK.
+A failed member cancels the barrier and restores input for every member. Forced
+revocation stops new admission and presence while draining already admitted work.
+The workbench/native binding adoption of these primitives remains a delivery gate.
 
 ## Rich editor projection
 

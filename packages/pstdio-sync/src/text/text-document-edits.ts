@@ -1,8 +1,9 @@
 import * as Y from "yjs";
+import { textDocumentKeys } from "./text-document-keys";
 import { writeText } from "./write-text";
 
-const ownDeletesKey = "text-own-deletes";
-const authorsKey = "text-edit-authors";
+const ownDeletesKey = textDocumentKeys.ownDeletes;
+const authorsKey = textDocumentKeys.authors;
 type DeleteRange = [client: number, clock: number, length: number];
 
 const rememberRanges = (document: Y.Doc, ranges: DeleteRange[]) => {

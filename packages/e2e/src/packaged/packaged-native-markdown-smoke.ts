@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { join } from "node:path";
 import { expect as expectEventually } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
+import { createTextEditingClient } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import * as Y from "yjs";
 
@@ -128,5 +129,21 @@ export const expectPackagedNativeMarkdown = async (input: {
       documentKey: second.documentKey,
       roomId: second.roomId,
     });
+  }
+  const connection = await client.textEditing.connect({ projectId: input.projectId, scope: { kind: "agent", target } });
+  const guest = connection.guest();
+  const editing = createTextEditingClient(guest.host);
+  const grant = await editing.current();
+  const session = await editing.open({ grant: grant! });
+  try {
+    expect(session.getSnapshot().text.doc).toBeInstanceOf(Y.Doc);
+    session.transact((text) => text.insert(frontmatter.length, "PUBLIC "));
+    await session.flush();
+    await session.project();
+    expect(session.getSnapshot().text.toString()).toBe(`${frontmatter}PUBLIC LOCAL Outside edit OUTSIDE`);
+    expect(readFileSync(path, "utf8")).toBe(session.getSnapshot().text.toString());
+  } finally {
+    await session.close();
+    await guest.close();
   }
 };

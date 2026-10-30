@@ -1,13 +1,14 @@
 import { fingerprint } from "pstdio-sync-contracts";
 import type * as Y from "yjs";
 import { NativeSourceRecoveryError } from "../shared";
+import { textDocumentKeys } from "./text-document-keys";
 import { readTextDocumentSeed, seedTextDocument } from "./text-document-seed";
 
 interface ImportFact {
   source: string;
   baseline: string;
 }
-const importsKey = "text-source-imports";
+const importsKey = textDocumentKeys.imports;
 const facts = (document: Y.Doc) => {
   const entries = [...document.getMap<ImportFact>(importsKey)];
   for (const [seed, fact] of entries) {
