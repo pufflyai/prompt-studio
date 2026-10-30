@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { findBudgetFailures } from "./benchmark-budget";
+import { findBudgetFailures } from "./budgets";
 
 const metric = (value: number) => ({ name: "cold-start", unit: "ms" as const, value, budget: 8_000 });
 

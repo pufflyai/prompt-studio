@@ -4,9 +4,9 @@ import { readFileSync } from "node:fs";
 import { availableParallelism, cpus } from "node:os";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { type BenchmarkMetric, findBudgetFailures } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { resolvePackagedLayout } from "../packaging/package-layout";
-import { type BenchmarkMetric, findBudgetFailures } from "../testing/benchmark-budget";
 import { attachBenchmarkPerformance } from "./benchmark-performance-evidence";
 import type { PackagedApp } from "./packaged-app-helpers";
 

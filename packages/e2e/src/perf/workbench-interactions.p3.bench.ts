@@ -1,9 +1,9 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { workbenchBudgets } from "pstdio-benchmarks";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import {
   afterTwoFrames,
   budgetMisses,
-  collectRepeatSamples,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -33,14 +33,18 @@ const measure = async (page: Page, input: InteractionInput) => {
   await input.ready();
   const result = await readInteraction(page);
   // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest long task 148 ms) plus about 20%.
-  expect(Math.max(0, ...result.longTasks)).toBeLessThanOrEqual(200);
+  expect(
+    budgetMisses(
+      "workbench-interactions",
+      "long-task",
+      [Math.max(0, ...result.longTasks)],
+      workbenchBudgets.interactionLongTask.value,
+    ),
+  ).toEqual([]);
   return result.duration;
 };
 
-test("resizes, closes, and reopens the Secondary Panel within the interaction budget", async ({
-  page,
-  request,
-}, testInfo) => {
+test("resizes, closes, and reopens the Secondary Panel within the interaction budget", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Workbench interactions performance");
   await preparePerfPage(page, project.id);
@@ -86,16 +90,15 @@ test("resizes, closes, and reopens the Secondary Panel within the interaction bu
 
   await reportPageMemory(page, "workbench-interactions");
 
-  const results = collectRepeatSamples(testInfo, "workbench-interactions", [{ resize, close, reopen }]);
-  if (!results) return;
-  expect(results).toHaveLength(testInfo.project.repeatEach);
+  const results = [{ resize, close, reopen }];
+  expect(results).toHaveLength(1);
   const misses = interactions.flatMap((interaction) =>
     budgetMisses(
       "workbench-interactions",
       interaction,
       results.map((result) => result[interaction]),
       // Set on 2026-10-26 from hosted ubuntu-24.04 runs (slowest 356.5 ms) plus about 20%.
-      450,
+      workbenchBudgets.interactions.value,
     ),
   );
   expect(misses).toEqual([]);

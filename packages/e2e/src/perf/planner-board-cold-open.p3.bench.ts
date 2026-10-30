@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "@playwright/test";
+import { benchmarkSampleCount, findBudgetFailures, plannerBudget } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { folderProjectInput } from "../helpers/folder-project";
 import { buildBinary, PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
@@ -15,7 +16,7 @@ const board = "pstdio.pstdio-planner.view.tickets";
 // The saved view filters by stored option IDs. While loading, none of them may reach the screen.
 const rawLabels = /\bin-progress\b|default-priority-low|Unavailable field/;
 // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest sample 2,426 ms) plus about 20%.
-const targetMs = 3_000;
+const targetMs = plannerBudget.value;
 
 interface Fixture {
   projectId: string;
@@ -180,7 +181,7 @@ const measureColdOpen = async (home: string, fixture: Fixture) => {
     }
     const firstTicketMs = Math.round(performance.now() - started);
     const diagnostics = await page.evaluate(() => ({
-      longTasksMs: (window as Window & { coldOpenLongTasks: number[] }).coldOpenLongTasks,
+      longTasksMs: (window as unknown as Window & { coldOpenLongTasks: number[] }).coldOpenLongTasks,
       resources: performance
         .getEntriesByType("resource")
         .sort((a, b) => b.duration - a.duration)
@@ -205,7 +206,7 @@ async function main() {
 
 bun run --cwd packages/e2e perf:planner-board-cold-open
 bun run --cwd packages/e2e perf:planner-board-cold-open -- --home <dir>   # keep and reuse the seeded home
-bun run --cwd packages/e2e perf:planner-board-cold-open -- --samples 5 --edits 3
+bun run --cwd packages/e2e perf:planner-board-cold-open -- --edits 3
 bun run --cwd packages/e2e perf:planner-board-cold-open -- --tickets 10000
 bun run --cwd packages/e2e perf:planner-board-cold-open -- --planner-source <dir>
 
@@ -237,8 +238,7 @@ Reports every sample against the ${targetMs} ms target. Seeding takes several mi
       }
     }
     const samples = [];
-    for (let sample = 0; sample < Number(option("--samples", 3)); sample++)
-      samples.push(await measureColdOpen(home, fixture));
+    for (let sample = 0; sample < benchmarkSampleCount(3); sample++) samples.push(await measureColdOpen(home, fixture));
     const firstTicket = summarizeSamples(samples.map((sample) => sample.firstTicketMs));
     for (const sample of samples) {
       recordMeasurement({
@@ -249,13 +249,22 @@ Reports every sample against the ${targetMs} ms target. Seeding takes several mi
         budget: targetMs,
       });
     }
+    const failures = findBudgetFailures(
+      samples.map((sample) => ({
+        name: "Planner cold open",
+        unit: "ms",
+        value: sample.firstTicketMs,
+        budget: targetMs,
+      })),
+    );
     process.stdout.write(
       `${JSON.stringify(
         {
           tickets: fixture.tickets,
           platform: `${process.platform}/${process.arch}`,
           targetMs,
-          withinTarget: firstTicket.max <= targetMs,
+          withinTarget: !failures.length,
+          failures,
           firstTicketMs: firstTicket,
           rawLabelsShown: samples.some((sample) => sample.rawLabelsShown),
           samples,
@@ -264,7 +273,7 @@ Reports every sample against the ${targetMs} ms target. Seeding takes several mi
         2,
       )}\n`,
     );
-    if (firstTicket.max > targetMs || samples.some((sample) => sample.rawLabelsShown)) process.exitCode = 1;
+    if (failures.length || samples.some((sample) => sample.rawLabelsShown)) process.exitCode = 1;
   } finally {
     if (!kept) rmSync(home, { recursive: true, force: true });
   }

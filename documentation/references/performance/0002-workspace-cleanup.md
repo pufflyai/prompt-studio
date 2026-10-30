@@ -74,7 +74,7 @@ BENCH_ROOT=/path/on/the/workspace/filesystem \
   bun --conditions=source packages/pstdio-api/src/features/workspaces/worktree-cleanup.p3.bench.ts
 ```
 
-`BENCH_FILES`, `BENCH_REPEATS`, and comma-separated `BENCH_LIMITS` control the filesystem fixture. Defaults are 5,000, 3, and `1,2,4,8,28`. Each run uses an owned temporary directory inside `BENCH_ROOT` and removes it afterward. Allow space for the fixture, and run while other build/test work is idle.
+`BENCH_FILES`, `BENCHMARK_SAMPLES`, and comma-separated `BENCH_LIMITS` control the filesystem fixture. Defaults are 5,000, 3, and `1,2,4,8,28`. Each run uses an owned temporary directory inside `BENCH_ROOT` and removes it afterward. Allow space for the fixture, and run while other build/test work is idle.
 
 Filesystem CPU measurements read the Linux cgroup and include all processes in that cgroup; they are `null` on macOS. CPU percentage uses 100% for one logical core. Short samples can exceed the average quota because quota enforcement uses longer windows. RSS includes the benchmark and sampled direct children on Linux, only the benchmark on macOS, and can miss short-lived processes. Event-loop delay and small-file read latency are responsiveness probes, not dashboard paint measurements.
 

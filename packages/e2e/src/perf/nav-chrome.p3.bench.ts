@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { workbenchBudgets } from "pstdio-benchmarks";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import { uiOrigin } from "../ui-server";
 import {
   afterTwoFrames,
   budgetMisses,
-  collectRepeatSamples,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -13,7 +13,7 @@ import {
   resetInteraction,
 } from "./perf-helpers";
 
-test("settles the persistent Nav Chrome after navigating back within budget", async ({ page, request }, testInfo) => {
+test("settles the persistent Nav Chrome after navigating back within budget", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Nav Chrome performance");
   const statuses = await getPlannerTicketStatuses(request, uiOrigin, project.id);
@@ -59,13 +59,12 @@ test("settles the persistent Nav Chrome after navigating back within budget", as
   await back.click();
   const result = await readInteraction(page);
   expect(await navNode!.evaluate((element) => element.isConnected)).toBe(true);
-  console.info(JSON.stringify({ metric: "nav-chrome", repeat: testInfo.repeatEachIndex, ...result }));
+  console.info(JSON.stringify({ metric: "nav-chrome", ...result }));
 
   await reportPageMemory(page, "nav-chrome");
 
-  const results = collectRepeatSamples(testInfo, "nav-chrome", [result.duration]);
-  if (!results) return;
-  expect(results).toHaveLength(testInfo.project.repeatEach);
+  const results = [result.duration];
+  expect(results).toHaveLength(1);
   // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 721 ms) plus about 20%.
-  expect(budgetMisses("nav-chrome", "navigate-back", results, 875)).toEqual([]);
+  expect(budgetMisses("nav-chrome", "navigate-back", results, workbenchBudgets.navChrome.value)).toEqual([]);
 });

@@ -113,9 +113,9 @@ Build the native binary before timing, then select it to prevent another build:
 bun run --cwd scripts build:host
 bun run --cwd packages/e2e perf:storage-scale:build
 export E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
-bun packages/e2e/src/perf/storage-scale.ts --help
-bun packages/e2e/src/perf/storage-scale.ts --fixture rich --output /path/evidence/rich --emit-fixture --timing-owner /path/owner.json
-bun packages/e2e/src/perf/storage-scale.ts --fixture rich --output /path/evidence/rich --home /path/native-rich --seed --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --help
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output /path/evidence/rich --emit-fixture --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output /path/evidence/rich --home /path/native-rich --seed --timing-owner /path/owner.json
 ```
 
 Repeat with `small` and a different home. Add `--churn` only to a separate fresh
@@ -221,8 +221,8 @@ A complete operation/background/profile shard retains ten cold and ten warm
 samples. Choose shards to split independent jobs without reducing this count:
 
 ```sh
-bun packages/e2e/src/perf/storage-scale.ts --fixture rich --output /path/evidence/board --home /path/native-rich --measure --profile native --operation board --background idle --timing-owner /path/owner.json
-bun packages/e2e/src/perf/storage-scale.ts --fixture small --output /path/evidence/edit --home /path/isolated-small --container-config /path/runtime.json --measure --profile combined --operation direct-sdk-first-write --background idle --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output /path/evidence/board --home /path/native-rich --measure --profile native --operation board --background idle --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/edit --home /path/isolated-small --container-config /path/runtime.json --measure --profile combined --operation direct-sdk-first-write --background idle --timing-owner /path/owner.json
 ```
 
 Omit operation/background selectors for the complete profile matrix. Use distinct
@@ -300,8 +300,8 @@ not stand in for compiled two-device or foreground latency evidence.
 ## Focused layer diagnostics
 
 ```sh
-bun packages/e2e/src/perf/storage-scale.ts --fixture rich --output /path/evidence/sync-10000 --layer sync --rows 10000 --timing-owner /path/owner.json
-bun packages/e2e/src/perf/storage-scale.ts --fixture small --output /path/evidence/db-100000 --layer database --rows 100000 --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output /path/evidence/sync-10000 --layer sync --rows 10000 --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/db-100000 --layer database --rows 100000 --timing-owner /path/owner.json
 ```
 
 Frozen scaling counts are rich 1,000/10,000 and small 1,000/10,000/100,000. These

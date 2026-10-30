@@ -1,4 +1,5 @@
 import { dirname, relative } from "node:path";
+import { suites } from "pstdio-benchmarks";
 import { selectPriorityTests, testRunner } from "./test-discovery";
 import type { TestPriority } from "./test-policy";
 
@@ -19,12 +20,15 @@ interface TestGroup {
   storybook?: string;
 }
 
+const workbenchBenchmarks = new Set(suites.find((suite) => suite.id === "workbench")!.files);
+
 const performanceCommand = (paths: string[], owner: TestPackage) => {
   if (owner.name === "@pstdio/desktop") return ["bun", "run", "test:benchmark", ...paths];
   if (owner.name === "@pstdio/ui") return ["bun", "run", "perf:chat", ...paths];
   if (paths.every((path) => path.startsWith("src/packaged/")))
     return ["bun", "run", "test:packaged:benchmark", ...paths];
-  if (paths.every((path) => path.endsWith(".perf.ts"))) return ["bun", "run", "perf:frontend", ...paths];
+  if (paths.every((path) => workbenchBenchmarks.has(`${owner.dir}/${path}`)))
+    return ["bun", "run", "perf:frontend", ...paths];
   const configured = Object.entries(owner.scripts).find(
     ([name, command]) => name.startsWith("bench:") && paths.length === 1 && command.includes(paths[0]!),
   );
@@ -90,7 +94,11 @@ const groupDetails = (file: string, runner: string, owner: TestPackage) => {
   }
   if (runner === "desktop") return { subgroup: file.includes("/packaged-") ? "packaged" : "source" };
   if (runner !== "performance") return { subgroup: "" };
-  if (owner.name === "@pstdio/desktop" || owner.name === "@pstdio/ui" || file.endsWith(".perf.ts"))
+  if (
+    owner.name === "@pstdio/desktop" ||
+    owner.name === "@pstdio/ui" ||
+    (workbenchBenchmarks.has(file) && file.startsWith("packages/e2e/src/perf/"))
+  )
     return { subgroup: "browser" };
   if (file.startsWith("packages/e2e/src/packaged/")) return { subgroup: "packaged-browser" };
   return { subgroup: file };

@@ -9,6 +9,7 @@ import {
   RESULT_FORMAT,
   type SuiteSample,
 } from "./result-file";
+import { parseSampleCount } from "./sampling";
 import { sampleOrder } from "./schedule";
 
 export interface Checkout {
@@ -29,10 +30,14 @@ export interface RunOptions {
 const packageDir = (checkout: Checkout) => join(checkout.dir, "packages", "benchmarks");
 
 // Each commit runs its own copy of this CLI, so it is measured with the benchmarks it shipped with.
-const bench = async (checkout: Checkout, args: string[]) => {
+const bench = async (checkout: Checkout, args: string[], env: Record<string, string> = {}) => {
   const cwd = packageDir(checkout);
   if (!existsSync(cwd)) throw new Error(`${checkout.sha} predates the benchmark result format and cannot be measured.`);
-  const child = Bun.spawn(["bun", "src/cli.ts", ...args], { cwd, stdio: ["ignore", "inherit", "inherit"] });
+  const child = Bun.spawn(["bun", "src/cli.ts", ...args], {
+    cwd,
+    env: { ...process.env, ...env },
+    stdio: ["ignore", "inherit", "inherit"],
+  });
   return (await child.exited) === 0;
 };
 
@@ -73,6 +78,7 @@ const resultFile = (input: {
 
 export const run = async (options: RunOptions) => {
   const { checkouts, out } = options;
+  const count = parseSampleCount(options.samples);
   const startedAt = new Date().toISOString();
   const cache = (checkout: Checkout) => join(options.cache, checkout.sha);
   const failures: string[] = [];
@@ -86,12 +92,13 @@ export const run = async (options: RunOptions) => {
   }
   await mkdir(join(out, ".samples"), { recursive: true });
   const samples = new Map<string, SuiteSample[]>(checkouts.map((checkout) => [checkout.sha, []]));
-  for (const { commit, sample } of sampleOrder(checkouts, options.samples)) {
+  for (const { commit, sample } of sampleOrder(checkouts, count)) {
     for (const suite of described.get(commit.sha) ?? []) {
       const file = join(out, ".samples", `${commit.sha}-${suite.id}-${sample}.jsonl`);
       await writeFile(file, "");
       const args = ["sample", "--suite", suite.id, "--sha", commit.sha, "--cache", cache(commit), "--out", file];
-      if (!(await bench(commit, args))) failures.push(`${suite.id} sample ${sample + 1} on ${commit.sha}`);
+      if (!(await bench(commit, args, { BENCHMARK_SAMPLE_INDEX: String(sample) })))
+        failures.push(`${suite.id} sample ${sample + 1} on ${commit.sha}`);
       samples.get(commit.sha)?.push({ suite: suite.id, lines: await readFile(file, "utf8") });
     }
   }

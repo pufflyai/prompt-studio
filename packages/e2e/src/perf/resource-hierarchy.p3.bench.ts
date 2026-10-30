@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { workbenchBudgets } from "pstdio-benchmarks";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import { uiOrigin } from "../ui-server";
@@ -67,7 +68,14 @@ test("derives ticket ancestry within the interaction budget", async ({ page, req
     await back.click();
     const result = await readInteraction(page);
     // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest long task 609 ms) plus about 20%.
-    expect(Math.max(0, ...result.longTasks)).toBeLessThanOrEqual(750);
+    expect(
+      budgetMisses(
+        "resource-hierarchy",
+        "long-task",
+        [Math.max(0, ...result.longTasks)],
+        workbenchBudgets.resourceHierarchyLongTask.value,
+      ),
+    ).toEqual([]);
     samples.push(result.duration);
 
     await forward.click();
@@ -77,5 +85,7 @@ test("derives ticket ancestry within the interaction budget", async ({ page, req
   expect(samples).toHaveLength(10);
   // Set on 2026-10-26 from hosted ubuntu-24.04 runs (slowest 547 ms) plus about 20%.
   await reportPageMemory(page, "resource-hierarchy");
-  expect(budgetMisses("resource-hierarchy", "derive-breadcrumbs", samples, 675)).toEqual([]);
+  expect(
+    budgetMisses("resource-hierarchy", "derive-breadcrumbs", samples, workbenchBudgets.resourceHierarchy.value),
+  ).toEqual([]);
 });

@@ -45,10 +45,12 @@ layer-map change.
    it imports no Electron, UI, database or client code. Desktop, CLI and E2E
    declare their own dependency on it. Native sampling stays in the host.
 
-   The private `pstdio-benchmarks` package writes benchmark measurements in the shared
-   result format and runs benchmark suites. It has no workspace dependencies. Packages
-   with benchmarks declare it as a development dependency; only benchmark and
-   performance test files import it.
+   The private `pstdio-benchmarks` package owns benchmark measurements, suite membership,
+   sampling, budget policy and shared browser helpers. It has no workspace dependencies.
+   Packages with benchmarks declare it as a development dependency. `pstdio-scripts`
+   also declares it as a development dependency so priority dispatch and CI coverage
+   use the same suite registry. Production entry points do not import it. Its root
+   export provides shared tooling; the writer-only entry avoids loading other helpers.
 
    `storage-scale-fixture` is a private test utility with no workspace dependencies.
    The scale benchmarks in `pstdio-sync`, `pstdio-db` and `e2e` declare it as a

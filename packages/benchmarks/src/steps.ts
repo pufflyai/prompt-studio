@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { benchmarkSampleIndex } from "./sampling";
 import { type BenchmarkSuite, runsOn, type SuiteContext, type SuiteStep, suites } from "./suites";
 import { RESULTS_FILE_ENV } from "./writer";
 
@@ -32,5 +33,14 @@ const runSteps = async (context: SuiteContext, steps: SuiteStep[], env?: Record<
 export const prepareSuite = (context: SuiteContext, suite: BenchmarkSuite) =>
   runSteps(context, suite.prepare?.(context) ?? []);
 
-export const sampleSuite = (context: SuiteContext, suite: BenchmarkSuite, resultsFile: string) =>
-  runSteps(context, suite.sample(context), { [RESULTS_FILE_ENV]: resultsFile });
+export const sampleSuite = (
+  context: SuiteContext,
+  suite: BenchmarkSuite,
+  resultsFile: string,
+  sampleIndex = benchmarkSampleIndex(),
+) =>
+  runSteps(context, suite.sample(context, suite.files), {
+    [RESULTS_FILE_ENV]: resultsFile,
+    BENCHMARK_SAMPLES: "1",
+    BENCHMARK_SAMPLE_INDEX: String(sampleIndex),
+  });
