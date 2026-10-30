@@ -31,8 +31,9 @@ A clone cannot recover untracked files, saved edits or commits absent from the r
 Source checked at `0c7e0548297e30bb10c133b7223d8a78dc4a7e71`:
 
 - [Folder endpoint](../../../packages/pstdio-api/src/features/projects/endpoints/folder.ts)
-  and [contract](../../../packages/pstdio-api-contracts/src/project-folder.ts) expose
-  `path` and `clone`; neither restores a stored project tree.
+  and [contract](../../../packages/pstdio-api-contracts/src/project-folder.ts): the
+  folder response returns `path` and `gitRemote`; choose-folder input accepts `path`
+  and `clone`. Neither operation restores a stored project tree.
 - [Project info](../../../packages/pstdio-api/src/services/relay/project-info-owner.ts)
   records the name and Git remote, not folder contents.
 - [Extension relay](../../../packages/pstdio-api/src/services/relay/extension-owner.ts)
@@ -142,6 +143,12 @@ it does not inspect folders. Logs and transport errors contain no readable paths
 content. This extends the current encryption and access rules, not the trust of
 other project members.
 
+Folder captures follow R15 and R37 for device removal: revoke future service access
+and rotate keys for future data. A removed device can still decrypt older ciphertext
+with keys it already received and keep its downloaded files. Removal cannot erase
+those copies or retroactively revoke their encryption keys. Remaining devices keep
+old keys for historical recovery; this feature adds no remote-wipe promise.
+
 ## Git and device-specific files
 
 Capture `.git` under the same `.pstignore` policy. When included, retain its files,
@@ -159,6 +166,16 @@ stores as private Git recovery dependencies, with cycle detection and source ide
 Inventory these dependencies separately from folder entries. If they are unavailable,
 the folder bytes can still be retained, but functional Git recovery stays incomplete.
 This exception does not mean following arbitrary filesystem symlinks.
+
+External targets must belong to the owning repository's canonical administration or
+object-store roots already trusted through local project/workspace registration.
+Derive that boundary from the existing local registration, not a new allow-list from
+project files. Validate the worktree/submodule relationship and every resolved path
+against those roots before reading. A `.git`, `commondir` or `alternates` pointer by
+itself grants no permission to read another directory. Reject unregistered roots,
+unrelated folders and links that escape the allowed roots; report Git recovery as
+incomplete. Recheck the boundary during reads so path replacement cannot widen it.
+Inspect metadata without running repository hooks, filters or configuration commands.
 
 Restoration retains captured original bytes. Where worktree pointers or device bindings
 need a new path, retain the original in the recovery store and record the local mapping
@@ -294,6 +311,8 @@ Implementation acceptance must prove:
 3. Full Git state restores saved edits, staged content, unpushed and detached commits,
    reflogs and local config. Linked worktrees and submodules recover without source
    paths; excluded or blocked Git dependencies never appear as functional Git recovery.
+   Crafted administration pointers, alternates and link replacement cannot capture
+   unrelated local directories outside the registered repository boundary.
 4. Watcher loss, restarts, deletes, renames, unreadable and changing files produce the
    specified state. Interrupted transfers preserve the previous complete capture;
    quota, disk and integrity failures never mark partial included data complete.
@@ -302,6 +321,8 @@ Implementation acceptance must prove:
 5. Independent device copies remain restorable, and only the owner's devices can
    decrypt folder captures, including private paths embedded in Git history. Relay
    dumps reveal no known names, credentials or bytes.
+   Removing a device stops future access and key delivery but leaves its previously
+   downloaded files and old keys usable, as R15/R37 require.
 6. Existing destinations, concurrent creation, traversal, symlinks, case collisions
    and interrupted publication preserve local work and cannot attach partial folders.
    Restored hooks, scripts and local overrides never execute during recovery.

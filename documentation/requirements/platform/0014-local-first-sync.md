@@ -267,11 +267,15 @@ anything.
   Show exclusions and matching rules separately from pending or blocked files.
   Unreadable, unsupported, changing or quota-blocked included entries keep the copy incomplete.
   Symlinks retain their target text without following it outside the folder. Capture
-  required external Git administration explicitly when a worktree needs it.
+  required external Git administration explicitly when a worktree needs it, bounded
+  by the owning repository's already registered canonical roots. Project pointers
+  alone do not authorize reading unrelated local directories.
 - R58. A complete folder capture belongs to the source user's private project data.
   Only that user's devices receive its decryption key. Shared project membership does
   not expose another user's credentials or private workspaces inside a folder or Git
-  history. Existing shared record and declared-file owners remain unchanged.
+  history. Existing shared record and declared-file owners remain unchanged. Folder
+  captures follow R15/R37: device removal stops future access and rotates future keys;
+  it cannot erase downloaded copies or prevent decryption with previously received keys.
 - R59. Capture and download folder changes automatically, with complete per-source
   manifests and resumable encrypted blobs. Restore to a new folder without overwriting
   existing local work. Preserve independent device copies and report upload, download
@@ -440,5 +444,5 @@ These came from the Cloud and Workspaces design review. The designs are in PR #1
   contain credentials and private workspaces. Existing shared records and declared
   files retain their shared owners.
 - Restore from the stored folder copy is the general new-device path. Clone and
-  attach remain explicit alternatives. Live source collaboration is not part of this
+  attach remain explicit alternatives. Live collaboration on source files is not part of this
   first recovery outcome. This is planned behavior, not a claim that it is shipped.
