@@ -27,6 +27,9 @@ jobs:
         with:
           node-version: "24"
       - run: bun install --frozen-lockfile
+      # Canvas ships a preview catalog built from this repo's UI; Git does not hold it.
+      - name: Build the Canvas preview catalog
+        run: bun run build -- --scope canvas --include-dependencies
       - name: Publish new extension versions independently
         env:
           PSTDIO_EXTENSION_REGISTRY: https://base.prompt.studio/psx

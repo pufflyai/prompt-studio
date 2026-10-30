@@ -134,6 +134,10 @@ layer-map change.
    on `main`, or on a pull request labeled `ci:full`; see
    [CI scope](../../requirements/platform/0001-cross-platform-support.md#ci-scope).
 
+   Its manual relay reference workload also composes the public `pstdio-db` and
+   `pstdio-sync-contracts` exports. These are development dependencies for isolated
+   fixture databases and transport measurements. It never opens the user's database.
+
    The private `canvas-tests` package owns component browser interactions and
    their Canvas servers. It declares `@pstdio/ui`, `@pstdio/workbench`, and
    `pstdio-dashboard` as development dependencies because it loads their stories.
