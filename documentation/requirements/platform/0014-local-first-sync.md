@@ -4,7 +4,7 @@ Status: Proposed. Created: 2026-10-19. Owner: platform. This PRD replaces the
 synchronization contracts PRD (0007) as the source of truth for Prompt Studio Cloud.
 Ticket PS-716 tracks the work.
 
-On 2026-10-30 the user decided that everything in the project folder should sync.
+On 2026-10-30 the user chose project-folder sync with a separate `.pstignore` file.
 PS-960's [project file recovery design](0015-project-data-recovery.md) defines that
 scope under R57–R59. The design is proposed implementation work; it is not shipped
 behavior. It replaces the earlier working-tree exclusion.
@@ -256,10 +256,16 @@ anything.
   snapshot through the CLI and API. The app has no restore screen (decided
   2026-10-24). A restore is a normal edit, so it syncs to every device. This policy
   was decided on 2026-10-22 and replaces daily snapshots retained for 30 days.
-- R57. Everything inside a cloud project's folder is retained automatically, including
-  hidden and ignored files, `.git`, `.env`, keys, dependencies, caches, local extension
-  code and `.pstdio` data. No path exclusion or separate Git opt-in narrows coverage.
-  Unreadable, unsupported, changing or quota-blocked entries keep the copy incomplete.
+- R57. Everything inside a cloud project's folder is retained unless excluded by its
+  root `.pstignore`. `.gitignore` does not control sync. A new folder enrollment with
+  no inherited policy creates a missing `.pstignore` with `node_modules/`; never
+  overwrite an existing policy or recreate one the user later deletes. Restored
+  captures inherit their policy, including deliberate absence. Empty or deleted
+  policies include all files.
+  `.env`, keys, hidden and Git-ignored files, local extension code and `.pstdio` data
+  are included unless users add matching rules. Always sync `.pstignore` itself.
+  Show exclusions and matching rules separately from pending or blocked files.
+  Unreadable, unsupported, changing or quota-blocked included entries keep the copy incomplete.
   Symlinks retain their target text without following it outside the folder. Capture
   required external Git administration explicitly when a worktree needs it.
 - R58. A complete folder capture belongs to the source user's private project data.
@@ -379,9 +385,10 @@ Phase 1 is done when:
 - A test dump of the relay database and object storage, searched for known titles, file
   names, record text and file bytes from the test project, finds none of them.
 - A reset device recovers every cloud project after Google login.
-- A new device restores all project-folder contents without a Git host, including
-  ignored files, credentials, dependencies, `.pstdio` and local Git state. Unsupported
-  or missing entries prevent a complete status. Only the owner's devices can decrypt
+- A new device restores the project-folder contents included by `.pstignore` without
+  a Git host, including `.env` and other Git-ignored files. The starter policy excludes
+  `node_modules/`; custom exclusions, negation and policy changes behave as documented.
+  Unsupported or missing included entries prevent a complete status. Only the owner's devices can decrypt
   folder captures, and existing destination work is preserved (R57–R59).
 - An account without early access can log in, gets no cloud projects and sees Cloud
   sync as coming soon. An account with early access gets the full Cloud UI.
@@ -425,8 +432,9 @@ These came from the Cloud and Workspaces design review. The designs are in PR #1
 
 ## Decisions made on 2026-10-30
 
-- Everything in the project folder syncs, including `.git`, hidden and ignored files,
-  credentials, dependencies, caches and `.pstdio` data. R57–R59 replace the earlier
+- Project-folder sync uses a separate root `.pstignore`, independent of `.gitignore`.
+  The starter file excludes `node_modules/`. `.env` files remain included unless users
+  add a rule. Users control further exclusions in that file. R57–R59 replace the earlier
   working-tree exclusion and the narrower coverage proposed during PS-960 refinement.
 - Whole-folder captures are private to the source user's devices because they can
   contain credentials and private workspaces. Existing shared records and declared

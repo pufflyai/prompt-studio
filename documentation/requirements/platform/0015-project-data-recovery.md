@@ -1,15 +1,16 @@
 # PRD: Restore project files without a Git host
 
 Status: Proposed implementation design. Created: 2026-10-30. Owner: platform.
-Ticket: PS-960, under PS-716. Coverage was decided by the user on 2026-10-30:
-**everything in the project folder should be synced**. This document and
+Ticket: PS-960, under PS-716. The user chose project-folder coverage with a separate
+`.pstignore` file on 2026-10-30. `.gitignore` does not control sync, so `.env` files
+remain included unless explicitly excluded in `.pstignore`. This document and
 [PRD 0014](0014-local-first-sync.md) reflect that decision. Runtime work is not yet
 implemented by this documentation change.
 
 ## Outcome and boundary
 
 A person opens a cloud project on a new device, chooses a new folder, and gets every
-project-folder file that reached Cloud. Saved edits, new files and local Git data
+included project-folder file that reached Cloud. Saved edits, new files and local Git data
 come back without a Git hosting service. No commit or push is required.
 
 This fits the [mission](../../../MISSION.md): storage, encryption and recovery belong
@@ -47,24 +48,69 @@ Source checked at `0c7e0548297e30bb10c133b7223d8a78dc4a7e71`:
 PS-960 has no linked prerequisite tickets. Its assigned base contains these modules;
 `update-stack` confirmed that base without adding dependency commits.
 
-## Complete folder coverage
+## Folder coverage and `.pstignore`
 
-The project folder is the inclusion boundary. There are no default or user-defined
-path exclusions in this first outcome. `.gitignore`, extension cache declarations,
-filename patterns and Git tracked/untracked state do not filter the captured tree.
+The project folder is the inclusion boundary. Include everything except paths matched
+by the root `.pstignore`. `.gitignore`, Git tracked/untracked state, global Git rules
+and extension cache declarations do not filter the folder capture. The same rule works
+without Git installed and for non-Git projects.
+
+When a new folder is first enrolled without an inherited capture policy, create a
+missing `.pstignore` with this starter rule. Do not overwrite an existing file or
+recreate a deleted one:
+
+```text
+node_modules/
+```
+
+This skips dependency directories at any depth. Users can remove that rule or add
+their own, such as `.cache/` or `dist/`. There are no other built-in path exclusions.
+An empty or deliberately deleted `.pstignore` means all project-folder files are
+included. `.env` and `.env.*` are not in the starter rules and remain included even
+when `.gitignore` excludes them.
+
+Restoring a capture inherits its applied policy, including an empty file or deliberate
+absence. Starting capture on that new device must not seed a starter policy over the
+restored choice. Record absence in the manifest, so round-trip recovery preserves it
+without a separate local preference flag.
+
+Use one UTF-8 `.pstignore` at the project root. Nested `.pstignore` files are ordinary
+files, not additional policies. Use familiar ignore-file patterns: `#` comments,
+`*`, `?` and `**` globs, `/` for root-relative patterns, a trailing `/` for directories,
+and `!` for re-inclusion. A pattern without a slash matches a name at any depth.
+The last matching rule wins. An excluded parent must be re-included before any child
+can be re-included. Escaped leading `#` and `!` match literal names.
+
+Always include the root `.pstignore` itself, including under broad patterns such as
+`*`. Store its exact contents and applied rules with each encrypted manifest. Read
+the policy as a regular file without following links. An unreadable, invalid or
+changing policy blocks a new capture; never silently fall back to including files.
+Re-scan when it changes, and verify it is unchanged before publishing the manifest.
 
 | Data inside the project folder | Required treatment |
 | --- | --- |
-| Saved source, binaries, new files, dotfiles, empty directories and executable bits | Include. No commit or push is needed. |
-| `.git`, nested repositories and submodule files | Include automatically, including objects, index, refs, reflogs, config and hooks. No separate Git opt-in. |
-| `.env`, key files and other credential-bearing files | Include, encrypted on the client before transfer. No secret-pattern exclusions. |
-| `node_modules`, build output, caches and ignored files | Include. Size, quota or transfer problems block completion; they do not create an exclusion. |
-| `.pstdio/config.json`, `.pstdio/extensions` and all `.pstdio/extension-storage` content | Include, including local extension code, caches, drafts, reports and nested workspace files. Preserve publisher paths. |
-| Files already represented by extension records or declared mounts | Include their actual on-disk bytes. The scanner is read-only and does not republish them through the extension's live record owner. |
-| Symlinks | Retain the link and its exact target text without following it. An external target does not become part of the project folder. |
-| Unreadable, changing or unsupported entries | Report the entry as pending or blocked. Do not skip it and mark the folder complete. |
+| Saved source, binaries, new files, dotfiles, empty directories and executable bits | Include unless matched by `.pstignore`. No commit or push is needed. |
+| `.git`, nested repositories and submodule files | Include unless matched by `.pstignore`, including objects, index, refs, reflogs, config and hooks. No separate Git opt-in. |
+| `.env`, key files and other credential-bearing files | Include unless explicitly matched by `.pstignore`, encrypted on the client before transfer. No secret-pattern exclusions. |
+| `node_modules`, build output, caches and Git-ignored files | Apply `.pstignore` only. The starter file excludes `node_modules/`; build output and caches remain included until users add rules. Size or transfer failures are not exclusions. |
+| `.pstdio/config.json`, `.pstdio/extensions` and `.pstdio/extension-storage` content | Include unless matched by `.pstignore`, including local extension code, caches, drafts, reports and nested workspace files. Preserve publisher paths. |
+| Files already represented by extension records or declared mounts | Apply `.pstignore` to their on-disk capture. This does not change the separate shared-record or declared-file sync owner. The scanner is read-only. |
+| Root `.pstignore` | Always retain the exact applied policy with the capture. |
+| Included symlinks | Retain the link and its exact target text without following it. An external target does not become part of the project folder. |
+| Unreadable, changing or unsupported included entries | Report the entry as pending or blocked. Do not skip it and mark the included copy complete. |
 
-Preserve supported file metadata, including permissions and link information. If the
+List excluded paths or directory roots with the matching rule, separately from errors
+and pending entries. Do not read or upload excluded file contents. Excluding a directory
+does not require traversing its contents. A complete capture means all included data
+under the displayed policy, not a full copy of excluded paths.
+
+Changing a rule changes coverage in the next manifest. Newly excluded paths leave the
+current capture after it completes; they are not filesystem deletions and do not
+delete local files. Re-included paths must finish uploading before the new capture is
+complete. Previous captures and grace-period blobs can still contain previously
+included bytes; changing `.pstignore` is not an immediate purge of stored history.
+
+For included entries, preserve supported metadata, including permissions and link information. If the
 source or destination cannot retain an entry or its required metadata, explain the
 limitation and keep the operation incomplete. A socket or device entry is not a
 running process that can be copied; detecting one must produce an explicit unsupported
@@ -98,13 +144,17 @@ other project members.
 
 ## Git and device-specific files
 
-Capture `.git` like every other path. Retain all its files, including local-only
-objects, staged data, reflogs, hooks and configuration. Do not substitute a clone,
+Capture `.git` under the same `.pstignore` policy. When included, retain its files,
+including local-only objects, staged data, reflogs, hooks and configuration. Excluding
+Git administration or required objects must disable the functional Git recovery claim;
+do not claim a partial object graph is a complete repository. Do not substitute a clone,
 rewrite history, filter historical secrets or require a second consent step. The
-private audience above covers both current files and historical objects.
+private audience above covers both current files and historical objects. `.pstignore`
+filters filesystem paths, not content embedded inside Git objects. An excluded working
+file can still exist in retained Git history; do not rewrite or silently filter commits.
 
 A worktree or submodule can use a `.git` file that points to administration outside
-the folder. Automatically capture the referenced administration and required object
+the folder. When Git administration is included, automatically capture the referenced administration and required object
 stores as private Git recovery dependencies, with cycle detection and source identity.
 Inventory these dependencies separately from folder entries. If they are unavailable,
 the folder bytes can still be retained, but functional Git recovery stays incomplete.
@@ -122,8 +172,8 @@ activation and execution follow the normal trust and setup flow after recovery.
 
 Use one core recovery owner for each source device's project folder. Each publishes
 one current complete manifest through an encrypted private document. List source
-identity, capture interval, relative paths, entry types, metadata, content digests,
-chunk references and Git recovery dependencies. An encrypted private catalog discovers
+identity, capture interval, applied `.pstignore`, exclusions, relative paths, entry
+types, metadata, content digests, chunk references and Git recovery dependencies. An encrypted private catalog discovers
 these sources. Existing workspace/device identities provide ownership; no second
 stored project status is needed.
 
@@ -131,7 +181,7 @@ Keep separate source copies when devices edit independently. A restored device
 publishes its own source entry. Never let one device's upload overwrite another's
 unsent work through an arbitrary latest-device or wall-clock rule.
 
-Read every entry. Watch filesystem changes, including writes by external tools, to
+Read every included entry. Watch filesystem changes, including `.pstignore` edits and writes by external tools, to
 schedule capture. Reconcile with a full scan on startup, reconnect, watcher overflow
 and an explicit “Back up now” action. Persist pending work across restarts. Watch
 notifications are hints, not proof that all entries were scanned.
@@ -144,7 +194,7 @@ pending while the previous complete capture remains restorable.
 
 Ordinary scans are not one atomic instant across unrelated external writes. Show
 the capture interval. Preserve platform atomic multi-file save boundaries (R4).
-Include database files if present, but do not promise an application-consistent image
+Include database files unless excluded by `.pstignore`, but do not promise an application-consistent image
 of a running external database. Its changing or unverified files remain pending.
 
 Split large files into independently encrypted bounded chunks and use resumable blob
@@ -195,14 +245,16 @@ Cancel removes only staging owned by the operation. A partial folder is never re
 
 Extend the existing derived sync state. Cloud UI and CLI/API expose the same data:
 
-- The project-folder boundary, source device, audience and Git dependencies.
+- The project-folder boundary, applied `.pstignore`, excluded paths/rules, source
+  device, audience and Git dependencies.
 - Last completed capture, its interval and counts, plus files and bytes pending since.
 - Per-entry read, transfer, quota, integrity or metadata problems, with an action needed.
 - Separate progress for records, folder upload, local download and restoration.
 
 A record download cannot imply that folder bytes are complete. Show a previous
-completed copy alongside newer pending work. No files disappear from the denominator
-because of ignore rules, credentials, size limits or errors. Offline restoration is
+completed copy alongside newer pending work. Count `.pstignore` exclusions separately
+from the included-file denominator. Credentials, size limits and errors never silently
+remove an included file. Offline restoration is
 ready only when every required entry is available locally. Records remain usable
 without a folder.
 
@@ -215,7 +267,7 @@ rules; do not silently change the existing `clone` input contract.
 ## PRD reconciliation and delivery
 
 The user's coverage instruction replaces the previous working-tree exclusion in
-PRD 0014. R57–R59 record complete folder coverage, its private audience and the first
+PRD 0014. R57–R59 record folder coverage controlled by `.pstignore`, its private audience and the first
 restore workflow. R2 distinguishes shared editable files from captured source trees;
 R43 retains local override files without activating their code as published extensions.
 There is no outstanding coverage decision or separate Git-history approval gate.
@@ -225,21 +277,28 @@ needs core capture/manifests and Git dependencies, bounded transfer and progress
 safe restore APIs, then Cloud UI and the new-device flow. UI work follows Canvas
 policy; this documentation correction changes no visual implementation. Update user
 guides when behavior ships. The 5 GiB workload, 1 GiB file and hosting target still
-apply; measure full contents rather than shrinking coverage or raising budgets.
+apply; keep the required benchmark files included and do not use ignore rules to
+shrink the benchmark workload or raise budgets.
 
 Implementation acceptance must prove:
 
 1. Two isolated runtimes recover all non-Git text, binary, hidden and new files,
    directories and supported metadata with no Git host or online source device.
-2. `.gitignore` entries, `.env`, keys, `node_modules`, caches, `.pstdio` configuration,
-   local extension sources, drafts and declared artifact bytes all recover automatically.
-   No opt-in or ignore rule removes them. Unsupported entries remain visible blockers.
+2. The starter `.pstignore` skips nested `node_modules` folders and copies itself.
+   `.env`, keys and other Git-ignored files recover unless explicitly excluded in
+   `.pstignore`. Existing policies are not overwritten; deleting or emptying one
+   removes exclusions. Restore on a new device preserves the applied policy, including
+   deliberate absence, without regenerating starter rules. Custom globs, negation and
+   non-Git projects follow the same rules.
+   Excluded files are not read/uploaded, while included failures remain blockers.
 3. Full Git state restores saved edits, staged content, unpushed and detached commits,
    reflogs and local config. Linked worktrees and submodules recover without source
-   paths; blocked external dependencies never appear as functional Git recovery.
+   paths; excluded or blocked Git dependencies never appear as functional Git recovery.
 4. Watcher loss, restarts, deletes, renames, unreadable and changing files produce the
    specified state. Interrupted transfers preserve the previous complete capture;
-   quota, disk and integrity failures never mark partial data complete.
+   quota, disk and integrity failures never mark partial included data complete.
+   Policy edits re-scan coverage without deleting local files; interrupted or invalid
+   policy changes cannot publish a manifest with mismatched rules and entries.
 5. Independent device copies remain restorable, and only the owner's devices can
    decrypt folder captures, including private paths embedded in Git history. Relay
    dumps reveal no known names, credentials or bytes.
