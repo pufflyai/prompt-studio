@@ -1,152 +1,35 @@
-name: Native CI deduplication and quarantine verification
+name: Browser runner compatibility baseline
 on:
   workflow_dispatch:
-    inputs:
-      source_sha:
-        required: true
-        type: string
 permissions:
   contents: read
 jobs:
-  intel:
-    runs-on: macos-15-intel
-    timeout-minutes: 30
-    env:
-      NX_DAEMON: 'false'
-      PLAYWRIGHT_TRACE: 'off'
-      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha }}
-          fetch-depth: 0
+          ref: b393779a1a099d2a78177badb663ed6507104526
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
-      - uses: ./.github/actions/setup-ci-cache
-        with:
-          install-strategy: native
-      - name: Build native app and test dependencies
-        run: bun run build -- --scope @pstdio/desktop --scope e2e --include-dependencies
-      - name: Package the Intel app and compiled CLI
-        run: bun run --cwd clients/desktop package -- --arch=x64
-      - name: Prepare Chromium outside case deadlines
-        run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke.ts"; preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
-      - name: Execute registered Intel compiled CLI case once
-        continue-on-error: true
-        run: bun scripts/ci/run-quarantined-tests.ts packaged-bun --scope e2e --prebuilt
-      - name: Require first-attempt compiled CLI report
-        if: '!cancelled()'
-        run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun --scope e2e
-      - name: Execute registered Intel desktop case once
-        if: '!cancelled()'
-        continue-on-error: true
-        run: bun scripts/ci/run-quarantined-tests.ts packaged-desktop --scope @pstdio/desktop --prebuilt
-      - name: Require first-attempt desktop report
-        if: '!cancelled()'
-        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop --scope @pstdio/desktop
+      - name: Confirm main's pinned browser rejects the current default image
+        shell: bash
+        run: |
+          set +e
+          bunx playwright@1.60.0 install chromium > browser-install.log 2>&1
+          install_status=$?
+          set -e
+          cat browser-install.log
+          test "$install_status" -ne 0
+          rg 'does not support chromium on ubuntu26.04-x64' browser-install.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: intel-quarantine-evidence
-          path: |
-            packages/e2e/test-results
-            clients/desktop/test-results
-            test-results/quarantine
-
-  installed_cli:
-    name: ${{ matrix.harness.extension }} (${{ matrix.version }}${{ matrix.harness.os && ', Windows' || '' }})
-    runs-on: windows-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: ${{ github.event_name == 'merge_group' }}
-      matrix:
-        version: [minimum, latest]
-        harness:
-          - extension: harness-pi
-            package: "@mariozechner/pi-coding-agent"
-            os: windows-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.source_sha }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      # Harnesses import SDK helpers at runtime, not only its types.
-      - name: Build the SDK
-        run: bun run build -- --scope @pstdio/sdk --include-dependencies
-
-      - name: Resolve the CLI validation plan
-        id: plan
-        shell: bash
-        env:
-          EXTENSION: ${{ matrix.harness.extension }}
-          PACKAGE: ${{ matrix.harness.package }}
-          VERSION: ${{ matrix.version }}
-          MINIMUM_LANE_SCHEDULED: ${{ contains(fromJSON('["minimum", "latest"]'), 'minimum') }}
-        run: |
-          export CLI_MINIMUM_VERSION=$(bun -e "console.log((await import('./extensions/$EXTENSION/src/detection.ts')).MINIMUM_VERSION)")
-          if [ "$VERSION" = minimum ]; then
-            export CLI_RESOLVED_VERSION="$CLI_MINIMUM_VERSION"
-          else
-            export CLI_RESOLVED_VERSION=$(npm view "$PACKAGE@latest" version)
-          fi
-          bun scripts/ci/harness-cli-validation.ts plan
-
-      - name: Install the agent CLI
-        if: steps.plan.outputs.reuse_minimum != 'true'
-        shell: bash
-        env:
-          PACKAGE: ${{ matrix.harness.package }}
-          VERSION: ${{ steps.plan.outputs.version }}
-        # Pin the resolved version so an npm tag update cannot change the plan.
-        run: npm install --global --allow-scripts="$PACKAGE" "$PACKAGE@$VERSION"
-
-      # Keep the cold probe first; running the stable tool test beforehand would warm the CLI.
-      - name: Run the registered installed CLI quarantine once
-        id: quarantine
-        if: steps.plan.outputs.reuse_minimum != 'true' && steps.plan.outputs.quarantine == 'true'
-        continue-on-error: true
-        env:
-          EXTENSION: ${{ matrix.harness.extension }}
-          CLI_RESOLVED_VERSION: ${{ steps.plan.outputs.version }}
-        run: bun scripts/ci/harness-cli-validation.ts run-quarantine
-
-      - name: Verify the installed CLI quarantine executed once
-        if: always() && steps.quarantine.outcome != 'skipped' && steps.plan.outputs.quarantine == 'true' && steps.plan.outputs.reuse_minimum != 'true'
-        env:
-          EXTENSION: ${{ matrix.harness.extension }}
-          CLI_RESOLVED_VERSION: ${{ steps.plan.outputs.version }}
-        run: bun scripts/ci/harness-cli-validation.ts verify-quarantine
-
-      - name: Test the harness against the installed CLI
-        if: success() && steps.plan.outputs.reuse_minimum != 'true'
-        working-directory: extensions/${{ matrix.harness.extension }}
-        env:
-          INSTALLED_CLI_TESTS: "1"
-          STABLE_PATTERN: ${{ steps.plan.outputs.stable_pattern }}
-        run: bun test src/installed-cli.p0.test.ts --test-name-pattern "$STABLE_PATTERN"
-        shell: bash
-
-      - name: Upload installed CLI quarantine evidence
-        if: always() && steps.plan.outputs.quarantine == 'true' && steps.plan.outputs.reuse_minimum != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: installed-cli-${{ matrix.harness.extension }}-${{ matrix.version }}-${{ runner.os }}-attempt-${{ github.run_attempt }}
-          path: test-results/quarantine/installed-harness/
+          name: main-browser-install-baseline
+          path: browser-install.log
           if-no-files-found: error
