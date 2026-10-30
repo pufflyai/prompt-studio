@@ -1,0 +1,40 @@
+name: Release readiness diagnostics
+on:
+  push:
+    branches: [test/release-readiness-diagnostics]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Exact reviewed source revision
+        required: true
+        type: string
+      check:
+        type: choice
+        options: [canvas, detached]
+        default: canvas
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || 'd26c84202068027f7df43cf404c377dcc26e042e' }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Install native dependencies
+        run: bun scripts/ci/install-native-dependencies.ts
+      - name: Build the selected owner's dependencies
+        run: bun run build -- --scope ${{ inputs.check == 'detached' && 'pstdio-api' || 'canvas' }} --include-dependencies
+      - name: Test Windows Canvas build outputs and archive bindings
+        if: inputs.check != 'detached'
+        run: bun run --cwd extensions/canvas test
+      - name: Test detached process lifetime
+        if: inputs.check == 'detached'
+        run: bun test --timeout 30000 packages/pstdio-api/src/features/extensions/extension-detached-process.p1.test.ts
