@@ -12,10 +12,16 @@ export interface Status {
   description: string;
 }
 
+export interface PullRequestFile {
+  filename: string;
+  status: string;
+  previous_filename?: string;
+}
+
 interface PolicyApi {
   readPull: () => Promise<PullRequest>;
   publish: (sha: string, status: Status) => Promise<unknown>;
-  readChangedFiles: () => Promise<Array<{ filename: string; status: string }>>;
+  readChangedFiles: () => Promise<PullRequestFile[]>;
   readManifest: (path: string, ref: string) => Promise<Record<string, unknown>>;
   readMergeBase: (base: string, head: string) => Promise<string>;
 }
@@ -27,6 +33,35 @@ interface Snapshot {
 }
 
 const snapshotOf = (pull: PullRequest) => ({ head: pull.head.sha, base: pull.base.sha, baseRef: pull.base.ref });
+
+const generatedCanvasOutputs = new Set([
+  "frame-bundle.ts",
+  "frame-themes.json",
+  "migration-ledger.json",
+  "native-manifest.json",
+  "source-information.json",
+  "stories.json",
+]);
+
+// Host and SDK edits change these compiled previews even when no extension source changes.
+const isGeneratedCanvasRefresh = async (api: PolicyApi, pull: PullRequest) => {
+  const files = await api.readChangedFiles();
+  if (files.length !== pull.changed_files || files.length === 0)
+    throw new Error("Incomplete generated Canvas diff; rerun classification");
+  const extensionFiles = files.filter(
+    (file) => file.filename.startsWith("extensions/") || file.previous_filename?.startsWith("extensions/"),
+  );
+  const prefix = "extensions/canvas/src/catalog/generated/";
+  return (
+    extensionFiles.length > 0 &&
+    extensionFiles.every(
+      (file) =>
+        file.status === "modified" &&
+        file.filename.startsWith(prefix) &&
+        generatedCanvasOutputs.has(file.filename.slice(prefix.length)),
+    )
+  );
+};
 
 const dependencyFields = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
 const releaseVersion = /^(?:\^|~)?\d+\.\d+\.\d+(?:-[\w.-]+)?$/;
@@ -142,12 +177,16 @@ export async function finish(
     }
     status = { state: "success", description: "SDK and extension changes are separate" };
     if (labels.has("sdk") && labels.has("extensions")) {
-      status = (await isReleaseMetadata(api, current))
-        ? {
-            state: "success",
-            description: "Generated release metadata contains no SDK or extension implementation changes",
-          }
-        : { state: "failure", description: "Split SDK and extension changes into separate PRs" };
+      if (await isReleaseMetadata(api, current)) {
+        status = {
+          state: "success",
+          description: "Generated release metadata contains no SDK or extension implementation changes",
+        };
+      } else if (await isGeneratedCanvasRefresh(api, current)) {
+        status = { state: "success", description: "SDK changes refresh only generated Canvas outputs" };
+      } else {
+        status = { state: "failure", description: "Split SDK and extension changes into separate PRs" };
+      }
       const latest = await api.readPull();
       if (latest.state !== "open" || !sameValue(snapshotOf(latest), snapshot))
         throw new Error("PR head or base changed during classification; rerun the workflow");
@@ -192,7 +231,7 @@ export function createApi(options: ApiOptions) {
       return comparison.merge_base_commit.sha as string;
     },
     readChangedFiles: async () => {
-      const files: Array<{ filename: string; status: string }> = [];
+      const files: PullRequestFile[] = [];
       for (let page = 1; page <= 30; page++) {
         const batch = await request(`pulls/${pullNumber}/files?per_page=100&page=${page}`);
         files.push(...batch);
