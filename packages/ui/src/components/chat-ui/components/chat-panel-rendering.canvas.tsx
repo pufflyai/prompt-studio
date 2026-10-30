@@ -10,8 +10,7 @@ import type { SessionMessage } from "./message-types";
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel Rendering",
   component: ChatPanel,
-  parameters: { layout: "fullscreen", controls: { disable: true } },
-  tags: ["!manifest"],
+  fullscreen: true,
 };
 export default meta;
 type Story = CanvasVariant<typeof ChatPanel>;

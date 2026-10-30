@@ -60,12 +60,10 @@ const KeyboardExample = () => {
 };
 export const KeyboardHandoff: Story = {
   id: "extensions-artifacts-htmlpreview--keyboard-handoff",
-  tags: ["!manifest"],
   render: () => <KeyboardExample />,
 };
 export const NavigationIsolation: Story = {
   id: "extensions-artifacts-htmlpreview--navigation-isolation",
-  tags: ["!manifest"],
   args: {
     title: "Navigation isolation",
     html: `<h1>Local preview</h1>

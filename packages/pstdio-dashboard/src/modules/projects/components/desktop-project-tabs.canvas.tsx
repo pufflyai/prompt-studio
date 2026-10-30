@@ -17,7 +17,7 @@ const ProjectTabsStory = () => {
 const meta = {
   title: "Dashboard/Project tabs",
   component: ProjectTabsStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ProjectTabsStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

@@ -1,18 +1,14 @@
-import { Meta } from "@pstdio/canvas";
-
-<Meta title="Agent Guide/Overview" />
-
 # Agent Guide
 
-`@pstdio/ui` is the shared React and Chakra UI package for Prompt Studio surfaces. Treat this Canvas as the source of truth for available components, patterns, design tokens, examples, and usage constraints.
+`@pstdio/ui` is the shared React and Chakra UI package for Prompt Studio surfaces. Treat UI Canvas as the source of truth for available components, patterns, design tokens, examples, and usage constraints.
 
 ## Agent workflow
 
 1. Inspect the live Canvas examples before writing UI.
 2. Use Chakra components directly when `psTheme` provides the recipe or token styling for that primitive.
-3. Verify props through Canvas docs, source types, or example stories before using them.
-4. Use stories to inspect realistic states, then compose the smallest UI that matches the existing patterns.
-5. Add or update colocated stories for user-visible UI changes.
+3. Verify props through Canvas descriptions, source types, or canvas examples before using them.
+4. Use canvas examples to inspect realistic states, then compose the smallest UI that matches the existing patterns.
+5. Add or update colocated canvas examples for user-visible UI changes.
 
 ## Component sources
 

@@ -65,7 +65,6 @@ const id = new URLSearchParams(location.search).get("canvas");
 const variantId = new URLSearchParams(location.search).get("preview");
 const viewportWidth = Number(new URLSearchParams(location.search).get("viewport-width") ?? "1198");
 const viewportHeight = Number(new URLSearchParams(location.search).get("viewport-height") ?? "960");
-const documentEntry = catalog.documents.find((entry) => entry.id === variantId);
 const variant = catalog.stories.find((entry) => entry.id === variantId);
 const resolveCanvas = (): CanvasDefinition | undefined => {
   if (new URLSearchParams(location.search).has("failure"))
@@ -102,21 +101,6 @@ const resolveCanvas = (): CanvasDefinition | undefined => {
           width: viewportWidth + 2,
           height: viewportHeight,
           preview: { kind: "story", ...variant, viewportHeight },
-        },
-      ],
-    };
-  if (documentEntry)
-    return {
-      id: "document-preview",
-      name: "Document preview",
-      items: [
-        {
-          id: documentEntry.id,
-          name: documentEntry.name,
-          position: { x: 0, y: 0 },
-          width: 1200,
-          height: 240,
-          preview: { kind: "document", ...documentEntry },
         },
       ],
     };

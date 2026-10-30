@@ -364,7 +364,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0039 — Temporary Node Windows directory removal](../adrs/0039-temporary-node-windows-directory-removal.md)
 - [0040 — Temporary export marker for bundled type files](../adrs/0040-temporary-dts-export-marker.md)
 - [0041 — Temporary Windows extension dependency links](../adrs/0041-temporary-windows-extension-dependency-links.md)
-- [0042 — Temporary docgen filter in the workbench Canvas](../adrs/0042-temporary-workbench-storybook-docgen-filter.md)
+- [0042 — Temporary docgen filter in the workbench Storybook (removed)](../adrs/0042-temporary-workbench-storybook-docgen-filter.md)
 - [0043 — Temporary CI Docker Hub mirror](../adrs/0043-temporary-ci-docker-hub-mirror.md)
 - [0044 — Temporary CI limits for heavy-setup tests](../adrs/0044-temporary-ci-limits-for-heavy-setup-tests.md)
 - [0045 — Temporary Remotion React subpath alias](../adrs/0045-temporary-remotion-react-subpath-alias.md)

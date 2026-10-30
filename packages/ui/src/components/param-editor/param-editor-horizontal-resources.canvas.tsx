@@ -86,9 +86,7 @@ const groups: InputGroup[] = [
 const meta = {
   title: "Patterns/Param Editor/Param Editor Horizontal",
   component: ParamEditorHorizontal,
-  parameters: {
-    layout: "fullscreen",
-  },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditorHorizontal>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

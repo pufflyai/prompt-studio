@@ -6,7 +6,7 @@ import { emptyWorkbenchExtensionMetadata, registerWorkbenchExtensionContribution
 import { previewNavigationTarget, previewPage } from "./extension-preview-composition";
 import { registerPreviewNavigation } from "./extension-preview-navigation";
 
-const extensionId = "storybook.guide";
+const extensionId = "preview.guide";
 const contributionId = (kind: string, id: string) => `${extensionId}.${kind}.${id}`;
 const normalizedRef = <Kind extends string>(ref: { extensionId?: string; kind: Kind; id: string }) => ({
   extensionId: ref.extensionId ?? extensionId,
@@ -133,7 +133,7 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
         name: "guide",
         displayName: "Guide",
         version: "1.0.0",
-        sourcePath: "/storybook/guide/extension.ts",
+        sourcePath: "/preview/guide/extension.ts",
       },
     ],
     views,
@@ -153,11 +153,11 @@ export const createExtensionPreview = (definition: ExtensionDefinition, pageId: 
 
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   workbench.registerModule({
-    id: "storybook.extension-preview",
+    id: "preview.extension-preview",
     activate(ctx) {
       return registerWorkbenchExtensionContributions({
         metadata,
-        projectId: "storybook",
+        projectId: "preview",
         workbench: ctx,
         executeCommand: async (commandId, request) => {
           const callback = handlers.get(commandId);
@@ -168,7 +168,7 @@ export const createExtensionPreview = (definition: ExtensionDefinition, pageId: 
     },
   });
 
-  workbench.pageLocations.setProject("storybook");
+  workbench.pageLocations.setProject("preview");
   workbench.pageLocations.navigate({ kind: "page", page });
   if (definition.navigationItems?.length || definition.navigationTrees?.length) registerPreviewNavigation(workbench);
   return workbench;

@@ -8,9 +8,6 @@ import type { SessionMessage, ToolPart } from "./message-types";
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel/Question Stream",
   component: ChatPanel,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof ChatPanel>;
@@ -46,7 +43,7 @@ const questionPrompt: ChatInputQuestionPrompt = {
       question: "Which constraints should I apply?",
       options: [
         { label: "Keep API stable", description: "Do not change public contracts." },
-        { label: "Add Storybook coverage", description: "Document the user-facing state." },
+        { label: "Add Canvas coverage", description: "Document the user-facing state." },
         { label: "No backend changes", description: "Keep this scoped to UI behavior." },
       ],
       multiple: true,

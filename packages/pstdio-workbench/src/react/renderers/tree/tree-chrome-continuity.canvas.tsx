@@ -108,7 +108,7 @@ const ChromeContinuityStory = () => {
 const meta = {
   title: "pstdio-workbench/Guides/Navigation chrome continuity",
   component: ChromeContinuityStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ChromeContinuityStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

@@ -49,7 +49,6 @@ const IndependentViewerQuery = () => {
 const meta = {
   title: "pstdio-workbench/Guides/Native viewer query",
   component: IndependentViewerQuery,
-  tags: ["view-page-params"],
 } satisfies CanvasMeta<typeof IndependentViewerQuery>;
 export default meta;
 export const IndependentPageContext: CanvasVariant<typeof meta> = {

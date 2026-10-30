@@ -120,13 +120,6 @@ export const NotesInSortableNavigation: Story = {
 };
 export const ExpandedNavigation: Story = {
   id: "components-data-display-tree-list-move--expanded-navigation",
-  tags: ["motion"],
   render: () => <MovableNotes />,
-  parameters: {
-    docs: {
-      description: {
-        story: "Drag Workspaces below expanded Notes. The placement line appears after the last visible descendant.",
-      },
-    },
-  },
+  description: "Drag Workspaces below expanded Notes. The placement line appears after the last visible descendant.",
 };

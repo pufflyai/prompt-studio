@@ -15,7 +15,7 @@ The validation pass is ready for review.
 | Area | Status |
 | ---- | ------ |
 | Theme recipes | Ready |
-| Storybook | Ready |
+| Canvas | Ready |
 | Browser check | Ready |
 
 \`\`\`ts
@@ -50,7 +50,7 @@ const chatMessages: SessionMessage[] = [
       },
       {
         type: "tool",
-        tool: "storybook-check",
+        tool: "preview-check",
         actionType: "other",
         status: "completed",
         state: {

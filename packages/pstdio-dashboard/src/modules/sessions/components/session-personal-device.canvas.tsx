@@ -32,5 +32,4 @@ export const OfflineSource: Story = {
 };
 export const Dark: Story = {
   id: "modules-sessions-personal-device--dark",
-  globals: { theme: "pstdio-dark" },
 };

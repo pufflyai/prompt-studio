@@ -34,8 +34,6 @@ function Preview(props: PreviewProps) {
 }
 const meta: CanvasMeta = {
   title: "Patterns/Chat/Collapsed User Message",
-  parameters: { layout: "padded" },
-  tags: ["!manifest"],
 };
 export default meta;
 type Story = CanvasVariant;

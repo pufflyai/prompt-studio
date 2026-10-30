@@ -3,27 +3,11 @@ import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { type ConversationFixture, fixtures, fixturesById } from "../mocks/library";
 import { ChatPanel } from "./chat-panel";
 
-const fixtureOptions = fixtures.map((f) => f.id);
 const meta: CanvasMeta<typeof FixtureRenderer> = {
   title: "Patterns/Chat/Conversation Library",
   component: FixtureRenderer,
-  tags: ["!manifest"],
-  parameters: {
-    layout: "padded",
-    docs: {
-      description: {
-        component:
-          "Real conversation snippets curated from .pstdio-dev sessions. Pick a fixture to preview different tool-call shapes for each Harness.",
-      },
-    },
-  },
-  argTypes: {
-    fixtureId: {
-      control: { type: "select" },
-      options: fixtureOptions,
-      description: "Which curated conversation to render.",
-    },
-  },
+  description:
+    "Real conversation snippets curated from .pstdio-dev sessions. Pick a fixture to preview different tool-call shapes for each Harness.",
 };
 export default meta;
 type Story = CanvasVariant<typeof FixtureRenderer>;

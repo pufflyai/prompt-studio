@@ -9,7 +9,6 @@ import type { QueuedFollowUp } from "./message-types";
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Question interruptions",
   component: ChatPanel,
-  parameters: { layout: "centered" },
 };
 export default meta;
 type Story = CanvasVariant<typeof ChatPanel>;
@@ -85,16 +84,9 @@ export const AttachmentControlsDuringQuestion: Story = {
 };
 export const DraftSelectionAfterQuestion: Story = {
   id: "patterns-chat-question-interruptions--draft-selection-after-question",
-  tags: ["!manifest"],
   render: () => <QuestionPanel queued draft="Keep my draft" />,
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Select part of the draft, ask a question, answer it, then focus the draft. Its text and selection return.",
-      },
-    },
-  },
+  description:
+    "Select part of the draft, ask a question, answer it, then focus the draft. Its text and selection return.",
 };
 export const InheritedQuestionIds: Story = {
   id: "patterns-chat-question-interruptions--inherited-question-ids",

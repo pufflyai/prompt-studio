@@ -9,7 +9,7 @@ import type { AttributeDescriptor } from "./types";
 const meta: CanvasMeta<typeof KanbanRenderer> = {
   title: "Patterns/Kanban Renderer/Regression Cases",
   component: KanbanRenderer,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 };
 export default meta;
 type Story = CanvasVariant;
@@ -26,7 +26,7 @@ const EditableBadgeWrapper = () => {
     <Box p="sm" height="560px">
       <KanbanRenderer<StoryRow>
         rows={rows}
-        storageKey="storybook-kanban-renderer-editable-badge"
+        storageKey="preview-kanban-renderer-editable-badge"
         attributes={attributes}
         defaultSettings={{
           viewMode: "board",
@@ -45,7 +45,6 @@ const EditableBadgeWrapper = () => {
 };
 export const EditableDisplayBadge: Story = {
   id: "patterns-kanban-renderer-regression-cases--editable-display-badge",
-  tags: ["editable-display-badge-regression"],
   render: () => <EditableBadgeWrapper />,
 };
 const ClearableSingleSelectBadgeWrapper = () => {
@@ -57,7 +56,7 @@ const ClearableSingleSelectBadgeWrapper = () => {
     <Box p="sm" height="560px">
       <KanbanRenderer<StoryRow>
         rows={rows}
-        storageKey="storybook-kanban-renderer-clearable-single-badge"
+        storageKey="preview-kanban-renderer-clearable-single-badge"
         attributes={editableAttributes}
         defaultSettings={{
           viewMode: "board",
@@ -78,7 +77,6 @@ const ClearableSingleSelectBadgeWrapper = () => {
 };
 export const ClearSingleSelectBadgeByRepicking: Story = {
   id: "patterns-kanban-renderer-regression-cases--clear-single-select-badge-by-repicking",
-  tags: ["clearable-single-select-badge-regression"],
   render: () => <ClearableSingleSelectBadgeWrapper />,
 };
 const EditableMultiSelectBadgeWrapper = () => {
@@ -97,7 +95,7 @@ const EditableMultiSelectBadgeWrapper = () => {
     <Box p="sm" height="560px">
       <KanbanRenderer<StoryRow>
         rows={rows}
-        storageKey="storybook-kanban-renderer-editable-multi-badge"
+        storageKey="preview-kanban-renderer-editable-multi-badge"
         attributes={editableAttributes}
         defaultSettings={{
           viewMode: "board",
@@ -150,7 +148,7 @@ export const CustomAttributeRenderer: Story = {
     <Box p="sm" height="560px">
       <KanbanRenderer<CustomRendererRow>
         rows={customRendererRows}
-        storageKey="storybook-kanban-renderer-custom-attribute"
+        storageKey="preview-kanban-renderer-custom-attribute"
         attributes={customRendererAttributes}
         defaultSettings={{
           viewMode: "board",
@@ -203,7 +201,7 @@ export const WorkspaceDisplayProperty: Story = {
     <Box p="sm" height="560px">
       <KanbanRenderer<WorkspaceDisplayRow>
         rows={workspaceDisplayRows}
-        storageKey="storybook-kanban-renderer-workspace-display"
+        storageKey="preview-kanban-renderer-workspace-display"
         attributes={workspaceDisplayAttributes}
         defaultSettings={{
           viewMode: "board",
@@ -224,7 +222,7 @@ const FailedActionExample = () => {
       <KanbanRenderer<StoryRow>
         rows={initialRows}
         attributes={attributes}
-        storageKey="storybook-kanban-failed-action"
+        storageKey="preview-kanban-failed-action"
         defaultSettings={{ viewMode: "board", columnGrouping: "status", displayProperties: ["status"] }}
         onAttributeChange={async () => {
           throw new Error("Could not save the change.");

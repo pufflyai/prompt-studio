@@ -50,14 +50,8 @@ const EditableGroup = (props: { editing?: boolean }) => {
 const meta = {
   title: "Components/Tree List/Groups",
   component: EditableGroup,
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Named sections support inline renaming and shared context actions. Hosts own group persistence and membership.",
-      },
-    },
-  },
+  description:
+    "Named sections support inline renaming and shared context actions. Hosts own group persistence and membership.",
 } satisfies CanvasMeta<typeof EditableGroup>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

@@ -107,7 +107,7 @@ const VisualTool = () => {
 const meta = {
   title: "Theme/Landing Tool Demo",
   component: VisualTool,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof VisualTool>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

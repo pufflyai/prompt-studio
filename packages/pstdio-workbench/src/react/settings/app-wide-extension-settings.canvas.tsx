@@ -88,7 +88,7 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof AppWideSettings>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

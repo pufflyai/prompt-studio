@@ -5,15 +5,8 @@ import { RichMessage } from "../../rich-message/rich-message";
 const meta: CanvasMeta<typeof RichMessage> = {
   title: "Patterns/Chat/Data Table Node",
   component: RichMessage,
-  parameters: {
-    layout: "padded",
-    docs: {
-      description: {
-        component:
-          "Chat tables wrap cells and hide row numbers by default. Display settings can change wrapping for each table independently.",
-      },
-    },
-  },
+  description:
+    "Chat tables wrap cells and hide row numbers by default. Display settings can change wrapping for each table independently.",
 };
 export default meta;
 type Story = CanvasVariant<typeof RichMessage>;
@@ -55,7 +48,6 @@ export const WrappedChatTable: Story = {
 | Review | Read the proposed changes and confirm that the shared tools work together for people who never read the code. |`,
     fullWidth: true,
   },
-  parameters: { viewport: { defaultViewport: "mobile1" } },
 };
 export const IndependentTableViews: Story = {
   id: "patterns-chat-data-table-node--independent-table-views",

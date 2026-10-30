@@ -4,7 +4,6 @@ import { MachineTokensPanelView } from "./machine-tokens-panel";
 const meta: CanvasMeta<typeof MachineTokensPanelView> = {
   title: "ProjectSettings/MachineTokensPanel",
   component: MachineTokensPanelView,
-  parameters: { layout: "padded" },
 };
 export default meta;
 type Story = CanvasVariant<typeof MachineTokensPanelView>;

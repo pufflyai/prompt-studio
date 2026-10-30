@@ -94,7 +94,7 @@ const EditableLinkMessage = () => {
 const meta = {
   title: "Chat/ChatPanel/Links",
   component: LinkConversation,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => (
       <Box h="100vh">

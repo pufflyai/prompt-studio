@@ -76,7 +76,6 @@ const SelectionMenus = () => {
   );
 };
 const meta = {
-  tags: ["menu-selection"],
   title: "Components/Overlays/Menu Selection",
   component: SelectionMenus,
 } satisfies CanvasMeta<typeof SelectionMenus>;

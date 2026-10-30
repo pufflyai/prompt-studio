@@ -79,10 +79,6 @@ const overflowingFollowUpMessages: SessionMessage[] = [
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel",
   component: ChatPanel,
-  parameters: {
-    layout: "padded",
-    actions: { argTypesRegex: "^on[A-Z].*" },
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof ChatPanel>;
@@ -575,12 +571,10 @@ export const PromptHistory: Story = {
 };
 export const PromptHistoryFull: Story = {
   id: "patterns-chat-chat-panel--prompt-history-full",
-  tags: ["!manifest"],
   render: () => <PromptHistoryPanel prompts={Array.from({ length: 12 }, (_, i) => `Prompt ${i + 1}`)} />,
 };
 export const PromptHistoryMultiline: Story = {
   id: "patterns-chat-chat-panel--prompt-history-multiline",
-  tags: ["!manifest"],
   render: () => <PromptHistoryPanel prompts={["Earlier prompt", "First line\nSecond line"]} />,
 };
 export const PromptHistoryReset: Story = {

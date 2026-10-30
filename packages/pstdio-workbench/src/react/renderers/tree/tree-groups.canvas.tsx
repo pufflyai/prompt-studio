@@ -72,7 +72,7 @@ const TreeGroups = (props: { counts?: boolean; chrome?: boolean }) => {
     });
     workbench.pages.registerPage({
       id: "groups",
-      ref: { kind: "page", id: "groups", extensionId: "storybook" },
+      ref: { kind: "page", id: "groups", extensionId: "preview" },
       title: "Tree groups",
       path: "groups",
       modeId: "project",
@@ -85,7 +85,7 @@ const TreeGroups = (props: { counts?: boolean; chrome?: boolean }) => {
       item: { kind: "view", presence: "fixed", view: { kind: "view", id: "group-navigation" } },
     });
     workbench.pageLocations.setProject("tree-groups");
-    workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", id: "groups", extensionId: "storybook" } });
+    workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", id: "groups", extensionId: "preview" } });
     return { workbench, storage };
   });
   return (
@@ -97,8 +97,7 @@ const TreeGroups = (props: { counts?: boolean; chrome?: boolean }) => {
 const meta = {
   title: "pstdio-workbench/Guides/Tree groups",
   component: TreeGroups,
-  parameters: { layout: "fullscreen" },
-  tags: ["tree-groups"],
+  fullscreen: true,
 } satisfies CanvasMeta<typeof TreeGroups>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

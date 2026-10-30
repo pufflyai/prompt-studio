@@ -6,14 +6,8 @@ import { Tooltip } from "./tooltip";
 const meta = {
   title: "Components/Overlays/Tooltip",
   component: Tooltip,
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Tooltips wait 380 ms on the first hover. Pass overflowRef for a label tooltip that is useful only when its text is clipped. The tooltip updates when the label or its available width changes. Keyboard focus uses the shared tooltip behavior.",
-      },
-    },
-  },
+  description:
+    "Tooltips wait 380 ms on the first hover. Pass overflowRef for a label tooltip that is useful only when its text is clipped. The tooltip updates when the label or its available width changes. Keyboard focus uses the shared tooltip behavior.",
 } satisfies CanvasMeta<typeof Tooltip>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

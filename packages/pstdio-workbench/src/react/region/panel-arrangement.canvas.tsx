@@ -12,7 +12,7 @@ export const createArrangementWorkbench = (
   bottomInitiallyOpen = true,
   sourceRegion: WorkbenchPanelRegion = "side",
 ) => {
-  const page = { kind: "page", extensionId: "storybook", id: "arrangement" } as const;
+  const page = { kind: "page", extensionId: "preview", id: "arrangement" } as const;
   const w = createWorkbench({
     startPage: page,
     initialSidePanelMode: sourceRegion === "side" ? "attached" : "closed",
@@ -63,7 +63,7 @@ export const createArrangementWorkbench = (
       execute: (_args, context) =>
         w.navigation.openTarget({
           kind: "panel",
-          panel: { kind: "placement", extensionId: "storybook", id: "sessions" },
+          panel: { kind: "placement", extensionId: "preview", id: "sessions" },
           resource: { type: "session", id: crypto.randomUUID(), label: "New session" },
           open: "pin",
           region: context?.region,
@@ -72,7 +72,7 @@ export const createArrangementWorkbench = (
   );
   w.modePlacements.registerPlacement({
     id: "sessions",
-    ref: { kind: "placement", extensionId: "storybook", id: "sessions" },
+    ref: { kind: "placement", extensionId: "preview", id: "sessions" },
     modeId: "arrangement",
     region: "side",
     item: {
@@ -81,7 +81,7 @@ export const createArrangementWorkbench = (
         kinds: [{ kind: "resource-kind", id: "session" }],
         view: { kind: "view", id: "editor" },
         cardinality: "many",
-        add: { kind: "command", target: { command: { kind: "command", extensionId: "storybook", id: "add-session" } } },
+        add: { kind: "command", target: { command: { kind: "command", extensionId: "preview", id: "add-session" } } },
       },
     },
     tab: {
@@ -105,14 +105,14 @@ export const createArrangementWorkbench = (
   });
   // Command references use the declared owner; this alias keeps the example's action identical to an extension action.
   w.commands.registerCommand(
-    { id: "storybook.command.add-session", label: "Create session" },
+    { id: "preview.command.add-session", label: "Create session" },
     { execute: (args, context) => w.commands.executeCommand("add-session", args, context) },
   );
   w.pageLocations.switchProject("arrangement");
   for (let i = 0; i < (crowded ? 8 : 2); i++)
     void w.navigation.openTarget({
       kind: "panel",
-      panel: { kind: "placement", extensionId: "storybook", id: "sessions" },
+      panel: { kind: "placement", extensionId: "preview", id: "sessions" },
       resource: {
         type: "session",
         id: String(i),
@@ -125,9 +125,8 @@ export const createArrangementWorkbench = (
 };
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Panel arrangement",
-  excludeStories: ["createArrangementWorkbench"],
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;
@@ -218,7 +217,7 @@ const draggedPreview = previewInsertionWorkbench.layout
 previewInsertionWorkbench.movePanel(draggedPreview.widgetId, "secondary");
 void previewInsertionWorkbench.navigation.openTarget({
   kind: "panel",
-  panel: { kind: "placement", extensionId: "storybook", id: "sessions" },
+  panel: { kind: "placement", extensionId: "preview", id: "sessions" },
   resource: { type: "session", id: "kept-preview", label: "Unpinned session to keep" },
   open: "preview",
 });

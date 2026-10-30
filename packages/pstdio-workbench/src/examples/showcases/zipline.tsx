@@ -13,7 +13,7 @@ import { ziplineTheme } from "./themes";
 import { type IssueStatus, type ZiplineIssue, ziplineIssues } from "./zipline-data";
 import { WorkspaceNav, ZiplineRail } from "./zipline-navigation";
 
-const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "zipline-resource" };
+const page: PageRef = { extensionId: "preview.showcases", kind: "page", id: "zipline-resource" };
 const homePage: PageRef = { ...page, id: "zipline" };
 const resource = (issue: ZiplineIssue): ResourceRef => ({ type: "zipline.issue", id: issue.id, label: issue.title });
 const store = createShowcaseStore({
@@ -333,6 +333,6 @@ export const createZiplineWorkbench = () => {
       },
     ],
   });
-  workbench.pageLocations.switchProject("storybook-zipline");
+  workbench.pageLocations.switchProject("preview-zipline");
   return workbench;
 };

@@ -133,7 +133,7 @@ const failedExtension = installedExtensions[1]!;
 const meta: CanvasMeta<typeof ExtensionsPanelView> = {
   title: "ProjectSettings/ExtensionsPanel",
   component: ExtensionsPanelView,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: { onUpgrade: noop, onDropFolder: noop },
 };
 export default meta;

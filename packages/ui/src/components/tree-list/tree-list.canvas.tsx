@@ -421,7 +421,7 @@ const customizationMenuItems = {
   footerSections: [{ id: "footer", nodes: customizationFooterNodes }],
 };
 const customizationMenuIcons = { visibleIcon: <Check size={14} />, hiddenIcon: <Check size={14} /> };
-const CUSTOMIZATION_KEY = "storybook/tree-customization";
+const CUSTOMIZATION_KEY = "preview/tree-customization";
 const BackgroundContextMenuStory = () => {
   const sectionOverrides = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.sectionOverrides);
   const nodeOverrides = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.nodeOverrides);

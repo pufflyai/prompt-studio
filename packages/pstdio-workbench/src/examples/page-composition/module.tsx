@@ -4,8 +4,8 @@ import { createWorkbench, type WorkbenchCore, type WorkbenchPanelRenderInput } f
 import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { useState } from "react";
 
-const sessionPage: PageRef = { extensionId: "pstdio.storybook", kind: "page", id: "session" };
-const labPage: PageRef = { extensionId: "pstdio.storybook", kind: "page", id: "lab" };
+const sessionPage: PageRef = { extensionId: "pstdio.preview", kind: "page", id: "session" };
+const labPage: PageRef = { extensionId: "pstdio.preview", kind: "page", id: "lab" };
 interface PageExample {
   id: string;
   ref: PageRef;
@@ -110,9 +110,9 @@ const AuxiliaryContent = (props: { detail: string; owner: string; title: string 
   );
 };
 const registerPage = (workbench: WorkbenchCore, page: PageExample, showNavigation: boolean) => {
-  const mainViewId = `storybook.${page.id}.main`;
-  const sidenavViewId = `storybook.${page.id}.sidenav`;
-  const auxiliaryViewId = `storybook.${page.id}.${page.auxiliary.region}`;
+  const mainViewId = `preview.${page.id}.main`;
+  const sidenavViewId = `preview.${page.id}.sidenav`;
+  const auxiliaryViewId = `preview.${page.id}.${page.auxiliary.region}`;
   workbench.views.registerView({
     id: mainViewId,
     title: page.title,
@@ -138,7 +138,7 @@ const registerPage = (workbench: WorkbenchCore, page: PageExample, showNavigatio
     },
   });
   workbench.pages.registerPage({
-    id: `storybook.${page.id}`,
+    id: `preview.${page.id}`,
     ref: page.ref,
     title: page.title,
     path: page.path,
@@ -185,7 +185,7 @@ interface PageCompositionWorkbenchOptions {
   startPage?: PageRef;
 }
 export const createPageCompositionWorkbench = (options: PageCompositionWorkbenchOptions = {}) => {
-  const { projectId = "storybook", showNavigation = true, startPage = sessionPage } = options;
+  const { projectId = "preview", showNavigation = true, startPage = sessionPage } = options;
   const workbench = createWorkbench({ startPage });
   workbench.modes.registerMode({ id: "session", label: "Session", activate: () => undefined });
   workbench.modes.registerMode({ id: "lab", label: "Extension Lab", activate: () => undefined });
@@ -204,14 +204,14 @@ const WorkbenchExampleFrame = (props: { workbench: WorkbenchCore }) => {
 export const PageCompositionExample = () => {
   const [sessionWorkbench] = useState(() =>
     createPageCompositionWorkbench({
-      projectId: "storybook-session-composition",
+      projectId: "preview-session-composition",
       showNavigation: false,
       startPage: sessionPage,
     }),
   );
   const [labWorkbench] = useState(() =>
     createPageCompositionWorkbench({
-      projectId: "storybook-lab-composition",
+      projectId: "preview-lab-composition",
       showNavigation: false,
       startPage: labPage,
     }),

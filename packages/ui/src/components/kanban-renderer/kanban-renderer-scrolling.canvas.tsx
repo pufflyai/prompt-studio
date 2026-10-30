@@ -5,7 +5,6 @@ import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-re
 
 const meta: CanvasMeta = {
   title: "Patterns/Kanban Renderer/Column Scrolling",
-  tags: ["!manifest", "ticket-column-scrollbar"],
 };
 export default meta;
 const items = Array.from({ length: 40 }, (_, index) => ({

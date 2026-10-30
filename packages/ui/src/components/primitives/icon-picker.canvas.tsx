@@ -12,9 +12,7 @@ const Picker = (props: { disabled?: boolean }) => {
     </Stack>
   );
 };
-const meta = { title: "Components/Inputs/Icon Picker", component: Picker, tags: ["icon-picker"] } satisfies CanvasMeta<
-  typeof Picker
->;
+const meta = { title: "Components/Inputs/Icon Picker", component: Picker } satisfies CanvasMeta<typeof Picker>;
 export default meta;
 export const ChooseIcon: CanvasVariant<typeof meta> = {
   id: "components-inputs-icon-picker--choose-icon",

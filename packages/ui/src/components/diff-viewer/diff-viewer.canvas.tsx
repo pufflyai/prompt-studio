@@ -184,9 +184,7 @@ const DiffViewerStressStory = () => {
 const meta: CanvasMeta<typeof DiffViewer> = {
   title: "Patterns/Diff/Diff Viewer",
   component: DiffViewer,
-  parameters: {
-    layout: "fullscreen",
-  },
+  fullscreen: true,
   decorators: [
     (Story: StoryFn) => (
       <Box height="100vh" width="100vw" border="1px solid" borderColor="border.subtle" overflow="hidden">

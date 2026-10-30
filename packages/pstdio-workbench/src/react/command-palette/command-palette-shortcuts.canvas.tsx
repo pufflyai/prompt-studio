@@ -25,7 +25,6 @@ const createPaletteWorkbench = () => {
 const meta = {
   title: "pstdio-workbench/Reference/Command palette/Assigned shortcuts",
   component: WorkbenchCommandPalette,
-  tags: ["palette-shortcuts"],
   args: { workbench: createPaletteWorkbench(), open: true, initialQuery: ">", onClose: () => undefined },
   render: (args) => (
     <WorkbenchThemeProvider>

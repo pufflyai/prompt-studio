@@ -30,5 +30,4 @@ const meta: CanvasMeta<typeof MeasuredChatStory> = {
 export default meta;
 export const SendMessage: CanvasVariant<typeof meta> = {
   id: "patterns-chat-measurement--send-message",
-  tags: ["measurement-regression"],
 };

@@ -7,7 +7,7 @@ import type { ParamValueMap } from "./param-editor.types";
 const meta = {
   title: "Patterns/Param Editor/Searchable Grouped Selection",
   component: ParamEditor,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditor>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

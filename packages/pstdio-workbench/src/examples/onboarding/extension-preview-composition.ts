@@ -8,7 +8,7 @@ import type {
   PlacementPresentation,
 } from "@pstdio/sdk/extensions";
 
-const extensionId = "storybook.guide";
+const extensionId = "preview.guide";
 export const previewRef = <Kind extends string>(ref: { extensionId?: string; kind: Kind; id: string }) => ({
   ...ref,
   extensionId: ref.extensionId ?? extensionId,

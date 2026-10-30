@@ -7,7 +7,7 @@ import { WorkbenchKeyboardShortcutsPanel } from "./keyboard-shortcuts-panel";
 const meta = {
   title: "pstdio-workbench/Reference/Keyboard",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

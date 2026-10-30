@@ -5,7 +5,7 @@ import { DesktopQuitConfirmationDialog } from "./desktop-quit-confirmation";
 const meta = {
   title: "Desktop/QuitConfirmation",
   component: DesktopQuitConfirmationDialog,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: {
     activity: {
       sessions: [{ id: "session-one", label: "Improve the quit warning" }],

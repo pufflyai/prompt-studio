@@ -7,7 +7,6 @@ const meta = {
   title: "Modules/Sessions/Harness Unavailable",
   component: SessionHarnessUnavailable,
   args: { onReviewExtensions: () => {} },
-  parameters: { layout: "padded" },
   render: (args) => (
     <Box h="lg">
       <ChatPanel
@@ -39,7 +38,6 @@ export const NoHarnessAvailable: Story = {
 };
 export const Dark: Story = {
   id: "modules-sessions-harness-unavailable--dark",
-  globals: { theme: "pstdio-dark" },
 };
 export const Narrow: Story = {
   id: "modules-sessions-harness-unavailable--narrow",

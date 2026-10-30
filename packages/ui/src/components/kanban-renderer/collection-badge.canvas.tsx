@@ -39,7 +39,7 @@ const LinkedBadgeList = () => {
 };
 const meta = {
   title: "Patterns/Kanban Renderer/Collection badge list",
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

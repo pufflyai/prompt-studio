@@ -58,7 +58,7 @@ export const ColorScales = {
       },
     },
     columnStats: { Health: { type: "histogram" } },
-    toolbarStorageKey: "storybook-data-table-color-scales",
+    toolbarStorageKey: "preview-data-table-color-scales",
   },
   render: StoryFrame,
 };
@@ -79,7 +79,7 @@ export const CategoricalColors = {
       },
     },
     columnStats: { Status: { type: "top-values", limit: 3 } },
-    toolbarStorageKey: "storybook-data-table-categorical-colors",
+    toolbarStorageKey: "preview-data-table-categorical-colors",
   },
   render: StoryFrame,
 };

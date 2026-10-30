@@ -12,7 +12,7 @@ const actions = {
 const meta = {
   title: "Patterns/Desktop/Lifecycle",
   component: DesktopLifecycleView,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => (
       <Flex>
@@ -42,7 +42,6 @@ export const WaitingForWorkbench: Story = {
 };
 export const Workbench: Story = {
   id: "patterns-desktop-lifecycle--workbench",
-  tags: ["!manifest"],
   args: {
     state: {
       kind: "workbench",
@@ -52,7 +51,6 @@ export const Workbench: Story = {
 };
 export const ActiveWorkInWorkbench: Story = {
   id: "patterns-desktop-lifecycle--active-work-in-workbench",
-  tags: ["!manifest"],
   args: {
     state: {
       kind: "confirming_active_work",

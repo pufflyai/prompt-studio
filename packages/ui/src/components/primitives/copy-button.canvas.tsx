@@ -6,14 +6,8 @@ const meta: CanvasMeta<typeof CopyButton> = {
   title: "Components/Inputs/CopyButton",
   component: CopyButton,
   args: { text: "Build the tools that make your work easier." },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Copies exact text and briefly shows Copied or a retry message. Pass a function as text to read changing content at click time. Extension webviews must declare clipboard.write.",
-      },
-    },
-  },
+  description:
+    "Copies exact text and briefly shows Copied or a retry message. Pass a function as text to read changing content at click time. Extension webviews must declare clipboard.write.",
 };
 export default meta;
 type Story = CanvasVariant<typeof CopyButton>;

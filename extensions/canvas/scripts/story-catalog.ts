@@ -50,7 +50,7 @@ export const sourceFiles = async (root = repoRoot) => {
   return [...new Set(files)]
     .filter(
       (file) =>
-        /\.(canvas\.tsx?|mdx)$/.test(file) &&
+        /\.canvas\.tsx?$/.test(file) &&
         !/(^|\/)(node_modules|dist|\.publish|__test-tmp__|canvas-test-static)\//.test(file) &&
         existsSync(resolve(root, file)),
     )
@@ -62,8 +62,6 @@ export const suiteForSource = (source: string): Suite => {
 };
 export const collectStoryCatalog = async () => {
   const stories: CatalogStory[] = [];
-  const documents: { id: string; name: string; source: string; suite: Suite; content: string; sourceHash: string }[] =
-    [];
   const sources: Record<string, { code: string; hash: string; component?: string; componentImport?: string }> = {};
   const files = await Promise.all(
     (await sourceFiles()).map(async (source) => {
@@ -73,22 +71,11 @@ export const collectStoryCatalog = async () => {
   );
   const cache = await readStoryParserCache(repoRoot);
   const parsed = await parseStorySources(
-    files.filter((file) => !file.source.endsWith(".mdx") && cache.get(file.source)?.hash !== file.hash),
+    files.filter((file) => cache.get(file.source)?.hash !== file.hash),
     resolve(repoRoot, "packages/ui/package.json"),
   );
   for (const { source, text, hash } of files) {
     sources[source] = { code: text, hash };
-    if (source.endsWith(".mdx")) {
-      documents.push({
-        id: `docs-${createHash("sha256").update(source).digest("hex").slice(0, 12)}`,
-        name: text.match(/<Meta[^>]*title="([^"]+)"/)?.[1] ?? text.match(/^#\s+(.+)$/m)?.[1] ?? source,
-        source,
-        content: text,
-        suite: suiteForSource(source),
-        sourceHash: hash,
-      });
-      continue;
-    }
     const suite = suiteForSource(source);
     const csf = parsed.get(source) ?? cache.get(source)!.parsed;
     sources[source].component = csf.component;
@@ -109,18 +96,15 @@ export const collectStoryCatalog = async () => {
   }
   const ids = stories.map((story) => story.id);
   if (new Set(ids).size !== ids.length) throw new Error("Duplicate story ids in UI Canvas catalog");
-  return { stories, documents, sources };
+  return { stories, sources };
 };
 
 export const generateStoryCatalog = async () => {
   const catalog = await collectStoryCatalog();
   await mkdir(generatedRoot, { recursive: true });
-  await writeFile(
-    resolve(generatedRoot, "stories.json"),
-    `${JSON.stringify({ stories: catalog.stories, documents: catalog.documents }, null, 2)}\n`,
-  );
+  await writeFile(resolve(generatedRoot, "stories.json"), `${JSON.stringify({ stories: catalog.stories }, null, 2)}\n`);
   await writeFile(resolve(generatedRoot, "source-information.json"), `${JSON.stringify(catalog.sources, null, 2)}\n`);
-  console.log(`${catalog.stories.length} stories and ${catalog.documents.length} documents indexed`);
+  console.log(`${catalog.stories.length} stories indexed`);
   return catalog;
 };
 if (import.meta.main) await generateStoryCatalog();
