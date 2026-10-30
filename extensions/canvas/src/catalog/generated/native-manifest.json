@@ -9,7 +9,7 @@
     "extensions/canvas/scripts/frame-runtime.tsx": "1f8ff5680e76601dd01a1db03f7cedcf7976f2896039cec0054aba5fb3e24c73",
     "extensions/canvas/scripts/frame-navigation.ts": "9719a4c95b8b4e6b6c0b65c1bb5ca53fb142685ee21493079ee0480383f69718",
     "extensions/canvas/scripts/frame-story.tsx": "2104729609abface63a1fcd237cf7424e155dbcd2e6539ac1426570fe7b824ab",
-    "bun.lock": "b0407052401db7a56e669b23cc2abe9d0ca18c66487dc78ccdd15bf9bfc3081a",
+    "bun.lock": "efc8c83a8e4a976f679d593c87d7404b5c8fb4b70bdd52502898061418d7a8a3",
     "packages/ui/package.json": "8ca439d9966fdd763c356c397e8d0e81e12e5d4a3e0bbdf85406fc8f6ff961bd",
     "packages/canvas/package.json": "1a26f356d6937c67b43c066b9269181c7d9e37778f373ad7ccad970e5c517802",
     "packages/canvas/src/indexer.ts": "7700dd9542fefd9862fdfa777f55b2791915b51bc41f349ca85d2f9c4cdec4d0",
