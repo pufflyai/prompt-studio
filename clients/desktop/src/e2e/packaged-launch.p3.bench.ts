@@ -60,7 +60,15 @@ test("warm attach restores the workbench within budget", async () => {
         const project = await createPackagedProject(first, "Warm attach project");
         await openPackagedProject(page, project);
         await page.getByRole("option", { name: "Sessions", exact: true }).click();
-        await expect(page.getByLabel("Main").getByRole("log")).toBeVisible();
+        try {
+          await expect(page.getByLabel("Main").getByRole("log")).toBeVisible();
+        } catch (error) {
+          await test.info().attach("blank-main-diagnostic", { contentType: "application/json", body: JSON.stringify(await page.evaluate(() => {
+            const debug = window as unknown as { __pstdioDashboardWorkbench: { pages: { store: { getState(): unknown } }; layout: { store: { getState(): unknown } } }; __releaseHosts?: Map<string, HTMLElement> };
+            return { html: document.body.outerHTML, pages: debug.__pstdioDashboardWorkbench.pages.store.getState(), layout: debug.__pstdioDashboardWorkbench.layout.store.getState(), hosts: [...(debug.__releaseHosts ?? [])].map(([id, host]) => ({id, connected: host.isConnected, parent: host.parentElement?.outerHTML, html: host.outerHTML})) };
+          })) });
+          throw error;
+        }
         const workbenchState = () => page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
         const pageLocationKey = `dashboard-wb2:page-location:${project.id}`;
         await expect
