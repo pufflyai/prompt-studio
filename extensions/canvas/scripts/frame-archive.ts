@@ -45,13 +45,13 @@ export const publishFrameArchive = async (root: string, outputs: NativeBuildOutp
   const entry = outputs.find((file) => file.type === "chunk" && file.isEntry)!;
   const manifest: FrameManifest = { entry: entry.fileName, catalog: "", sources: {}, modules: {}, styles: [] };
   const sources = new Map<string, string>();
+  const chunkNames = new Set(outputs.filter((file) => file.type === "chunk").map((file) => file.fileName));
   for (const output of outputs) {
     if (output.type !== "chunk" && !output.fileName.endsWith(".css")) continue;
     const code =
       output.type === "chunk"
-        ? output.code.replace(
-            /(["'`])\.\/([^"'`]+\.js)\1/g,
-            (_match, quote, file) => `${quote}canvas-preview:${file}${quote}`,
+        ? output.code.replace(/(["'`])\.\/([^"'`]+\.js)\1/g, (match, quote, file) =>
+            chunkNames.has(file) ? `${quote}canvas-preview:${file}${quote}` : match,
           )
         : String(output.source);
     const name = `${createHash("sha256").update(code).digest("hex")}.txt`;

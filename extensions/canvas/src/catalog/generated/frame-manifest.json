@@ -6985,14 +6985,14 @@
       "bytes": 9680
     },
     "extension-detail.canvas-C9Qsv5aI.js": {
-      "file": "src/catalog/generated/frame-modules/036be6ee01999b7ab46b913645df74a482a8d3062958c2c23da93c80a41387e6.txt",
+      "file": "src/catalog/generated/frame-modules/9dcdcfdefdb26c5522ab05da2119f19d41cca1bd1be02e24271d264009b422d2.txt",
       "imports": [
         "preview-core~entry~study-status.canvas~desktop-starting-state.canvas~preview~os-logo.canvas~djfevogh-Bvt7GnV1.js",
         "param-editor-field-R59X_3ya-Dl60f3V3.js",
         "extension-detail-B48xGgl7.js"
       ],
       "dynamicImports": [],
-      "bytes": 6223
+      "bytes": 6197
     },
     "extension-folder-drop-zone-BM9ibhzE.js": {
       "file": "src/catalog/generated/frame-modules/106fb0f80b6df22e9f6fc396be02ba8490838f0a166f08dfc43d8854fc882d4f.txt",
@@ -7152,12 +7152,12 @@
       "bytes": 12420
     },
     "extensions-panel.canvas-DFuM_rdJ.js": {
-      "file": "src/catalog/generated/frame-modules/b935b02db271eb76a4367eda711ae11455dea3092371b22a98b69b915da5ac9f.txt",
+      "file": "src/catalog/generated/frame-modules/df83a985ba98ab76af58625573b418cad53111de1a8dbfd646f4aafac3c0db51.txt",
       "imports": [
         "extensions-panel-view-DBleGu9j.js"
       ],
       "dynamicImports": [],
-      "bytes": 6141
+      "bytes": 6128
     },
     "eye-CGe4Tww6.js": {
       "file": "src/catalog/generated/frame-modules/c491b182061fcdbba990e8c43a54df9a4ff1d5008aabd56d9800ca78fed3b45c.txt",
@@ -13190,10 +13190,10 @@
       "bytes": 6772
     },
     "source-information-C6IBRkFL.js": {
-      "file": "src/catalog/generated/frame-modules/9286c11d264f729f6ed349826ed4566510059492a53181eceab175109a3e394f.txt",
+      "file": "src/catalog/generated/frame-modules/fce51b28b97bdc4744255ffe7931e5a1326196349322a5c383d46a8eafdb2fab.txt",
       "imports": [],
       "dynamicImports": [],
-      "bytes": 1498618
+      "bytes": 1498579
     },
     "sparkles-CQbz-Dyu.js": {
       "file": "src/catalog/generated/frame-modules/4306f3eb21466d7fa2b9d7d793c55795c54cf1c41fc65092cf977b050b8a387f.txt",
