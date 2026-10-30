@@ -1,0 +1,2 @@
+# Local build fingerprints are not source or distribution assets.
+/src/catalog/generated/native-manifest.json

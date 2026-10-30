@@ -5,9 +5,10 @@ import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import type { StorageRecord } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { createSyncSpace } from "pstdio-sync";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
-import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
+import { createPackagedSyncPeer, packagedProjectKey } from "./packaged-sync-relay.fixture";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 const waitFor = async (condition: () => Promise<boolean> | boolean) => {
@@ -109,6 +110,25 @@ test(
       expect(status).toMatchObject({ state: "synced", offlineReady: true, pendingItems: 0 });
       expect(status.download!.total).toBeGreaterThan(0);
       expect(status.download!.completed).toBe(status.download!.total!);
+      const space = await createSyncSpace({ projectId: project.id, spaceOwner: null, keys: [packagedProjectKey] });
+      const streamId = await space.documentId(JSON.stringify(["example.shared-notes", "record-stream"]));
+      const stream = peer.documents.get(`~${streamId}`)!;
+      const previousState = stream.state!.stateId;
+      const previousUpdates = stream.updates.length;
+      // The grouped save exceeds both the inline frame limit and the founding state's size.
+      // Compaction must charge its blob bytes so the relay does not retain an unbounded tail.
+      await command("commit", {
+        group: {
+          operationId: "online-large-save",
+          edits: Array.from({ length: 8 }, (_, index) => ({
+            recordId: `online-large-${index}`,
+            replace: `packaged-secret${"y".repeat(200_000)}`,
+          })),
+        },
+      });
+      await waitFor(() => stream.updates.length > previousUpdates);
+      await waitFor(() => Number(stream.state?.through) === stream.updates.length);
+      expect(stream.state!.stateId).not.toBe(previousState);
       peer.corrupt();
       const quarantine = join(root, "state", "sync-quarantine");
       await waitFor(async () => (await readdir(quarantine).catch(() => [])).some((file) => file.endsWith(".json")));

@@ -20,7 +20,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
-// packaged-canvas-install.p1.test.ts checks optional Canvas installation, module assets, rendered previews, themes, and its skill outside a checkout.
+// packaged-canvas-install.p1.test.ts checks optional Canvas module assets, previews, themes, and skills without local build fingerprints.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
 // placeholder actions and status-item popover views through the compiled host.
 // scripts/verify/public-package-consumer.ts checks legacy hidden headers and explicit page/tab presentation in the built workbench.
@@ -37,6 +37,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // packaged-cloud-extension-set-smoke.p2.test.ts checks offline number collisions, aliases and later allocations across three compiled hosts.
 // packaged-document-sync-smoke.p1.test.ts checks verified-document progress and pending counts through the compiled host.
 // packaged-account-smoke.p2.test.ts checks rejected-device sign-in recovery across restarts and explicit sign-out.
+// packaged-document-sync-smoke.p1.test.ts checks encrypted large-save blobs trigger record-stream compaction.
 // packaged-board-panning-smoke.p2.test.ts retains card opening and dragging; the UI Card Gestures story covers nested-control pointer ownership.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
