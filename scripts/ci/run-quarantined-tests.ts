@@ -35,7 +35,11 @@ if (import.meta.main) {
   const root = resolve(import.meta.dir, "../..");
   const args = process.argv.slice(2);
   const runner = args[0] ?? "bun";
-  if (!["bun", "packaged-bun", "playwright", "playwright-ui", "packaged-desktop"].includes(runner))
+  if (
+    !["bun", "packaged-bun", "playwright", "playwright-ui", "packaged-desktop", "packaged-desktop-benchmark"].includes(
+      runner,
+    )
+  )
     throw new Error("Choose a quarantine runner");
   const scopeAt = args.indexOf("--scope");
   const scope = scopeAt < 0 ? undefined : args[scopeAt + 1];
@@ -78,7 +82,7 @@ if (import.meta.main) {
     const result = await runCiChecks(setup, { priority: "P2", concurrency: 1 });
     if (result.outcome !== "success") process.exit(1);
   }
-  if (runner === "packaged-desktop" && !args.includes("--prebuilt")) {
+  if (runner.startsWith("packaged-desktop") && !args.includes("--prebuilt")) {
     const result = await runCiChecks(
       [{ id: "package-quarantine-desktop", cwd: root, command: ["bun", "run", "--cwd", "clients/desktop", "package"] }],
       { priority: "P2", concurrency: 1 },
@@ -119,6 +123,7 @@ if (import.meta.main) {
       playwright: "test:packaged:browser",
       "playwright-ui": "test:ui",
       "packaged-desktop": "test:packaged",
+      "packaged-desktop-benchmark": "test:benchmark",
     };
     const script = scripts[runner] ?? "test";
     if (!manifest.scripts?.[script]) throw new Error(`Missing ${script} runner for ${owner.name}`);

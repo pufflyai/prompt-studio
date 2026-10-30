@@ -247,12 +247,12 @@ Run registered cases locally with `E2E_TEST_LANE=quarantine bun run --cwd packag
 
 Windows compiled CLI quarantine runs after native package verification against that same binary. For diagnosis, set `E2E_PACKAGED_BINARY_PATH` to the compiled executable and run `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:cli`. The API quarantine step runs its registered file in an isolated source-conditions process, with the same 30-second test allowance as normal API shards.
 
-For ten full CI validations, create ten refs under `test/ci-reliability/<batch>/` at the same final commit. Each push starts the normal full workflow, including native builds, all browser engines, package consumers, and quarantine. The ref is part of the concurrency key, so independent runs cannot cancel each other. Nx test targets disable result caching; dependency builds still use their caches. Count first attempts and record all failures. If a fix changes the commit, start a new ten-run qualification on that commit. A test passing on a later attempt does not erase its earlier failure.
+Each CI pipeline executes each test once per applicable platform, including performance and quarantine cases. Do not repeat a test or create multiple reliability refs to obtain a passing result. Quarantine confirmed flakes with first-failure evidence, an owner and a removal criterion; keep their limits and assertions, and require their separate execution report. A later pass does not erase an earlier failure.
 
-To investigate a failure, keep retries disabled and repeat the affected spec:
+To investigate a failure, keep retries disabled and run only the affected spec once:
 
 ```bash
-bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.p2.spec.ts --repeat-each=5
+bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.p2.spec.ts
 ```
 
 To run one CI shard locally, use `bun run --cwd packages/e2e test:ui -- --shard=2/3`. Keep the same shard total when comparing runs.
