@@ -30,6 +30,7 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
   const nonce = useRef(crypto.randomUUID());
   const [revision, setRevision] = useState(0);
   const [bootstrap, setBootstrap] = useState<FrameBootstrap>();
+  const startup = useRef<ReturnType<typeof runtime.startup.enqueue>>(undefined);
   const source = item.preview?.source ?? `$native:${item.component}`;
   const [height, setHeight] = useState(item.height);
   const [information, setInformation] = useState<FrameMessage["information"]>();
@@ -52,6 +53,7 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
       });
     return () => {
       active = false;
+      startup.current?.finish();
     };
   }, [source]);
   useEffect(() => {
@@ -66,10 +68,14 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
       switch (message.type) {
         case "bootstrap": {
           const { scripts, styles, entry } = bootstrap!;
-          postFrame(frame.current, { nonce: nonce.current, type: "bootstrap", assets: { scripts, styles, entry } });
+          startup.current = runtime.startup.enqueue(() =>
+            postFrame(frame.current, { nonce: nonce.current, type: "bootstrap", assets: { scripts, styles, entry } }),
+          );
           return;
         }
         case "boot":
+          // Release before example setup, which can await nested previews.
+          startup.current?.finish();
           sentTheme.current = theme;
           postFrame(frame.current, {
             nonce: nonce.current,
@@ -92,6 +98,7 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
           setInformation(message.information);
           break;
         case "error":
+          startup.current?.finish();
           setError(message.message ?? "Preview failed");
           break;
       }
@@ -125,6 +132,7 @@ export const FramePreview = (props: { item: CanvasItem; runtime: CanvasRuntime }
         size="xs"
         variant="ghost-static"
         onClick={() => {
+          startup.current?.finish();
           setError("");
           setReady(false);
           setInformation(undefined);

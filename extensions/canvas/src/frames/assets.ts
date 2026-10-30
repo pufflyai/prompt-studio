@@ -72,6 +72,12 @@ const bootDocument = (protocol: string) => {
     document.head.append(map);
     const entry = document.createElement("script");
     entry.type = "module";
+    entry.addEventListener("error", () =>
+      window.parent.postMessage(
+        { protocol, nonce: message.nonce, type: "error", message: "Preview runtime failed to load" },
+        "*",
+      ),
+    );
     entry.textContent = `import ${JSON.stringify(data.entry)};`;
     document.body.append(entry);
   });

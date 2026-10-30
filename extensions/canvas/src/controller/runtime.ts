@@ -1,6 +1,7 @@
 import { type CanvasZoomChange, zoomCanvas } from "@pstdio/ui/canvas";
 import type { CanvasDefinition } from "../canvases/definitions";
 import type { FrameTheme } from "../frame-themes";
+import { createFrameStartupQueue } from "../frames/startup-queue";
 import type { Layout, LayoutChange } from "../layout";
 import { frameAnchor, type ItemBounds, measureItem } from "./frame-bounds";
 import { createFrameSelection } from "./frame-selection";
@@ -25,12 +26,18 @@ const subscribeToRuntime = (listeners: Set<() => void>, listener: () => void) =>
   };
 };
 
+const selectFrame = (selection: ReturnType<typeof createFrameSelection>, raise: (id: string) => void, id?: string) => {
+  selection.select(id);
+  if (id) raise(id);
+};
+
 export const createCanvasRuntime = (
   canvas: CanvasDefinition,
   initial: Layout,
   save: (change: LayoutChange) => void,
 ) => {
   let layout = initial;
+  const startup = createFrameStartupQueue();
   const selection = createFrameSelection(canvas.items.map((item) => item.id));
   let shell: HTMLElement | undefined;
   let stage: HTMLElement | undefined;
@@ -116,11 +123,9 @@ export const createCanvasRuntime = (
     reframe();
   };
   return {
+    startup,
     selection,
-    select: (id?: string) => {
-      selection.select(id);
-      if (id) raise(id);
-    },
+    select: (id?: string) => selectFrame(selection, raise, id),
     get: () => layout,
     subscribe: (listener: () => void) => subscribeToRuntime(listeners, listener),
     mount: (element: HTMLElement, content: HTMLElement) => {
@@ -230,6 +235,7 @@ export const createCanvasRuntime = (
     },
     flush,
     dispose: () => {
+      startup.dispose();
       selection.dispose();
       flush();
       cancelAnimationFrame(frame);

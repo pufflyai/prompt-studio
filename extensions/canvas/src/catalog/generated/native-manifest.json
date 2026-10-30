@@ -208,11 +208,12 @@
     "extensions/canvas/src/canvases/definitions.ts": "a0b08b4400ef11fd14e62f5b0e0cec8ea80d8f1982ae621ab613d8b68dad517f",
     "extensions/canvas/src/canvases/verification-fixtures.ts": "3ef548bcffe12df57dbc21bcb9307b45bfac46f1b9184987f2e1f8f5413221a6",
     "packages/ui/dist/canvas-Da4SuJVP.js": "53ce43c3479ba9693ece68d5aa03707967a368faf22c1de0d459079c5dd5cda7",
+    "extensions/canvas/src/frames/startup-queue.ts": "207eb1d1a9cf30f251486e14d86e0102c032da4b273dd723dd1819f293a7c36b",
     "extensions/canvas/src/controller/frame-bounds.ts": "d04620d0933eefa2b13c4ff5596ffeaf73bbf6a926e6fe29c0c766956a19e266",
     "extensions/canvas/src/controller/frame-selection.ts": "5d2aea76c91cea53a5c5c8bf4364dbd550e6b201ff8db6b97978ef4181bb18db",
     "extensions/canvas/src/controller/geometry.ts": "ea6ca5fcccb7ceacb839bafbb50ef2e47ac67309c098ac547c5f305340c47e08",
     "extensions/canvas/src/controller/grid.ts": "a9e9bf71a334f53ba154f6d21a9dc19f8c4dee585506a4ca9612b5915df3c12b",
-    "extensions/canvas/src/controller/runtime.ts": "35c5ebd1f7eb211a5372c1e2d8f03f09cfb1f63edd3b72403f29399c67753282",
+    "extensions/canvas/src/controller/runtime.ts": "b606f2f6cb259106c23d184f4db4d78d84f6896fefbfcfb67821ba212e71e84d",
     "extensions/canvas/src/frame-themes.ts": "f3df25778aeb68ab4683023dded6d96749552ce7bc2389054a8e83a53e5e05a4",
     "extensions/canvas/src/layout.ts": "13c6580742bada1318be8d0ae480689447508ab3e79fb4cb57a9794f9b3e74c7",
     "extensions/canvas/src/controller/item-movement.ts": "1bea67f678528aed5caa46bdbb957c8db587fec799fe1a3eae8250e0035fc1b4",
@@ -220,7 +221,7 @@
     "extensions/canvas/src/catalog/generated/frame-themes.json": "dcf2779ac1cc884ab34c2c70f549512eda385e2f186e3f08eaac5006f4eda5f6",
     "extensions/canvas/src/catalog/source-information.tsx": "03eb9492874c24557a052f49f91f1e8ff660734f633408bfca6f53ed8237020b",
     "extensions/canvas/src/frames/navigation.ts": "6e6d7167f556b7b63682423d99f07cb687e9c1520cdc102d007a997fdf8c246a",
-    "extensions/canvas/src/frames/frame.tsx": "326d20d62cd0303ab825fd10180cdf1ee43f187647a26d3db4e96da531c7937f",
+    "extensions/canvas/src/frames/frame.tsx": "acd262345e80ad1b59a27abdde85d07d6fae56f707787821d757144455b65c33",
     "extensions/canvas/src/view/frame-theme-picker.tsx": "7088a8fdac2ae1f364bd02405fb876e25a6db1b7592df3ee74036b7d0a831d00",
     "extensions/canvas/src/view/frame-variant-picker.tsx": "66c5939f693a3e470994947c8a3e807e256c167232a5825667ca2c7f67454b5d",
     "extensions/canvas/src/view/item-frame.tsx": "b0ac7ab005e62be42cebe7768ff0dcfe026a90700fe0750258a4e48865820101",
@@ -1418,7 +1419,7 @@
     "packages/ui/src/components/rich-text/prompt-input/prompt-input.tsx": "c27d900f25fcecedd37f13a9065f1c40b33be06eaf382c9cacec632195f33399",
     "packages/ui/src/components/rich-text/prompt-input/prompt-input.canvas.tsx": "cce86f1bf3381e979f4a041bdaec87f0d904bd72a7d321335bb21eafcda5fbdc",
     "extensions/canvas/src/frames/selection.ts": "eadd804f36b68dd349f99d3357883489f080e525f72d26db65b7dcbd215bac62",
-    "extensions/canvas/src/frames/assets.ts": "ec1117c002cbd9b1f73607fca41d2035d70591de2e990bf67f4e6d7bd7e6133a",
+    "extensions/canvas/src/frames/assets.ts": "872cd949cf2963ef40c3474a495830bbcf27357354fac1881e60fe5ad36a1086",
     "extensions/canvas/src/frames/protocol.ts": "4e2ce0176ddab8f86ec2421ea02690b8fef3bee52d8982ef72363bd1f523d47b",
     "packages/ui/src/components/chat-ui/tool-rendering/question-prompt.ts": "deeaf5cfec3c86b250e02c47a33fcfafb381956fd1be59bfb5a7f30608da3265",
     "packages/ui/src/components/chat-ui/components/question-prompt-controls.canvas.tsx": "50576a36271525c393a89cf44f75449c287161096fd0c882cf01ba4c3ed2d68f",
@@ -2375,9 +2376,9 @@
     "packages/canvas/src/native-preview-runtime.tsx": "3c46fed360b95b7c7292be3a0669aca9f7969a204106476fbf443783746408ff"
   },
   "outputs": {
-    "frame-bundle.ts": "0953593bc83ee37807a2a5bc1c47246aab0a9475b9d6f9c03f1c73a1ac31cae2"
+    "frame-bundle.ts": "07444a756cad9ba8ad0421db1e05b19f2726e554e6550d2b4af0f5cf54900dcc"
   },
   "stories": 1626,
   "documents": 36,
-  "bytes": 61729615
+  "bytes": 61730235
 }
