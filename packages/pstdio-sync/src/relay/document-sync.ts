@@ -24,6 +24,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
   let updates = 0;
   let incomplete = false;
   let downloaded = false;
+  let acknowledgedRevision = 0;
   const rejected = new Set<string>();
   const quarantine = async (failure: SyncFailure) => {
     incomplete = true;
@@ -138,6 +139,13 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
       await replace(local, blobIds);
     }
   };
+  const acknowledge = async () => {
+    if (!store.revision) return;
+    const acknowledged = await store.transaction(owner, async ({ document, revision }) =>
+      missingUpdate(document, remote) ? undefined : revision,
+    );
+    if (acknowledged !== undefined) acknowledgedRevision = acknowledged;
+  };
   return {
     /** A format upgrade can read its old relay source once without writing that format again. */
     async download() {
@@ -162,6 +170,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
             if (!(await replace(remote, blobIds))) continue;
           }
           downloaded = !incomplete;
+          await acknowledge();
           return;
         } finally {
           local.destroy();
@@ -170,12 +179,12 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     },
     // Compare against the relay replica, including delete-only edits. A durable local
     // transaction after synchronization must immediately stop reporting synced.
-    status: () =>
-      store.transaction(owner, async ({ document }) => ({
-        downloaded,
-        pending: !!missingUpdate(document, remote),
-        needsAttention: incomplete,
-      })),
+    status: async () => {
+      const pending = store.revision
+        ? (await store.revision(owner)) !== acknowledgedRevision
+        : await store.transaction(owner, async ({ document }) => !!missingUpdate(document, remote));
+      return { downloaded, pending, needsAttention: incomplete };
+    },
     close: () => remote.destroy(),
   };
 };

@@ -62,10 +62,12 @@ test(
     const heartbeat = Promise.withResolvers<void>();
     const observedCredentials: string[] = [];
     let deviceId = "";
+    let rejected = false;
     const manager = Bun.serve({
       hostname: "127.0.0.1",
       port: 0,
       fetch(request) {
+        if (rejected) return Response.json({ error: "removed-device" }, { status: 401 });
         const path = new URL(request.url).pathname;
         if (path === "/v1/account") return Response.json({ features: { relay: false } });
         if (path === "/v1/devices/presence") {
@@ -117,6 +119,15 @@ test(
       expect(await client.account.status()).toMatchObject({ features: { relay: false }, login: { deviceId } });
       const project = await client.projects.create(folderProjectInput({ name: "Local during early access" }, root));
       expect(await client.account.projectSyncStatus(project.id)).toEqual({ state: "local", offlineReady: false });
+      rejected = true;
+      await expect(client.account.devices()).rejects.toThrow();
+      expect(await client.account.status()).toMatchObject({ login: null, signInRequired: true });
+      await stopProcess(host.child);
+      host = await startPackagedServe(root);
+      client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
+      expect(await client.account.status()).toMatchObject({ login: null, signInRequired: true });
+      await client.account.logout();
+      expect(await client.account.status()).not.toMatchObject({ signInRequired: true });
     } finally {
       await stopProcess(host.child);
       await manager.stop(true);

@@ -154,6 +154,7 @@ export const startRelayRuntime = async (input: {
         coreDocuments.get(workbenchId),
         publications.get(workbenchId),
         automations.get(workbenchId),
+        personal.get(workbenchId),
         ...snapshot.enabledSources.map(({ installedSource }) =>
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
         ),

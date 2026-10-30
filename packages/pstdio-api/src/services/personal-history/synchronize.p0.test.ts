@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { createMemoryDocumentStore, createSyncSpace, openUpdate } from "pstdio-sync";
 import type { DocumentRelay } from "pstdio-sync/relay";
 import type { StoredUpdate } from "pstdio-sync-contracts";
@@ -66,6 +66,7 @@ test("another device downloads full transcripts after the source device stops, u
       },
     });
   const a = sync(source);
+  expect(await a.status()).toMatchObject({ downloaded: false, download: { completed: 0, total: null } });
   const messages = Array.from({ length: 600 }, (_, index) => ({
     id: `message-${index}`,
     role: "assistant" as const,
@@ -77,6 +78,19 @@ test("another device downloads full transcripts after the source device stops, u
       { id: "session-a" },
     ]);
   });
+  const listing = spyOn(source, "transcriptNames");
+  const content = spyOn(source.records, "transaction");
+  expect(await a.status()).toMatchObject({ pendingItems: 0, download: { completed: 2, total: 2 } });
+  expect(listing).not.toHaveBeenCalled();
+  expect(content).not.toHaveBeenCalled();
+  listing.mockRestore();
+  content.mockRestore();
+  await source.writeTranscript("session-a", [...messages, { id: "offline", role: "user", parts: [] }]);
+  expect(await a.status()).toMatchObject({ pendingItems: 1 });
+  a.invalidate();
+  expect((await a.status()).download.total).toBeNull();
+  await source.writeTranscript("session-a", messages);
+  await a.synchronize(async () => {});
   a.close();
   expect(encrypted.size).toBe(2);
   expect(

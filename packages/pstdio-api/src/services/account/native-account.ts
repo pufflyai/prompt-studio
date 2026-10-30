@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
 import type { RelayWorkbench } from "../relay/runtime";
+import { readAccountStatus } from "./account-status";
 import { readManagerAccount } from "./manager-account";
 import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
 import { createMissingProjectRecovery } from "./missing-project-recovery";
@@ -73,7 +74,7 @@ export const createNativeAccount = (input: {
   const store = createNativeStore(input.file);
   const presence = createNativePresence({
     denied: async (credential) => {
-      await store.forget(credential);
+      await store.reject(credential);
       await refresh();
     },
   });
@@ -98,9 +99,9 @@ export const createNativeAccount = (input: {
   let closed = false;
 
   // A login saved by another database in the same folder belongs to another device.
-  const readLogin = async () => {
+  const readLogin = async (deviceId?: string) => {
     const login = await store.read();
-    const { environmentId } = await input.environment.get();
+    const environmentId = deviceId ?? (await input.environment.get()).environmentId;
     return login?.deviceId === environmentId ? login : null;
   };
   const current = async () => {
@@ -116,7 +117,7 @@ export const createNativeAccount = (input: {
     } catch (error) {
       if (!denied(error)) throw error;
       // Another device removed this one, so its credential no longer works.
-      await store.forget(login.token);
+      await store.reject(login.token);
       await refresh();
       throw new AccountRequestError("This device was removed from your account. Log in again with pst login");
     }
@@ -144,7 +145,7 @@ export const createNativeAccount = (input: {
     } catch (error) {
       if (login && denied(error)) {
         // Another device removed this one. A newer login saved meanwhile stays.
-        await store.forget(login.token);
+        await store.reject(login.token);
         login = await readLogin();
         cloudProjects = undefined;
       } else if (!closed) {
@@ -178,7 +179,12 @@ export const createNativeAccount = (input: {
   };
   // Logging out works offline and after removal. Removing the device at the manager is best effort.
   const logout = async () => {
-    const login = await current();
+    const login = await readLogin();
+    if (!login) {
+      await store.forget(null);
+      await refresh();
+      return { ok: true, removed: false };
+    }
     const removed = await managerRequest(login.managerOrigin, `${devicePath(login.deviceId)}/remove`, login.token, {})
       .then(() => true)
       .catch(() => false);
@@ -244,16 +250,8 @@ export const createNativeAccount = (input: {
       return { ok: true, status: "failed" as const };
     },
     async status() {
-      const login = await readLogin();
-      if (!login) return { login: null, cloudProjects: [] as string[], cloudProjectsLoaded: true, features: null };
-      const { token: _, ...device } = login;
-      const projects = projectsFor(login);
-      return {
-        login: device,
-        cloudProjects: projects ?? [],
-        cloudProjectsLoaded: !!projects,
-        features: projects ? cloudProjects!.features : null,
-      };
+      const { environmentId } = await input.environment.get();
+      return readAccountStatus(store, await readLogin(environmentId), cloudProjects, environmentId);
     },
     async projectSyncStatus(projectId: string) {
       if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
