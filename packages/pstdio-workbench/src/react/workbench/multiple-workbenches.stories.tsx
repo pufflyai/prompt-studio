@@ -30,7 +30,7 @@ const Editor = (props: {
       </Button>
       <Input aria-label={`${name} draft`} value={draft} onChange={(event) => setDraft(event.target.value)} />
       {richText ? (
-        <Box role="group" aria-label={`${name} rich text`}>
+        <Box role="group" aria-label={`${name} rich text`} minH="xs">
           <MarkdownEditor defaultState="" isEditable fullWidth scrollable={false} />
         </Box>
       ) : null}

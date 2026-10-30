@@ -1,7 +1,7 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { LexicalTypeaheadMenuPlugin, MenuOption } from "@lexical/react/LexicalTypeaheadMenuPlugin";
 import { $createTextNode, $getSelection, $setSelection } from "lexical";
-import { type RefObject, useEffect, useState } from "react";
+import { type RefObject, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { ListRow } from "@/components/list-row/list-row";
 import { ScrollArea } from "@/components/primitives/scroll-area";
@@ -34,7 +34,8 @@ interface CommandMenuProps {
 }
 
 const CommandMenu = (props: CommandMenuProps) => {
-  useTypeaheadScope(props.anchor);
+  const active = useTypeaheadScope(props.anchor);
+  const menuId = useId();
   const { options, selectedIndex, onSelect, onHighlight } = props;
   const styles = useSlotRecipe({ key: "menu" })();
   useEffect(() => {
@@ -46,7 +47,7 @@ const CommandMenu = (props: CommandMenuProps) => {
         {options.map((option, index) => (
           <ListRow
             key={option.key}
-            id={`typeahead-item-${index}`}
+            id={active ? `typeahead-item-${index}` : `${menuId}-typeahead-item-${index}`}
             ref={option.setRefElement}
             role="option"
             aria-label={option.command.name}

@@ -10,7 +10,18 @@ export const useTypeaheadScope = (anchor: RefObject<HTMLElement | null>) => {
     if (!element) return;
     element.hidden = !active;
     element.inert = !active;
-    if (!active) element.id = inactiveId;
-    else if (element.id === inactiveId) element.id = "typeahead-menu";
+    if (active) {
+      if (element.id === inactiveId) element.id = "typeahead-menu";
+      return;
+    }
+    const repairId = () => {
+      if (element.id !== inactiveId) element.id = inactiveId;
+    };
+    repairId();
+    // Lexical rewrites its fixed ID on reposition. See ADR 0117 for removal.
+    const observer = new MutationObserver(repairId);
+    observer.observe(element, { attributes: true, attributeFilter: ["id"] });
+    return () => observer.disconnect();
   }, [anchor, active, inactiveId]);
+  return active;
 };
