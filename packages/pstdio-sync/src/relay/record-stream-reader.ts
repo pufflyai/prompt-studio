@@ -1,5 +1,6 @@
 import { recordStreamStateSchema, type StateInfo, type StoredUpdate } from "pstdio-sync-contracts";
 import * as Y from "yjs";
+import { decodeBytes } from "../shared";
 import { openBlob, openState, openSummary, openUpdate, type SyncSpace, UnreadableSyncData } from "../encryption";
 import type { DocumentRelay, SyncFailure } from "./document-sync-types";
 import type { createRecordAssets } from "./record-assets";
@@ -61,22 +62,27 @@ export const createRecordStreamReader = (input: {
 }) => {
   const { space, documentId, relay, files } = input;
   const openFrame = async (update: StoredUpdate) => {
+    let byteLength = decodeBytes(update.payload).length;
     const unreadable = async () => {
       await input.quarantine({ kind: "update", id: update.updateId, envelope: update });
-      return null;
+      return { frame: null, byteLength };
     };
     let frame = await readable(async () => decodeRecordFrame(await openUpdate(space, documentId, update)));
     if (!frame) return unreadable();
     if (frame.blob) {
       const { blobId } = frame.blob;
       const bytes = await relay.blobs!.get(blobId);
+      byteLength += bytes.length;
       frame = await readable(async () => decodeRecordFrame(await openBlob(space, blobId, bytes)));
       if (!frame) return unreadable();
     }
-    return (await downloaded(files, [frame])) ? frame : unreadable();
+    return (await downloaded(files, [frame])) ? { frame, byteLength } : unreadable();
   };
   return {
-    openFrames: (updates: StoredUpdate[]) => mapLimited(updates, openFrame),
+    async openFrames(updates: StoredUpdate[]) {
+      const received = await mapLimited(updates, openFrame);
+      return { frames: received.map((item) => item.frame), byteLengths: received.map((item) => item.byteLength) };
+    },
     /** A latest state's records, or null when it cannot be read. */
     async openLatest(state: StateInfo) {
       const unreadable = async () => {

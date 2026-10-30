@@ -270,6 +270,93 @@ test("a network error while joining is retried instead of skipping the founding 
   expect(second.failures).toEqual([]);
 });
 
+test("a large record save compacts when its encrypted frame exceeds the latest-state threshold", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  await first.sync.synchronize();
+  const previous = fixture.latest()!.stateId;
+  const ids = Array.from({ length: 8 }, (_, index) => `large-${index}`);
+  const body = "x".repeat(150_000);
+  await first.records.commit({ operationId: "large", edits: ids.map((recordId) => ({ recordId, replace: body })) });
+  await first.sync.synchronize();
+  expect(fixture.latest()!.stateId).not.toBe(previous);
+  expect(fixture.latest()!.through).toBe(fixture.updates().at(-1)!.sequence);
+  const joining = await device(fixture.relay);
+  await joining.sync.synchronize();
+  for (const id of ids) expect(await joining.value(id)).toBe(body);
+});
+
+test("a peer latest state preserves byte accounting for an already downloaded newer tail", async () => {
+  const fixture = createRelay();
+  const first = await device({
+    ...fixture.relay,
+    replace: async (state) => (state.baseStateId ? false : fixture.relay.replace(state)),
+  });
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  await first.sync.synchronize();
+  await first.records.commit({
+    operationId: "large",
+    edits: Array.from({ length: 8 }, (_, index) => ({ recordId: `large-${index}`, replace: "x".repeat(150_000) })),
+  });
+  await first.sync.synchronize();
+  let raced = false;
+  const second = await device({
+    ...fixture.relay,
+    async replace(state) {
+      if (state.baseStateId && !raced) {
+        raced = true;
+        await first.records.commit({
+          operationId: "tail",
+          edits: [{ recordId: "tail", replace: "y".repeat(200_000) }],
+        });
+        await first.sync.synchronize();
+      }
+      return fixture.relay.replace(state);
+    },
+  });
+  await second.sync.synchronize();
+  expect(raced).toBe(true);
+  expect(fixture.latest()!.through).toBe(1);
+  await first.sync.synchronize();
+  const [cursor] = await first.db.select().from(storage_record_sync);
+  const actualTail = fixture
+    .updates()
+    .filter((update) => update.sequence > 1)
+    .reduce((sum, update) => sum + Buffer.from(update.payload, "base64").length, 0);
+  expect(actualTail).toBeGreaterThan(0);
+  expect(cursor!.pending_bytes).toBe(actualTail);
+  for (const peer of [first, second]) expect(await peer.value("tail")).toBe("y".repeat(200_000));
+});
+
+test("a joining device compacts the downloaded tail after another device's latest-state upload fails", async () => {
+  const fixture = createRelay();
+  let unavailable = false;
+  const first = await device({
+    ...fixture.relay,
+    replace: async (state) => {
+      if (unavailable && state.baseStateId) throw new Error("Latest-state network failure");
+      return fixture.relay.replace(state);
+    },
+  });
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  await first.sync.synchronize();
+  unavailable = true;
+  const body = "y".repeat(200_000);
+  const left = ["left-a", "left-b", "left-c"];
+  const right = ["right-a", "right-b", "right-c"];
+  await first.records.commit({ operationId: "left", edits: left.map((recordId) => ({ recordId, replace: body })) });
+  await first.sync.synchronize();
+  await first.records.commit({ operationId: "right", edits: right.map((recordId) => ({ recordId, replace: body })) });
+  await expect(first.sync.synchronize()).rejects.toThrow("Latest-state network failure");
+  const previous = fixture.latest()!.stateId;
+  const joining = await device(fixture.relay);
+  await joining.sync.synchronize();
+  expect(fixture.latest()!.stateId).not.toBe(previous);
+  expect(fixture.latest()!.through).toBe(fixture.updates().at(-1)!.sequence);
+  for (const id of [...left, ...right]) expect(await joining.value(id)).toBe(body);
+});
+
 test("a device catches up without looping when another device founds a stream the relay lost", async () => {
   const fixture = createRelay();
   const first = await device(fixture.relay);
