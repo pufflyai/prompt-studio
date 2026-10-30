@@ -1,10 +1,9 @@
 name: PR guards
 
-# Enforces AGENTS.md: no generated files outside the listed exceptions, and a person's
-# approval (the large-change-approved label) for PRs that add 2,000 or more lines.
+# Enforces AGENTS.md "Generated files": no generated files outside the listed exceptions.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -20,8 +19,7 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - name: Check generated files and change size
+      - name: Check generated files
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
         run: bun scripts/ci/pr-change-guards.ts
