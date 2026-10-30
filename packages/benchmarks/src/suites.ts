@@ -87,7 +87,6 @@ export const suites: BenchmarkSuite[] = [
       {
         command: ["bun", "run", "src/scripts/run-playwright.ts", "-c", "playwright.perf.config.ts"],
         cwd: "packages/e2e",
-        env: { PERF_REPEAT_EACH: "1" },
       },
     ],
   },
@@ -100,7 +99,6 @@ export const suites: BenchmarkSuite[] = [
       {
         command: ["bunx", "playwright", "test", "--config", "playwright.chat-perf.config.ts"],
         cwd: "packages/ui",
-        env: { PERF_REPEAT_EACH: "1" },
       },
     ],
   },

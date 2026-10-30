@@ -32,7 +32,7 @@ The #1499 Linux x64 merge group also exhausted the packaged attached-recovery ca
 
 Quarantine temporarily removes these specific cases from merge protection on the affected platforms. It does not prove the product works there. Other platforms and the packaged released-data upgrade contract remain blocking. Every quarantined case still executes without retries or prewarming, at its existing limit, and retains first-attempt evidence. A quarantine failure must be reported separately from stable CI success.
 
-Full reliability runs use ten independent refs at the same commit under `test/ci-reliability/`. The normal full workflow handles them. Ref-specific concurrency prevents cancellation between those runs. Nx disables caching for test, conformance and coverage targets; dependency builds retain caching. The global cache-bypass flag is avoided because it also rebuilds test dependencies. Changes during qualification require ten new runs on the final commit.
+On 2026-10-30, the user required single execution and quarantine of confirmed flakes. CI no longer repeats performance cases or runs multiple reliability refs to obtain a pass. Windows x64 warm-attach and cold-start launch benchmarks run once in a separate non-blocking test step, with a required execution report; their existing budgets, assertions and execution allowances remain unchanged. Other native platforms remain blocking. Reproduce and repair the cause before restoring a case to the stable gate.
 
 ## Removal
 

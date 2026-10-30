@@ -1,16 +1,32 @@
 import { defineConfig } from "@playwright/test";
+import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
+
+const quarantine = process.env.E2E_TEST_LANE === "quarantine";
 
 // Benchmarks measure the packaged app without traces. One worker runs files in name order and
 // tests in declaration order; packaged-launch.p3.bench.ts relies on that order for its cold start.
 export default defineConfig({
-  outputDir: "test-results/benchmark",
+  outputDir: quarantine ? "test-results/benchmark-quarantine" : "test-results/benchmark",
   testDir: "src/e2e",
   testMatch: "packaged-*.bench.ts",
+  ...playwrightQuarantineSelection("packaged-desktop-benchmark", "clients/desktop/src/e2e", quarantine),
   // Windows and hosted Intel macOS runners need longer for real launches and setup (approved 2026-10-10).
   timeout: process.platform === "win32" || (process.platform === "darwin" && process.arch === "x64") ? 60_000 : 30_000,
   workers: 1,
   forbidOnly: !!process.env.CI,
   fullyParallel: false,
-  metadata: { electronTrace: false },
-  reporter: [["line"], ["json", { outputFile: "test-results/packaged-benchmarks.json" }]],
+  repeatEach: 1,
+  retries: 0,
+  metadata: { electronTrace: false, quarantineAttempt: quarantine ? process.env.CI_QUARANTINE_ATTEMPT : undefined },
+  reporter: [
+    ["line"],
+    [
+      "json",
+      {
+        outputFile: quarantine
+          ? "test-results/packaged-benchmarks-quarantine.json"
+          : "test-results/packaged-benchmarks.json",
+      },
+    ],
+  ],
 });

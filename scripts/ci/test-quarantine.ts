@@ -67,6 +67,7 @@ const browserReports: Record<string, string> = {
   playwright: "packages/e2e/test-results/packaged-browser-quarantine/results.json",
   "playwright-ui": "packages/e2e/test-results/ui-quarantine/results.json",
   "packaged-desktop": "clients/desktop/test-results/packaged-quarantine-readiness.json",
+  "packaged-desktop-benchmark": "clients/desktop/test-results/packaged-benchmarks-quarantine.json",
 };
 export const browserQuarantineReportPath = (runner: string) => {
   const path = browserReports[runner];
@@ -97,6 +98,7 @@ export const playwrightQuarantineSelection = (
           testMatch: files,
           maxFailures: 0,
           retries: 0,
+          repeatEach: 1,
           metadata: { quarantineAttempt: process.env.CI_QUARANTINE_ATTEMPT },
         }
       : { grepInvert: pattern }),

@@ -49,6 +49,13 @@ jobs:
       - name: Smoke signed packaged application
         if: ${{ !cancelled() && (success() || steps.benchmark.outcome == 'failure') }}
         run: bun run --cwd clients/desktop test:packaged
+      - name: Run quarantined launch benchmarks once
+        if: ${{ !cancelled() && (success() || steps.benchmark.outcome == 'failure') }}
+        continue-on-error: true
+        run: bun scripts/ci/run-quarantined-tests.ts packaged-desktop-benchmark --scope @pstdio/desktop --prebuilt
+      - name: Require first-attempt launch quarantine execution
+        if: ${{ !cancelled() && (success() || steps.benchmark.outcome == 'failure') }}
+        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop-benchmark --scope @pstdio/desktop
       - name: Verify installed Windows command
         if: ${{ !cancelled() && (success() || steps.benchmark.outcome == 'failure') }}
         run: bun clients/desktop/scripts/verify-windows-cli-install.ts

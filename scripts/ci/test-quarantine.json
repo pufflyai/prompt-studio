@@ -385,5 +385,35 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/40547961144/job/122343761978"
     ],
     "removeWhen": "Identify and fix the cold Claude dependency install delay, then pass this complete case in ten independent Linux x64 runs within its existing 30000 ms allowance, without retries, prewarming or fewer extensions."
+  },
+  {
+    "runner": "packaged-desktop-benchmark",
+    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
+    "name": "warm attach restores the workbench within budget",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-907 / desktop performance",
+    "reason": "The original nightly and focused final-source run intermittently leave initial Sessions Main empty. Identical-source diagnosis passed; a separate baseline also exceeded the unchanged 3000 ms attach budget.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40995061329",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41025270739",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41026983012"
+    ],
+    "removeWhen": "Fix initial Sessions view mounting and warm attach timing, then verify the unchanged workload in the first Windows execution before restoring the stable gate."
+  },
+  {
+    "runner": "packaged-desktop-benchmark",
+    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
+    "name": "cold start with an empty home shows the workbench within budget",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-907 / desktop performance",
+    "reason": "Intermittently misses the required settling sample or fails cleanup with EBUSY on Windows; other executions of the same source pass. Preserve all startup, evidence and cleanup assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40995061329",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41025270739",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41026983012"
+    ],
+    "removeWhen": "Fix native settling collection and Windows process/file-handle cleanup, then verify the unchanged cold workload in the first Windows execution before restoring the stable gate."
   }
 ]

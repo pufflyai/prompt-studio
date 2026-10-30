@@ -162,6 +162,8 @@ Choose the smallest test scope that covers the changed behavior. Include affecte
 
 Tests must stay green.
 
+CI executes each test once per applicable platform. Never repeat tests, retry failures, or create repeated reliability runs to obtain a pass. Quarantine confirmed flakes with evidence, an owner, and removal criteria; run them once in their separate lane and require its execution report.
+
 ### 4. Prove it works (required)
 
 For code changes, run targeted tests and the relevant package checks, such as type checking, linting, or a build. Match the checks to the affected behavior and dependencies. Fix reported issues, then rerun only the failed or affected checks. Do not repeat passing checks without a new change or unresolved concern.
