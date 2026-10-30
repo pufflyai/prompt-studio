@@ -1,6 +1,6 @@
 export class NativeDocumentSourceError extends Error {
   constructor(
-    readonly status: 400 | 404 | 502,
+    readonly status: 400 | 403 | 404 | 409 | 502,
     readonly code: string,
     message: string,
   ) {

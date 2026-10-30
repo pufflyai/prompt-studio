@@ -1,5 +1,5 @@
 {
-  "id": "7b07a162-3bd1-4388-9867-d24243887c35",
+  "id": "b6fec830-6f09-4291-82ea-accedcca19a8",
   "prevId": "a83d016d-1fbb-4348-ba66-fcc0315e3ac3",
   "version": "7",
   "dialect": "postgresql",
@@ -172,8 +172,12 @@
           "name": "activity_events_project_id_projects_id_fk",
           "tableFrom": "activity_events",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -181,8 +185,12 @@
           "name": "activity_events_source_extension_id_installed_extension_sources_id_fk",
           "tableFrom": "activity_events",
           "tableTo": "installed_extension_sources",
-          "columnsFrom": ["source_extension_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "source_extension_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -241,8 +249,12 @@
           "name": "artifact_file_projections_projection_key_artifact_file_projection_roots_projection_key_fk",
           "tableFrom": "artifact_file_projections",
           "tableTo": "artifact_file_projection_roots",
-          "columnsFrom": ["projection_key"],
-          "columnsTo": ["projection_key"],
+          "columnsFrom": [
+            "projection_key"
+          ],
+          "columnsTo": [
+            "projection_key"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -250,7 +262,10 @@
       "compositePrimaryKeys": {
         "artifact_file_projections_projection_key_path_pk": {
           "name": "artifact_file_projections_projection_key_path_pk",
-          "columns": ["projection_key", "path"]
+          "columns": [
+            "projection_key",
+            "path"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -305,8 +320,12 @@
           "name": "asset_transfers_project_id_projects_id_fk",
           "tableFrom": "asset_transfers",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -314,7 +333,11 @@
       "compositePrimaryKeys": {
         "asset_transfers_project_id_extension_id_operation_id_pk": {
           "name": "asset_transfers_project_id_extension_id_operation_id_pk",
-          "columns": ["project_id", "extension_id", "operation_id"]
+          "columns": [
+            "project_id",
+            "extension_id",
+            "operation_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -369,8 +392,12 @@
           "name": "automation_principals_project_id_projects_id_fk",
           "tableFrom": "automation_principals",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -433,8 +460,12 @@
           "name": "automation_run_events_run_id_automation_runs_id_fk",
           "tableFrom": "automation_run_events",
           "tableTo": "automation_runs",
-          "columnsFrom": ["run_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -574,8 +605,12 @@
           "name": "automation_runs_project_id_projects_id_fk",
           "tableFrom": "automation_runs",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -583,8 +618,12 @@
           "name": "automation_runs_principal_id_automation_principals_id_fk",
           "tableFrom": "automation_runs",
           "tableTo": "automation_principals",
-          "columnsFrom": ["principal_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "principal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -592,8 +631,12 @@
           "name": "automation_runs_token_id_automation_tokens_id_fk",
           "tableFrom": "automation_runs",
           "tableTo": "automation_tokens",
-          "columnsFrom": ["token_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "token_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -691,8 +734,12 @@
           "name": "automation_tokens_principal_id_automation_principals_id_fk",
           "tableFrom": "automation_tokens",
           "tableTo": "automation_principals",
-          "columnsFrom": ["principal_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "principal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -700,8 +747,12 @@
           "name": "automation_tokens_project_id_projects_id_fk",
           "tableFrom": "automation_tokens",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -753,8 +804,12 @@
           "name": "board_default_views_project_id_projects_id_fk",
           "tableFrom": "board_default_views",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -762,8 +817,12 @@
           "name": "board_default_views_extension_instance_id_extension_instances_id_fk",
           "tableFrom": "board_default_views",
           "tableTo": "extension_instances",
-          "columnsFrom": ["extension_instance_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "extension_instance_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -773,7 +832,11 @@
         "board_default_views_scope_unique": {
           "name": "board_default_views_scope_unique",
           "nullsNotDistinct": true,
-          "columns": ["project_id", "extension_instance_id", "board_id"]
+          "columns": [
+            "project_id",
+            "extension_instance_id",
+            "board_id"
+          ]
         }
       },
       "policies": {},
@@ -892,8 +955,12 @@
           "name": "board_views_project_id_projects_id_fk",
           "tableFrom": "board_views",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -901,8 +968,12 @@
           "name": "board_views_extension_instance_id_extension_instances_id_fk",
           "tableFrom": "board_views",
           "tableTo": "extension_instances",
-          "columnsFrom": ["extension_instance_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "extension_instance_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1055,8 +1126,12 @@
           "name": "extension_connections_project_id_projects_id_fk",
           "tableFrom": "extension_connections",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1142,8 +1217,12 @@
           "name": "extension_resource_sequences_project_id_projects_id_fk",
           "tableFrom": "extension_resource_sequences",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1151,7 +1230,11 @@
       "compositePrimaryKeys": {
         "extension_resource_sequences_project_id_extension_id_kind_pk": {
           "name": "extension_resource_sequences_project_id_extension_id_kind_pk",
-          "columns": ["project_id", "extension_id", "kind"]
+          "columns": [
+            "project_id",
+            "extension_id",
+            "kind"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1223,8 +1306,12 @@
           "name": "extension_automation_preferences_project_id_projects_id_fk",
           "tableFrom": "extension_automation_preferences",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1232,8 +1319,12 @@
           "name": "extension_automation_preferences_extension_instance_id_extension_instances_id_fk",
           "tableFrom": "extension_automation_preferences",
           "tableTo": "extension_instances",
-          "columnsFrom": ["extension_instance_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "extension_instance_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1241,7 +1332,11 @@
       "compositePrimaryKeys": {
         "extension_automation_preferences_project_id_extension_instance_id_automation_id_pk": {
           "name": "extension_automation_preferences_project_id_extension_instance_id_automation_id_pk",
-          "columns": ["project_id", "extension_instance_id", "automation_id"]
+          "columns": [
+            "project_id",
+            "extension_instance_id",
+            "automation_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1381,8 +1476,12 @@
           "name": "extension_files_project_id_projects_id_fk",
           "tableFrom": "extension_files",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1390,8 +1489,12 @@
           "name": "extension_files_extension_instance_id_extension_instances_id_fk",
           "tableFrom": "extension_files",
           "tableTo": "extension_instances",
-          "columnsFrom": ["extension_instance_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "extension_instance_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1399,8 +1502,12 @@
           "name": "extension_files_file_id_files_id_fk",
           "tableFrom": "extension_files",
           "tableTo": "files",
-          "columnsFrom": ["file_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "file_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1548,8 +1655,12 @@
           "name": "extension_instances_installed_extension_id_installed_extension_sources_id_fk",
           "tableFrom": "extension_instances",
           "tableTo": "installed_extension_sources",
-          "columnsFrom": ["installed_extension_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "installed_extension_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1648,8 +1759,12 @@
           "name": "extension_reload_events_installed_extension_id_installed_extension_sources_id_fk",
           "tableFrom": "extension_reload_events",
           "tableTo": "installed_extension_sources",
-          "columnsFrom": ["installed_extension_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "installed_extension_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1749,7 +1864,12 @@
       "compositePrimaryKeys": {
         "extension_settings_owner_type_owner_id_extension_id_key_pk": {
           "name": "extension_settings_owner_type_owner_id_extension_id_key_pk",
-          "columns": ["owner_type", "owner_id", "extension_id", "key"]
+          "columns": [
+            "owner_type",
+            "owner_id",
+            "extension_id",
+            "key"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -1840,8 +1960,12 @@
           "name": "extension_skill_preferences_project_id_projects_id_fk",
           "tableFrom": "extension_skill_preferences",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1849,8 +1973,12 @@
           "name": "extension_skill_preferences_extension_instance_id_extension_instances_id_fk",
           "tableFrom": "extension_skill_preferences",
           "tableTo": "extension_instances",
-          "columnsFrom": ["extension_instance_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "extension_instance_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1858,7 +1986,11 @@
       "compositePrimaryKeys": {
         "extension_skill_preferences_project_id_extension_instance_id_skill_key_pk": {
           "name": "extension_skill_preferences_project_id_extension_instance_id_skill_key_pk",
-          "columns": ["project_id", "extension_instance_id", "skill_key"]
+          "columns": [
+            "project_id",
+            "extension_instance_id",
+            "skill_key"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -2111,8 +2243,12 @@
           "name": "files_project_id_projects_id_fk",
           "tableFrom": "files",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2163,6 +2299,13 @@
           "type": "bytea",
           "primaryKey": false,
           "notNull": false
+        },
+        "completed_revision": {
+          "name": "completed_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         }
       },
       "indexes": {},
@@ -2171,8 +2314,12 @@
           "name": "native_document_file_projections_workbench_id_projects_id_fk",
           "tableFrom": "native_document_file_projections",
           "tableTo": "projects",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2180,7 +2327,12 @@
       "compositePrimaryKeys": {
         "native_document_file_projections_pk": {
           "name": "native_document_file_projections_pk",
-          "columns": ["workbench_id", "extension_id", "document_key", "projection_key"]
+          "columns": [
+            "workbench_id",
+            "extension_id",
+            "document_key",
+            "projection_key"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -2217,8 +2369,12 @@
           "name": "native_document_room_updates_room_id_native_document_rooms_id_fk",
           "tableFrom": "native_document_room_updates",
           "tableTo": "native_document_rooms",
-          "columnsFrom": ["room_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "room_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2226,7 +2382,10 @@
       "compositePrimaryKeys": {
         "native_document_room_updates_room_id_revision_pk": {
           "name": "native_document_room_updates_room_id_revision_pk",
-          "columns": ["room_id", "revision"]
+          "columns": [
+            "room_id",
+            "revision"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -2289,8 +2448,16 @@
           "name": "native_document_rooms_workbench_id_extension_id_document_key_native_document_sources_workbench_id_extension_id_document_key_fk",
           "tableFrom": "native_document_rooms",
           "tableTo": "native_document_sources",
-          "columnsFrom": ["workbench_id", "extension_id", "document_key"],
-          "columnsTo": ["workbench_id", "extension_id", "document_key"],
+          "columnsFrom": [
+            "workbench_id",
+            "extension_id",
+            "document_key"
+          ],
+          "columnsTo": [
+            "workbench_id",
+            "extension_id",
+            "document_key"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2327,7 +2494,7 @@
           "name": "target",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         }
       },
       "indexes": {},
@@ -2336,8 +2503,12 @@
           "name": "native_document_sources_workbench_id_projects_id_fk",
           "tableFrom": "native_document_sources",
           "tableTo": "projects",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2345,7 +2516,11 @@
       "compositePrimaryKeys": {
         "native_document_sources_workbench_id_extension_id_document_key_pk": {
           "name": "native_document_sources_workbench_id_extension_id_document_key_pk",
-          "columns": ["workbench_id", "extension_id", "document_key"]
+          "columns": [
+            "workbench_id",
+            "extension_id",
+            "document_key"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -2622,8 +2797,12 @@
           "name": "notifications_project_id_projects_id_fk",
           "tableFrom": "notifications",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2748,8 +2927,14 @@
           "name": "recovery_point_owners_workbench_id_hours_recovery_points_workbench_id_hours_fk",
           "tableFrom": "recovery_point_owners",
           "tableTo": "recovery_points",
-          "columnsFrom": ["workbench_id", "hours"],
-          "columnsTo": ["workbench_id", "hours"],
+          "columnsFrom": [
+            "workbench_id",
+            "hours"
+          ],
+          "columnsTo": [
+            "workbench_id",
+            "hours"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2757,7 +2942,11 @@
       "compositePrimaryKeys": {
         "recovery_point_owners_workbench_id_hours_extension_id_pk": {
           "name": "recovery_point_owners_workbench_id_hours_extension_id_pk",
-          "columns": ["workbench_id", "hours", "extension_id"]
+          "columns": [
+            "workbench_id",
+            "hours",
+            "extension_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -2794,8 +2983,12 @@
           "name": "recovery_points_workbench_id_projects_id_fk",
           "tableFrom": "recovery_points",
           "tableTo": "projects",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2803,7 +2996,10 @@
       "compositePrimaryKeys": {
         "recovery_points_workbench_id_hours_pk": {
           "name": "recovery_points_workbench_id_hours_pk",
-          "columns": ["workbench_id", "hours"]
+          "columns": [
+            "workbench_id",
+            "hours"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -2934,8 +3130,12 @@
           "name": "resource_anchors_project_id_projects_id_fk",
           "tableFrom": "resource_anchors",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3076,8 +3276,12 @@
           "name": "session_queue_entries_session_id_sessions_id_fk",
           "tableFrom": "session_queue_entries",
           "tableTo": "sessions",
-          "columnsFrom": ["session_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3232,8 +3436,12 @@
           "name": "sessions_project_id_projects_id_fk",
           "tableFrom": "sessions",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3241,8 +3449,12 @@
           "name": "sessions_session_file_id_files_id_fk",
           "tableFrom": "sessions",
           "tableTo": "files",
-          "columnsFrom": ["session_file_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "session_file_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -3374,8 +3586,12 @@
           "name": "skill_files_project_id_projects_id_fk",
           "tableFrom": "skill_files",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3383,8 +3599,12 @@
           "name": "skill_files_skill_id_skills_id_fk",
           "tableFrom": "skill_files",
           "tableTo": "skills",
-          "columnsFrom": ["skill_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "skill_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3392,8 +3612,12 @@
           "name": "skill_files_file_id_files_id_fk",
           "tableFrom": "skill_files",
           "tableTo": "files",
-          "columnsFrom": ["file_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "file_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3401,7 +3625,10 @@
       "compositePrimaryKeys": {
         "skill_files_skill_id_path_pk": {
           "name": "skill_files_skill_id_path_pk",
-          "columns": ["skill_id", "path"]
+          "columns": [
+            "skill_id",
+            "path"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -3463,8 +3690,12 @@
           "name": "skills_project_id_projects_id_fk",
           "tableFrom": "skills",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3516,8 +3747,16 @@
           "name": "storage_document_operations_document_fk",
           "tableFrom": "storage_document_operations",
           "tableTo": "storage_documents",
-          "columnsFrom": ["workbench_id", "extension_id", "document_id"],
-          "columnsTo": ["workbench_id", "extension_id", "document_id"],
+          "columnsFrom": [
+            "workbench_id",
+            "extension_id",
+            "document_id"
+          ],
+          "columnsTo": [
+            "workbench_id",
+            "extension_id",
+            "document_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3525,7 +3764,12 @@
       "compositePrimaryKeys": {
         "storage_document_operations_pk": {
           "name": "storage_document_operations_pk",
-          "columns": ["workbench_id", "extension_id", "document_id", "operation_id"]
+          "columns": [
+            "workbench_id",
+            "extension_id",
+            "document_id",
+            "operation_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -3574,8 +3818,16 @@
           "name": "storage_document_updates_document_fk",
           "tableFrom": "storage_document_updates",
           "tableTo": "storage_documents",
-          "columnsFrom": ["workbench_id", "extension_id", "document_id"],
-          "columnsTo": ["workbench_id", "extension_id", "document_id"],
+          "columnsFrom": [
+            "workbench_id",
+            "extension_id",
+            "document_id"
+          ],
+          "columnsTo": [
+            "workbench_id",
+            "extension_id",
+            "document_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3583,7 +3835,12 @@
       "compositePrimaryKeys": {
         "storage_document_updates_pk": {
           "name": "storage_document_updates_pk",
-          "columns": ["workbench_id", "extension_id", "document_id", "revision"]
+          "columns": [
+            "workbench_id",
+            "extension_id",
+            "document_id",
+            "revision"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -3640,8 +3897,12 @@
           "name": "storage_documents_workbench_id_projects_id_fk",
           "tableFrom": "storage_documents",
           "tableTo": "projects",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3649,7 +3910,11 @@
       "compositePrimaryKeys": {
         "storage_documents_workbench_id_extension_id_document_id_pk": {
           "name": "storage_documents_workbench_id_extension_id_document_id_pk",
-          "columns": ["workbench_id", "extension_id", "document_id"]
+          "columns": [
+            "workbench_id",
+            "extension_id",
+            "document_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -3727,8 +3992,14 @@
           "name": "storage_record_outbox_sync_fk",
           "tableFrom": "storage_record_outbox",
           "tableTo": "storage_record_sync",
-          "columnsFrom": ["workbench_id", "extension_id"],
-          "columnsTo": ["workbench_id", "extension_id"],
+          "columnsFrom": [
+            "workbench_id",
+            "extension_id"
+          ],
+          "columnsTo": [
+            "workbench_id",
+            "extension_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3810,8 +4081,12 @@
           "name": "storage_record_sync_workbench_id_projects_id_fk",
           "tableFrom": "storage_record_sync",
           "tableTo": "projects",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3819,7 +4094,10 @@
       "compositePrimaryKeys": {
         "storage_record_sync_workbench_id_extension_id_pk": {
           "name": "storage_record_sync_workbench_id_extension_id_pk",
-          "columns": ["workbench_id", "extension_id"]
+          "columns": [
+            "workbench_id",
+            "extension_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -3951,8 +4229,12 @@
           "name": "storage_current_records_workbench_id_projects_id_fk",
           "tableFrom": "storage_current_records",
           "tableTo": "projects",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3960,8 +4242,14 @@
           "name": "storage_current_records_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk",
           "tableFrom": "storage_current_records",
           "tableTo": "storage_record_projections",
-          "columnsFrom": ["workbench_id", "extension_id"],
-          "columnsTo": ["workbench_id", "extension_id"],
+          "columnsFrom": [
+            "workbench_id",
+            "extension_id"
+          ],
+          "columnsTo": [
+            "workbench_id",
+            "extension_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3969,7 +4257,11 @@
       "compositePrimaryKeys": {
         "storage_current_records_workbench_id_extension_id_record_id_pk": {
           "name": "storage_current_records_workbench_id_extension_id_record_id_pk",
-          "columns": ["workbench_id", "extension_id", "record_id"]
+          "columns": [
+            "workbench_id",
+            "extension_id",
+            "record_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -4018,8 +4310,12 @@
           "name": "storage_record_indexes_workbench_id_projects_id_fk",
           "tableFrom": "storage_record_indexes",
           "tableTo": "projects",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4027,7 +4323,11 @@
       "compositePrimaryKeys": {
         "storage_record_indexes_workbench_id_extension_id_name_pk": {
           "name": "storage_record_indexes_workbench_id_extension_id_name_pk",
-          "columns": ["workbench_id", "extension_id", "name"]
+          "columns": [
+            "workbench_id",
+            "extension_id",
+            "name"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -4078,8 +4378,12 @@
           "name": "storage_record_projections_workbench_id_projects_id_fk",
           "tableFrom": "storage_record_projections",
           "tableTo": "projects",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4087,8 +4391,16 @@
           "name": "storage_record_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk",
           "tableFrom": "storage_record_projections",
           "tableTo": "storage_documents",
-          "columnsFrom": ["workbench_id", "extension_id", "document_id"],
-          "columnsTo": ["workbench_id", "extension_id", "document_id"],
+          "columnsFrom": [
+            "workbench_id",
+            "extension_id",
+            "document_id"
+          ],
+          "columnsTo": [
+            "workbench_id",
+            "extension_id",
+            "document_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4096,7 +4408,10 @@
       "compositePrimaryKeys": {
         "storage_record_projections_workbench_id_extension_id_pk": {
           "name": "storage_record_projections_workbench_id_extension_id_pk",
-          "columns": ["workbench_id", "extension_id"]
+          "columns": [
+            "workbench_id",
+            "extension_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -4202,8 +4517,12 @@
           "name": "storage_resource_aliases_workbench_id_projects_id_fk",
           "tableFrom": "storage_resource_aliases",
           "tableTo": "projects",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4211,8 +4530,12 @@
           "name": "storage_resource_aliases_workbench_id_storage_resource_projections_workbench_id_fk",
           "tableFrom": "storage_resource_aliases",
           "tableTo": "storage_resource_projections",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["workbench_id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "workbench_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4220,7 +4543,11 @@
       "compositePrimaryKeys": {
         "storage_resource_aliases_workbench_id_resource_id_shorthand_pk": {
           "name": "storage_resource_aliases_workbench_id_resource_id_shorthand_pk",
-          "columns": ["workbench_id", "resource_id", "shorthand"]
+          "columns": [
+            "workbench_id",
+            "resource_id",
+            "shorthand"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -4350,8 +4677,12 @@
           "name": "storage_resource_identities_workbench_id_projects_id_fk",
           "tableFrom": "storage_resource_identities",
           "tableTo": "projects",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4359,8 +4690,12 @@
           "name": "storage_resource_identities_workbench_id_storage_resource_projections_workbench_id_fk",
           "tableFrom": "storage_resource_identities",
           "tableTo": "storage_resource_projections",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["workbench_id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "workbench_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4368,7 +4703,10 @@
       "compositePrimaryKeys": {
         "storage_resource_identities_workbench_id_resource_id_pk": {
           "name": "storage_resource_identities_workbench_id_resource_id_pk",
-          "columns": ["workbench_id", "resource_id"]
+          "columns": [
+            "workbench_id",
+            "resource_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -4413,8 +4751,12 @@
           "name": "storage_resource_projections_workbench_id_projects_id_fk",
           "tableFrom": "storage_resource_projections",
           "tableTo": "projects",
-          "columnsFrom": ["workbench_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workbench_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4422,8 +4764,16 @@
           "name": "storage_resource_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk",
           "tableFrom": "storage_resource_projections",
           "tableTo": "storage_documents",
-          "columnsFrom": ["workbench_id", "extension_id", "document_id"],
-          "columnsTo": ["workbench_id", "extension_id", "document_id"],
+          "columnsFrom": [
+            "workbench_id",
+            "extension_id",
+            "document_id"
+          ],
+          "columnsTo": [
+            "workbench_id",
+            "extension_id",
+            "document_id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4431,7 +4781,9 @@
       "compositePrimaryKeys": {
         "storage_resource_projections_workbench_id_pk": {
           "name": "storage_resource_projections_workbench_id_pk",
-          "columns": ["workbench_id"]
+          "columns": [
+            "workbench_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -4485,7 +4837,12 @@
       "compositePrimaryKeys": {
         "webview_preferences_extension_id_name_scope_type_scope_id_pk": {
           "name": "webview_preferences_extension_id_name_scope_type_scope_id_pk",
-          "columns": ["extension_id", "name", "scope_type", "scope_id"]
+          "columns": [
+            "extension_id",
+            "name",
+            "scope_type",
+            "scope_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -4565,8 +4922,12 @@
           "name": "workspace_sessions_workspace_id_workspaces_id_fk",
           "tableFrom": "workspace_sessions",
           "tableTo": "workspaces",
-          "columnsFrom": ["workspace_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4574,8 +4935,12 @@
           "name": "workspace_sessions_session_id_sessions_id_fk",
           "tableFrom": "workspace_sessions",
           "tableTo": "sessions",
-          "columnsFrom": ["session_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4825,8 +5190,12 @@
           "name": "workspaces_project_id_projects_id_fk",
           "tableFrom": "workspaces",
           "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4834,8 +5203,12 @@
           "name": "workspaces_startup_log_file_id_files_id_fk",
           "tableFrom": "workspaces",
           "tableTo": "files",
-          "columnsFrom": ["startup_log_file_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "startup_log_file_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4851,32 +5224,64 @@
     "public.activity_actor_type": {
       "name": "activity_actor_type",
       "schema": "public",
-      "values": ["user", "agent", "system"]
+      "values": [
+        "user",
+        "agent",
+        "system"
+      ]
     },
     "public.activity_source": {
       "name": "activity_source",
       "schema": "public",
-      "values": ["ui", "api", "hook", "system", "agent"]
+      "values": [
+        "ui",
+        "api",
+        "hook",
+        "system",
+        "agent"
+      ]
     },
     "public.extension_load_status": {
       "name": "extension_load_status",
       "schema": "public",
-      "values": ["pending", "loaded", "error", "missing", "disabled"]
+      "values": [
+        "pending",
+        "loaded",
+        "error",
+        "missing",
+        "disabled"
+      ]
     },
     "public.extension_reload_status": {
       "name": "extension_reload_status",
       "schema": "public",
-      "values": ["success", "error", "skipped"]
+      "values": [
+        "success",
+        "error",
+        "skipped"
+      ]
     },
     "public.extension_source_kind": {
       "name": "extension_source_kind",
       "schema": "public",
-      "values": ["local_path", "git", "registry"]
+      "values": [
+        "local_path",
+        "git",
+        "registry"
+      ]
     },
     "public.session_status": {
       "name": "session_status",
       "schema": "public",
-      "values": ["in_progress", "awaiting_input", "queued", "completed", "failed", "cancelled", "disconnected"]
+      "values": [
+        "in_progress",
+        "awaiting_input",
+        "queued",
+        "completed",
+        "failed",
+        "cancelled",
+        "disconnected"
+      ]
     }
   },
   "schemas": {},

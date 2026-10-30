@@ -110,6 +110,7 @@ export {
   type PropsStore,
   type WebviewFilesClient,
 } from "./define-extension-view";
+export { defineTextSource } from "./define-text-source";
 export { resolveEventReferenceId } from "./event-reference";
 export { chooseHarnessAuthentication } from "./harness-authentication";
 export {

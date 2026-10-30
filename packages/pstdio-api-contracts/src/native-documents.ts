@@ -3,15 +3,21 @@ import { bytesToHex } from "@noble/hashes/utils.js";
 import { resourceKey } from "./extension-kernel/resource-key";
 import type { PageParams } from "./extension-kernel/types/pages";
 import type { ResourceRef } from "./extension-kernel/types/resources";
+import type { TextDocumentRef } from "./extension-kernel/types/text-source";
 
 interface FileRendererLoadKeyInput {
   fileRendererId: string;
-  resource: ResourceRef | undefined;
+  resource?: ResourceRef;
   pageParams?: PageParams;
   documentKey?: string;
 }
 
 export type NativeDocumentTarget = Omit<FileRendererLoadKeyInput, "documentKey">;
+export interface TextSourceTarget {
+  extensionId: string;
+  textDocument: TextDocumentRef;
+}
+export type NativeTextTarget = NativeDocumentTarget | TextSourceTarget;
 
 const stableValue = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(stableValue);

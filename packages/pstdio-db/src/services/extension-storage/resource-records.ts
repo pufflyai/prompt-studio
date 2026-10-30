@@ -164,14 +164,20 @@ export const createResourceRecords = (
   };
   return {
     ...queries,
-    async bindText(input: { recordId: string; field?: string; documentKey: string; content?: string }) {
+    async bindText(input: {
+      recordId: string;
+      field?: string;
+      documentKey: string;
+      sourceKey?: string;
+      content?: string;
+    }) {
       const result = await bindNativeRecordSource(db, owner, input, deps.observer);
       if (result.changed) {
         deps.changed();
-        deps.nativeChanged?.([input.documentKey]);
+        deps.nativeChanged?.([result.documentKey]);
         deps.observer?.committed(owner, [result.record], { status: "saved-locally" });
       }
-      return { documentKey: input.documentKey, changed: result.changed };
+      return { documentKey: result.documentKey, lifetime: result.lifetime, changed: result.changed };
     },
     async writeTextAsset(input: {
       recordId: string;

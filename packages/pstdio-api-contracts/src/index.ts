@@ -21,9 +21,15 @@ export * from "./harness-commands";
 export * from "./history-reconciliation";
 export * from "./link-icons";
 export * from "./native-document-presence";
-export { nativeDocumentTargetSchema, nativeFileContentSchema } from "./native-document-schemas";
+export {
+  nativeDocumentTargetSchema,
+  nativeFileContentSchema,
+  nativeTextTargetSchema,
+  textDocumentRefSchema,
+} from "./native-document-schemas";
 export { createNativeSourceKey, type NativeDocumentSource, nativeDocumentSourceSchema } from "./native-document-source";
 export * from "./native-document-transport";
+export type { NativeTextTarget, TextSourceTarget } from "./native-documents";
 export { createFileRendererLoadKey, createNativeDocumentKey, type NativeDocumentTarget } from "./native-documents";
 export * from "./notifications/types";
 export * from "./pagination";

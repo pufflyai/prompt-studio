@@ -16,13 +16,16 @@ import { importTextSource } from "pstdio-sync/text";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_updates, storage_documents } from "../../db/schemas.pg";
 import { runDocumentTransaction } from "./document-persistence";
-import { nativeDocumentId } from "./native-record-projection";
+import { nativeDocumentId, readNativeTextIn } from "./native-record-projection";
+import { nativeSourceAddressIn } from "./native-source-address";
 import { lockRecordOwner, saveRecordChanges } from "./record-changes";
 import { queueRecordUpload } from "./record-outbox";
 import { readProjectedRecords } from "./record-queries";
 import { resourceDocumentId } from "./resource-document-persistence";
 
-type SourceInput = { recordId: string; documentKey: string; field?: string; content?: string };
+type SourceInput = { recordId: string; documentKey: string; sourceKey?: string; field?: string; content?: string };
+type SourceRecord = Awaited<ReturnType<typeof readProjectedRecords>>[number];
+type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 const initialSource = (record: Awaited<ReturnType<typeof readProjectedRecords>>[number], input: SourceInput) => {
   if (input.field) {
     const value = nativeFieldValue(record.value, input.field);
@@ -43,6 +46,25 @@ const initialSource = (record: Awaited<ReturnType<typeof readProjectedRecords>>[
 };
 const sameSource = (source: NativeRecordSources[string], field?: string) =>
   field ? "field" in source && source.field === field : "asset" in source;
+const existingBinding = async (
+  tx: Transaction,
+  owner: StorageOwner,
+  input: SourceInput,
+  record: SourceRecord,
+  sources: NativeRecordSources,
+) => {
+  const existing = Object.entries(sources).find(([, source]) => sameSource(source, input.field));
+  if (!existing) return false;
+  if (existing[0] !== input.documentKey) throw new Error("The source already belongs to another text document");
+  if (input.content !== undefined) {
+    const content = input.field
+      ? nativeFieldValue(record.value, input.field)
+      : await readNativeTextIn(tx, owner, input.documentKey);
+    if (content === undefined) throw new NativeSourcePendingError();
+    if (content !== input.content) throw new Error("A native file view must load its full source bytes");
+  }
+  return true;
+};
 const sourceLifetime = (record: Awaited<ReturnType<typeof readProjectedRecords>>[number]) => {
   if (!record.exists || record.deleted) throw new Error("The text source no longer exists");
   if (!("recordLifetime" in record) || !record.recordLifetime) throw new NativeSourcePendingError();
@@ -58,16 +80,20 @@ export const bindNativeRecordSource = async (
 ) =>
   db.transaction(async (tx) => {
     const revision = await lockRecordOwner(tx, owner);
+    const address = await nativeSourceAddressIn(tx, owner, {
+      recordId: input.recordId,
+      documentKey: input.sourceKey ?? input.documentKey,
+    });
+    if (input.sourceKey && address.documentKey !== input.documentKey) throw new StorageRevisionChangedError();
+    input = { ...input, documentKey: address.documentKey };
     const [record] = await readProjectedRecords(tx, owner, [input.recordId]);
     const lifetime = sourceLifetime(record);
     const sources = ("nativeSources" in record ? record.nativeSources : {}) ?? {};
-    const existing = Object.entries(sources).find(([, source]) => sameSource(source, input.field));
-    if (existing) {
-      if (existing[0] !== input.documentKey) throw new Error("The source already belongs to another text document");
-      return { changed: false, record };
-    }
     const expected = observer?.expected?.(owner, input.recordId);
     if (expected !== undefined && expected !== record.revision) throw new StorageRevisionChangedError();
+    if (await existingBinding(tx, owner, input, record, sources)) {
+      return { changed: false, record, ...address };
+    }
     const original = initialSource(record, input);
     const { content } = original;
     const native = await runDocumentTransaction(
@@ -119,5 +145,5 @@ export const bindNativeRecordSource = async (
     await saveRecordChanges(tx, owner, revision, [prepared]);
     await queueRecordUpload(tx, owner, [prepared]);
     const [saved] = await readProjectedRecords(tx, owner, [input.recordId]);
-    return { changed: true, record: saved };
+    return { changed: true, record: saved, ...address };
   });

@@ -1,5 +1,5 @@
 import { bigint, foreignKey, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
-import type { NativeDocumentTarget } from "pstdio-api-contracts";
+import type { NativeTextTarget } from "pstdio-api-contracts";
 import { projects } from "./projects";
 import { bytea } from "./types";
 
@@ -12,7 +12,7 @@ export const native_document_sources = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     extension_id: text("extension_id").notNull(),
     document_key: text("document_key").notNull(),
-    target: jsonb("target").$type<NativeDocumentTarget>().notNull(),
+    target: jsonb("target").$type<NativeTextTarget>(),
   },
   (table) => [primaryKey({ columns: [table.workbench_id, table.extension_id, table.document_key] })],
 );
@@ -29,6 +29,7 @@ export const native_document_file_projections = pgTable(
     projection_key: text("projection_key").notNull().default("handler"),
     baseline: bytea("baseline"),
     pending: bytea("pending"),
+    completed_revision: bigint("completed_revision", { mode: "number" }).notNull().default(0),
   },
   (table) => [
     primaryKey({

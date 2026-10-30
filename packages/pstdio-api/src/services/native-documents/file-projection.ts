@@ -1,4 +1,4 @@
-import type { NativeDocumentTarget } from "pstdio-api-contracts";
+import type { NativeTextTarget } from "pstdio-api-contracts";
 import type { StorageOwner } from "pstdio-sync";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { createNativeFileCopy } from "./file-copy";
@@ -57,8 +57,10 @@ export const createNativeFileProjector = (deps: {
       return serialize(address, async () => {
         const target = await deps.storage.nativeRooms.source(address);
         if (!target) throw new Error("Native document source not found");
-        const input: NativeDocumentTarget & { projectId: string } = { ...target, projectId: address.owner.workbenchId };
+        const input: NativeTextTarget & { projectId: string } = { ...target, projectId: address.owner.workbenchId };
         const loaded = await deps.load(input);
+        if (loaded.content.editable === false)
+          throw new NativeDocumentSourceError(403, "source_read_only", "The text source is read only");
         if (loaded.documentKey !== address.documentKey || loaded.owner.extensionId !== address.owner.extensionId)
           throw new NativeDocumentSourceError(
             400,
@@ -68,10 +70,14 @@ export const createNativeFileProjector = (deps: {
         await observe(address, loaded);
         await initialize(address);
         const saved = (await projections.read(address))!;
-        const state = await canonical(address).exportUpdate();
+        const { state, revision } = await canonical(address).snapshot();
         const content = checkpointText(state);
         // Only physical copies are outside-write evidence. A downloaded record or asset is not an edit.
-        if (saved.baseline && content === checkpointText(saved.baseline) && !saved.pending) return;
+        if (saved.baseline && content === checkpointText(saved.baseline) && !saved.pending) {
+          await projections.begin({ ...address, state });
+          await projections.complete({ ...address, state, revision });
+          return;
+        }
         await projections.begin({ ...address, state });
         await deps.save({
           ...input,
@@ -79,7 +85,7 @@ export const createNativeFileProjector = (deps: {
           fileStorageVersions: loaded.fileStorageVersions,
           ...(loaded.copy ? { projection: { ...address, projectionKey: loaded.copy.projectionKey, state } } : {}),
         });
-        await projections.complete({ ...address, state });
+        await projections.complete({ ...address, state, revision });
       });
     },
   };

@@ -12,6 +12,7 @@ import { ProjectFolderMissingError } from "../../features/projects/project-folde
 import { fileRecordId } from "../shared-files/file-tree";
 import { workspaceFileObservationKey } from "../shared-files/observed-file-mount";
 import { withStorageObservation } from "../shared-files/storage-observation";
+import { validateLoadedRecordSource } from "./loaded-record-source";
 import { NativeDocumentSourceError } from "./source-error";
 
 const unavailable = (message: string) =>
@@ -36,7 +37,7 @@ const readWorkspaceSource = async (root: string, path: string) => {
   }
 };
 
-export const resolveNativeSource = async (
+const resolveNativeDeclaration = async (
   deps: ExtensionsRouteDeps,
   owner: StorageOwner,
   source: NativeDocumentSource,
@@ -66,6 +67,20 @@ export const resolveNativeSource = async (
   if (!mount) throw unavailable("The declared text source mount is unavailable");
   const path = posix.join(mount.relativePath, normalizeMountRelativePath(source.path));
   return { documentKey: createNativeSourceKey(["artifact", mount.id, source.identity]), recordId: fileRecordId(path) };
+};
+
+export const resolveNativeSource = async (
+  deps: ExtensionsRouteDeps,
+  owner: StorageOwner,
+  source: NativeDocumentSource,
+) => {
+  const address = await resolveNativeDeclaration(deps, owner, source);
+  if (address.recordId === undefined) return { ...address, lifetime: "initial" };
+  const resolved = await deps.extensionStorageService.resolveNativeRecordAddress(owner, {
+    recordId: address.recordId,
+    documentKey: address.documentKey,
+  });
+  return { ...address, ...resolved, sourceKey: address.documentKey };
 };
 
 export const resolveNativeLoadedSource = async (
@@ -103,7 +118,17 @@ export const resolveNativeLoadedSource = async (
       );
     copy = { projectionKey, content };
   }
-  return { documentKey: address.documentKey, copy };
+  const fileStorageVersions =
+    address.recordId === undefined
+      ? input.versions
+      : await validateLoadedRecordSource(deps.extensionStorageService, {
+          ...address,
+          recordId: address.recordId,
+          owner: input.owner,
+          content: input.content,
+          versions: input.versions,
+        });
+  return { documentKey: address.documentKey, lifetime: address.lifetime, copy, fileStorageVersions };
 };
 
 export const initializeNativeSource = async (

@@ -47,7 +47,7 @@ describe("removed extension resources", () => {
     await settle();
     const before = fixture.workbench.resources.getRemovalVersion();
     deleted = true;
-    if (trigger === "reset") publishExtensionEventReset();
+    if (trigger === "reset") publishExtensionEventReset({ projectId });
     else publishExtensionEvent({ id: `${extensionId}.event.notes.changed`, projectId });
     await settle();
     expect(fixture.workbench.resources.wasRemovedSince(resource, before)).toBe(true);
@@ -90,7 +90,7 @@ describe("removed extension resources", () => {
     await settle();
     const selected = fixture.workbench.layout.getLayout().activeWidgetId;
     deleted = true;
-    if (trigger === "reset") publishExtensionEventReset();
+    if (trigger === "reset") publishExtensionEventReset({ projectId });
     else publishExtensionEvent({ id: `${extensionId}.event.notes.changed`, projectId });
     await settle();
     const tabs = fixture.workbench.layout.getLayout().regions.side.widgets;
@@ -135,7 +135,7 @@ describe("open extension resource sync", () => {
     await settle();
     const selected = workbench.layout.getLayout().activeWidgetId;
     writable = false;
-    if (eventId === "reset") publishExtensionEventReset();
+    if (eventId === "reset") publishExtensionEventReset({ projectId });
     else publishExtensionEvent({ id: eventId, projectId });
     await settle();
     const duplicate = workbench.layout.getLayout().regions.side.widgets[0]?.resource;

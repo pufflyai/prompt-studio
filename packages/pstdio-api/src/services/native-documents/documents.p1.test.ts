@@ -10,7 +10,7 @@ import { createWorkspaceContextFixture } from "../../features/extensions/workspa
 import { createNativeDocumentRoutes } from "../../features/native-documents/routes";
 import { createNativeDocumentService } from "./documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
-import { initializeNativeSource } from "./source-binding";
+import { initializeNativeSource, resolveNativeLoadedSource } from "./source-binding";
 
 let extension: Awaited<ReturnType<typeof createWorkspaceContextFixture>>;
 const services: ReturnType<typeof createNativeDocumentService>[] = [];
@@ -80,6 +80,237 @@ const setup = () => {
 const target = { fileRendererId: "example.context.view.document", resource: undefined };
 const open = (service: ReturnType<typeof createNativeDocumentService>) =>
   service.open({ ...target, projectId: storage.projectAId });
+
+test("restart retains a deleted record's pending text and continues recovering a healthy source", async () => {
+  const { deps } = setup();
+  const owner = { workbenchId: storage.projectAId, extensionId: "example.context" };
+  const records = (await storage.svc.open({ owner })).records;
+  await records.commit({
+    operationId: "create-deleted",
+    edits: [{ recordId: "retired", replace: { content: "cached source" } }],
+  });
+  const source = { kind: "record" as const, recordId: "retired", field: "/content" };
+  const load = async (input: Parameters<typeof loadNativeMarkdownFile>[1]) => {
+    if ("fileRendererId" in input && input.fileRendererId === "cached-record") {
+      const binding = await resolveNativeLoadedSource(deps, { owner, source, content: "cached source", versions: {} });
+      return {
+        ...binding,
+        owner,
+        content: { content: "cached source", documentSource: source },
+        saveHandlerId: "cached-save",
+        projectionTarget: { fileRendererId: "cached-record", resource: undefined, pageParams: undefined },
+      };
+    }
+    return loadNativeMarkdownFile(deps, input);
+  };
+  const save = async (input: Parameters<typeof saveNativeMarkdownFile>[1]) =>
+    "fileRendererId" in input && input.fileRendererId === "cached-record"
+      ? { fileStorageVersions: {} }
+      : saveNativeMarkdownFile(deps, input);
+  const service = createService({ storage: storage.svc, load, save });
+  const retired = await service.open({
+    projectId: storage.projectAId,
+    fileRendererId: "cached-record",
+    resource: undefined,
+  });
+  await service.close({ projectId: storage.projectAId, roomId: retired.roomId });
+  const healthy = await open(service);
+  await service.close({ projectId: storage.projectAId, roomId: healthy.roomId });
+  await service.dispose();
+  await records.commit({ operationId: "delete-source", edits: [{ recordId: "retired", deleted: true }] });
+  await storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).save("retained late text");
+  await storage.svc.openNativeTextDocument({ owner, fileId: healthy.documentKey }).save("healthy pending text");
+  // This fresh service resolves the same cached declaration; deletion is a known source error.
+  const reopened = createService({ storage: storage.svc, load, save });
+  await reopened.recover();
+  expect((await records.read("retired")).deleted).toBe(true);
+  expect(await storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).read()).toBe(
+    "retained late text",
+  );
+  expect(await Array.fromAsync(storage.svc.nativeFileProjections.pending())).toContainEqual({
+    owner,
+    documentKey: retired.documentKey,
+  });
+  expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("healthy pending text");
+});
+
+test.each([
+  false,
+  true,
+])("record sources reject transformed snippets, including an existing binding (%s)", async (bound) => {
+  const { deps } = setup();
+  const owner = { workbenchId: storage.projectAId, extensionId: "example.context" };
+  const records = (await storage.svc.open({ owner })).records;
+  await records.commit({
+    operationId: "create",
+    edits: [{ recordId: "body", replace: { content: "complete source" } }],
+  });
+  const source = { kind: "record" as const, recordId: "body", field: "/content" };
+  if (bound) {
+    const loaded = await resolveNativeLoadedSource(deps, { owner, source, content: "complete source", versions: {} });
+    await records.bindText({
+      recordId: "body",
+      documentKey: loaded.documentKey,
+      field: "/content",
+      content: "complete source",
+    });
+  }
+  await expect(
+    resolveNativeLoadedSource(deps, { owner, source, content: "snippet", versions: {} }),
+  ).rejects.toMatchObject({ code: "native_document_source_invalid" });
+});
+
+test("a read-only source cannot accept a reconnect frame or replace a writable locator", async () => {
+  await Bun.write(
+    join(extension.root, "extension.ts"),
+    `export default { textSources: [{
+    id: "body", ref: { kind: "text-source", id: "body" }, params: { writable: { type: "boolean" } },
+    resolve: async (ctx, { params }) => ({ source: { kind: "workspace", path: "notes.txt" }, content: await ctx.workspaceFiles.readText("notes.txt"), editable: params.writable === true }),
+    project: async (ctx, { content }) => ctx.workspaceFiles.writeText("notes.txt", content),
+  }] };`,
+  );
+  const { service } = setup();
+  const writable = {
+    projectId: storage.projectAId,
+    extensionId: "example.context",
+    textDocument: { sourceId: "body", params: { writable: true } },
+  };
+  const first = await service.open(writable);
+  const readOnly = { ...writable, textDocument: { sourceId: "body", params: { writable: false } } };
+  const reader = await service.open(readOnly);
+  expect(await storage.svc.nativeRooms.source(first)).toEqual({
+    extensionId: writable.extensionId,
+    textDocument: writable.textDocument,
+  });
+  const author = new Y.Doc();
+  Y.applyUpdate(author, reader.state);
+  const vector = Y.encodeStateVector(author);
+  author.getText("content").insert(0, "forbidden ");
+  const pendingUpdate = Y.encodeStateAsUpdate(author, vector);
+  try {
+    await expect(service.open({ ...readOnly, sourceState: reader.state, pendingUpdate })).rejects.toMatchObject({
+      code: "source_read_only",
+    });
+    await expect(
+      service.submit({ projectId: storage.projectAId, roomId: reader.roomId, update: pendingUpdate }),
+    ).rejects.toMatchObject({ code: "source_read_only" });
+    expect(await storage.svc.openNativeTextDocument({ owner: first.owner, fileId: first.documentKey }).read()).toBe(
+      "selected folder",
+    );
+  } finally {
+    author.destroy();
+  }
+});
+
+test("a file view's read-only restriction also limits a writable text provider", async () => {
+  await Bun.write(
+    join(extension.root, "extension.ts"),
+    `export default {
+    textSources: [{ id: "body", ref: { kind: "text-source", id: "body" }, params: {},
+      resolve: async (ctx) => ({ source: { kind: "workspace", path: "notes.txt" }, content: await ctx.workspaceFiles.readText("notes.txt"), editable: true }),
+      project: async (ctx, { content }) => ctx.workspaceFiles.writeText("notes.txt", content) }],
+    views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Read only", body: { kind: "file", load: async () => ({ textDocument: { sourceId: "body", params: {} }, editable: false }) } }],
+  };`,
+  );
+  const { service } = setup();
+  const room = await open(service);
+  expect(room.content.editable).toBe(false);
+  const author = new Y.Doc();
+  Y.applyUpdate(author, room.state);
+  const vector = Y.encodeStateVector(author);
+  author.getText("content").insert(0, "forbidden ");
+  try {
+    await expect(
+      service.submit({
+        projectId: storage.projectAId,
+        roomId: room.roomId,
+        update: Y.encodeStateAsUpdate(author, vector),
+      }),
+    ).rejects.toMatchObject({ code: "source_read_only" });
+  } finally {
+    author.destroy();
+  }
+});
+
+test("read-only sources without a writable locator do not leave fatal projection work after restart", async () => {
+  await Bun.write(
+    join(extension.root, "extension.ts"),
+    `export default { textSources: [{
+    id: "body", ref: { kind: "text-source", id: "body" }, params: {},
+    resolve: async (ctx) => ({ source: { kind: "workspace", path: "notes.txt" }, content: await ctx.workspaceFiles.readText("notes.txt"), editable: false }),
+    project: async () => { throw new Error("Read-only projection must not run"); },
+  }] };`,
+  );
+  const { service } = setup();
+  await service.open({
+    projectId: storage.projectAId,
+    extensionId: "example.context",
+    textDocument: { sourceId: "body", params: {} },
+  });
+  // Leave the durable read room as if its guest disappeared before closing.
+  await service.dispose();
+  expect(await Array.fromAsync(storage.svc.nativeFileProjections.pending())).toEqual([]);
+  await setup().service.recover();
+  expect(await Array.fromAsync(storage.svc.nativeRooms.pending())).toEqual([]);
+  expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("selected folder");
+});
+
+test("an open provider-backed file rechecks its presentation's write access before admitting another edit", async () => {
+  await Bun.write(
+    join(extension.root, "extension.ts"),
+    `export default {
+    textSources: [{ id: "body", ref: { kind: "text-source", id: "body" }, params: {},
+      resolve: async (ctx) => ({ source: { kind: "workspace", path: "notes.txt" }, content: await ctx.workspaceFiles.readText("notes.txt"), editable: true }),
+      project: async (ctx, { content }) => ctx.workspaceFiles.writeText("notes.txt", content) }],
+    views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: { kind: "file", load: async (ctx) => ({ textDocument: { sourceId: "body", params: {} }, editable: !(await ctx.workspaceFiles.exists("read-only")) }) } }],
+  };`,
+  );
+  const { service } = setup();
+  const room = await open(service);
+  expect(room.content.editable).toBe(true);
+  await writeFile(join(extension.root, "read-only"), "");
+  const author = new Y.Doc();
+  Y.applyUpdate(author, room.state);
+  const vector = Y.encodeStateVector(author);
+  author.getText("content").insert(0, "forbidden ");
+  try {
+    await expect(
+      service.submit({
+        projectId: storage.projectAId,
+        roomId: room.roomId,
+        update: Y.encodeStateAsUpdate(author, vector),
+      }),
+    ).rejects.toMatchObject({ code: "source_read_only" });
+  } finally {
+    author.destroy();
+  }
+});
+
+test("durable text projects after every editor has closed", async () => {
+  const { service } = setup();
+  const room = await open(service);
+  await service.close({ projectId: storage.projectAId, roomId: room.roomId });
+  const text = storage.svc.openNativeTextDocument({ owner: room.owner, fileId: room.documentKey });
+  await text.save("remote edit without any editor");
+  await service.dispose();
+  expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("remote edit without any editor");
+});
+
+test("startup finds a committed projection without a room or pending-write checkpoint", async () => {
+  const { service } = setup();
+  const room = await open(service);
+  await service.close({ projectId: storage.projectAId, roomId: room.roomId });
+  await service.dispose();
+  const text = storage.svc.openNativeTextDocument({ owner: room.owner, fileId: room.documentKey });
+  await text.save("committed while projection worker was stopped");
+  expect(await Array.fromAsync(storage.svc.nativeRooms.pending())).toEqual([]);
+  expect((await storage.svc.nativeFileProjections.read(room))?.pending).toBeNull();
+  const reopened = setup().service;
+  await reopened.recover();
+  expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe(
+    "committed while projection worker was stopped",
+  );
+});
 
 test("open editor sources can register with relay before unrelated discovery finishes", async () => {
   const { service } = setup();

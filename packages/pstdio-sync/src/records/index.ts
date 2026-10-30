@@ -26,7 +26,7 @@ export {
 } from "./project-info";
 export { appendGroups, projectGroups, type RecordProjection } from "./projection";
 export { adoptionEdit, mergeJson } from "./record-adoption";
-export { recordLifetime } from "./record-lifetime";
+export { hasEarlierRecordLifetime, recordLifetime } from "./record-lifetime";
 export {
   compareQueryValues,
   encodeQueryCursor,

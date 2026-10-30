@@ -8,14 +8,6 @@ import { MarkdownEditor } from "./markdown-editor";
 
 const initial = "# Shared document\n\nFirst paragraph.\n\nKeep __this spelling__ and {{token}}.";
 const tableInitial = "| A | B |\n| --- | --- |\n| left | right |";
-const _selectEnd = (element: HTMLElement) => {
-  const range = document.createRange();
-  range.selectNodeContents(element);
-  range.collapse(false);
-  const selection = window.getSelection()!;
-  selection.removeAllRanges();
-  selection.addRange(range);
-};
 const createPair = (source: string) => {
   const first = new Y.Doc();
   first.getText("content").insert(0, source);
@@ -189,16 +181,6 @@ const meta = {
 } satisfies CanvasMeta<typeof MarkdownEditor>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;
-
-const _checkSameTickEdits = async (canvasElement: HTMLElement, order: "remote-first" | "local-first") => {
-  const canvas = within(canvasElement);
-  await userEvent.click(canvas.getByRole("button", { name: `Commit ${order} edits` }));
-  for (const id of ["device-0", "device-1"]) {
-    const device = within(canvas.getByTestId(id));
-    await waitFor(() => expect(device.getByTestId("source").textContent).toBe("REMOTE Start LOCAL"));
-    await expect(device.getByRole("textbox")).toHaveTextContent("REMOTE Start LOCAL");
-  }
-};
 export const SharedEditing: Story = {
   id: "patterns-editors-markdown-editor-collaboration--shared-editing",
   render: () => <CollaborationScene />,

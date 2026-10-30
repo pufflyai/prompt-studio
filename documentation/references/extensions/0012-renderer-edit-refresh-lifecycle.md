@@ -6,6 +6,37 @@ Editable native file renderers have one owner for loaded content, the current dr
 
 ## Shared Markdown sources
 
+Source providers separate domain persistence from presentation. Register a
+`defineTextSource` in `textSources` with parameter definitions, a `resolve` callback
+returning the complete `source`, `content` and `editable` value, and an idempotent
+`project` callback. The host runs both under that extension's normal permissions.
+`FileRendererLoadResult.textDocument` names a local source with `{ sourceId, params,
+resource? }`. Legacy `documentSource` remains supported and is deprecated. The two
+declarations are mutually exclusive.
+
+```ts
+const body = defineTextSource({
+  id: "body",
+  params: {},
+  async resolve(ctx) {
+    return {
+      source: { kind: "workspace", path: "README.md" },
+      content: await ctx.workspaceFiles.readText("README.md"),
+      editable: true,
+    };
+  },
+  async project(ctx, { content }) {
+    await ctx.workspaceFiles.writeText("README.md", content);
+  },
+});
+```
+
+Projection follows durable text commits after editors close. Startup retries
+registered handlers whose canonical revision exceeds their completed revision.
+Unavailable providers retain pending work. A read-only resolution cannot replace
+the writable projection locator. An observed record deletion and recreation starts
+a new text authority, including when the recreated bytes are identical.
+
 An editable Markdown load result can declare `documentSource`. The host then owns
 one durable source document and live presence. The extension still supplies its
 normal load and save handlers. Extensions contain no relay or merge code.

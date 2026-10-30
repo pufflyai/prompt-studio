@@ -18,3 +18,12 @@ export class NativeSourcePendingError extends Error {
     this.name = "NativeSourcePendingError";
   }
 }
+
+/** The logical source was deleted; retained text must not recreate its domain record. */
+export class NativeSourceRetiredError extends Error {
+  readonly code = "native_source_retired";
+  constructor(readonly recordId: string) {
+    super("The text source no longer exists. Its saved text has been retained.");
+    this.name = "NativeSourceRetiredError";
+  }
+}

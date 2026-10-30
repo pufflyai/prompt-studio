@@ -35,11 +35,11 @@ test("file projection intent survives restart and only its matching completion c
   other.destroy();
   await f.projections.begin({ ...address, state: next });
   const reopened = createExtensionStorageDBService(f.db).nativeFileProjections;
-  expect(await reopened.read(address)).toEqual({ baseline: f.state, pending: next });
+  expect(await reopened.read(address)).toEqual({ baseline: f.state, pending: next, completedRevision: 0 });
   expect(await reopened.complete({ ...address, state: f.state })).toBe(false);
   expect((await reopened.read(address))?.pending).toEqual(next);
   expect(await reopened.complete({ ...address, state: next })).toBe(true);
-  expect(await reopened.read(address)).toEqual({ baseline: next, pending: null });
+  expect(await reopened.read(address)).toEqual({ baseline: next, pending: null, completedRevision: 0 });
 });
 
 test("file projection initialization preserves the first baseline and scopes it to its source", async () => {

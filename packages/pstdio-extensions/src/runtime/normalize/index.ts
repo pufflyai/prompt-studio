@@ -22,6 +22,7 @@ import { registerProviders } from "./providers";
 import { validateResourcePrefixes } from "./resource-prefixes";
 import { registerSchedules } from "./schedules";
 import { registerSettings, validateSettingOptions } from "./settings";
+import { registerTextSources } from "./text-sources";
 import { registerTranslations } from "./translations";
 import { registerUiModel } from "./ui-model";
 import { registerWebviewValidation } from "./webview-validation";
@@ -93,6 +94,7 @@ export const normalizeExtensionSources = (
     if (!validateExtensionDefinition(ext, source, runtime)) continue;
 
     registerCommands(ext, source, runtime, index);
+    registerTextSources(ext, source, runtime, index);
     collectCompositionContributions(ext, source, runtime);
     registerKeybindings(ext, source, runtime, index);
     registerMiddlewares(ext, source, runtime);

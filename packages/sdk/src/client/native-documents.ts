@@ -1,8 +1,8 @@
 import {
   type NativeDocumentJoined as JoinedWire,
   type NativeDocumentSelection,
-  type NativeDocumentTarget,
   type NativePresenceSnapshot,
+  type NativeTextTarget,
   nativeDocumentJoinedSchema,
   nativeDocumentSnapshotSchema,
   nativePresenceSnapshotSchema,
@@ -47,7 +47,7 @@ const roomPath = (input: RoomRequest) =>
 export const createNativeDocumentsClient = (request: RequestFn) => ({
   async open(input: {
     projectId: string;
-    target: NativeDocumentTarget;
+    target: NativeTextTarget;
     sourceState?: Uint8Array;
     pendingUpdate?: Uint8Array;
     signal?: AbortSignal;

@@ -22,10 +22,9 @@ export const writeNativeMarkdownExtension = (root: string) => {
   writeFileSync(
     join(source, "extension.ts"),
     `export default {
-    views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: {
-      kind: "file",
-      load: async ctx => ({ fileName: "native-shared.md", content: await ctx.workspaceFiles.readText("native-shared.md"), documentSource: {kind: "workspace", path: "native-shared.md"} }),
-      save: async (ctx, input) => {
+    textSources: [{ id: "body", ref: { kind: "text-source", id: "body" }, params: {},
+      resolve: async ctx => ({ content: await ctx.workspaceFiles.readText("native-shared.md"), source: {kind: "workspace", path: "native-shared.md"}, editable: true }),
+      project: async (ctx, input) => {
         if (await ctx.extensionFiles.exists("race")) {
           await ctx.extensionFiles.writeText("race-entered", "ready");
           while (!(await ctx.extensionFiles.exists("race-release"))) await Bun.sleep(10);
@@ -33,6 +32,10 @@ export const writeNativeMarkdownExtension = (root: string) => {
         await ctx.workspaceFiles.writeText("native-shared.md", input.content);
         await ctx.extensionFiles.writeText("saved.txt", input.content);
       },
+    }],
+    views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: {
+      kind: "file",
+      load: async () => ({ fileName: "native-shared.md", textDocument: { sourceId: "body", params: {} } }),
     }}],
   };`,
   );

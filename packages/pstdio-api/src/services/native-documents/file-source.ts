@@ -1,6 +1,7 @@
 import {
   extensionRendererContextSchema,
   type NativeDocumentTarget,
+  type NativeTextTarget,
   nativeFileContentSchema,
   resolveFileRendererPresentation,
 } from "pstdio-api-contracts";
@@ -12,11 +13,15 @@ import { executeProjectExtensionCommand } from "../../features/extensions/execut
 import { withNativeFileWrite } from "./file-write-context";
 import { resolveNativeLoadedSource } from "./source-binding";
 import { NativeDocumentSourceError } from "./source-error";
+import { loadTextSource, projectTextSource } from "./source-provider";
 
 export { NativeDocumentSourceError } from "./source-error";
 
-type FileTarget = NativeDocumentTarget & { projectId: string; signal?: AbortSignal };
-const resolveFile = async (deps: ExtensionsRouteDeps, input: FileTarget) => {
+type FileTarget = NativeTextTarget & { projectId: string; signal?: AbortSignal };
+const resolveFile = async (
+  deps: ExtensionsRouteDeps,
+  input: NativeDocumentTarget & { projectId: string; signal?: AbortSignal },
+) => {
   const snapshot = await createReadBoundary(input.signal)(() => deps.extensionRuntimeCatalog.get(input.projectId));
   const view = snapshot.runtime.views.find((view) => view.id === input.fileRendererId);
   const handler = (operation: string) =>
@@ -48,6 +53,7 @@ const resolveFile = async (deps: ExtensionsRouteDeps, input: FileTarget) => {
 
 /** The registered extension resolves its source; browsers supply view identities, never source paths. */
 export const loadNativeMarkdownFile = async (deps: ExtensionsRouteDeps, input: FileTarget) => {
+  if ("textDocument" in input) return loadTextSource(deps, input);
   const { view, load, save, renderer, slot } = await resolveFile(deps, input);
   const result = await executeProjectExtensionCommand(deps, {
     projectId: input.projectId,
@@ -67,6 +73,28 @@ export const loadNativeMarkdownFile = async (deps: ExtensionsRouteDeps, input: F
   if (!parsed.success)
     throw new NativeDocumentSourceError(502, "native_document_load_failed", "The file view returned invalid content");
   const content = parsed.data;
+  if (content.textDocument) {
+    if (content.documentSource)
+      throw new NativeDocumentSourceError(
+        400,
+        "native_document_source_invalid",
+        "A file view must declare only one text source",
+      );
+    const loaded = await loadTextSource(deps, {
+      projectId: input.projectId,
+      signal: input.signal,
+      extensionId: view.extensionId,
+      textDocument: content.textDocument,
+    });
+    return {
+      ...loaded,
+      content: {
+        ...content,
+        ...loaded.content,
+        editable: content.editable !== false && loaded.content.editable !== false,
+      },
+    };
+  }
   const presentation = resolveFileRendererPresentation(content, Boolean(save));
   if (presentation.kind !== "markdown" || !presentation.isEditable || !save || !content.documentSource)
     throw new NativeDocumentSourceError(
@@ -84,11 +112,13 @@ export const loadNativeMarkdownFile = async (deps: ExtensionsRouteDeps, input: F
   });
   return {
     documentKey: binding.documentKey,
+    lifetime: binding.lifetime,
     owner,
     content,
     copy: binding.copy,
     saveHandlerId: save.id,
-    fileStorageVersions,
+    fileStorageVersions: binding.fileStorageVersions,
+    projectionTarget: { fileRendererId: input.fileRendererId, resource: input.resource, pageParams: input.pageParams },
   };
 };
 
@@ -105,6 +135,13 @@ export const saveNativeMarkdownFile = async (
     };
   },
 ) => {
+  if ("textDocument" in input) {
+    const project = () => projectTextSource(deps, input);
+    const result = input.projection
+      ? await withNativeFileWrite({ ...input.projection, storage: deps.extensionStorageService }, project)
+      : await project();
+    return { fileStorageVersions: result.fileStorageVersions };
+  }
   const { save, renderer, slot } = await resolveFile(deps, input);
   if (!save)
     throw new NativeDocumentSourceError(

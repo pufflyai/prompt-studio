@@ -1,5 +1,5 @@
 import { and, eq, gt } from "drizzle-orm";
-import { type NativeDocumentTarget, nativeDocumentTargetSchema } from "pstdio-api-contracts";
+import { type NativeTextTarget, nativeTextTargetSchema } from "pstdio-api-contracts";
 import type { StorageOwner } from "pstdio-sync";
 import { applyTextEditorUpdate, readTextDocumentSeed } from "pstdio-sync/text";
 import * as Y from "yjs";
@@ -127,9 +127,16 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
     return { revision: result.revision, documentKey: result.documentKey };
   };
   return {
-    async create(input: { owner: StorageOwner; documentKey: string; target: NativeDocumentTarget; state: Uint8Array }) {
-      const parsed = nativeDocumentTargetSchema.parse(input.target);
-      const target = { ...parsed, resource: parsed.resource };
+    async create(input: {
+      owner: StorageOwner;
+      documentKey: string;
+      target: NativeTextTarget;
+      state: Uint8Array;
+      writable?: boolean;
+    }) {
+      const parsed = nativeTextTargetSchema.parse(input.target);
+      const normalized = "fileRendererId" in parsed ? { ...parsed, resource: parsed.resource } : parsed;
+      const target = input.writable === false ? null : normalized;
       if (!/^[a-f0-9]{64}$/.test(input.documentKey))
         throw new Error("The resolved text source has an invalid document key");
       const document = new Y.Doc();
@@ -143,15 +150,22 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
         }
         const id = crypto.randomUUID();
         await db.transaction(async (tx) => {
-          await tx
-            .insert(native_document_sources)
-            .values({
-              workbench_id: input.owner.workbenchId,
-              extension_id: input.owner.extensionId,
-              document_key: input.documentKey,
-              target,
-            })
-            .onConflictDoNothing();
+          const insert = tx.insert(native_document_sources).values({
+            workbench_id: input.owner.workbenchId,
+            extension_id: input.owner.extensionId,
+            document_key: input.documentKey,
+            target,
+          });
+          if (target)
+            await insert.onConflictDoUpdate({
+              target: [
+                native_document_sources.workbench_id,
+                native_document_sources.extension_id,
+                native_document_sources.document_key,
+              ],
+              set: { target },
+            });
+          else await insert.onConflictDoNothing();
           await tx.insert(native_document_rooms).values({
             id,
             workbench_id: input.owner.workbenchId,

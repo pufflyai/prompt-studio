@@ -41,7 +41,7 @@ export const createNativeFileCopy = (
             "An interrupted file write has an ambiguous result. Its bytes and shared text are preserved.",
           );
         await projections.complete({ ...input, state: saved.pending });
-        saved = { baseline: saved.pending, pending: null };
+        saved = { ...saved, baseline: saved.pending, pending: null };
       }
       if (source === undefined) return;
       if (!saved.baseline)

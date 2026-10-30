@@ -23,6 +23,7 @@ const facts = (document: Y.Doc) => {
 };
 export const hasTextSourceImport = (document: Y.Doc, key: string) =>
   facts(document).some(([, fact]) => fact.source === key);
+export const hasAnyTextSourceImport = (document: Y.Doc) => facts(document).length > 0;
 export const carryTextSourceImports = (source: Y.Doc, target: Y.Doc) => {
   const imports = target.getMap<ImportFact>(importsKey);
   for (const [seed, fact] of facts(source)) {

@@ -43,6 +43,38 @@ const target = {
   pageParams: { section: "body" },
 };
 
+test("a text source resolves and projects through its owner without a rendering view", async () => {
+  await Bun.write(
+    join(fixture.root, "extension.ts"),
+    `export default { textSources: [{
+    id: "body", ref: { kind: "text-source", id: "body" }, params: { name: { type: "text", required: true } },
+    resolve: async (ctx, { params }) => ({ source: { kind: "workspace", path: params.name }, content: await ctx.workspaceFiles.readText(params.name), editable: true }),
+    project: async (ctx, { params, content }) => { await ctx.workspaceFiles.writeText(params.name, content); await ctx.storage.set("domain-effect", content); },
+  }] };`,
+  );
+  const input = {
+    projectId: "project-1",
+    extensionId: "example.context",
+    textDocument: { sourceId: "body", params: { name: "notes.txt" } },
+  };
+  const loaded = await loadNativeMarkdownFile(fixture.deps, input);
+  expect(loaded.content.content).toBe("selected folder");
+  expect(loaded.projectionTarget).toEqual({ extensionId: input.extensionId, textDocument: input.textDocument });
+  await saveNativeMarkdownFile(fixture.deps, {
+    ...input,
+    content: "provider edit",
+    fileStorageVersions: loaded.fileStorageVersions,
+  });
+  expect(await readFile(join(fixture.root, "notes.txt"), "utf8")).toBe("provider edit");
+  expect(fixture.values.get("domain-effect")).toBe("provider edit");
+  await expect(loadNativeMarkdownFile(fixture.deps, { ...input, extensionId: "foreign.owner" })).rejects.toMatchObject({
+    code: "native_document_source_unavailable",
+  });
+  await expect(
+    loadNativeMarkdownFile(fixture.deps, { ...input, textDocument: { sourceId: "body", params: {} } }),
+  ).rejects.toThrow("Missing required param");
+});
+
 test("a native workspace source preserves its UTF-8 byte-order mark", async () => {
   await writeFile(join(fixture.root, "notes.txt"), "\ufeff# Source\r\n");
   const loaded = await loadNativeMarkdownFile(fixture.deps, { ...target, projectId: "project-1" });

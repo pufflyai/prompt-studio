@@ -24,7 +24,7 @@ import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { runDocumentTransaction } from "./document-persistence";
 import { lockStorageProject, refreshNativeRecordText } from "./native-record-projection";
-
+import { readNativeTextSnapshot } from "./native-text-snapshot";
 import { createProjectionStatistics } from "./projection-statistics";
 import { createRecordStreamStore } from "./record-stream-store";
 import { resourceDocumentId } from "./resource-document-persistence";
@@ -255,6 +255,7 @@ export const createDocumentStorageDBService = (
       return {
         read: () => store.transaction(input.owner, ({ document }) => readNativeText(document)),
         exportUpdate: text.exportUpdate,
+        snapshot: () => readNativeTextSnapshot(db, input.owner, documentId),
         store,
         save: (source: string) =>
           store.transaction(input.owner, async ({ document }) => saveTextDocument(document, source)),

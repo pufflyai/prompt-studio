@@ -22,6 +22,14 @@ const fixture = async () => {
   return { ...f, owner, target, documentKey, author, rooms: f.svc.nativeRooms };
 };
 
+test("a newly validated presentation replaces the source projection locator", async () => {
+  const f = await fixture();
+  await f.rooms.create({ ...f, state: Y.encodeStateAsUpdate(f.author) });
+  const target = { fileRendererId: "ext.example.view.replacement", resource: undefined };
+  await f.rooms.create({ ...f, target, state: Y.encodeStateAsUpdate(f.author) });
+  expect(await f.rooms.source(f)).toEqual(target);
+});
+
 test("room edits survive a service restart and replay without changing their local revision", async () => {
   const f = await fixture();
   const room = await f.rooms.create({ ...f, state: Y.encodeStateAsUpdate(f.author) });

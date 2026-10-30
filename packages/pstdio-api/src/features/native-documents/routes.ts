@@ -7,7 +7,12 @@ import {
   nativePresenceUpdateSchema,
 } from "pstdio-api-contracts";
 import { NativeDocumentRoomError } from "pstdio-db";
-import { NativeSourcePendingError, NativeSourceRecoveryError, StorageRevisionChangedError } from "pstdio-sync";
+import {
+  NativeSourcePendingError,
+  NativeSourceRecoveryError,
+  NativeSourceRetiredError,
+  StorageRevisionChangedError,
+} from "pstdio-sync";
 import type { createNativeDocumentService } from "../../services/native-documents/documents";
 import { NativeDocumentSourceError } from "../../services/native-documents/file-source";
 import { NativePresenceError } from "../../services/native-documents/presence";
@@ -22,6 +27,7 @@ const base = "/projects/{projectId}/native-documents";
 const sourceFailure = (error: Error) => {
   if (error instanceof NativeSourcePendingError) return { status: 503 as const, code: error.code };
   if (error instanceof NativeSourceRecoveryError) return { status: 409 as const, code: error.code };
+  if (error instanceof NativeSourceRetiredError) return { status: 409 as const, code: error.code };
   if (error instanceof StorageRevisionChangedError) return { status: 409 as const, code: "storage_revision_changed" };
 };
 const wireSnapshot = <T extends { state: Uint8Array; seedId: string; sourceSeedId: string; sourceState?: Uint8Array }>(
@@ -83,7 +89,7 @@ export const createNativeDocumentRoutes = (service: ReturnType<typeof createNati
       const { sourceState, pendingUpdate, ...target } = c.req.valid("json");
       const joined = await service.open({
         ...target,
-        resource: target.resource,
+        ...("fileRendererId" in target && { resource: target.resource }),
         projectId: c.req.valid("param").projectId,
         signal: c.req.raw.signal,
         sourceState: sourceState === undefined ? undefined : Buffer.from(sourceState, "base64"),
