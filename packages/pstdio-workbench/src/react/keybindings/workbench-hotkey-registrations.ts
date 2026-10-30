@@ -1,5 +1,7 @@
 import type { WebviewKeyboardShortcut } from "@pstdio/sdk/extensions";
 import { getKeybindingSteps, type KeybindingSequence, type WorkbenchCore } from "../../core";
+import type { KeyboardPresentation } from "../../core/controllers/keyboard/keyboard-presentations";
+import { isShortcutBindingAvailable } from "../../core/controllers/keyboard/shortcut-catalog";
 import { keyboardEntryKind } from "../../core/registries/keybindings/keyboard-entry-commands";
 import { getNavigationTargetKey } from "../../core/registries/navigation/navigation-target-key";
 import { runUserAction } from "../../core/shared/run-user-action";
@@ -53,7 +55,14 @@ export const normalizeWorkbenchKeybinding = (keybinding: KeybindingSequence): Ke
 export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyRegistrationsInput) => {
   const { workbench, disabled = false, commandIds } = input;
   const allowedCommandIds = commandIds ? new Set(commandIds) : undefined;
-  const catalog = workbench.keyboard.catalog(true);
+  let targets: KeyboardPresentation[] | undefined;
+  const visibleTargets = () => (targets ??= workbench.keyboard.visibleTargets());
+  const available = (id: string) => {
+    const binding = workbench.keybindings
+      .listActiveKeybindings()
+      .find((entry) => workbench.keybindings.getId(entry) === id);
+    return binding !== undefined && isShortcutBindingAvailable(workbench, binding);
+  };
 
   return workbench.keybindings.listActiveKeybindings().flatMap((keybinding, index) => {
     const action = keybinding.action;
@@ -61,8 +70,7 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
       if (allowedCommandIds && !allowedCommandIds.has(action.commandId)) return [];
       const record = workbench.commands.getCommand(action.commandId);
       if (!record) return [];
-      const enabled =
-        !disabled && catalog.some((entry) => entry.id === workbench.keybindings.getId(keybinding) && !entry.disabled);
+      const enabled = !disabled && isShortcutBindingAvailable(workbench, keybinding, visibleTargets);
       return [
         {
           id: record.command.id,
@@ -72,11 +80,7 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
           ignoreInputs: !keybinding.allowInInputs,
           requestId: JSON.stringify([getNavigationTargetKey(action), keybinding.keybinding]),
           execute: async () => {
-            if (
-              workbench.keyboard.catalog(true).find((entry) => entry.id === workbench.keybindings.getId(keybinding))
-                ?.disabled !== false
-            )
-              return;
+            if (!available(workbench.keybindings.getId(keybinding))) return;
             if (workbench.keyboard.store.getState().active || keybinding.targetScope)
               return workbench.keyboard.invoke(workbench.keybindings.getId(keybinding));
             if (action.args === undefined && hasCommandParameters(record.command.params)) {
@@ -99,16 +103,11 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
         id: `workbench.keybinding.${index}`,
         entry: undefined,
         hotkey: normalizeWorkbenchKeybinding(keybinding.keybinding),
-        enabled:
-          !disabled && catalog.some((entry) => entry.id === workbench.keybindings.getId(keybinding) && !entry.disabled),
+        enabled: !disabled && isShortcutBindingAvailable(workbench, keybinding, visibleTargets),
         ignoreInputs: !keybinding.allowInInputs,
         requestId: JSON.stringify([getNavigationTargetKey(action), keybinding.keybinding]),
         execute: () => {
-          if (
-            workbench.keyboard.catalog(true).find((entry) => entry.id === workbench.keybindings.getId(keybinding))
-              ?.disabled !== false
-          )
-            return Promise.resolve();
+          if (!available(workbench.keybindings.getId(keybinding))) return Promise.resolve();
           return runUserAction(workbench, "Open", () =>
             workbench.keyboard.store.getState().active || keybinding.targetScope
               ? workbench.keyboard.invoke(workbench.keybindings.getId(keybinding))

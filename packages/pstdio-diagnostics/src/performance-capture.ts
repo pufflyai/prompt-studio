@@ -41,6 +41,7 @@ export class PerformanceCaptureCollector {
   #bytes = 0;
   #sequence = 0;
   #pending: Promise<void> | null = null;
+  #reading: Promise<void> | null = null;
   #previous: { pid: number; reading: KernelProcessReading; at: number } | null = null;
   #lastSampleAt: number | null = null;
 
@@ -80,11 +81,14 @@ export class PerformanceCaptureCollector {
 
   sample(readProcesses: () => PerformanceProcessSample[]) {
     if (this.#abort.signal.aborted) return Promise.resolve();
-    if (this.#pending) return this.#pending;
-    this.#pending = this.#sample(readProcesses).finally(() => {
-      this.#pending = null;
+    if (this.#reading) return this.#reading;
+    const pending = this.#sample(readProcesses, this.#pending).finally(() => {
+      if (this.#reading === pending) this.#reading = null;
+      if (this.#pending === pending) this.#pending = null;
     });
-    return this.#pending;
+    this.#reading = pending;
+    this.#pending = pending;
+    return pending;
   }
 
   /** Operation boundaries need a fresh reading, even when a periodic probe is finishing. */
@@ -102,20 +106,23 @@ export class PerformanceCaptureCollector {
     this.#options.record?.(sample);
   }
 
-  async #sample(readProcesses: () => PerformanceProcessSample[]) {
+  async #sample(readProcesses: () => PerformanceProcessSample[], previousSample: Promise<void> | null) {
     const { signal } = this.#abort;
     const backend = this.#options.backend();
     const sampledAt = this.#now();
     const capturedAt = new Date().toISOString();
     // Every native reader belongs to this collection, including synchronous Electron metrics.
     let processes = readProcesses();
-    const [reading, response] = await Promise.all([
+    const response = measureBackendResponse(backend, signal, this.#options.intervalMs).catch(() => null);
+    const reading = await Promise.resolve(
       backend?.scope === "local" && backend.pid !== null
         ? this.#options.readProcess(backend.pid, signal).catch(() => null)
         : null,
-      measureBackendResponse(backend, signal, this.#options.intervalMs).catch(() => null),
-    ]);
-    if (signal.aborted || !response) return;
+    );
+    // Only native reads serialize. A slow HTTP reply must not suppress the next
+    // periodic collection or join CPU readings from different collection times.
+    this.#reading = null;
+    if (signal.aborted) return;
     if (reading && backend?.pid !== null && backend?.pid !== undefined) {
       const previous = this.#previous;
       const sameProcess = previous?.pid === backend.pid && previous.reading.processStartId === reading.processStartId;
@@ -131,21 +138,30 @@ export class PerformanceCaptureCollector {
           pid: backend.pid,
           role: "backend",
           cpuPercent,
-          heapUsedBytes: response.runtime?.pid === backend.pid ? response.runtime.heapUsedBytes : null,
-          externalBytes: response.runtime?.pid === backend.pid ? response.runtime.externalBytes : null,
+          heapUsedBytes: null,
+          externalBytes: null,
         },
       ];
       this.#previous = { pid: backend.pid, reading, at: sampledAt };
     } else {
       this.#previous = null;
     }
+    const reply = await response;
+    // Replies can finish out of order; publish the collections in sampling order.
+    await previousSample?.catch(() => {});
+    if (signal.aborted || !reply) return;
+    processes = processes.map((process) =>
+      process.role === "backend" && process.pid === reply.runtime?.pid
+        ? { ...process, heapUsedBytes: reply.runtime.heapUsedBytes, externalBytes: reply.runtime.externalBytes }
+        : process,
+    );
     const sample: PerformanceCaptureSample = {
       sequence: this.#sequence++,
       capturedAt,
       elapsedMs: sampledAt - this.#started,
       intervalMs: this.#lastSampleAt === null ? null : sampledAt - this.#lastSampleAt,
       processes,
-      backend: response,
+      backend: reply,
     };
     this.#lastSampleAt = sampledAt;
     this.#record(sample);
