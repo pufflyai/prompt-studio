@@ -14,5 +14,5 @@ bun run --cwd scripts release:platforms:sync
 bun install
 bun run --cwd scripts release:lockfile:sync
 bun run --cwd scripts verify:lockfile
-# Include refreshed catalog fingerprints and compiled assets in the version commit.
+# Refresh distributable previews for the version commit; fingerprints remain local.
 bun x --no-install lerna run build --scope canvas --include-dependencies
