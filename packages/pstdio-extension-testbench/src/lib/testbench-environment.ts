@@ -1,4 +1,9 @@
-import type { ExtensionWorkspace, ResourceIdentity } from "@pstdio/sdk/extensions";
+import type {
+  ExtensionBlobInput,
+  ExtensionBlobRef,
+  ExtensionWorkspace,
+  ResourceIdentity,
+} from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import { createBenchResources } from "./testbench-resources";
@@ -35,23 +40,41 @@ const blobRef = (id: string, name = id) => ({
 });
 
 const createStorageFiles = (seedBlobs?: BenchStorageSeed["blobs"]): CommandRunnerEnvironment["storage"]["files"] => {
-  const files = new Map<string, Uint8Array>();
-  for (const [id, blob] of Object.entries(seedBlobs ?? {})) files.set(id, base64ToBytes(blob.base64));
+  const files = new Map<string, { bytes: Uint8Array; ref: ExtensionBlobRef }>();
+  for (const [id, blob] of Object.entries(seedBlobs ?? {})) {
+    const bytes = base64ToBytes(blob.base64);
+    files.set(id, { bytes, ref: { ...blobRef(id, blob.name), mimeType: blob.mimeType, size: bytes.length } });
+  }
+  const write = (id: string, input: ExtensionBlobInput, previous: ExtensionBlobRef = blobRef(id, input.name)) => {
+    const bytes = input.data instanceof Uint8Array ? input.data.slice() : new Uint8Array(input.data.slice(0));
+    const ref = {
+      ...previous,
+      name: input.name,
+      mimeType: input.mimeType ?? null,
+      size: bytes.length,
+      updatedAt: new Date().toISOString(),
+    };
+    files.set(id, { bytes, ref });
+    return ref;
+  };
 
   return {
     async put(input) {
-      const id = crypto.randomUUID();
-      files.set(id, input.data instanceof Uint8Array ? input.data : new Uint8Array(input.data));
-      return { ...blobRef(id, input.name), mimeType: input.mimeType ?? null, size: files.get(id)?.byteLength ?? 0 };
+      return write(crypto.randomUUID(), input);
+    },
+    async update(id, input) {
+      const previous = files.get(id);
+      if (!previous) throw new Error("File not found");
+      return write(id, input, previous.ref);
     },
     async get(id) {
-      return files.has(id) ? blobRef(id) : undefined;
+      return files.get(id)?.ref;
     },
     async getBytes(id) {
-      return files.get(id) ?? new Uint8Array();
+      return files.get(id)?.bytes ?? new Uint8Array();
     },
     async list() {
-      return [...files.keys()].map((id) => blobRef(id));
+      return [...files.values()].map((file) => file.ref);
     },
     async delete(id) {
       files.delete(id);

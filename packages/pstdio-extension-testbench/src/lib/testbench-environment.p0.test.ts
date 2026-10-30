@@ -1,6 +1,20 @@
 import { expect, test } from "bun:test";
 import { createBenchEnvironment } from "./testbench-environment";
 
+test("bench file updates retain identity and expose the new bytes and metadata", async () => {
+  const { storage } = createBenchEnvironment();
+  const first = await storage.files.put({ name: "before.md", data: new TextEncoder().encode("Before") });
+  const changed = await storage.files.update(first.id, {
+    name: "after.md",
+    data: new TextEncoder().encode("After edit"),
+    mimeType: "text/markdown",
+  });
+  expect(changed).toMatchObject({ id: first.id, name: "after.md", size: 10, mimeType: "text/markdown" });
+  expect(await storage.files.get(first.id)).toEqual(changed);
+  expect(await storage.files.list()).toEqual([changed]);
+  expect(new TextDecoder().decode(await storage.files.getBytes(first.id))).toBe("After edit");
+});
+
 test("bench commands migrate once per storage scope and retry failed imports", async () => {
   const { storage } = createBenchEnvironment({ kv: { title: "Seed" } });
   await expect(

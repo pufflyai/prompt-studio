@@ -12,6 +12,7 @@ import { FullscreenControls } from "../workbench/fullscreen-controls";
 import { WorkbenchPanelToggles } from "../workbench/workbench-panel-toggles";
 import { WorkbenchHeaderActions } from "./header-actions";
 import { WorkbenchBreadcrumbActions } from "./resource-actions";
+import { WorkbenchPresence } from "./workbench-presence";
 
 interface WorkbenchNavChromeProps {
   workbench: WorkbenchCore;
@@ -103,6 +104,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
         <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
       </Box>
       {fullscreen || chrome === false ? <Box flex="1" minW="0" /> : null}
+      <WorkbenchPresence workbench={workbench} />
       {panelControls && !fullscreen ? <WorkbenchPanelToggles workbench={workbench} /> : null}
       {panelControls || fullscreen ? <FullscreenControls workbench={workbench} /> : null}
     </Header>

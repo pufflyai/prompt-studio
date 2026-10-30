@@ -98,13 +98,13 @@ export const guardPublicationStorage = (
       }
     },
     records: guard(storage.records, ["commit", "resolve"]),
-    files: guard(storage.files, ["put", "delete"]),
+    files: guard(storage.files, ["put", "update", "delete"]),
     assets: guard(storage.assets, ["stage", "cancel"]),
     collection: <TItem = unknown>(name: string) => {
       const collection = storage.collection<TItem>(name);
       return {
         ...guard(collection, ["put", "update", "create", "createIfAbsent", "delete", "deleteIfValue"]),
-        attachments: (id: string) => guard(collection.attachments(id), ["put", "delete"]),
+        attachments: (id: string) => guard(collection.attachments(id), ["put", "update", "delete"]),
       };
     },
   } satisfies CommandRunnerEnvironment["storage"];

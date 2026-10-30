@@ -23,6 +23,8 @@ export const createSyncQuarantine =
     }
     apiLogger.warn(
       { event: "relay.data.quarantined", documentId: scope.documentId, kind: failure.kind, id: failure.id },
-      "Unreadable sync data was set aside; other updates will continue",
+      failure.reason === "source-history"
+        ? "Saved source data needs recovery; its encrypted copy and pending local edits were retained"
+        : "Unreadable sync data was set aside; other updates will continue",
     );
   };

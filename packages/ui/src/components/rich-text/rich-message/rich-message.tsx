@@ -35,7 +35,7 @@ import { EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin"
 import { ListMarkerWidthPlugin } from "../shared/plugins/list-marker-width-plugin";
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
-import { splitFrontmatter } from "../utils/markdown";
+import { joinFrontmatter, splitFrontmatter } from "../utils/markdown";
 import { RichMessageStatePlugin, SOURCE_IMPORT_TAG } from "./rich-message-state-plugin";
 
 export interface RichMessageProps extends ChatLinkProps {
@@ -140,7 +140,7 @@ function RichMessageContent(props: RichMessageProps) {
                   editorState.read(() => {
                     const root = $getRoot();
                     const markdownBody = sourceDocumentRef.current?.exportFromLexical(root) ?? "";
-                    onChange?.(frontmatter + markdownBody);
+                    onChange?.(joinFrontmatter(frontmatter, markdownBody));
                   });
                 }}
               />

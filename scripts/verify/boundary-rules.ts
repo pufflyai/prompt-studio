@@ -83,6 +83,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-api-contracts",
     "pstdio-extensions",
     "pstdio-sync-contracts",
+    "pstdio-sync",
     "pstdio-benchmarks",
   ],
   "pstdio-dashboard": [
@@ -108,7 +109,9 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // so changing one marks e2e as affected.
   e2e: [
     "@pstdio/sdk",
+    "@pstdio/workbench",
     "pstdio",
+    "pstdio-api",
     "pstdio-api-contracts",
     "pstdio-diagnostics",
     "pstdio-extensions",
@@ -172,6 +175,8 @@ export const FORBIDDEN_FOLDER_SPECIFIERS: Record<string, { folder: string; speci
 // lower limit as soon as an entry is removed. The API exposes only its app and runtime.
 export const DEFAULT_PRIVATE_EXPORT_LIMIT = 2;
 export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
+  // These are ownership boundaries, not file-level escape hatches.
+  "pstdio-sync": 6,
   "pstdio-api": 2,
   "pstdio-api-contracts": 7,
   "pstdio-extensions": 12,

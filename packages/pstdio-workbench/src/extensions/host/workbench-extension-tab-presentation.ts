@@ -110,8 +110,12 @@ export const createWorkbenchExtensionTabPresentation = (
         snapshots.set(key, toWorkbenchPresentationSnapshot(value, metadata.extensionId, input.projectId));
         for (const listener of listeners) listener();
       })
-      .finally(() => {
-        if (loading.get(key) === pendingLoad) loading.delete(key);
+      .finally(async () => {
+        if (loading.get(key) !== pendingLoad) return;
+        loading.delete(key);
+        const current = instances.get(instance.instanceId);
+        // A reset can arrive from a notified listener before this completed load is retired.
+        if (currentRevision !== revision && current && keyOf(current) === key) await load(current);
       });
     loading.set(key, pendingLoad);
     return pendingLoad;
@@ -136,15 +140,19 @@ export const createWorkbenchExtensionTabPresentation = (
         revision++;
         await Promise.all(affected.map(load));
       });
-      const refreshSubscription = input.subscribeRefreshEvents?.((event: WorkbenchExtensionRefreshEvent) => {
-        if (!refreshEvents.has(event.id)) return;
+      const refresh = () => {
         revision++;
         for (const instance of instances.values()) void load(instance).catch(() => undefined);
+      };
+      const refreshSubscription = input.subscribeRefreshEvents?.((event: WorkbenchExtensionRefreshEvent) => {
+        if (refreshEvents.has(event.id)) refresh();
       });
+      const resetSubscription = input.subscribeRefreshReset?.(refresh);
       const disposable: Disposable = {
         dispose() {
           listeners.delete(listener);
           refreshSubscription?.dispose();
+          resetSubscription?.dispose();
           resourceSubscription.dispose();
         },
       };

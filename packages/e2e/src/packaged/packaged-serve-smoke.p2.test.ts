@@ -19,6 +19,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // harness-npm-detection.p2.test.ts checks the patched Pi minimum with the maintained package's Windows layout.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
+import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./packaged-native-markdown-smoke";
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
 // packaged-canvas-install.p1.test.ts checks optional Canvas installation, module assets, rendered previews, themes, and its skill outside a checkout.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
@@ -92,6 +93,7 @@ test(
           { source: installEnvironmentProbe, installName: "install-env-probe" },
           { source: navigationProbe, installName: "navigation-probe" },
           { source: nativeActions, installName: "native-actions" },
+          { source: writeNativeMarkdownExtension(tempRoot), installName: "native-markdown" },
           { source: otherNativeActions, installName: "other-native-actions" },
         ]),
         HTTPS_PROXY: "http://127.0.0.1:9",
@@ -142,6 +144,12 @@ test(
         name: "dep-ext",
       });
       await expectPackagedNativeActions({
+        projectFolder,
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      await expectPackagedNativeMarkdown({
         projectFolder,
         baseUrl: started.baseUrl,
         projectId: project.id,

@@ -9,24 +9,14 @@ import { EditModeDataTableHeader } from "./edit-mode-data-table-header";
 import { EditModeSelectionHeader } from "./edit-mode-data-table-selection";
 import { PaginationFooter } from "./pagination-footer";
 import { SelectionToolbar } from "./selection-toolbar";
-import type { DataTableEditModeColumn, DataTableProps, RowData } from "./types";
+import type { DataTableProps } from "./types";
+import { useDataTableDrafts } from "./use-data-table-drafts";
 import { useDataTableView } from "./use-data-table-view";
 
 const createId = (kind: "column" | "row") => {
   const unique = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
   return `${kind}-${unique}`;
 };
-
-interface ActiveCell {
-  rowId: string;
-  columnId: string;
-  draft: string;
-}
-
-interface ActiveHeader {
-  columnId: string;
-  draft: string;
-}
 
 export const EditModeDataTable = (props: DataTableProps) => {
   const {
@@ -42,8 +32,8 @@ export const EditModeDataTable = (props: DataTableProps) => {
   } = props;
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(() => Math.min(Math.max(initialPageSize, 1), 50));
-  const [activeCell, setActiveCell] = useState<ActiveCell | null>(null);
-  const [activeHeader, setActiveHeader] = useState<ActiveHeader | null>(null);
+  const drafts = useDataTableDrafts({ data, editMode, getRowId, isReadOnly });
+  const { rowIdFor } = drafts;
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(() => new Set());
   const columns = editMode?.columns ?? [];
   const columnKeys = columns.map((column) => column.id);
@@ -82,31 +72,6 @@ export const EditModeDataTable = (props: DataTableProps) => {
 
   if (!editMode) return null;
 
-  const rowIdFor = (row: RowData, index: number) => getRowId?.(row, index) ?? String(row.id ?? index);
-
-  const commitCell = () => {
-    if (!activeCell) return;
-
-    editMode.onDataChange(
-      data.map((row, index) =>
-        rowIdFor(row, index) === activeCell.rowId ? { ...row, [activeCell.columnId]: activeCell.draft } : row,
-      ),
-    );
-    setActiveCell(null);
-  };
-
-  const updateColumn = (columnId: string, update: Partial<DataTableEditModeColumn>) => {
-    editMode.onColumnsChange(
-      columns.map((column) => (column.id === columnId ? { ...column, ...update, id: column.id } : column)),
-    );
-  };
-
-  const commitHeader = () => {
-    if (!activeHeader) return;
-    updateColumn(activeHeader.columnId, { label: activeHeader.draft });
-    setActiveHeader(null);
-  };
-
   const addColumn = () => {
     const id = createId("column");
     editMode.onColumnsChange([...columns, { id, label: `Column ${columns.length + 1}`, alignment: null }]);
@@ -115,7 +80,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
   const removeColumn = (columnId: string) => {
     if (columns.length === 1) return;
     editMode.onColumnsChange(columns.filter((column) => column.id !== columnId));
-    if (activeHeader?.columnId === columnId) setActiveHeader(null);
+    if (drafts.activeHeader?.columnId === columnId) drafts.cancelHeader();
   };
 
   const addRow = () => {
@@ -178,7 +143,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
               {!isReadOnly ? <Box as="col" width="10" /> : null}
             </colgroup>
             <EditModeDataTableHeader
-              activeHeader={activeHeader}
+              activeHeader={drafts.activeHeader}
               columnIcons={columnIcons}
               columns={columns}
               data={data}
@@ -187,11 +152,11 @@ export const EditModeDataTable = (props: DataTableProps) => {
               rowNumbers={rowNumbers}
               rowDisplayControl={toolbarStorageKey ? undefined : rowDisplayControl}
               onAddColumn={addColumn}
-              onCancelHeaderEdit={() => setActiveHeader(null)}
+              onCancelHeaderEdit={drafts.cancelHeader}
               onDeleteColumn={removeColumn}
-              onHeaderDraftChange={(draft) => setActiveHeader((current) => (current ? { ...current, draft } : current))}
-              onHeaderEdit={(column) => setActiveHeader({ columnId: column.id, draft: column.label })}
-              onSaveHeader={commitHeader}
+              onHeaderDraftChange={drafts.changeHeader}
+              onHeaderEdit={drafts.openHeader}
+              onSaveHeader={drafts.commitHeader}
               selectionHeader={
                 enableSelection ? (
                   <EditModeSelectionHeader
@@ -205,7 +170,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
               }
             />
             <EditModeDataTableBody
-              activeCell={activeCell}
+              activeCell={drafts.activeCell}
               columns={columns}
               data={data}
               editMode={editMode}
@@ -218,11 +183,11 @@ export const EditModeDataTable = (props: DataTableProps) => {
               selectedRowIds={selectedRowIds}
               showNewRow={pageIndex === pageCount - 1}
               wrapRows={wrapRows}
-              onActivateCell={setActiveCell}
+              onActivateCell={drafts.openCell}
               onAddRow={addRow}
-              onCancelCell={() => setActiveCell(null)}
-              onCommitCell={commitCell}
-              onDraftChange={setActiveCell}
+              onCancelCell={drafts.cancelCell}
+              onCommitCell={drafts.commitCell}
+              onDraftChange={drafts.changeCell}
               onRemoveRow={removeRow}
               onToggleRowSelection={toggleRowSelection}
               rowIdFor={rowIdFor}

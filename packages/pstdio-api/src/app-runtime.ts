@@ -122,11 +122,13 @@ const createAppCloser = (input: {
   stopQueueReadiness: () => Promise<void>;
   sessionQueueLifecycle: RouteDeps["sessionQueueLifecycle"];
   harnessRegistry: RouteDeps["harnessRegistry"];
+  nativeDocuments: Pick<RouteDeps["nativeDocuments"], "dispose">;
 }) => {
   let closePromise: Promise<void> | null = null;
   return async () => {
     closePromise ??= (async () => {
       const hooksStopped = input.closeSessionHooks();
+      const nativeDocumentsStopped = input.nativeDocuments.dispose();
       try {
         input.startupAbort.abort();
         const queueStopped = input.sessionQueueLifecycle.close();
@@ -139,6 +141,7 @@ const createAppCloser = (input: {
         await input.startupDone;
         await input.getStartupBackgroundDone();
         await hooksStopped;
+        await nativeDocumentsStopped;
         clearInterval(input.notificationWakeTimer);
         input.unsubscribeExtensionEvents();
         await input.extensionRuntime.dispose();
@@ -152,12 +155,31 @@ const createAppCloser = (input: {
         try {
           await hooksStopped;
         } finally {
-          await input.closeDb();
+          try {
+            await nativeDocumentsStopped;
+          } finally {
+            await input.closeDb();
+          }
         }
       }
     })();
     await closePromise;
   };
+};
+
+export const closeAppDatabase = async (
+  deps: Pick<RouteDeps, "extensionResourceSequencesService" | "extensionStorageService">,
+  closeDb: () => Promise<void>,
+) => {
+  try {
+    await deps.extensionResourceSequencesService.flush();
+  } finally {
+    try {
+      await deps.extensionStorageService.flushStatistics();
+    } finally {
+      await closeDb();
+    }
+  }
 };
 
 export const startAppLifecycle = async (input: {
@@ -216,6 +238,7 @@ export const startAppLifecycle = async (input: {
     stopQueueReadiness,
     sessionQueueLifecycle: input.deps.sessionQueueLifecycle,
     harnessRegistry: input.deps.harnessRegistry,
+    nativeDocuments: input.deps.nativeDocuments,
     startupDone,
     getStartupBackgroundDone: () => Promise.all(startupBackgroundTasks).then(() => undefined),
   });

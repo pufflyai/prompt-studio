@@ -2,16 +2,111 @@ import { describe, expect, test } from "bun:test";
 import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import { viewDataEvents } from "@pstdio/sdk/extensions";
 import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
-import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
+import { publishExtensionEvent, publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
 import { watchOpenExtensionResource } from "./extension-resource-sync";
 
 import { extensionId, openNoteWorkbench, page, projectId, settle } from "./extension-resource-sync.fixture";
+
+describe("removed extension resources", () => {
+  test("closes a missing pasted resource whose owner is inferred by the resolver", async () => {
+    const fixture = openNoteWorkbench(() => null);
+    const landing = { kind: "page" as const, extensionId, id: "notes-landing" };
+    fixture.workbench.pages.registerPage({
+      id: landing.id,
+      ref: landing,
+      path: "notes-landing",
+      modeId: "project",
+      slots: [],
+      main: { kind: "view", view: { kind: "view", id: "note" }, cardinality: "one" },
+    });
+    const resource = { type: "note", id: "missing-pasted-note" };
+    fixture.workbench.pageLocations.navigate({ kind: "page", page, resource, parent: { kind: "page", page: landing } });
+    await settle();
+    expect(fixture.workbench.getPrimaryResource()).toBeUndefined();
+    expect(fixture.workbench.resources.wasRemovedSince(resource, 0)).toBe(true);
+    fixture.dispose();
+  });
+
+  test.each([
+    "event",
+    "reset",
+  ])("closes the current resource when its owner reports deletion after %s", async (trigger) => {
+    let deleted = false;
+    const fixture = openNoteWorkbench((resource) => (deleted ? null : resource));
+    const resource = { type: "note", id: "deleted", extensionId, projectId, label: "Deleted note" };
+    const landing = { kind: "page" as const, extensionId, id: "notes-landing" };
+    fixture.workbench.pages.registerPage({
+      id: landing.id,
+      ref: landing,
+      path: "notes-landing",
+      modeId: "project",
+      slots: [],
+      main: { kind: "view", view: { kind: "view", id: "note" }, cardinality: "one" },
+    });
+    fixture.workbench.pageLocations.navigate({ kind: "page", page, resource, parent: { kind: "page", page: landing } });
+    await settle();
+    const before = fixture.workbench.resources.getRemovalVersion();
+    deleted = true;
+    if (trigger === "reset") publishExtensionEventReset();
+    else publishExtensionEvent({ id: `${extensionId}.event.notes.changed`, projectId });
+    await settle();
+    expect(fixture.workbench.resources.wasRemovedSince(resource, before)).toBe(true);
+    expect(fixture.workbench.getPrimaryResource()?.id).not.toBe(resource.id);
+    fixture.dispose();
+  });
+
+  test.each([
+    "event",
+    "reset",
+  ])("closes a deleted background tab without selecting another resource after %s", async (trigger) => {
+    let deleted = false;
+    const fixture = openNoteWorkbench((resource) => (deleted && resource.id === "deleted" ? null : resource));
+    const panel = { kind: "placement" as const, id: "notes", extensionId };
+    fixture.workbench.modePlacements.registerPlacement({
+      id: "notes",
+      ref: panel,
+      modeId: "project",
+      region: "side",
+      item: {
+        kind: "binding",
+        binding: {
+          kinds: [{ kind: "resource-kind", id: "note" }],
+          view: { kind: "view", id: "note" },
+          cardinality: "many",
+        },
+      },
+    });
+    fixture.open({ type: "note", id: "primary", extensionId, projectId });
+    for (const id of ["deleted", "selected"])
+      fixture.workbench.modePlacements.openPlacement({
+        panel,
+        resource: { type: "note", id, extensionId, projectId },
+        open: "pin",
+      });
+    const selectedTab = fixture.workbench.layout
+      .getLayout()
+      .regions.side.widgets.find((tab) => tab.resource?.id === "selected")!;
+    fixture.workbench.layout.activatePanel(selectedTab.widgetId);
+    await settle();
+    const selected = fixture.workbench.layout.getLayout().activeWidgetId;
+    deleted = true;
+    if (trigger === "reset") publishExtensionEventReset();
+    else publishExtensionEvent({ id: `${extensionId}.event.notes.changed`, projectId });
+    await settle();
+    const tabs = fixture.workbench.layout.getLayout().regions.side.widgets;
+    expect(tabs.map((tab) => tab.resource?.id)).toEqual(["selected"]);
+    expect(fixture.workbench.layout.getLayout().activeWidgetId).toBe(selected);
+    expect(fixture.workbench.getPrimaryResource()?.id).toBe("primary");
+    fixture.dispose();
+  });
+});
 
 describe("open extension resource sync", () => {
   test.each([
     `${extensionId}.event.notes.changed`,
     `${extensionId}.notes.changed`,
     viewDataEvents.workspacesChanged.id,
+    "reset",
   ])("refreshes all placements after %s", async (eventId) => {
     let writable = true;
     const { workbench, open } = openNoteWorkbench((resource) => ({
@@ -40,7 +135,8 @@ describe("open extension resource sync", () => {
     await settle();
     const selected = workbench.layout.getLayout().activeWidgetId;
     writable = false;
-    publishExtensionEvent({ id: eventId, projectId });
+    if (eventId === "reset") publishExtensionEventReset();
+    else publishExtensionEvent({ id: eventId, projectId });
     await settle();
     const duplicate = workbench.layout.getLayout().regions.side.widgets[0]?.resource;
     expect(duplicate).toMatchObject({ label: "Renamed", metadata: { writable: false } });

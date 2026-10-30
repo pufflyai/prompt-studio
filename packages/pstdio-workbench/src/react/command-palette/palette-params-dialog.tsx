@@ -26,15 +26,14 @@ export const PaletteParamsDialog = (props: PaletteParamsDialogProps) => {
         (renderer) =>
           renderer.createCommandId === request.record.command.id && renderer.createRow && renderer.onCreateRow,
       );
+  const closeParams = () => {
+    if (workbench.commandPalette.getParamsRequest() === request) workbench.commandPalette.clearParams();
+  };
   return (
     <>
       {confirmation ? <CommandConfirmationDialog key={confirmation.label} confirmation={confirmation} /> : null}
       {creation ? (
-        <RendererCreateDialog
-          key={creation.id}
-          contribution={creation}
-          onClose={() => workbench.commandPalette.clearParams()}
-        />
+        <RendererCreateDialog key={creation.id} contribution={creation} onClose={closeParams} />
       ) : (
         <CommandParamsDialog
           request={request}
@@ -45,9 +44,16 @@ export const PaletteParamsDialog = (props: PaletteParamsDialogProps) => {
           prepareArgs={(input) =>
             workbench.commands.prepareCommandArgs(input.commandId, input.args, input.context, input.onArgsChange)
           }
-          onClose={() => workbench.commandPalette.clearParams()}
-          // The dialog shows a failure itself and stays open, so let the error reach it.
-          onRun={async ({ commandId, args, context }) => {
+          onClose={closeParams}
+          onRun={async ({ commandId, args, context, label }) => {
+            if (request?.record.command.resourceMutation?.kind === "rename") {
+              const reportError = workbench.notifications.captureActionError(label);
+              // Resource previews already show the new title and roll it back on failure.
+              // The dialog must not hold focus while persistence and refresh finish.
+              void workbench.commands.executeCommand(commandId, args, context).catch(reportError);
+              closeParams();
+              return;
+            }
             await workbench.commands.executeCommand(commandId, args, context);
           }}
         />

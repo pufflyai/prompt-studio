@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { createDocumentStorage, memoryDocumentState } from "pstdio-sync";
+import { memoryDocumentState } from "pstdio-sync";
+import { createDocumentStorage } from "pstdio-sync/records";
 import * as Y from "yjs";
 import { createMemoryStorage } from "./memory-storage";
 

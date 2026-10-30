@@ -22,6 +22,7 @@ export {
   type ExtensionSettingOwnerType,
 } from "./services/extension-settings/extension-settings";
 export { createExtensionStorageDBService } from "./services/extension-storage/extension-storage";
+export { NativeDocumentRoomError } from "./services/extension-storage/native-document-errors";
 export { RecoveryPointError } from "./services/extension-storage/recovery-points";
 export { createExtensionUserDataDBService } from "./services/extension-user-data/extension-user-data";
 export { createFilesDBService } from "./services/files/files";

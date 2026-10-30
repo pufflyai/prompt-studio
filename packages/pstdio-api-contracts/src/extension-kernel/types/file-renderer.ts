@@ -1,6 +1,9 @@
+import type { NativeDocumentSource } from "../../native-document-source";
 import type { RendererCallback } from "./context";
 import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
+
+export type { NativeDocumentSource } from "../../native-document-source";
 
 export type FileRendererResourceRef = ResourceRef;
 
@@ -26,6 +29,8 @@ export interface FileRendererLoadParams {
 // based on `fileName` / `mimeType`. Text-ish files return `content`; images
 // return a `dataUrl`. An absent `fileName` falls back to the markdown editor.
 export interface FileRendererLoadResult {
+  /** Declare a stable source for shared native Markdown. Record fields use JSON pointers, e.g. /content. */
+  documentSource?: NativeDocumentSource;
   fileName?: string;
   mimeType?: string;
   content?: string;

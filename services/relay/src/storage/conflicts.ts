@@ -1,5 +1,5 @@
 import { and, arrayOverlaps, eq, isNull, or, sql } from "drizzle-orm";
-import type { ResolutionState } from "pstdio-sync";
+import type { ResolutionState } from "pstdio-sync/records";
 import type { Mutation } from "pstdio-sync-contracts";
 import type { RelayTransaction } from "./database";
 import { relayConflicts, relayOperations } from "./schema";

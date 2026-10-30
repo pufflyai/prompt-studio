@@ -21,6 +21,7 @@ import type {
   WorkbenchSidePanelMode,
 } from "./controllers/side-panel/side-panel-controller";
 import type { WorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
+import type { WorkbenchPresence } from "./presence/workbench-presence";
 import type { CommandPaletteResourceRegistry } from "./registries/command-palette-resources/command-palette-resource-registry";
 import type { CommandRegistry } from "./registries/commands/command-registry";
 import type { KeybindingRegistry } from "./registries/keybindings/keybinding-registry";
@@ -115,6 +116,7 @@ export interface WorkbenchCoreContributionContext {
   navigation: NavigationRegistry;
   navigationTrees: NavigationTreeRegistry;
   notifications: NotificationRegistry;
+  presence: WorkbenchPresence;
   overlays: WorkbenchOverlayRegistry;
   placeholders: WorkbenchPlaceholderRegistry;
   pageLocations: WorkbenchPageLocationController;

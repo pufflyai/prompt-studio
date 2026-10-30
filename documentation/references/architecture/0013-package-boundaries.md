@@ -6,6 +6,10 @@ app, runtime, or packaging concerns. The source of truth for mechanical rules is
 `scripts/verify/boundary-rules.ts`; update this document with any intentional
 layer-map change.
 
+Cross-package native editor integration tests live in `packages/e2e`. They may
+start the real `pstdio-api/app` host and use the public `@pstdio/workbench` session
+API. The workbench package itself does not depend on the API host.
+
 ## Layers
 
 1. **Contracts and utilities**
@@ -30,9 +34,12 @@ layer-map change.
    `pstdio-db` also consumes synchronization contracts for the durable extension
    journal and accepted state. It does not import the test-only conformance entry.
    The private `pstdio-sync` package owns the production, runtime-neutral record
-   model and authoring operations. It depends on synchronization contracts and
-   Yjs, hides sequence documents behind record operations, and accepts a storage
-   adapter. `pstdio-db` supplies its durable local adapter.
+   and text engines. Its root entry owns shared storage ports; records, text,
+   transient presence, encryption and relay have separate entry points. Module
+   dependency checks keep text and presence independent of host and editor code.
+   The six exports are module contracts, not individual internal file exports.
+   It accepts storage adapters; `pstdio-db` supplies the durable local adapter.
+   [Sync modules](0026-synchronization-contracts.md#sync-modules) defines each owner.
    Its real-file integration tests declare `pstdio-storage` as a development
    dependency to verify immutable asset gates; database runtime code does not import it.
    Its production-relay conformance tests also declare `pstdio-relay` as a development
@@ -62,6 +69,8 @@ layer-map change.
    contracts shared with the API live below it in `pstdio-api-contracts`, not in
    API packages. The SDK and workbench declare `pstdio-sync-contracts` as a build
    dependency and inline its types and schemas into their public packages.
+   Workbench bundles `pstdio-sync/text` for its browser replica. It is a private
+   build dependency and is inlined into runtime and type output.
    The SDK's in-memory test storage also bundles `pstdio-sync`, so extension tests
    use the same grouped-write and conflict rules as the durable host.
 

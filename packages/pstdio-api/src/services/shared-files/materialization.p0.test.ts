@@ -76,12 +76,70 @@ test("one native save can write a file more than once without conflicting with i
   }
 });
 
+test("a native save refuses to overwrite an outside edit made since its load", async () => {
+  const { withStorageObservation } = await import("./storage-observation");
+  const f = await artifactFilesFixture();
+  try {
+    await f.mount().writeText("note.md", "base");
+    const loaded = await withStorageObservation({}, () => f.mount().readText("note.md"));
+    await writeFile(f.pathFor("documents/note.md"), "outside edit");
+    await expect(
+      withStorageObservation(loaded.versions, () => f.mount().writeText("note.md", "stale editor text")),
+    ).rejects.toThrow("changed since it was loaded");
+    expect(await f.mount().readText("note.md")).toBe("outside edit");
+    expect(await readFile(f.pathFor("documents/note.md"), "utf8")).toBe("outside edit");
+  } finally {
+    await f.close();
+  }
+});
+
+test("a native save rechecks its loaded revision after staging bytes", async () => {
+  const { withStorageObservation } = await import("./storage-observation");
+  const f = await artifactFilesFixture();
+  try {
+    await f.mount().writeText("note.md", "base");
+    const loaded = await withStorageObservation({}, () => f.mount().readText("note.md"));
+    const staging = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<void>();
+    const mount = createSharedArtifactMount(
+      {
+        ...f.deps,
+        assetTransferService: {
+          ...f.assets,
+          stage: async (...args: Parameters<typeof f.assets.stage>) => {
+            const asset = await f.assets.stage(...args);
+            staging.resolve();
+            await resume.promise;
+            return asset;
+          },
+        },
+      },
+      f.input,
+    );
+    const saved = withStorageObservation(loaded.versions, () => mount.writeText("note.md", "stale text"));
+    void saved.catch(() => {});
+    await staging.promise;
+    try {
+      await f.replace("documents/note.md", "concurrent record edit");
+    } finally {
+      resume.resolve();
+    }
+    await expect(saved).rejects.toThrow("changed since it was loaded");
+    expect(await f.mount().readText("note.md")).toBe("concurrent record edit");
+  } finally {
+    await f.close();
+  }
+});
+
 for (const replacement of ["remote bytes", null])
   test(`replaying a projected ${replacement === null ? "deletion" : "file"} after an interrupted checkpoint creates no conflict`, async () => {
     const f = await artifactFilesFixture();
     try {
       await f.mount().writeText("note.md", "base");
-      const projection = fileProjection(JSON.stringify([f.owner, f.pathFor("")]));
+      const projection = fileProjection(
+        JSON.stringify([f.owner, f.pathFor("")]),
+        f.deps.extensionStorageService.fileProjections,
+      );
       const baseline = await projection.read();
       await f.replace("documents/note.md", replacement);
       await f.mount().refresh();

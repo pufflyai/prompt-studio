@@ -58,6 +58,21 @@ export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) =>
   const blobsApi = (name: string): ExtensionBlobsApi => {
     const store = blobStore(name);
     return {
+      async update(id, input) {
+        const stored = store.get(id);
+        if (!stored) throw new Error(`File not found: ${id}`);
+        const data = input.data instanceof Uint8Array ? input.data : new Uint8Array(input.data);
+        const { data: _data, ...ref } = stored;
+        const next = {
+          ...ref,
+          name: input.name,
+          mimeType: input.mimeType ?? null,
+          size: data.byteLength,
+          updatedAt: new Date().toISOString(),
+        };
+        store.set(id, { ...next, data });
+        return next;
+      },
       async put(input) {
         const id = crypto.randomUUID();
         const data = input.data instanceof Uint8Array ? input.data : new Uint8Array(input.data);

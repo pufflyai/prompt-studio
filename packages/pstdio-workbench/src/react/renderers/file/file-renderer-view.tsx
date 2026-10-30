@@ -1,5 +1,5 @@
 import { Box, Button, Center, Flex, Text } from "@chakra-ui/react";
-import { resourceKey } from "@pstdio/sdk/extensions";
+import { type PageParams, resourceKey } from "@pstdio/sdk/extensions";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RegisteredFileRendererContribution, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
@@ -7,6 +7,7 @@ import {
   getFileSectionNavigation,
   resolveFileSectionTargetId,
 } from "../../../core/registries/renderers/file-section-navigation";
+import { useOpenPlacementIds } from "../../shared/use-open-placement-ids";
 import { usePageParams } from "../use-page-params";
 import { FileRendererContentView } from "./file-renderer-content";
 import {
@@ -24,6 +25,7 @@ import {
   storeCachedFileContent,
 } from "./file-renderer-load-state";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
+import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 import { useFileSectionSelection } from "./file-renderer-sections";
 
 interface WorkbenchFileRendererViewProps {
@@ -82,9 +84,24 @@ const fileRendererOwnerKey = (
   loadKey: string,
 ) => (placement ? rendererReadKey(placement) : JSON.stringify(["file", contributionId, loadKey]));
 
+const getNativeMarkdownConnection = (
+  contribution: RegisteredFileRendererContribution,
+  file: LoadedFile | null,
+  resource: WorkbenchPanelInstance["resource"],
+  pageParams: PageParams | undefined,
+) => {
+  const connect = contribution.connectDocument;
+  if (contribution.saveMode === "manual" || !file?.documentSource || !connect) return undefined;
+  const presentation = resolveFileRendererPresentation(file, Boolean(contribution.save));
+  if (presentation.kind !== "markdown" || !presentation.isEditable) return undefined;
+  return () => connect(resource, pageParams);
+};
+
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
   const resource = props.placement?.resource;
+  const openPlacements = useOpenPlacementIds(workbench);
+  const open = !props.placement?.placementIdentity || openPlacements.has(props.placement.instanceId);
   const position = props.placement?.position;
   const sectionNavigation = getFileSectionNavigation(resource);
   const requestedSection = props.placement?.section;
@@ -246,7 +263,9 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   // The key must carry the document identity, not just the contribution: two
   // documents from the same renderer both start at revision 1, so keying on the
   // contribution alone reuses the editor and keeps showing the previous file.
-  const editorKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
+  let editorKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
+  const connectDocument = getNativeMarkdownConnection(contribution, currentLoaded, resource, pageParams);
+  if (connectDocument && currentLoaded) editorKey = currentLoaded.loadKey;
   let errorNotice: ReactNode = null;
   if (editState.removed) {
     errorNotice = (
@@ -273,7 +292,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
         }
       }}
     >
-      {currentLoaded && (
+      {currentLoaded && !connectDocument && (
         <FileRendererHeader
           file={currentLoaded}
           dirty={manualSave && editState.dirty}
@@ -282,6 +301,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       )}
       <Box flex="1" minH="0">
         <FileRendererContentView
+          presence={workbench.presence}
+          open={open}
           content={currentLoaded}
           position={position}
           editorKey={editorKey}
@@ -295,7 +316,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           onChange={handleChange}
           rendererRef={rendererRef}
           sectionNavigation={editorSectionNavigation}
-          title={contribution.title}
+          title={resource?.label ?? contribution.title}
+          connectDocument={connectDocument}
         />
       </Box>
     </Flex>

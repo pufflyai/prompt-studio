@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { coreOwnerId, type NumberedResource, retainedResourceValue, type StorageOwner } from "pstdio-sync";
+import type { StorageOwner } from "pstdio-sync";
+import { coreOwnerId, type NumberedResource, retainedResourceValue } from "pstdio-sync/records";
 import type { StorageRecord } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import {
