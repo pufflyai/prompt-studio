@@ -199,7 +199,7 @@ Keep backups of every database and test a recovery before relying on it.
 
 ## Reference workload measurement
 
-PS-787 adds a manual [reference workload](../../../packages/e2e/src/perf/relay-reference-workload/run.ts).
+PS-787 adds a manual [reference workload](../../../packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts).
 It uses this guide's Compose relay, migration job, PostgreSQL and real RustFS object
 storage. It replaces public ingress with loopback ports and uses disposable signed
 identities. It does not create cloud resources or open the user's local database.
@@ -210,7 +210,7 @@ Build the relay image from the revision you want to measure, then run from the r
 
 ```sh
 docker build -f infra/relay/Dockerfile --target runtime -t pstdio-relay:measurement .
-bun packages/e2e/src/perf/relay-reference-workload/run.ts \
+bun packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts \
   .pstdio/extension-storage/pstdio.pstdio-artifacts/relay-measurement \
   pstdio-relay:measurement
 ```

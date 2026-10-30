@@ -117,7 +117,10 @@ export const deploy = async (image: string, log: (message: string) => void, sign
         return {
           id: details.Id,
           tag: image,
-          sourceRevision: details.Config.Labels?.["org.opencontainers.image.revision"] ?? null,
+          ociLabels: {
+            source: details.Config.Labels?.["org.opencontainers.image.source"] ?? null,
+            revision: details.Config.Labels?.["org.opencontainers.image.revision"] ?? null,
+          },
         };
       },
       token: async (accountId: string, workbenchId: string, environmentId: string) =>

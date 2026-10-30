@@ -10,7 +10,7 @@ const output = resolve(process.argv[2] ?? ".pstdio/extension-storage/pstdio.pstd
 const image = process.argv[3];
 if (!image)
   throw new Error(
-    "Usage: bun packages/e2e/src/perf/relay-reference-workload/run.ts <output-directory> <built-relay-image>",
+    "Usage: bun packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts <output-directory> <built-relay-image>",
   );
 await mkdir(output, { recursive: true });
 const logs: string[] = [];
