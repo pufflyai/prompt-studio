@@ -1,7 +1,9 @@
 import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import type { ComponentProps } from "react";
+import { useApiFileParts } from "@/lib/api-file-url";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
+import { projectSteeringSubmission } from "../chat/optimistic-steering";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useQueuedSessionMessages } from "../hooks/use-queued-session-messages";
 import { SessionAttachmentControls } from "./session-attachment-controls";
@@ -17,7 +19,7 @@ interface SessionQueuedChatPanelProps extends ComponentProps<typeof ChatPanel> {
   draftKey: string;
   drafts?: DashboardSessionDraftPersistence;
   queue?: PendingQueuedFollowUpsResponse;
-  refreshQueue(): void;
+  refreshQueue(): unknown;
   draftAttachments: ReturnType<typeof useSessionDraftAttachments>;
   modelControls: ComponentProps<typeof SessionComposerActions>;
   messagesBlocked?: boolean;
@@ -42,6 +44,7 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
   const actions = useQueuedSessionMessages({
     sessionId,
     queuedFollowUps: panel.queuedFollowUps ?? [],
+    messages: panel.messages,
     refreshQueue,
     activeRunStartedAt: queue?.activeRunStartedAt,
     editRequest: (id, prompt) => {
@@ -61,9 +64,18 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
     actions.clearActionError();
     refreshQueue();
   };
+  const display = projectSteeringSubmission(
+    panel.messages,
+    panel.queuedFollowUps ?? [],
+    actions.steeringSubmission,
+    queue,
+  );
+  const messages = useApiFileParts(display.messages);
   return (
     <ChatPanel
       {...panel}
+      messages={messages}
+      queuedFollowUps={display.queuedFollowUps}
       conversationNotices={
         <>
           {panel.conversationNotices}

@@ -180,4 +180,6 @@ Explicit steering uses the active harness handle's optional live-input capabilit
 
 Before provider I/O, the host persists a delivery identity and run identity on the request. Definite rejection releases it. Acceptance removes the request only after a correlated user message is checkpointed. Uncertain delivery stays visible, protects its attachments, and cannot drain, mutate, or replay automatically. Recovery requires positive correlated history evidence.
 
+The dashboard shows live input as a sent conversation message immediately. The pending request keeps its submitted content until the durable handoff or confirmed message takes over. Queue removal alone does not clear that optimistic message. A definite rejection restores the saved queue row. Uncertain input stays visible without a delivery notice, including after reload; it is never sent again automatically.
+
 The harness emits one user message with the host delivery identity before returning acceptance. Native history preserves that identity so recovery can match the delivery after a restart. A transport failure does not prove rejection. Stopping and resuming a process is a separate operation and does not implement steering.
