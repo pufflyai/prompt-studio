@@ -1,4 +1,12 @@
 export const previews = {
+  "cloud-status-states": { source: "cloud-status-previews.tsx", exportName: "CloudStatusStates" },
+  "cloud-popover-synced": { source: "cloud-status-previews.tsx", exportName: "CloudPopoverSynced" },
+  "cloud-popover-offline": { source: "cloud-status-previews.tsx", exportName: "CloudPopoverOffline" },
+  "cloud-popover-coming-soon": { source: "cloud-status-previews.tsx", exportName: "CloudPopoverComingSoon" },
+  "cloud-settings-connected": { source: "cloud-settings-previews.tsx", exportName: "CloudSettingsConnected" },
+  "cloud-settings-local": { source: "cloud-settings-previews.tsx", exportName: "CloudSettingsLocal" },
+  "cloud-settings-coming-soon": { source: "cloud-settings-previews.tsx", exportName: "CloudSettingsComingSoon" },
+  "cloud-make-local": { source: "cloud-settings-previews.tsx", exportName: "CloudMakeLocalConfirmation" },
   "long-documentation": { source: "documentation.tsx", exportName: "LongDocumentation" },
   "project-form": { source: "interactive-previews.tsx", exportName: "ProjectForm" },
   controls: { source: "interactive-previews.tsx", exportName: "Controls" },
