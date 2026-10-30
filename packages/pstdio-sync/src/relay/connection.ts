@@ -72,6 +72,9 @@ const createRelaySocket = (input: RelaySocketInput) => {
     while (!input.signal.aborted) {
       attempt = new AbortController();
       attemptSignal = AbortSignal.any([input.signal, attempt.signal]);
+      // Access ends on schedule. Renewing a ready connection is not a lost connection, so it keeps its status
+      // and reconnects at once; the run after the next "ready" catches up on anything sent in between.
+      let renewal = false;
       try {
         const access = await input.access();
         if (input.signal.aborted) break;
@@ -85,6 +88,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
         const endAccess = () => {
           const remaining = Date.parse(access.expiresAt) - Date.now();
           if (remaining <= 0) {
+            renewal = connected;
             attempt?.abort();
             connection.close();
             return;
@@ -123,10 +127,11 @@ const createRelaySocket = (input: RelaySocketInput) => {
         input.onError?.();
       }
       clearTimeout(expiry);
-      setConnected(false);
+      if (!renewal) setConnected(false);
       attempt.abort();
       await running;
       if (input.signal.aborted) break;
+      if (renewal) continue;
       await new Promise<void>((resolve) => {
         retryDone = resolve;
         retry = setTimeout(resolve, Math.min(1000 * 2 ** failures++, 30_000));
