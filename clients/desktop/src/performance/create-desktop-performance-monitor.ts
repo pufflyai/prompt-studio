@@ -31,7 +31,7 @@ export const createDesktopPerformanceMonitor = (input: DesktopPerformanceMonitor
     readMetrics: () => {
       const started = performance.now();
       const metrics = app.getAppMetrics();
-      console.info("METRICS_DURATION", performance.now() - started);
+      logEndpointFailure(new Error(`METRICS_DURATION ${performance.now() - started}`));
       return metrics;
     },
     listFrames: () => windows()?.ownedFrames() ?? [],

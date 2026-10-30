@@ -23,11 +23,11 @@ jobs:
       - run: bun run --cwd clients/desktop package -- --arch=x64
       - name: Functional evidence regressions
         working-directory: clients/desktop
-        run: bunx playwright test --config playwright.packaged.config.ts packaged-benchmark-evidence.p2.spec.ts
+        run: bunx playwright test --config playwright.packaged.config.ts packaged-benchmark-evidence.p2.spec.ts --repeat-each=5
       - name: Launch benchmarks
         if: '!cancelled()'
         working-directory: clients/desktop
-        run: bunx playwright test --config playwright.benchmark.config.ts packaged-launch.p3.bench.ts
+        run: bunx playwright test --config playwright.benchmark.config.ts packaged-launch.p3.bench.ts --repeat-each=3
       - uses: actions/upload-artifact@v4
         if: always()
         with:
