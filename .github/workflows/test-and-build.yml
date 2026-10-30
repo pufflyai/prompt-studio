@@ -1,35 +1,60 @@
-name: Browser runner compatibility baseline
+name: Focused Windows quarantine verification
 on:
   workflow_dispatch:
+    inputs:
+      source_sha:
+        required: true
+        type: string
 permissions:
   contents: read
 jobs:
-  baseline:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    env:
+      NX_DAEMON: 'false'
+      E2E_TEST_LANE: quarantine
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: b393779a1a099d2a78177badb663ed6507104526
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
-      - name: Confirm main's pinned browser rejects the current default image
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Build native fixture dependencies
+        run: bun run build -- --scope pstdio-api --include-dependencies
+      - name: Start fresh source-matched evidence
         shell: bash
         run: |
-          set +e
-          bunx playwright@1.60.0 install chromium > browser-install.log 2>&1
-          install_status=$?
-          set -e
-          cat browser-install.log
-          test "$install_status" -ne 0
-          rg 'does not support chromium on ubuntu26.04-x64' browser-install.log
+          bun -e 'import {randomUUID} from "node:crypto"; import {mkdirSync,rmSync,writeFileSync,appendFileSync} from "node:fs"; import {bunRunIdentity} from "./scripts/ci/bun-test-evidence.ts"; const dir="test-results/quarantine/windows-final";rmSync(dir,{recursive:true,force:true});mkdirSync(dir,{recursive:true});const token=randomUUID();writeFileSync(dir+"/attempt.json",JSON.stringify({...bunRunIdentity(process.cwd()),token}));appendFileSync(process.env.GITHUB_ENV!,"CI_QUARANTINE_ATTEMPT="+token+"\n");'
+      - name: Execute delayed detached-process case once at its existing allowance
+        continue-on-error: true
+        working-directory: packages/pstdio-api
+        env:
+          BUN_TEST_EVIDENCE_FILE: ${{ github.workspace }}/test-results/quarantine/windows-final/api/cases.json
+          PSTDIO_DEFAULT_EXTENSIONS: '[]'
+          PSTDIO_EXTENSION_WEBVIEW_BUILDS: '0'
+        run: bun ../../scripts/ci/run-bun-tests.ts --conditions=source --timeout=30000 ./src/features/extensions/extension-detached-process.p1.test.ts
+      - name: Execute native Pi browser-completion case once at its existing allowance
+        if: '!cancelled()'
+        continue-on-error: true
+        working-directory: extensions/harness-pi
+        env:
+          BUN_TEST_EVIDENCE_FILE: ${{ github.workspace }}/test-results/quarantine/windows-final/pi/cases.json
+        run: bun ../../scripts/ci/run-bun-tests.ts --timeout=15000 ./src/authentication.p0.test.ts
+      - name: Require exactly one fresh attempt per registered case
+        if: '!cancelled()'
+        shell: bash
+        run: |
+          bun -e 'import {appendFileSync} from "node:fs";import {bunRunIdentity} from "./scripts/ci/bun-test-evidence.ts";import {verifyQuarantineAttempt,verifyBunQuarantineCases} from "./scripts/ci/quarantine-reports.ts";import {quarantineRegistry,matchesPlatform,bunTestSelection} from "./scripts/ci/test-quarantine.ts";const identity=bunRunIdentity(process.cwd());const attempt=await Bun.file("test-results/quarantine/windows-final/attempt.json").json();for(const [owner,key,file,control] of [["packages/pstdio-api","api","src/features/extensions/extension-detached-process.p1.test.ts","a detached extension command outlives its host after 0ms startup"],["extensions/harness-pi","pi","src/authentication.p0.test.ts","cancelling Pi login stops its worker before it can save credentials"]]){const report=await Bun.file("test-results/quarantine/windows-final/"+key+"/cases.json").json();if(!report.complete||report.reportError||report.signal||report.lane!=="quarantine")throw Error("Incomplete native evidence");verifyQuarantineAttempt(attempt,identity,report.quarantineAttempt);verifyQuarantineAttempt({...report,token:report.quarantineAttempt},identity,attempt.token);const expected=quarantineRegistry.filter(e=>e.runner==="bun"&&e.file===owner+"/"+file&&matchesPlatform(e,process.platform,process.arch));if(expected.length!==1)throw Error("Unexpected quarantine scope");const stable=bunTestSelection(quarantineRegistry,owner,process.platform,false);if(!new RegExp(stable.pattern!).test(control)||new RegExp(stable.pattern!).test(expected[0]!.name))throw Error("Stable/quarantine overlap");const result=verifyBunQuarantineCases(report.cases,expected);console.log(owner,result);appendFileSync(process.env.GITHUB_STEP_SUMMARY!,owner+": "+JSON.stringify(result)+"\n");}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: main-browser-install-baseline
-          path: browser-install.log
+          name: windows-final-first-attempt-evidence
+          path: test-results/quarantine/windows-final
           if-no-files-found: error
