@@ -1,5 +1,10 @@
 import { createInterface } from "node:readline";
-import { createAgentSessionServices } from "@mariozechner/pi-coding-agent";
+import {
+  createAgentSessionServices,
+  getAgentDir,
+  ProjectTrustStore,
+  SettingsManager,
+} from "@earendil-works/pi-coding-agent";
 import type { HarnessAuthenticationChannel } from "@pstdio/sdk/extensions";
 import { authenticatePiAccount, getPiAccountState } from "./account-state";
 import type { AccountWorkerInput, AccountWorkerMessage } from "./account-worker-protocol";
@@ -55,8 +60,14 @@ const channel: HarnessAuthenticationChannel = {
 };
 const main = async () => {
   const request = await initial.promise;
+  const cwd = process.cwd();
+  const agentDir = getAgentDir();
   const services = await createAgentSessionServices({
-    cwd: process.cwd(),
+    cwd,
+    agentDir,
+    settingsManager: SettingsManager.create(cwd, agentDir, {
+      projectTrusted: new ProjectTrustStore(agentDir).get(cwd) === true,
+    }),
     resourceLoaderOptions: { noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true },
   });
   if (request.type === "status") {

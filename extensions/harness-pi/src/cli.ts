@@ -7,7 +7,7 @@ export const piBunCommand = (entry: string) => ({
   env: { BUN_BE_BUN: "1" },
 });
 
-const managedPi = () => join(dirname(fileURLToPath(import.meta.resolve("@mariozechner/pi-coding-agent"))), "cli.js");
+const managedPi = () => join(dirname(fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"))), "cli.js");
 
 export const resolvePiCommand = (
   input: {
@@ -20,10 +20,15 @@ export const resolvePiCommand = (
   const found = (input.which ?? (() => Bun.which("pi")))();
   if (found) {
     if ((input.platform ?? process.platform) === "win32" && /\.(cmd|bat|ps1)$/i.test(found)) {
-      const entry = ["@earendil-works", "@mariozechner"]
-        .map((scope) => win32.join(win32.dirname(found), "node_modules", scope, "pi-coding-agent", "dist", "cli.js"))
-        .find(input.exists ?? existsSync);
-      if (entry) return piBunCommand(entry);
+      const entry = win32.join(
+        win32.dirname(found),
+        "node_modules",
+        "@earendil-works",
+        "pi-coding-agent",
+        "dist",
+        "cli.js",
+      );
+      if ((input.exists ?? existsSync)(entry)) return piBunCommand(entry);
       return piBunCommand((input.managed ?? managedPi)());
     }
     let entry = found;

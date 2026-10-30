@@ -34,9 +34,9 @@ jobs:
           - extension: harness-open-code
             package: opencode-ai
           - extension: harness-pi
-            package: "@mariozechner/pi-coding-agent"
+            package: "@earendil-works/pi-coding-agent"
           - extension: harness-pi
-            package: "@mariozechner/pi-coding-agent"
+            package: "@earendil-works/pi-coding-agent"
             os: windows-latest
     steps:
       - uses: actions/checkout@v5

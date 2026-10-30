@@ -1,10 +1,36 @@
 import { afterEach, expect, test } from "bun:test";
-import { SessionManager } from "@mariozechner/pi-coding-agent";
+import { ProjectTrustStore, SessionManager } from "@earendil-works/pi-coding-agent";
 import { piFixture } from "./cli.test-helpers";
+import { createPiHarness } from "./harness";
 
 let fixture: Awaited<ReturnType<typeof piFixture>>;
 afterEach(async () => {
   await fixture?.close();
+});
+
+test.each(["start", "resume", "getMessages"] as const)("refuses vulnerable Pi during %s", async (action) => {
+  fixture = await piFixture();
+  const entry = `${fixture.root}/unsupported.ts`;
+  const marker = `${fixture.root}/ran`;
+  await Bun.write(
+    entry,
+    `if (process.argv.includes('--version')) console.log('0.78.1');
+     else {
+       await Bun.write(${JSON.stringify(marker)}, 'ran');
+       console.log(JSON.stringify({type:'session',id:'unsupported'}));
+       console.log(JSON.stringify({type:'response',id:'request',success:true,data:{sessionFile:'missing'}}));
+     }`,
+  );
+  const harness = createPiHarness({ command: [process.execPath, entry] });
+  const input = {
+    prompt: "Hello",
+    sessionId: "unsupported",
+    agentSessionId: "existing",
+    cwd: fixture.root,
+    events: fixture.sink(),
+  };
+  await expect(harness[action](fixture.context, input)).rejects.toThrow("Requires Pi 0.79.0");
+  expect(await Bun.file(marker).exists()).toBe(false);
 });
 
 test("discovers authenticated Pi models", async () => {
@@ -12,7 +38,7 @@ test("discovers authenticated Pi models", async () => {
   const account = await fixture.harness.getAuthentication!(fixture.context, { model: "fixture/test" });
   expect(account.status).toBe("signed_in");
   expect(account.providers.find((provider) => provider.id === "fixture")?.canLogout).toBe(false);
-  expect(await fixture.harness.detect!(fixture.context)).toMatchObject({ available: true, version: "0.73.1" });
+  expect(await fixture.harness.detect!(fixture.context)).toMatchObject({ available: true, version: "0.79.0" });
   expect(await fixture.harness.listModels!(fixture.context)).toContainEqual({
     id: "fixture/test",
     label: "Local fixture",
@@ -198,12 +224,13 @@ test("keeps complete history and unique identities after Pi compacts its model c
   expect(recovered).toEqual({ kind: "recovered", messages: events.getMessages() });
 });
 
-test("keeps native extension messages consistent between streaming and history", async () => {
+test.each([false, true])("applies saved project trust %s to native extensions and their history", async (trusted) => {
   fixture = await piFixture();
   await Bun.write(
     `${fixture.root}/.pi/extensions/context.ts`,
     `export default function(pi) { pi.on("before_agent_start", () => ({ message: { customType: "fixture", content: "Visible context", display: true } })); }`,
   );
+  new ProjectTrustStore(`${fixture.root}/agent`).set(fixture.root, trusted);
   const events = fixture.sink();
   const session = await fixture.harness.start(fixture.context, {
     prompt: "First",
@@ -213,10 +240,10 @@ test("keeps native extension messages consistent between streaming and history",
     events,
   });
   expect(await session.done).toEqual({ status: "completed" });
-  expect(events.getMessages().flatMap((message) => message.parts)).toContainEqual({
-    type: "text",
-    text: "Visible context",
-  });
+  const parts = events.getMessages().flatMap((message) => message.parts);
+  const context = { type: "text", text: "Visible context" } as const;
+  if (trusted) expect(parts).toContainEqual(context);
+  else expect(parts).not.toContainEqual(context);
   const nativeMessages = await fixture.harness.getMessages!(fixture.context, {
     agentSessionId: session.agentSessionId!,
     cwd: fixture.root,
