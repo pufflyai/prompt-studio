@@ -66,4 +66,15 @@ test("keyboard tab navigation restores focus and draft state", async ({ page }) 
   const draft = preview.getByRole("textbox", { name: "Draft 1", exact: true });
   await expect(draft).toBeFocused();
   await expect(draft).toHaveValue("Retained keyboard draft");
+  const shortcuts = preview.locator("[data-keyboard-tab-shortcut]");
+  await page.keyboard.down("Alt");
+  await expect(shortcuts).toHaveCount(4);
+  await page.keyboard.up("Alt");
+  await expect(shortcuts).toHaveCount(0);
+  await page.keyboard.press("Alt+Shift+2");
+  await expect(preview.getByRole("textbox", { name: "Draft 2", exact: true })).toBeFocused();
+  await expect(preview.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await page.keyboard.press("Alt+Shift+1");
+  await expect(draft).toBeFocused();
+  await expect(draft).toHaveValue("Retained keyboard draft");
 });

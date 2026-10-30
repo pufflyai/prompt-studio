@@ -2,6 +2,7 @@ import { HStack, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, PaletteShortcut, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
+import { numberedTargetShortcut } from "../keybindings/numbered-target-shortcut";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
@@ -48,10 +49,13 @@ export const EmptyPanel = (props: EmptyPanelProps) => {
           gap="sm"
         >
           {panels.map((panel) => {
-            const number = targets.find(
-              (target) =>
-                target.kind === "new-tab" && target.region === region && target.panel.panelId === panel.panelId,
-            )?.number;
+            const shortcut = numberedTargetShortcut(
+              keyboard,
+              targets.find(
+                (target) =>
+                  target.kind === "new-tab" && target.region === region && target.panel.panelId === panel.panelId,
+              )?.number,
+            );
             return (
               <SimpleCard variant="action" asChild key={panel.panelId}>
                 <button
@@ -78,9 +82,7 @@ export const EmptyPanel = (props: EmptyPanelProps) => {
                           {panel.contribution.title}
                         </Text>
                       </HStack>
-                      {number && number <= 9 ? (
-                        <PaletteShortcut binding={keyboard.active ? String(number) : `Alt+Shift+${number}`} />
-                      ) : null}
+                      {shortcut ? <PaletteShortcut binding={shortcut} /> : null}
                     </HStack>
                   </SimpleCardBody>
                 </button>

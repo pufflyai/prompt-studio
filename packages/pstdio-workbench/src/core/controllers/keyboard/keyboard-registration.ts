@@ -37,12 +37,7 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
       category: "Panels and tabs",
       params: { number: { type: "number", required: true } },
     },
-    {
-      execute: (args: { number: number }) => {
-        if (!core.keyboard.store.getState().active) core.keyboard.open();
-        return core.keyboard.selectTab(args.number);
-      },
-    },
+    { execute: (args: { number: number }) => core.keyboard.selectTab(args.number) },
   );
   for (let number = 1; number <= 9; number++)
     core.keybindings.registerKeybinding({

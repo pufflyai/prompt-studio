@@ -21,12 +21,12 @@ export const WorkbenchKeybindingDispatcher = (props: WorkbenchKeybindingDispatch
   useEffect(() => {
     const refresh = () => setRegistrations(createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds }));
     const subscriptions = [
-      workbench.keybindings.store,
-      workbench.context.store,
-      workbench.commands.store,
-      workbench.layout.store,
-      workbench.keyboard.store,
-    ].map((store) => store.subscribe(refresh));
+      ...[workbench.keybindings.store, workbench.context.store, workbench.commands.store, workbench.layout.store].map(
+        (store) => store.subscribe(refresh),
+      ),
+      // Only the selected panel changes which shortcuts apply; previews and typed keys do not.
+      workbench.keyboard.store.subscribeSelector((state) => state.selectedRegion, refresh),
+    ];
     const preferences = workbench.preferences.onDidChangeValue(refresh);
     refresh();
     return () => {

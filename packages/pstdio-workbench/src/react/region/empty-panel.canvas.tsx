@@ -97,6 +97,16 @@ export const OpenInMain: Story = {
   id: "pstdio-workbench-reference-core-api-empty-panel--open-in-main",
   args: { workbench: createEmptyWorkbench() },
 };
+export const ShortcutPreview: Story = {
+  id: "pstdio-workbench-reference-core-api-empty-panel--shortcut-preview",
+  args: {
+    workbench: (() => {
+      const workbench = createEmptyWorkbench();
+      workbench.keyboard.setPreview(true);
+      return workbench;
+    })(),
+  },
+};
 export const OpenInSide: Story = {
   id: "pstdio-workbench-reference-core-api-empty-panel--open-in-side",
   args: { workbench: createEmptyWorkbench() },

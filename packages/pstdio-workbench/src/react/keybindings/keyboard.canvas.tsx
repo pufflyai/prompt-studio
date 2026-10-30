@@ -19,6 +19,12 @@ export const CrowdedTabs: Story = {
   id: "pstdio-workbench-reference-keyboard--crowded-tabs",
   args: { workbench: createKeyboardWorkbench(12) },
 };
+const shortcutPreview = createKeyboardWorkbench();
+shortcutPreview.keyboard.setPreview(true);
+export const ShortcutPreview: Story = {
+  id: "pstdio-workbench-reference-keyboard--shortcut-preview",
+  args: { workbench: shortcutPreview },
+};
 const menu = createKeyboardWorkbench();
 menu.keyboard.open();
 export const KeyboardBubble: Story = {
