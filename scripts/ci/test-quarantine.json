@@ -500,5 +500,33 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/41047163361/job/124034054688"
     ],
     "removeWhen": "Identify and fix the variable slow phase, then verify the complete collection views and runtime restart workload in a first-attempt Intel macOS execution within the unchanged allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-api/src/features/extensions/extension-detached-process.p1.test.ts",
+    "name": "a detached extension command outlives its host after 1500ms startup",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-907 / detached extension process lifetime",
+    "reason": "The unchanged delayed-start Windows case passed in both prior complete batteries (1966 ms in the revised run), then exhausted its existing 30000 ms allowance after the host-exit assertions in the final battery. The immediate-start variant passed and remains blocking. Preserve child lifetime and post-exit heartbeat assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754479",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41052259182/job/124051161177"
+    ],
+    "removeWhen": "Fix the delayed child post-host-exit progress or observation race, then verify this complete Windows x64 workload in a first attempt within its existing 30000 ms allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "extensions/harness-pi/src/authentication.p0.test.ts",
+    "name": "native Pi browser completion wins over a pending manual-code prompt",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-907 / Pi browser authentication",
+    "reason": "The unchanged Windows case passed in 1906 ms in the revised full battery, then exhausted its existing 15000 ms allowance with no assertions reached in the final battery. Preserve native browser completion, pending manual input, saved credentials and signed-in status checks; login cancellation remains blocking.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41052259182/job/124051160816"
+    ],
+    "removeWhen": "Identify and fix native account-worker startup/completion variance, then verify the complete Windows x64 authentication case in a first attempt within its unchanged 15000 ms allowance."
   }
 ]

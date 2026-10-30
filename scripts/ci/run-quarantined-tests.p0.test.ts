@@ -9,6 +9,7 @@ test("Windows Playwright quarantine preserves its configured allowance instead o
   expect(quarantineTestCommand("packaged-desktop", "@pstdio/desktop", "test:packaged", files, "win32")).not.toContain(
     "--timeout=15000",
   );
+  expect(quarantineTestCommand("bun", "harness-pi", "test", files, "win32")).toContain("--timeout=15000");
   expect(quarantineTestCommand("bun", "@pstdio/desktop", "test", files, "win32")).toContain("--timeout=15000");
   expect(quarantineTestCommand("bun", "@pstdio/desktop", "test", files, "linux")).not.toContain("--timeout=15000");
 });

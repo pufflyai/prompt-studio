@@ -23,7 +23,7 @@ export const quarantineTestCommand = (
   if (
     runner === "bun" &&
     platform === "win32" &&
-    ["pstdio-db", "harness-codex", "pstdio-planner", "@pstdio/desktop"].includes(owner)
+    ["pstdio-db", "harness-codex", "harness-pi", "pstdio-planner", "@pstdio/desktop"].includes(owner)
   )
     command.push("--timeout=15000");
   return command;
