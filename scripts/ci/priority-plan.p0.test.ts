@@ -69,3 +69,17 @@ test("isolated integrations invoke one canonical owner script with the selected 
   expect(plan).toHaveLength(1);
   expect(plan[0]?.command).toEqual(["bun", "run", "test:integration", "src/storage.p1.integration.ts"]);
 });
+
+test("P3 benchmark names keep browser and standalone files on their owning runners", () => {
+  const browser = "packages/e2e/src/perf/nav-chrome.p3.bench.ts";
+  const standalone = "packages/e2e/src/perf/subnav.p3.bench.ts";
+  const plan = createPriorityPlan([browser, standalone], packages, "P3");
+  expect(plan.find((run) => run.files.includes(browser))?.command).toEqual([
+    "bun",
+    "run",
+    "perf:frontend",
+    "src/perf/nav-chrome.p3.bench.ts",
+  ]);
+  expect(plan.find((run) => run.files.includes(standalone))?.command).toEqual(["bun", "src/perf/subnav.p3.bench.ts"]);
+  expect(plan).toHaveLength(2);
+});

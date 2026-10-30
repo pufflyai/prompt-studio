@@ -7,9 +7,9 @@ P3 runs the maintained acceptance workloads on exact candidate inputs. Manual an
 | Family | Definitions | Contract |
 | --- | --- | --- |
 | Signed desktop | `clients/desktop/src/e2e/packaged-launch.p3.bench.ts`, `packaged-renderer.p3.bench.ts` | Every named launch/renderer operation and existing platform budget, on all four desktop targets. Fresh performance runners receive the exact signed candidate app. Daily Windows nightlies use an explicitly source-only diagnostic because no Windows desktop app is published nightly. |
-| Browser | UI `chat-rendering.p3.perf.ts`, `chat-panel.p3.perf.ts`; every e2e `src/perf/*.perf.ts`; `packaged-paged-collections.p3.bench.ts` | Maintained three-repeat browser configurations and existing operation assertions. The frontend runs directly on restored candidate output. Chat builds its own measurement Storybook. |
+| Browser | UI `chat-rendering.p3.bench.ts`, `chat-panel.p3.bench.ts`; every e2e `src/perf/*.p3.bench.ts`; `packaged-paged-collections.p3.bench.ts` | Maintained three-repeat browser configurations and existing operation assertions. The frontend runs directly on restored candidate output. Chat builds its own measurement Storybook. |
 | Navigation | `subnav.p3.bench.ts` | Default 30 samples and the fixed 15,000-file / 1,000-ticket / 1,000-session / five-workspace workload. Structure/data/editor budgets are set from hosted ubuntu-24.04 runs ([sidenav and subnav](0004-sidenav-subnav.md)). |
-| Planner | `planner-stress.p3.bench.ts --packaged`, `planner-board-cold-open.p3.bench.ts` | Maintained 1,000-ticket workload and three default cold-open samples. Cold-open uses its CI-qualified target ([board cold open](0002-planner-board-cold-open.md)). Stress measurements remain informative where no timing ceiling exists. |
+| Planner | `planner-stress.diagnostic.ts --packaged`, `planner-board-cold-open.p3.bench.ts` | Maintained 1,000-ticket workload and three default cold-open samples. Cold-open uses its CI-qualified target ([board cold open](0002-planner-board-cold-open.md)). Stress measurements remain informative where no timing ceiling exists. |
 | Backend | Harness session resources, worktree cleanup, workbench resource inventory, session queries, document storage history | Fixed default standalone benchmark workloads on Linux, macOS and Windows. Correctness assertions remain blocking. Measurements without an existing operation ceiling remain informative. |
 | Relay | `services/relay/scripts/storage-bound.p3.bench.ts` | Maintained disposable-container workload and existing storage-bound contract. |
 
@@ -32,13 +32,13 @@ The full rich/small storage-scale track is explicitly diagnostic under [the main
 - `packages/pstdio-sync/src/relay/document-scale.diagnostic.ts`
 - `packages/pstdio-db/src/services/extension-storage/document-scale.diagnostic.ts`
 - `packages/pstdio-db/src/services/extension-storage/record-read-scale.diagnostic.ts`
-- `packages/e2e/src/perf/storage-scale.ts`, its preparation, sample and constrained-runtime controllers
+- `packages/e2e/src/perf/storage-scale.diagnostic.ts`, its preparation, sample and constrained-runtime controllers
 
 Acquire the acknowledged exclusive timing window described in that contract, build the compiled runtime before timing, then use the maintained supervisor for **every** frozen layer workload: rich 1,000 and 10,000 rows; small 1,000, 10,000 and 100,000 rows; sync and database layers; the contract's distinct churn variants. Do not reduce rows or sample counts. For each combination:
 
 ```sh
-bun packages/e2e/src/perf/storage-scale.ts --fixture rich --output /absolute/evidence/rich-1000-sync --layer sync --rows 1000 --timing-owner /absolute/owner.json
-bun packages/e2e/src/perf/storage-scale.ts --fixture rich --output /absolute/evidence/rich-1000-database --layer database --rows 1000 --timing-owner /absolute/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output /absolute/evidence/rich-1000-sync --layer sync --rows 1000 --timing-owner /absolute/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output /absolute/evidence/rich-1000-database --layer database --rows 1000 --timing-owner /absolute/owner.json
 ```
 
 The database supervisor prepares the complete closed fixture, copies it before fresh sample workers and retains all ten samples. The read diagnostic has its own maintained preparation/sample controller:

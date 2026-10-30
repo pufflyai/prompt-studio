@@ -1,23 +1,23 @@
 # Benchmark results
 
-Every benchmark in the repository reports its measurements in one result format. GitHub Actions runs them, release runs attach their results to the GitHub release, and the **Performance** pages in the repository's `pstdio-dev` extension read them. Ticket: PS-920.
+Every benchmark in the repository reports its measurements in one result format. GitHub Actions runs them, release runs attach their results to the GitHub release, and the **Performance** pages in the repository's `pstdio-dev` extension read them. Tickets: PS-920 and PS-924. See [Write a benchmark](../../guides/development/0016-writing-benchmarks.md) for naming, coverage, sampling, budgets and shared helpers.
 
 Benchmarks run only on GitHub Actions. A developer machine has other work running, so its numbers vary too much to compare commits.
 
 ## Suites
 
-[`packages/benchmarks/src/suites.ts`](../../../packages/benchmarks/src/suites.ts) lists every suite: how each commit prepares it once (builds, browsers), how one sample runs, and which platforms support it.
+[`packages/benchmarks/src/suites.ts`](../../../packages/benchmarks/src/suites.ts) lists exact benchmark files for every suite, preparation (builds and browsers), one-sample commands, and platform support. CI rejects missing or unregistered files.
 
 | Suite | Source | Measures |
 | --- | --- | --- |
 | `desktop` | `clients/desktop/src/e2e/packaged-*.bench.ts` | Launch, recovery, renderer CPU share, renderer heap, and app memory |
-| `workbench` | `packages/e2e/src/perf/*.perf.ts` | Workbench interaction times and page heap |
-| `chat` | `packages/ui/src/components/chat-ui/performance/*.perf.ts` | Chat loading, switching, streaming, rendering, and page heap |
-| `subnav` | `packages/e2e/src/perf/subnav-benchmark.ts` | Side navigation sections, data, and editor times |
-| `planner` | `packages/e2e/src/perf/planner-board-cold-open.ts` | Tickets cold open with 1,000 tickets |
+| `workbench` | `packages/e2e/src/perf/*.p3.bench.ts` and the packaged collection benchmark | Workbench interaction times and page heap |
+| `chat` | `packages/ui/src/components/chat-ui/performance/*.p3.bench.ts` | Chat loading, switching, streaming, rendering, and page heap |
+| `subnav` | `packages/e2e/src/perf/subnav.p3.bench.ts` | Side navigation sections, data, and editor times |
+| `planner` | `packages/e2e/src/perf/planner-board-cold-open.p3.bench.ts` | Tickets cold open with 1,000 tickets |
 | `storage` | `packages/pstdio-db/src/services/**/*.bench.ts` | Record saves, session badge query, and peak memory |
 | `runtime` | `pstdio-api`, `pstdio-api-runtime-host`, and `pstdio-workbench` `*.bench.ts` | Session resources, open-resource lookups, workspace cleanup, and peak memory |
-| `relay` | `services/relay/scripts/storage-bound.bench.ts` | Relay storage bound; Linux only, because it needs Docker |
+| `relay` | `services/relay/scripts/storage-bound.p3.bench.ts` | Relay storage bound; Linux only, because it needs Docker |
 
 The Planner moves stress test, its validation script, the Planner stress report, and the Planner reorder fixture are diagnostics. They need a Docker development stack or live inside the Planner extension, so the suites leave them out.
 
@@ -81,7 +81,7 @@ After a stable or patch release publishes, the release workflow starts a separat
 
 ## Performance pages
 
-The pages read only from `.pstdio/extension-storage/pstdio-dev/.publishers/pstdio/benchmarks/`. Opening a page, the daily schedule, and a followed run download new release assets and finished run artifacts there with the developer's `gh` login. Cached results outlive GitHub's artifact retention. Extension storage is not tracked by Git, so each developer keeps their own cache.
+The pages read only from `.pstdio/extension-storage/pstdio.pstdio-dev/benchmarks/`. Opening a page, the daily schedule, and a followed run download new release assets and finished run artifacts there with the developer's `gh` login. Cached results outlive GitHub's artifact retention. Extension storage is not tracked by Git, so each developer keeps their own cache.
 
 - **Trends** shows one chart per benchmark across the chosen releases: the median, its 95% confidence interval, and the budget. **Show table** lists every benchmark as a column and every release as a row. **One version** lists every benchmark for one release with its change against the previous release.
 - **Compare** shows base and head medians with intervals, and the change with its interval. When a run measured both commits, its results win over separate runs.

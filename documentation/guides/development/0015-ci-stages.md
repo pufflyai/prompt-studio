@@ -18,7 +18,7 @@ Every test file names its priority before the runner suffix, for example `sessio
 | P0 | Fast rules: types, validation, permissions, state changes, focused extension logic, repository and CI rules | Pull request, queue, nightly, stable | `session-state.p0.test.ts` |
 | P1 | Essential product behavior: session, workspace and extension lifecycles, data safety, restart and upgrade, sync, a working app, native and compiled startup | Queue, nightly, stable | `session-isolation.p1.test.ts`, `startup.p1.spec.ts` |
 | P2 | Breadth: extension feature workflows, component variants, more browsers and platforms, full install and update matrices | Nightly, stable | `planner-board.p2.spec.ts` |
-| P3 | Performance: startup, responsiveness, throughput, resource use, scale and endurance | Nightly, stable | `startup.p3.bench.ts`, `chat-rendering.p3.perf.ts` |
+| P3 | Performance: startup, responsiveness, throughput, resource use, scale and endurance | Nightly, stable | `startup.p3.bench.ts`, `chat-rendering.p3.bench.ts` |
 
 Rules:
 

@@ -1,9 +1,9 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { workbenchBudgets } from "pstdio-benchmarks";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import {
   afterTwoFrames,
   budgetMisses,
-  collectRepeatSamples,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -71,7 +71,7 @@ const measure = async (page: Page, trigger: Locator, ready: () => Promise<void>)
   return { ...result, collapseStateTransitions };
 };
 
-test("closes and reopens the live Side Panel within budget", async ({ page, request }, testInfo) => {
+test("closes and reopens the live Side Panel within budget", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Side Panel performance");
   await preparePerfPage(page, project.id);
@@ -101,16 +101,15 @@ test("closes and reopens the live Side Panel within budget", async ({ page, requ
 
   await reportPageMemory(page, "side-panel");
 
-  const results = collectRepeatSamples(testInfo, "side-panel", [{ close: close.duration, reopen: reopen.duration }]);
-  if (!results) return;
-  expect(results).toHaveLength(testInfo.project.repeatEach);
+  const results = [{ close: close.duration, reopen: reopen.duration }];
+  expect(results).toHaveLength(1);
   const misses = (["close", "reopen"] as const).flatMap((action) =>
     budgetMisses(
       "side-panel",
       action,
       results.map((result) => result[action]),
       // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 267 ms) plus about 20%.
-      325,
+      workbenchBudgets.sidePanel.value,
     ),
   );
   expect(misses).toEqual([]);

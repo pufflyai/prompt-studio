@@ -16,15 +16,15 @@
     "test:vite-terminal": "bun run src/scripts/run-vite-terminal-playwright.ts",
     "perf:frontend": "bun run --cwd ../.. build -- --scope e2e --scope pstdio-dashboard --include-dependencies && bun run src/scripts/run-playwright.ts -c playwright.perf.config.ts",
     "perf:frontend:trace": "PLAYWRIGHT_TRACE=on bun run perf:frontend",
-    "test:planner-stress": "bun src/perf/planner-stress.p3.bench.ts",
+    "test:planner-stress": "bun src/perf/planner-stress.diagnostic.ts",
     "perf:subnav": "bun src/perf/subnav.p3.bench.ts",
     "report": "playwright show-report",
     "perf:planner-board-cold-open": "bun src/perf/planner-board-cold-open.p3.bench.ts",
-    "perf:storage-scale": "bun src/perf/storage-scale.ts",
+    "perf:storage-scale": "bun src/perf/storage-scale.diagnostic.ts",
     "perf:storage-scale:build": "bun build src/perf/storage-scale-extension.ts --target bun --external @pstdio/sdk/extensions --outfile dist/storage-scale/scale.js",
     "perf:timing-window": "bun src/perf/storage-timing-window.ts",
     "test:packaged:benchmark": "playwright test --config playwright.packaged-benchmark.config.ts",
-    "bench:planner-stress": "bun src/perf/planner-stress.p3.bench.ts --packaged"
+    "bench:planner-stress": "bun src/perf/planner-stress.diagnostic.ts --packaged"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
