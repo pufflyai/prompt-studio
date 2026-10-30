@@ -9,12 +9,13 @@ import { KeyboardChoices } from "./keyboard-choices";
 import { KeyboardSequence } from "./keyboard-sequence";
 import { focusKeyboardChoice, useKeyboardLayerKeys } from "./use-keyboard-layer-keys";
 import { useKeyboardModeFocus } from "./use-keyboard-mode-focus";
+import { useKeyboardPreview } from "./use-keyboard-preview";
 import { useShortcutCatalog } from "./use-shortcut-catalog";
 
 export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const state = useWorkbenchStore(workbench.keyboard.store, (state) => state);
-  const { catalog } = useShortcutCatalog(workbench, state.active);
+  const { catalog } = useShortcutCatalog(workbench, state.active || state.preview);
   useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const bubble = useSlotRecipe({ key: "keyboardBubble" })();
   const palette = useSlotRecipe({ key: "palette" })();
@@ -28,6 +29,7 @@ export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
   const selection = state.selection;
   const expanded = hovered || search || Boolean(browseDirection);
   useKeyboardModeFocus(workbench, state, content, heading);
+  useKeyboardPreview(workbench);
   useKeyboardLayerKeys({
     workbench,
     content,
@@ -121,7 +123,18 @@ export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
         </Dialog.Positioner>
       </Dialog.Root>
     );
-  if (!state.active) return null;
+  if (!state.active && !state.preview) return null;
+  // The preview names the chord that enters shortcut mode, where sequences such as G → H work.
+  if (!state.active)
+    return (
+      <Portal>
+        <Box css={bubble.root} role="status" aria-label="Shortcut mode chord">
+          <Box css={bubble.sequence}>
+            <KeyboardSequence state={state} catalog={catalog} />
+          </Box>
+        </Box>
+      </Portal>
+    );
   return (
     <Portal>
       <Box

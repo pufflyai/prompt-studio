@@ -5,7 +5,7 @@ const runId = process.env.UI_PERF_RUN_ID ?? `ui-chat-perf-${Date.now()}-${proces
 
 export default defineConfig({
   testDir: "./src/components/chat-ui/performance",
-  testMatch: "**/*.perf.ts",
+  testMatch: "**/*.p3.bench.ts",
   timeout: Number(process.env.UI_PERF_TEST_TIMEOUT_MS ?? "60000"),
   expect: { timeout: 20_000 },
   fullyParallel: false,

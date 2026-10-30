@@ -24,6 +24,8 @@ export const installKeyboardShortcuts = (
 ) => {
   const listener = (input: Event) => {
     const event = input as KeyboardEvent;
+    // Global chords always hold Alt, Ctrl or Cmd, so ordinary typing never pays for a lookup.
+    if (!event.altKey && !event.ctrlKey && !event.metaKey) return;
     const shortcut = shortcuts().find((candidate) => matchesKeyboardShortcut(event, candidate));
     if (!shortcut) return;
     event.preventDefault();

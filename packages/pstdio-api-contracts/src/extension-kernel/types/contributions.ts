@@ -270,6 +270,7 @@ export type ShortcutLayer =
   | "create"
   | "current"
   | "settings"
+  /** @deprecated Choose a shared action layer. Legacy bindings join Current view. */
   | "help"
   /** @deprecated Choose a shared action layer. Legacy bindings join Current view. */
   | "extensions";

@@ -316,6 +316,10 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
     await page.keyboard.press("Escape");
   }
   await page.keyboard.press("Alt+Shift+Space");
+  await page.keyboard.press("g");
+  await page.keyboard.press("h");
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
+  await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("c");
   await page.keyboard.press("n");
   await expect(page).toHaveURL(/\/notes$/);

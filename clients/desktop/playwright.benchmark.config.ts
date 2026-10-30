@@ -1,4 +1,5 @@
 import { defineConfig } from "@playwright/test";
+import { suites } from "pstdio-benchmarks";
 import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
 
 const quarantine = process.env.E2E_TEST_LANE === "quarantine";
@@ -8,7 +9,9 @@ const quarantine = process.env.E2E_TEST_LANE === "quarantine";
 export default defineConfig({
   outputDir: quarantine ? "test-results/benchmark-quarantine" : "test-results/benchmark",
   testDir: "src/e2e",
-  testMatch: "packaged-*.bench.ts",
+  testMatch: suites
+    .find((suite) => suite.id === "desktop")!
+    .files.map((file) => `**/${file.replace("clients/desktop/src/e2e/", "")}`),
   ...playwrightQuarantineSelection("packaged-desktop-benchmark", "clients/desktop/src/e2e", quarantine),
   // Windows and hosted Intel macOS runners need longer for real launches and setup (approved 2026-10-10).
   timeout: process.platform === "win32" || (process.platform === "darwin" && process.arch === "x64") ? 60_000 : 30_000,

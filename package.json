@@ -55,7 +55,8 @@
     "test:p0": "bun scripts/ci/run-priority-tests.ts p0",
     "test:p1": "bun scripts/ci/run-priority-tests.ts p1",
     "test:p2": "bun scripts/ci/run-priority-tests.ts p2",
-    "test:p3": "bun scripts/ci/run-priority-tests.ts p3"
+    "test:p3": "bun scripts/ci/run-priority-tests.ts p3",
+    "verify:benchmarks": "bun packages/benchmarks/src/cli.ts verify"
   },
   "engines": {
     "bun": ">=1.4.4"

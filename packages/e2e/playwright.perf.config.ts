@@ -1,10 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
+import { suites } from "pstdio-benchmarks";
 import { e2eRunId, serveWebServer } from "./src/serve-web-server";
 import { uiOrigin } from "./src/ui-server";
 
 export default defineConfig({
   testDir: "./src/perf",
-  testMatch: "**/*.perf.ts",
+  testMatch: suites
+    .find((suite) => suite.id === "workbench")!
+    .files.filter((file) => file.startsWith("packages/e2e/src/perf/"))
+    .map((file) => `**/${file.replace("packages/e2e/src/perf/", "")}`),
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,

@@ -2,6 +2,7 @@ import { runCiChecks } from "./run-ci-checks";
 
 const scripts = [
   "format:check",
+  "verify:benchmarks",
   "verify:boundaries",
   "verify:lockfile",
   "verify:extension-api-version",

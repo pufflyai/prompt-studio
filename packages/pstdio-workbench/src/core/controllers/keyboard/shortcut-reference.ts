@@ -10,7 +10,7 @@ const layerGroups = {
   create: "Create",
   current: "Current view",
   settings: "Settings",
-  help: "Help",
+  help: "Current view",
   extensions: "Current view",
 };
 

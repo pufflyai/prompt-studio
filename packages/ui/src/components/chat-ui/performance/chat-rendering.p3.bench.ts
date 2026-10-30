@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { recordPageMemory, throttleChromiumCpu } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 
 const workloads = ["Rich turns", "Plain turns", "1000 responses", "5000 responses", "Large response"];
@@ -6,7 +7,7 @@ const workloads = ["Rich turns", "Plain turns", "1000 responses", "5000 response
 for (const workload of workloads) {
   test(`measures ${workload.toLowerCase()} rendering`, async ({ page }, testInfo) => {
     const cdp = await page.context().newCDPSession(page);
-    await cdp.send("Emulation.setCPUThrottlingRate", { rate: Number(process.env.CPU_THROTTLE ?? "4") });
+    await throttleChromiumCpu(page);
     await cdp.send("Performance.enable");
     await page.addInitScript(() => {
       window.__longTasks = [];
@@ -91,9 +92,7 @@ for (const workload of workloads) {
       const metric = `${workload.toLowerCase().replaceAll(" ", "-")}/${phase}`;
       const label = `${workload}, ${phase}`;
       recordMeasurement({ metric, label, unit: "ms", value: snapshot.elapsedMs });
-      const heap = after.metrics.find((entry) => entry.name === "JSHeapUsedSize")?.value;
-      if (heap !== undefined)
-        recordMeasurement({ metric: `${metric}/js-heap`, label: `${label}, page heap`, unit: "bytes", value: heap });
+      await recordPageMemory(page, { metric: `${metric}/js-heap`, label: `${label}, page heap` });
       expect(snapshot.responses).toBeLessThan(30);
       expect(snapshot.elapsedMs).toBeGreaterThan(0);
     }

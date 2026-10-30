@@ -1,3 +1,4 @@
+import { parseHotkey } from "@tanstack/hotkeys";
 import type { ContextKeyService } from "../../shared/context/context-key-service";
 import {
   byContributionPriority,
@@ -89,13 +90,18 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     const assigned = override?.layer === "direct" ? undefined : (override?.layer ?? binding.layer);
     const layer = assigned ? sharedShortcutLayer(assigned) : undefined;
     let defaultScope: Keybinding["targetScope"];
-    if (assigned === "extensions") defaultScope = "project";
+    if (assigned === "extensions" || assigned === "help") defaultScope = "project";
     else if (layer === "current") defaultScope = "panel";
+    const keybinding = override?.keybinding ?? binding.keybinding;
+    const first = getKeybindingSteps(keybinding)[0];
+    const held = first ? parseHotkey(first) : undefined;
     return {
       ...binding,
       id: getId(binding),
       targetScope: binding.targetScope ?? defaultScope,
-      keybinding: override?.keybinding ?? binding.keybinding,
+      keybinding,
+      // Plain keys belong to the editor, so only Alt, Ctrl or Cmd chords may act while typing.
+      allowInInputs: binding.allowInInputs === true && Boolean(held?.alt || held?.ctrl || held?.meta),
       layer,
       disabled: override?.disabled === true,
     };

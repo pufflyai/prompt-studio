@@ -32,6 +32,7 @@ const ResolvedShortcutHint = (props: ShortcutHintProps & { active: boolean }) =>
 export const WorkbenchShortcutHint = (props: ShortcutHintProps) => {
   const { workbench, action, children, modeOnly } = props;
   const active = useWorkbenchStore(workbench.keyboard.store, (state) => state.active);
-  if (!action || (modeOnly && !active)) return children;
+  const visible = useWorkbenchStore(workbench.keyboard.store, (state) => state.active || state.preview);
+  if (!action || (modeOnly && !visible)) return children;
   return <ResolvedShortcutHint {...props} active={active} />;
 };

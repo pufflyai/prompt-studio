@@ -43,6 +43,12 @@ export const createStartModule = () =>
         },
         slots: [],
       });
+      ctx.keybindings.registerKeybinding({
+        action: { kind: "page", page: workbenchPages.start },
+        keybinding: "H",
+        layer: "go",
+        label: "Go to home",
+      });
       registerDashboardNavigationContribution(ctx, {
         id: "dashboard.start.project-nav",
         modes: ["project"],

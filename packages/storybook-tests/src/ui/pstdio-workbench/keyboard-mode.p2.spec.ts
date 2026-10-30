@@ -12,19 +12,45 @@ test.afterAll(async () => {
   await stopStorybook(storybook);
 });
 
-test("a numbered chord starts tab navigation and Enter focuses the last plain-number selection", async ({ page }) => {
+test("a numbered chord selects a tab without entering shortcut mode", async ({ page }) => {
   await page.goto(storyUrl(baseUrl, `${prefix}visible-panels`));
   await waitForStoryPlayback(page);
   await page.getByRole("textbox", { name: "Draft 4", exact: true }).fill("Keep Secondary draft");
+  await page.keyboard.down("Alt");
+  const firstLabelId = await page
+    .locator("[data-keyboard-tab-shortcut]")
+    .filter({ hasText: /1$/ })
+    .locator('xpath=ancestor::*[@role="tab"]')
+    .getAttribute("aria-labelledby");
+  const firstLabel = await page.locator(`[id="${firstLabelId}"]`).textContent();
+  await page.keyboard.up("Alt");
   await page.keyboard.press("Alt+Shift+1");
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await expect(
+    page.getByRole("textbox", { name: `Draft ${firstLabel?.replace("PS-", "")}`, exact: true }),
+  ).toBeFocused();
+  await expect(page.getByRole("textbox", { name: "Draft 4", exact: true })).toHaveValue("Keep Secondary draft");
+});
+
+test("holding Alt previews tab chords and shortcut mode selects by plain number", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, `${prefix}visible-panels`));
+  await waitForStoryPlayback(page);
+  const shortcuts = page.locator("[data-keyboard-tab-shortcut]");
+  await expect(shortcuts).toHaveCount(0);
+  const chord = page.getByRole("status", { name: "Shortcut mode chord", exact: true });
+  await page.keyboard.down("Alt");
+  await expect(shortcuts).toHaveCount(4);
+  await expect(chord).toBeVisible();
+  await expect(chord).toContainText("Space");
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await page.keyboard.up("Alt");
+  await expect(shortcuts).toHaveCount(0);
+  await expect(chord).toBeHidden();
+  await page.keyboard.press("Alt+Shift+Space");
   const mode = page.getByRole("region", { name: "Keyboard shortcut mode", exact: true });
   await expect(mode).toBeVisible();
   const numberedTab = (number: number) =>
-    page
-      .locator("[data-keyboard-tab-number]")
-      .filter({ hasText: new RegExp(`^${number}$`) })
-      .locator('xpath=ancestor::*[@role="tab"]');
-  await expect(numberedTab(1)).toHaveAttribute("data-keyboard-selected", "");
+    shortcuts.filter({ hasText: new RegExp(`^${number}$`) }).locator('xpath=ancestor::*[@role="tab"]');
   const secondLabelId = await numberedTab(2).getAttribute("aria-labelledby");
   const secondLabel = await page.locator(`[id="${secondLabelId}"]`).textContent();
   await page.keyboard.press("2");
@@ -35,7 +61,6 @@ test("a numbered chord starts tab navigation and Enter focuses the last plain-nu
   await expect(
     page.getByRole("textbox", { name: `Draft ${secondLabel?.replace("PS-", "")}`, exact: true }),
   ).toBeFocused();
-  await expect(page.getByRole("textbox", { name: "Draft 4", exact: true })).toHaveValue("Keep Secondary draft");
 });
 
 test("Ctrl Tab cycles tabs and Ctrl Shift Tab goes back without entering shortcut mode", async ({ page }) => {
@@ -75,7 +100,7 @@ test("fast entry owns keys, tab navigation stays active and exits into Secondary
   await expect(page.getByRole("tab", { name: "PS-4", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("Enter");
   await expect(draft).toBeFocused();
-  await expect(page.locator("[data-keyboard-tab-number]")).toHaveCount(0);
+  await expect(page.locator("[data-keyboard-tab-shortcut]")).toHaveCount(0);
 });
 
 test("ambiguous visible resources require a choice and Enter on the heading is inert", async ({ page }) => {
@@ -107,12 +132,12 @@ test("tabs beyond nine use the direct picker and tab navigation wraps", async ({
             a.getBoundingClientRect().top - b.getBoundingClientRect().top ||
             a.getBoundingClientRect().left - b.getBoundingClientRect().left,
         )[0];
-        return first?.querySelector("[data-keyboard-tab-number]")?.textContent;
+        return first?.querySelector("[data-keyboard-tab-shortcut]")?.textContent;
       }),
     )
     .toBe("1");
   const firstLabelId = await page
-    .locator("[data-keyboard-tab-number]")
+    .locator("[data-keyboard-tab-shortcut]")
     .filter({ hasText: /^1$/ })
     .locator('xpath=ancestor::*[@role="tab"]')
     .getAttribute("aria-labelledby");

@@ -17,6 +17,8 @@ are defined in `src/vite-terminal-servers.ts` and shared by its configuration an
 
 ## Performance suite
 
+Follow [Write a benchmark](../../documentation/guides/development/0016-writing-benchmarks.md) for the shared naming, runner, helpers and strictly-below budget rule.
+
 Run the frontend performance suite with `bun run --cwd packages/e2e perf:frontend`. The script
 builds the dashboard and its dependencies, then starts the same isolated `pstdio serve` server
 as the dashboard suite. `src/serve-web-server.ts` defines that server for both configurations.

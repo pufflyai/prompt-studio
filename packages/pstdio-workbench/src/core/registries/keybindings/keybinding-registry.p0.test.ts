@@ -110,3 +110,28 @@ describe("createKeybindingRegistry", () => {
     ).toThrow("Keybinding command not registered: missing");
   });
 });
+
+test("only chords holding Alt, Ctrl or Cmd work while typing", () => {
+  const core = createWorkbench();
+  for (const [id, keybinding] of [
+    ["plain", "F2"],
+    ["shifted", "Shift+J"],
+    ["held", "Alt+Shift+J"],
+    ["command", "Mod+J"],
+  ] as const) {
+    core.commands.registerCommand({ id, label: id }, { execute() {} });
+    core.keybindings.registerKeybinding({
+      id,
+      action: { kind: "command", commandId: id },
+      keybinding,
+      allowInInputs: true,
+    });
+  }
+  const typing = Object.fromEntries(
+    core.keybindings
+      .listActiveKeybindings()
+      .filter((binding) => ["plain", "shifted", "held", "command"].includes(binding.id!))
+      .map((binding) => [binding.id, Boolean(binding.allowInInputs)]),
+  );
+  expect(typing).toEqual({ plain: false, shifted: false, held: true, command: true });
+});
