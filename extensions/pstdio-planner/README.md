@@ -38,9 +38,9 @@ Local ticket folders follow the current number. Planner preserves unsaved text a
 
 ## Refinement options
 
-Open Settings → Project → Extensions → Project Planner, then the Settings tab. **Generate an artifact prototype for UX features** is enabled by default. It applies when refining a new feature with UX changes and Artifacts is installed and enabled for the project.
+Open Settings → Project → Extensions → Project Planner, then the Settings tab. **Update canvas designs for UI changes** is enabled by default. It applies to tickets that add or change UI, including changes to existing features.
 
-The refine-ticket skill reads the project option with `pst pstdio-planner refinement-policy`. The result contains `generateArtifactPrototype`. When enabled, the agent publishes an interactive prototype and links it in the ticket before completing refinement. If the option is off or Artifacts is unavailable, the agent records why it skipped the prototype. Tickets without a new UX feature do not require one.
+The ticket skills read the project option with `pst pstdio-planner refinement-policy`. The result contains `updateCanvasDesign`. When enabled, the agent follows the project's canvas skill and updates the live design before completing the ticket or changing production UI. The ticket links the canvas page, exact preview names, source paths, and a short walkthrough. This replaces the artifact prototype requirement. If the option is off, the agent records why it skipped the design step. If Canvas is unavailable, the agent uses the project's existing design workflow and records why no canvas was linked. Tickets without UI changes do not require one.
 
 Install the optional **Artifacts** extension from Extensions to use prototypes. Its package name is `pstdio-artifacts`. Refinement does not install it automatically. Shared ticket workflow options belong to Planner alongside its refinement and implementation skills.
 

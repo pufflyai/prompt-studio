@@ -6,7 +6,7 @@ This project is a Bun + TypeScript monorepo using workspaces, Lerna, and Nx cach
 
 - Git. The isolated stack mounts the checkout's Git folder, and core extensions are downloaded with Git.
 - Bun `1.4.4`, matching the root `packageManager` pin, CI, and Docker images
-- Node `24` for native build tooling, desktop development, and Storybook
+- Node `24` for native build tooling, desktop development, and Canvas
 - Docker with the Compose v2 plugin (`docker compose version`). The isolated stack needs BuildKit and Compose 2.17 or newer, because its build uses an extra build context. Docker Desktop includes both.
 - Free disk space for Docker. See [Disk space](#disk-space).
 
@@ -309,22 +309,18 @@ bun run --cwd packages/pstdio-db db:generate
 
 Never edit generated SQL by hand. Keep one migration entry per PR. Verify migrations through isolated test/startup workflows. Do not connect directly to the local PGlite database or run Drizzle Studio against production state. Use public APIs for inspection. See [PGlite ownership and recovery](../../lessons-learned/0002-pglite-wal-corruption.md).
 
-## Storybook
+## Canvas
 
-Run the UI Storybook locally:
+Use the live Canvas extension for designs and component examples. See the [authoring and coverage guide](0003-canvas-coverage.md).
 
-```bash
-bun run storybook:ui
+```sh
+bun run --cwd scripts canvas:build
+bun run --cwd scripts canvas:coverage
+pst canvas list
+pst canvas open --canvas foundations
 ```
 
-Build the static Storybook files or run component tests:
-
-```bash
-bun run --cwd packages/ui build-storybook
-bun run --cwd packages/ui test-storybook
-```
-
-See `packages/ui/README.md` for UI-package Storybook guidance.
+Run `canvas:verify` in the isolated Docker tools container for browser validation.
 
 ## Project Validation
 

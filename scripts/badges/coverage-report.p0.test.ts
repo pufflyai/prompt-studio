@@ -14,10 +14,10 @@ test("lists unimported production files without inventing executable line counts
       "packages/api/src/helper.test-fixture.ts",
       "packages/api/src/typed.generated.ts",
       "packages/api/src/__generated__/types.ts",
-      "packages/api/src/example.stories.tsx",
+      "packages/api/src/example.canvas.tsx",
       "packages/api/src/app.p1.test.ts",
       "packages/api/src/types.d.ts",
-      "packages/storybook-tests/src/ui/example.spec.ts",
+      "packages/canvas-tests/src/ui/example.spec.ts",
       "packages/workbench-fixture/src/index.ts",
     ],
     reports: [

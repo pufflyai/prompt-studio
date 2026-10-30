@@ -37,7 +37,7 @@ if (args.includes("--list")) {
     ...new Set(
       plan
         .map((run) => {
-          if (run.storybook) return packages.find((pkg) => pkg.dir === `packages/${run.storybook}`)!.name;
+          if (run.componentOwner) return packages.find((pkg) => pkg.dir === `packages/${run.componentOwner}`)!.name;
           return run.owner;
         })
         .filter((owner) => owner !== "repository"),
@@ -58,20 +58,11 @@ if (args.includes("--list")) {
           "--include-dependencies",
         ],
       });
-    for (const owner of new Set(plan.flatMap((run) => (run.storybook ? [run.storybook] : []))))
+    if (plan.some((run) => run.componentOwner))
       setup.push({
-        id: `build-storybook:${owner}`,
+        id: "build-canvas-previews",
         cwd: root,
-        command: [
-          "bun",
-          "x",
-          "--no-install",
-          "lerna",
-          "run",
-          "build-storybook",
-          "--scope",
-          packages.find((pkg) => pkg.dir === `packages/${owner}`)?.name ?? owner,
-        ],
+        command: ["bun", "x", "--no-install", "lerna", "run", "build:previews", "--scope", "canvas-tests"],
       });
     if (plan.some((run) => run.runner.startsWith("packaged") || (run.runner === "performance" && run.owner === "e2e")))
       setup.push({ id: "build-packaged-cli", cwd: root, command: ["bun", "run", "--cwd", "scripts", "build:host"] });
@@ -86,8 +77,8 @@ if (args.includes("--list")) {
     const checks = plan.map((run) => ({
       id: run.id,
       cwd: join(root, run.cwd),
-      command: run.storybook
-        ? ["bun", "x", "--no-install", "cross-env", `STORYBOOK_PACKAGES=${run.storybook}`, ...run.command]
+      command: run.componentOwner
+        ? ["bun", "x", "--no-install", "cross-env", `CANVAS_TEST_PACKAGES=${run.componentOwner}`, ...run.command]
         : run.command,
     }));
     const result = await runCiChecks(checks, {

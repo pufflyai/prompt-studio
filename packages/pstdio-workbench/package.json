@@ -46,8 +46,6 @@
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
     "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --silent",
-    "storybook": "storybook dev -p 6007",
-    "build-storybook": "storybook build",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --coverage",
     "prepublishOnly": "bun run build"
   },
@@ -71,9 +69,6 @@
   "devDependencies": {
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
-    "@storybook/addon-docs": "10.6.0",
-    "@storybook/react": "^10.6.0",
-    "@storybook/react-vite": "^10.6.0",
     "@types/bun": "1.4.4",
     "@types/react": "19.2.3",
     "@types/react-dom": "19.2.3",
@@ -89,9 +84,9 @@
     "react-dom": "19.2.4",
     "rolldown": "^1.2.11",
     "rolldown-plugin-dts": "^0.28.6",
-    "storybook": "^10.6.0",
     "three": "^0.185.1",
     "typescript": "6.0.2",
-    "vite": "^8.3.1"
+    "vite": "^8.3.1",
+    "@pstdio/canvas": "workspace:*"
   }
 }

@@ -26,6 +26,7 @@ describe("VS Code theme conversion", () => {
       "colors.bg": "#272822",
       "colors.bg.code": "#272822",
       "colors.bg.panel": "#1f201b",
+      "colors.bg.subtle": "#1f201b",
       "colors.border.accent": "#66d9ef",
       "colors.fg": "#f8f8f2",
       "colors.vscode.activityBar.background": "#191a16",
@@ -77,6 +78,22 @@ describe("VS Code theme conversion", () => {
       "colors.vscode.list.hoverBackground": "#004454AA",
       "colors.vscode.menu.selectionBackground": "#6272a4",
     });
+  });
+
+  test("keeps subtle surfaces apart from the editor background", () => {
+    const preference = createThemePreferenceFromVsCodeTheme({
+      id: "lab.dracula",
+      mode: "dark",
+      theme: {
+        colors: {
+          "editor.background": "#282A36",
+          "input.background": "#282A36",
+          "sideBar.background": "#21222C",
+        },
+      },
+    });
+
+    expect(preference.tokens).toMatchObject({ "colors.bg": "#282A36", "colors.bg.subtle": "#21222C" });
   });
 
   test("maps badge and git decoration colors into app tokens", () => {

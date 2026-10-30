@@ -75,14 +75,14 @@ export default defineExtension({
         ),
       },
 
-      "refinement.generateArtifactPrototype": {
+      "refinement.updateCanvasDesign": {
         type: "boolean",
         scope: "project",
         default: true,
-        title: l10n("settings.uxPrototype.title", "Generate an artifact prototype for UX features"),
+        title: l10n("settings.canvasDesign.title", "Update canvas designs for UI changes"),
         description: l10n(
-          "settings.uxPrototype.description",
-          "Require an interactive prototype when refining a new UX feature if Artifacts is available.",
+          "settings.canvasDesign.description",
+          "Update the canvas design before completing tickets that add or change UI.",
         ),
       },
       "implementation.adversarialReview": {

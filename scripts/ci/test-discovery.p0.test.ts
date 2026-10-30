@@ -30,7 +30,7 @@ describe("test priority discovery", () => {
   test("keeps application, component, packaged and native execution separate", () => {
     expect(testRunner("packages/pstdio-api/src/session.p1.test.ts")).toBe("api");
     expect(testRunner("packages/e2e/src/ui/session.p1.spec.ts")).toBe("app");
-    expect(testRunner("packages/storybook-tests/src/ui/ui/menu.p1.spec.ts")).toBe("component");
+    expect(testRunner("packages/canvas-tests/src/ui/ui/menu.p1.spec.ts")).toBe("component");
     expect(testRunner("packages/e2e/src/packaged/startup.p1.test.ts")).toBe("packaged-cli");
     expect(testRunner("packages/e2e/src/packaged/startup.p1.spec.ts")).toBe("packaged-browser");
     expect(testRunner("clients/desktop/src/e2e/desktop-startup.p1.spec.ts")).toBe("desktop");

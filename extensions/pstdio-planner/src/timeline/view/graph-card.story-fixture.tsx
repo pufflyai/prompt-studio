@@ -33,6 +33,7 @@ export function EditableCardPreview(props: EditableCardPreviewProps) {
   const { displayProperties = DEFAULT_TIMELINE_DISPLAY_PROPERTIES, ...cardProps } = props;
   const [values, setValues] = useState<Record<string, unknown>>({ status: props.row.status?.id, type: "feature" });
   const [host] = useState<GuestHost>(() => ({
+    extensionId: "pstdio.pstdio-planner",
     call: (async (method, request) => {
       if (method === "resources.actions") return [{ key: "run", label: "Run attempt", icon: "Play" }];
       if (method === "commands.execute") {

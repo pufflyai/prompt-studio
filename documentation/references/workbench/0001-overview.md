@@ -18,7 +18,7 @@ The React integration needs the peer dependencies `react` and `react-dom` (19), 
 - [Contribution ownership](0003-contribution-ownership.md) explains module and extension attribution, lifecycle, and instance ownership.
 - [Navigation](0004-navigation.md) explains explicit targets, canonical locations, breadcrumbs, and history.
 
-Runnable examples live in the workbench's Storybook stories under `packages/pstdio-workbench/src/examples`. Start with the [panels and pages stories](../../../packages/pstdio-workbench/src/examples/api/api.stories.tsx).
+Runnable examples live in the workbench's Canvas stories under `packages/pstdio-workbench/src/examples`. Start with the [panels and pages stories](../../../packages/pstdio-workbench/src/examples/api/api.canvas.tsx).
 
 ## Tabs
 
@@ -88,5 +88,5 @@ Native Chakra menu choices use `Menu.ItemText` and `Menu.ItemIndicator` with the
 The floating Side Panel hides its launcher while open and restores it when closed.
 The hidden launcher is inert and outside the accessibility tree. Panel content stays
 mounted while closed, so minimizing and reopening preserves drafts. See the
-[menu selection story](../../../packages/ui/src/components/overlays/menu-selection.stories.tsx)
-and [Side Panel stories](../../../packages/pstdio-workbench/src/examples/side-panel/side-panel.stories.tsx).
+[menu selection story](../../../packages/ui/src/components/overlays/menu-selection.canvas.tsx)
+and [Side Panel stories](../../../packages/pstdio-workbench/src/examples/side-panel/side-panel.canvas.tsx).

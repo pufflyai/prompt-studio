@@ -1,5 +1,5 @@
-import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
-import * as OnboardingStories from "./onboarding.stories";
+import { Canvas, Meta, Source } from "@pstdio/canvas";
+import * as OnboardingStories from "./onboarding.canvas";
 import source from "./extensions/page-extension.ts?raw";
 
 <Meta of={OnboardingStories} name="3. First extension page" />
@@ -48,5 +48,5 @@ Finally, `defineExtension(...)` exports the views, pages, and navigation items a
 removes them together. Registering the View alone would show nothing; the page places it, and the navigation item gives
 the user a way to reach it.
 
-The Storybook preview supplies a host sidebar that renders Project mode's navigation items. An installed extension uses
+The Canvas preview supplies a host sidebar that renders Project mode's navigation items. An installed extension uses
 the dashboard's sidebar. The sidebar is separate from each page's Main content.

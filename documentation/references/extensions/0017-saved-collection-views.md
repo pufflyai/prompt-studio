@@ -37,4 +37,4 @@ Webviews call extension commands through `createWebviewClient`. Subscribe to `vi
 
 Provide a `CollectionViewsSource` backed by `ctx.views` commands. Keep search and selection local. Keep the collection's saved settings, filters, and sorts in the project API. A custom presentation can share a native collection's filters while retaining its own display preferences.
 
-See [the collection header stories](../../../packages/ui/src/components/collection-view/collection-view-bar.stories.tsx) for props and interactions, and [ADR 0060](../../adrs/0060-shared-project-board-views.md) for storage ownership.
+See [the collection header stories](../../../packages/ui/src/components/collection-view/collection-view-bar.canvas.tsx) for props and interactions, and [ADR 0060](../../adrs/0060-shared-project-board-views.md) for storage ownership.

@@ -72,7 +72,7 @@ Electron's `DesktopProjectTabsStore` persists only `{ projectIds: string[] }` in
 
 A failed write shows an error through the workbench notification system. Tabs remain usable. The next tab change saves the full current order and dismisses the error after a successful write.
 
-`@pstdio/ui` owns the title-bar and tab recipes. Pencil node `V3OnvZ` defines the workbench; `iGFTr` shows normal and full-screen desktop title bars. `@pstdio/workbench` provides a generic `titleBar` slot above its regions and inside its theme. It has no project or Electron knowledge.
+`@pstdio/ui` owns the title-bar and tab recipes. The live Canvas examples define normal and full-screen desktop title bars. `@pstdio/workbench` provides a generic `titleBar` slot above its regions and inside its theme. It has no project or Electron knowledge.
 
 ## Theme
 
@@ -95,7 +95,7 @@ bun run --cwd clients/desktop package
 bun run --cwd clients/desktop test:packaged --grep 'opens, switches, closes'
 ```
 
-The flow opens two projects through the picker and restores a different page in each, including an extension page. It reorders tabs with the pointer and keyboard, cancels a move, closes the active tab without stopping its terminal, and restores the page and tab order after relaunch. It checks the expected lifecycle and workbench renderers and an unchanged runtime ID and PID, then attaches `desktop-project-tabs.png` while two tabs are visible. Source Electron checks also verify that both renderers share one native window. Storybook's `Components/Navigation/Window Tabs` covers light and dark themes, overflow, long names, keyboard selection and reordering, and close hover/focus.
+The flow opens two projects through the picker and restores a different page in each, including an extension page. It reorders tabs with the pointer and keyboard, cancels a move, closes the active tab without stopping its terminal, and restores the page and tab order after relaunch. It checks the expected lifecycle and workbench renderers and an unchanged runtime ID and PID, then attaches `desktop-project-tabs.png` while two tabs are visible. Source Electron checks also verify that both renderers share one native window. Canvas's `Components/Navigation/Window Tabs` covers light and dark themes, overflow, long names, keyboard selection and reordering, and close hover/focus.
 
 BrowserWindow enables sandboxing, context isolation, web security, and disables Node integration and webviews. The bundled lifecycle renderer is served from the privileged `pstdio://lifecycle/` protocol, restricted to files under its renderer root. It does not use the broader `file://` protocol. The shell:
 
@@ -169,7 +169,7 @@ on Linux, and a signed Squirrel Setup installer and update package on Windows.
 The DMG opens a Finder window with a static background,
 `assets/dmg-background.png` and its `@2x` Retina copy. Both are exported from
 the `Desktop · macOS installer · Background` frame in
-`design/prompt-studio-website.pen`. Forge places the real app icon and the
+the Landing Page canvas. Forge places the real app icon and the
 Applications link in the clear areas on each side of the painted arrow. Finder
 owns the copy, its progress, and replace prompts. No Prompt Studio code runs
 while Finder copies the app, so the window cannot report that the copy finished.
