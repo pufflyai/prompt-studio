@@ -76,8 +76,6 @@ const PanelViewPortal = (props: {
   const [host] = useState(() => {
     const node = document.createElement("div");
     node.style.display = "contents";
-    const debug = window as unknown as { __releaseHosts?: Map<string, HTMLElement> };
-    (debug.__releaseHosts ??= new Map()).set(placement.widgetId, node);
     return node;
   });
   useLayoutEffect(() => {

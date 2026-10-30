@@ -28,16 +28,8 @@ export const createDesktopPerformanceMonitor = (input: DesktopPerformanceMonitor
         onError: logEndpointFailure,
       }),
     preference: new PerformanceMonitoringPreference(join(app.getPath("userData"), "performance-monitoring.json")),
-    readMetrics: () => {
-      const started = performance.now();
-      try { return app.getAppMetrics(); }
-      catch (error) { console.log("release-metrics-error", String(error)); throw error; }
-      finally { console.log("release-metrics-ms", performance.now() - started); }
-    },
-    listFrames: () => {
-      try { return windows()?.ownedFrames() ?? []; }
-      catch (error) { console.log("release-frames-error", String(error)); throw error; }
-    },
+    readMetrics: () => app.getAppMetrics(),
+    listFrames: () => windows()?.ownedFrames() ?? [],
     runtimeOrigin: () => windows()?.runtimeOrigin() ?? null,
     platform: process.platform,
     cpuCount: cpus().length,

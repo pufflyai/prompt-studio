@@ -1,8 +1,6 @@
 name: Focused release regressions
 on:
   workflow_dispatch:
-  push:
-    branches: [test/ci-reliability/release-regressions]
 permissions:
   contents: read
 jobs:
@@ -23,12 +21,45 @@ jobs:
       - run: bun scripts/ci/install-native-dependencies.ts
       - run: bun run build -- --scope @pstdio/desktop --include-dependencies
       - run: bun run --cwd clients/desktop package -- --arch=x64
+      - name: Functional evidence regressions
+        working-directory: clients/desktop
+        run: bunx playwright test --config playwright.packaged.config.ts packaged-benchmark-evidence.p2.spec.ts
       - name: Launch benchmarks
         if: '!cancelled()'
         working-directory: clients/desktop
-        run: bunx playwright test --config playwright.benchmark.config.ts packaged-launch.p3.bench.ts --repeat-each=3
+        run: bunx playwright test --config playwright.benchmark.config.ts packaged-launch.p3.bench.ts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: focused-windows-evidence
           path: clients/desktop/test-results
+  ubuntu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      NX_DAEMON: 'false'
+      PLAYWRIGHT_TRACE: 'off'
+      CI_PRIORITY: P3
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - run: bun scripts/ci/install-native-dependencies.ts
+      - run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - run: bunx playwright@1.60.0 install --with-deps chromium
+      - name: Original browser performance regressions
+        run: bun run --cwd packages/e2e src/scripts/run-playwright.ts -c playwright.perf.config.ts project-switch.p3.perf.ts side-panel.p3.perf.ts workbench-interactions.p3.perf.ts sidenav-header.p3.perf.ts
+      - name: Keyboard, theme and command forms
+        if: '!cancelled()'
+        run: bun run --cwd packages/e2e src/scripts/run-playwright.ts src/ui/keyboard-shortcuts.p2.spec.ts src/ui/keyboard-webview-relay.p2.spec.ts --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: focused-ubuntu-evidence
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
