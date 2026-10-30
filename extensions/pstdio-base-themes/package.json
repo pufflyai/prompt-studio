@@ -28,7 +28,7 @@
   "devDependencies": {
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
-    "@pstdio/ui": "^0.43.1",
+    "@pstdio/ui": "^0.46.0",
     "@storybook/react-vite": "10.6.0",
     "@storybook/test-runner": "^0.24.5",
     "@types/bun": "1.4.4",
