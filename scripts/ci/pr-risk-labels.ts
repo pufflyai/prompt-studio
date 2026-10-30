@@ -35,13 +35,28 @@ interface Snapshot {
 const snapshotOf = (pull: PullRequest) => ({ head: pull.head.sha, base: pull.base.sha, baseRef: pull.base.ref });
 
 const generatedCanvasOutputs = new Set([
-  "frame-bundle.ts",
+  "frame-manifest.json",
   "frame-themes.json",
   "migration-ledger.json",
   "native-manifest.json",
   "source-information.json",
   "stories.json",
 ]);
+
+const canvasModulePath = /^extensions\/canvas\/src\/catalog\/generated\/frame-modules\/[a-f0-9]{64}\.txt$/;
+
+const isGeneratedCanvasFileChange = (file: PullRequestFile) => {
+  if (file.status === "renamed")
+    return canvasModulePath.test(file.filename) && canvasModulePath.test(file.previous_filename ?? "");
+  if (file.previous_filename) return false;
+  if (canvasModulePath.test(file.filename)) return ["added", "modified", "removed"].includes(file.status);
+  const prefix = "extensions/canvas/src/catalog/generated/";
+  return (
+    file.status === "modified" &&
+    file.filename.startsWith(prefix) &&
+    generatedCanvasOutputs.has(file.filename.slice(prefix.length))
+  );
+};
 
 // Host and SDK edits change these compiled previews even when no extension source changes.
 const isGeneratedCanvasRefresh = async (api: PolicyApi, pull: PullRequest) => {
@@ -51,16 +66,7 @@ const isGeneratedCanvasRefresh = async (api: PolicyApi, pull: PullRequest) => {
   const extensionFiles = files.filter(
     (file) => file.filename.startsWith("extensions/") || file.previous_filename?.startsWith("extensions/"),
   );
-  const prefix = "extensions/canvas/src/catalog/generated/";
-  return (
-    extensionFiles.length > 0 &&
-    extensionFiles.every(
-      (file) =>
-        file.status === "modified" &&
-        file.filename.startsWith(prefix) &&
-        generatedCanvasOutputs.has(file.filename.slice(prefix.length)),
-    )
-  );
+  return extensionFiles.length > 0 && extensionFiles.every(isGeneratedCanvasFileChange);
 };
 
 const dependencyFields = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
