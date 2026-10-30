@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { getWorkbenchRenderers } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
-import { createArrangementWorkbench } from "./panel-arrangement.canvas";
+import { createArrangementWorkbench } from "./panel-arrangement-workbench";
 
 const createPlacementWorkbench = (embeddedNavigation = false) => {
   const w = createArrangementWorkbench();

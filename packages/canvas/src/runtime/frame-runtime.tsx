@@ -84,7 +84,13 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     return (
       <div
         data-preview-content
-        style={{ display: "grid", minHeight: minimumHeight ? `${minimumHeight}px` : undefined }}
+        // `alignSelf` keeps the content at its own height when project CSS stretches `#root`.
+        style={{
+          display: "grid",
+          alignSelf: "start",
+          width: "100%",
+          minHeight: minimumHeight ? `${minimumHeight}px` : undefined,
+        }}
       >
         <LiveFrame Frame={loaded.Component} args={loaded.args} />
       </div>
@@ -160,7 +166,12 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
       // An open dialog, popover or menu is positioned outside the content's height, so the frame
       // grows to the viewport while one is open.
       const modal = document.querySelector(MODAL_SELECTOR) ? (item?.preview?.viewportHeight ?? 960) : 1;
-      const height = Math.ceil(Math.max(root.offsetHeight, root.scrollHeight, modal));
+      // Measure the frame's content, not `#root`: project CSS often sizes `#root` to the viewport,
+      // and a frame as tall as its viewport could never shrink again.
+      const content = root.querySelector<HTMLElement>("[data-preview-content]");
+      if (content) resizeObserver.observe(content);
+      const measured = content ?? root;
+      const height = Math.ceil(Math.max(measured.offsetHeight, measured.scrollHeight, modal));
       if (height === previous) return;
       previous = height;
       send({ type: "height", height });

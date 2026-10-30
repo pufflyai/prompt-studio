@@ -2,7 +2,8 @@ import { Box, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
-export const createDropFeedbackWorkbench = (pinned = false, floating = false) => {
+
+const createDropFeedbackWorkbench = (pinned = false, floating = false) => {
   const page = { kind: "page", extensionId: "preview", id: "drop-feedback" } as const;
   const workbench = createWorkbench({
     startPage: page,

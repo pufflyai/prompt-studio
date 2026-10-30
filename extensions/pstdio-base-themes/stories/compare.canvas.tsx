@@ -1,6 +1,6 @@
 import { Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { CoreComponents, type Section } from "./core-components.canvas";
+import { CoreComponents, type Section } from "./core-components";
 
 function Compare(props: { section: Section }) {
   const { section } = props;
