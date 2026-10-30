@@ -8,6 +8,8 @@ When upgrading Bun, align the root `packageManager` pin, Bun engine requirements
 
 Repository type checks use the TypeScript 7 checker built into Bun 1.4.4. Keep using each package's `typecheck` script: the dashboard checks both project references with `bun check -b`, UI uses `tsconfig.build.json`, and base themes also check `tsconfig.canvas.json`. Chakra token generation still runs before dashboard checking. TypeScript 6.0.2 remains installed for compiler API users and Rolldown declaration emit. Public package and provider consumers check the same positive and negative fixtures with both TypeScript 6.0.2 and `bun check`, so the faster checker preserves the supported consumer contract.
 
+Public package consumers keep the ES2022 output target and include `ES2023.Intl` declarations for the number-range APIs available in the supported runtimes. Fresh dependencies can expose those types in their public declarations. Declaration checking remains strict.
+
 Editors using the workspace TypeScript version still show TypeScript 6 diagnostics. Run the package's `typecheck` script to see the required TypeScript 7 result; the two versions can differ in generic inference and removed configuration options.
 
 The private workbench fixture keeps published dependency ranges for isolated installs. Its repository check uses `tsconfig.test-fixtures.json` to resolve the current SDK and UI public declarations. Nx builds those producers first and includes the repository config in the check's cache inputs.
