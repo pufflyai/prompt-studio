@@ -475,6 +475,7 @@
         "@types/pg": "^8.18.0",
         "@types/react": "19.2.3",
         "@types/react-dom": "19.2.3",
+        "canvas": "workspace:*",
         "cmd-shim": "7.0.0",
         "extension-lab": "workspace:*",
         "harness-claude-code": "workspace:*",
