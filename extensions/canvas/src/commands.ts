@@ -1,12 +1,31 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { canvases, findCanvas } from "./canvases/definitions";
+import frameManifest from "./catalog/generated/frame-manifest.json";
 import { layoutChanged } from "./events";
+import { readFrameAssets } from "./frames/module-graph";
 import { loadLayout, saveLayout } from "./layout-store";
 import { canvasTarget, canvasUrl } from "./navigation";
 import { resolveCanvasCommand } from "./resource";
 
 const canvasParam = { canvas: params.text({ required: true, label: "Canvas id" }) };
 export const commands = {
+  "preview.assets": defineCommand({
+    id: "preview.assets",
+    title: l10n("command.previewAssets", "Load preview assets"),
+    params: {
+      source: params.text({ required: true }),
+      cached: params.json({ required: true }),
+    },
+    run: (ctx, input) =>
+      readFrameAssets(
+        frameManifest,
+        {
+          source: input.source,
+          cached: input.cached as string[],
+        },
+        (path) => ctx.packageFiles.readText(path),
+      ),
+  }),
   resolve: resolveCanvasCommand,
   list: defineCommand({
     id: "list",

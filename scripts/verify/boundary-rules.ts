@@ -133,7 +133,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "storage-scale-fixture",
     "pstdio-scripts",
   ],
-  "canvas-tests": ["@pstdio/ui", "@pstdio/workbench", "pstdio-dashboard"],
+  "canvas-tests": ["@pstdio/ui", "@pstdio/workbench", "pstdio-benchmarks", "pstdio-dashboard"],
   "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions", "pstdio-benchmarks"],
   "@pstdio/desktop": [
     "@pstdio/canvas",

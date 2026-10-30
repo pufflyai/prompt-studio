@@ -7,6 +7,7 @@ export interface LoadedStory {
   argTypes?: Record<string, unknown>;
   parameters?: Record<string, unknown>;
   dispose?: () => void;
+  timings?: Record<string, number>;
 }
 export const inspect = (value: unknown) => {
   const seen = new WeakSet<object>();

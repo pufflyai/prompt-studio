@@ -32,6 +32,11 @@ test("documentation grows without clipping its contents", async ({ page }) => {
 
 // Critical: preserve the fixed workload used to detect camera regressions.
 test("the populated camera workload retains 24 previews and batches saves", async ({ page }, info) => {
+  const requested: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/preview-assets" && request.method() === "POST")
+      requested.push(request.postDataJSON().source);
+  });
   await page.addInitScript(() => {
     const events: { type: string; at: number }[] = [];
     Object.defineProperty(window, "__canvasStartup", { value: events });
@@ -46,6 +51,10 @@ test("the populated camera workload retains 24 previews and batches saves", asyn
   try {
     const surface = await openSurface(page, "verification-populated", 8_000);
     await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(24);
+    const maximum = Number(await surface.locator("html").getAttribute("data-canvas-startup-maximum"));
+    expect(maximum).toBeGreaterThan(0);
+    expect(maximum).toBeLessThanOrEqual(4);
+    expect(requested.sort()).toEqual(["$native:controls", "$native:project-form", "$runtime"].sort());
     const result = await profilePopulatedCanvas(surface);
     expect(result.previews).toBe(24);
     expect(result.saves).toBe(1);

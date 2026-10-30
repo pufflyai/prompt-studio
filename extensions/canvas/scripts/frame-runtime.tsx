@@ -3,7 +3,8 @@ import { ChakraProvider, psTheme, type ThemePreferenceOption, ThemePreferencePro
 import { Component, type ComponentType, type ReactNode, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import type { CanvasItem } from "../src/canvases/definitions";
-import { installFrameBootstrap } from "../src/frames/assets";
+import { createFrameAssetBridge } from "../src/frames/asset-bridge";
+import { installFrameAssetLoader } from "../src/frames/assets";
 import { type FrameMessage, type FrameRequest, frameProtocol } from "../src/frames/protocol";
 import { installFrameNavigation } from "./frame-navigation";
 import { FrameStory, inspect, type LoadedStory } from "./frame-story";
@@ -12,25 +13,16 @@ const storage = { getItem: () => null, setItem: () => {} };
 export const mountPreviewRuntime = (
   load: (
     input: import("../src/catalog/definitions").StoryPreview | import("../src/catalog/definitions").DocumentPreview,
+    imported: () => void,
   ) => Promise<LoadedStory>,
   loadNative: (component: string) => Promise<ComponentType<Record<string, unknown>>>,
 ) => {
+  const booted = performance.now();
   let nonce = "";
   const send = (message: Omit<FrameMessage, "protocol" | "nonce">) =>
     window.parent.postMessage({ protocol: frameProtocol, nonce, ...message }, "*");
-  const catalogRequests = new Map<
-    string,
-    { resolve: (bootstrap: import("../src/frames/assets").FrameBootstrap) => void; reject: (error: Error) => void }
-  >();
-  // Embedded previews request their own graph. Ordinary frames must not clone
-  // every catalog module and dependency edge to render their selected example.
-  installFrameBootstrap(
-    (source) =>
-      new Promise((resolve, reject) => {
-        catalogRequests.set(source, { resolve, reject });
-        send({ type: "catalog", source });
-      }),
-  );
+  const assets = createFrameAssetBridge(send);
+  const cleanupAssets = installFrameAssetLoader(assets.load);
   class Boundary extends Component<{ children: ReactNode }, { error?: string }> {
     state: { error?: string } = {};
     static getDerivedStateFromError(error: Error) {
@@ -46,15 +38,34 @@ export const mountPreviewRuntime = (
   const ReadyStory = (props: { loaded: LoadedStory; viewportHeight: number }) => {
     const { loaded, viewportHeight } = props;
     useLayoutEffect(() => {
+      let second = 0;
       const docs = loaded.parameters?.docs as { description?: { story?: string } } | undefined;
+      // Offscreen iframe animation frames can be suspended; readiness must not wait for paint.
       send({
         type: "loaded",
+        timings: {
+          ...loaded.timings,
+          bootstrapMs: booted - (performance.getEntriesByName("canvas:bootstrap-received")[0]?.startTime ?? 0),
+          committedMs: performance.now(),
+        },
         information: {
           args: inspect(loaded.args),
           argTypes: inspect(loaded.argTypes),
           description: docs?.description?.story,
         },
       });
+      const first = requestAnimationFrame(() => {
+        second = requestAnimationFrame(() =>
+          send({
+            type: "painted",
+            timings: { firstPaintMs: performance.now() },
+          }),
+        );
+      });
+      return () => {
+        cancelAnimationFrame(first);
+        cancelAnimationFrame(second);
+      };
     }, [loaded]);
     return (
       <FrameStory loaded={loaded} minimumHeight={loaded.parameters?.layout === "fullscreen" ? viewportHeight : 0} />
@@ -83,12 +94,17 @@ export const mountPreviewRuntime = (
   };
   const loadContent = async (next: CanvasItem) => {
     item = next;
+    const started = performance.now();
     const result: LoadedStory = next.preview
-      ? await load(next.preview)
-      : { Component: await loadNative(next.component!) };
+      ? await load(next.preview, () => send({ type: "imports-ready" }))
+      : {
+          Component: await loadNative(next.component!),
+          timings: { importMs: performance.now() - started, setupMs: 0 },
+        };
+    if (!next.preview) send({ type: "imports-ready" });
     if (!active) return result.dispose?.();
     loaded = result;
-    // Mount the providers once, after the requested content and initial theme are available.
+    // Mount providers once, with the requested theme and content already available.
     render();
   };
   const receive = (event: MessageEvent<FrameRequest>) => {
@@ -97,23 +113,25 @@ export const mountPreviewRuntime = (
     if (nonce && message.nonce !== nonce) return;
     nonce = message.nonce;
     if (message.theme) theme = message.theme;
-    if (message.type === "catalog" && message.source) {
-      const pending = catalogRequests.get(message.source);
-      if (message.bootstrap) pending?.resolve(message.bootstrap);
-      else pending?.reject(new Error(message.error ?? "Missing preview assets"));
-      catalogRequests.delete(message.source);
-    }
-    if (message.type === "theme") render();
-    if (message.type === "render" && message.item && !item) {
-      void loadContent(message.item).catch((error) => {
-        if (!active) return;
-        reactRoot.render(
-          <div role="alert" data-ui-canvas-error>
-            {String(error)}
-          </div>,
-        );
-        send({ type: "error", message: String(error) });
-      });
+    switch (message.type) {
+      case "assets":
+        assets.receive(message);
+        break;
+      case "theme":
+        render();
+        break;
+      case "render":
+        if (!message.item || item) return;
+        void loadContent(message.item).catch((error) => {
+          if (!active) return;
+          reactRoot.render(
+            <div role="alert" data-ui-canvas-error>
+              {String(error)}
+            </div>,
+          );
+          send({ type: "error", message: String(error) });
+        });
+        break;
     }
   };
   window.addEventListener("message", receive);
@@ -156,6 +174,8 @@ export const mountPreviewRuntime = (
       mutationObserver.disconnect();
       document.fonts.removeEventListener("loadingdone", measure);
       reactRoot.unmount();
+      assets.dispose();
+      cleanupAssets();
     },
     { once: true },
   );
