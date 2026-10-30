@@ -258,6 +258,11 @@ export async function* normalizeClaudeCodeStream(
   const ctx: StreamContext = { index: 0, toolMap: new Map() };
 
   for await (const event of raw) {
+    if (event.type === "user_message") {
+      yield event.message;
+      ctx.index += 1;
+      continue;
+    }
     if (event.type === "stderr") {
       yield {
         id: `stream-error-${ctx.index}`,

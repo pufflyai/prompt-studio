@@ -4,17 +4,8 @@ import type { ApprovalResponse, HarnessApprovalChannel, HarnessQuestionChannel }
 import { ASK_USER_QUESTION } from "./message-parts";
 import { EXIT_PLAN_MODE, missingPlanReply, planPreview, reviewPlan } from "./plan-mode";
 import { askPerson } from "./questions";
+import { createSessionInput } from "./session-input";
 import { type AskUserQuestionInput, parseStdoutLine, type RawLogEvent } from "./types";
-
-const formatUserMessage = (content: string) =>
-  `${JSON.stringify({ type: "user", message: { role: "user", content } })}\n`;
-
-// stdin stays open after the prompt. Claude's `result` event ends a turn, not the run: while
-// stdin is open Claude waits for its own background tasks and runs another turn when one ends.
-// Ending stdin here would kill those tasks and report the run as finished mid-work.
-export const sendUserMessage = (stdin: Writable, content: string) => {
-  stdin.write(formatUserMessage(content));
-};
 
 /** Host channels that answer Claude's control requests. */
 export type ControlChannels = {
@@ -67,65 +58,52 @@ const answerControlRequest = async (parsed: Record<string, unknown>, channels: C
 
 // A `result` ends one turn, not the run. The run ends when a turn finishes with no background
 // task left to wake Claude again, and the resulting EOF on stdin is what lets the process exit.
-const createRunLifetime = (stdin: Writable) => {
-  let runningBackgroundTasks = 0;
-
-  return {
-    observe(parsed: Record<string, unknown>) {
-      if (parsed.type === "system" && parsed.subtype === "background_tasks_changed") {
-        // Each event carries the whole list, so the newest one is the current state.
-        runningBackgroundTasks = Array.isArray(parsed.tasks) ? parsed.tasks.length : 0;
-      }
-
-      if (parsed.type === "result" && runningBackgroundTasks === 0) stdin.end();
-    },
-    // `writable` covers both ends of the run: stdin closed by the EOF rule above, and stdin
-    // destroyed because the child already exited while a reply was still being decided.
-    acceptsInput: () => stdin.writable,
-  };
-};
-
 export async function* createRawEventStream(
   stdout: Readable,
   stdin: Writable,
   channels: ControlChannels = {},
+  lifetime = createSessionInput(stdin),
 ): AsyncGenerator<RawLogEvent> {
   const reader = createInterface({ input: stdout, crlfDelay: Number.POSITIVE_INFINITY });
-  const lifetime = createRunLifetime(stdin);
 
-  for await (const line of reader) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
+  try {
+    for await (const line of reader) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
 
-    const parsed = parseStdoutLine(trimmed);
+      const parsed = parseStdoutLine(trimmed);
 
-    if (parsed && isControlRequest(parsed)) {
-      // Permission requests include plan text that the original tool call can omit.
-      if ((parsed.request as Record<string, unknown>)?.tool_name === EXIT_PLAN_MODE && channels.questions) {
-        yield { type: "stdout", data: trimmed };
+      if (parsed && isControlRequest(parsed)) {
+        // Permission requests include plan text that the original tool call can omit.
+        if ((parsed.request as Record<string, unknown>)?.tool_name === EXIT_PLAN_MODE && channels.questions) {
+          yield { type: "stdout", data: trimmed };
+        }
+        // Keep reading while the person decides. The host closes an open question only after the run
+        // ends, so waiting for the answer here would keep the run from ever ending if Claude exits.
+        void answerControlRequest(parsed, channels)
+          // Every control request gets a reply, because stdin stays open and Claude would wait forever.
+          .catch((error: unknown) => ({ behavior: "deny", message: String(error), interrupt: false }))
+          .then((response) => {
+            // A reply that lands after the pipe closed would crash the host on an unhandled stream error.
+            if (!lifetime.acceptsInput()) return;
+            stdin.write(`${JSON.stringify(controlResponse(parsed.request_id as string, response))}\n`);
+          });
+        continue;
       }
-      // Keep reading while the person decides. The host closes an open question only after the run
-      // ends, so waiting for the answer here would keep the run from ever ending if Claude exits.
-      void answerControlRequest(parsed, channels)
-        // Every control request gets a reply, because stdin stays open and Claude would wait forever.
-        .catch((error: unknown) => ({ behavior: "deny", message: String(error), interrupt: false }))
-        .then((response) => {
-          // A reply that lands after the pipe closed would crash the host on an unhandled stream error.
-          if (!lifetime.acceptsInput()) return;
-          stdin.write(`${JSON.stringify(controlResponse(parsed.request_id as string, response))}\n`);
-        });
-      continue;
+
+      // Read the run state before the session_id branch below, which swallows system events.
+      const message = parsed && lifetime.observe(parsed);
+      if (message) yield { type: "user_message", message };
+
+      if (parsed && parsed.type === "system" && typeof parsed.session_id === "string") {
+        yield { type: "session_id", sessionId: parsed.session_id };
+        continue;
+      }
+
+      yield { type: "stdout", data: trimmed };
     }
-
-    // Read the run state before the session_id branch below, which swallows system events.
-    if (parsed) lifetime.observe(parsed);
-
-    if (parsed && parsed.type === "system" && typeof parsed.session_id === "string") {
-      yield { type: "session_id", sessionId: parsed.session_id };
-      continue;
-    }
-
-    yield { type: "stdout", data: trimmed };
+  } finally {
+    lifetime.close();
   }
 }
 

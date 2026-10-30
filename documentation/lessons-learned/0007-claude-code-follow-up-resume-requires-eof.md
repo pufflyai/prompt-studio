@@ -34,10 +34,10 @@ The Claude resume wrapper now treats a follow-up as a one-shot input payload and
 
 The original host timeout was superseded by PS-389. Claude Code and Codex now use provider-owned completion. A lack of chat events cannot distinguish a hung process from quiet reasoning or a long tool call, so the host activity watchdog must not terminate these CLI sessions.
 
-The [Claude Code harness](../../extensions/harness-claude-code/src/spawn.ts) closes stdin after sending the prompt, drains stderr to prevent output backpressure, and returns `timeoutStrategy: "provider"`. Its [regression test](../../extensions/harness-claude-code/src/spawn.p0.test.ts) checks that follow-up input ends.
+The [Claude Code harness](../../extensions/harness-claude-code/src/spawn.ts) now keeps stdin open until a result arrives with no pending live input or background tasks. This lets corrections reach the running process and lets background tasks finish before EOF. It drains stderr to prevent output backpressure and returns `timeoutStrategy: "provider"`. The [stdin tests](../../extensions/harness-claude-code/src/spawn.stdin.p0.test.ts) and [steering tests](../../extensions/harness-claude-code/src/steering.p0.test.ts) cover that boundary.
 
 ## Key takeaway
 
-When wrapping a streaming CLI with a one-shot request model, writing the message is not enough. The input boundary is part of the protocol.
+When wrapping a streaming CLI, writing the message is not enough. The input boundary is part of the protocol.
 
-If the provider expects EOF to conclude a request, leaving `stdin` open can look like an unfinished turn. Close the input boundary, drain output pipes, and respect the provider's completion contract.
+If the provider expects EOF to conclude a run, leaving `stdin` open forever can look like unfinished work. Closing it too early can discard pending input or background tasks. Close the input boundary when the provider's work is finished, drain output pipes, and respect its completion contract.
