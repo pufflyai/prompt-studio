@@ -140,7 +140,6 @@ describe("generated Canvas catalog refreshes", () => {
       "frame-manifest.json",
       "frame-themes.json",
       "migration-ledger.json",
-      "native-manifest.json",
       "source-information.json",
       "stories.json",
     ];

@@ -38,7 +38,6 @@ const generatedCanvasOutputs = new Set([
   "frame-manifest.json",
   "frame-themes.json",
   "migration-ledger.json",
-  "native-manifest.json",
   "source-information.json",
   "stories.json",
 ]);
