@@ -20,7 +20,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
-// packaged-canvas-install.p1.test.ts checks optional Canvas previews and skills outside a checkout, without local build fingerprints.
+// packaged-canvas-install.p1.test.ts checks optional Canvas module assets, previews, themes, and skills without local build fingerprints.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
 // placeholder actions and status-item popover views through the compiled host.
 // scripts/verify/public-package-consumer.ts checks legacy hidden headers and explicit page/tab presentation in the built workbench.

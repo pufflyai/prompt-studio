@@ -7,12 +7,17 @@ const performanceChecks = (family: string) => {
   if (family === "backend")
     return discoverTestFiles(process.cwd())
       .filter(
-        (path) => path.startsWith("packages/") && !path.startsWith("packages/e2e/") && path.endsWith(".p3.bench.ts"),
+        (path) =>
+          path.startsWith("packages/") &&
+          !path.startsWith("packages/e2e/") &&
+          !path.startsWith("packages/canvas-tests/") &&
+          path.endsWith(".p3.bench.ts"),
       )
       .map((path) => ({ id: path, command: ["bun", path] }));
   if (family === "browser")
     return [
       { id: "chat-rendering", command: ["bun", "run", "--cwd", "packages/ui", "perf:chat"] },
+      { id: "canvas-startup", command: ["bun", "run", "--cwd", "packages/canvas-tests", "perf:startup"] },
       {
         id: "frontend",
         command: [

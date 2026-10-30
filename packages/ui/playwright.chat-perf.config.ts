@@ -26,7 +26,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `bun x --no-install lerna run build:previews --scope canvas-tests && CANVAS_PREVIEW_PORT=${port} bun ../canvas-tests/src/scripts/preview-server.ts`,
+    command: `bun x --no-install lerna run build:previews --scope canvas-tests && CANVAS_PREVIEW_PORT=${port} bun ../../extensions/canvas/scripts/serve-verification.ts`,
     port,
     reuseExistingServer: false,
     timeout: 120_000,

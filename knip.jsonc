@@ -107,8 +107,14 @@
       "project": ["src/**/*.{ts,tsx}"]
     },
     "packages/canvas-tests": {
-      "entry": ["playwright.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts", "src/scripts/*.ts"],
-      "project": ["playwright.config.ts", "src/**/*.ts"],
+      "entry": [
+        "playwright*.config.ts",
+        "src/**/*.spec.ts",
+        "src/**/*.test.ts",
+        "src/**/*.bench.ts",
+        "src/scripts/*.ts"
+      ],
+      "project": ["playwright*.config.ts", "src/**/*.ts"],
       "ignore": ["playwright-report/**", "test-results/**"],
       "ignoreDependencies": ["@pstdio/ui", "@pstdio/workbench", "pstdio-dashboard"]
     },
