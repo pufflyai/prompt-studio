@@ -1,0 +1,85 @@
+import { afterEach, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, utimesSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { buildCanvases, readManifest, resolveOut } from "./build";
+import { createTestProject, sampleProject, writeProjectFiles } from "./test-project";
+
+const cleanups: (() => void)[] = [];
+afterEach(() => {
+  for (const cleanup of cleanups.splice(0)) cleanup();
+});
+const project = (files: Record<string, string> = sampleProject) => {
+  const created = createTestProject(files);
+  cleanups.push(created.dispose);
+  return created.root;
+};
+// Each command run is a new process, so a package installed in between is resolved afresh.
+const CLI = resolve(import.meta.dir, "../../bin/pstdio-canvas.ts");
+const commandBuild = async (root: string) => {
+  const result = Bun.spawnSync([process.execPath, CLI, "build"], { cwd: root, stdout: "pipe", stderr: "pipe" });
+  const manifest = (await readManifest(resolveOut(root)))!;
+  return {
+    built: result.stdout.toString().includes("Built "),
+    widget: manifest.canvases.find((c) => c.id === "src/widget.canvas.tsx"),
+  };
+};
+const widget = (version: string, label: string) => ({
+  "node_modules/local-widget/package.json": JSON.stringify({ name: "local-widget", version, main: "index.js" }),
+  "node_modules/local-widget/index.js": `export const Widget = () => ${JSON.stringify(label)};\n`,
+});
+
+test("installing a missing package or upgrading it rebuilds the canvas", async () => {
+  const root = project({
+    ...sampleProject,
+    "src/widget.canvas.tsx": `import { Widget } from "local-widget";\nexport const Default = () => <Widget />;\n`,
+  });
+  expect((await commandBuild(root)).widget?.error).toContain("local-widget");
+
+  writeProjectFiles(root, widget("1.0.0", "first"));
+  const installed = await commandBuild(root);
+  expect(installed.built).toBe(true);
+  expect(installed.widget?.error).toBeUndefined();
+  expect((await commandBuild(root)).built).toBe(false);
+
+  // An upgrade replaces the package's files, including its package.json.
+  writeProjectFiles(root, widget("2.0.0", "second"));
+  utimesSync(join(root, "node_modules/local-widget/package.json"), new Date(), new Date(Date.now() + 1_000));
+  expect((await commandBuild(root)).built).toBe(true);
+});
+
+test("a change to a file outside the project, such as a sibling workspace package, rebuilds", async () => {
+  const base = mkdtempSync(join(tmpdir(), "pstdio-canvas-workspace-"));
+  cleanups.push(() => rmSync(base, { recursive: true, force: true }));
+  const root = project({
+    ...sampleProject,
+    "src/shared.canvas.tsx": `import { Badge } from "${join(base, "shared/badge")}";\nexport const Default = () => <Badge />;\n`,
+  });
+  writeProjectFiles(base, { "shared/badge.tsx": "export const Badge = () => <span>New</span>;\n" });
+  await buildCanvases({ root });
+  expect((await buildCanvases({ root })).built).toBe(false);
+
+  utimesSync(join(base, "shared/badge.tsx"), new Date(), new Date(Date.now() + 1_000));
+  expect((await buildCanvases({ root })).built).toBe(true);
+});
+
+test("a root reached through a symbolic link builds", async () => {
+  const root = project();
+  const links = mkdtempSync(join(tmpdir(), "pstdio-canvas-link-"));
+  cleanups.push(() => rmSync(links, { recursive: true, force: true }));
+  mkdirSync(join(links, "nested"));
+  symlinkSync(root, join(links, "nested", "project"), "dir");
+
+  const { manifest } = await buildCanvases({ root: join(links, "nested", "project") });
+  expect(manifest.canvases.every((canvas) => !canvas.error)).toBe(true);
+  expect(Object.keys(manifest.frames.sources)).toEqual(["src/button.canvas.tsx", "src/card.canvas.tsx"]);
+});
+
+test("a file changed after the build started is rebuilt next time", async () => {
+  const root = project();
+  // The build cannot know whether it read this file before or after the change.
+  const duringBuild = new Date(Date.now() + 60_000);
+  utimesSync(join(root, "src/card.tsx"), duringBuild, duringBuild);
+  await buildCanvases({ root });
+  expect((await buildCanvases({ root })).built).toBe(true);
+});

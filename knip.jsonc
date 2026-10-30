@@ -98,13 +98,17 @@
     },
     "packages/canvas": {
       "entry": [
+        "bin/pstdio-canvas.ts",
+        "scripts/prune-tests.ts",
         "src/index.ts",
         "src/indexer.ts",
         "src/native-preview-runtime.tsx",
+        // Generated build entries import the frame runtime by file path.
+        "src/runtime/frame-runtime.tsx",
         "src/**/*.test.ts",
         "src/**/*.test.tsx"
       ],
-      "project": ["src/**/*.{ts,tsx}"]
+      "project": ["bin/**/*.ts", "scripts/**/*.ts", "src/**/*.{ts,tsx}"]
     },
     "packages/canvas-tests": {
       "entry": [

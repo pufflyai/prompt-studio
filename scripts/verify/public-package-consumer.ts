@@ -236,7 +236,7 @@ export default defineConfig({ build: { lib: { entry: ${JSON.stringify(dependenci
   );
 };
 
-export const verifyPublicPackages = (repoRoot: string, packageNames = ["sdk", "ui", "pstdio-workbench"]) => {
+export const verifyPublicPackages = (repoRoot: string, packageNames = ["sdk", "ui", "pstdio-workbench", "canvas"]) => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-public-packages-"));
   try {
     const packages = packageNames.map((name) => {
