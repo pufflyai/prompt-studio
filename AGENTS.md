@@ -40,6 +40,7 @@ If a change will add 2,000 or more lines to a PR, or commits the project to addi
 1. Stop before writing the code.
 2. Create a review request with `pst pstdio-planner request-human --request '{"kind":"decision"}'`. Explain why the change needs that much code, the expected size, and the smaller alternatives you considered.
 3. Wait for the answer. Write the change only if the person approves it, and link the request in the PR description.
+4. The `pr-guards` CI check fails the PR until a person adds the `large-change-approved` label. Never add that label yourself.
 
 When a change grows past 2,000 added lines while you work, stop and ask the same way. Check the size with `git diff --shortstat origin/main...HEAD`.
 
