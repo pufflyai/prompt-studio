@@ -8,6 +8,7 @@ export interface QuarantinedTest {
   name: string;
   platforms: string[];
   arch?: string;
+  cliVersion?: string;
 }
 
 export const quarantineRegistry = JSON.parse(

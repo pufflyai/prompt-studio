@@ -60,21 +60,62 @@ jobs:
       - name: Build the SDK
         run: bun run build -- --scope @pstdio/sdk --include-dependencies
 
-      - name: Install the agent CLI
+      - name: Resolve the CLI validation plan
+        id: plan
         shell: bash
         env:
           EXTENSION: ${{ matrix.harness.extension }}
           PACKAGE: ${{ matrix.harness.package }}
           VERSION: ${{ matrix.version }}
+          MINIMUM_LANE_SCHEDULED: ${{ contains(fromJSON(inputs.versions), 'minimum') }}
         run: |
+          export CLI_MINIMUM_VERSION=$(bun -e "console.log((await import('./extensions/$EXTENSION/src/detection.ts')).MINIMUM_VERSION)")
           if [ "$VERSION" = minimum ]; then
-            VERSION=$(bun -e "console.log((await import('./extensions/$EXTENSION/src/detection.ts')).MINIMUM_VERSION)")
+            export CLI_RESOLVED_VERSION="$CLI_MINIMUM_VERSION"
+          else
+            export CLI_RESOLVED_VERSION=$(npm view "$PACKAGE@latest" version)
           fi
-          # npm runs a global package's install scripts only when allowed. They download the native CLI.
-          npm install --global --allow-scripts="$PACKAGE" "$PACKAGE@$VERSION"
+          bun scripts/ci/harness-cli-validation.ts plan
+
+      - name: Install the agent CLI
+        if: steps.plan.outputs.reuse_minimum != 'true'
+        shell: bash
+        env:
+          PACKAGE: ${{ matrix.harness.package }}
+          VERSION: ${{ steps.plan.outputs.version }}
+        # Pin the resolved version so an npm tag update cannot change the plan.
+        run: npm install --global --allow-scripts="$PACKAGE" "$PACKAGE@$VERSION"
+
+      # Keep the cold probe first; running the stable tool test beforehand would warm the CLI.
+      - name: Run the registered installed CLI quarantine once
+        id: quarantine
+        if: steps.plan.outputs.reuse_minimum != 'true' && steps.plan.outputs.quarantine == 'true'
+        continue-on-error: true
+        env:
+          EXTENSION: ${{ matrix.harness.extension }}
+          CLI_RESOLVED_VERSION: ${{ steps.plan.outputs.version }}
+        run: bun scripts/ci/harness-cli-validation.ts run-quarantine
+
+      - name: Verify the installed CLI quarantine executed once
+        if: always() && steps.quarantine.outcome != 'skipped' && steps.plan.outputs.quarantine == 'true' && steps.plan.outputs.reuse_minimum != 'true'
+        env:
+          EXTENSION: ${{ matrix.harness.extension }}
+          CLI_RESOLVED_VERSION: ${{ steps.plan.outputs.version }}
+        run: bun scripts/ci/harness-cli-validation.ts verify-quarantine
 
       - name: Test the harness against the installed CLI
+        if: success() && steps.plan.outputs.reuse_minimum != 'true'
         working-directory: extensions/${{ matrix.harness.extension }}
         env:
           INSTALLED_CLI_TESTS: "1"
-        run: bun test src/installed-cli.p0.test.ts
+          STABLE_PATTERN: ${{ steps.plan.outputs.stable_pattern }}
+        run: bun test src/installed-cli.p0.test.ts --test-name-pattern "$STABLE_PATTERN"
+        shell: bash
+
+      - name: Upload installed CLI quarantine evidence
+        if: always() && steps.plan.outputs.quarantine == 'true' && steps.plan.outputs.reuse_minimum != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: installed-cli-${{ matrix.harness.extension }}-${{ matrix.version }}-${{ runner.os }}-attempt-${{ github.run_attempt }}
+          path: test-results/quarantine/installed-harness/
+          if-no-files-found: error

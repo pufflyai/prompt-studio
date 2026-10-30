@@ -457,5 +457,48 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754962"
     ],
     "removeWhen": "Identify and fix the variable slow phase, then verify the complete packaged board workload in a first-attempt Intel macOS execution within the unchanged allowance."
+  },
+  {
+    "runner": "installed-harness",
+    "file": "extensions/harness-pi/src/installed-cli.p0.test.ts",
+    "name": "detects the installed CLI and discovers a configured model",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "cliVersion": "0.73.1",
+    "owner": "PS-907 / Pi CLI compatibility",
+    "reason": "The cold Windows Pi 0.73.1 detection probe returned no version in the latest lane while the identical minimum version passed in the same full battery. Preserve the existing 3000 ms probe and all detection/model assertions; native tool execution and session resume remain blocking.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41047163361/job/124034054717",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41047163361/job/124034054751"
+    ],
+    "removeWhen": "Fix Windows cold CLI version discovery, then verify the complete detection/model case in a first-attempt native Windows x64 execution within the unchanged probe deadline."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-harness-detection.p2.spec.ts",
+    "name": "selects installed harnesses after a desktop launch with /bin/zsh",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-907 / desktop harness menu",
+    "reason": "The unchanged Intel macOS case passed in the earlier complete battery, then the harness submenu stayed visible after clicking the conversation heading in the final full battery. Preserve every installed-harness, model-selection and new-session assertion.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754115",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41047163361/job/124034053920"
+    ],
+    "removeWhen": "Fix intermittent harness-submenu dismissal, then verify the complete zsh launch and selection workload in a first-attempt Intel macOS execution with the existing assertions and deadlines."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-board-views-smoke.p2.test.ts",
+    "name": "packaged collection views include native Workspaces and survive a runtime restart",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-907 / packaged collection views",
+    "reason": "The unchanged Intel macOS case passed in 23672 ms in the revised full battery, then exhausted its unchanged 30000 ms allowance in the final full battery. The variable phase remains unidentified; retain CLI operations, native Workspaces and restart/persistence assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754962",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41047163361/job/124034054688"
+    ],
+    "removeWhen": "Identify and fix the variable slow phase, then verify the complete collection views and runtime restart workload in a first-attempt Intel macOS execution within the unchanged allowance."
   }
 ]
