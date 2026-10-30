@@ -6,7 +6,7 @@ import { useTabDrag } from "./tab-drag-context";
 import { useTabContextMenu } from "./use-tab-context-menu";
 
 export interface WorkbenchRegionTabProps {
-  shortcutNumber?: number;
+  shortcut?: string;
   keyboardSelected?: boolean;
   workbench: WorkbenchCore;
   placement: WorkbenchWidgetPlacement;

@@ -115,7 +115,7 @@ Keybindings bind app-level keyboard shortcuts to a navigation `action`. The acti
 
 Help → Keyboard shortcuts manages assigned, inactive, disabled, and unassigned actions. It supports personal bindings, disabling, resetting, Leader, and extension aliases. Menus, the command palette, and navigation items supply readable action labels. Repeated placements of the same target and parameters share one row. Different parameters remain separate. The reference updates when extensions change. Hidden row actions release label space; labels truncate only when visible content needs that space. Navigation rows show effective shortcut hints while keyboard mode is active. Row actions use the existing hover fade and remain visible while keyboard focus is inside the row. Command shortcuts without supplied parameters open the shared parameter form before execution.
 
-Layered bindings add `layer` (`view`, `go`, `create`, `current`, `extensions`, `settings`, or `help`) and `targetScope` (`project`, `resource`, or `panel`). Their keys are letters or numbers relative to the group. Shared keys open an action or target chooser. Completed actions exit shortcut mode; tab navigation remains active until Enter or Escape. The deprecated `sticky` field is accepted for older declarations but no longer retains mode after completion. Existing direct bindings can declare `allowInInputs`; use it only for explicit workbench chords that must be consumed before editors. See [Keyboard shortcuts](../workbench/0006-keyboard.md) for navigation, target rules, preferences, and nested webviews.
+Layered bindings add `layer` (`view`, `go`, `create`, `current`, or `settings`; `extensions` and `help` are deprecated and join `current`) and `targetScope` (`project`, `resource`, or `panel`). Their keys are letters or numbers relative to the group. Shared keys open an action or target chooser. Completed actions exit shortcut mode; tab navigation remains active until Enter or Escape. The deprecated `sticky` field is accepted for older declarations but no longer retains mode after completion. Existing direct bindings can declare `allowInInputs`; use it only for explicit workbench chords that must be consumed before editors. It applies only to chords that hold Alt, Ctrl, or Cmd; plain keys always reach the editor. See [Keyboard shortcuts](../workbench/0006-keyboard.md) for navigation, target rules, preferences, and nested webviews.
 
 The main destinations use `Alt+Shift`: Sessions `S`, Workspaces `W`, Notes `O`, Tickets `P`, and Artifacts `A`. Notes uses `O` because notifications already uses `N`. Creation uses `Mod+Alt`: session `S`, workspace `W`, note `N`, and ticket `P`. Settings uses `Mod+,`. Command palette placements use their source command and exact parameters to resolve shortcut hints. Sessions, Workspaces, and Tickets bind their existing open commands so the command palette shows their navigation shortcuts. These extension defaults live in their own contributions; the host does not assign shortcuts to third-party tools.
 
@@ -372,6 +372,10 @@ Pressed and selected controls, such as an open panel's toggle, use
 `editor.selectionBackground`. When a theme sets `editor.background` but not
 `editor.selectionBackground`, the app mixes the theme's text color into its
 background instead, so pressed controls stand out from the main background.
+
+Subtle surfaces, such as user chat messages, use `sideBar.background`. Most
+themes set `input.background` to `editor.background`, so it cannot separate
+these surfaces from the main background.
 
 ## Views: filter, sort, and display
 

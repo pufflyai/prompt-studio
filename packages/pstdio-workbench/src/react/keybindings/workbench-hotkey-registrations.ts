@@ -54,7 +54,12 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
   const { workbench, disabled = false, commandIds } = input;
   if (!workbench.activation.isActive()) return [];
   const allowedCommandIds = commandIds ? new Set(commandIds) : undefined;
-  const catalog = workbench.keyboard.catalog(true);
+  const available = new Set(
+    workbench.keyboard
+      .catalog(true)
+      .filter((entry) => !entry.disabled)
+      .map((entry) => entry.id),
+  );
 
   return workbench.keybindings.listActiveKeybindings().flatMap((keybinding, index) => {
     const action = keybinding.action;
@@ -62,8 +67,7 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
       if (allowedCommandIds && !allowedCommandIds.has(action.commandId)) return [];
       const record = workbench.commands.getCommand(action.commandId);
       if (!record) return [];
-      const enabled =
-        !disabled && catalog.some((entry) => entry.id === workbench.keybindings.getId(keybinding) && !entry.disabled);
+      const enabled = !disabled && available.has(workbench.keybindings.getId(keybinding));
       return [
         {
           id: record.command.id,
@@ -96,8 +100,7 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
         id: `workbench.keybinding.${index}`,
         entry: undefined,
         hotkey: normalizeWorkbenchKeybinding(keybinding.keybinding),
-        enabled:
-          !disabled && catalog.some((entry) => entry.id === workbench.keybindings.getId(keybinding) && !entry.disabled),
+        enabled: !disabled && available.has(workbench.keybindings.getId(keybinding)),
         ignoreInputs: !keybinding.allowInInputs,
         requestId: JSON.stringify([getNavigationTargetKey(action), keybinding.keybinding]),
         execute: () => {

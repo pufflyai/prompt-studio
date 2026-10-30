@@ -9,8 +9,9 @@ import {
   type ThemePreference,
 } from "../src/utils/apply-theme-preference";
 import { ThemePreferenceProvider } from "../src/utils/theme-preference";
+import { storybookVsCodeThemes } from "./vscode-themes";
 
-const storybookThemePreferences = defaultThemePreferences;
+const storybookThemePreferences = [...defaultThemePreferences, ...storybookVsCodeThemes];
 const storybookThemes = Object.fromEntries(
   storybookThemePreferences.map((theme) => [theme.id, getThemePreferenceClassNames(theme.id, theme.mode).join(" ")]),
 );

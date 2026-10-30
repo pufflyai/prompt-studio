@@ -25,6 +25,20 @@ test("empty panels offer the same permitted tabs as Add panel", async ({ page })
   }
 });
 
+test("card shortcuts appear while Alt is held and a card chord does not enter shortcut mode", async ({ page }) => {
+  await page.goto(storyUrl(baseUrl, `${prefix}available-tabs`));
+  await waitForStoryPlayback(page);
+  const shortcuts = page.getByRole("group", { name: "Available tabs" }).locator("kbd");
+  await expect(shortcuts).toHaveCount(0);
+  await page.keyboard.down("Alt");
+  await expect(shortcuts.first()).toBeVisible();
+  await page.keyboard.up("Alt");
+  await expect(shortcuts).toHaveCount(0);
+  await page.keyboard.press("Alt+Shift+1");
+  await expect(page.getByRole("tab")).toHaveCount(1);
+  await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+});
+
 test("default tab cards wait while selecting a declared mode", async ({ page }) => {
   await page.goto(storyUrl(baseUrl, `${prefix}selecting-mode`));
   await waitForStoryPlayback(page);

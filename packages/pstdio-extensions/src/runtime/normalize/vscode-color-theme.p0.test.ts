@@ -23,6 +23,18 @@ describe("contributed application theme colors", () => {
     });
   });
 
+  test("keeps subtle surfaces apart from the editor background", () => {
+    const preference = createThemePreference("monokai", "dark", {
+      colors: {
+        "editor.background": "#272822",
+        "input.background": "#272822",
+        "sideBar.background": "#1F201B",
+      },
+    });
+
+    expect(preference.tokens).toMatchObject({ "colors.bg": "#272822", "colors.bg.subtle": "#1F201B" });
+  });
+
   test("keeps application colors out of Monaco's VS Code color registry", () => {
     const colors = { "editor.background": "#282A36" };
     expect(
