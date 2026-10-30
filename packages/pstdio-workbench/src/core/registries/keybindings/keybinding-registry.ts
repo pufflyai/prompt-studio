@@ -89,7 +89,7 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     const assigned = override?.layer === "direct" ? undefined : (override?.layer ?? binding.layer);
     const layer = assigned ? sharedShortcutLayer(assigned) : undefined;
     let defaultScope: Keybinding["targetScope"];
-    if (assigned === "extensions") defaultScope = "project";
+    if (assigned === "extensions" || assigned === "help") defaultScope = "project";
     else if (layer === "current") defaultScope = "panel";
     return {
       ...binding,

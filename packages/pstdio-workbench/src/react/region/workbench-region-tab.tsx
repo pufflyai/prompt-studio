@@ -77,9 +77,9 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
             onPointerCancel={behavior.onPointerCancel}
             onClickCapture={behavior.onClick}
           >
-            {props.shortcutNumber !== undefined ? (
-              <span aria-hidden="true" data-keyboard-tab-number={props.shortcutNumber}>
-                <PaletteShortcut binding={String(props.shortcutNumber)} />
+            {props.shortcut ? (
+              <span aria-hidden="true" data-keyboard-tab-shortcut>
+                <PaletteShortcut binding={props.shortcut} />
               </span>
             ) : null}
             <TabIcon indicator={snapshot.indicator} icon={icon} />

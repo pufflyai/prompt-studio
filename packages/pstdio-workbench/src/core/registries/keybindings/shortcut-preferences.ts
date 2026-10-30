@@ -8,11 +8,12 @@ export const shortcutLayers = {
   create: "C",
   current: "A",
   settings: "S",
-  help: "H",
 } as const;
-export type ShortcutLayer = keyof typeof shortcutLayers | "extensions";
-/** Legacy extension bindings join shared actions until their author chooses a specific group. */
-export const sharedShortcutLayer = (layer: ShortcutLayer) => (layer === "extensions" ? "current" : layer);
+/** `extensions` and `help` are deprecated layers. */
+export type ShortcutLayer = keyof typeof shortcutLayers | "extensions" | "help";
+/** Legacy extension and help bindings join shared actions until their author chooses a specific group. */
+export const sharedShortcutLayer = (layer: ShortcutLayer) =>
+  layer === "extensions" || layer === "help" ? "current" : layer;
 export interface ShortcutAssignment {
   keybinding?: string;
   disabled?: boolean;
