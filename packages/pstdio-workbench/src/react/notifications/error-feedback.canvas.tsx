@@ -97,7 +97,7 @@ const ErrorFeedback = (props: { errorCount?: number; longMessages?: boolean; sta
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Error feedback",
   component: ErrorFeedback,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ErrorFeedback>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

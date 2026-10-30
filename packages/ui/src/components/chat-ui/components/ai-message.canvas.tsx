@@ -22,9 +22,6 @@ const assistantResponseForStory =
 const meta: CanvasMeta<typeof ChatMessage.Root> = {
   title: "Patterns/Chat/AI Message",
   component: ChatMessage.Root,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof ChatMessage.Root>;

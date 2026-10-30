@@ -9,19 +9,13 @@ import type { TreeListNode } from "./tree-list.types";
 const meta: CanvasMeta<typeof TreeList> = {
   title: "Components/Data Display/Tree List/Outliner",
   component: TreeList,
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Compose authoring rows with controlled selection, expansion, order, extension previews, and persistent toggle actions. " +
-          "Click replaces selection; Ctrl/Cmd toggles; Shift-click or Shift+Up/Down extends a visible enabled range. " +
-          "Space/Enter selects. Alt+Up/Down emits the focused node's sibling move through onMoveNode. " +
-          "Moves apply to the source by default; set moveSelection when the host moves the selected set. The host persists order and enforces domain rules such as locks. " +
-          "Group expansion has its own control. Buttons do not select, activate, or drag their row. " +
-          "Drop near a group edge for before/after, or in its center for inside. Native HTML drag moves and sortable customization remain separate APIs.",
-      },
-    },
-  },
+  description:
+    "Compose authoring rows with controlled selection, expansion, order, extension previews, and persistent toggle actions. " +
+    "Click replaces selection; Ctrl/Cmd toggles; Shift-click or Shift+Up/Down extends a visible enabled range. " +
+    "Space/Enter selects. Alt+Up/Down emits the focused node's sibling move through onMoveNode. " +
+    "Moves apply to the source by default; set moveSelection when the host moves the selected set. The host persists order and enforces domain rules such as locks. " +
+    "Group expansion has its own control. Buttons do not select, activate, or drag their row. " +
+    "Drop near a group edge for before/after, or in its center for inside. Native HTML drag moves and sortable customization remain separate APIs.",
 };
 export default meta;
 type Story = CanvasVariant<typeof TreeList>;
@@ -110,9 +104,7 @@ const Outliner = (props: { narrow?: boolean }) => {
 };
 export const ControlledAuthoringRows: Story = {
   id: "components-data-display-tree-list-outliner--controlled-authoring-rows",
-  parameters: {
-    docs: { description: { story: "This example reorders root siblings. Drops inside groups are ignored." } },
-  },
+  description: "This example reorders root siblings. Drops inside groups are ignored.",
   render: () => <Outliner />,
 };
 export const NarrowInspector: Story = {
@@ -181,6 +173,5 @@ const Reparenting = () => {
 };
 export const FocusAfterReparenting: Story = {
   id: "components-data-display-tree-list-outliner--focus-after-reparenting",
-  tags: ["!manifest"],
   render: () => <Reparenting />,
 };

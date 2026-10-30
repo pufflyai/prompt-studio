@@ -66,7 +66,7 @@ const config: KanbanRendererCreateRowConfig = {
 const meta = {
   title: "Patterns/Kanban Renderer/Create Dialog",
   component: KanbanRendererCreateDialog,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof KanbanRendererCreateDialog>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

@@ -23,8 +23,7 @@ const messages: SessionMessage[] = [
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel Width",
   component: ChatPanel,
-  tags: ["chat-width"],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: {
     messages,
     emptyStateTitle: "No messages yet",

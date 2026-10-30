@@ -6,7 +6,7 @@ import { SkillViewerContent } from "./skill-viewer";
 const meta: CanvasMeta<typeof SkillViewerContent> = {
   title: "ProjectSettings/SkillViewer",
   component: SkillViewerContent,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => (
       <FileIconThemePreferenceProvider>

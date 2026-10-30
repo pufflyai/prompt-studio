@@ -5,15 +5,12 @@ import { ColorInput } from "./color-input";
 const meta = {
   title: "Components/Inputs/Param Editor/Color Input",
   component: ColorInput,
-  parameters: {
-    layout: "fullscreen",
-  },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ColorInput>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;
 export const ClosesOnBlur: Story = {
   id: "components-inputs-param-editor-color-input--closes-on-blur",
-  tags: ["param-editor-color-input"],
   render: (props) => {
     return (
       <Container padding="md">

@@ -55,7 +55,7 @@ void workbench.keyboard.press("C").then(() => workbench.keyboard.press("T"));
 const meta = {
   title: "pstdio-workbench/Reference/Command creation",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

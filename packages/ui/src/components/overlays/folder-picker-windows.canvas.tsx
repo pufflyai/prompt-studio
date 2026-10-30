@@ -34,15 +34,8 @@ const WindowsPicker = (props: ComponentProps<typeof FolderPickerDialog>) => {
 const meta = {
   title: "Overlays/FolderPickerDialog/Windows",
   component: FolderPickerDialog,
-  tags: ["folder-picker"],
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Windows drives come from the runtime host. Selection only navigates; Open folder confirms. Matches Pencil frame XuQrP. Unix runtimes supply no drives. UNC paths leave the drive unselected.",
-      },
-    },
-  },
+  description:
+    "Windows drives come from the runtime host. Selection only navigates; Open folder confirms. Matches Pencil frame XuQrP. Unix runtimes supply no drives. UNC paths leave the drive unselected.",
   args: {
     open: true,
     currentPath: "D:\\Projects",

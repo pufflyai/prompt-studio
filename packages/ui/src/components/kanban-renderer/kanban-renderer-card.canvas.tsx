@@ -6,7 +6,6 @@ import { KanbanRendererCard } from "./kanban-renderer-card";
 const meta: CanvasMeta<typeof KanbanRendererCard> = {
   title: "Patterns/Kanban Renderer/Card",
   component: KanbanRendererCard,
-  parameters: { layout: "padded" },
   decorators: [
     (Story) => (
       <Box maxWidth="300px">

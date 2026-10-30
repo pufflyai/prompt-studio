@@ -6,9 +6,6 @@ import { ListRow } from "./list-row";
 const meta: CanvasMeta<typeof ListRow> = {
   title: "Components/Data Display/List Row/Full Width",
   component: ListRow,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof ListRow>;

@@ -20,7 +20,6 @@ const meta = {
   title: "Sync/Backend connection status",
   component: BackendConnectionStatus,
   args: { connected: false },
-  parameters: { layout: "padded" },
 } satisfies CanvasMeta<typeof BackendConnectionStatus>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

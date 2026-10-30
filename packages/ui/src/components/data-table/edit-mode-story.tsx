@@ -185,7 +185,7 @@ export const EditableWithViewsStory = () => {
         fullWidth
         getRowId={(row) => String(row.id)}
         isReadOnly={false}
-        toolbarStorageKey="storybook-editable-data-table-with-views"
+        toolbarStorageKey="preview-editable-data-table-with-views"
       />
     </Box>
   );

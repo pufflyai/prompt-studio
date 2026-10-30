@@ -5,11 +5,7 @@ import { ParamEditor } from "./param-editor";
 const meta = {
   title: "Patterns/Param Editor/Param Editor Vertical",
   component: ParamEditor,
-  parameters: {
-    layout: "fullscreen",
-  },
-  tags: [],
-  argTypes: {},
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditor>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

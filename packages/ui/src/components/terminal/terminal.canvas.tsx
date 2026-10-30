@@ -8,7 +8,6 @@ import type { TerminalBridge } from "./types";
 const meta: CanvasMeta<typeof Terminal> = {
   title: "Components/Terminal",
   component: Terminal,
-  parameters: { layout: "centered" },
 };
 export default meta;
 type Story = CanvasVariant<typeof Terminal>;
@@ -52,7 +51,6 @@ const DeferredFocusFixture = () => {
 };
 export const DeferredFocusRespectsNewChoice: Story = {
   id: "components-terminal--deferred-focus-respects-new-choice",
-  tags: ["!manifest", "terminal-deferred-focus"],
   render: () => <DeferredFocusFixture />,
 };
 const PopupRestoreFocusFixture = () => {
@@ -89,7 +87,6 @@ const PopupRestoreFocusFixture = () => {
 };
 export const DeferredFocusIgnoresPopupRestore: Story = {
   id: "components-terminal--deferred-focus-ignores-popup-restore",
-  tags: ["!manifest", "terminal-deferred-focus"],
   render: () => <PopupRestoreFocusFixture />,
 };
 export const Default: Story = {

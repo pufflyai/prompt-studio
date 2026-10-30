@@ -20,13 +20,6 @@ import { generateTableRows, tableRows } from "./data-table.story-fixtures";
 
 type StoryFn = () => ReactNode;
 
-interface StoryContext {
-  parameters?: {
-    pageHeight?: string;
-    pagePadding?: string | number;
-  };
-}
-
 interface DataTableStoryContainerProps {
   args: DataTableProps;
   height?: string;
@@ -92,16 +85,13 @@ export const singleValueRows = generateTableRows(24).map((row) => ({
   Status: tableRows[0]!.Status,
 }));
 
-export const withStoryPage = (Story: StoryFn, context: StoryContext) => {
-  const pagePadding = context.parameters?.pagePadding ?? "sm";
-  const pageHeight = context.parameters?.pageHeight;
-
-  return (
+export const storyPage =
+  (pagePadding: string | number = "sm", pageHeight?: string) =>
+  (Story: StoryFn) => (
     <Box padding={pagePadding} background="bg" height={pageHeight}>
       <Story />
     </Box>
   );
-};
 
 export const DataTableStoryContainer = (props: DataTableStoryContainerProps) => {
   const { args, maxWidth, height, marginX } = props;

@@ -9,20 +9,13 @@ import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 const meta: CanvasMeta<typeof KanbanRenderer> = {
   title: "Patterns/Kanban Renderer/Internal/Live Options",
   component: KanbanRenderer,
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "Regression story for live enum option updates. Excluded from agent manifests so agents use the canonical Kanban Renderer stories.",
-      },
-    },
-  },
-  tags: ["!manifest"],
+  description:
+    "Regression story for live enum option updates. Excluded from agent manifests so agents use the canonical Kanban Renderer stories.",
+  fullscreen: true,
 };
 export default meta;
 type Story = CanvasVariant;
-const LIVE_STORAGE_KEY = "storybook-kanban-renderer-live";
+const LIVE_STORAGE_KEY = "preview-kanban-renderer-live";
 const ADDABLE_STATUSES: EnumOption[] = [
   { value: "review", label: "Review", color: "purple" },
   { value: "blocked", label: "Blocked", color: "red" },
@@ -212,6 +205,5 @@ const LiveWrapper = () => {
 };
 export const LiveOptions: Story = {
   id: "patterns-kanban-renderer-internal-live-options--live-options",
-  tags: ["live-options-regression", "!manifest"],
   render: () => <LiveWrapper />,
 };

@@ -33,7 +33,7 @@ const changedFilePaths = scrollDiffs.map((diff) => diff.newPath ?? diff.oldPath 
 const meta: CanvasMeta<typeof DiffViewer> = {
   title: "Patterns/Diff/Diff Viewer Scroll",
   component: DiffViewer,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   render: () => (
     <Box h="100vh" w="100vw" minH="0" display="flex" overflow="hidden">
       <Box flex="1" minH="0" minW="0" display="flex">

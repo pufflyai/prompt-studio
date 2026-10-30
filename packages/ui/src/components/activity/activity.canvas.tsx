@@ -55,7 +55,7 @@ const initialComments: StoryComment[] = [
 ];
 const meta: CanvasMeta = {
   title: "Components/Data Display/Activity",
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => (
       <ScrollArea height="100vh" background="bg" color="fg" contentProps={{ padding: { base: "md", md: "xl" } }}>

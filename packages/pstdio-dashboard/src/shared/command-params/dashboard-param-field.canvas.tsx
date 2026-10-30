@@ -122,7 +122,7 @@ const DashboardParamFieldsPreview = () => {
 const meta = {
   title: "CommandParams/DashboardParamFields",
   component: DashboardParamFieldsPreview,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof DashboardParamFieldsPreview>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

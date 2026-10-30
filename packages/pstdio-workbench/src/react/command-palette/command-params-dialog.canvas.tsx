@@ -4,13 +4,12 @@ import { type ComponentProps, useState } from "react";
 import type { Command, RegisteredCommand } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { CommandParamsDialog } from "./command-params-dialog";
-import { commandParamsSources } from "./command-params-dialog-source";
 
 const registerCommand = (command: Command) =>
   ({
     command,
     handler: { execute: () => undefined },
-    ownerId: "storybook",
+    ownerId: "preview",
     priority: 0,
     source: "module",
   }) satisfies RegisteredCommand;
@@ -45,7 +44,7 @@ const refineTicketCommand = registerCommand({
   },
 });
 const everyControlCommand = registerCommand({
-  id: "storybook.every-param",
+  id: "preview.every-param",
   label: "Run with every param type",
   params: {
     title: { type: "text", label: "Title", required: true },
@@ -72,7 +71,7 @@ const everyControlCommand = registerCommand({
   },
 });
 const filesCommand = registerCommand({
-  id: "storybook.files-param",
+  id: "preview.files-param",
   label: "Import data files",
   params: {
     files: {
@@ -84,9 +83,6 @@ const filesCommand = registerCommand({
       accept: ".csv",
     },
   },
-});
-const commandSourceParameters = (code: string) => ({
-  docs: { source: { code, language: "tsx", type: "code" } },
 });
 const CommandParameterExample = (props: ComponentProps<typeof CommandParamsDialog>) => {
   const { onClose, request } = props;
@@ -114,16 +110,8 @@ const CommandParameterExample = (props: ComponentProps<typeof CommandParamsDialo
 const meta = {
   title: "pstdio-workbench/Guides/Command parameters",
   component: CommandParamsDialog,
-  tags: ["!dev"],
-  parameters: {
-    layout: "padded",
-    docs: {
-      description: {
-        component:
-          "Command parameter schemas in @pstdio/sdk/extensions describe input fields. The host renders the form, validates it, and passes normalized values to the command.",
-      },
-    },
-  },
+  description:
+    "Command parameter schemas in @pstdio/sdk/extensions describe input fields. The host renders the form, validates it, and passes normalized values to the command.",
   args: {
     onClose: () => {},
     onRun: async () => {},
@@ -142,7 +130,6 @@ export default meta;
 type Story = CanvasVariant<typeof meta>;
 export const NumberParameter: Story = {
   id: "pstdio-workbench-guides-command-parameters--number-parameter",
-  parameters: commandSourceParameters(commandParamsSources.number),
   render: (args) => <CommandParameterExample {...args} />,
   args: {
     request: {
@@ -153,7 +140,6 @@ export const NumberParameter: Story = {
 };
 export const RefineTicket: Story = {
   id: "pstdio-workbench-guides-command-parameters--refine-ticket",
-  parameters: commandSourceParameters(commandParamsSources.refineTicket),
   render: (args) => <CommandParameterExample {...args} />,
   args: {
     request: {
@@ -164,7 +150,6 @@ export const RefineTicket: Story = {
 };
 export const EveryControl: Story = {
   id: "pstdio-workbench-guides-command-parameters--every-control",
-  parameters: commandSourceParameters(commandParamsSources.everyControl),
   render: (args) => <CommandParameterExample {...args} />,
   args: {
     request: {
@@ -175,7 +160,6 @@ export const EveryControl: Story = {
 };
 export const FilesParameter: Story = {
   id: "pstdio-workbench-guides-command-parameters--files-parameter",
-  parameters: commandSourceParameters(commandParamsSources.files),
   render: (args) => <CommandParameterExample {...args} />,
   args: {
     request: {

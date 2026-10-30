@@ -32,7 +32,6 @@ const sampleAttachments: SessionAttachment[] = [
 const meta: CanvasMeta<typeof SessionAttachmentControls> = {
   title: "Modules/Sessions/Session Attachments",
   component: SessionAttachmentControls,
-  parameters: { layout: "padded" },
   decorators: [
     // Attachment previews load API files through the query cache.
     (Story) => (

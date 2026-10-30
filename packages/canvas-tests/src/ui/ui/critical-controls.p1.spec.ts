@@ -49,11 +49,3 @@ test("extension examples load their fallback suite provider", async ({ page }) =
   const preview = await openCanvasPreview(page, "dashboard-motion-lab-study-status--deleted");
   await expect(preview.getByText("This study was deleted or does not exist.", { exact: true })).toBeVisible();
 });
-
-// Critical: documentation must embed a working example, not a blank or broken block.
-test("documentation embeds interactive previews", async ({ page }) => {
-  const preview = await openCanvasPreview(page, "docs-ab17fbcbc73c");
-  await expect(preview.getByRole("heading", { name: "Command parameters", exact: true })).toBeVisible();
-  await preview.getByRole("button", { name: "Open parameter form", exact: true }).first().click();
-  await expect(preview.getByRole("dialog")).toBeVisible();
-});

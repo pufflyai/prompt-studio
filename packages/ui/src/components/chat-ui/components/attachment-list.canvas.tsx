@@ -4,9 +4,6 @@ import { AttachmentList } from "./attachment-list";
 const meta: CanvasMeta<typeof AttachmentList> = {
   title: "Patterns/Chat/Attachment List",
   component: AttachmentList,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof AttachmentList>;

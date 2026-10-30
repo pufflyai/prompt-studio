@@ -23,7 +23,7 @@ const Example = (props: { canvas: CanvasDefinition; zoom?: number; selected?: st
     </Box>
   );
 };
-export default { title: "Canvas/Workspace", parameters: { layout: "fullscreen" } };
+export default { title: "Canvas/Workspace", fullscreen: true };
 export const Interactive = {
   id: "canvas-workspace--interactive",
   render: () => <Example canvas={interactionFixture} />,

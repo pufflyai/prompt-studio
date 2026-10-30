@@ -67,6 +67,6 @@ const DeveloperToolsNavigation = () => {
 };
 export const SettingsNavigation: Story = {
   id: "settings-developer-tools--settings-navigation",
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   render: () => <DeveloperToolsNavigation />,
 };

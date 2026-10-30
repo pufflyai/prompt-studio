@@ -6,7 +6,6 @@ import { KanbanRendererCard } from "./kanban-renderer-card";
 const meta: CanvasMeta<typeof KanbanRendererCard> = {
   title: "Patterns/Kanban Renderer/Card Gestures",
   component: KanbanRendererCard,
-  tags: ["!manifest"],
 };
 export default meta;
 const openCard = () => {};

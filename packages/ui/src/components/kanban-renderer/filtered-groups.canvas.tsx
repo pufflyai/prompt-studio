@@ -6,11 +6,11 @@ import { attributes, initialRows } from "./kanban-renderer-story-fixtures";
 import type { ViewMode } from "./types";
 import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 
-const meta: CanvasMeta = { title: "Patterns/Kanban Renderer/Filtered Groups", parameters: { layout: "fullscreen" } };
+const meta: CanvasMeta = { title: "Patterns/Kanban Renderer/Filtered Groups", fullscreen: true };
 export default meta;
 type Story = CanvasVariant;
 const FilteredGroups = (props: { mode: ViewMode; empty?: boolean; grouped?: boolean }) => {
-  const key = `storybook-empty-filter-groups-${props.mode}-${props.empty ?? false}-${props.grouped ?? true}`;
+  const key = `preview-empty-filter-groups-${props.mode}-${props.empty ?? false}-${props.grouped ?? true}`;
   const initial = {
     settings: {
       viewMode: props.mode,

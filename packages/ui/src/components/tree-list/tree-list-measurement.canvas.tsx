@@ -40,7 +40,6 @@ const MeasuredRowsStory = () => {
 };
 export const AddedRows: Story = {
   id: "components-data-display-tree-list-measurement--added-rows",
-  tags: ["measurement-regression"],
   render: () => <MeasuredRowsStory />,
 };
 const rowIds = Array.from({ length: 12 }, (_, index) => `row-${index}`);
@@ -73,6 +72,5 @@ const HiddenRowsStory = () => {
 };
 export const HiddenAndShown: Story = {
   id: "components-data-display-tree-list-measurement--hidden-and-shown",
-  tags: ["measurement-regression"],
   render: () => <HiddenRowsStory />,
 };

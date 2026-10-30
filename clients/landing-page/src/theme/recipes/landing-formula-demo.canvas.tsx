@@ -67,7 +67,7 @@ const FormulaDemo = () => {
 const meta = {
   title: "Theme/Landing Formula Demo",
   component: FormulaDemo,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof FormulaDemo>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

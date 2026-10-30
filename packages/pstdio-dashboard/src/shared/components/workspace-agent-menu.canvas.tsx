@@ -7,7 +7,6 @@ import { WorkspaceAgentMenu, type WorkspacePanelMenuOption } from "./workspace-a
 const meta: CanvasMeta<typeof WorkspaceAgentMenu> = {
   title: "Shared/WorkspaceAgentMenu",
   component: WorkspaceAgentMenu,
-  parameters: { layout: "padded" },
   decorators: [
     (Story) => (
       <Box maxWidth="400px">
@@ -237,8 +236,7 @@ export const NoHarnessAvailable: Story = {
 };
 export const CommandDialogPlacement: Story = {
   id: "shared-workspaceagentmenu--command-dialog-placement",
-  tags: ["!manifest"],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   render: () => {
     const [selectedAgent, setSelectedAgent] = useState("claude-code");
     const [selectedModel, setSelectedModel] = useState("claude-sonnet-4");

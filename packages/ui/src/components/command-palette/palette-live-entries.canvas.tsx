@@ -23,7 +23,7 @@ const LiveEntriesPalette = () => {
 const meta: CanvasMeta<typeof LiveEntriesPalette> = {
   title: "Components/Overlays/Palette/Live entries",
   component: LiveEntriesPalette,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 };
 export default meta;
 type Story = CanvasVariant<typeof LiveEntriesPalette>;

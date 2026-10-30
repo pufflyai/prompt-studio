@@ -31,7 +31,6 @@ export const ReadOnly: Story = {
 };
 export const ConstrainedContainer: Story = {
   id: "patterns-editors-code-editor--constrained-container",
-  tags: ["!manifest"],
   args: {
     defaultCode: 'export const greeting: number = "Hello";\n',
   },
@@ -83,7 +82,6 @@ const ThemeSwitchingEditors = () => {
 };
 export const ThemeSwitching: Story = {
   id: "patterns-editors-code-editor--theme-switching",
-  tags: ["!manifest"],
   render: () => (
     <ThemePreferenceProvider initialPreference="pstdio-light">
       <ThemeSwitchingEditors />

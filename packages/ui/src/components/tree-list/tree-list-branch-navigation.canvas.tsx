@@ -36,7 +36,6 @@ const NavigableBranch = () => {
 const meta = {
   title: "Components/Data Display/Tree List/Branch navigation",
   component: NavigableBranch,
-  tags: ["tree-branch-navigation"],
 } satisfies CanvasMeta<typeof NavigableBranch>;
 export default meta;
 export const PageAndChildren: CanvasVariant<typeof meta> = {

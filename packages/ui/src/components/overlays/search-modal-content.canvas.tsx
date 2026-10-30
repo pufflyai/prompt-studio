@@ -43,7 +43,7 @@ const ProjectListDialog = (props: { showSearch: boolean }) => {
 const meta = {
   title: "Overlays/Search modal content",
   component: ProjectListDialog,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: { showSearch: true },
 } satisfies CanvasMeta<typeof ProjectListDialog>;
 export default meta;

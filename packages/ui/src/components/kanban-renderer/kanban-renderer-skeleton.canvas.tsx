@@ -5,7 +5,7 @@ import { KanbanRendererSkeleton } from "./kanban-renderer-skeleton";
 const meta: CanvasMeta<typeof KanbanRendererSkeleton> = {
   title: "Patterns/Kanban Renderer/Loading",
   component: KanbanRendererSkeleton,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: { viewMode: "board" },
   decorators: [
     (Story) => (

@@ -28,15 +28,8 @@ const repositoryItems: SearchableMenuItem[] = Array.from({ length: 12 }, (_, ind
 const meta: CanvasMeta<typeof SearchableMenu> = {
   title: "Components/Navigation/Searchable Menu",
   component: SearchableMenu,
-  parameters: {
-    layout: "padded",
-    docs: {
-      description: {
-        component:
-          "Searchable selection menu for switching between local option sets. RULE: Menu item subtitles must add distinct context and never contain the same information as the title.",
-      },
-    },
-  },
+  description:
+    "Searchable selection menu for switching between local option sets. RULE: Menu item subtitles must add distinct context and never contain the same information as the title.",
   decorators: [
     (Story) => (
       <Box maxWidth="320px">
@@ -49,7 +42,6 @@ export default meta;
 type Story = CanvasVariant<typeof SearchableMenu>;
 export const BranchSelector: Story = {
   id: "components-navigation-searchable-menu--branch-selector",
-  tags: ["menu-selection"],
   render: () => (
     <SearchableMenu
       trigger={<Button variant="outline">Select branch</Button>}
@@ -72,7 +64,6 @@ export const BranchSelector: Story = {
 };
 export const SwitchableLists: Story = {
   id: "components-navigation-searchable-menu--switchable-lists",
-  tags: ["menu-selection"],
   render: () => {
     const [selectedBranch, setSelectedBranch] = useState("main");
     const [selectedRepository, setSelectedRepository] = useState("prompt-studio");
@@ -167,9 +158,7 @@ export const DisabledParentList: Story = {
 };
 export const PortalledInsideDialog: Story = {
   id: "components-navigation-searchable-menu--portalled-inside-dialog",
-  parameters: {
-    layout: "fullscreen",
-  },
+  fullscreen: true,
   render: () => {
     const dialogRef = useRef<HTMLDivElement>(null);
     return (

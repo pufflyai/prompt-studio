@@ -7,7 +7,6 @@ import { ListRow } from "./list-row";
 const meta = {
   title: "Components/Data Display/List Row/Hover Content",
   component: ListRow,
-  tags: ["hover-content"],
 } satisfies CanvasMeta<typeof ListRow>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

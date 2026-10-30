@@ -31,7 +31,6 @@ const definitions: NonNullable<WorkbenchExtensionMetadata["connections"]> = [
 const meta: CanvasMeta<typeof ExtensionConnectionsCard> = {
   title: "ProjectSettings/ExtensionConnectionsCard",
   component: ExtensionConnectionsCard,
-  parameters: { layout: "padded" },
   decorators: [
     (Story) => (
       <QueryClientProvider client={queryClient}>

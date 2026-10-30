@@ -5,7 +5,7 @@ import { createWorkbench, type ResourceRef, resourceContextMenuPath, type TreeVi
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
 export const createTreeResourceActionsWorkbench = (region: "sidenav" | "main") => {
-  const page: PageRef = { extensionId: "storybook", kind: "page", id: `tree-actions-${region}` };
+  const page: PageRef = { extensionId: "preview", kind: "page", id: `tree-actions-${region}` };
   const workbench = createWorkbench({ startPage: page });
   const ticket: ResourceRef = { type: "ticket", id: "ticket", label: "Write notes" };
   const session: ResourceRef = { type: "session", id: "inactive-session", label: "Inactive session" };
@@ -119,7 +119,7 @@ export const createTreeResourceActionsWorkbench = (region: "sidenav" | "main") =
   if (region === "sidenav") {
     workbench.modePlacements.registerPlacement({
       id: "tree-resource-actions",
-      ref: { extensionId: "storybook", kind: "placement", id: "tree-resource-actions" },
+      ref: { extensionId: "preview", kind: "placement", id: "tree-resource-actions" },
       modeId: "tree-actions",
       item: { kind: "view", view: { kind: "view", id: "tree-resource-actions" }, presence: "fixed" },
       region: "sidenav",

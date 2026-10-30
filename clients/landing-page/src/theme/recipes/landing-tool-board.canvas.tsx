@@ -5,7 +5,6 @@ import { BOARD_PREVIEW_HEIGHT, BOARD_WIDTH, SLOT_TRAY_HEIGHT } from "../../servi
 const meta = {
   title: "Theme/Progressive Tool Board",
   component: ToolBoard,
-  parameters: { layout: "centered" },
   args: { x: 0, y: 0, scale: 1, unitScale: 1, view: { example: "icons", parts: [] } },
   decorators: [
     (Story, { args }) => (
@@ -32,9 +31,7 @@ export const PageAdded: Story = {
 export const InspectorAdded: Story = {
   id: "theme-progressive-tool-board--inspector-added",
   args: { view: { example: "icons", parts: ["page", "editor"] } },
-  parameters: {
-    docs: { description: { story: "The inspector centers its glyph in a taller preview, including compact boards." } },
-  },
+  description: "The inspector centers its glyph in a taller preview, including compact boards.",
 };
 export const IconsComplete: Story = {
   id: "theme-progressive-tool-board--icons-complete",

@@ -7,7 +7,7 @@ import { AssemblyFrame } from "./assembly-frame";
 const meta = {
   title: "Landing/Initial Editor Frame",
   component: AssemblyFrame,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => {
       const styles = useLandingStyles();
@@ -33,9 +33,7 @@ export const BeforeJavaScript: Story = {
 };
 export const Narrow: Story = {
   id: "landing-initial-editor-frame--narrow",
-  parameters: {
-    docs: { description: { story: "Narrow editors use 95% of the fitted space, aligning with the mobile copy." } },
-  },
+  description: "Narrow editors use 95% of the fitted space, aligning with the mobile copy.",
   decorators: [
     (Story) => (
       <Box width="80">

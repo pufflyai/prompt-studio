@@ -20,9 +20,6 @@ const assistantResponseForStory =
 const meta: CanvasMeta<typeof Response> = {
   title: "Patterns/Chat/AI Response",
   component: Response,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof Response>;

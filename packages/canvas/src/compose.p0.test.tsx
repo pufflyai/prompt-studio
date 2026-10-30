@@ -47,3 +47,12 @@ test("providers wrap in project, module, variant order and failed setup is repor
     ),
   ).rejects.toThrow("fixture failed");
 });
+
+test("a frame's description and full-page height come from plain fields", async () => {
+  const framed = await composePreview({ description: "Wide layout" }, { fullscreen: true });
+  expect(framed.description).toBe("Wide layout");
+  expect(framed.fullscreen).toBe(true);
+  const plain = await composePreview({ fullscreen: false }, {}, { fullscreen: true });
+  expect(plain.description).toBeUndefined();
+  expect(plain.fullscreen).toBe(false);
+});

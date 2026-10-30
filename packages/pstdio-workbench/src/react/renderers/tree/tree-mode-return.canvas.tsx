@@ -89,7 +89,7 @@ const ModeReturnStory = (props: { modeLabel: string; showHeader: boolean }) => {
 const meta = {
   title: "pstdio-workbench/Guides/Fixed mode return",
   component: ModeReturnStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: { modeLabel: "Project", showHeader: true },
 } satisfies CanvasMeta<typeof ModeReturnStory>;
 export default meta;

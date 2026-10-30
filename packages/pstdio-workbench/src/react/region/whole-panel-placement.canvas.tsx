@@ -57,7 +57,7 @@ const PlacementStory = (props: {
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Whole panel placement",
   component: PlacementStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof PlacementStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

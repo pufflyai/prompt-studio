@@ -55,6 +55,5 @@ export const MovesWithoutSelection: Story = {
 };
 export const RangeFromEmptySelection: Story = {
   id: "components-data-display-tree-list-keyboard--range-from-empty-selection",
-  tags: ["!manifest"],
   render: () => <KeyboardRows empty />,
 };

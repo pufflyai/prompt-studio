@@ -201,7 +201,7 @@ const WorkspaceFilesStory = (props: { state: WorkspaceStoryState }) => {
 const meta = {
   title: "Modules/Workspaces/Files and Changes",
   component: WorkspaceFilesStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkspaceFilesStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

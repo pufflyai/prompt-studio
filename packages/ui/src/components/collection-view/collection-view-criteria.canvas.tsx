@@ -7,7 +7,7 @@ import { storyFilter } from "./collection-view-story-fixtures";
 const meta: CanvasMeta<typeof CollectionViewBar> = {
   title: "Patterns/Collection View/Filter Row",
   component: CollectionViewBar,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 };
 export default meta;
 type Story = CanvasVariant;
@@ -16,7 +16,7 @@ export const ManyFilters: Story = {
   render: () => (
     <Box width="full" maxW="folder-picker-width">
       <Bar
-        storageKey="storybook-many-filter-criteria"
+        storageKey="preview-many-filter-criteria"
         filter={storyFilter}
         editedSorts={[{ attributeId: "score", direction: "desc" }]}
       />

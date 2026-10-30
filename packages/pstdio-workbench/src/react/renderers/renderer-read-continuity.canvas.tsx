@@ -58,8 +58,7 @@ const ProgressiveRead = () => {
 const meta = {
   title: "pstdio-workbench/Guides/Progressive read continuity",
   component: ProgressiveRead,
-  tags: ["!manifest"],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ProgressiveRead>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

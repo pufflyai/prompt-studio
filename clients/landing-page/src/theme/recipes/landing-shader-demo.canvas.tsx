@@ -134,7 +134,7 @@ const meta = {
   title: "Theme/Landing Shader Demo",
   component: ShaderDemo,
   args: { withControls: false, connected: true },
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ShaderDemo>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

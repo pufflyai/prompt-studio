@@ -183,7 +183,6 @@ export const InlineEditor: Story = {
 };
 export const SwitchingTargets: Story = {
   id: "patterns-chat-queued-conversation--switching-targets",
-  tags: ["!manifest"],
 };
 export const FailedUpdate: Story = {
   id: "patterns-chat-queued-conversation--failed-update",

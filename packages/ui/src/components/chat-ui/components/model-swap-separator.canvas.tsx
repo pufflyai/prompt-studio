@@ -5,9 +5,6 @@ import { ModelSwapSeparator } from "./model-swap-separator";
 const meta: CanvasMeta<typeof ModelSwapSeparator> = {
   title: "Patterns/Chat/Model Swap Separator",
   component: ModelSwapSeparator,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof ModelSwapSeparator>;

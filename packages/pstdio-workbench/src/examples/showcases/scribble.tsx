@@ -8,9 +8,9 @@ import { type ScribbleDocument, scribbleDocuments } from "./scribble-data";
 import { createShowcaseStore, type ShowcaseStore, useShowcaseStore } from "./showcase-store";
 import { scribbleTheme } from "./themes";
 
-const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "scribble-resource" };
+const page: PageRef = { extensionId: "preview.showcases", kind: "page", id: "scribble-resource" };
 const homePage: PageRef = { ...page, id: "scribble" };
-const viewer = { kind: "placement", extensionId: "storybook.showcases", id: "scribble-document" } as const;
+const viewer = { kind: "placement", extensionId: "preview.showcases", id: "scribble-document" } as const;
 const resource = (document: ScribbleDocument): ResourceRef => ({
   type: "scribble.document",
   id: document.id,
@@ -245,7 +245,7 @@ export const createScribbleWorkbench = () => {
     main: { kind: "panels", landing: viewer },
     slots: [],
   });
-  workbench.pageLocations.switchProject("storybook-scribble");
+  workbench.pageLocations.switchProject("preview-scribble");
   workbench.pageLocations.navigate({ kind: "page", page, resource: resource(scribbleDocuments[0]), open: "pin" });
   return workbench;
 };

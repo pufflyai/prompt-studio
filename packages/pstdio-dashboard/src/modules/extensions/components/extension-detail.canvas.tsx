@@ -114,7 +114,7 @@ const settings = [
 const meta: CanvasMeta<typeof ExtensionDetail> = {
   title: "ProjectSettings/ExtensionDetail",
   component: ExtensionDetail,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: {
     extension,
     metadata,

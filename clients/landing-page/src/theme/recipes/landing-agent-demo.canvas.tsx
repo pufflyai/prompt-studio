@@ -106,7 +106,7 @@ const AgentDemo = () => {
 const meta = {
   title: "Theme/Landing Agent Demo",
   component: AgentDemo,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof AgentDemo>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

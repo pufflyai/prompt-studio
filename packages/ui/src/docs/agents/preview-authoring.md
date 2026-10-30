@@ -1,7 +1,3 @@
-import { Meta } from "@pstdio/canvas";
-
-<Meta title="Agent Guide/Preview Authoring" />
-
 # Preview authoring
 
 Canvas examples are executable documentation and live design references. Keep them beside their components in `*.canvas.tsx` files.
@@ -20,6 +16,6 @@ Start with the default useful state, then common configurations and supported ed
 
 ## Metadata and validation
 
-Use concise component and variant descriptions when usage needs more explanation than props and examples provide. Rebuild the Canvas catalog, verify source coverage, and test only critical interaction risks in the isolated browser. A successful initial render does not prove every user flow.
+Use concise component and variant descriptions when usage needs more explanation than props and examples provide. Rebuild the Canvas catalog and test only critical interaction risks in the isolated browser. A successful initial render does not prove every user flow. Put a frame's description in `description`, and set `fullscreen: true` when a frame needs the full viewport height.
 
 Examples are design fixtures, not test cases. Add Playwright checks only for critical user behavior; avoid cosmetic, prop, viewport, and theme permutations.

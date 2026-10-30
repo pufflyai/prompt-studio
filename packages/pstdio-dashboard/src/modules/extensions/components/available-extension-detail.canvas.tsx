@@ -67,7 +67,7 @@ const metadata = {
 const meta: CanvasMeta<typeof AvailableExtensionDetail> = {
   title: "ProjectSettings/AvailableExtensionDetail",
   component: AvailableExtensionDetail,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: {
     extension: {
       installName: "pstdio-reports",
