@@ -185,6 +185,11 @@ export const createWorkbenchCommandPaletteEntries = (input: {
 export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => {
   const { workbench, open, onClose } = props;
   const request = useWorkbenchStore(workbench.commandPalette.store, (state) => state.resourceSearch);
+  const { previewThemePreference } = useThemePreference();
+  useEffect(() => {
+    if (!open) previewThemePreference(null);
+  }, [open, previewThemePreference]);
+  if (!open) return null;
   if (request && open) return <WorkbenchResourceSearch workbench={workbench} request={request} onClose={onClose} />;
   return <WorkbenchMainCommandPalette {...props} />;
 };

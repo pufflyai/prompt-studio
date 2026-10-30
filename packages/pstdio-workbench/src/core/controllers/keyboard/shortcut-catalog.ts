@@ -42,6 +42,17 @@ const applicable = (core: WorkbenchCore, binding: RegisteredKeybinding, target?:
     core.commands.isCommandEnabled(binding.action.commandId, args, context)
   );
 };
+const isContextual = (binding: RegisteredKeybinding) =>
+  binding.targetScope ? binding.targetScope !== "project" : binding.layer === "current";
+
+/** Direct input dispatch only needs the assigned binding's live availability. */
+export const isShortcutBindingAvailable = (
+  core: WorkbenchCore,
+  binding: RegisteredKeybinding,
+  targets: () => KeyboardPresentation[] = () => core.keyboard.visibleTargets(),
+) =>
+  isContextual(binding) ? targets().some((target) => applicable(core, binding, target)) : applicable(core, binding);
+
 export const resolveShortcutCatalog = (
   core: WorkbenchCore,
   visibleTargets = visibleKeyboardTargets(core),
@@ -59,7 +70,7 @@ export const resolveShortcutCatalog = (
     const navigates = binding.action.kind === "page" || navigation.has(getNavigationTargetKey(binding.action));
     const prefix: string[] = [];
     if (binding.layer) prefix.push(shortcutLayers[sharedShortcutLayer(binding.layer)]);
-    const contextual = binding.targetScope ? binding.targetScope !== "project" : binding.layer === "current";
+    const contextual = isContextual(binding);
     let targets = contextual ? visibleTargets.filter((target) => applicable(core, binding, target)) : [];
     if (binding.targetScope === "resource") {
       const resources = new Set<string>();

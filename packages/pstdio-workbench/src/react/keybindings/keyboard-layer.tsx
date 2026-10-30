@@ -13,7 +13,8 @@ import { useShortcutCatalog } from "./use-shortcut-catalog";
 
 export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
-  const { state, catalog } = useShortcutCatalog(workbench);
+  const state = useWorkbenchStore(workbench.keyboard.store, (state) => state);
+  const { catalog } = useShortcutCatalog(workbench, state.active);
   useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const bubble = useSlotRecipe({ key: "keyboardBubble" })();
   const palette = useSlotRecipe({ key: "palette" })();
