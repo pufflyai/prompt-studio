@@ -5,6 +5,7 @@ import type { HarnessSession, HarnessSteeringInput } from "@pstdio/sdk/extension
 import { parseTranscript } from "./harness";
 import { recoverClaudeMessages } from "./history-reconciliation";
 import { controlledChild, recordingSink, waitForStreamIo } from "./mocks/controlled-child";
+import { normalizeClaudeCodeStream } from "./normalize-stream";
 import { normalizeClaudeCodeMessages } from "./normalize-transcript";
 import { userMessageFor } from "./session-input";
 import { resumeClaudeCodeSession, type SpawnDeps, startClaudeCodeSession } from "./spawn";
@@ -167,6 +168,20 @@ test("recovery pairs identical accepted input by native identity before later re
   expect(recovered.kind).toBe("recovered");
   if (recovered.kind === "recovered")
     expect(recovered.messages.map((message) => message.id)).toEqual(nativeMessages.map((message) => message.id));
+});
+
+test("accepted live input shows its response after a compaction command", async () => {
+  async function* events() {
+    yield { type: "stdout" as const, data: JSON.stringify(assistant("Earlier reply")) };
+    yield { type: "user_message" as const, message: userMessageFor(delivery.prompt, [], delivery.deliveryId) };
+    yield { type: "stdout" as const, data: JSON.stringify(assistant("Correction response")) };
+  }
+  const messages = [];
+  for await (const message of normalizeClaudeCodeStream(events(), { compact: true })) messages.push(message);
+  expect(messages.map((message) => message.parts[0])).toEqual([
+    { type: "text", text: delivery.prompt },
+    { type: "text", text: "Correction response" },
+  ]);
 });
 
 test("the initial replay is suppressed and pending input keeps stdin open across a result", async () => {
