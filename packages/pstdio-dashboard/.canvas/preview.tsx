@@ -1,10 +1,10 @@
 import "@pstdio/ui/style.css";
-import type { CanvasProject } from "@pstdio/canvas";
+import type { CanvasPreview } from "@pstdio/canvas";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { I18nextProvider } from "react-i18next";
 import i18n from "../src/i18n/config";
 
-const preview: CanvasProject = {
+const preview: CanvasPreview = {
   decorators: [
     (Story) => (
       <I18nextProvider i18n={i18n}>

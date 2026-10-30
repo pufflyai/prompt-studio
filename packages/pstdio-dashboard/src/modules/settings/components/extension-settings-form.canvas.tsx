@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ExtensionSettingValueRecord } from "@pstdio/sdk/api";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
 import { ExtensionSettingsForm } from "./extension-settings-form";
@@ -67,7 +67,7 @@ const meta: CanvasMeta<typeof ExtensionSettingsForm> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof ExtensionSettingsForm>;
+type Story = CanvasFrame<typeof ExtensionSettingsForm>;
 export const Loaded: Story = {
   id: "projectsettings-extensionsettingsform--loaded",
 };

@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ActionInput } from "./action-input";
 
 const run = { id: "run", name: "Run" };
@@ -15,7 +15,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof ActionInput>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const RepeatSelectedAction: Story = {
   id: "patterns-param-editor-actions--repeat-selected-action",
 };

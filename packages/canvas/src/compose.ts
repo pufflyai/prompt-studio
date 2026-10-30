@@ -18,7 +18,8 @@ export interface CanvasContext {
 export const CanvasThemeContext = createContext<CanvasTheme>("light");
 export type CanvasRender<T = any> = (args: Props<T>, context: CanvasContext) => ReactNode;
 export type CanvasDecorator = (Preview: (props?: any) => ReactNode, context: CanvasContext) => ReactNode;
-export interface CanvasVariant<T = any> {
+/** An object frame: Canvas renders `render(args)`, or the canvas `component` with `args`. */
+export interface CanvasFrame<T = any> {
   id?: string;
   name?: string;
   args?: Partial<Props<T>>;
@@ -27,57 +28,36 @@ export interface CanvasVariant<T = any> {
   description?: string;
   /** The frame is at least as tall as the Canvas viewport, for full-page previews. */
   fullscreen?: boolean;
-  setup?: () =>
-    | { args?: Record<string, any>; dispose?: () => void }
-    | Promise<{ args?: Record<string, any>; dispose?: () => void }>;
 }
-export interface CanvasMeta<T = any> extends CanvasVariant<T> {
+/** The default export of a canvas file. */
+export interface CanvasMeta<T = any> extends CanvasFrame<T> {
   title?: string;
   component?: ComponentType<Props<T>>;
 }
-export type CanvasProject = Omit<CanvasVariant, "render">;
-/** One frame: a component with no props, or an object rendering `render(args)` or `component`. */
-export type CanvasFrame<T = any> = CanvasVariant<T> | ComponentType;
 /** The default export of `.canvas/preview.tsx`. */
-export type CanvasPreview = CanvasProject;
+export interface CanvasPreview {
+  decorators?: CanvasDecorator[];
+}
 
-export const composePreview = async (
-  variant: CanvasVariant | CanvasRender,
+export const composePreview = (
+  frame: CanvasFrame | CanvasRender,
   meta: CanvasMeta = {},
-  project: CanvasProject = {},
+  preview: CanvasPreview = {},
 ) => {
-  const example = typeof variant === "function" ? { render: variant } : variant;
-  const context = { args: { ...meta.args, ...example.args } };
-  const cleanups: (() => void)[] = [];
-  let disposed = false;
-  const dispose = () => {
-    if (disposed) return;
-    disposed = true;
-    for (const cleanup of cleanups.reverse()) cleanup();
-  };
-  try {
-    for (const source of [project, meta, example]) {
-      const setup = await source.setup?.();
-      if (setup?.dispose) cleanups.push(setup.dispose);
-      Object.assign(context.args, setup?.args);
-    }
-  } catch (error) {
-    dispose();
-    throw error;
-  }
+  const example = typeof frame === "function" ? { render: frame } : frame;
+  const args = { ...meta.args, ...example.args };
   const render = example.render ?? meta.render;
-  const decorators = [...(project.decorators ?? []), ...(meta.decorators ?? []), ...(example.decorators ?? [])];
-  const Component = (args: Record<string, unknown>) => {
-    const current: CanvasContext = { args: { ...context.args, ...args }, theme: useContext(CanvasThemeContext) };
+  const decorators = [...(preview.decorators ?? []), ...(meta.decorators ?? []), ...(example.decorators ?? [])];
+  const Component = (props: Record<string, unknown>) => {
+    const current: CanvasContext = { args: { ...args, ...props }, theme: useContext(CanvasThemeContext) };
     const body = () =>
       render ? render(current.args, current) : createElement(meta.component ?? (() => null), current.args);
     return decorators.reduceRight<() => ReactNode>((child, decorator) => () => decorator(child, current), body)();
   };
   return {
     Component,
-    args: context.args,
+    args,
     description: example.description,
-    fullscreen: example.fullscreen ?? meta.fullscreen ?? project.fullscreen ?? false,
-    dispose,
+    fullscreen: example.fullscreen ?? meta.fullscreen ?? false,
   };
 };

@@ -1,5 +1,5 @@
-import type { CanvasProject } from "@pstdio/canvas";
+import type { CanvasPreview } from "@pstdio/canvas";
 
 // The live frame runtime owns each frame’s theme.
-const project: CanvasProject = { fullscreen: true };
+const project: CanvasPreview = {};
 export default project;

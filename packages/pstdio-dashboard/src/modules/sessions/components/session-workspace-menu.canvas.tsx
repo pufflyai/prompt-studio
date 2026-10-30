@@ -1,5 +1,5 @@
 import { Box, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { DashboardWorkspaceOption } from "@/shared/workspaces/workspace-options";
 import { SessionWorkspaceMenu } from "./session-workspace-menu";
 
@@ -40,7 +40,7 @@ const meta = {
   ),
 } satisfies CanvasMeta<typeof SessionWorkspaceMenu>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const EditableAndLocked: Story = {
   id: "modules-sessions-workspace-selector--editable-and-locked",
 };

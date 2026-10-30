@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatInput } from "./chat-input";
@@ -50,18 +50,18 @@ const meta = { title: "Patterns/Chat/Follow-up submission", component: Streaming
   typeof StreamingComposer
 >;
 export default meta;
-export const QueueWhileRunning: CanvasVariant<typeof meta> = {
+export const QueueWhileRunning: CanvasFrame<typeof meta> = {
   id: "patterns-chat-follow-up-submission--queue-while-running",
 };
-export const KeepFailedDraft: CanvasVariant<typeof meta> = {
+export const KeepFailedDraft: CanvasFrame<typeof meta> = {
   id: "patterns-chat-follow-up-submission--keep-failed-draft",
   args: { fail: true, slow: true },
 };
-export const SlowSubmission: CanvasVariant<typeof meta> = {
+export const SlowSubmission: CanvasFrame<typeof meta> = {
   id: "patterns-chat-follow-up-submission--slow-submission",
   args: { slow: true },
 };
-export const KeepFailedQuestionAnswers: CanvasVariant<typeof meta> = {
+export const KeepFailedQuestionAnswers: CanvasFrame<typeof meta> = {
   id: "patterns-chat-follow-up-submission--keep-failed-question-answers",
   args: { fail: true, slow: true, question: true },
 };

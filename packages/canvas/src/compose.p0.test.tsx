@@ -3,62 +3,30 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CanvasThemeContext, composePreview } from "./index";
 
-test("each preview owns its setup, args, and cleanup", async () => {
-  let created = 0;
-  let disposed = 0;
-  const variant = {
-    setup: () => ({
-      args: { value: ++created },
-      dispose: () => {
-        disposed++;
-      },
-    }),
-  };
-  const meta = { component: () => null, args: { label: "Default", value: 0 } };
-  const first = await composePreview(variant, meta);
-  const second = await composePreview(variant, meta);
-  expect(first.args).toEqual({ label: "Default", value: 1 });
-  expect(second.args.value).toBe(2);
-  first.dispose();
-  first.dispose();
-  expect(disposed).toBe(1);
-  second.dispose();
-  expect(disposed).toBe(2);
-});
-
-test("providers wrap in project, module, variant order and failed setup is reported", async () => {
+test("decorators wrap in preview, canvas, frame order and args merge", () => {
   const wrap = (name: string) => (Preview: () => unknown) => createElement("section", { id: name }, Preview() as never);
-  const result = await composePreview(
-    { decorators: [wrap("variant")] },
-    { render: () => createElement("content"), decorators: [wrap("module")] },
+  const result = composePreview(
+    { args: { value: 1 }, decorators: [wrap("variant")] },
+    { render: () => createElement("content"), args: { label: "Default", value: 0 }, decorators: [wrap("module")] },
     { decorators: [wrap("project")] },
   );
+  expect(result.args).toEqual({ label: "Default", value: 1 });
   expect(renderToStaticMarkup(createElement(result.Component, {}))).toBe(
     '<section id="project"><section id="module"><section id="variant"><content></content></section></section></section>',
   );
-  await expect(
-    composePreview(
-      {
-        setup: async () => {
-          throw new Error("fixture failed");
-        },
-      },
-      {},
-    ),
-  ).rejects.toThrow("fixture failed");
 });
 
-test("a frame's description and full-page height come from plain fields", async () => {
-  const framed = await composePreview({ description: "Wide layout" }, { fullscreen: true });
+test("a frame's description and full-page height come from plain fields", () => {
+  const framed = composePreview({ description: "Wide layout" }, { fullscreen: true });
   expect(framed.description).toBe("Wide layout");
   expect(framed.fullscreen).toBe(true);
-  const plain = await composePreview({ fullscreen: false }, {}, { fullscreen: true });
+  const plain = composePreview({ fullscreen: false }, { fullscreen: true });
   expect(plain.description).toBeUndefined();
   expect(plain.fullscreen).toBe(false);
 });
 
-test("decorators receive the frame's theme", async () => {
-  const preview = await composePreview(() => createElement("p", null, "body"), {
+test("decorators receive the frame's theme", () => {
+  const preview = composePreview(() => createElement("p", null, "body"), {
     decorators: [(Frame, context) => createElement("main", { "data-theme": context.theme }, Frame())],
   });
   const markup = (theme?: "dark") => {

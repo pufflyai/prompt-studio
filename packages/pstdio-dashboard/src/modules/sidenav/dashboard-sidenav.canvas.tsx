@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
@@ -230,7 +230,7 @@ const meta = {
   ],
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void; desktop?: boolean }) => {
   const { open, desktop } = props;
   const [workbench] = useState(() => {

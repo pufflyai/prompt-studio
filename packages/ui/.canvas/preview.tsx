@@ -1,5 +1,5 @@
-import type { CanvasProject } from "@pstdio/canvas";
+import type { CanvasPreview } from "@pstdio/canvas";
 
 // The shared preview runtime owns Chakra and per-frame themes.
-const project: CanvasProject = {};
+const project: CanvasPreview = {};
 export default project;

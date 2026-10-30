@@ -1,5 +1,5 @@
 import { Box, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { ChatPrimitives } from "./ai-conversation";
 import { ChatMessage } from "./ai-message";
@@ -14,7 +14,7 @@ const meta: CanvasMeta<typeof ChatPrimitives.Root> = {
   component: ChatPrimitives.Root,
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPrimitives.Root>;
+type Story = CanvasFrame<typeof ChatPrimitives.Root>;
 const storyMessages = mergeReasoningToolOnlyMessages(conversationMessages).slice(-18);
 const statusColorPrompt = [
   "```ts",

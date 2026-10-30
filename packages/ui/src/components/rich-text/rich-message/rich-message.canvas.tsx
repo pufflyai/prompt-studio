@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { RichMessage } from "./rich-message";
 
@@ -126,7 +126,7 @@ const meta: CanvasMeta<typeof RichMessage> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof RichMessage>;
+type Story = CanvasFrame<typeof RichMessage>;
 export const Basic: Story = {
   id: "patterns-chat-rich-message--basic",
   render: (args) => (

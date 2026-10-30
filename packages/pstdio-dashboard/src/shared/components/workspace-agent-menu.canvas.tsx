@@ -1,5 +1,5 @@
 import { Box, Button, Dialog, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Cpu, TerminalIcon } from "lucide-react";
 import { useState } from "react";
 import { WorkspaceAgentMenu, type WorkspacePanelMenuOption } from "./workspace-agent-menu";
@@ -16,7 +16,7 @@ const meta: CanvasMeta<typeof WorkspaceAgentMenu> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof WorkspaceAgentMenu>;
+type Story = CanvasFrame<typeof WorkspaceAgentMenu>;
 const agentOptions = [
   { label: "Claude Code", value: "claude-code", icon: TerminalIcon },
   { label: "OpenCode", value: "opencode", icon: TerminalIcon },

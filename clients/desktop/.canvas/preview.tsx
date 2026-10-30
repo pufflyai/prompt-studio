@@ -1,8 +1,8 @@
 import "@pstdio/ui/style.css";
-import type { CanvasProject } from "@pstdio/canvas";
+import type { CanvasPreview } from "@pstdio/canvas";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 
-const preview: CanvasProject = {
+const preview: CanvasPreview = {
   decorators: [
     (Story) => (
       <ChakraProvider value={psTheme}>

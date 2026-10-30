@@ -1,5 +1,5 @@
 import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
 import { KanbanRenderer } from "./kanban-renderer";
 import { attributes, type StoryRow } from "./kanban-renderer-story-fixtures";
@@ -14,7 +14,7 @@ const meta: CanvasMeta<typeof KanbanRenderer> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const LIVE_STORAGE_KEY = "preview-kanban-renderer-live";
 const ADDABLE_STATUSES: EnumOption[] = [
   { value: "review", label: "Review", color: "purple" },

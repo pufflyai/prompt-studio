@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ArtifactLibrary } from "./artifact-library";
 import { exampleArtifact as item } from "./artifact-story-fixture";
@@ -24,7 +24,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof ArtifactLibrary>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Published: Story = {
   id: "extensions-artifacts-library--published",
 };

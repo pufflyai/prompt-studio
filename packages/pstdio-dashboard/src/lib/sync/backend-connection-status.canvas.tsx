@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { BackendConnectionStatus } from "./backend-connection-status";
 
@@ -22,7 +22,7 @@ const meta = {
   args: { connected: false },
 } satisfies CanvasMeta<typeof BackendConnectionStatus>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Disconnected: Story = {
   id: "sync-backend-connection-status--disconnected",
 };

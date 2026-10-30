@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { HarnessModelPicker } from "./harness-model-picker";
 
@@ -35,7 +35,7 @@ const meta: CanvasMeta<typeof HarnessModelPicker> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof HarnessModelPicker>;
+type Story = CanvasFrame<typeof HarnessModelPicker>;
 export const Default: Story = {
   id: "components-param-editor-harness-model-picker--default",
 };

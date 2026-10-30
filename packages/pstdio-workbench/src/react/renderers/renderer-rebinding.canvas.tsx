@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench, getWorkbenchRenderers } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -121,7 +121,7 @@ const meta = {
   ],
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 export const ControlsResourceChange: Story = {
   id: "renderers-rebinding--controls-resource-change",
   render: () => <ControlsRebinding />,

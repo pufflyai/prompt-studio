@@ -1,5 +1,5 @@
 import { Box, Flex, Icon, IconButton, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Bot, GitBranch, MoreHorizontal, PanelLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { Header } from "@/components/layout/header";
@@ -61,7 +61,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof ResizableSplitLayout>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const LeftPanel: Story = {
   id: "components-layout-resizable-split-layout--left-panel",
 };

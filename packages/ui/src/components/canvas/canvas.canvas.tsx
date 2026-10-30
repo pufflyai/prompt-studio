@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Canvas } from "./canvas";
 import { FlowCanvasExample, FreeformCanvasExample, ScrollCanvasExample } from "./canvas.examples";
 
@@ -17,7 +17,7 @@ const meta: CanvasMeta<typeof Canvas> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof Canvas>;
+type Story = CanvasFrame<typeof Canvas>;
 export const LivePreviews: Story = {
   id: "components-layout-canvas--live-previews",
   args: { minZoom: 0.1, maxZoom: 4 },

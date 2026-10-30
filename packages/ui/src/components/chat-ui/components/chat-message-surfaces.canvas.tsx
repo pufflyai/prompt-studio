@@ -1,5 +1,5 @@
 import { Box, Theme } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ComponentProps } from "react";
 import { canvasVsCodeThemes } from "../../../theme/custom/vscode-theme.canvas-fixture";
 import { defaultThemePreferences, type ThemePreferenceOption } from "../../../utils/apply-theme-preference";
@@ -39,7 +39,7 @@ const meta = {
 } satisfies CanvasMeta<typeof ChatPanel>;
 
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 
 export const Light: Story = { id: "patterns-chat-message-surfaces--light", render: inTheme("pstdio-light") };
 export const Dark: Story = { id: "patterns-chat-message-surfaces--dark", render: inTheme("pstdio-dark") };

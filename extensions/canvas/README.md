@@ -37,7 +37,7 @@ Each frame has a **Theme** menu: Follow app, Light, Dark, Solarized Light, Solar
 
 ## Edit source
 
-`src/canvases/definitions.ts` owns canvas IDs, unique readable names, preview membership, component keys, initial positions, and intended dimensions. `src/canvases/previews.tsx` maps component keys to source files and named React exports. The compiler creates a lazy lookup so frames import only their native component group. Add another canvas to the definitions array and another preview component when needed. Camera and gesture code do not need to change.
+`src/canvases/definitions.ts` owns canvas IDs, unique readable names, preview membership, component keys, initial positions, and intended dimensions. `src/canvases/previews.tsx` maps component keys to the design pages in `packages/ui/src/foundations/` and their named React exports. The compiler creates a lazy lookup so frames import only their native component group. Add another canvas to the definitions array and another preview component when needed. Camera and gesture code do not need to change.
 
 Preserve IDs and names in follow-up edits. Add a new named entry for another version. Keep unrelated designs. Place new entries in nearby empty space and reveal them through the camera. Use the `canvas` skill for the full authoring and validation rules.
 

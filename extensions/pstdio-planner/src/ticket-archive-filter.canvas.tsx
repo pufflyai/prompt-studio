@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { isLocalizedString } from "@pstdio/sdk/extensions";
 import { type AttributeDescriptor, KanbanRenderer } from "@pstdio/ui/kanban-renderer";
 import { buildTicketAttributes } from "./data/mappers";
@@ -9,7 +9,7 @@ const meta: CanvasMeta<typeof KanbanRenderer> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const attributes = JSON.parse(JSON.stringify(buildTicketAttributes([])), (_key, value) =>
   isLocalizedString(value) ? value.default : value,
 ) as AttributeDescriptor[];

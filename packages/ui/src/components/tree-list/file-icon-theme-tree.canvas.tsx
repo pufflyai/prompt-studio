@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import type { FileIconThemePreferenceOption } from "../../utils/apply-file-icon-theme-preference";
 import { resolveFileIconElement } from "../../utils/resolve-file-icon-element";
@@ -11,7 +11,7 @@ const meta: CanvasMeta<typeof TreeList> = {
   component: TreeList,
 };
 export default meta;
-type Story = CanvasVariant<typeof TreeList>;
+type Story = CanvasFrame<typeof TreeList>;
 // A miniature Seti-like icon theme. Glyphs render once the contributed font is
 // loaded; this story focuses on the resolution + color wiring and Lucide fallback.
 const demoTheme: FileIconThemePreferenceOption = {

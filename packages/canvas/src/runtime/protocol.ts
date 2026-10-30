@@ -1,3 +1,5 @@
+import type { FrameBootstrap } from "./assets";
+
 // The messages between a UI Canvas frame and its host. They match the protocol the UI Canvas
 // extension speaks; the extension reads these types from this package once it adopts it.
 export const frameProtocol = "pstdio.canvas.preview";
@@ -19,6 +21,8 @@ export interface FrameRequest {
   error?: string;
   item?: FrameItem;
   theme?: FrameTheme;
+  /** The answer to a nested frame's `assets` request. */
+  bootstrap?: FrameBootstrap;
 }
 
 export interface FrameMessage {

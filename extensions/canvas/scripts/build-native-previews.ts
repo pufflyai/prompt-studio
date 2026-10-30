@@ -7,10 +7,7 @@ import { type NativeBuildOutput, publishNativeBuild } from "./native-build-outpu
 import { generatedRoot, generateStoryCatalog, repoRoot, suites } from "./story-catalog";
 
 const nativeSources = Object.fromEntries(
-  Object.entries(previews).map(([name, preview]) => [
-    name,
-    resolve(import.meta.dir, "../src/canvases", preview.source),
-  ]),
+  Object.entries(previews).map(([name, preview]) => [name, resolve(repoRoot, preview.source)]),
 );
 const nativeDeclaration = `const __UI_CANVAS_NATIVE__={${Object.entries(previews)
   .map(

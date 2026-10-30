@@ -1,5 +1,5 @@
 import { Box, HStack, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Trash2 } from "lucide-react";
 import { getThemePreferenceClassNames } from "@/utils/apply-theme-preference";
 
@@ -42,7 +42,7 @@ const meta = {
   mode: "light" | "dark";
 }>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Light: Story = {
   id: "components-inputs-delete-icon-buttons--light",
 };

@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
@@ -172,7 +172,7 @@ const meta: CanvasMeta<typeof RequestsPanel> = {
   args: { row, onAnswer: async () => {}, onOpenChat: async () => {} },
 };
 export default meta;
-type Story = CanvasVariant<typeof RequestsPanel>;
+type Story = CanvasFrame<typeof RequestsPanel>;
 export const NoRequests: Story = {
   id: "extensions-planner-needs-attention--no-requests",
   args: { row },

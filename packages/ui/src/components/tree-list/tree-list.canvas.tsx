@@ -1,5 +1,5 @@
 import { Box, Button, Flex, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Check, Copy, EllipsisVertical, FileText, Folder, Plus, Search, Settings, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
@@ -15,7 +15,7 @@ const meta: CanvasMeta<typeof TreeList> = {
   component: TreeList,
 };
 export default meta;
-type Story = CanvasVariant<typeof TreeList>;
+type Story = CanvasFrame<typeof TreeList>;
 const toggleId = (ids: string[], id: string) => (ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]);
 const actionMenuItems = Array.from({ length: 10 }, (_, index) => ({
   id: `action-${index + 1}`,

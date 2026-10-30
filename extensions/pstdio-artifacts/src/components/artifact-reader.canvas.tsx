@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { weeklyActivityHtml } from "../../examples/weekly-activity";
 import { ArtifactReader } from "./artifact-reader";
 import { exampleArtifact } from "./artifact-story-fixture";
@@ -31,7 +31,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof ArtifactReader>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Interactive: Story = {
   id: "extensions-artifacts-reader--interactive",
 };

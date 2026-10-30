@@ -1,5 +1,5 @@
 import { Box, Button, HStack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useRef, useState } from "react";
 import { updateStreamingTextPart } from "../performance/chat-performance-fixtures";
 import { defaultChatPanelProps, markAfterPaint, streamMessages } from "../performance/chat-performance-story-utils";
@@ -13,7 +13,7 @@ const meta: CanvasMeta<typeof ChatPanel> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 function RenderingBenchmark() {
   const [messages, setMessages] = useState<SessionMessage[]>([]);
   const [identity, setIdentity] = useState("primary");

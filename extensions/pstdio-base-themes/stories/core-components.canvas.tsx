@@ -1,5 +1,5 @@
 import { Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Buttons, Inputs } from "./buttons-and-inputs";
 import { ComposedComponents } from "./composed-components";
 import { Foundations } from "./foundations";
@@ -29,11 +29,12 @@ export function CoreComponents(props: { section: Section }) {
 }
 const meta = {
   title: "Themes/Single theme",
+  fullscreen: true,
   component: CoreComponents,
   args: { section: "all" },
 } satisfies CanvasMeta<typeof CoreComponents>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Core: Story = {
   id: "themes-single-theme--core",
 };

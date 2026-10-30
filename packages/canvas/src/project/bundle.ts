@@ -1,16 +1,50 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { dirname, extname, join, resolve } from "node:path";
 import type { CanvasEntry } from "./manifest";
 
 const RUNTIME = resolve(import.meta.dir, "../runtime/frame-runtime.tsx");
 
+// The folder React resolves from: the project root, or in a monorepo whose root installs no
+// React, the first canvas file that can resolve it.
+const reactBase = (root: string, canvases: CanvasEntry[]) => {
+  for (const folder of [root, ...canvases.map((canvas) => dirname(join(root, canvas.id)))]) {
+    try {
+      Bun.resolveSync("react", folder);
+      return folder;
+    } catch {}
+  }
+  return root;
+};
+
 // The runtime lives in this package, but every frame must share the project's single React.
-const projectReact = (root: string): Bun.BunPlugin => ({
+const projectReact = (base: string): Bun.BunPlugin => ({
   name: "pstdio-canvas-project-react",
   setup(build) {
-    build.onResolve({ filter: /^react(-dom)?($|\/)/ }, (args) => ({ path: Bun.resolveSync(args.path, root) }));
+    build.onResolve({ filter: /^react(-dom)?($|\/)/ }, (args) => ({ path: Bun.resolveSync(args.path, base) }));
   },
 });
+
+// Vite's `?raw` (file text) and `?url` (file address) imports are common in React projects.
+// Frames load from blob URLs, so a `?url` import becomes a data URL.
+const queryImports: Bun.BunPlugin = {
+  name: "pstdio-canvas-query-imports",
+  setup(build) {
+    build.onResolve({ filter: /\?(raw|url)$/ }, (args) => {
+      const [specifier, query] = args.path.split("?") as [string, "raw" | "url"];
+      return { path: Bun.resolveSync(specifier, dirname(args.importer)), namespace: `canvas-${query}` };
+    });
+    build.onLoad({ filter: /.*/, namespace: "canvas-raw" }, async (args) => ({
+      contents: `export default ${JSON.stringify(await Bun.file(args.path).text())};`,
+      loader: "js",
+    }));
+    build.onLoad({ filter: /.*/, namespace: "canvas-url" }, async (args) => {
+      const file = Bun.file(args.path);
+      const type = ASSET_TYPES[extname(args.path).slice(1).toLowerCase()] ?? file.type;
+      const data = Buffer.from(await file.arrayBuffer()).toString("base64");
+      return { contents: `export default ${JSON.stringify(`data:${type};base64,${data}`)};`, loader: "js" };
+    });
+  },
+};
 
 const ownFiles = (root: string, canvas: CanvasEntry) =>
   new Set([join(root, canvas.id), ...(canvas.preview ? [join(root, canvas.preview)] : [])]);
@@ -74,7 +108,7 @@ const bunBuild = (root: string, entry: string, canvases: CanvasEntry[], outdir?:
     define: { "process.env.NODE_ENV": '"production"' },
     naming: { entry: "[name]-[hash].[ext]", chunk: "chunk-[hash].[ext]", asset: "[name]-[hash].[ext]" },
     loader,
-    plugins: [projectReact(root)],
+    plugins: [projectReact(reactBase(root, canvases)), queryImports],
   });
 
 type BuildLogs = Bun.BuildOutput["logs"];

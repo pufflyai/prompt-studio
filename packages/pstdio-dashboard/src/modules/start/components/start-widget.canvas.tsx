@@ -1,5 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { createDashboardResource } from "@/shared/app/resources";
 import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
@@ -76,7 +76,7 @@ const meta: CanvasMeta<typeof StartPagePreview> = {
   component: StartPagePreview,
 };
 export default meta;
-type Story = CanvasVariant<typeof StartPagePreview>;
+type Story = CanvasFrame<typeof StartPagePreview>;
 export const Default: Story = {
   id: "start-startpage--default",
 };

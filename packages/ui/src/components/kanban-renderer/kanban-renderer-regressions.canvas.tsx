@@ -1,5 +1,5 @@
 import { Badge, Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { AlertMessage } from "../primitives/alert";
 import { KanbanRenderer } from "./kanban-renderer";
@@ -12,7 +12,7 @@ const meta: CanvasMeta<typeof KanbanRenderer> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const EditableBadgeWrapper = () => {
   const [rows, setRows] = useState<StoryRow[]>(initialRows);
   const handleAttributeChange = (rowId: string, attributeId: string, value: unknown) => {

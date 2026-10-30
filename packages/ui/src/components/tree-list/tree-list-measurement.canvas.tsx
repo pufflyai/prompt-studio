@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "./tree-list";
@@ -9,7 +9,7 @@ const meta: CanvasMeta<typeof TreeList> = {
   component: TreeList,
 };
 export default meta;
-type Story = CanvasVariant<typeof TreeList>;
+type Story = CanvasFrame<typeof TreeList>;
 const MeasuredRowsStory = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [count, setCount] = useState(0);

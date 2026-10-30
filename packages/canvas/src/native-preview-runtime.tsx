@@ -1,4 +1,4 @@
-import { type CanvasMeta, type CanvasProject, type CanvasVariant, composePreview } from "@pstdio/canvas";
+import { type CanvasFrame, type CanvasMeta, type CanvasPreview, composePreview } from "@pstdio/canvas";
 
 interface PreviewInput {
   kind: string;
@@ -21,10 +21,10 @@ export const createPreviewLoader =
     if (!module[exportName]) throw new Error(`Missing preview: ${input.source}#${exportName}`);
     const importedAt = performance.now();
     imported();
-    const preview = await composePreview(
-      module[exportName] as CanvasVariant,
+    const preview = composePreview(
+      module[exportName] as CanvasFrame,
       module.default as CanvasMeta,
-      project as CanvasProject,
+      project as CanvasPreview,
     );
     return { ...preview, timings: { importMs: importedAt - started, setupMs: performance.now() - importedAt } };
   };
