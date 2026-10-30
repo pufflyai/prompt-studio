@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Stack, Text, Textarea } from "@chakra-ui/react";
+import { Box, Button, Flex, Spinner, Stack, Text, Textarea } from "@chakra-ui/react";
 import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { DocumentParticipants } from "@pstdio/ui";
 import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
@@ -17,6 +17,7 @@ const modes = [
 ] as const;
 type Mode = (typeof modes)[number];
 const messages: Partial<Record<Mode, string>> = {
+  Saving: "Saving changes…",
   Reconnecting: "Changes are waiting to be saved.",
   "Read only": "This document is read only.",
   "Close blocked": "Finish or cancel your text draft before closing.",
@@ -123,9 +124,12 @@ const EditorNotice = (props: { mode: Mode; message: string; retry: () => void })
   const { mode, message, retry } = props;
   return (
     <Flex gap="sm" align="center" justify="space-between" bg="bg.muted" px="sm" py="xs">
-      <Text color="fg.muted" textStyle="label/S/regular">
-        {message}
-      </Text>
+      <Flex align="center" gap="xs">
+        {(mode === "Saving" || mode === "Reconnecting") && <Spinner size="xs" color="fg.muted" aria-label={mode} />}
+        <Text color="fg.muted" textStyle="label/S/regular">
+          {message}
+        </Text>
+      </Flex>
       {(mode === "Reconnecting" || mode === "Projection failed") && (
         <Button size="2xs" variant="subtle" onClick={retry}>
           Retry
