@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import { benchmarkSampleCount } from "pstdio-benchmarks";
 
-const port = Number(process.env.UI_STORYBOOK_PORT ?? "6008");
+const port = Number(process.env.UI_CANVAS_PORT ?? "6008");
 const runId = process.env.UI_PERF_RUN_ID ?? `ui-chat-perf-${Date.now()}-${process.pid}`;
 
 export default defineConfig({
@@ -16,7 +16,7 @@ export default defineConfig({
   outputDir: `test-results/${runId}`,
   reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
   use: {
-    baseURL: `http://localhost:${port}`,
+    baseURL: `http://127.0.0.1:${port}`,
     trace: process.env.PLAYWRIGHT_TRACE === "on" ? "on" : "off",
     screenshot: "only-on-failure",
   },
@@ -27,7 +27,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `bun run build-storybook && bun ./scripts/serve-static.ts storybook-static ${port}`,
+    command: `bun x --no-install lerna run build:previews --scope canvas-tests && CANVAS_PREVIEW_PORT=${port} bun ../canvas-tests/src/scripts/preview-server.ts`,
     port,
     reuseExistingServer: false,
     timeout: 120_000,

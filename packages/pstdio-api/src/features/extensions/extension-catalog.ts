@@ -23,6 +23,8 @@ const extensionCatalogEntrySchema = z.object({
   origin: gitOriginSchema,
   publisher: z.string().min(1).optional(),
   default: z.boolean(),
+  /** Build policy: leave large optional sources available for download instead of embedding them. */
+  bundleSource: z.boolean().optional(),
   /** Host policy: keep this installed user extension enabled in every project. */
   alwaysEnabled: z.boolean().optional(),
 });

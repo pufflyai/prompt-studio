@@ -17,7 +17,7 @@ The local theme extends the shared theme with the landing illustration colors.
 - `src/services` builds the page catalog, resolves routes, page metadata, and structured data, loads GitHub releases, and selects desktop assets.
 - `src/services/markdown` holds the markdown plugins that rewrite links and read page descriptions.
 - `src/services/shapes` owns tool geometry, pointer dragging, and agent assembly.
-- `src/theme/recipes` owns page layouts and demo styles, with colocated Storybook stories.
+- `src/theme/recipes` owns page layouts and demo styles, with colocated Canvas stories.
 - `src/content/legal` holds the legal documents as markdown. See [Legal documents](#legal-documents).
 - `src/content/blog` holds the blog posts as markdown. See [Blog](#blog).
 
@@ -181,11 +181,11 @@ extension management, and themes have a separate Features page. A single page ga
 Use "workbench" for the overall home for tools. A workspace is a separate product concept.
 
 The page layout and preview styles use the local `landingStory` and `landingToolDemo`
-recipes. The app's Storybook covers desktop and narrow-panel layouts. Preview panels respond
+recipes. The app's Canvas covers desktop and narrow-panel layouts. Preview panels respond
 to their actual container width.
 
-Build these stories with `bun run --cwd clients/landing-page build-storybook`.
-The reusable component stories remain in the UI package's Storybook.
+Browse these component variants under Landing Page in Canvas. Rebuild with `bun run --cwd scripts canvas:build`.
+The reusable component stories remain in the UI package's Canvas.
 
 The page catalog supplies static routes, unique metadata, canonical links, and
 `/sitemap.xml`. `/robots.txt` points crawlers to that sitemap. Canonical URLs end

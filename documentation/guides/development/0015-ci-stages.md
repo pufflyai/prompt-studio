@@ -26,7 +26,7 @@ Rules:
 - If you are unsure how important a new behavior test is, start with P1.
 - One file has one priority. Split a file that mixes priorities, and keep tests with the same owner, priority and fixture together.
 - Keep each behavior in one place. A focused test proves the detailed rules. A browser test proves that the user interaction reaches those rules.
-- Put focused tests next to the code. Stories stay next to components. Component browser tests live under `packages/storybook-tests/src/ui/<owner>/`. App and packaged journeys live in `packages/e2e`.
+- Put focused tests next to the code. Stories stay next to components. Component browser tests live under `packages/canvas-tests/src/ui/<owner>/`. App and packaged journeys live in `packages/e2e`.
 - Fixtures end in `.fixture.ts` or `.test-fixture.ts`. Scale tools with no release contract end in `.diagnostic.ts`.
 
 ### Run tests locally
@@ -40,7 +40,7 @@ bun test:p1 --runner component      # one kind of runner
 bun test:p2 --list                  # print the plan without building or running
 ```
 
-Each command builds what the selected tests need, then runs exactly that priority. An empty selection fails. CI adds `--prebuilt` because it builds first. Browser and desktop tests need their system prerequisites installed. Component tests use built Storybooks. For manual app checks, use `bun run dev:playwright` and stop it with `bun run dev:playwright:down`.
+Each command builds what the selected tests need, then runs exactly that priority. An empty selection fails. CI adds `--prebuilt` because it builds first. Browser and desktop tests need their system prerequisites installed. Component tests use built Canvas previews. For manual app checks, use `bun run dev:playwright` and stop it with `bun run dev:playwright:down`.
 
 A local run only proves your own machine. It does not prove other platforms or signed release files. See [the testing guide](0002-testing.md) for fixtures, isolation and time limits.
 

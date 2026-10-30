@@ -1,0 +1,215 @@
+import { Box, Button, Icon, Stack } from "@chakra-ui/react";
+import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import { FolderGit2, GitBranch } from "lucide-react";
+import { useRef, useState } from "react";
+import { ListRow } from "@/components/list-row/list-row";
+import { SearchableMenu, type SearchableMenuItem } from "@/components/overlays/searchable-menu";
+import { ScopedDialog as Dialog, ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
+
+const branchItems: SearchableMenuItem[] = Array.from({ length: 18 }, (_, index) => {
+  const branchName = index === 0 ? "main" : `feature/searchable-menu-${index}`;
+  return {
+    id: branchName,
+    label: branchName,
+    searchText: `origin/${branchName}`,
+    icon: GitBranch,
+    isSelected: branchName === "main",
+  };
+});
+const repositoryItems: SearchableMenuItem[] = Array.from({ length: 12 }, (_, index) => {
+  const repoName = index === 0 ? "prompt-studio" : `repo-browser-${index}`;
+  return {
+    id: repoName,
+    label: repoName,
+    searchText: `/repos/${repoName}`,
+    icon: FolderGit2,
+    isSelected: false,
+  };
+});
+const meta: CanvasMeta<typeof SearchableMenu> = {
+  title: "Components/Navigation/Searchable Menu",
+  component: SearchableMenu,
+  parameters: {
+    layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Searchable selection menu for switching between local option sets. RULE: Menu item subtitles must add distinct context and never contain the same information as the title.",
+      },
+    },
+  },
+  decorators: [
+    (Story) => (
+      <Box maxWidth="320px">
+        <Story />
+      </Box>
+    ),
+  ],
+};
+export default meta;
+type Story = CanvasVariant<typeof SearchableMenu>;
+export const BranchSelector: Story = {
+  id: "components-navigation-searchable-menu--branch-selector",
+  tags: ["menu-selection"],
+  render: () => (
+    <SearchableMenu
+      trigger={<Button variant="outline">Select branch</Button>}
+      items={branchItems}
+      searchPlaceholder="Search branches…"
+      portalled={false}
+      emptyState={
+        <Menu.Item value="empty" asChild>
+          <ListRow
+            asChild
+            variant="full-width"
+            label="No branches found"
+            icon={<Icon as={GitBranch} boxSize="16px" />}
+            disabled
+          />
+        </Menu.Item>
+      }
+    />
+  ),
+};
+export const SwitchableLists: Story = {
+  id: "components-navigation-searchable-menu--switchable-lists",
+  tags: ["menu-selection"],
+  render: () => {
+    const [selectedBranch, setSelectedBranch] = useState("main");
+    const [selectedRepository, setSelectedRepository] = useState("prompt-studio");
+    const repositoryLabel = repositoryItems.find((item) => item.id === selectedRepository)?.label ?? selectedRepository;
+    return (
+      <SearchableMenu
+        trigger={<Button variant="outline">Switchable menu</Button>}
+        items={branchItems.map((item) => ({
+          ...item,
+          isSelected: item.id === selectedBranch,
+          onSelect: () => setSelectedBranch(item.id),
+        }))}
+        searchPlaceholder="Search branches…"
+        portalled={false}
+        emptyState={
+          <Menu.Item value="empty" asChild>
+            <ListRow
+              asChild
+              variant="full-width"
+              label="No branches found"
+              icon={<Icon as={GitBranch} boxSize="16px" />}
+              disabled
+            />
+          </Menu.Item>
+        }
+        parentList={{
+          items: repositoryItems.map((item) => ({
+            ...item,
+            isSelected: item.id === selectedRepository,
+          })),
+          selectedLabel: repositoryLabel,
+          selectedIcon: FolderGit2,
+          ariaLabel: "Toggle list",
+          showSearch: true,
+          searchPlaceholder: "Search repositories…",
+          emptyState: (
+            <Menu.Item value="empty" asChild>
+              <ListRow
+                asChild
+                variant="full-width"
+                label="No repositories found"
+                icon={<Icon as={FolderGit2} boxSize="16px" />}
+                disabled
+              />
+            </Menu.Item>
+          ),
+          onSelect: (item) => setSelectedRepository(item.id),
+        }}
+      />
+    );
+  },
+};
+export const DisabledParentList: Story = {
+  id: "components-navigation-searchable-menu--disabled-parent-list",
+  render: () => (
+    <SearchableMenu
+      trigger={<Button variant="outline">Single repo</Button>}
+      items={branchItems}
+      searchPlaceholder="Search branches…"
+      portalled={false}
+      emptyState={
+        <Menu.Item value="empty" asChild>
+          <ListRow
+            asChild
+            variant="full-width"
+            label="No branches found"
+            icon={<Icon as={GitBranch} boxSize="16px" />}
+            disabled
+          />
+        </Menu.Item>
+      }
+      parentList={{
+        items: [{ id: "prompt-studio", label: "prompt-studio", icon: FolderGit2 }],
+        selectedLabel: "prompt-studio",
+        selectedIcon: FolderGit2,
+        ariaLabel: "Toggle list",
+        disabled: true,
+        emptyState: (
+          <Menu.Item value="empty" asChild>
+            <ListRow
+              asChild
+              variant="full-width"
+              label="No repositories found"
+              icon={<Icon as={FolderGit2} boxSize="16px" />}
+              disabled
+            />
+          </Menu.Item>
+        ),
+      }}
+    />
+  ),
+};
+export const PortalledInsideDialog: Story = {
+  id: "components-navigation-searchable-menu--portalled-inside-dialog",
+  parameters: {
+    layout: "fullscreen",
+  },
+  render: () => {
+    const dialogRef = useRef<HTMLDivElement>(null);
+    return (
+      <Dialog.Root open modal>
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content ref={dialogRef} maxW="sm" overflow="hidden">
+              <Dialog.Header>
+                <Dialog.Title>Create workspace</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Stack alignItems="flex-start" gap="3">
+                  <SearchableMenu
+                    portalContainer={dialogRef}
+                    positioning={{ strategy: "fixed", hideWhenDetached: true }}
+                    trigger={<Button variant="outline">Select workspace</Button>}
+                    items={branchItems}
+                    searchPlaceholder="Search workspaces..."
+                    emptyState={
+                      <Menu.Item value="empty" asChild>
+                        <ListRow
+                          asChild
+                          variant="full-width"
+                          label="No workspaces found"
+                          icon={<Icon as={GitBranch} boxSize="16px" />}
+                          disabled
+                        />
+                      </Menu.Item>
+                    }
+                  />
+                  <Button variant="primary">Create workspace</Button>
+                </Stack>
+              </Dialog.Body>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
+    );
+  },
+};

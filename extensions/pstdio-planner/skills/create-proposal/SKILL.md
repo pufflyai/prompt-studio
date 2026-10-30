@@ -11,6 +11,10 @@ A proposal ticket is not a document in the user's repository. If the repository 
 
 A proposal lets a person check quickly that your plan matches their vision. It says what changes for users and why, through concrete scenarios. It does not say how to build it. Implementation planning happens later, in the tickets created from the proposal.
 
+## UI designs
+
+Before saving a proposal that adds or changes UI, read `pst pstdio-planner refinement-policy`. When `updateCanvasDesign` is enabled, follow the project's canvas skill and update the relevant live design first. Preserve existing previews and name alternatives clearly. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically. If the option is off, record why the design step was skipped. Resolve policy-read failures before finishing.
+
 ## Workflow
 
 1. Derive a short, verb-led title from the request, such as `add-`, `update-`, `remove-`, `refactor-`, or `fix-`.

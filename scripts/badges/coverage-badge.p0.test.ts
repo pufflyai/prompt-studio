@@ -58,7 +58,7 @@ describe("summarizeCoverage", () => {
           ["src/app.p1.test.ts", [[1, 1]]],
           ["src/document-scale.diagnostic.ts", [[1, 1]]],
           ["src/chat-rendering.p3.bench.ts", [[1, 1]]],
-          ["src/button.stories.tsx", [[1, 1]]],
+          ["src/button.canvas.tsx", [[1, 1]]],
           ["src/test-utils/fake.ts", [[1, 1]]],
           ["src/fixtures/extension.ts", [[1, 1]]],
           ["src/session.test-fixture.ts", [[1, 1]]],

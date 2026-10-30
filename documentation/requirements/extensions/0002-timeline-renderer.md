@@ -22,7 +22,7 @@ The shared renderer must support other tools that show dependencies, grouped wor
 
 | Owner | Responsibilities |
 | --- | --- |
-| UI | Cards, lanes, milestone bands, dependency arrows, pan and zoom, selection, focus, drag feedback, viewport rendering, theme recipes, and Storybook coverage |
+| UI | Cards, lanes, milestone bands, dependency arrows, pan and zoom, selection, focus, drag feedback, viewport rendering, theme recipes, and Canvas coverage |
 | SDK | Serializable timeline data, query and event contracts, declared actions, and capability validation |
 | Workbench | Mounting the renderer, shared collection controls, navigation, loading and connection chrome, action reporting, and query lifecycle |
 | Planner | Mapping tickets to timeline data; dependency correctness; dates, ordering, ETA and risk; gates and reviews; Auto Build; storage and command implementations |

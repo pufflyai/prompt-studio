@@ -1,6 +1,6 @@
-import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@pstdio/canvas";
 import firstExtensionSource from "../onboarding/extensions/page-extension.ts?raw";
-import * as ExtensionApiStories from "./extension-api.stories";
+import * as ExtensionApiStories from "./extension-api.canvas";
 
 <Meta of={ExtensionApiStories} name="API reference" />
 
@@ -21,7 +21,7 @@ workbench authoring API available to first-party and third-party extensions.
 ## Runnable example
 
 This is the complete extension used by the preview. The source panel under the preview shows the same TypeScript that
-Storybook runs.
+Canvas runs.
 
 <Canvas of={ExtensionApiStories.RunnableExample} sourceState="shown" />
 

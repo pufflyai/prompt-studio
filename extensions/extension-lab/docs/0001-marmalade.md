@@ -52,7 +52,7 @@ The extension owns its document, selected IDs, order, groups, expansion, visibil
 
 Each webview subscribes to the public `marmalade.changed` event before its first read. Notifications and host-sync reconnects trigger a fresh command read. There is no polling or browser-storage copy. Input drafts, pending selection, and in-progress drags have transient local previews. Saved document state stays on the host. Command failures appear beside the canvas and inspector controls.
 
-`TreeList` owns generic focus, range-selection gestures, explicit insertion feedback, and keyboard move intent. `ListRow` supplies preview slots, persistent toggle actions, and separate expansion controls. The example supplies image rendering and lock/group rules. See the **Tree List / Outliner** Storybook stories for a domain-free composition.
+`TreeList` owns generic focus, range-selection gestures, explicit insertion feedback, and keyboard move intent. `ListRow` supplies preview slots, persistent toggle actions, and separate expansion controls. The example supplies image rendering and lock/group rules. See the **Tree List / Outliner** Canvas stories for a domain-free composition.
 
 ## Sample image
 

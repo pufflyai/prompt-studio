@@ -2,7 +2,7 @@ import { relative, resolve, sep } from "node:path";
 import type { CoverageReport } from "./coverage-badge";
 
 const excludedSource =
-  /(^|\/)(node_modules|dist|mocks?|__tests__|__test-tmp__|__generated__|generated|e2e|storybook-tests|workbench-fixture|storage-scale-fixture|pstdio-extension-testbench)\/|\.(test|spec|bench|perf|diagnostic|integration|stories|generated)\.|\.d\.ts$|fixture|test-helpers|test-utils|test-support|test-setup|mock-data/;
+  /(^|\/)(node_modules|dist|mocks?|__tests__|__test-tmp__|__generated__|generated|e2e|canvas-tests|workbench-fixture|storage-scale-fixture|pstdio-extension-testbench)\/|\.(test|spec|bench|perf|diagnostic|integration|canvas|generated)\.|\.d\.ts$|fixture|test-helpers|test-utils|test-support|test-setup|mock-data/;
 
 export const isCoverageSource = (path: string) => !excludedSource.test(path);
 

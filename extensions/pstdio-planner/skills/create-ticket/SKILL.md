@@ -20,6 +20,10 @@ Name what gets better for the person, not the code change. Someone should unders
 | Add retry to upload client | Finish uploads when the connection drops briefly |
 | Add revocable consumer grants to browser previews | Choose who can see previews |
 
+## UI designs
+
+Before saving a new ticket that adds or changes UI, read `pst pstdio-planner refinement-policy`. When `updateCanvasDesign` is enabled, follow the project's canvas skill and update the relevant live design first. Preserve existing previews and add named variations when comparing alternatives. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Complete the canvas skill's source handoff before saving: in Git projects, push the reviewed design sources and record their branch and commit SHA so the implementation workspace can retrieve them. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically. If the option is off, record why the design step was skipped. Resolve policy-read failures before finishing.
+
 ## Workflow
 
 1. List the available statuses, tags, and ticket templates with `pst statuses list`, `pst tags list`, and `pst tickets templates`. Do not assume their names. Use `pst tickets list` to check for related work. See [Tags and statuses](https://prompt.studio/docs/extensions/planner/tags-and-statuses/).
@@ -115,3 +119,7 @@ Use `depends_on` for real code prerequisites. If a ticket consumes a file or API
 Pass a ticket shorthand such as `PS-42` to `--id`. The command resolves it to the stored ticket.
 
 See [how attempts use dependencies](https://prompt.studio/docs/extensions/planner/attempts/#dependencies) and the [Planner CLI](https://prompt.studio/docs/extensions/planner/cli/).
+
+## Critical UI verification
+
+Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies. Keep Canvas examples for exploration. A visual example does not require a matching automated test. Name the critical risk covered by any new browser check. Ordinary relevant unit, type, and build checks still apply.
