@@ -1,6 +1,6 @@
 import { createThemePreferenceFromVsCodeTheme } from "./vscode-theme";
 
-// Plain VS Code colors, without app overrides, so stories show how imported themes map to tokens.
+// Plain VS Code colors, without app overrides, to show how imported themes map to tokens.
 // Like most VS Code themes, these set `input.background` to `editor.background`.
 const vscodeTheme = (id: string, title: string, mode: "light" | "dark", colors: Record<string, string>) => ({
   ...createThemePreferenceFromVsCodeTheme({ id, mode, theme: { colors } }),
@@ -8,6 +8,16 @@ const vscodeTheme = (id: string, title: string, mode: "light" | "dark", colors: 
 });
 
 export const canvasVsCodeThemes = [
+  vscodeTheme("vscode-flat-dark", "Flat Dark (VS Code colors)", "dark", {
+    "editor.background": "#181818",
+    "editor.foreground": "#FFFFFF",
+    "sideBar.background": "#181818",
+    "menu.background": "#242424",
+    "menu.selectionBackground": "#EEEEEE",
+    "menu.selectionForeground": "#111111",
+    "button.background": "#8AC7FF",
+    "button.foreground": "#111111",
+  }),
   vscodeTheme("vscode-monokai", "Monokai (VS Code colors)", "dark", {
     "editor.background": "#272822",
     "editor.foreground": "#F8F8F2",

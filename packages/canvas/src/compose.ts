@@ -25,6 +25,8 @@ export interface CanvasVariant<T = any> {
   render?: CanvasRender<T>;
   decorators?: CanvasDecorator[];
   description?: string;
+  /** The frame's initial theme, before a saved user choice. */
+  defaultTheme?: string;
   /** The frame is at least as tall as the Canvas viewport, for full-page previews. */
   fullscreen?: boolean;
   setup?: () =>
