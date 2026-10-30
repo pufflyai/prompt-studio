@@ -7,12 +7,16 @@ test("rejects generated files that are not an allowed exception", () => {
       "extensions/canvas/src/catalog/generated/frame-manifest.json",
       "packages/ui/dist/index.js",
       "packages/ui/storybook-static/index.html",
+      "packages/pstdio/src/_embed-manifest.generated.ts",
+      "packages/pstdio-db/vendor/pglite.wasm",
       "packages/ui/src/button.tsx",
     ]),
   ).toEqual([
     "extensions/canvas/src/catalog/generated/frame-manifest.json",
     "packages/ui/dist/index.js",
     "packages/ui/storybook-static/index.html",
+    "packages/pstdio/src/_embed-manifest.generated.ts",
+    "packages/pstdio-db/vendor/pglite.wasm",
   ]);
 });
 
@@ -24,6 +28,7 @@ test("allows the listed exceptions", () => {
       "extensions/notes/bun.lock",
       "packages/pstdio-db/drizzle/0003_new.sql",
       "extensions/harness-codex/src/protocol/v2/Item.ts",
+      "packages/pstdio/src/_embed-manifest.generated.d.ts",
     ]),
   ).toEqual([]);
 });

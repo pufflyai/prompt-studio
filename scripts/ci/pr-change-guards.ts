@@ -3,7 +3,15 @@ import { execFileSync } from "node:child_process";
 // Enforces the AGENTS.md rule "Generated files": never commit generated files outside the listed exceptions.
 
 // Paths that only a tool or build writes.
-const GENERATED = [/(^|\/)generated\//, /(^|\/)dist\//, /(^|\/)storybook-static\//, /\.bundle\.js$/, /\.min\.js$/];
+const GENERATED = [
+  /(^|\/)generated\//,
+  /(^|\/)dist\//,
+  /(^|\/)storybook-static\//,
+  /\.bundle\.js$/,
+  /\.min\.js$/,
+  /(^|\/)_embed-manifest\.generated\.ts$/,
+  /^packages\/pstdio-db\/vendor\//,
+];
 
 // AGENTS.md "Generated files" lists every exception; keep the two in sync.
 const ALLOWED = [/^packages\/pstdio-extensions\/src\/bridge\/webview-runtime\/runtime\.bundle\.js$/];

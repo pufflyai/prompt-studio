@@ -1,6 +1,8 @@
 name: PR guards
 
 # Enforces AGENTS.md "Generated files": no generated files outside the listed exceptions.
+# It catches accidental commits, mostly by agents. It is not a security boundary: the PR
+# can edit this workflow, and reviewers check workflow changes.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
