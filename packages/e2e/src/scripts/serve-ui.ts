@@ -1,12 +1,12 @@
 import { join } from "node:path";
-import { preparePackagedExtensionSource } from "../packaged/packaged-extension-source";
 
 const repoRoot = join(import.meta.dirname, "../../../..");
 const defaults = JSON.parse(process.env.PSTDIO_DEFAULT_EXTENSIONS!);
 const lab = defaults.defaultExtensions.find((entry: { installName: string }) => entry.installName === "extension-lab");
 // Browser regressions exercise current public APIs. The separate published-extension check owns release compatibility.
-lab.source = await preparePackagedExtensionSource(join(process.env.PSTDIO_HOME!, "fixtures", "lab"), lab.source);
-delete lab.skipInstall;
+if (!process.env.E2E_EXTENSION_LAB_SOURCE) throw new Error("Start UI tests with the test:ui launcher.");
+lab.source = process.env.E2E_EXTENSION_LAB_SOURCE;
+lab.skipInstall = true;
 
 const child = Bun.spawn(
   [process.execPath, "--conditions=source", "src/index.ts", "serve", "--foreground", ...process.argv.slice(2)],

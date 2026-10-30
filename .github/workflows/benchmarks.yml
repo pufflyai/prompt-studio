@@ -78,7 +78,7 @@ jobs:
             echo "No commits to measure" >&2
             exit 1
           fi
-          RUNNERS='{"linux-x64":"ubuntu-latest","darwin-arm64":"macos-15","darwin-x64":"macos-15-intel","win32-x64":"windows-2025"}'
+          RUNNERS='{"linux-x64":"ubuntu-24.04","darwin-arm64":"macos-15","darwin-x64":"macos-15-intel","win32-x64":"windows-2025"}'
           include='[]'
           IFS=',' read -ra platforms <<< "$PLATFORMS"
           for platform in "${platforms[@]}"; do

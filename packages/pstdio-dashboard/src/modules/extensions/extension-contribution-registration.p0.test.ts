@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
+import { createDashboardSyncWriterProvider } from "@/lib/sync/sync-client";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import {
   disposeExtensionContributions,
@@ -114,6 +115,27 @@ describe("registerExtensionContributions", () => {
     expect(panel).toMatchObject({ kind: "view", viewId: settingsViewId });
     expect(workbench.views.getView(settingsViewId)?.body.kind).toBe("react");
     disposeExtensionContributions(registration);
+  });
+  test("a storage change refreshes only the views of the project that changed", () => {
+    const refreshed = new Map<string, number>();
+    const registrations = ["project-1", "project-2"].map((projectId) => {
+      const workbench = createWorkbench();
+      const refreshView = workbench.views.refreshView;
+      workbench.views.refreshView = (viewId, input) => {
+        refreshed.set(projectId, (refreshed.get(projectId) ?? 0) + 1);
+        refreshView(viewId, input);
+      };
+      return registerExtensionContributions({
+        ctx: workbench,
+        executeCommand: async () => response,
+        metadata,
+        projectId,
+      });
+    });
+    const events = createDashboardSyncWriterProvider().getWriter("extension_events")!;
+    events.upsert({ id: "change", eventId: "pstdio.event.storage-changed", projectId: "project-1" });
+    expect(Object.fromEntries(refreshed)).toEqual({ "project-1": metadata.views.length });
+    for (const registration of registrations) disposeExtensionContributions(registration);
   });
 });
 

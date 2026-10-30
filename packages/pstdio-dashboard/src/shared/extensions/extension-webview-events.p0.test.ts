@@ -26,7 +26,7 @@ describe("webview extension invalidations", () => {
       },
       { projectId: "project-1" },
     );
-    publishExtensionEventReset();
+    publishExtensionEventReset({});
     expect(received).toEqual([
       { type: "changed", id: "notes.changed" },
       { type: "changed", id: "notes.changed" },
@@ -34,8 +34,21 @@ describe("webview extension invalidations", () => {
     ]);
     dispose();
     publishExtensionEvent({ id: "notes.changed", projectId: "project-1" });
-    publishExtensionEventReset();
+    publishExtensionEventReset({});
     expect(received).toHaveLength(3);
+  });
+
+  test("resets only the views of the project whose storage changed, and every view after reconnecting", () => {
+    const host = createHostEventPublisher();
+    const received: unknown[] = [];
+    host.bind((message) => received.push(message.payload));
+    const dispose = subscribeWebviewExtensionEvents(host, "project-1");
+    publishExtensionEventReset({ projectId: "project-2" });
+    expect(received).toEqual([]);
+    publishExtensionEventReset({ projectId: "project-1" });
+    publishExtensionEventReset({});
+    expect(received).toEqual([{ type: "reset" }, { type: "reset" }]);
+    dispose();
   });
 
   test("keeps project changes out of global views", () => {
