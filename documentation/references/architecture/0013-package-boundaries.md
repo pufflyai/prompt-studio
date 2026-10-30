@@ -138,7 +138,8 @@ layer-map change.
    their Canvas servers. It declares `@pstdio/ui`, `@pstdio/workbench`, and
    `pstdio-dashboard` as development dependencies because it loads their stories.
    Story sources stay with those owners. It does not depend on the API, database,
-   CLI, or `e2e`. App E2E never starts or builds Canvas.
+   CLI, or `e2e`. It uses `pstdio-benchmarks` for startup measurements and sample counts.
+   App E2E never starts or builds Canvas.
 
    `e2e` and `@pstdio/desktop` declare the private `pstdio-scripts` workspace as a
    development dependency. Their Playwright configs use its `./test-quarantine`

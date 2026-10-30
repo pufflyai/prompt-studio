@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { type FrameArchiveInputs, publishFrameArchive } from "./frame-archive";
 import { generatedRoot, repoRoot } from "./story-catalog";
@@ -11,8 +11,8 @@ interface Chunk {
   code: string;
   isEntry?: boolean;
   modules?: Record<string, unknown>;
-  imports: string[];
-  dynamicImports: string[];
+  imports?: string[];
+  dynamicImports?: string[];
   viteMetadata?: { importedCss: Set<string> };
 }
 interface Asset {
@@ -30,9 +30,13 @@ export const publishNativeBuild = async (
   await rm(resolve(generatedRoot, "native-preview.ts"), { force: true });
   await publishFrameArchive(generatedRoot, outputs, inputs);
   const outputHashes: Record<string, string> = {};
-  outputHashes["frame-bundle.ts"] = createHash("sha256")
-    .update(await readFile(resolve(generatedRoot, "frame-bundle.ts")))
-    .digest("hex");
+  for (const file of [
+    "frame-manifest.json",
+    ...(await readdir(resolve(generatedRoot, "frame-modules"))).map((name) => `frame-modules/${name}`),
+  ])
+    outputHashes[file] = createHash("sha256")
+      .update(await readFile(resolve(generatedRoot, file)))
+      .digest("hex");
   const sources = [
     ...new Set(outputs.filter((file) => file.type === "chunk").flatMap((file) => Object.keys(file.modules ?? {}))),
   ];
