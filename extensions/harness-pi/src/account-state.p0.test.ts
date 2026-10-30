@@ -1,10 +1,9 @@
 import { expect, test } from "bun:test";
-import { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
+import { AuthStorage, ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { authenticatePiAccount, getPiAccountState } from "./account-state";
 
 test("Pi stores and removes keys through its native store and scopes readiness to the model provider", async () => {
-  // GitHub Actions supplies GH_TOKEN, which Pi also recognizes as an external Copilot account.
-  for (const key of ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"]) delete process.env[key];
+  delete process.env.COPILOT_GITHUB_TOKEN;
   const authStorage = AuthStorage.inMemory();
   const modelRegistry = ModelRegistry.inMemory(authStorage);
   const accounts = { authStorage, modelRegistry };
@@ -23,7 +22,7 @@ test("Pi stores and removes keys through its native store and scopes readiness t
 });
 
 test("Pi keeps externally managed Copilot credentials outside native logout", async () => {
-  process.env.GH_TOKEN = "fixture-ci-token";
+  process.env.COPILOT_GITHUB_TOKEN = "fixture-ci-token";
   const authStorage = AuthStorage.inMemory();
   const accounts = { authStorage, modelRegistry: ModelRegistry.inMemory(authStorage) };
   const state = getPiAccountState(accounts, "github-copilot/gpt-5");
@@ -42,7 +41,7 @@ test("Pi keeps externally managed Copilot credentials outside native logout", as
       },
     ),
   ).rejects.toThrow("managed outside");
-  expect(process.env.GH_TOKEN).toBe("fixture-ci-token");
+  expect(process.env.COPILOT_GITHUB_TOKEN).toBe("fixture-ci-token");
   expect(authStorage.list()).toEqual([]);
 });
 
@@ -56,6 +55,7 @@ test("Pi discovers OAuth providers registered by its native extensions and relay
       name: "Fixture OAuth",
       login: async (callbacks) => {
         callbacks.onAuth({ url: "https://example.test/sign-in" });
+        callbacks.onDeviceCode({ verificationUri: "https://example.test/device", userCode: "FIXTURE-CODE" });
         expect(await callbacks.onSelect?.({ message: "Organization", options: [{ id: "team", label: "Team" }] })).toBe(
           "team",
         );
@@ -80,6 +80,11 @@ test("Pi discovers OAuth providers registered by its native extensions and relay
       },
     );
     expect(prompts).toContainEqual({ type: "browser", url: "https://example.test/sign-in", message: undefined });
+    expect(prompts).toContainEqual({
+      type: "browser",
+      url: "https://example.test/device",
+      message: expect.stringContaining("FIXTURE-CODE"),
+    });
     expect(authStorage.get("fixture-oauth")).toMatchObject({ type: "oauth", access: "fixture-access" });
   } finally {
     modelRegistry.unregisterProvider("fixture-oauth");

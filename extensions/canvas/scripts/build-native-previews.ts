@@ -74,18 +74,17 @@ const buildPreviews = async (
       )
       .join(",")}};`,
   );
-  declarations.push(nativeDeclaration);
   declarations.push(
     `const __UI_CANVAS_MODULES__={${files.map((file) => `${JSON.stringify(file)}:()=>import(${JSON.stringify(resolve(repoRoot, file))})`).join(",")}};`,
   );
+  declarations.push(nativeDeclaration);
+  const lookup = resolve(scratch, "catalog-lookup.ts");
+  await writeFile(lookup, declarations.map((code) => `export ${code}`).join("\n"));
+  declarations.length = 0;
   declarations.push(
-    (await readFile(resolve(repoRoot, "packages/canvas/src/native-preview-runtime.tsx"), "utf8")).replace(
-      '"./story-canvas-theme"',
-      JSON.stringify(resolve(import.meta.dir, "story-canvas-theme.tsx")),
-    ),
-  );
-  declarations.push(
-    `import {mountPreviewRuntime} from ${JSON.stringify(resolve(import.meta.dir, "frame-runtime.tsx"))}; mountPreviewRuntime(loadPreview, component=>__UI_CANVAS_NATIVE__[component]());`,
+    `import {__UI_CANVAS_MODULES__,__UI_CANVAS_PROJECTS__,__UI_CANVAS_NATIVE__} from ${JSON.stringify(lookup)};`,
+    `import {createPreviewLoader} from ${JSON.stringify(resolve(repoRoot, "packages/canvas/src/native-preview-runtime.tsx"))};`,
+    `import {mountPreviewRuntime} from ${JSON.stringify(resolve(import.meta.dir, "frame-runtime.tsx"))}; mountPreviewRuntime(createPreviewLoader(__UI_CANVAS_MODULES__,__UI_CANVAS_PROJECTS__),(component)=>__UI_CANVAS_NATIVE__[component]());`,
   );
   const entry = resolve(scratch, "entry.tsx");
   await writeFile(entry, declarations.join("\n"));
@@ -243,7 +242,7 @@ const buildPreviews = async (
         Object.entries(suites).map(([name, path]) => [name, resolve(repoRoot, path, ".canvas/preview.tsx")]),
       ),
       nativeSources,
-      catalogSource: entry,
+      catalogSource: lookup,
     },
   );
 };

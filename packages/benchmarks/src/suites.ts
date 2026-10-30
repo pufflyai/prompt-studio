@@ -101,13 +101,39 @@ export const suites: BenchmarkSuite[] = [
     ],
   },
   {
+    id: "canvas",
+    label: "Canvas cold startup",
+    files: ["packages/canvas-tests/src/performance/frame-startup.p3.bench.ts"],
+    prepare: () => [
+      { command: ["bun", "x", "--no-install", "lerna", "run", "build:previews", "--scope", "canvas-tests"] },
+      { command: ["bunx", "playwright", "install", "chromium"], cwd: "packages/canvas-tests" },
+    ],
+    sample: (_context, files) => [
+      {
+        command: [
+          "bun",
+          "run",
+          "test:browser",
+          "--config",
+          "playwright.startup-perf.config.ts",
+          ...files.map((file) => file.replace("packages/canvas-tests/", "")),
+        ],
+        cwd: "packages/canvas-tests",
+      },
+    ],
+  },
+  {
     id: "chat",
     label: "Chat rendering",
     files: [
       "packages/ui/src/components/chat-ui/performance/chat-panel.p3.bench.ts",
       "packages/ui/src/components/chat-ui/performance/chat-rendering.p3.bench.ts",
     ],
-    prepare: () => [{ command: ["bunx", "playwright", "install", "chromium"], cwd: "packages/ui" }],
+    prepare: () => [
+      // UI stories import the SDK through its published entry points.
+      { command: ["bun", "run", "build", "--", "--scope", "@pstdio/sdk", "--include-dependencies"] },
+      { command: ["bunx", "playwright", "install", "chromium"], cwd: "packages/ui" },
+    ],
     sample: (_context, files) => [
       {
         command: [
