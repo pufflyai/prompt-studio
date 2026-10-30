@@ -397,6 +397,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.source_sha || github.sha }}
+          persist-credentials: false
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
@@ -415,12 +416,12 @@ jobs:
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"
         env:
+          GH_TOKEN: ${{ github.token }}
           CI_CHECK_COMMAND: bun run --cwd scripts verify:published-extensions
         shell: bash
     env:
       CI_PRIORITY: P0
       TEST_PRIORITIES: P0
-      GH_TOKEN: ${{ github.token }}
       CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
       CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
   harness_cli_support:
