@@ -8,6 +8,8 @@ When upgrading Bun, align the root `packageManager` pin, Bun engine requirements
 
 Repository type checks use the TypeScript 7 checker built into Bun 1.4.4. Keep using each package's `typecheck` script: the dashboard checks both project references with `bun check -b`, UI uses `tsconfig.build.json`, and base themes also check `tsconfig.canvas.json`. Chakra token generation still runs before dashboard checking. TypeScript 6.0.2 remains installed for compiler API users and Rolldown declaration emit. Public package and provider consumers check the same positive and negative fixtures with both TypeScript 6.0.2 and `bun check`, so the faster checker preserves the supported consumer contract.
 
+Public package consumers keep the ES2022 output target and include `ES2023.Intl` declarations for the number-range APIs available in the supported runtimes. Fresh dependencies can expose those types in their public declarations. Declaration checking remains strict.
+
 Editors using the workspace TypeScript version still show TypeScript 6 diagnostics. Run the package's `typecheck` script to see the required TypeScript 7 result; the two versions can differ in generic inference and removed configuration options.
 
 The private workbench fixture keeps published dependency ranges for isolated installs. Its repository check uses `tsconfig.test-fixtures.json` to resolve the current SDK and UI public declarations. Nx builds those producers first and includes the repository config in the check's cache inputs.
@@ -58,6 +60,8 @@ The script runs `bun test --conditions production --tsconfig-override tsconfig.a
 Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks described in `AGENTS.md`. Documentation-reference-only edits do not.
 
 During implementation, run targeted tests. Before marking a draft PR ready, follow [Finishing a pull request](../../../AGENTS.md#finishing-a-pull-request), including the full test run after integrating main for behavioral features and meaningful regressions. Routine copy, spacing, cosmetic and documentation changes require only relevant scoped checks, without a full command or browser runs. Explicit user-requested validation still applies. Run full validation only when explicitly requested. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs unit packages through Lerna, then the E2E script, CLI, UI, Vite terminal, and separate Canvas suites. `bun run test:e2e` runs app checks; `bun run test:canvas` runs component server checks and browser interactions. Lerna excludes both browser packages from its unit pass. Packaged and desktop tests run separately in CI.
+
+The complete local test run schedules one workspace suite at a time. Suites such as the API already own worker pools; running several suites together multiplies those pools and can starve native CLI fixtures. Priority and CI commands retain their own scheduling. The complete local run may take longer because workspace suites do not overlap.
 
 Install browser dependencies before running browser tests:
 
