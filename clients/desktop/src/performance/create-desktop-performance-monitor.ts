@@ -28,12 +28,7 @@ export const createDesktopPerformanceMonitor = (input: DesktopPerformanceMonitor
         onError: logEndpointFailure,
       }),
     preference: new PerformanceMonitoringPreference(join(app.getPath("userData"), "performance-monitoring.json")),
-    readMetrics: () => {
-      const started = performance.now();
-      const metrics = app.getAppMetrics();
-      logEndpointFailure(new Error(`METRICS_DURATION ${performance.now() - started}`));
-      return metrics;
-    },
+    readMetrics: () => app.getAppMetrics(),
     listFrames: () => windows()?.ownedFrames() ?? [],
     runtimeOrigin: () => windows()?.runtimeOrigin() ?? null,
     platform: process.platform,
