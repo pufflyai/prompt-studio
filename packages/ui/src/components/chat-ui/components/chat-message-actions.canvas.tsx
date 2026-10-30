@@ -82,7 +82,6 @@ const incompleteTurnMessages: SessionMessage[] = [
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Message Actions",
   component: ChatPanel,
-  parameters: { layout: "padded" },
 };
 export default meta;
 type Story = CanvasVariant<typeof ChatPanel>;

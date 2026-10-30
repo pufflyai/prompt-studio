@@ -3,7 +3,7 @@ import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createPageContextWorkbench = (routed = false, contextView = false) => {
-  const page = { kind: "page" as const, extensionId: "storybook", id: "documents" };
+  const page = { kind: "page" as const, extensionId: "preview", id: "documents" };
   const workbench = createWorkbench({ startPage: page, initialSidePanelMode: "attached" });
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   workbench.resources.registerKind({ kind: "note", label: "Note", icon: "file-text" });
@@ -45,7 +45,7 @@ const createPageContextWorkbench = (routed = false, contextView = false) => {
       },
     })),
   });
-  workbench.pageLocations.setProject("storybook-context");
+  workbench.pageLocations.setProject("preview-context");
   workbench.pageLocations.navigate({
     kind: "page",
     page,
@@ -64,7 +64,7 @@ const createPageContextWorkbench = (routed = false, contextView = false) => {
 const meta = {
   title: "pstdio-workbench/Guides/Page context",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;
@@ -78,12 +78,11 @@ export const RoutedResource: Story = {
 };
 export const RoutedContextView: Story = {
   id: "pstdio-workbench-guides-page-context--routed-context-view",
-  tags: ["breadcrumb-resource-ownership"],
   args: { workbench: createPageContextWorkbench(true, true) },
 };
 const createComposerWorkbench = () => {
   const workbench = createWorkbench();
-  const page = { kind: "page" as const, extensionId: "storybook", id: "compose" };
+  const page = { kind: "page" as const, extensionId: "preview", id: "compose" };
   workbench.modes.registerMode({ id: "project", activate() {} });
   workbench.views.registerView({ id: "compose", title: "Compose", body: { kind: "react", render: () => null } });
   workbench.pages.registerPage({
@@ -136,12 +135,11 @@ const createComposerWorkbench = () => {
     main: { kind: "view", presentation: "page", cardinality: "one", view: { kind: "view", id: "compose" } },
     slots: [],
   });
-  workbench.pageLocations.setProject("storybook-composer");
+  workbench.pageLocations.setProject("preview-composer");
   workbench.pageLocations.navigate({ kind: "page", page });
   return workbench;
 };
 export const PageComposer: Story = {
   id: "pstdio-workbench-guides-page-context--page-composer",
-  tags: ["!manifest", "page-composer-navigation"],
   args: { workbench: createComposerWorkbench() },
 };

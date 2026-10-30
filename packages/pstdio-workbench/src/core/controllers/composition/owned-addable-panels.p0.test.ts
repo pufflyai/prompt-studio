@@ -46,7 +46,7 @@ describe("placement add command availability", () => {
       main: { kind: "view", view: { kind: "view", id: "guide" }, cardinality: "one" },
       slots: owner === "page" ? [placement] : [],
     });
-    workbench.pageLocations.setProject("storybook");
+    workbench.pageLocations.setProject("preview");
     workbench.pageLocations.navigate({ kind: "page", page });
     const addable = () => workbench.composition.panelsFor("side").addable;
     expect(addable()).toHaveLength(1);

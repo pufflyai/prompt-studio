@@ -3,7 +3,7 @@ import { createLevelNavigation } from "../../core";
 
 // The dashboard supplies this host navigation UI when an extension is installed.
 export const registerPreviewNavigation = (workbench: WorkbenchCore) => {
-  const id = "storybook.navigation";
+  const id = "preview.navigation";
   const navigation = createLevelNavigation(workbench);
   workbench.views.registerView({
     id,

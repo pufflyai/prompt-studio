@@ -61,7 +61,7 @@ const reviewLinks: ResourceParam = {
 const meta = {
   title: "Components/Inputs/Param Editor/Resource Input",
   component: ParamEditor,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditor>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;
@@ -82,7 +82,6 @@ export const Demo: Story = {
 export const ImmediateMultiSelectChanges: Story = {
   id: "components-inputs-param-editor-resource-input--immediate-multi-select-changes",
   ...Demo,
-  tags: ["!manifest"],
   args: {
     params: [{ ...tags, defaultValue: [] }],
     onChange: () => {},

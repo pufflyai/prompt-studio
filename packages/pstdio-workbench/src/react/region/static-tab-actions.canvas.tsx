@@ -49,7 +49,6 @@ const StaticTabActions = () => {
 const meta = {
   title: "pstdio-workbench/Guides/Static tab actions",
   component: StaticTabActions,
-  tags: ["!manifest"],
   decorators: [
     (Story) => (
       <WorkbenchThemeProvider>
@@ -64,5 +63,4 @@ export const PinAndUnpin: CanvasVariant<typeof meta> = {
 };
 export const AddAfterPin: CanvasVariant<typeof meta> = {
   id: "pstdio-workbench-guides-static-tab-actions--add-after-pin",
-  tags: ["tab-menu-next-action"],
 };

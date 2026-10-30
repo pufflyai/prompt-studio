@@ -201,11 +201,6 @@ export const FramePreview = (props: FramePreviewProps) => {
               {information.args}
             </Box>
           )}
-          {information?.argTypes && (
-            <Box as="pre" whiteSpace="pre-wrap" overflowWrap="anywhere">
-              {information.argTypes}
-            </Box>
-          )}
           {expanded && <PreviewSource source={item.preview.source} />}
         </Box>
       )}

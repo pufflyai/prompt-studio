@@ -31,8 +31,7 @@ const PageWorkbench = () => {
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Main fullscreen/Page content",
   component: PageWorkbench,
-  parameters: { layout: "fullscreen" },
-  tags: ["main-fullscreen-page-content"],
+  fullscreen: true,
 } satisfies CanvasMeta<typeof PageWorkbench>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

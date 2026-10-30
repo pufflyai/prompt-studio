@@ -58,7 +58,7 @@ const SessionChatDraftStory = (props: { initiallyClosed?: boolean; showMain?: bo
 const meta = {
   title: "Modules/Sessions/Session Chat Draft",
   component: SessionChatDraftStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof SessionChatDraftStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;
@@ -68,14 +68,8 @@ export const PreviewWithRestoredDraft: Story = {
 export const MainAndSidePanels: Story = {
   id: "modules-sessions-session-chat-draft--main-and-side-panels",
   args: { showMain: true },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Main and side chat views share the same bottom inset, with no gap between workspace headers and inputs.",
-      },
-    },
-  },
+  description:
+    "Main and side chat views share the same bottom inset, with no gap between workspace headers and inputs.",
 };
 export const OpenFromBubble: Story = {
   id: "modules-sessions-session-chat-draft--open-from-bubble",

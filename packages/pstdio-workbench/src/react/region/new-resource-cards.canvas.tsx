@@ -58,7 +58,7 @@ const createNotesWorkbench = () => {
       },
     ],
   });
-  workbench.pageLocations.setProject("storybook-notes");
+  workbench.pageLocations.setProject("preview-notes");
   workbench.pageLocations.navigate({ kind: "page", page });
   return workbench;
 };
@@ -69,8 +69,7 @@ const NotesCards = () => {
 const meta = {
   title: "pstdio-workbench/Reference/Core API/New resource cards",
   component: NotesCards,
-  parameters: { layout: "fullscreen" },
-  tags: ["new-resource-cards"],
+  fullscreen: true,
 } satisfies CanvasMeta<typeof NotesCards>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

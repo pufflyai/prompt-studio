@@ -40,5 +40,5 @@ export interface FrameMessage {
   deltaY?: number;
   deltaMode?: number;
   zoom?: boolean;
-  information?: { args?: string; argTypes?: string; description?: string };
+  information?: { args?: string; description?: string };
 }

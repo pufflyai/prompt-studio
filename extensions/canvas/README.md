@@ -67,13 +67,13 @@ Canvas is the source of truth for UI appearance, component states, and example p
 
 Run `bun run --cwd extensions/canvas test` and `bun run --cwd extensions/canvas typecheck`. The workspace examples cover the interactive starter, zoomed-out previews, and a populated 24-preview canvas. Validate only critical behavior risks with Playwright in the isolated Docker app. Routine cosmetic changes do not require browser runs. Report physical-device and browser behaviors that were not tested.
 
-## Native documentation catalog
+## Native catalog
 
-UI Canvas indexes every current Canvas variant export and MDX document. Related scenarios share one source-owned topic canvas and keep their original scenario IDs. Auto Build combines its status and form examples; Create folder combines folder-picker states. Earlier scenario URLs resolve to the grouped canvas. Select canvases in the navigation panel or find them through global resource search. The Design playground and Documentation panels demo canvases have been removed from navigation. Their interaction fixtures remain in verification examples. Search accepts source paths, export IDs, names, and design keywords.
+UI Canvas indexes every current Canvas variant export. Related scenarios share one source-owned topic canvas and keep their original scenario IDs. Auto Build combines its status and form examples; Create folder combines folder-picker states. Earlier scenario URLs resolve to the grouped canvas. Select canvases in the navigation panel or find them through global resource search. The Design playground and Documentation panels demo canvases have been removed from navigation. Their interaction fixtures remain in verification examples. Search accepts source paths, export IDs, names, and design keywords.
 
-Each component has one frame. Its **Variant** menu, beside **Theme**, selects an original scenario’s predefined parameters. Selecting a variant resets that example’s local fixture state and keeps its frame theme and position. Every original scenario ID remains in the migration ledger and resource search.
+Each component has one frame. Its **Variant** menu, beside **Theme**, selects an original scenario’s predefined args. Selecting a variant resets that example’s local fixture state and keeps its frame theme and position. Every original scenario ID remains in resource search.
 
-Scenarios render compiled original React components in individual preview documents. Each document owns its React, Chakra, theme, and application fixture state so several dialogs and store variants can be used together. Preview code is compiled into individually compressed modules; project storage cannot provide executable content. Application examples use local API and in-memory storage fixtures. Gallery token overrides stay local to each preview. Monaco uses its public worker factory to load the prebuilt classic workers from document-owned URLs, preserving TypeScript diagnostics inside the opaque sandbox. Website analytics is inert in previews. Examples contain rendering and fixture setup only. Critical behavioral assertions live in Playwright tests using the same preview renderer and sandbox. **Props and source** shows arguments, authored argument types, component references, the source hash, and complete source code.
+Scenarios render compiled original React components in individual preview documents. Each document owns its React, Chakra, theme, and application fixture state so several dialogs and store variants can be used together. Preview code is compiled into individually compressed modules; project storage cannot provide executable content. Application examples use local API and in-memory storage fixtures. Gallery token overrides stay local to each preview. Monaco uses its public worker factory to load the prebuilt classic workers from document-owned URLs, preserving TypeScript diagnostics inside the opaque sandbox. Website analytics is inert in previews. Examples contain rendering and fixture setup only. Critical behavioral assertions live in Playwright tests using the same preview renderer and sandbox. **Props and source** shows the frame's description and arguments, component references, the source hash, and complete source code.
 
 Documentation frames have content-driven heights. Resize observations and font completion refresh measured bounds. Fit and explicit reveal include a tall panel and its title. Fullscreen application examples retain a minimum viewport inside the documentation frame; lists and editors retain their own scrolling. Long prose, source listings, and API details have no inner vertical scroll area. The **IntrinsicDocumentation** verification story checks expansion and draft retention outside the canvas resource registry.
 
@@ -85,13 +85,11 @@ From the repository root:
 
 ```sh
 bun run --cwd scripts canvas:build
-bun run --cwd scripts canvas:inventory
 bun run --cwd extensions/canvas test
 bun run --cwd extensions/canvas typecheck
-bun run --cwd scripts canvas:coverage
 ```
 
-`canvas:build` composes colocated `*.canvas.tsx` examples and MDX documents, then records source and output hashes. Generated modules are build output; edit the source and rebuild. The builder retains each scenario's existing ID, variant parameters, providers and asynchronous setup. `canvas:inventory` regenerates the source destination ledger. The original scenario inventory checks that every covered export still has a canvas destination.
+`canvas:build` composes colocated `*.canvas.tsx` examples, then records source and output hashes. Generated modules are build output; edit the source and rebuild. The builder retains each scenario's existing ID, args, decorators and asynchronous `setup`.
 
 The extension's normal `build` command discovers current examples and reuses compiled previews while their inputs are unchanged. Its `src/catalog/generated/native-manifest.json` freshness manifest is a local cache, excluded from Git, extension watching, and packages by the extension's `.gitignore`. It records source, dependency lockfile, and output hashes; a clean checkout builds it before freshness checks run. Nx caches and restores the manifest along with the compiled catalog.
 
@@ -100,8 +98,6 @@ Run `bun run build -- --scope canvas --include-dependencies` before individual C
 The other generated catalog files remain tracked because the optional extension currently installs from a sparse Git checkout of its release tag. Commit changed preview assets when source changes alter them. Unrelated lockfile changes only refresh the local manifest when the compiled output stays the same. Release versioning still rebuilds the distributable catalog before its version commit.
 
 `typecheck` checks the extension and examples across all owning workspaces. Published extension configurations exclude repository-only examples; the catalog checks them separately with the private authoring types.
-
-`canvas:coverage` rejects stale builds or missing source destinations. It checks current live sources; it does not certify historical visual fidelity.
 
 Run `canvas:verify` inside the isolated Docker tooling container with Chromium installed. It checks representative critical interactions, documentation expansion, retained drafts, measured fit, and the unchanged populated 24-preview workload. It does not behaviorally test every variant. Failed cases retain Playwright traces and screenshots under `packages/canvas-tests/test-results/`. Browser interaction checks live in `packages/canvas-tests`; its static preview build is test-only. The live Canvas is the developer catalog. Physical touch, trackpad behavior, full visual fidelity, packaged verification, full tests, and CI remain separate checks.
 

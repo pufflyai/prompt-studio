@@ -11,10 +11,7 @@ import { FrameStory, inspect, type LoadedStory } from "./frame-story";
 
 const storage = { getItem: () => null, setItem: () => {} };
 export const mountPreviewRuntime = (
-  load: (
-    input: import("../src/catalog/definitions").StoryPreview | import("../src/catalog/definitions").DocumentPreview,
-    imported: () => void,
-  ) => Promise<LoadedStory>,
+  load: (input: import("../src/catalog/definitions").StoryPreview, imported: () => void) => Promise<LoadedStory>,
   loadNative: (component: string) => Promise<ComponentType<Record<string, unknown>>>,
 ) => {
   const booted = performance.now();
@@ -39,7 +36,6 @@ export const mountPreviewRuntime = (
     const { loaded, viewportHeight } = props;
     useLayoutEffect(() => {
       let second = 0;
-      const docs = loaded.parameters?.docs as { description?: { story?: string } } | undefined;
       // Offscreen iframe animation frames can be suspended; readiness must not wait for paint.
       send({
         type: "loaded",
@@ -50,8 +46,7 @@ export const mountPreviewRuntime = (
         },
         information: {
           args: inspect(loaded.args),
-          argTypes: inspect(loaded.argTypes),
-          description: docs?.description?.story,
+          description: loaded.description,
         },
       });
       const first = requestAnimationFrame(() => {
@@ -67,9 +62,7 @@ export const mountPreviewRuntime = (
         cancelAnimationFrame(second);
       };
     }, [loaded]);
-    return (
-      <FrameStory loaded={loaded} minimumHeight={loaded.parameters?.layout === "fullscreen" ? viewportHeight : 0} />
-    );
+    return <FrameStory loaded={loaded} minimumHeight={loaded.fullscreen ? viewportHeight : 0} />;
   };
   const root = document.getElementById("root")!;
   const reactRoot = createRoot(root);

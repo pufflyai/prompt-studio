@@ -83,6 +83,6 @@ const UpdateChannelNavigation = () => {
 };
 export const SettingsNavigation: Story = {
   id: "settings-update-channel--settings-navigation",
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   render: () => <UpdateChannelNavigation />,
 };

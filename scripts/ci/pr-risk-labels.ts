@@ -37,7 +37,6 @@ const snapshotOf = (pull: PullRequest) => ({ head: pull.head.sha, base: pull.bas
 const generatedCanvasOutputs = new Set([
   "frame-manifest.json",
   "frame-themes.json",
-  "migration-ledger.json",
   "source-information.json",
   "stories.json",
 ]);

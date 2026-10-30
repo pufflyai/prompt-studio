@@ -36,8 +36,7 @@ const meta = {
   title: "pstdio-workbench/Reference/Core API/Native data table scrolling",
   component: WorkbenchStory,
   args: { workbench },
-  parameters: { layout: "fullscreen", controls: { disable: true } },
-  tags: ["!manifest"],
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

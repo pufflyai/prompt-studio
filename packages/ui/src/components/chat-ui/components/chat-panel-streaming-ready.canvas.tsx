@@ -50,7 +50,7 @@ function StreamingOnOpen() {
 const meta = {
   title: "Patterns/Chat/Chat Panel Streaming Ready",
   component: StreamingOnOpen,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof StreamingOnOpen>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

@@ -50,7 +50,6 @@ const MotionTree = (props: { draggable?: boolean; virtualize?: boolean }) => {
   );
 };
 const meta = {
-  tags: ["motion"],
   title: "Components/Tree List/Motion",
   component: MotionTree,
 } satisfies CanvasMeta<typeof MotionTree>;
@@ -70,6 +69,5 @@ export const InstantVirtual: Story = {
 };
 export const SortableKeyboard: Story = {
   id: "components-tree-list-motion--sortable-keyboard",
-  tags: ["!manifest"],
   args: { draggable: true },
 };

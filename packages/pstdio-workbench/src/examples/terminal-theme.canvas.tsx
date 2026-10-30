@@ -44,8 +44,7 @@ const ThemeControls = () => {
 };
 const meta = {
   title: "pstdio-workbench/Reference/Host terminal themes",
-  parameters: { layout: "fullscreen", controls: { disable: true } },
-  tags: ["!manifest"],
+  fullscreen: true,
   render: () => (
     <WorkbenchThemeProvider
       initialThemePreference={themes[0].id}

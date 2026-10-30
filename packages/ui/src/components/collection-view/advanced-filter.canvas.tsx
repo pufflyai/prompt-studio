@@ -1,14 +1,14 @@
 import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
 import { Bar } from "./collection-view-bar-story";
 
-const meta: CanvasMeta = { title: "Patterns/Collection View/Advanced Filter", parameters: { layout: "fullscreen" } };
+const meta: CanvasMeta = { title: "Patterns/Collection View/Advanced Filter", fullscreen: true };
 export default meta;
 type Story = CanvasVariant;
 export const NestedExactDateField: Story = {
   id: "patterns-collection-view-advanced-filter--nested-exact-date-field",
   render: () => (
     <Bar
-      storageKey="storybook-advanced-date-parameters"
+      storageKey="preview-advanced-date-parameters"
       filter={{
         conjunction: "and",
         rules: [],
@@ -21,7 +21,7 @@ export const NormalAndAdvanced: Story = {
   id: "patterns-collection-view-advanced-filter--normal-and-advanced",
   render: () => (
     <Bar
-      storageKey="storybook-normal-advanced"
+      storageKey="preview-normal-advanced"
       filter={{
         conjunction: "and",
         rules: [
@@ -36,7 +36,7 @@ export const ExistingOrView: Story = {
   id: "patterns-collection-view-advanced-filter--existing-or-view",
   render: () => (
     <Bar
-      storageKey="storybook-existing-or"
+      storageKey="preview-existing-or"
       filter={{
         conjunction: "or",
         rules: [
@@ -52,7 +52,7 @@ export const ClearAllFilters: Story = {
   id: "patterns-collection-view-advanced-filter--clear-all-filters",
   render: () => (
     <Bar
-      storageKey="storybook-clear-all-filters"
+      storageKey="preview-clear-all-filters"
       filter={{
         conjunction: "and",
         rules: [{ attributeId: "status", condition: "is-any-of", value: ["todo"] }],
@@ -65,7 +65,7 @@ export const ClearAdvancedDraft: Story = {
   id: "patterns-collection-view-advanced-filter--clear-advanced-draft",
   render: () => (
     <Bar
-      storageKey="storybook-clear-advanced-draft"
+      storageKey="preview-clear-advanced-draft"
       filter={{ conjunction: "and", rules: [], groups: [{ conjunction: "and", rules: [] }] }}
     />
   ),

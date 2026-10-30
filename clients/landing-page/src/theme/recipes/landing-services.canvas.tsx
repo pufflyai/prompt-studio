@@ -117,7 +117,7 @@ const SharedFeatures = () => {
 const meta = {
   title: "Theme/Landing Services",
   component: SharedFeatures,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof SharedFeatures>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

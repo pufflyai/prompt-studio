@@ -8,7 +8,6 @@ const source =
 const meta: CanvasMeta<typeof RichMessage> = {
   title: "Patterns/Chat/Rich Message Editing",
   component: RichMessage,
-  tags: ["!manifest"],
 };
 export default meta;
 type Story = CanvasVariant<typeof RichMessage>;

@@ -21,7 +21,7 @@ type Story = CanvasVariant<typeof DataTable>;
 export const EnableStatistics: Story = {
   id: "components-data-display-data-table-display--enable-statistics",
   args: {
-    toolbarStorageKey: "storybook-enable-table-statistics",
+    toolbarStorageKey: "preview-enable-table-statistics",
     defaultSettings: { showStats: false },
     columnStats: { Amount: { type: "histogram", bins: 4 } },
   },
@@ -30,7 +30,7 @@ export const EnableStatistics: Story = {
 export const FilteredPagination: Story = {
   id: "components-data-display-data-table-display--filtered-pagination",
   args: {
-    toolbarStorageKey: "storybook-filtered-table-pagination",
+    toolbarStorageKey: "preview-filtered-table-pagination",
     defaultFilter: { conjunction: "and", rules: [{ attributeId: "Amount", condition: "gt", value: 3 }] },
   },
 };

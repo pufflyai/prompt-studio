@@ -38,7 +38,7 @@ const EditableTableDemo = (props: EditableTableDemoProps) => {
 const meta = {
   title: "Patterns/Editors/Markdown Editor/Tables",
   component: MarkdownEditor,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => (
       <Box padding="sm" background="bg">

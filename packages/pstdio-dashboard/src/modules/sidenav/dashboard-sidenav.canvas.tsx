@@ -220,7 +220,7 @@ const openStartPage = (workbench: WorkbenchCore) =>
   void workbench.navigation.openTarget({ kind: "page", page: workbenchPages.start });
 const meta = {
   title: "Dashboard/Sidenav",
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => (
       <QueryClientProvider client={queryClient}>

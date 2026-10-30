@@ -14,12 +14,12 @@ import { NavigationIdentitySection } from "./gallery/sections/navigation-identit
 import { OverlaysSection } from "./gallery/sections/overlays-section";
 import { PanelsSection } from "./gallery/sections/panels-section";
 
-// One canvas that renders every light component family together. Flip the
-// Storybook "theme" toolbar (pstdio-light / pstdio-dark) to see the impact of a
+// One canvas that renders every light component family together. Switch the
+// frame theme (pstdio-light / pstdio-dark) to see the impact of a
 // token or recipe change across the whole system at once.
 const meta = {
   title: "Foundations/Component Gallery",
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
 type Story = CanvasVariant;

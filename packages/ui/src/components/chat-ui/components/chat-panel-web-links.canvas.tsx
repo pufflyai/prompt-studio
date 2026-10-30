@@ -26,7 +26,6 @@ const linkHandler: ChatLinkHandler = { resolveHref: () => null, resolveIcon, ope
 const meta = {
   title: "Chat/ChatPanel/Web links",
   component: RichMessage,
-  parameters: { layout: "padded" },
   args: { defaultState: MESSAGE, linkHandler },
 } satisfies CanvasMeta<typeof RichMessage>;
 export default meta;

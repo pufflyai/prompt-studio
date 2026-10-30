@@ -5,7 +5,7 @@ import { BrowserSignInRequired } from "./browser-sign-in-required";
 const meta = {
   title: "App/Browser sign-in required",
   component: BrowserSignInRequired,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof BrowserSignInRequired>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

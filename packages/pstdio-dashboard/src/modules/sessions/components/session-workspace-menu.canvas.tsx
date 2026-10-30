@@ -20,7 +20,6 @@ const workspace: DashboardWorkspaceOption = {
 };
 const meta = {
   title: "Modules/Sessions/Workspace selector",
-  tags: ["locked-workspace"],
   component: SessionWorkspaceMenu,
   args: {
     workspaces: [workspace],

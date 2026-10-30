@@ -22,10 +22,9 @@ const FloatingPanel = () => {
   );
 };
 const meta = {
-  tags: ["motion", "launcher-visibility"],
   title: "Components/Overlays/Bubble/Motion",
   component: FloatingPanel,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof FloatingPanel>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

@@ -8,13 +8,7 @@ const layeredItems = Array.from({ length: 16 }, (_, index) => `Layered row ${ind
 const meta: CanvasMeta<typeof ScrollArea> = {
   title: "Components/Layout/Scroll Area",
   component: ScrollArea,
-  parameters: {
-    docs: {
-      description: {
-        component: "Shared scrolling surface. The default xs size uses a 2px thumb with an 8px pointer target.",
-      },
-    },
-  },
+  description: "Shared scrolling surface. The default xs size uses a 2px thumb with an 8px pointer target.",
   decorators: [
     (Story) => (
       <Box bg="bg" maxW="560px" p="lg">

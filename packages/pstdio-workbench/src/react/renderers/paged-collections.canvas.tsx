@@ -147,8 +147,7 @@ const PagedCollections = (props: { initiallyHeld?: boolean; withOtherTable?: boo
 const meta = {
   title: "pstdio-workbench/Guides/Paged collections",
   component: PagedCollections,
-  tags: ["!manifest"],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof PagedCollections>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

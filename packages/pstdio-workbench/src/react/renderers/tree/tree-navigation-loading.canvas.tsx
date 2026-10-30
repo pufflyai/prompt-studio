@@ -14,7 +14,7 @@ const createFixture = (pageOwned: boolean, composed: boolean) => {
     return [{ id: "navigation", nodes: [{ id: "destination", label: `${id} page action` }] }];
   };
   const open = (id: string) =>
-    workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", id, extensionId: "storybook" } });
+    workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", id, extensionId: "preview" } });
   workbench.views.registerView({
     id: "navigation-tree",
     title: "Navigation",
@@ -26,7 +26,7 @@ const createFixture = (pageOwned: boolean, composed: boolean) => {
         if (composed) return navigation.getSections("content", context.signal, context.onProgress);
         const id = workbench.pages.store.getState().activePageId!;
         return pageOwned
-          ? workbench.navigationTrees.getSections({ kind: "page", id, extensionId: "storybook" })
+          ? workbench.navigationTrees.getSections({ kind: "page", id, extensionId: "preview" })
           : sections(id);
       },
     },
@@ -58,7 +58,7 @@ const createFixture = (pageOwned: boolean, composed: boolean) => {
     workbench.modes.registerMode({ id, label: id, activate: () => undefined });
     workbench.pages.registerPage({
       id,
-      ref: { kind: "page", id, extensionId: "storybook" },
+      ref: { kind: "page", id, extensionId: "preview" },
       title: id,
       path: id,
       modeId: pageOwned ? "first" : id,
@@ -71,8 +71,8 @@ const createFixture = (pageOwned: boolean, composed: boolean) => {
       owners.push(
         workbench.navigationTrees.registerContribution({
           id,
-          owner: { kind: "page", id, extensionId: "storybook" },
-          sourceExtensionId: "storybook",
+          owner: { kind: "page", id, extensionId: "preview" },
+          sourceExtensionId: "preview",
           declarationIndex: 0,
           getSections: () => sections(id),
         }),
@@ -97,7 +97,7 @@ const createFixture = (pageOwned: boolean, composed: boolean) => {
     region: "sidenav",
     item: { kind: "view", presence: "fixed", view: { kind: "view", id: "navigation-tree" } },
   });
-  workbench.pageLocations.setProject("storybook");
+  workbench.pageLocations.setProject("preview");
   open("first");
   return workbench;
 };
@@ -110,7 +110,7 @@ const meta = {
   title: "pstdio-workbench/Guides/Tree navigation loading",
   component: TreeNavigationLoading,
   args: { pageOwned: false },
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof TreeNavigationLoading>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

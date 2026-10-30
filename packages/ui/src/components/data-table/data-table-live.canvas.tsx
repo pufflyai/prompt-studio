@@ -19,7 +19,7 @@ const LiveRowActions = () => {
         selectionMode="multiple"
         getRowId={(row) => String(row.id)}
         getRowActions={() => [{ label: "Open invoice", onSelect: (row) => setOpenedRevision(Number(row.Revision)) }]}
-        toolbarStorageKey="storybook-live-row-actions"
+        toolbarStorageKey="preview-live-row-actions"
       />
     </Box>
   );
@@ -27,7 +27,6 @@ const LiveRowActions = () => {
 export default { title: "Components/Data Display/Data Table/Live updates", component: LiveRowActions };
 export const RowActionsDuringRefresh = {
   id: "components-data-display-data-table-live-updates--row-actions-during-refresh",
-  tags: ["!manifest"],
   render: () => <LiveRowActions />,
 };
 const StatisticsRowActivation = () => {
@@ -40,13 +39,12 @@ const StatisticsRowActivation = () => {
         columnStats={{ Invoice: { type: "top-values", limit: 5 }, Amount: { type: "histogram" } }}
         defaultSettings={{ showStats: true }}
         onRowClick={() => setOpened(true)}
-        toolbarStorageKey="storybook-statistics-row-activation"
+        toolbarStorageKey="preview-statistics-row-activation"
       />
     </Box>
   );
 };
 export const RowActivationWithStatistics = {
   id: "components-data-display-data-table-live-updates--row-activation-with-statistics",
-  tags: ["!manifest"],
   render: () => <StatisticsRowActivation />,
 };

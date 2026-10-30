@@ -8,7 +8,6 @@ const queryClient = new QueryClient({
 const meta: CanvasMeta<typeof ProjectDefaultsCard> = {
   title: "ProjectSettings/ProjectDefaultsCard",
   component: ProjectDefaultsCard,
-  parameters: { layout: "padded" },
   decorators: [
     (Story) => (
       <QueryClientProvider client={queryClient}>

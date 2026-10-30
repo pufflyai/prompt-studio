@@ -7,7 +7,6 @@ import { generateEditorStateFromString } from "./utils";
 const meta: CanvasMeta<typeof PromptEditor> = {
   title: "Patterns/Editors/Prompt Editor",
   component: PromptEditor,
-  parameters: { layout: "padded" },
   args: {
     defaultState: JSON.stringify(generateEditorStateFromString()),
     commands: [

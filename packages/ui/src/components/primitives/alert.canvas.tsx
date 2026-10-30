@@ -6,15 +6,8 @@ import { AlertMessage } from "./alert";
 const meta = {
   title: "Primitives/AlertMessage",
   component: AlertMessage,
-  tags: ["alerts"],
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Titles and descriptions wrap and scroll within the alert. Alerts use at most half the viewport, capped at 24rem, and shrink inside constrained flex layouts. Error alerts include Copy error message, which copies the complete title and message. Extension webviews need clipboard.write. Place recovery controls in endElement for a wrapping bottom-right footer outside the scrolling content. Dismiss buttons stay at the top right, aligned with the icon and the first title line. Both use compact ghost buttons with hover, focus, and pressed backgrounds tinted by the alert's semantic color.",
-      },
-    },
-  },
+  description:
+    "Titles and descriptions wrap and scroll within the alert. Alerts use at most half the viewport, capped at 24rem, and shrink inside constrained flex layouts. Error alerts include Copy error message, which copies the complete title and message. Extension webviews need clipboard.write. Place recovery controls in endElement for a wrapping bottom-right footer outside the scrolling content. Dismiss buttons stay at the top right, aligned with the icon and the first title line. Both use compact ghost buttons with hover, focus, and pressed backgrounds tinted by the alert's semantic color.",
 } satisfies CanvasMeta<typeof AlertMessage>;
 export default meta;
 type Story = CanvasVariant<typeof AlertMessage>;

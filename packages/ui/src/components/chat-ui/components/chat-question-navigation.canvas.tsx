@@ -6,8 +6,6 @@ import { ChatPanel } from "./chat-panel";
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Question navigation",
   component: ChatPanel,
-  tags: ["!manifest"],
-  parameters: { layout: "centered" },
 };
 export default meta;
 type Story = CanvasVariant<typeof ChatPanel>;

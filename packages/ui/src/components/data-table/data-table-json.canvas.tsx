@@ -13,7 +13,7 @@ export const FriendlyJson = {
     data: friendlyJsonRows,
     hiddenColumns: ["id"],
     columnRenderers: { Profile: { type: "json" } },
-    toolbarStorageKey: "storybook-data-table-friendly-json",
+    toolbarStorageKey: "preview-data-table-friendly-json",
   },
   render: (args: DataTableProps) => (
     <Box width="100%" maxWidth="820px" height="420px" marginX="auto" padding="sm" background="bg">

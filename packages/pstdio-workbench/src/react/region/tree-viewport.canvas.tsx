@@ -4,7 +4,7 @@ import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createTreeWorkbench = (menu: boolean) => {
-  const page = { kind: "page", extensionId: "storybook", id: "tree-viewport" } as const;
+  const page = { kind: "page", extensionId: "preview", id: "tree-viewport" } as const;
   const workbench = createWorkbench({ startPage: page });
   workbench.modes.registerMode({ id: "files", label: "Files", activate: () => undefined });
   workbench.commands.registerCommand(
@@ -58,8 +58,7 @@ const createTreeWorkbench = (menu: boolean) => {
 const meta = {
   title: "pstdio-workbench/File tree/Viewport",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
-  tags: ["!manifest"],
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

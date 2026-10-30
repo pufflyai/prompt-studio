@@ -115,6 +115,6 @@ export const createTreeWorkbench = () => {
     },
     region: "sidenav",
   });
-  workbench.pageLocations.switchProject("storybook");
+  workbench.pageLocations.switchProject("preview");
   return workbench;
 };

@@ -4,8 +4,8 @@ import { createWorkbench, resourceContextMenuPath, workbenchTopHeaderTrailingMen
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 
-const page = { kind: "page", extensionId: "storybook", id: "library" } as const;
-const artifact = { type: "artifact", id: "prototype", extensionId: "storybook", projectId: "storybook" };
+const page = { kind: "page", extensionId: "preview", id: "library" } as const;
+const artifact = { type: "artifact", id: "prototype", extensionId: "preview", projectId: "preview" };
 const openArtifact = (workbench: ReturnType<typeof createWorkbench>) =>
   workbench.navigation.openTarget({
     kind: "panel",
@@ -61,14 +61,14 @@ const createHeaderWorkbench = () => {
   });
   workbench.commands.registerCommand({ id: "rename-artifact", label: "Rename artifact" }, { execute: () => undefined });
   workbench.layout.registerMenuItem(resourceContextMenuPath("artifact"), { commandId: "rename-artifact" });
-  workbench.pageLocations.setProject("storybook");
+  workbench.pageLocations.setProject("preview");
   workbench.pageLocations.navigate({ kind: "page", page });
   return workbench;
 };
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Header actions",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

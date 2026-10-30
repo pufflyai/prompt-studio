@@ -4,7 +4,6 @@ import { TimelineFromJSON } from "./timeline";
 const meta = {
   title: "Patterns/Chat/Timeline",
   component: TimelineFromJSON,
-  parameters: { layout: "padded" },
 } satisfies CanvasMeta<typeof TimelineFromJSON>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

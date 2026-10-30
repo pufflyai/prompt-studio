@@ -6,8 +6,7 @@ import type { AttributeDescriptor, KanbanRendererRow } from "./types";
 
 const meta: CanvasMeta = {
   title: "Patterns/Kanban Renderer/Dragging",
-  tags: ["!manifest"],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 };
 export default meta;
 type Story = CanvasVariant;
@@ -50,7 +49,7 @@ const DraggingBoard = (props: { grouped?: boolean; ungrouped?: boolean }) => {
       <KanbanRenderer
         rows={rows}
         attributes={attributes}
-        storageKey={`storybook-kanban-dragging-${grouped}-${ungrouped}`}
+        storageKey={`preview-kanban-dragging-${grouped}-${ungrouped}`}
         hideToolbar
         defaultSettings={{
           viewMode: "board",

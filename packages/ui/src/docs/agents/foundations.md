@@ -1,7 +1,3 @@
-import { Meta } from "@pstdio/canvas";
-
-<Meta title="Agent Guide/Foundations" />
-
 # Foundations
 
 Use the `psTheme` Chakra system and package tokens instead of hard-coded visual values.
@@ -15,7 +11,7 @@ Use the `psTheme` Chakra system and package tokens instead of hard-coded visual 
 - Prefer Chakra layout props and local layout components over bespoke CSS.
 - Do not change border radius for local preference. Default to `xs` and use the existing recipe radius unless a component
   guide explicitly calls for another radius.
-- Preserve theme preference behavior by rendering stories under the configured Canvas decorators.
+- Preserve theme preference behavior by rendering canvas examples under the configured Canvas decorators.
 
 ## Layout defaults
 
@@ -32,4 +28,4 @@ Use the `psTheme` Chakra system and package tokens instead of hard-coded visual 
 
 ## Visual states
 
-Document meaningful states in stories: default, empty, loading, error, disabled, selected, long content, and dense data. Avoid stories that only demonstrate implementation details.
+Document meaningful states in canvas examples: default, empty, loading, error, disabled, selected, long content, and dense data. Avoid canvas examples that only demonstrate implementation details.

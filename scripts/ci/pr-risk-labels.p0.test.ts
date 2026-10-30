@@ -136,13 +136,7 @@ describe("generated Canvas catalog refreshes", () => {
 
   test("allows SDK changes with a refresh of the generated Canvas catalog", async () => {
     const { api, statuses, setFiles, setPull } = fixture(["sdk", "extensions"]);
-    const generated = [
-      "frame-manifest.json",
-      "frame-themes.json",
-      "migration-ledger.json",
-      "source-information.json",
-      "stories.json",
-    ];
+    const generated = ["frame-manifest.json", "frame-themes.json", "source-information.json", "stories.json"];
     setFiles([
       { filename: "packages/sdk/src/client/projects.ts", status: "modified" },
       ...generated.map((name) => ({

@@ -10,7 +10,7 @@ const RowTargetNavigation = (props: { panel?: boolean }) => {
   const { panel } = props;
   const [workbench] = useState(() => {
     const w = createWorkbench();
-    const ref = (id: string) => ({ kind: "page" as const, id, extensionId: "storybook" });
+    const ref = (id: string) => ({ kind: "page" as const, id, extensionId: "preview" });
     w.views.registerView({
       id: "board",
       title: "Board",
@@ -34,7 +34,7 @@ const RowTargetNavigation = (props: { panel?: boolean }) => {
                     row,
                     undefined,
                     (id) => {
-                      const target = collectionBadgeTarget(row, "items", id, "storybook", "project");
+                      const target = collectionBadgeTarget(row, "items", id, "preview", "project");
                       return target
                         ? () => {
                             void w.navigation.openTarget(target);
@@ -126,7 +126,7 @@ const RowTargetNavigation = (props: { panel?: boolean }) => {
 const meta = {
   title: "pstdio-workbench/Guides/Row target navigation",
   component: RowTargetNavigation,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof RowTargetNavigation>;
 export default meta;
 export const ImmediatePage: CanvasVariant<typeof meta> = {

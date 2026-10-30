@@ -38,7 +38,7 @@ const InteractiveCompare = (props: InteractiveCompareProps) => {
 const meta: CanvasMeta<typeof InteractiveCompare> = {
   title: "Extensions/Prompt Studio Dev/Compare commits",
   component: InteractiveCompare,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: { base: "3d7f5766b0", head: "65d36f4490" },
 };
 export default meta;

@@ -5,15 +5,8 @@ import { FolderPickerDialog } from "./folder-picker-dialog";
 const meta = {
   title: "Overlays/FolderPickerDialog",
   component: FolderPickerDialog,
-  tags: ["folder-picker"],
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Open a project in an existing folder or create a folder first. The host owns navigation and creation. Hidden folders start hidden; press Cmd/Ctrl+Shift+. to toggle them. Matches the folder picker states in Pencil node LmcML.",
-      },
-    },
-  },
+  description:
+    "Open a project in an existing folder or create a folder first. The host owns navigation and creation. Hidden folders start hidden; press Cmd/Ctrl+Shift+. to toggle them. Matches the folder picker states in Pencil node LmcML.",
   args: {
     open: true,
     currentPath: "/Users/alex/Documents",
@@ -52,7 +45,6 @@ const DelayedDirectoryList = (props: ComponentProps<typeof FolderPickerDialog>) 
 };
 export const TypedPathAfterLoading: Story = {
   id: "overlays-folderpickerdialog--typed-path-after-loading",
-  tags: ["!manifest", "folder-path-regression"],
   render: (args) => <DelayedDirectoryList {...args} />,
 };
 export const Opening: Story = {

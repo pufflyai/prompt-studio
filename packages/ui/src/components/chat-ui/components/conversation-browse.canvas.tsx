@@ -34,7 +34,6 @@ const items: ConversationBrowseItem[] = [
 const meta: CanvasMeta<typeof ConversationBrowse> = {
   title: "Patterns/Chat/Conversation Browse",
   component: ConversationBrowse,
-  parameters: { layout: "centered" },
 };
 export default meta;
 type Story = CanvasVariant<typeof ConversationBrowse>;

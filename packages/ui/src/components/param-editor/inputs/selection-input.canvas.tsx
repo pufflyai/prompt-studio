@@ -19,7 +19,6 @@ export default meta;
 type Story = CanvasVariant<typeof meta>;
 export const BranchChoices: Story = {
   id: "patterns-param-editor-selection--branch-choices",
-  tags: ["menu-selection"],
 };
 export const StatusChoices: Story = {
   id: "patterns-param-editor-selection--status-choices",
@@ -68,7 +67,6 @@ export const OptionalSelection: Story = {
 };
 export const MultiSelection: Story = {
   id: "patterns-param-editor-selection--multi-selection",
-  tags: ["menu-selection"],
   args: { options: [main], defaultValue: ["main"], multiSelect: true },
 };
 export const UnavailableAlternatives: Story = {

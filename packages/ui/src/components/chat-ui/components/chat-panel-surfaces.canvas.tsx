@@ -25,7 +25,6 @@ const workspaceHub = (
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Composer Surfaces",
   component: ChatPanel,
-  parameters: { layout: "padded" },
   args: {
     messages: [],
     emptyStateTitle: "Prepare release notes",
@@ -56,11 +55,9 @@ export default meta;
 type Story = CanvasVariant<typeof meta>;
 export const Light: Story = {
   id: "patterns-chat-composer-surfaces--light",
-  globals: { theme: "pstdio-light" },
 };
 export const Dark: Story = {
   id: "patterns-chat-composer-surfaces--dark",
-  globals: { theme: "pstdio-dark" },
 };
 export const WithoutWorkspace: Story = {
   id: "patterns-chat-composer-surfaces--without-workspace",
@@ -69,14 +66,11 @@ export const WithoutWorkspace: Story = {
 export const Focused: Story = {
   id: "patterns-chat-composer-surfaces--focused",
   args: { chatInputAutoFocus: true },
-  parameters: {
-    docs: { description: { story: "Focus inside the input highlights its edge without changing its size." } },
-  },
+  description: "Focus inside the input highlights its edge without changing its size.",
 };
 export const FocusedDark: Story = {
   id: "patterns-chat-composer-surfaces--focused-dark",
   ...Focused,
-  globals: { theme: "pstdio-dark" },
 };
 export const FocusedWithoutWorkspace: Story = {
   id: "patterns-chat-composer-surfaces--focused-without-workspace",

@@ -1,7 +1,3 @@
-import { Meta } from "@pstdio/canvas";
-
-<Meta title="Agent Guide/Patterns" />
-
 # Patterns
 
 Patterns are composed UI surfaces. Prefer these when building product workflows instead of assembling primitives from scratch.
@@ -26,7 +22,7 @@ Use `TreeList` for hierarchical resources with sections, expansion, selection, d
 
 ## Editors
 
-Use the editor patterns for markdown, prompt input, and rich-message rendering. Keep editor stories deterministic and avoid real network or collaboration backends unless the story explicitly mocks the boundary.
+Use the editor patterns for markdown, prompt input, and rich-message rendering. Keep editor canvas examples deterministic and avoid real network or collaboration backends unless the story explicitly mocks the boundary.
 
 ## Diff
 

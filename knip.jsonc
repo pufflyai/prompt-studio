@@ -306,9 +306,7 @@
         "src/**/*.test.tsx"
       ],
       "project": ["*.ts", ".canvas/**/*.{ts,tsx}", "scripts/**/*.ts", "src/**/*.{ts,tsx}"],
-      "ignore": ["dist/**", "canvas-test-static/**"],
-      // The Canvas builder resolves the MDX compiler from this authoring workspace.
-      "ignoreDependencies": ["@mdx-js/mdx"]
+      "ignore": ["dist/**", "canvas-test-static/**"]
     },
     "packages/workbench-fixture": {
       // Views are webview entries that extension.ts references by path.

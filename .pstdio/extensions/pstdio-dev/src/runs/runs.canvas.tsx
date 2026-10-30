@@ -41,7 +41,7 @@ const RunsStory = (props: RunsStoryProps) => {
 const meta: CanvasMeta<typeof RunsStory> = {
   title: "Extensions/Prompt Studio Dev/Benchmark runs",
   component: RunsStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 };
 export default meta;
 type Story = CanvasVariant<typeof RunsStory>;

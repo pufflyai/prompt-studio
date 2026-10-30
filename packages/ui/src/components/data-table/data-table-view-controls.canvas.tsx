@@ -9,7 +9,7 @@ import { useDataTableViewStore } from "./use-data-table-view";
 const meta: CanvasMeta<typeof DataTable> = {
   title: "Patterns/Data Table/View Controls",
   component: DataTable,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 };
 export default meta;
 type Story = CanvasVariant;
@@ -57,11 +57,11 @@ const Table = (props: TableProps) => {
 /** The header menu replaces the view's sorts with one column and shows its direction. */
 export const HeaderSort: Story = {
   id: "patterns-data-table-view-controls--header-sort",
-  render: () => <Table storageKey="storybook-data-table-header-sort" />,
+  render: () => <Table storageKey="preview-data-table-header-sort" />,
 };
 export const SearchHighlights: Story = {
   id: "patterns-data-table-view-controls--search-highlights",
-  render: () => <Table storageKey="storybook-data-table-search" />,
+  render: () => <Table storageKey="preview-data-table-search" />,
 };
 const SavedViewsTable = () => {
   const [views, setViews] = useState<
@@ -99,7 +99,7 @@ const SavedViewsTable = () => {
     onDeleteView: async (id) => setViews((current) => current.filter((view) => view.id !== id)),
     onSetDefaultView: async () => undefined,
   };
-  return <Table storageKey="storybook-data-table-saved-views" viewsSource={viewsSource} />;
+  return <Table storageKey="preview-data-table-saved-views" viewsSource={viewsSource} />;
 };
 /** Filters, sorts, and display settings belong to the saved view. */
 export const SavedViews: Story = {
@@ -111,7 +111,7 @@ export const GroupedByStatus: Story = {
   id: "patterns-data-table-view-controls--grouped-by-status",
   render: () => (
     <Table
-      storageKey="storybook-data-table-grouped"
+      storageKey="preview-data-table-grouped"
       defaultSettings={{ grouping: "Status", rowNumbers: false }}
       defaultSorts={[{ attributeId: "Priority", direction: "asc" }]}
     />
@@ -119,18 +119,18 @@ export const GroupedByStatus: Story = {
 };
 export const RowNumbersHidden: Story = {
   id: "patterns-data-table-view-controls--row-numbers-hidden",
-  render: () => <Table storageKey="storybook-data-table-no-row-numbers" defaultSettings={{ rowNumbers: false }} />,
+  render: () => <Table storageKey="preview-data-table-no-row-numbers" defaultSettings={{ rowNumbers: false }} />,
 };
 /** A new sort, filter, grouping, or search starts again on the first page. */
 export const PageResetsOnViewChange: Story = {
   id: "patterns-data-table-view-controls--page-resets-on-view-change",
-  render: () => <Table storageKey="storybook-data-table-page-reset" initialPageSize={3} pageSizeOptions={[3, 10]} />,
+  render: () => <Table storageKey="preview-data-table-page-reset" initialPageSize={3} pageSizeOptions={[3, 10]} />,
 };
 export const EmptyFilteredGroups: Story = {
   id: "patterns-data-table-view-controls--empty-filtered-groups",
   render: () => (
     <Table
-      storageKey="storybook-empty-table-groups"
+      storageKey="preview-empty-table-groups"
       defaultSettings={{ grouping: "Status" }}
       defaultFilter={{ conjunction: "and", rules: [{ attributeId: "Score", condition: "gt", value: 1000 }] }}
     />

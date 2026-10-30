@@ -55,6 +55,6 @@ const BetaFeaturesNavigation = () => {
 };
 export const ExperimentalNavigation: Story = {
   id: "settings-beta-features--experimental-navigation",
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   render: () => <BetaFeaturesNavigation />,
 };
