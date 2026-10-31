@@ -31,7 +31,12 @@ Prompt Studio builds its canvases with `@pstdio/canvas`, like any other project.
 
 Open canvases with `pst canvas open --canvas <canvas file>`. Inspect Theme, Props and source, and real interactions. The first click selects a frame; the next interacts with its contents. Verify only affected critical behavior in the isolated app. Routine copy, spacing, cosmetic, and documentation changes require no browser runs or screenshots.
 
-Run `bun run --cwd packages/canvas-tests test` in the isolated Docker tools container to check representative critical Canvas contracts. It builds Prompt Studio with `pstdio-canvas build` and renders that build through UI Canvas's own view code. For one existing test, use `bun run --cwd packages/canvas-tests test:browser -- src/ui/pstdio-workbench/critical-workbench.p1.spec.ts`.
+Run `bun run --cwd packages/canvas-tests test` in the isolated Docker tools container to check representative critical Canvas contracts. It builds Prompt Studio with `pstdio-canvas build` and renders that build through UI Canvas's own view code. To run one existing test, build the verification previews first, because `test:browser` uses whatever build it finds:
+
+```sh
+bun run --cwd packages/canvas-tests build:previews
+bun run --cwd packages/canvas-tests test:browser -- src/ui/pstdio-workbench/critical-workbench.p1.spec.ts
+```
 
 Rendering alone does not prove editing, validation, persistence, accessibility, or visual fidelity. Report unavailable physical-device checks separately.
 
