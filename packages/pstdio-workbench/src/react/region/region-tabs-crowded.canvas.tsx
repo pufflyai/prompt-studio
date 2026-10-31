@@ -1,12 +1,12 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { PageRef } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createCrowdedWorkbench = () => {
-  const page: PageRef = { extensionId: "storybook", kind: "page", id: "crowded-tabs" };
+  const page: PageRef = { extensionId: "preview", kind: "page", id: "crowded-tabs" };
   const workbench = createWorkbench({ startPage: page, defaultPanelOpenByRegionId: { secondary: true } });
   workbench.modes.registerMode({ id: "crowded", label: "Crowded tabs", activate: () => undefined });
   const labels = [
@@ -46,10 +46,10 @@ const createCrowdedWorkbench = () => {
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Crowded panel tabs",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SharedWidth: Story = {
   id: "pstdio-workbench-reference-core-api-crowded-panel-tabs--shared-width",
   args: { workbench: createCrowdedWorkbench() },
@@ -74,7 +74,6 @@ export const MinimumWidth: Story = {
 };
 export const ScrollingStaysInPanel: Story = {
   id: "pstdio-workbench-reference-core-api-crowded-panel-tabs--scrolling-stays-in-panel",
-  tags: ["!manifest", "tab-strip-scroll"],
   args: { workbench: createCrowdedWorkbench() },
   render: (args) => (
     <ChakraProvider value={psTheme}>

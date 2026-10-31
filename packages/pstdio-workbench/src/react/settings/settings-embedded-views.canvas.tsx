@@ -1,5 +1,5 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import { createWorkbench } from "../../core";
@@ -33,7 +33,7 @@ const EmbeddedSettingsStory = () => {
   useEffect(() => {
     const settings = workbench.registerModule(createWorkbenchSettingsModule());
     const controls = workbench.registerModule({
-      id: "storybook.settings.embedded",
+      id: "preview.settings.embedded",
       activate(ctx) {
         const children = ["First", "Second"].map((title) => {
           ctx.views.registerView({
@@ -99,10 +99,10 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof EmbeddedSettingsStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const IndependentEventsAndDisposal: Story = {
   id: "pstdio-workbench-reference-core-api-embedded-settings--independent-events-and-disposal",
 };

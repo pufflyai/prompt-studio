@@ -1,5 +1,5 @@
 import { Box, Button } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import type { HostStorage } from "@pstdio/ui";
 import type { AttributeDescriptor } from "@pstdio/ui/kanban-renderer";
@@ -131,7 +131,7 @@ const meta: CanvasMeta<typeof TrackGraphStory> = {
   args: { filter: { conjunction: "and", rules: [] } },
 };
 export default meta;
-type Story = CanvasVariant<typeof TrackGraphStory>;
+type Story = CanvasFrame<typeof TrackGraphStory>;
 export const CurvedDependencies: Story = {
   id: "extensions-planner-timeline-graph-tracks--curved-dependencies",
 };
@@ -163,7 +163,6 @@ export const MovingPinchAnchor: Story = {
 export const TouchNavigation: Story = {
   id: "extensions-planner-timeline-graph-tracks--touch-navigation",
   args: { height: 360 },
-  parameters: { viewport: { defaultViewport: "mobile1" } },
 };
 export const KeyboardAfterPan: Story = {
   id: "extensions-planner-timeline-graph-tracks--keyboard-after-pan",

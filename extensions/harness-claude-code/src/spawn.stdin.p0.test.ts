@@ -74,7 +74,7 @@ describe("Claude process stdin across turns", () => {
     emit({
       type: "control_request",
       request_id: "req-1",
-      request: { subtype: "can_use_tool", tool_name: "ExitPlanMode", input: {}, tool_use_id: "toolu_1" },
+      request: { subtype: "can_use_tool", tool_name: "Bash", input: {}, tool_use_id: "toolu_1" },
     });
     await waitForStreamIo();
 

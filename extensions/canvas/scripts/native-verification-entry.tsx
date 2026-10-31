@@ -10,6 +10,21 @@ import { readLayout } from "../src/layout";
 import { CanvasStage } from "../src/view/canvas-stage";
 import { verificationCanvases } from "./native-verification-fixtures";
 import "@pstdio/ui/style.css";
+import { createFrameAssetLoader } from "../src/frames/asset-loader";
+import { installFrameAssetLoader } from "../src/frames/assets";
+import { frameProtocol } from "../src/frames/protocol";
+
+installFrameAssetLoader(
+  createFrameAssetLoader(async (request) => {
+    const response = await fetch(new URL("/preview-assets", location.href), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) throw new Error(await response.text());
+    return response.json();
+  }),
+);
 
 declare global {
   interface Window {
@@ -17,6 +32,16 @@ declare global {
   }
 }
 window.__CANVAS_VERIFICATION__ = { saves: 0, longTasks: [] };
+let maximumStarting = 0;
+const starting = new Set<MessageEventSource>();
+// Import handshakes finish before React commits its loading display.
+window.addEventListener("message", (event) => {
+  if (!event.source || event.data?.protocol !== frameProtocol) return;
+  if (event.data.type === "bootstrap") starting.add(event.source);
+  if (["boot", "loaded", "error"].includes(event.data.type)) starting.delete(event.source);
+  maximumStarting = Math.max(maximumStarting, starting.size);
+  document.documentElement.dataset.canvasStartupMaximum = String(maximumStarting);
+});
 const longTasks = new PerformanceObserver((list) => {
   window.__CANVAS_VERIFICATION__.longTasks.push(...list.getEntries().map((entry) => entry.duration));
 });
@@ -40,7 +65,6 @@ const id = new URLSearchParams(location.search).get("canvas");
 const variantId = new URLSearchParams(location.search).get("preview");
 const viewportWidth = Number(new URLSearchParams(location.search).get("viewport-width") ?? "1198");
 const viewportHeight = Number(new URLSearchParams(location.search).get("viewport-height") ?? "960");
-const documentEntry = catalog.documents.find((entry) => entry.id === variantId);
 const variant = catalog.stories.find((entry) => entry.id === variantId);
 const resolveCanvas = (): CanvasDefinition | undefined => {
   if (new URLSearchParams(location.search).has("failure"))
@@ -77,21 +101,6 @@ const resolveCanvas = (): CanvasDefinition | undefined => {
           width: viewportWidth + 2,
           height: viewportHeight,
           preview: { kind: "story", ...variant, viewportHeight },
-        },
-      ],
-    };
-  if (documentEntry)
-    return {
-      id: "document-preview",
-      name: "Document preview",
-      items: [
-        {
-          id: documentEntry.id,
-          name: documentEntry.name,
-          position: { x: 0, y: 0 },
-          width: 1200,
-          height: 240,
-          preview: { kind: "document", ...documentEntry },
         },
       ],
     };

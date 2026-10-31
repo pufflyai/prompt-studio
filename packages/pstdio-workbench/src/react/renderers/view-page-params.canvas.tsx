@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
 import { usePageParams } from "./use-page-params";
@@ -49,9 +49,8 @@ const IndependentViewerQuery = () => {
 const meta = {
   title: "pstdio-workbench/Guides/Native viewer query",
   component: IndependentViewerQuery,
-  tags: ["view-page-params"],
 } satisfies CanvasMeta<typeof IndependentViewerQuery>;
 export default meta;
-export const IndependentPageContext: CanvasVariant<typeof meta> = {
+export const IndependentPageContext: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-guides-native-viewer-query--independent-page-context",
 };

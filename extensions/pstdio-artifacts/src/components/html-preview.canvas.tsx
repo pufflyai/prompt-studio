@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { installWebviewKeyboardRelay } from "@pstdio/sdk/extensions";
 import { ThemePreferenceProvider, useThemePreference } from "@pstdio/ui";
 import { useEffect, useRef, useState } from "react";
@@ -21,7 +21,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof HtmlPreview>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Interactive: Story = { id: "extensions-artifacts-htmlpreview--interactive" };
 const KeyboardExample = () => {
   const [request, setRequest] = useState("Waiting");
@@ -60,12 +60,10 @@ const KeyboardExample = () => {
 };
 export const KeyboardHandoff: Story = {
   id: "extensions-artifacts-htmlpreview--keyboard-handoff",
-  tags: ["!manifest"],
   render: () => <KeyboardExample />,
 };
 export const NavigationIsolation: Story = {
   id: "extensions-artifacts-htmlpreview--navigation-isolation",
-  tags: ["!manifest"],
   args: {
     title: "Navigation isolation",
     html: `<h1>Local preview</h1>

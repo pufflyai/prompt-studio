@@ -1,11 +1,11 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ThemePreferenceProvider } from "@pstdio/ui";
 import { DesktopQuitConfirmationDialog } from "./desktop-quit-confirmation";
 
 const meta = {
   title: "Desktop/QuitConfirmation",
   component: DesktopQuitConfirmationDialog,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: {
     activity: {
       sessions: [{ id: "session-one", label: "Improve the quit warning" }],
@@ -20,7 +20,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof DesktopQuitConfirmationDialog>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Light: Story = {
   id: "desktop-quitconfirmation--light",
   decorators: [

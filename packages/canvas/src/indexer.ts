@@ -39,7 +39,7 @@ export const indexExamples = (path: string, source: string) => {
   const defaults = file.statements.find(ts.isExportAssignment);
   const meta = object(defaults?.expression);
   const component = property(meta, "component")?.getText(file);
-  const stories: { exportName: string; id: string; name: string }[] = [];
+  const stories: { exportName: string; id: string; name: string; defaultTheme?: string }[] = [];
   for (const statement of file.statements) {
     if (
       !ts.isVariableStatement(statement) ||
@@ -52,7 +52,8 @@ export const indexExamples = (path: string, source: string) => {
       if (!id) continue;
       const exportName = declaration.name.getText(file);
       const name = text(property(value, "name")) ?? exportName.replace(/([a-z\d])([A-Z])/g, "$1 $2");
-      stories.push({ exportName, id, name });
+      const defaultTheme = text(property(value, "defaultTheme")) ?? text(property(meta, "defaultTheme"));
+      stories.push({ exportName, id, name, ...(defaultTheme ? { defaultTheme } : {}) });
     }
   }
   return {

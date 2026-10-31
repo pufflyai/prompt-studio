@@ -1,8 +1,7 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../workbench-story";
 import { createDataTableRendererStoryModule } from "./module";
-import source from "./module.tsx?raw";
 import { createPagedTableStoryModule } from "./paged-module";
 
 const workbench = createWorkbench();
@@ -10,35 +9,17 @@ workbench.registerModule(createDataTableRendererStoryModule());
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Native data table",
   component: WorkbenchStory,
-  tags: ["autodocs"],
   args: { workbench },
-  argTypes: {
-    workbench: { table: { disable: true } },
-  },
-  parameters: {
-    controls: { disable: true },
-    docs: {
-      description: {
-        component:
-          "The Core API registration used by the host adapter for the native data table. Extension authors declare the dataTable view body shown in Extension onboarding.",
-      },
-    },
-    layout: "fullscreen",
-  },
+  description:
+    "The Core API registration used by the host adapter for the native data table. Extension authors declare the dataTable view body shown in Extension onboarding.",
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const MultipleSelection: Story = {
   id: "pstdio-workbench-reference-core-api-native-data-table--multiple-selection",
   name: "Multiple selection",
-  parameters: {
-    docs: {
-      description: {
-        story: "Select services and run the contribution's bulk restart action from the selection toolbar.",
-      },
-      source: { code: source, language: "tsx", type: "code" },
-    },
-  },
+  description: "Select services and run the contribution's bulk restart action from the selection toolbar.",
 };
 const emptyWorkbench = createWorkbench();
 emptyWorkbench.registerModule(createDataTableRendererStoryModule(true));

@@ -101,6 +101,48 @@ test("keeps a Bun cache the caller provides", async () => {
   }
 });
 
+test("finishes fixture preparation before launching the browser tests", async () => {
+  const run = await runPlaywright(
+    { cmd: process.execPath, args: ["-e", "console.log(process.env.E2E_FIXTURE_READY)"] },
+    { PATH: process.env.PATH },
+    {
+      stdio: "pipe",
+      prepare: async (env) => {
+        await Bun.sleep(1);
+        env.E2E_FIXTURE_READY = "ready";
+      },
+    },
+  );
+  expect(run.exitCode).toBe(0);
+  expect(run.output.trim()).toBe("ready");
+});
+
+test("cleans up when fixture preparation is interrupted", async () => {
+  const launcher = Bun.spawn(
+    [
+      process.execPath,
+      "-e",
+      `const { runPlaywright } = await import(${JSON.stringify(new URL("./run-playwright.ts", import.meta.url).href)});
+      const run = await runPlaywright(
+        { cmd: process.execPath, args: ["-e", "process.exit(5)"] },
+        { PATH: process.env.PATH },
+        { stdio: "pipe", prepare: async (env, signal) => {
+          console.log(env.E2E_HOME);
+          await new Promise((resolve, reject) => signal.addEventListener("abort", reject, { once: true }));
+        } },
+      );
+      process.exit(run.exitCode);`,
+    ],
+    { stdout: "pipe" },
+  );
+  const { value } = await launcher.stdout.getReader().read();
+  const home = new TextDecoder().decode(value).trim();
+  launcher.kill("SIGTERM");
+  const exitCode = await launcher.exited;
+  if (process.platform !== "win32") expect(exitCode).toBe(143);
+  expect(existsSync(dirname(home))).toBe(false);
+});
+
 test("removes the run's folders when the launcher is stopped", async () => {
   const launcher = Bun.spawn(
     [

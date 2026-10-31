@@ -1,11 +1,12 @@
 import { expect, test } from "bun:test";
-import { gunzipSync } from "node:zlib";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { previews } from "../src/canvases/previews";
-import archive from "../src/catalog/generated/frame-bundle";
+import frames from "../src/catalog/generated/frame-manifest.json";
 import catalog from "../src/catalog/generated/stories.json";
-import type { FrameBootstrap } from "../src/frames/assets";
-import { selectFrameBootstrap } from "../src/frames/selection";
+import { selectFrameModules } from "../src/frames/module-graph";
 import { checkNativeBuildFreshness } from "./native-build-freshness";
+import { extensionRoot } from "./story-catalog";
 
 test("native previews match the component sources, fixtures, and generated files", async () => {
   const { manifest, stale } = await checkNativeBuildFreshness();
@@ -14,27 +15,29 @@ test("native previews match the component sources, fixtures, and generated files
   expect(Object.keys(manifest.outputs)).not.toHaveLength(0);
 });
 
-test("every retained preview has a complete startup graph and its suite provider", () => {
-  const decode = (data: string) => new Blob([gunzipSync(Buffer.from(data, "base64"))]);
-  const all: FrameBootstrap = {
-    entry: archive.entry,
-    graph: archive.graph,
-    scripts: Object.fromEntries(Object.entries(archive.scripts).map(([name, code]) => [name, decode(code)])),
-    styles: archive.styles.map(decode),
-  };
-  const sources = [
-    ...new Set([...catalog.stories, ...catalog.documents].map((entry) => entry.source)),
-    ...Object.keys(previews).map((name) => `$native:${name}`),
-  ];
-  expect(Object.keys(all.graph.sources).sort()).toEqual(sources.sort());
-  for (const source of sources) {
-    const selected = selectFrameBootstrap(all, source);
-    const description = all.graph.sources[source]!;
-    expect(selected.scripts[description.script]).toBe(all.scripts[description.script]);
-    if (description.project) expect(selected.scripts[description.project]).toBe(all.scripts[description.project]);
-    expect(selected.styles.length).toBeGreaterThan(0);
+test("every catalog source has a complete packaged dependency graph", () => {
+  const sources = [...new Set(catalog.stories.map((entry) => entry.source))];
+  const native = Object.keys(previews).map((name) => `$native:${name}`);
+  expect(Object.keys(frames.sources).sort()).toEqual([...sources, ...native].sort());
+  const assets = new Set(frames.styles);
+  for (const source of [...sources, ...native, "$runtime"]) {
+    const modules = selectFrameModules(frames, source);
+    expect(modules).toContain(frames.entry);
+    for (const name of modules) assets.add(name);
   }
-  expect(Object.keys(selectFrameBootstrap(all, "$native:project-form").scripts).length).toBeLessThan(
-    Object.keys(all.scripts).length,
-  );
+  for (const name of assets)
+    expect(existsSync(resolve(extensionRoot, frames.modules[name as keyof typeof frames.modules].file))).toBe(true);
+});
+
+test("example graphs include the provider used by their catalog suite, including fallback suites", () => {
+  const providers = new Map<string, string>();
+  for (const { source, suite } of catalog.stories) {
+    const frame = frames.sources[source as keyof typeof frames.sources];
+    const provider = "project" in frame ? frame.project : undefined;
+    if (provider) providers.set(suite, provider);
+  }
+  for (const { source, suite } of catalog.stories) {
+    const frame = frames.sources[source as keyof typeof frames.sources];
+    expect("project" in frame ? frame.project : undefined, source).toBe(providers.get(suite));
+  }
 });

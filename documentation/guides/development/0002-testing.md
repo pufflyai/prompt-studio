@@ -8,6 +8,8 @@ When upgrading Bun, align the root `packageManager` pin, Bun engine requirements
 
 Repository type checks use the TypeScript 7 checker built into Bun 1.4.4. Keep using each package's `typecheck` script: the dashboard checks both project references with `bun check -b`, UI uses `tsconfig.build.json`, and base themes also check `tsconfig.canvas.json`. Chakra token generation still runs before dashboard checking. TypeScript 6.0.2 remains installed for compiler API users and Rolldown declaration emit. Public package and provider consumers check the same positive and negative fixtures with both TypeScript 6.0.2 and `bun check`, so the faster checker preserves the supported consumer contract.
 
+Public package consumers keep the ES2022 output target and include `ES2023.Intl` declarations for the number-range APIs available in the supported runtimes. Fresh dependencies can expose those types in their public declarations. Declaration checking remains strict.
+
 Editors using the workspace TypeScript version still show TypeScript 6 diagnostics. Run the package's `typecheck` script to see the required TypeScript 7 result; the two versions can differ in generic inference and removed configuration options.
 
 The private workbench fixture keeps published dependency ranges for isolated installs. Its repository check uses `tsconfig.test-fixtures.json` to resolve the current SDK and UI public declarations. Nx builds those producers first and includes the repository config in the check's cache inputs.
@@ -58,6 +60,8 @@ The script runs `bun test --conditions production --tsconfig-override tsconfig.a
 Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks described in `AGENTS.md`. Documentation-reference-only edits do not.
 
 During implementation, run targeted tests. Before marking a draft PR ready, follow [Finishing a pull request](../../../AGENTS.md#finishing-a-pull-request), including the full test run after integrating main for behavioral features and meaningful regressions. Routine copy, spacing, cosmetic and documentation changes require only relevant scoped checks, without a full command or browser runs. Explicit user-requested validation still applies. Run full validation only when explicitly requested. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs unit packages through Lerna, then the E2E script, CLI, UI, Vite terminal, and separate Canvas suites. `bun run test:e2e` runs app checks; `bun run test:canvas` runs component server checks and browser interactions. Lerna excludes both browser packages from its unit pass. Packaged and desktop tests run separately in CI.
+
+The complete local test run schedules one workspace suite at a time. Suites such as the API already own worker pools; running several suites together multiplies those pools and can starve native CLI fixtures. Priority and CI commands retain their own scheduling. The complete local run may take longer because workspace suites do not overlap.
 
 Install browser dependencies before running browser tests:
 
@@ -140,7 +144,7 @@ Every attempt logs its status and output. Other errors fail at once. This retrie
 
 ## Published extension dependencies
 
-Run `bun run --cwd scripts verify:published-extensions` to typecheck and test every extension in the Changesets release group against the registry SDK and UI versions selected by its dependency ranges. The check copies each extension outside the workspace, installs fresh dependencies, runs `bun check`, and runs its Bun tests. It preserves shared compiler settings and test isolation, but copies no workspace packages, installed dependencies, or lockfiles. Failures name the extension and command; output shows the resolved SDK and UI versions.
+Run `bun run --cwd scripts verify:published-extensions` to typecheck and test every extension in the Changesets release group against the registry SDK and UI versions selected by its dependency ranges. The check copies each extension outside the workspace, installs fresh dependencies, runs `bun check`, and runs its Bun tests. It preserves shared compiler settings and test isolation, but copies no workspace packages, installed dependencies, or lockfiles. It copies build output that is already in the extension folder, so build Canvas first with `bun run build -- --scope canvas --include-dependencies`: its preview catalog is built from this repo's UI and is not committed. Failures name the extension and command; output shows the resolved SDK and UI versions.
 
 Published-extension checks and public-package consumer checks use a one-day minimum release age for fresh installs. This keeps a third-party publish in progress from selecting packages whose matching dependencies are not available yet. Prompt Studio packages in the Changesets release group are exempt, so these checks can use the SDK and UI immediately after a release. The repository's frozen-lockfile install is unchanged. See [Bun's minimum release age](https://bun.sh/docs/pm/cli/install#minimum-release-age).
 
@@ -219,7 +223,7 @@ Evidence artifact names end in `-attempt-<run_attempt>` so a manual rerun keeps 
 
 Intel Mac desktop CI runs its packaged smoke files in two required Playwright shards under the existing 20-minute job allowance. Both jobs build a real native app; source Electron tests, native cleanup tests, existing quarantine execution and shared build archives belong to shard one. Other desktop targets use one complete shard. Published desktop targets remain unique physical platforms. The normal developer command still runs the complete unsharded suite.
 
-Windows ARM64 packaged runtime checks use two Bun file shards within the existing 30-minute job allowance. Other native toolchains use one shard. Both ARM64 shards remain required; each keeps compiled-file integrity, public package contracts and compiled CLI smoke. Windows compiled CLI quarantine runs once per platform on its first shard. `bun run --cwd scripts verify:packages --profile full --shard 1/2` selects one runtime shard; omit `--shard` to run the complete suite. Released candidates still use `--prebuilt`, so neither shard rebuilds their immutable binary.
+Windows ARM64 packaged runtime checks use two Bun file shards within the existing 30-minute job allowance. Other native toolchains use one shard. Both ARM64 shards remain required; each keeps compiled-file integrity, public package contracts and compiled CLI smoke. Compiled CLI quarantine runs once per platform on its first shard. `bun run --cwd scripts verify:packages --profile full --shard 1/2` selects one runtime shard; omit `--shard` to run the complete suite. Released candidates still use `--prebuilt`, so neither shard rebuilds their immutable binary.
 
 Packaged toolchain checks run through the CI runner with direct arguments and the operating system's default shell. Do not wrap Windows verification in a Git Bash pipeline: it gives child processes an inherited Ctrl+C-ignore attribute, preventing the real terminal interruption check from exercising normal Windows signal handling.
 
@@ -243,14 +247,14 @@ The Apple Silicon desktop row runs its registered packaged cases in a separate s
 
 Run registered cases locally with `E2E_TEST_LANE=quarantine bun run --cwd packages/pstdio-db test`, `E2E_TEST_LANE=quarantine bun run --cwd scripts test`, or `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:browser`. Use the normal package scripts for the stable lane. Direct `bun test <file>` remains available for diagnosis and does not apply quarantine selection.
 
-Windows compiled CLI quarantine runs after native package verification against that same binary. For diagnosis, set `E2E_PACKAGED_BINARY_PATH` to the compiled executable and run `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:cli`. The API quarantine step runs its registered file in an isolated source-conditions process, with the same 30-second test allowance as normal API shards.
+Compiled CLI quarantine runs after native package verification against that same binary. For diagnosis, set `E2E_PACKAGED_BINARY_PATH` to the compiled executable and run `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:cli`. The API quarantine step runs its registered file in an isolated source-conditions process, with the same 30-second test allowance as normal API shards.
 
-For ten full CI validations, create ten refs under `test/ci-reliability/<batch>/` at the same final commit. Each push starts the normal full workflow, including native builds, all browser engines, package consumers, and quarantine. The ref is part of the concurrency key, so independent runs cannot cancel each other. Nx test targets disable result caching; dependency builds still use their caches. Count first attempts and record all failures. If a fix changes the commit, start a new ten-run qualification on that commit. A test passing on a later attempt does not erase its earlier failure.
+Each CI pipeline executes each test once per applicable platform, including performance and quarantine cases. Do not repeat a test or create multiple reliability refs to obtain a passing result. Quarantine confirmed flakes with first-failure evidence, an owner and a removal criterion; keep their limits and assertions, and require their separate execution report. A later pass does not erase an earlier failure.
 
-To investigate a failure, keep retries disabled and repeat the affected spec:
+To investigate a failure, keep retries disabled and run only the affected spec once:
 
 ```bash
-bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.p2.spec.ts --repeat-each=5
+bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.p2.spec.ts
 ```
 
 To run one CI shard locally, use `bun run --cwd packages/e2e test:ui -- --shard=2/3`. Keep the same shard total when comparing runs.
@@ -348,6 +352,12 @@ E2E_AGENTS=opencode bun run --cwd packages/e2e test:ui -- src/ui/session-follow-
 ```
 
 They require the selected provider and its credentials. They are separate from ordinary fixture-based CI coverage.
+
+Installed harness compatibility resolves and pins npm versions before execution. When `latest` equals `minimum` and both lanes are scheduled, the required minimum lane owns their single execution; a latest-only invocation still executes. The Windows x64 Pi 0.73.1 cold detection/model case runs once in its version-specific quarantine before the blocking tool/session-resume case. Its report must prove exactly one first attempt; the 3000 ms probe remains unchanged.
+
+The final full battery additionally confirmed Intel macOS harness-submenu dismissal and compiled collection-view restart flakes. Both complete cases passed in the prior battery with unchanged sources. Their exact darwin-x64 cases join the existing native quarantine lanes; other platforms remain blocking and no deadline or assertion changes.
+
+Desktop benchmarks retain one complete ordered Playwright invocation: launch cases (including quarantined warm attach and cold start) precede renderer cases. The runner classifies the resulting first-attempt report: stable/setup failures block CI, quarantined failures remain visible in a separate mandatory report. Comparison artifacts retain all measurements and the quarantine evidence. No second invocation repeats or moves the cold scenario after renderer work.
 
 ## Critical UI checks
 

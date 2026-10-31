@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { buildPlan } from "../model/build-plan";
 import { buildTracks } from "../model/tracks";
 import type { DropTarget } from "./drag";
@@ -104,7 +104,7 @@ const meta: CanvasMeta<typeof TimelineGraphStory> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof TimelineGraphStory>;
+type Story = CanvasFrame<typeof TimelineGraphStory>;
 export const AllMilestones: Story = {
   id: "extensions-planner-timeline-graph--all-milestones",
 };

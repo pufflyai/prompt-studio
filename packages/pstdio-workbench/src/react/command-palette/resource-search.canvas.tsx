@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchResourceSearch } from "./resource-search";
@@ -34,14 +34,14 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof WorkbenchResourceSearch>;
 export default meta;
-export const FullHistory: CanvasVariant<typeof meta> = {
+export const FullHistory: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-components-resource-search--full-history",
 };
-export const Empty: CanvasVariant<typeof meta> = {
+export const Empty: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-components-resource-search--empty",
   args: { request: { label: "Switch session", placeholder: "Search sessions", list: () => [] } },
 };
-export const StatusIndicators: CanvasVariant<typeof meta> = {
+export const StatusIndicators: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-components-resource-search--status-indicators",
   args: {
     request: {
@@ -68,7 +68,7 @@ export const StatusIndicators: CanvasVariant<typeof meta> = {
 const ownedWorkbench = createWorkbench();
 ownedWorkbench.resources.registerKind({ kind: "drawing", extensionId: "first", label: "First", icon: "File" });
 ownedWorkbench.resources.registerKind({ kind: "drawing", extensionId: "second", label: "Second", icon: "Folder" });
-export const OwnerIcons: CanvasVariant<typeof meta> = {
+export const OwnerIcons: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-components-resource-search--owner-icons",
   args: {
     workbench: ownedWorkbench,

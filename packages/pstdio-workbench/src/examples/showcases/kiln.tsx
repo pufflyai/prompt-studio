@@ -53,7 +53,7 @@ export const createKilnWorkbench = () => {
   });
   workbench.modePlacements.registerPlacement({
     id: "kiln.timeline",
-    ref: { extensionId: "storybook.showcases", kind: "placement", id: "kiln.timeline" },
+    ref: { extensionId: "preview.showcases", kind: "placement", id: "kiln.timeline" },
     modeId: "kiln",
     region: "secondary",
     item: {
@@ -89,7 +89,7 @@ export const createKilnWorkbench = () => {
       },
     ],
   });
-  workbench.pageLocations.switchProject("storybook-kiln");
+  workbench.pageLocations.switchProject("preview-kiln");
   workbench.pageLocations.navigate({ kind: "page", page: homePage });
   return workbench;
 };

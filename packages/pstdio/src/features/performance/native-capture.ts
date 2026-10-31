@@ -1,10 +1,12 @@
 import type { PerformanceCaptureSample } from "pstdio-api-contracts/performance-diagnostics";
 import { type PerformanceBackend, PerformanceCaptureCollector } from "pstdio-diagnostics";
-import { createProcessSampler } from "./process-sampler";
+import { createProcessSampler, type ProcessReading } from "./process-sampler";
 
 interface NativeCaptureInput {
   hostVersion: string;
   backend: () => PerformanceBackend | null;
+  /** Reads the backend process where it runs, such as inside a container. Defaults to this host's kernel. */
+  readProcess?: (pid: number) => Promise<ProcessReading | null>;
   record?: (captureId: string, sample: PerformanceCaptureSample) => void;
   onError: (error: unknown) => void;
 }
@@ -20,8 +22,12 @@ export const startNativePerformanceCapture = async (input: NativeCaptureInput) =
     record: (sample) => input.record?.(capture.id, sample),
     readProcess: async (pid, signal) => {
       signal.throwIfAborted();
-      sampler ??= await createProcessSampler();
-      const reading = await sampler.read(pid);
+      let reading: ProcessReading | null;
+      if (input.readProcess) reading = await input.readProcess(pid);
+      else {
+        sampler ??= await createProcessSampler();
+        reading = await sampler.read(pid);
+      }
       signal.throwIfAborted();
       return reading;
     },

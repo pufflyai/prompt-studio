@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 
 const meta: CanvasMeta<typeof ExtensionFolderDropZone> = {
@@ -7,7 +7,7 @@ const meta: CanvasMeta<typeof ExtensionFolderDropZone> = {
   args: { onDropFolder: () => {} },
 };
 export default meta;
-type Story = CanvasVariant<typeof ExtensionFolderDropZone>;
+type Story = CanvasFrame<typeof ExtensionFolderDropZone>;
 export const Idle: Story = {
   id: "projectsettings-extensionfolderdropzone--idle",
 };

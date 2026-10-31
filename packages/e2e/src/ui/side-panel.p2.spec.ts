@@ -21,6 +21,7 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
 
 const prepareDashboard = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
+    if (window.parent !== window) return;
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
     localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
@@ -39,15 +40,22 @@ const expectNear = (actual: number, expected: number) => {
 const expectDashboardAttachedBounds = async (page: import("@playwright/test").Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
   const side = page.getByTestId("workbench-side-panel-attached");
+  const status = page.locator('[data-workbench-region="status"]');
+  await expect(status).toBeVisible();
   await expect
     .poll(() => side.evaluate((element) => element.closest("[data-dragging]")!.getAnimations().length))
     .toBe(0);
-  const [mainBox, sideBox] = await Promise.all([main.boundingBox(), side.boundingBox()]);
+  const [mainBox, sideBox, statusBox] = await Promise.all([
+    main.boundingBox(),
+    side.boundingBox(),
+    status.boundingBox(),
+  ]);
   expect(mainBox).not.toBeNull();
   expect(sideBox).not.toBeNull();
+  expect(statusBox).not.toBeNull();
 
   expectNear(sideBox!.y, PANEL_GAP_PX);
-  expectNear(sideBox!.height, 720 - 2 * PANEL_GAP_PX);
+  expectNear(sideBox!.y + sideBox!.height, statusBox!.y);
   expectNear(sideBox!.width, 420);
   expectNear(mainBox!.x + mainBox!.width + PANEL_GAP_PX, sideBox!.x);
   expectNear(sideBox!.x + sideBox!.width, 1280 - PANEL_GAP_PX);

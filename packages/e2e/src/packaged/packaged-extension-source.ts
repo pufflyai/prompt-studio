@@ -9,7 +9,7 @@ const repoRoot = join(import.meta.dirname, "../../../..");
 export async function preparePackagedExtensionSource(
   root: string,
   packagePath: string,
-  options: { offline?: boolean } = {},
+  options: { offline?: boolean; env?: NodeJS.ProcessEnv; signal?: AbortSignal } = {},
 ) {
   mkdirSync(root, { recursive: true });
   const source = join(root, "extension-source");
@@ -31,7 +31,7 @@ export async function preparePackagedExtensionSource(
   await promisify(execFile)(
     "bun",
     ["install", "--lockfile-only", "--ignore-scripts", ...(options.offline ? ["--offline"] : [])],
-    { cwd: source },
+    { cwd: source, env: options.env, signal: options.signal },
   );
   return source;
 }

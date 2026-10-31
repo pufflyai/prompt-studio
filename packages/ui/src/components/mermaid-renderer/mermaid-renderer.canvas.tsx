@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { useThemePreference } from "../../utils/theme-preference";
 import { mermaidFixtures } from "./mermaid-fixtures";
@@ -8,9 +8,6 @@ import { MermaidRenderer } from "./mermaid-renderer";
 const meta: CanvasMeta<typeof MermaidRenderer> = {
   title: "Patterns/Editors/Mermaid Renderer",
   component: MermaidRenderer,
-  parameters: {
-    layout: "padded",
-  },
   decorators: [
     (Story) => (
       <Box maxW="920px">
@@ -25,7 +22,7 @@ const meta: CanvasMeta<typeof MermaidRenderer> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof MermaidRenderer>;
+type Story = CanvasFrame<typeof MermaidRenderer>;
 const SourceChangeResetStory = () => {
   const [code, setCode] = useState<string>(mermaidFixtures.ps81Flowchart);
   return (
@@ -92,9 +89,6 @@ export const GanttChart: Story = {
 };
 export const DarkMode: Story = {
   id: "patterns-editors-mermaid-renderer--dark-mode",
-  globals: {
-    theme: "pstdio-dark",
-  },
 };
 export const InvalidSyntax: Story = {
   id: "patterns-editors-mermaid-renderer--invalid-syntax",
@@ -104,37 +98,30 @@ export const InvalidSyntax: Story = {
 };
 export const FullscreenOpen: Story = {
   id: "patterns-editors-mermaid-renderer--fullscreen-open",
-  tags: ["!manifest"],
   args: {
     initialFullscreenOpen: true,
   },
 };
 export const ZoomedInPan: Story = {
   id: "patterns-editors-mermaid-renderer--zoomed-in-pan",
-  tags: ["!manifest"],
   args: {
     initialZoom: 1.5,
   },
 };
 export const SourceChangeReset: Story = {
   id: "patterns-editors-mermaid-renderer--source-change-reset",
-  tags: ["!manifest"],
   render: () => <SourceChangeResetStory />,
 };
 export const ThemeToggle: Story = {
   id: "patterns-editors-mermaid-renderer--theme-toggle",
-  tags: ["!manifest"],
   render: () => <ThemeToggleStory />,
 };
 export const ZoomControlPlay: Story = {
   id: "patterns-editors-mermaid-renderer--zoom-control-play",
-  tags: ["!manifest"],
 };
 export const FullscreenPlay: Story = {
   id: "patterns-editors-mermaid-renderer--fullscreen-play",
-  tags: ["!manifest"],
 };
 export const PanGatePlay: Story = {
   id: "patterns-editors-mermaid-renderer--pan-gate-play",
-  tags: ["!manifest"],
 };

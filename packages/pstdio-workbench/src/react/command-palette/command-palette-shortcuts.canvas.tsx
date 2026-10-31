@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench, workbenchCommandPaletteMenuPath } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchCommandPalette } from "./command-palette";
@@ -25,7 +25,6 @@ const createPaletteWorkbench = () => {
 const meta = {
   title: "pstdio-workbench/Reference/Command palette/Assigned shortcuts",
   component: WorkbenchCommandPalette,
-  tags: ["palette-shortcuts"],
   args: { workbench: createPaletteWorkbench(), open: true, initialQuery: ">", onClose: () => undefined },
   render: (args) => (
     <WorkbenchThemeProvider>
@@ -36,7 +35,7 @@ const meta = {
   ),
 } satisfies CanvasMeta<typeof WorkbenchCommandPalette>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const AssignedShortcuts: Story = {
   id: "pstdio-workbench-reference-command-palette-assigned-shortcuts--assigned-shortcuts",
 };

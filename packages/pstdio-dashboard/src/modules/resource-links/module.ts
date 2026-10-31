@@ -56,7 +56,9 @@ export const createResourceLinksService = (
           )
             listener();
         }),
-        subscribeToExtensionEventReset(listener),
+        subscribeToExtensionEventReset((reset) => {
+          if (reset.projectId === undefined || reset.projectId === projectId) listener();
+        }),
       ];
       return () => {
         for (const dispose of disposers) dispose();

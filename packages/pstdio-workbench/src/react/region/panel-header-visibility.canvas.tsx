@@ -1,12 +1,12 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench, headerTrailingMenuPath } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createPanelWorkbench = (
   options: { changes?: boolean; collapsed?: boolean; action?: boolean; panelResource?: boolean } = {},
 ) => {
-  const page = { kind: "page", extensionId: "storybook", id: "panel-header" } as const;
+  const page = { kind: "page", extensionId: "preview", id: "panel-header" } as const;
   const workbench = createWorkbench({ startPage: page });
   workbench.modes.registerMode({
     id: "panel-header",
@@ -64,7 +64,7 @@ const createPanelWorkbench = (
       ...(options.panelResource ? { when: 'workbench.resource.type == "file"' } : {}),
     });
   }
-  workbench.pageLocations.switchProject("storybook-panel-header");
+  workbench.pageLocations.switchProject("preview-panel-header");
   workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "workspace", id: "workspace-1" } });
   if (options.panelResource) {
     const panel = workbench.layout.listPanelInstances("main")[0];
@@ -79,10 +79,10 @@ const createPanelWorkbench = (
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Panel header visibility",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SingleAvailableFixedPanel: Story = {
   id: "pstdio-workbench-reference-core-api-panel-header-visibility--single-available-fixed-panel",
   args: { workbench: createPanelWorkbench() },
@@ -108,7 +108,7 @@ export const SinglePageHeader: Story = {
   id: "pstdio-workbench-reference-core-api-panel-header-visibility--single-page-header",
   args: {
     workbench: (() => {
-      const page = { kind: "page", extensionId: "storybook", id: "start" } as const;
+      const page = { kind: "page", extensionId: "preview", id: "start" } as const;
       const core = createWorkbench({ startPage: page });
       core.modes.registerMode({
         id: "start",
@@ -133,7 +133,7 @@ export const SinglePageHeader: Story = {
         main: { kind: "view", view: { kind: "view", id: "start" }, cardinality: "one" },
         slots: [],
       });
-      core.pageLocations.switchProject("storybook-start-header");
+      core.pageLocations.switchProject("preview-start-header");
       core.pageLocations.navigate({ kind: "page", page });
       return core;
     })(),

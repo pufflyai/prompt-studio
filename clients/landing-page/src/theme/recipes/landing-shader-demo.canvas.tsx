@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Stack, Text, Textarea, useSlotRecipe } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createGlyphIcon, ScrollArea, Slider } from "@pstdio/ui";
 import { useState } from "react";
 import { landingStorySlotRecipe } from "./landing-story";
@@ -134,10 +134,10 @@ const meta = {
   title: "Theme/Landing Shader Demo",
   component: ShaderDemo,
   args: { withControls: false, connected: true },
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ShaderDemo>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Editor: Story = {
   id: "theme-landing-shader-demo--editor",
 };

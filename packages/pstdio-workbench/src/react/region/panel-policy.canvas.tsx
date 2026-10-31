@@ -1,14 +1,14 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { createPolicyWorkbench } from "./panel-policy.fixture";
 
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Panel policy",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SharedControls: Story = {
   id: "pstdio-workbench-reference-core-api-panel-policy--shared-controls",
   args: { workbench: createPolicyWorkbench() },

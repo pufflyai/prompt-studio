@@ -9,6 +9,7 @@ import { startRelayExtension } from "./extension-owner";
 import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
 import { startPublishedExtensions } from "./publications";
+import { createStorageChangeAnnouncer } from "./storage-changes";
 import { createWorkbenchConnections } from "./workbench-connections";
 
 export type RelayWorkbench = {
@@ -51,12 +52,8 @@ export const startRelayRuntime = async (input: {
   };
   let running: Promise<void> | undefined;
   let dirty = false;
-  const notify = (workbenchId: string) =>
-    deps.eventBus.emit("extension_events", "set", {
-      id: crypto.randomUUID(),
-      projectId: workbenchId,
-      eventId: "pstdio.event.storage-changed",
-    });
+  // Committed storage changes, local or downloaded, refresh the project's open views.
+  const storageChanges = createStorageChangeAnnouncer(deps.eventBus);
   // Shutdown closes every connection. That is not a status change to announce.
   const statusChanged = (workbenchId: string) => {
     if (!controller.signal.aborted) input.statusChanged?.(workbenchId);
@@ -92,7 +89,6 @@ export const startRelayRuntime = async (input: {
         access: access.get(workbenchId)!,
         deps,
         signal: controller.signal,
-        notify: () => notify(workbenchId),
         statusChanged: () => statusChanged(workbenchId),
       });
       if (controller.signal.aborted || workbenches.get(workbenchId) !== config) {
@@ -137,7 +133,7 @@ export const startRelayRuntime = async (input: {
       statusChanged(owner.workbenchId);
       return;
     }
-    notify(owner.workbenchId);
+    storageChanges.changed(owner.workbenchId);
     statusChanged(owner.workbenchId);
     const connection = connections.get(JSON.stringify([owner.workbenchId, owner.extensionId]));
     if (connection) connection.wake();
@@ -150,6 +146,14 @@ export const startRelayRuntime = async (input: {
   });
   await refresh();
   return {
+    async retry(workbenchId: string) {
+      await refresh();
+      publications.get(workbenchId)?.retry();
+      automations.get(workbenchId)?.retry();
+      coreDocuments.get(workbenchId)?.retry();
+      for (const connection of connections.values())
+        if (connection.owner.workbenchId === workbenchId) connection.retry();
+    },
     // Every owner of project data reports: core resource numbers and each enabled extension.
     // An owner that has not started yet counts as not downloaded.
     async status(workbenchId: string) {
@@ -202,6 +206,7 @@ export const startRelayRuntime = async (input: {
       stopCatalog();
       stopEvents();
       clearTimeout(retry);
+      storageChanges.close();
       controller.abort();
       for (const owners of coreOwners) owners.close();
       for (const connection of connections.values()) connection.close();

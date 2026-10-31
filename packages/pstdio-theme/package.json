@@ -1,0 +1,32 @@
+{
+  "name": "pstdio-theme",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun x --no-install tsc -p tsconfig.build.json",
+    "typecheck": "bun check",
+    "lint": "bun run typecheck && biome check .",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts --silent",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage"
+  },
+  "nx": {
+    "targets": {
+      "build": {
+        "outputs": [
+          "{projectRoot}/dist"
+        ]
+      }
+    }
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "typescript": "6.0.2"
+  }
+}

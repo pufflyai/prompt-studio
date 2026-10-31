@@ -1,5 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
@@ -7,7 +7,7 @@ import { WorkbenchStory } from "../../../examples/workbench-story";
 const createFixture = (pageOwned: boolean, resourceDependent: boolean) => {
   const workbench = createWorkbench();
   const pending = Promise.withResolvers<void>();
-  const page = { kind: "page", id: "sessions", extensionId: "storybook" } as const;
+  const page = { kind: "page", id: "sessions", extensionId: "preview" } as const;
   const open = (id: string) =>
     workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "session", id } });
   const sections = async () => {
@@ -39,7 +39,7 @@ const createFixture = (pageOwned: boolean, resourceDependent: boolean) => {
       ),
     },
   });
-  const parent = { kind: "page", id: "session-list", extensionId: "storybook" } as const;
+  const parent = { kind: "page", id: "session-list", extensionId: "preview" } as const;
   workbench.pages.registerPage({
     id: parent.id,
     ref: parent,
@@ -60,11 +60,11 @@ const createFixture = (pageOwned: boolean, resourceDependent: boolean) => {
     main: { kind: "view", view: { kind: "view", id: "session-guide" }, cardinality: "one" },
     slots: [],
   });
-  const owner = { kind: pageOwned ? ("page" as const) : ("mode" as const), id: page.id, extensionId: "storybook" };
+  const owner = { kind: pageOwned ? ("page" as const) : ("mode" as const), id: page.id, extensionId: "preview" };
   workbench.navigationTrees.registerContribution({
     id: "sessions",
     owner,
-    sourceExtensionId: "storybook",
+    sourceExtensionId: "preview",
     declarationIndex: 0,
     ...(!pageOwned && !resourceDependent ? { resolveResource: () => undefined } : {}),
     getSections: sections,
@@ -86,7 +86,7 @@ const createFixture = (pageOwned: boolean, resourceDependent: boolean) => {
     item: { kind: "view", presence: "fixed", view: { kind: "view", id: "session-navigation" } },
   });
   workbench.pages.store.subscribe(() => workbench.views.refreshView("session-navigation"));
-  workbench.pageLocations.setProject("storybook");
+  workbench.pageLocations.setProject("preview");
   open("first");
   return workbench;
 };
@@ -99,10 +99,10 @@ const meta = {
   title: "pstdio-workbench/Guides/Tree resource navigation",
   component: ResourceNavigation,
   args: { pageOwned: false, resourceDependent: false },
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ResourceNavigation>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SharedNavigation: Story = {
   id: "pstdio-workbench-guides-tree-resource-navigation--shared-navigation",
 };

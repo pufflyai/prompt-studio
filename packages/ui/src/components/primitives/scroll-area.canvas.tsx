@@ -1,5 +1,5 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
@@ -8,13 +8,7 @@ const layeredItems = Array.from({ length: 16 }, (_, index) => `Layered row ${ind
 const meta: CanvasMeta<typeof ScrollArea> = {
   title: "Components/Layout/Scroll Area",
   component: ScrollArea,
-  parameters: {
-    docs: {
-      description: {
-        component: "Shared scrolling surface. The default xs size uses a 2px thumb with an 8px pointer target.",
-      },
-    },
-  },
+  description: "Shared scrolling surface. The default xs size uses a 2px thumb with an 8px pointer target.",
   decorators: [
     (Story) => (
       <Box bg="bg" maxW="560px" p="lg">
@@ -34,7 +28,7 @@ const meta: CanvasMeta<typeof ScrollArea> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof ScrollArea>;
+type Story = CanvasFrame<typeof ScrollArea>;
 export const Vertical: Story = {
   id: "components-layout-scroll-area--vertical",
   render: (args) => (

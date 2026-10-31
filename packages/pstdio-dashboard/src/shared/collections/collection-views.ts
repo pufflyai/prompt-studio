@@ -156,7 +156,9 @@ export const createSharedCollectionViews = <
         )
           refresh();
       }, owner);
-      const stopReset = subscribeToExtensionEventReset(refresh, owner);
+      const stopReset = subscribeToExtensionEventReset((reset) => {
+        if (reset.projectId === undefined || reset.projectId === projectId) refresh();
+      }, owner);
       refresh();
       return () => {
         listeners.delete(listener);

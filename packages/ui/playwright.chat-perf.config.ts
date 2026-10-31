@@ -1,5 +1,4 @@
 import { defineConfig, devices } from "@playwright/test";
-import { benchmarkSampleCount } from "pstdio-benchmarks";
 
 const port = Number(process.env.UI_CANVAS_PORT ?? "6008");
 const runId = process.env.UI_PERF_RUN_ID ?? `ui-chat-perf-${Date.now()}-${process.pid}`;
@@ -12,7 +11,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  repeatEach: benchmarkSampleCount(3),
+  repeatEach: 1,
   outputDir: `test-results/${runId}`,
   reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
   use: {
@@ -27,7 +26,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `bun x --no-install lerna run build:previews --scope canvas-tests && CANVAS_PREVIEW_PORT=${port} bun ../canvas-tests/src/scripts/preview-server.ts`,
+    command: `bun x --no-install lerna run build:previews --scope canvas-tests && CANVAS_PREVIEW_PORT=${port} bun ../../extensions/canvas/scripts/serve-verification.ts`,
     port,
     reuseExistingServer: false,
     timeout: 120_000,

@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { File, Folder } from "lucide-react";
 import { TreeList } from "./tree-list";
 
@@ -8,7 +8,7 @@ const meta = {
   component: TreeList,
 } satisfies CanvasMeta<typeof TreeList>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const CompactFiles: Story = {
   id: "components-data-display-tree-list-files--compact-files",
   render: () => (

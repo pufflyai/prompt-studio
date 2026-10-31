@@ -28,6 +28,13 @@ const rows = {
   ],
 };
 describe("dashboard project data selectors", () => {
+  test("the project location belongs to this device's default workspace", () => {
+    const foreign = { ...rows.workspaces[0], id: "foreign", root_path: "/other-device", device: { id: "other" } };
+    const local = { ...rows.workspaces[0], root_path: null };
+    const projects = buildDashboardProjectsFromRows({ ...rows, workspaces: [local, foreign] });
+    expect(projects.find((project) => project.id === "project-1")?.folderPath).toBeNull();
+  });
+
   test("maps synced project rows into selectable workbench project resources", () => {
     const projects = buildDashboardProjectsFromRows(rows);
     expect(projects.map((project) => project.id)).toEqual(["project-2", "project-1"]);

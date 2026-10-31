@@ -1,15 +1,14 @@
 import { HStack, Icon, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { OSLogo, platformIcon } from "./os-logo";
 
 const meta = {
   title: "Landing/OS logos",
   component: OSLogo,
   args: { platform: "macOS" },
-  parameters: { layout: "centered" },
 } satisfies CanvasMeta<typeof OSLogo>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const MacOS: Story = {
   id: "landing-os-logos--mac-os",
 };

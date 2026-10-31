@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { PageRef } from "@pstdio/sdk/extensions";
 import {
   createWorkbench,
@@ -23,7 +23,7 @@ const createPanelWorkbench = (
     tabLabel?: string;
   } = {},
 ) => {
-  const page: PageRef = { extensionId: "storybook", kind: "page", id: "panel-tabs" };
+  const page: PageRef = { extensionId: "preview", kind: "page", id: "panel-tabs" };
   const workbench = createWorkbench({
     startPage: page,
     initialSidePanelMode: "attached",
@@ -120,7 +120,7 @@ const createPanelWorkbench = (
     },
     slots,
   });
-  workbench.pageLocations.switchProject("storybook-panel-tabs");
+  workbench.pageLocations.switchProject("preview-panel-tabs");
   if (options.menusOnly) {
     for (const region of ["secondary", "side"] as const) {
       const id = `${region}.menu`;
@@ -159,19 +159,12 @@ const createUnavailableMenuWorkbench = () => {
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Panel tabs",
   component: WorkbenchStory,
-  tags: ["autodocs"],
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "Single-resource Main pages have no tab. Pages supporting many resources and optional panels keep their last tab and Close button. alwaysShowTabs overrides the single-tab default. Header actions remain available without tabs.",
-      },
-    },
-  },
+  description:
+    "Single-resource Main pages have no tab. Pages supporting many resources and optional panels keep their last tab and Close button. alwaysShowTabs overrides the single-tab default. Header actions remain available without tabs.",
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SingleItems: Story = {
   id: "pstdio-workbench-reference-core-api-panel-tabs--single-items",
   args: { workbench: createPanelWorkbench() },

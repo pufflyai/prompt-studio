@@ -220,3 +220,21 @@ describe("live tool results", () => {
     expect(messages).toEqual([]);
   });
 });
+
+test("plan preview and review question have consecutive stream positions", async () => {
+  const messages = await collectStream([
+    stdout({
+      type: "control_request",
+      request_id: "plan",
+      request: { tool_name: "ExitPlanMode", tool_use_id: "plan-tool", input: { plan: "# Plan\n\nRun tests." } },
+    }),
+  ]);
+  expect(messages.map((message) => message.index)).toEqual([0, 1]);
+});
+
+test("native history does not offer an interrupted plan call without its permission preview", () => {
+  const messages = normalizeClaudeCodeMessages([
+    transcriptEntry("plan", "assistant", [{ type: "tool_use", id: "plan-tool", name: "ExitPlanMode", input: {} }]),
+  ]);
+  expect(messages).toEqual([]);
+});

@@ -319,6 +319,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0005 — PRD: Versioning and releases](../requirements/platform/0005-versioning-and-releases.md)
 - [0013 — PRD: Reliable documentation and extension authoring](../requirements/platform/0013-documentation-and-skills-reliability.md)
 - [0014 — PRD: Local-first sync with a blind relay (proposed)](../requirements/platform/0014-local-first-sync.md)
+- [0015 — PRD: Restore project files without a Git host (proposed)](../requirements/platform/0015-project-data-recovery.md)
 
 - Extension API plans: [0009 — PRD: Standardize extension storage](../requirements/platform/0009-standardize-storage-api.md), [0010 — PRD: Bound client storage and isolate sync failures](../requirements/platform/0010-bound-client-storage-and-isolate-sync-failures.md), [0011 — PRD: Simplify extension APIs](../requirements/platform/0011-simplify-extension-apis.md), [0012 — PRD: Align extension API shapes](../requirements/platform/0012-align-extension-api-shapes.md)
 
@@ -363,7 +364,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0039 — Temporary Node Windows directory removal](../adrs/0039-temporary-node-windows-directory-removal.md)
 - [0040 — Temporary export marker for bundled type files](../adrs/0040-temporary-dts-export-marker.md)
 - [0041 — Temporary Windows extension dependency links](../adrs/0041-temporary-windows-extension-dependency-links.md)
-- [0042 — Temporary docgen filter in the workbench Canvas](../adrs/0042-temporary-workbench-storybook-docgen-filter.md)
+- [0042 — Temporary docgen filter in the workbench Storybook (removed)](../adrs/0042-temporary-workbench-storybook-docgen-filter.md)
 - [0043 — Temporary CI Docker Hub mirror](../adrs/0043-temporary-ci-docker-hub-mirror.md)
 - [0044 — Temporary CI limits for heavy-setup tests](../adrs/0044-temporary-ci-limits-for-heavy-setup-tests.md)
 - [0045 — Temporary Remotion React subpath alias](../adrs/0045-temporary-remotion-react-subpath-alias.md)
@@ -413,3 +414,4 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0015 — Anchor context menus in their viewport](../lessons-learned/0015-anchor-context-menus-in-their-viewport.md)
 - [0016 — Bun promise assertions can deadlock Windows pipe reads](../lessons-learned/0016-bun-expect-rejects-blocks-pipe-reads.md)
 - [0017 — Unreaped processes look alive](../lessons-learned/0017-unreaped-processes-look-alive.md)
+- [0019 — Generated files bury pull requests](../lessons-learned/0019-generated-files-bury-pull-requests.md)

@@ -1,5 +1,5 @@
 import { CloseButton, Dialog } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import { WorkspaceProviderForm } from "./workspace-provider-form";
 
@@ -56,7 +56,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof WorkspaceProviderForm>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const GitAndRemote: Story = {
   id: "workspaces-provider-selection--git-and-remote",
 };

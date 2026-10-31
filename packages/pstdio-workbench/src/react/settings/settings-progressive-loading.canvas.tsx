@@ -1,5 +1,5 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -9,7 +9,7 @@ import { createWorkbenchSettingsModule, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } fro
 const registerFixture = (workbench: ReturnType<typeof createWorkbench>) => {
   const collections = { skills: Promise.withResolvers<string[]>(), templates: Promise.withResolvers<string[]>() };
   const contributions = workbench.registerModule({
-    id: "storybook.progressive-settings",
+    id: "preview.progressive-settings",
     activate(ctx) {
       ctx.views.registerView({
         id: "settings-content",
@@ -61,7 +61,7 @@ const registerFixture = (workbench: ReturnType<typeof createWorkbench>) => {
       }
     },
   });
-  const settings = workbench.registerModule(createWorkbenchSettingsModule({ resolveScopeId: () => "storybook" }));
+  const settings = workbench.registerModule(createWorkbenchSettingsModule({ resolveScopeId: () => "preview" }));
   return () => {
     settings.dispose();
     contributions.dispose();
@@ -88,10 +88,10 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ProgressiveSettings>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const IndependentCollections: Story = {
   id: "pstdio-workbench-reference-core-api-settings-progressive-loading--independent-collections",
 };

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { finish, type PullRequest, prepare, type Status } from "./pr-risk-labels";
+import { finish, type PullRequest, type PullRequestFile, prepare, type Status } from "./pr-risk-labels";
 
 function fixture(labels: string[] = []) {
   let pull: PullRequest & { merged: boolean } = {
@@ -12,7 +12,7 @@ function fixture(labels: string[] = []) {
     labels: labels.map((name) => ({ name })),
   };
   const statuses: Array<{ sha: string } & Status> = [];
-  let files = [
+  let files: PullRequestFile[] = [
     { filename: "packages/sdk/package.json", status: "modified" },
     { filename: "extensions/example/package.json", status: "modified" },
   ];

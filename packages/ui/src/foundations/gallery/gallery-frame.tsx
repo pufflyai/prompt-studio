@@ -2,8 +2,8 @@ import { Box, SimpleGrid, Stack, type StackProps, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react";
 
 // The gallery renders many component families on one canvas so a theme/token
-// change can be reviewed across the whole system at once (flip the Storybook
-// theme toolbar to compare). These helpers give every section a consistent shell.
+// change can be reviewed across the whole system at once (switch the frame
+// theme to compare). These helpers give every section a consistent shell.
 
 export interface GalleryFrameProps {
   kicker: string;

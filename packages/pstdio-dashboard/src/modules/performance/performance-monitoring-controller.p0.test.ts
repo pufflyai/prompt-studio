@@ -58,6 +58,22 @@ describe("browser performance monitoring", () => {
     expect(await controller.host.snapshot()).toBeNull();
   });
 
+  test("measures while a monitoring extension holds a capture and stops when the last one leaves", async () => {
+    const controller = createPerformanceMonitoringController(createPerformanceHost(undefined, createStorage()));
+    await controller.load();
+
+    const releaseMeter = await controller.retainCapture();
+    const releaseSecondWindow = await controller.retainCapture();
+    expect(controller.getEnabled()).toBe(true);
+    expect(await controller.host.snapshot()).not.toBeNull();
+
+    await releaseMeter();
+    expect(controller.getEnabled()).toBe(true);
+    await releaseSecondWindow();
+    expect(controller.getEnabled()).toBe(false);
+    expect(await controller.host.snapshot()).toBeNull();
+  });
+
   test("saves the switch for this browser and reports renderer measurements only", async () => {
     const storage = createStorage();
     const controller = createPerformanceMonitoringController(createPerformanceHost(undefined, storage));

@@ -1,5 +1,5 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { CollectionPageRequest } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { createWorkbench, type DataTableRendererQueryContext } from "../../core";
@@ -147,11 +147,10 @@ const PagedCollections = (props: { initiallyHeld?: boolean; withOtherTable?: boo
 const meta = {
   title: "pstdio-workbench/Guides/Paged collections",
   component: PagedCollections,
-  tags: ["!manifest"],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof PagedCollections>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const HiddenPageState: Story = {
   id: "pstdio-workbench-guides-paged-collections--hidden-page-state",
   args: { withOtherTable: true },

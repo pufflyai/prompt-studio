@@ -12,15 +12,9 @@ export interface StoryPreview {
   component?: string;
   componentImport?: string;
   viewportHeight: number;
+  defaultTheme?: string;
 }
-export interface DocumentPreview {
-  kind: "document";
-  id: string;
-  suite: string;
-  source: string;
-  content: string;
-}
-export type CatalogPreview = StoryPreview | DocumentPreview;
+export type CatalogPreview = StoryPreview;
 const groups = new Map<string, CanvasDefinition>();
 for (const story of catalog.stories) {
   const topic = storyTopic(story.title);
@@ -47,6 +41,7 @@ for (const story of catalog.stories) {
     component: story.component,
     componentImport: story.componentImport,
     viewportHeight: 960,
+    defaultTheme: story.defaultTheme,
   };
   let item = canvas.items.find((item) => item.preview?.source === story.source);
   if (!item) {
@@ -62,36 +57,5 @@ for (const story of catalog.stories) {
     addGroupItem(canvas, item);
   }
   (item.variants as CanvasVariant[]).push({ id: story.id, name: story.name, preview });
-}
-for (const document of catalog.documents) {
-  let section = document.suite === "ui" ? "Component guide" : "Workbench reference";
-  if (document.source.includes("/onboarding/")) section = "Workbench onboarding";
-  let canvas = groups.get(section);
-  if (!canvas) {
-    canvas = {
-      id: document.id,
-      name: section,
-      group: document.suite === "ui" ? "Design System" : "Workbench Core",
-      path: ["Documentation"],
-      items: [],
-      aliases: [],
-    };
-    groups.set(section, canvas);
-  }
-  (canvas.aliases as string[]).push(document.id);
-  addGroupItem(canvas, {
-    id: document.id,
-    name: document.name,
-    width: 1040,
-    height: 1400,
-    position: { x: 0, y: 0 },
-    preview: {
-      kind: "document",
-      id: document.id,
-      suite: document.suite,
-      source: document.source,
-      content: document.content,
-    },
-  });
 }
 export const catalogCanvases: CanvasDefinition[] = [...groups.values()].map(placeGroup);

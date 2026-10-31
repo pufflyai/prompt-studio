@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { TreeList } from "./tree-list";
 
@@ -8,7 +8,7 @@ const meta: CanvasMeta<typeof TreeList> = {
   component: TreeList,
 };
 export default meta;
-type Story = CanvasVariant<typeof TreeList>;
+type Story = CanvasFrame<typeof TreeList>;
 const KeyboardRows = (props: { empty?: boolean; moveSelection?: boolean; select?: boolean }) => {
   const { empty, moveSelection, select = true } = props;
   const [selected, setSelected] = useState<string[]>(empty ? [] : ["b", "c"]);
@@ -55,6 +55,5 @@ export const MovesWithoutSelection: Story = {
 };
 export const RangeFromEmptySelection: Story = {
   id: "components-data-display-tree-list-keyboard--range-from-empty-selection",
-  tags: ["!manifest"],
   render: () => <KeyboardRows empty />,
 };

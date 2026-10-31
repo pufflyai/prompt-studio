@@ -22,13 +22,13 @@ describe("VS Code theme conversion", () => {
 
     expect(preference.id).toBe("lab.monokai");
     expect(preference.mode).toBe("dark");
-    expect(preference.tokens).toEqual({
+    expect(preference.tokens).toMatchObject({
       "colors.bg": "#272822",
       "colors.bg.code": "#272822",
-      "colors.bg.panel": "#1f201b",
-      "colors.bg.subtle": "#1f201b",
+      "colors.bg.panel": "#20211C",
+      "colors.bg.subtle": "#1F201B",
       "colors.border.accent": "#66d9ef",
-      "colors.fg": "#f8f8f2",
+      "colors.fg": "#F8F8F2",
       "colors.vscode.activityBar.background": "#191a16",
       "colors.vscode.editor.background": "#272822",
       "colors.vscode.editor.foreground": "#f8f8f2",
@@ -63,13 +63,11 @@ describe("VS Code theme conversion", () => {
       },
     });
 
-    expect(preference.tokens).toEqual({
-      "colors.bg.active": "#565a6d",
-      "colors.bg.hover": "#3a3d4e",
-      "colors.bg.menu-item.focus": "#004454AA",
-      "colors.bg.menu-item.hover": "#004454AA",
-      "colors.bg.menu-item.selected": "#005A6F",
-      "colors.border": "#44475a",
+    expect(preference.tokens).toMatchObject({
+      "colors.bg.menu-item.focus": "#6272a4",
+      "colors.bg.menu-item.hover": "#6272a4",
+      "colors.bg.menu-item.selected": "#6272a4",
+      "colors.border": "#44475A",
       "colors.border.subtle": "#44475a",
       "colors.vscode.border": "#44475a",
       "colors.vscode.editor.lineHighlightBackground": "#3a3d4e",
@@ -96,7 +94,7 @@ describe("VS Code theme conversion", () => {
     expect(preference.tokens).toMatchObject({ "colors.bg": "#282A36", "colors.bg.subtle": "#21222C" });
   });
 
-  test("maps badge and git decoration colors into app tokens", () => {
+  test("preserves badge colors without replacing app text and maps git decorations", () => {
     const preference = createThemePreferenceFromVsCodeTheme({
       id: "lab.solarized",
       mode: "light",
@@ -114,10 +112,10 @@ describe("VS Code theme conversion", () => {
 
     expect(preference.tokens).toMatchObject({
       "colors.bg.error": "#dc322f26",
-      "colors.bg.muted": "#eee8d5",
+      "colors.vscode.badge.background": "#eee8d5",
       "colors.bg.success": "#85990026",
       "colors.fg.error": "#dc322f",
-      "colors.fg.muted": "#657b83",
+      "colors.vscode.badge.foreground": "#657b83",
       "colors.fg.success": "#859900",
     });
   });

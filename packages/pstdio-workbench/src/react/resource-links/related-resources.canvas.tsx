@@ -1,5 +1,5 @@
 import { Dialog } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ResourceAnchorPage, ResourceRef } from "@pstdio/sdk/extensions";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { RelatedResources } from "./related-resources";
@@ -65,7 +65,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof RelatedResources>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Related: Story = {
   id: "workbench-resource-links--related",
   args: {
