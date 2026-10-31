@@ -43,13 +43,13 @@ jobs:
                       visit(item)
           for path in pathlib.Path("evidence").rglob("packaged-benchmarks.json"):
               visit(json.loads(path.read_text()))
-          for label, job in [("Linux desktop", 124383343507), ("Windows unit 2", 124383343027), ("Linux x64 packaged CLI", 124383344311), ("Linux arm64 packaged CLI", 124383343999)]:
+          for label, job in [("Corrected landing image", 124386698352)]:
               annotations = json.loads(subprocess.check_output(["gh", "api", f"repos/pufflyai/prompt-studio/check-runs/{job}/annotations?per_page=100"]))
               sections.append("### " + label + "\n\n" + "\n".join(clean(item.get("message", "")) for item in annotations))
               try:
                   logs = subprocess.check_output(["gh", "api", "--allow-escape-sequences", f"repos/pufflyai/prompt-studio/actions/jobs/{job}/logs"], text=True, stderr=subprocess.STDOUT)
                   lines = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", logs).splitlines()
-                  indices = [index for index, line in enumerate(lines) if re.search(r"Error:|error: expect|\\(fail\\)|✗|Test timeout|✘|TimeoutError:|Expected:|Received:|tests failed|[1-9][0-9]* fail", line)]
+                  indices = [index for index, line in enumerate(lines) if re.search(r"Error:|ERROR:|error:|MISSING_EXPORT|UNRESOLVED|Cannot find|failed", line)]
                   selected = sorted({index for match in indices for index in range(max(0, match - 4), min(len(lines), match + 14))})
                   sections.append("### " + label + " failure context\n\n" + clean("\n".join(lines[index] for index in selected[-150:])))
               except Exception as error:
