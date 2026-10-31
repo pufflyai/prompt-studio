@@ -1,7 +1,9 @@
-import { Box, chakra, Flex, IconButton, Popover, Portal } from "@chakra-ui/react";
+import { Box, chakra, Flex, IconButton } from "@chakra-ui/react";
 import { Check, X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, type RefObject, useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 
 interface InlineEditActionsProps {
   cancelLabel: string;

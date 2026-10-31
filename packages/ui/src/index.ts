@@ -116,9 +116,13 @@ export {
   type ThemePreferenceOption,
   type ThemePreferenceTokens,
 } from "@/utils/apply-theme-preference";
-export { FileIconThemePreferenceProvider, useFileIconThemePreference } from "@/utils/file-icon-theme-preference";
+export {
+  FileIconThemePreferenceProvider,
+  FileIconThemePreferenceSurface,
+  useFileIconThemePreference,
+} from "@/utils/file-icon-theme-preference";
 export { getFileTypeIcon } from "@/utils/get-file-type-icon";
-export { type HostStorage, HostStorageProvider } from "@/utils/host-storage";
+export { type HostStorage, HostStorageProvider, useHostStorage } from "@/utils/host-storage";
 export { installPrismGlobal } from "@/utils/prism";
 export { resolveFileIconElement } from "@/utils/resolve-file-icon-element";
 export { resolveIconComponent } from "@/utils/resolve-icon-component";
@@ -126,5 +130,9 @@ export {
   getInitialThemePreference,
   ThemePreferenceProvider,
   type ThemePreferenceStorage,
+  ThemePreferenceSurface,
   useThemePreference,
 } from "@/utils/theme-preference";
+export { HostStorageScope } from "./utils/host-storage";
+export { ScopedDialog, ScopedMenu, ScopedPopover, ScopedTooltip, useScopedMenu } from "./utils/scoped-overlays";
+export { Portal, UiScopeProvider, UiScopeRoot, useUiScope } from "./utils/ui-scope";

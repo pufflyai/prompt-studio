@@ -1,4 +1,5 @@
-import { Box, Popover, Portal } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
+import { ScopedPopover as Popover, Portal } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { WorkbenchWidgetHost } from "../region/widget-host";

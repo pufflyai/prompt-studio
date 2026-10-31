@@ -1,5 +1,6 @@
-import { CloseButton, Dialog } from "@chakra-ui/react";
+import { CloseButton } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { ParamEditorLabel } from "./param-editor-label";
 
 const meta = {

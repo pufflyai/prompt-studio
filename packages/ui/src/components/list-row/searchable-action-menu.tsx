@@ -1,5 +1,6 @@
-import { IconButton, Menu } from "@chakra-ui/react";
+import { IconButton } from "@chakra-ui/react";
 import { SearchableMenu } from "@/components/overlays/searchable-menu";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import { ListRow } from "./list-row";
 import type { ListRowAction } from "./list-row.types";
 
