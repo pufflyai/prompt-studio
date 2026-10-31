@@ -1,11 +1,12 @@
 import { defineCommandPaletteResource } from "@pstdio/sdk/extensions";
-import { buildFiles, readBuild } from "./build-mount";
+import { buildChanged, buildFiles, readBuild } from "./build-mount";
 import { canvasResource, canvasTarget } from "./navigation";
 
 export const canvasResources = defineCommandPaletteResource({
   id: "canvases",
   title: "UI Canvas",
   resourceKind: canvasResource.ref,
+  refreshEvents: [buildChanged],
   query: async (ctx, input) => {
     const build = await readBuild(buildFiles(ctx));
     const canvases = build.status === "ready" ? build.manifest.canvases : [];

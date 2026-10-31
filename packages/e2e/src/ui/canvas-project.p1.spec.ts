@@ -7,10 +7,11 @@ import { folderProjectInput } from "../helpers/folder-project";
 
 const repoRoot = resolve(import.meta.dirname, "../../../..");
 
-const writeProject = (root: string, label: string) => {
+const writeProject = (root: string, label: string, color = "rgb(0, 128, 0)") => {
   const files: Record<string, string> = {
     "package.json": `{ "name": "canvas-project", "private": true }\n`,
-    "src/button.tsx": `export const Button = (props: { label: string }) => <button>${label}: {props.label}</button>;\n`,
+    "src/button.css": `.button { color: ${color}; }\n`,
+    "src/button.tsx": `import "./button.css";\nexport const Button = (props: { label: string }) => <button className="button">${label}: {props.label}</button>;\n`,
     "src/button.canvas.tsx": `import { Button } from "./button";
 export default { title: "Components/Button", component: Button };
 export const Primary = { args: { label: "Save" } };
@@ -23,8 +24,9 @@ export const Primary = { args: { label: "Save" } };
 };
 
 // Critical: seeing a project's own components is UI Canvas's primary task. A project that runs
-// `pstdio-canvas watch` must see its canvas, and an edit must reach the open frame.
-test("UI Canvas shows a project's own canvas and follows edits to its component", async ({
+// `pstdio-canvas watch` must see its canvas, and edits, including style-only ones, must reach the
+// open frame.
+test("UI Canvas shows a project's own canvas and follows edits to its component and styles", async ({
   page,
   request,
   baseURL,
@@ -44,6 +46,11 @@ test("UI Canvas shows a project's own canvas and follows edits to its component"
     });
     expect(created.ok(), await created.text()).toBe(true);
     const project = (await created.json()) as { id: string };
+    // Opened before any build exists, the navigation tree must fill in once the watcher writes one.
+    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.goto(`/projects/${project.id}/extensions/pstdio.canvas/canvases`);
+    await expect(page.getByText("UI Canvas", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Components", { exact: true })).toHaveCount(0);
     watcher = spawn("bun", [join(repoRoot, "packages/canvas/bin/pstdio-canvas.ts"), "watch", "--root", root], {
       stdio: "inherit",
     });
@@ -61,14 +68,22 @@ test("UI Canvas shows a project's own canvas and follows edits to its component"
       .poll(async () => (await list()).map((canvas) => canvas.id), { timeout: 30_000 })
       .toEqual(["src/button.canvas.tsx"]);
 
-    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await expect(page.getByText("Components", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await page.goto((await list())[0]!.href);
     const viewer = page.frameLocator('iframe[title="UI Canvas"]');
     const frame = viewer.frameLocator('iframe[data-frame-ready="true"]');
     await expect(frame.getByRole("button", { name: "Version 1: Save" })).toBeVisible({ timeout: 30_000 });
 
     writeProject(root, "Version 2");
-    await expect(frame.getByRole("button", { name: "Version 2: Save" })).toBeVisible({ timeout: 30_000 });
+    const button = frame.getByRole("button", { name: "Version 2: Save" });
+    await expect(button).toBeVisible({ timeout: 30_000 });
+    await expect(button).toHaveCSS("color", "rgb(0, 128, 0)");
+
+    // Bun keeps a chunk's name when only its stylesheet changes; the frame must still reload.
+    writeProject(root, "Version 2", "rgb(255, 0, 0)");
+    await expect(frame.getByRole("button", { name: "Version 2: Save" })).toHaveCSS("color", "rgb(255, 0, 0)", {
+      timeout: 30_000,
+    });
     await expect(viewer.locator("[data-ui-canvas-error]")).toHaveCount(0);
   } finally {
     watcher?.kill();

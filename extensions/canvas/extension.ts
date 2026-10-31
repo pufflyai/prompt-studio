@@ -7,7 +7,7 @@ import {
   packageAsset,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
-import { buildFiles, buildMount, readBuild } from "./src/build-mount";
+import { buildChanged, buildFiles, buildMount, readBuild } from "./src/build-mount";
 import { commands } from "./src/commands";
 import { canvasPage, canvasPanel, canvasResource, canvasView, homePage } from "./src/navigation";
 import { canvasTree } from "./src/navigation-tree";
@@ -19,6 +19,8 @@ const tree = defineView({
   icon: canvasResource.icon,
   body: {
     kind: "tree",
+    // The watcher's first build, and every added, renamed or removed canvas file, changes the list.
+    refreshEvents: [buildChanged],
     body: async (ctx) => {
       const build = await readBuild(buildFiles(ctx));
       return [

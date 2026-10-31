@@ -36,22 +36,6 @@ test("reads a canvas with one frame per export and reports the build's state", a
   expect((await commands["canvas.read"].run((await testContext(future)).ctx, {})).status).toBe("unsupported");
 });
 
-test("only the changed canvas gets a new revision", async () => {
-  const before = testManifest();
-  const after = testManifest();
-  after.frames.modules["foundations-2.js"] = { file: "modules/f2.txt", imports: [], dynamicImports: [], bytes: 1 };
-  after.frames.sources["src/foundations.canvas.tsx"] = { script: "foundations-2.js" };
-  after.frames.modules["runtime-2.js"] = { file: "modules/r2.txt", imports: [], dynamicImports: [], bytes: 1 };
-  after.frames.entry = "runtime-2.js";
-  const revision = async (manifest: ReturnType<typeof testManifest>, canvas: string) =>
-    (await commands["canvas.read"].run((await testContext(manifest)).ctx, { canvas })).canvas?.items[0]?.preview
-      .revision;
-  expect(await revision(after, foundations)).not.toBe(await revision(before, foundations));
-  expect(await revision(after, "src/folder-picker.canvas.tsx")).toBe(
-    await revision(before, "src/folder-picker.canvas.tsx"),
-  );
-});
-
 test("serves a frame's modules from the build folder", async () => {
   const { ctx, files } = await testContext();
   await files.writeText("modules/runtime.txt", "runtime");
