@@ -13,7 +13,7 @@ const performanceChecks = (family: string) => {
         "--suite",
         suite,
         "--out",
-        `test-results/production-performance/backend/${suite}.json`,
+        `test-results/production-performance/backend/${suite}.jsonl`,
       ],
     }));
   if (family === "browser")
@@ -54,6 +54,8 @@ if (import.meta.main) {
   const checks = performanceChecks(family);
   const directory = `test-results/production-performance/${family}`;
   mkdirSync(directory, { recursive: true });
+  if (family === "backend")
+    for (const check of checks) await Bun.write(`${directory}/${check.id}.jsonl`, "");
   const metadata = {
     sourceSha: process.env.SOURCE_SHA,
     versionSha: process.env.VERSION_SHA,
