@@ -171,6 +171,10 @@ export const createModuleContext = (
       registerHierarchyProvider: (provider) => track(core.resources.registerHierarchyProvider(provider)),
       registerProvider: (provider) => track(core.resources.registerProvider(provider)),
     },
+    presence: {
+      ...core.presence,
+      register: (source) => track(core.presence.register(source)),
+    },
     views: {
       ...core.views,
       registerView: (view, metadata) => track(core.views.registerView(view, withModuleMetadata(input, metadata))),

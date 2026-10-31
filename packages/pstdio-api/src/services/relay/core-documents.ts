@@ -1,12 +1,13 @@
-import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync";
+import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync/records";
 import {
   createDocumentRelay,
   createDocumentRelayConnection,
   createDocumentSync,
   fetchSyncSpaces,
 } from "pstdio-sync/relay";
-import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
+import type { RelayDeps } from "./deps";
+import { createNativeDocumentLive } from "./native-document-live";
 import { reconcileProjectInfo } from "./project-info-owner";
 import { createSyncQuarantine } from "./quarantine";
 import { createResourceNumberSync } from "./resource-number-sync";
@@ -18,7 +19,7 @@ import type { RelayWorkbench } from "./runtime";
  */
 export const startCoreDocumentSync = (input: {
   config: RelayWorkbench;
-  deps: ExtensionsRouteDeps;
+  deps: RelayDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
   signal: AbortSignal;
   statusChanged?: () => void;
@@ -46,30 +47,43 @@ export const startCoreDocumentSync = (input: {
   let generation: number | undefined;
   // Each reconnect replaces the document syncs. The first download stays done.
   let firstDownloaded = false;
+  const documentIds = new Set<string>();
+  let summary = { downloaded: false, pending: false, needsAttention: false };
   const close = () => {
     for (const sync of syncs) sync.close();
     syncs = [];
     numbers = undefined;
+    documentIds.clear();
   };
+  const live = createNativeDocumentLive({
+    projectId: config.workbenchId,
+    deviceId: config.environmentId,
+    live: deps.nativeDocuments.live,
+    send: (message) => connection.send(message),
+  });
   const connection = createDocumentRelayConnection({
     origin: config.relayOrigin,
     projectId: config.workbenchId,
     access,
     signal,
+    acceptsChange: (change) => change.spaceOwner === null && documentIds.has(change.documentId),
     synchronize: async (attemptSignal) => {
       const { project: space } = await fetchSyncSpaces({
         ...config,
         credential: config.renewalGrant,
         signal: attemptSignal,
       });
-      const relay = (documentId: string) =>
-        createDocumentRelay({
+      live.setSpace(space);
+      const relay = (documentId: string) => {
+        documentIds.add(documentId);
+        return createDocumentRelay({
           origin: config.relayOrigin,
           space,
           documentId,
           signal: attemptSignal,
           token: async () => (await access()).token,
         });
+      };
       const quarantine = (documentId: string) =>
         createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
       if (!syncs.length || attempt !== attemptSignal || generation !== space.generation) {
@@ -97,8 +111,13 @@ export const startCoreDocumentSync = (input: {
         quarantine,
       });
       await numbers!.synchronize();
-      if (!(await Promise.all([...syncs, numbers!].map((sync) => sync.status()))).every((status) => status.downloaded))
-        return;
+      const statuses = await Promise.all([...syncs, numbers!].map((sync) => sync.status()));
+      summary = {
+        downloaded: statuses.every((status) => status.downloaded),
+        pending: statuses.some((status) => status.pending),
+        needsAttention: statuses.some((status) => status.needsAttention),
+      };
+      if (!summary.downloaded) return;
       firstDownloaded = true;
       await reconcileProjectInfo(deps, config.workbenchId, checkedFolders);
     },
@@ -107,10 +126,19 @@ export const startCoreDocumentSync = (input: {
         { event: "relay.core-documents.reconnecting", workbenchId: config.workbenchId },
         "Core document sync will retry",
       ),
+    onLive: (message) => {
+      void live.receive(message).catch(() => {});
+    },
+    onReady: () => live.republish(),
+    onDisconnect: (reason) => {
+      if (reason === "renewal") live.renewAccess();
+      else live.clearSpace();
+    },
     onStatusChange: input.statusChanged,
   });
   const changed = (changed: { workbenchId: string }) => {
     if (changed.workbenchId !== owner.workbenchId) return;
+    summary = { ...summary, pending: true };
     connection.wake();
     input.statusChanged?.();
   };
@@ -121,20 +149,12 @@ export const startCoreDocumentSync = (input: {
   return {
     wake: connection.wake,
     retry: connection.retry,
-    done: connection.done.finally(() => {
+    done: connection.done.finally(async () => {
       for (const stop of stops) stop();
       close();
+      await live.close();
     }),
-    status: async () => {
-      const statuses = await Promise.all([...syncs, ...(numbers ? [numbers] : [])].map((sync) => sync.status()));
-      return {
-        firstDownloaded,
-        downloaded: !!numbers && statuses.length > 0 && statuses.every((status) => status.downloaded),
-        pending: statuses.some((status) => status.pending),
-        needsAttention: statuses.some((status) => status.needsAttention),
-        ...connection.status(),
-      };
-    },
+    status: async () => ({ firstDownloaded, ...summary, ...connection.status() }),
     close: () => controller.abort(),
   };
 };

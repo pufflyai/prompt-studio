@@ -1,20 +1,15 @@
-import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
-import type { WorkbenchCore, WorkbenchPanelInstance } from "../../core";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
 import { createWorkbenchEditingSessionAdapter } from "./webview-editing-session";
 import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
 import { createWebviewResourceActions } from "./webview-resource-actions";
+import { createWorkbenchTextEditingAdapter, type WorkbenchTextEditingInput } from "./webview-text-editing";
 
-interface CreateWorkbenchWebviewHostAdaptersInput {
-  workbench: WorkbenchCore;
-  placement?: WorkbenchPanelInstance;
+interface CreateWorkbenchWebviewHostAdaptersInput extends WorkbenchTextEditingInput {
   extensionId?: string;
-  projectId?: string;
   ownedPreferences?: WebviewOwnedPreferences;
   warn?: (message: string) => void;
-  hostEvents?: HostEventPublisher;
 }
 
 export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebviewHostAdaptersInput) => {
@@ -32,6 +27,7 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
       return resourceActions(request);
     },
     hostEvents,
+    textEditing: createWorkbenchTextEditingAdapter(input),
     editing: createWorkbenchEditingSessionAdapter(input),
     executeCommand: async (request, signal) => {
       requireCurrentViewer();

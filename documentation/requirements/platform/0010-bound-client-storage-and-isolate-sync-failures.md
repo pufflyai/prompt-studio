@@ -68,7 +68,7 @@ grows; current file size alone does not predict them.
 ## Failure cases
 
 The [production relay owner](../../../packages/pstdio-api/src/services/relay/extension-owner.ts) calls
-[synchronize()](../../../packages/pstdio-sync/src/synchronize.ts), and shared files use the
+[synchronize()](../../../packages/pstdio-sync/src/records/synchronize.ts), and shared files use the
 [journal-backed adapter](../../../packages/pstdio-api/src/services/shared-files/artifact-mount.ts).
 Automatic retention cleanup, eviction and compaction are not implemented. The middle column
 describes the current code; the required column defines the remaining capacity and recovery work.
@@ -242,14 +242,14 @@ Budget enforcement also changes calls that succeed today, so it ships only in a 
 - [Completed asset retention and project cleanup](../../guides/sdk/0002-assets.md#read-and-cancel)
 - [Complete-version storage and deduplication](../../../packages/pstdio-storage/src/services/asset-bytes.ts)
 - [Asset paths scoped by workbench and extension](../../../packages/pstdio-storage/src/storage/asset-byte-paths.ts)
-- [Snapshot assets include retained receipt references](../../../packages/pstdio-sync/src/asset-transfer.ts)
-- [Assets download before snapshot application and local submission](../../../packages/pstdio-sync/src/synchronize.ts)
+- [Snapshot assets include retained receipt references](../../../packages/pstdio-sync/src/records/asset-transfer.ts)
+- [Assets download before snapshot application and local submission](../../../packages/pstdio-sync/src/records/synchronize.ts)
 - [Production relay synchronization](../../../packages/pstdio-api/src/services/relay/extension-owner.ts)
 - [Document-backed shared files](../../../packages/pstdio-api/src/services/shared-files/artifact-mount.ts)
 - [Local document persistence](../../references/architecture/0026-synchronization-contracts.md#durable-local-state)
 - [Local save and synchronization outcomes](../../references/sdk/0004-storage.md#edits-and-outcomes)
-- [Read revisions name journal operations](../../../packages/pstdio-sync/src/projection.ts)
-- [Saving rebuilds the captured revision](../../../packages/pstdio-sync/src/authoring.ts)
-- [Asset verification currently precedes retry lookup](../../../packages/pstdio-sync/src/storage.ts)
+- [Read revisions name journal operations](../../../packages/pstdio-sync/src/records/projection.ts)
+- [Saving rebuilds the captured revision](../../../packages/pstdio-sync/src/records/authoring.ts)
+- [Asset verification currently precedes retry lookup](../../../packages/pstdio-sync/src/records/storage.ts)
 - [Connection-owned browser collections](../../../packages/pstdio-dashboard/src/lib/sync/collections.ts)
 - [Local-first sync PRD, which replaces the relay design this PRD assumed](0014-local-first-sync.md)

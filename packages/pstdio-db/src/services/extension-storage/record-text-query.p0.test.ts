@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
+import { createMemoryDocumentStore } from "pstdio-sync";
+import { createDocumentStorage } from "pstdio-sync/records";
 import type { Json, StoragePredicate } from "pstdio-sync-contracts";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";

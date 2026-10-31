@@ -1,7 +1,10 @@
 import { isNavigationTarget, type PageLocation, type ResourceResolution } from "@pstdio/sdk/extensions";
 import type { Disposable, ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { qualifyNavigationTarget } from "pstdio-api-contracts";
-import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-webview-broadcast";
+import {
+  subscribeToExtensionEventFeed,
+  subscribeToExtensionEventReset,
+} from "@/shared/extensions/extension-webview-broadcast";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
@@ -103,14 +106,14 @@ export const watchOpenExtensionResource = (
     route: string,
   ) => {
     const resolution = resolutionFromResult(value, { batch: resolver.batch, identityOf, open });
-    const resolved = toDashboardExtensionResource(resolution?.resource, input.projectId, input.metadata.resourceKinds);
     const latest = ctx.getPrimaryResource();
-    if (
-      !resolved ||
-      !latest ||
-      routeOf(latest) !== route ||
-      routeOf({ ...resolved, extensionId: resolved.extensionId ?? resolver.extensionId }) !== route
-    )
+    if (!latest || routeOf(latest) !== route) return;
+    if (!resolver.batch && value === null) {
+      ctx.resources.removed(latest);
+      return;
+    }
+    const resolved = toDashboardExtensionResource(resolution?.resource, input.projectId, input.metadata.resourceKinds);
+    if (!resolved || routeOf({ ...resolved, extensionId: resolved.extensionId ?? resolver.extensionId }) !== route)
       return;
     // The resolver describes the resource; the open page keeps its identity and route.
     const current = {
@@ -178,6 +181,9 @@ export const watchOpenExtensionResource = (
     if (isResourceRefreshEvent(event.id, resolver.extensionId)) void resolveOpenResource();
   });
   const placementResources = watchExtensionPlacementResources(ctx, input);
+  const unsubscribeReset = subscribeToExtensionEventReset(() => {
+    void resolveOpenResource();
+  });
   return {
     dispose() {
       placementResources.dispose();
@@ -185,6 +191,7 @@ export const watchOpenExtensionResource = (
       primarySubscription.dispose();
       unsubscribePages();
       unsubscribeEvents();
+      unsubscribeReset();
     },
   };
 };

@@ -27,6 +27,7 @@ import {
 } from "./boundary-rules";
 import { checkExtensionRegistryResolution, type ExtensionPackageDependencies } from "./extension-registry-resolution";
 import { sourceImports } from "./source-imports";
+import { syncModuleViolation } from "./sync-module-boundaries";
 
 const SKIP_DIRS = new Set(["node_modules", "dist", ".cache", "__test-tmp__", "_reference", "canvas-test-static"]);
 
@@ -238,6 +239,8 @@ const checkSourceImports = (pkg: WorkspacePackage, workspace: Workspace, errors:
       ? source.replace(/import\s+type\s+\{[^}]*\}\s+from\s+["']@pstdio\/canvas["'];?/g, "")
       : source;
     for (const specifier of sourceImports(importSource)) {
+      const syncViolation = syncModuleViolation(relativeFile, specifier);
+      if (syncViolation) errors.push(syncViolation);
       checkSpecifier(specifier, { pkg, pkgRoot, file, relativeFile, workspace }, errors);
     }
   }

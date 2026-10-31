@@ -111,3 +111,11 @@ export function splitFrontmatter(content: string) {
     body: content.slice(match[0].length),
   };
 }
+
+export function joinFrontmatter(frontmatter: string, body: string) {
+  if (frontmatter && body && !frontmatter.endsWith("\n")) {
+    const newline = frontmatter.includes("\r\n") ? "\r\n" : "\n";
+    return frontmatter + newline + body;
+  }
+  return frontmatter + body;
+}

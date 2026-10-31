@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { createStorageId } from "pstdio-api-contracts";
-import { coreOwnerId } from "pstdio-sync";
+import { coreOwnerId } from "pstdio-sync/records";
 import type * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";
 import { extension_resource_sequences as sequences } from "../db/schemas.pg";

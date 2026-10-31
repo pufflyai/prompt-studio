@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { createSyncSpace, sealBlob, sealState, sealUpdate } from "pstdio-sync";
+import { createSyncSpace, sealBlob, sealState, sealUpdate } from "pstdio-sync/encryption";
 import { body, createSyncFixture, randomId, sha256 } from "./sync-fixture";
 
 const fixture = createSyncFixture();

@@ -5,7 +5,7 @@
   "scripts": {
     "test": "bun run test:scripts && bun run test:cli && bun run test:ui && bun run test:vite-terminal",
     "test:cli": "bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/cli --timeout 30000 --silent",
-    "test:scripts": "bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/scripts src/helpers src/local-workspace-registry.p0.test.ts src/default-extensions.p0.test.ts --timeout 30000 --silent",
+    "test:scripts": "bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/scripts src/helpers src/fixtures src/local-workspace-registry.p0.test.ts src/default-extensions.p0.test.ts --timeout 30000 --silent",
     "test:packaged": "bun run test:packaged:cli && bun run test:packaged:browser && bun run test:packaged:benchmark",
     "test:packaged:cli": "bun src/packaged/run-packaged-cli-tests.ts",
     "test:packaged:browser": "playwright test --config playwright.packaged.config.ts",
@@ -27,8 +27,11 @@
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "3.1152.0",
+    "@chakra-ui/react": "3.32.0",
     "@playwright/test": "^1.60.0",
     "@pstdio/sdk": "workspace:*",
+    "@pstdio/ui": "workspace:*",
+    "@pstdio/workbench": "workspace:*",
     "@tanstack/react-query": "^5.90.21",
     "@types/cmd-shim": "5.0.2",
     "@types/pg": "^8.18.0",
@@ -45,6 +48,7 @@
     "local-example": "workspace:*",
     "pg": "^8.20.0",
     "pstdio": "workspace:*",
+    "pstdio-api": "workspace:*",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-artifacts": "workspace:*",
     "pstdio-base-themes": "workspace:*",
@@ -66,6 +70,7 @@
     "react-dom": "^19.0.0",
     "remote-workspaces": "workspace:*",
     "storage-scale-fixture": "workspace:*",
-    "workbench-fixture": "workspace:*"
+    "workbench-fixture": "workspace:*",
+    "yjs": "^13.6.29"
   }
 }

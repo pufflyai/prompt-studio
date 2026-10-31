@@ -1,6 +1,8 @@
 import { ProjectFolderMissingError } from "../../projects/project-folder-missing";
 import type { ExtensionsRouteDeps } from "../deps";
 
+export class WorkspaceTargetUnavailableError extends Error {}
+
 export interface WorkspaceTargetInput {
   projectId: string;
   workspaceId?: string;
@@ -25,8 +27,8 @@ export const resolveLocalWorkspaceTarget = async (
     (workspace.provider_state && workspace.provider_state !== "ready") ||
     (!provisioning && (workspace.initializing || workspace.setup_error))
   )
-    throw new Error(`This workspace has no ready local ${kind} target.`);
+    throw new WorkspaceTargetUnavailableError(`This workspace has no ready local ${kind} target.`);
   if (workspace.root_path) return { workspace, root: workspace.root_path };
   if (workspace.is_default) throw new ProjectFolderMissingError();
-  throw new Error(`This workspace has no local ${kind} target.`);
+  throw new WorkspaceTargetUnavailableError(`This workspace has no local ${kind} target.`);
 };

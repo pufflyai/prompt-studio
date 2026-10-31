@@ -18,7 +18,7 @@ import type {
 import { createHostCapabilityGate } from "../contract";
 import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
-import { capabilityReply } from "./capability-reply";
+import { callFrameCapability, frameDimensionChanged } from "./frame-capability";
 import type { HostEventPublisher } from "./host-event-publisher";
 import { extensionIframeAllow } from "./iframe-permissions";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
@@ -70,6 +70,8 @@ const frameShellStyle: CSSProperties = {
 
 export const EXTENSION_IFRAME_SANDBOX = "allow-scripts allow-forms allow-popups";
 const NO_KEYBOARD_SHORTCUTS: WebviewKeyboardShortcut[] = [];
+// Initialization runs after host.connect resolves.
+const guestReady = () => {};
 
 export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const {
@@ -123,10 +125,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   onErrorRef.current = onError;
   onDiagnosticsRef.current = onDiagnostics;
 
-  // Connect once per browsing context. React StrictMode dev double-mount and parent
-  // re-renders with unstable prop references (e.g. `webview.styles` rebuilt by `.map`)
-  // would otherwise tear down the live connection while the iframe keeps its state,
-  // leaving guest-to-host RPCs with no listener.
+  // Keep one connection per browsing context across StrictMode and unstable parent props.
   // biome-ignore lint/correctness/useExhaustiveDependencies: frameEpoch remounts the iframe this effect reads through iframeRef.
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -143,8 +142,9 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     iframe.addEventListener("load", onFrameLoad);
     const removeLoadListener = () => iframe.removeEventListener("load", onFrameLoad);
 
-    if (iframe.contentWindow === connectedWindowRef.current) return removeLoadListener;
-    connectedWindowRef.current = iframe.contentWindow;
+    const connectedWindow = iframe.contentWindow;
+    if (connectedWindow === connectedWindowRef.current) return removeLoadListener;
+    connectedWindowRef.current = connectedWindow;
 
     // Snapshot styles at connect time so subsequent parent re-renders that produce a
     // new array reference don't affect what we send in init.
@@ -193,25 +193,18 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           }),
         );
       },
-      contentHeightChanged: (height: number) => {
-        if (sizing === "content-height" && Number.isFinite(height) && height >= 0) setContentHeight(height);
-      },
-      contentWidthChanged: (width: number) => {
-        if (sizing === "content-width" && Number.isFinite(width) && width >= 0) setContentWidth(width);
-      },
+      contentHeightChanged: frameDimensionChanged(sizing === "content-height", setContentHeight),
+      contentWidthChanged: frameDimensionChanged(sizing === "content-width", setContentWidth),
       dispatchKeyboardEvent: async (event: import("pstdio-api-contracts").WebviewKeyboardEventParams) => {
         if (onKeyboardEventRef.current) return onKeyboardEventRef.current(event);
         document.dispatchEvent(new KeyboardEvent("keydown", { ...event, bubbles: true, cancelable: true }));
       },
-      ready: () => {
-        // no-op; init fires from host.connect().then() below.
-      },
+      ready: guestReady,
       runtimeError: (payload: { message: string; stack?: string }) => {
         onErrorRef.current?.(payload);
       },
-      call: async (request: HostCapabilityRequest) => {
-        return await capabilityReply(() => createCapabilityGate().call(request));
-      },
+      call: (request: HostCapabilityRequest) =>
+        callFrameCapability(iframe, iframeRef.current, connectedWindow, () => createCapabilityGate().call(request)),
     } satisfies GuestApi;
 
     const connect = () => {

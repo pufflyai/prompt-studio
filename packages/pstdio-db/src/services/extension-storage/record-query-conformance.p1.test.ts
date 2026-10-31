@@ -1,7 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
 import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
+import { createMemoryDocumentStore } from "pstdio-sync";
+import { createDocumentStorage } from "pstdio-sync/records";
 import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
 import { createProjectsDBService } from "../projects/projects";
 import { createDocumentStorageDBService } from "./document-storage";
@@ -375,7 +376,12 @@ test("indexed values and revisions match the authoritative document after a cold
   const authoritative = await reopened.list();
   expect(await f.records.readMany(["note"])).toEqual(authoritative);
   expect(await reopened.readMany(["note"])).toEqual(authoritative);
-  expect(await memory.readMany(["note"])).toEqual(authoritative);
+  const [memoryRecord] = await memory.readMany(["note"]);
+  // Independently authored histories have different lifetimes but the same values and revisions.
+  expect(authoritative[0].recordLifetime).toEqual(expect.any(String));
+  const expectedMemoryRecord = { ...authoritative[0], recordLifetime: expect.any(String) };
+  expect(memoryRecord).toEqual(expectedMemoryRecord);
+  expect(memoryRecord).not.toEqual(authoritative[0]);
   expect(authoritative[0].value).toEqual({ body: "x�y", "�key": ["\u0000", "😀", "�"] });
   const page = await reopened.query({ index: "text", where: { field: "body", op: "eq", value: "x�y" } });
   expect(page.records[0].revision).toBe(authoritative[0].revision);

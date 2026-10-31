@@ -6,6 +6,7 @@ import { type BoardViewsClient, createBoardViewsClient } from "./board-views";
 import { createExtensionClient, type ExtensionClient } from "./extensions";
 import { createFilesystemClient, type FilesystemClient } from "./filesystem";
 import { createLinkIconsClient, type LinkIconsClient } from "./link-icons";
+import { createNativeDocumentsClient, type NativeDocumentsClient } from "./native-documents";
 import { createNotificationsClient, type NotificationsClient } from "./notifications";
 import { createProjectClient, type ProjectClient } from "./projects";
 import type { ClientOptions } from "./request";
@@ -17,6 +18,7 @@ import { createSessionClient, type SessionClient } from "./sessions";
 import { createSettingsClient, type SettingsClient } from "./settings";
 import { createSkillClient, type SkillClient } from "./skills";
 import { createSyncClient, type SyncClient } from "./sync";
+import { createTextTransportClient, type TextEditingTransportClient } from "./text-editing";
 import { createWorkspaceClient, type WorkspaceClient } from "./workspaces";
 
 export type PstdioClient = {
@@ -32,6 +34,8 @@ export type PstdioClient = {
   agents: AgentClient;
   automation: AutomationClient;
   notifications: NotificationsClient;
+  nativeDocuments: NativeDocumentsClient;
+  textEditing: TextEditingTransportClient;
   extensions: ExtensionClient;
   settings: SettingsClient;
   linkIcons: LinkIconsClient;
@@ -55,6 +59,8 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     agents: createAgentClient(request, options),
     automation: createAutomationClient(request),
     notifications: createNotificationsClient(request),
+    nativeDocuments: createNativeDocumentsClient(request),
+    textEditing: createTextTransportClient(request),
     extensions: createExtensionClient(request, streams),
     settings: createSettingsClient(request),
     linkIcons: createLinkIconsClient(request),

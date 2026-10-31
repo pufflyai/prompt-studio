@@ -1,5 +1,6 @@
 import { and, eq, like } from "drizzle-orm";
-import { adoptResourceDocument, mergeResourceDocument, resourceDocumentState, type StorageOwner } from "pstdio-sync";
+import { NativeSourceRecoveryError, type StorageOwner } from "pstdio-sync";
+import { adoptResourceDocument, mergeResourceDocument, resourceDocumentState } from "pstdio-sync/records";
 import type { RecordBytes, RecordFrame } from "pstdio-sync/relay";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_documents } from "../../db/schemas.pg";
@@ -14,6 +15,8 @@ const batches = <T>(items: T[]) =>
   Array.from({ length: Math.ceil(items.length / batchSize) }, (_, index) =>
     items.slice(index * batchSize, (index + 1) * batchSize),
   );
+const adoptionBaseline = (saved: { folded_revision: number; state: Uint8Array | null }) =>
+  saved.folded_revision === 1 ? (saved.state ?? undefined) : undefined;
 
 /** Record IDs of every record document this owner holds, deleted ones included. */
 export const localRecordIds = async (tx: Pick<DbClient, "select">, owner: StorageOwner, limit?: number) => {
@@ -69,7 +72,8 @@ export const mergeRecords = async (
         });
         if (result.update) changes.push({ id, revision, foldedRevision, ...result });
         if (result.missing) missing.push({ recordId, bytes: result.missing });
-      } catch {
+      } catch (error) {
+        if (error instanceof NativeSourceRecoveryError) throw error;
         rejected.push(recordId);
       }
     }
@@ -97,7 +101,8 @@ export const acceptFrames = async (tx: Transaction, owner: StorageOwner, frames:
         await mergeResourceDocument(recordId, [...saved.get(recordId)!, ...(accepted.get(recordId) ?? [])], [bytes], {
           checkpoint: false,
         });
-    } catch {
+    } catch (error) {
+      if (error instanceof NativeSourceRecoveryError) throw error;
       rejected.push(index);
       continue;
     }
@@ -126,7 +131,7 @@ export const adoptRecords = async (tx: Transaction, owner: StorageOwner, remote:
           continue;
         }
         // The first checkpoint is the record as this device first saved it, until a fold replaces it.
-        const base = saved.folded_revision === 1 ? saved.state : undefined;
+        const base = adoptionBaseline(saved);
         const result = await adoptResourceDocument(recordId, remote.get(recordId)!, saved.states, base);
         changes.push({
           id,
@@ -137,7 +142,8 @@ export const adoptRecords = async (tx: Transaction, owner: StorageOwner, remote:
           record: result.record,
         });
         if (result.update) uploads.push({ recordId, bytes: result.update });
-      } catch {
+      } catch (error) {
+        if (error instanceof NativeSourceRecoveryError) throw error;
         rejected.push(recordId);
       }
     }

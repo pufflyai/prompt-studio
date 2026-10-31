@@ -10,7 +10,7 @@ using `storage.records`, the deprecated KV and collection methods, and the file 
 
 | Package | Responsibility |
 | --- | --- |
-| `pstdio-sync` | Shape-based edits, document reads, shared primitives, checkpoint staging and legacy namespaces. |
+| `pstdio-sync` | Record and text engines, transient presence, encryption and relay transport, separated by module APIs. |
 | `pstdio-db` | Durable document state, atomic current-record projections, query indexes, incremental updates, local retry identities, migration versions and the one-time journal import. |
 | `pstdio-api` | Public storage adapters, verified assets, file projection and notifications after local commits. |
 | `@pstdio/sdk/testing` | The same document engine with an in-memory store. |
@@ -22,6 +22,51 @@ the functions in `packages/pstdio-sync/src/encryption/` and keys from the accoun
 transport and latest-state uploads run in `pstdio-sync/src/relay/`. The runtime starts
 encrypted document sync for each enabled extension. Local reads and saves do not wait
 for the relay.
+
+## Sync modules
+
+The private package has six entry points. Consumers import the module that owns the
+operation instead of a root barrel that exposes every implementation.
+
+| Entry point | Owns | May depend on |
+| --- | --- | --- |
+| `pstdio-sync` | Shared storage ports, document history and byte utilities | Synchronization contracts and Yjs |
+| `pstdio-sync/text` | Plain shared text, initial histories, adoption, file diffs and browser replicas | Shared ports |
+| `pstdio-sync/records` | Structured values, resource lifetimes, record queries and record-to-text bindings | Shared ports and text |
+| `pstdio-sync/presence` | Transient, connection-owned participant values and leases | Shared owner identity |
+| `pstdio-sync/encryption` | Sealing, opening and sync-space keys | Shared byte utilities |
+| `pstdio-sync/relay` | Encrypted document and record-stream transport | Shared ports, records, text and encryption |
+
+The text engine has no Markdown, Monaco, React, HTTP or database dependency. Its
+replica owns received history and pending local frames. Workbench sessions supply
+the host client, connection lifecycle and close guard. Editor bindings own rendering,
+selection mapping, composition and undo. Adding a code-editor binding should reuse
+this text engine; it should not create another relay or persistence implementation.
+The legacy native view adapter admits Markdown. Registered text sources can resolve
+and project through ordinary extension callbacks without an open view. Public editor
+sessions and selected-source grants remain unimplemented in the PS-776 checkpoint;
+the private native session does not establish third-party editor parity. See
+[the shared text decision](../../adrs/0118-host-owned-shared-text-documents.md).
+
+Presence carries a caller-defined value. An icon editor can share selected icon IDs;
+a text editor can share history-relative selections. The host adapter validates and
+encodes its wire values, authenticates connections, owns heartbeat timers and supplies
+the transport. The presence engine never writes a database, file or update journal.
+The existing native-text wire protocol and its limits remain unchanged.
+
+Record and text data remain separate authorities for different data shapes. A ticket
+form uses record operations for structured fields and a bound text document for its
+body. Two editors of the same field must use that same authority. Raw JSON source
+editing does not automatically provide structured JSON merging or syntax validation.
+
+Database adapters and indexed projections stay in `pstdio-db`. Source authorization,
+HTTP endpoints and physical file saves stay in `pstdio-api`. Extension declarations
+stay in the public SDK. UI components remain outside `pstdio-sync`.
+
+`verify-boundaries.ts` checks this module dependency graph. Production imports across
+modules must use their entry points. Text and presence cannot import record, relay,
+host or editor implementations. Public workbench bundles inline their private text
+engine dependency; published packages do not require a private workspace package.
 
 ## Indexed current records
 

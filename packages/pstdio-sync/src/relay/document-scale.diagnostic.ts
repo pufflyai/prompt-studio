@@ -9,10 +9,10 @@ import {
   type Workload,
 } from "storage-scale-fixture";
 import * as Y from "yjs";
-import { verifyScaleOfflineMerges } from "../document-scale-offline";
-import { createDocumentStorage } from "../document-storage";
-import { memoryDocumentState } from "../document-types";
-import { cloneDocument, missingUpdate } from "./document-merge";
+import { verifyScaleOfflineMerges } from "../records/document-scale-offline.fixture";
+import { createDocumentStorage } from "../records/document-storage";
+import { cloneDocument, missingUpdate } from "../shared/document-merge";
+import { memoryDocumentState } from "../shared/document-types";
 
 // An explicit diagnostic, never discovered by bun test. Run in a disposable worker per owner.
 export const benchmarkSyncOwner = async (kind: Workload, count: number, churn: boolean) => {

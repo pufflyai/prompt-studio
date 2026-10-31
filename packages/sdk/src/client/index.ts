@@ -5,6 +5,7 @@ export type {
   HarnessAuthenticationQuestion,
   ProjectSyncState,
   ProjectSyncStatus,
+  TextEditingConnectionInput,
 } from "pstdio-api-contracts";
 export type { AccountClient, AccountDevice, AccountStatus, DeviceLogin } from "./account";
 export type { AgentAuthenticationOptions } from "./agent-authentication";
@@ -17,6 +18,7 @@ export type { CommandStreamClientEvent } from "./extension-stream";
 export type { ExtensionClient } from "./extensions";
 export type { DirectoryEntry, FilesystemClient, FilesystemDrive } from "./filesystem";
 export type { LinkIconsClient } from "./link-icons";
+export type { NativeDocumentJoined, NativeDocumentSnapshot, NativeDocumentsClient } from "./native-documents";
 export type { NotificationsClient } from "./notifications";
 export type { ProjectClient } from "./projects";
 export {
@@ -44,4 +46,5 @@ export {
   type SyncWriter,
   type SyncWriterProvider,
 } from "./sync";
+export type { TextEditingConnection, TextEditingTransportClient } from "./text-editing";
 export type { WorkspaceClient } from "./workspaces";

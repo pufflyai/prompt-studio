@@ -43,6 +43,8 @@ export const startPublishedExtensions = (input: {
     projectId: config.workbenchId,
     access,
     signal,
+    acceptsChange: documents.acceptsChange,
+    synchronizeChanged: documents.synchronizeChanged,
     synchronize: async (attemptSignal) => {
       await documents.synchronize(attemptSignal);
       const catalog = await openPublishedCatalog(deps, config.workbenchId, attemptSignal);
@@ -92,7 +94,7 @@ export const startPublishedExtensions = (input: {
     wake: connection.wake,
     done: connection.done.finally(() => {
       clearTimeout(retry);
-      documents.close();
+      return documents.close();
     }),
     status: async () => {
       const status = await documents.status();

@@ -60,5 +60,7 @@ export const readSseStream = async (
     }
   } finally {
     options.signal?.removeEventListener("abort", abort);
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
   }
 };

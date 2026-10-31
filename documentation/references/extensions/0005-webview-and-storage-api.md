@@ -415,6 +415,50 @@ Sessions cannot choose another project or extension, and an open key must use th
 Global views without a project do not provide this capability. Publish SDK and host support before
 adopting it in separately released extensions.
 
+## Shared text sessions (unreleased)
+
+Shared text uses `editing.text` and `client.editing.text`, separately from the
+structured editing sessions above. A source owner declares a `defineTextSource`
+provider and returns its `textDocument` reference from a file view. The view can
+select an installed text editor with `textEditor`; omission selects native Markdown.
+An editor opens its own source reference or the opaque grant from
+`client.editing.text.current()`. A grant cannot open an unselected foreign source.
+
+`client.editing.text.open(input)` returns a public text session. Its snapshot contains
+the Yjs `text`, `historyId`, current `editable` and `closing` permissions, `pending`,
+`connected`, friendly participants and an optional typed error. Import the matching
+Yjs 13 runtime normally. Use `session.transact` for local changes, or public Yjs
+transactions with `session.origin`. Remote changes must not become new local edits.
+
+`session.flush()` captures the current authored prefix and waits for local host
+durability. `session.project()` also waits for that prefix's source projection.
+Neither means cloud catch-up has finished. A failed projection retains acknowledged
+text. `session.retry()` retries recoverable work without changing its source lifetime.
+
+Bindings that queue renderer changes register `session.beforeReceive(handler)`.
+The handler synchronously drains those existing edits before incoming snapshots,
+including acknowledgement and recovery snapshots, can change the binding's history.
+It may run when text is unchanged. Do not await work or author a fresh edit on every
+notification. The returned function removes the handler. A thrown handler leaves
+the incoming snapshot available for retry; recursive receive and async handlers are
+rejected. Normal remote edits preserve local undo. When `historyId` changes, reset
+the old undo stack and selection anchors while retaining SDK-owned drafts.
+
+Use `session.createDraft()` for tentative composition and table edits. A draft owns
+its original causal history; `commit()` freezes and admits that delta, and retries
+the same submission. `cancel()` discards an unsubmitted draft, or one definitively
+refused as read only without an earlier uncertain admission. Retired-source recovery
+also allows explicit cancellation. Unknown admission and acknowledged edits cannot
+be undone by cancelling a draft. Register `session.beforeClose(handler)` to finish or explicitly
+cancel local drafts. An unfinished draft blocks ordinary close and keeps its recovery
+data available. `session.close()` waits for finalized authored edits to become durable.
+
+Authenticated HTTP consumers use
+[`client.textEditing.connect`](../sdk/0003-api.md#http-client), then the public guest
+adapter and `createTextEditingClient`. Both routes share source admission, frame
+validation and durability. These additions require matching unreleased host and SDK
+support before adoption by separately released extensions.
+
 ## Page params
 
 Page params are on `main` (extension API 0.1.7 and later) and ship in the release after 0.43.x. `@pstdio/sdk` 0.43.1 and the 0.43.1 app do not have them.
