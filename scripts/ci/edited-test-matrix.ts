@@ -91,7 +91,7 @@ export const createEditedTestMatrix = (files: string[], packages: Packages) => {
           stable: !covered,
           quarantine: files.some((file) => quarantined.has(file)),
           suite: "",
-          browser: !["bun", "api", "integration", "cli"].includes(group.runner),
+          browser: !["bun", "api", "integration"].includes(group.runner),
           desktop: group.runner === "desktop",
         };
       });
