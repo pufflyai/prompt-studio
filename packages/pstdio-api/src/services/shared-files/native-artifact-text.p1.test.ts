@@ -57,3 +57,45 @@ test("binding a stale original asset uses its genesis history without deleting l
     await f.close();
   }
 });
+
+test.each([
+  "same",
+  "different",
+])("recreating an artifact with %s bytes keeps retired text out of its new lifetime", async (kind) => {
+  const f = await artifactFilesFixture();
+  try {
+    const mount = f.mount();
+    const source = { recordId: f.recordId("documents/note.md"), documentKey: "4".repeat(64) };
+    await mount.writeText("note.md", "original");
+    const first = await f.storage.records.bindText({ ...source, content: "original" });
+    const retired = f.deps.extensionStorageService.openNativeTextDocument({
+      owner: f.owner,
+      fileId: first.documentKey,
+    });
+    await retired.save("retired edit");
+    expect(await mount.readText("note.md")).toBe("retired edit");
+    const beforeDelete = await Bun.file(f.pathFor("documents/note.md")).text();
+    expect(beforeDelete).toBe("retired edit");
+    const content = kind === "same" ? beforeDelete : "replacement";
+
+    await mount.delete("note.md");
+    expect(await mount.exists("note.md")).toBe(false);
+    await expect(f.deps.extensionStorageService.resolveNativeRecordAddress(f.owner, source)).rejects.toMatchObject({
+      code: "native_source_retired",
+    });
+    await mount.writeText("note.md", content);
+    const next = await f.storage.records.bindText({ ...source, content });
+    expect(next.documentKey).not.toBe(first.documentKey);
+    expect(next.lifetime).not.toBe(first.lifetime);
+
+    await retired.save("late retired edit");
+    const current = f.deps.extensionStorageService.openNativeTextDocument({ owner: f.owner, fileId: next.documentKey });
+    expect(await current.read()).toBe(content);
+    expect(await mount.readText("note.md")).toBe(content);
+    expect(await Bun.file(f.pathFor("documents/note.md")).text()).toBe(content);
+    expect(await f.mount().readText("note.md")).toBe(content);
+    expect((await f.storage.records.bindText({ ...source, content })).documentKey).toBe(next.documentKey);
+  } finally {
+    await f.close();
+  }
+});
