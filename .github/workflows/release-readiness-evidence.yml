@@ -47,7 +47,7 @@ jobs:
               annotations = json.loads(subprocess.check_output(["gh", "api", f"repos/pufflyai/prompt-studio/check-runs/{job}/annotations?per_page=100"]))
               sections.append("### " + label + "\n\n" + "\n".join(clean(item.get("message", "")) for item in annotations))
               try:
-                  logs = subprocess.check_output(["gh", "api", f"repos/pufflyai/prompt-studio/actions/jobs/{job}/logs"], text=True, stderr=subprocess.STDOUT)
+                  logs = subprocess.check_output(["gh", "api", "--allow-escape-sequences", f"repos/pufflyai/prompt-studio/actions/jobs/{job}/logs"], text=True, stderr=subprocess.STDOUT)
                   sections.append("### " + label + " log tail\n\n" + clean("\n".join(logs.splitlines()[-100:])))
               except Exception as error:
                   sections.append("### Log access error\n\n" + clean(str(error) + "\n" + str(getattr(error, "output", ""))))
