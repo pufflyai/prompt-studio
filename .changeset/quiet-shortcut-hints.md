@@ -1,5 +1,6 @@
 ---
 "@pstdio/workbench": patch
+"pstdio": patch
 ---
 
-Resolve ordinary menu and tree shortcut hints without enumerating unrelated discovery actions or measuring panel layout.
+Reduce shortcut discovery, unrelated region renders, and panel menu updates during resizing.
