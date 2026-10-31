@@ -98,7 +98,7 @@ export interface WorkbenchCoreContributionContext {
   ): void;
   resetLayout(): void;
   onDidResetLayout(listener: () => void): Disposable;
-  closePlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity): void;
+  closePlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity): void | Promise<void>;
   breadcrumbs: WorkbenchBreadcrumbController;
   commandPalette: WorkbenchCommandPaletteController;
   commandPaletteResources: CommandPaletteResourceRegistry;
