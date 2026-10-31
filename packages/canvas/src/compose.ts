@@ -48,6 +48,10 @@ export interface CanvasPreview {
   decorators?: CanvasDecorator[];
 }
 
+// The args and theme of the frame being rendered. Layers read them here, so each layer's component
+// stays the same across renders and React keeps the state inside the frame.
+const FrameContext = createContext<CanvasContext>({ args: {}, theme: { id: "light", mode: "light" } });
+
 export const composePreview = (
   frame: CanvasFrame | CanvasRender,
   meta: CanvasMeta = {},
@@ -57,11 +61,18 @@ export const composePreview = (
   const args = { ...meta.args, ...example.args };
   const render = example.render ?? meta.render;
   const decorators = [...(preview.decorators ?? []), ...(meta.decorators ?? []), ...(example.decorators ?? [])];
+  const Body = () => {
+    const current = useContext(FrameContext);
+    return render ? render(current.args, current) : createElement(meta.component ?? (() => null), current.args);
+  };
+  // Built once per preview: a decorator always receives the same inner component.
+  const Decorated = decorators.reduceRight<() => ReactNode>((Inner, decorator) => {
+    const Layer = () => decorator(Inner, useContext(FrameContext));
+    return Layer;
+  }, Body);
   const Component = (props: Record<string, unknown>) => {
     const current: CanvasContext = { args: { ...args, ...props }, theme: useContext(CanvasThemeContext) };
-    const body = () =>
-      render ? render(current.args, current) : createElement(meta.component ?? (() => null), current.args);
-    return decorators.reduceRight<() => ReactNode>((child, decorator) => () => decorator(child, current), body)();
+    return createElement(FrameContext.Provider, { value: current }, createElement(Decorated));
   };
   return {
     Component,

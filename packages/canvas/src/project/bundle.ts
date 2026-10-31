@@ -1,20 +1,9 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, extname, join, resolve } from "node:path";
 import type { CanvasEntry } from "./manifest";
+import { reactBase } from "./react-base";
 
 const RUNTIME = resolve(import.meta.dir, "../runtime/frame-runtime.tsx");
-
-// The folder React resolves from: the project root, or in a monorepo whose root installs no
-// React, the first canvas file that can resolve it.
-const reactBase = (root: string, canvases: CanvasEntry[]) => {
-  for (const folder of [root, ...canvases.map((canvas) => dirname(join(root, canvas.id)))]) {
-    try {
-      Bun.resolveSync("react", folder);
-      return folder;
-    } catch {}
-  }
-  return root;
-};
 
 // The runtime lives in this package, but every frame must share the project's single React.
 const projectReact = (base: string): Bun.BunPlugin => ({

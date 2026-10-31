@@ -1,7 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, utimesSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { gunzipSync } from "node:zlib";
 import { buildCanvases, readManifest, resolveOut } from "./build";
 import { createTestProject, sampleProject, writeProjectFiles } from "./test-project";
 
@@ -106,4 +107,9 @@ test("Vite-style ?raw and ?url imports build", async () => {
   });
   const { manifest } = await buildCanvases({ root });
   expect(manifest.canvases.find((canvas) => canvas.id === "src/query.canvas.tsx")?.error).toBeUndefined();
+  const script = manifest.frames.modules[manifest.frames.sources["src/query.canvas.tsx"]!.script]!;
+  const code = gunzipSync(Buffer.from(readFileSync(join(resolveOut(root), script.file), "utf8"), "base64")).toString();
+  // `?raw` is the file's text; `?url` is an address a sandboxed frame can load without the project.
+  expect(code).toContain(JSON.stringify("Plain notes"));
+  expect(code).toContain(`data:image/png;base64,${Buffer.from("png-bytes").toString("base64")}`);
 });

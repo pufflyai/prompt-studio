@@ -46,3 +46,30 @@ test("decorators receive the frame's theme", () => {
     '<main data-theme="dracula" data-mode="dark" data-bg="#282a36"><p>body</p></main>',
   );
 });
+
+test("decorators get the same inner component across renders, so frame state survives new args and themes", () => {
+  const seen = new Set<unknown>();
+  const preview = composePreview(
+    { render: (args: { label: string }) => createElement("button", null, args.label) },
+    {},
+    {
+      decorators: [
+        (Frame, { theme }) => {
+          seen.add(Frame);
+          return createElement("main", { "data-theme": theme.id }, createElement(Frame));
+        },
+      ],
+    },
+  );
+  const markup = (label: string, theme: CanvasTheme) =>
+    renderToStaticMarkup(
+      createElement(CanvasThemeContext.Provider, { value: theme }, createElement(preview.Component, { label })),
+    );
+
+  expect(markup("Save", { id: "light", mode: "light" })).toBe('<main data-theme="light"><button>Save</button></main>');
+  expect(markup("Saved", { id: "dracula", mode: "dark" })).toBe(
+    '<main data-theme="dracula"><button>Saved</button></main>',
+  );
+  // React remounts a subtree whose component type changes; one inner component means no remount.
+  expect(seen.size).toBe(1);
+});

@@ -8,7 +8,12 @@ export interface FrameBootstrap {
 
 let load: ((source: string) => Promise<FrameBootstrap>) | undefined;
 
-/** Code for a Canvas frame rendered inside this frame, such as UI Canvas's own canvases. */
+/**
+ * Code for a Canvas frame rendered inside this frame, such as UI Canvas's own canvases. Only frames
+ * whose code calls this function use the bridge: UI Canvas's frame component still uses its own
+ * loader, so its canvases show "Preview asset loader is unavailable" in a package build until UI
+ * Canvas imports this function from `@pstdio/canvas`.
+ */
 export const frameBootstrap = (source: string) => {
   if (!load) return Promise.reject(new Error("Preview asset loader is unavailable"));
   return load(source);
