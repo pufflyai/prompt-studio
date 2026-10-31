@@ -1,9 +1,11 @@
-import { HStack, IconButton, Menu, Portal, Tabs } from "@chakra-ui/react";
+import { HStack, IconButton, Tabs } from "@chakra-ui/react";
 import {
   buildTabVisibilityMenuActions,
   ListRow,
+  ScopedMenu as Menu,
   PANEL_HEADER_CONTROL_SIZE,
   PANEL_HEADER_TAB_SIZE,
+  Portal,
   ScrollArea,
   Tooltip,
 } from "@pstdio/ui";

@@ -1,6 +1,8 @@
-import { Box, HStack, IconButton, Menu, Portal, useRecipe } from "@chakra-ui/react";
+import { Box, HStack, IconButton, useRecipe } from "@chakra-ui/react";
 import { Fragment, type ReactElement } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import type { ListRowAction } from "./list-row.types";
 import { preventRowAccessoryDrag } from "./list-row-accessory-events";
 import { SearchableActionMenu } from "./searchable-action-menu";

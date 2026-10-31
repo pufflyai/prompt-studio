@@ -1,5 +1,5 @@
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
-import { Checkbox, DeleteConfirmationModal, toaster } from "@pstdio/ui";
+import { Checkbox, DeleteConfirmationModal, useToaster } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useState } from "react";
@@ -31,6 +31,7 @@ interface ExtensionDetailContainerProps {
 }
 
 export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) => {
+  const toaster = useToaster();
   const { projectId, extension, metadata, agents, onBack, settingsInput } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const settingsPanels =

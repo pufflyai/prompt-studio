@@ -79,32 +79,32 @@ const applyThemeTokens = (el: HTMLElement, theme: ThemePreferenceOption) => {
   el.setAttribute(THEME_TOKEN_PATHS_ATTRIBUTE, Object.keys(tokens).join("\n"));
 };
 
+export const applyThemePreferenceToElement = (
+  el: HTMLElement,
+  theme: ThemePreference,
+  themePreferences: readonly ThemePreferenceOption[] = defaultThemePreferences,
+) => {
+  const preference = themePreferences.find((option) => option.id === theme) ?? { id: theme, mode: "light" };
+  const mode = getThemePreferenceMode(theme, themePreferences);
+  const previousTheme = el.getAttribute("data-theme");
+  const previousPreference = themePreferences.find((option) => option.id === previousTheme);
+  el.classList.remove("light", "dark");
+  if (previousTheme) el.classList.remove(getThemePreferenceClassName(previousTheme));
+  removeTrackedThemeTokens(el);
+  removeThemeTokens(el, previousPreference);
+  applyThemeTokens(el, preference);
+  el.classList.add(...getThemePreferenceClassNames(theme, mode));
+  el.setAttribute("data-theme", theme);
+  el.setAttribute("data-color-mode", mode);
+  el.style.colorScheme = mode;
+};
+
 export const applyThemePreference = (
   theme: ThemePreference,
   themePreferences: readonly ThemePreferenceOption[] = defaultThemePreferences,
 ) => {
   if (typeof document === "undefined") return;
-
-  const root = document.documentElement;
-  const body = document.body;
-  const preference = themePreferences.find((option) => option.id === theme) ?? { id: theme, mode: "light" };
-  const mode = getThemePreferenceMode(theme, themePreferences);
-
-  for (const el of [root, body]) {
-    if (!el) continue;
-    const previousTheme = el.getAttribute("data-theme");
-    const previousPreference = themePreferences.find((option) => option.id === previousTheme);
-
-    el.classList.remove("light", "dark");
-    if (previousTheme) {
-      el.classList.remove(getThemePreferenceClassName(previousTheme));
-    }
-    removeTrackedThemeTokens(el);
-    removeThemeTokens(el, previousPreference);
-    applyThemeTokens(el, preference);
-    el.classList.add(...getThemePreferenceClassNames(theme, mode));
-    el.setAttribute("data-theme", theme);
-    el.setAttribute("data-color-mode", mode);
-    el.style.colorScheme = mode;
+  for (const element of [document.documentElement, document.body]) {
+    if (element) applyThemePreferenceToElement(element, theme, themePreferences);
   }
 };

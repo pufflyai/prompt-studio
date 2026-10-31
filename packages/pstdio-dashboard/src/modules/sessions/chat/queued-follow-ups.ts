@@ -21,8 +21,7 @@ const getPromptText = (message: SessionMessage) =>
   message.parts
     .filter((part) => part.type === "text")
     .map((part) => part.text)
-    .join("\n")
-    .trim();
+    .join("\n");
 
 const getAttachments = (message: SessionMessage): QueuedFollowUp["attachments"] =>
   message.parts
@@ -34,18 +33,6 @@ const getAttachments = (message: SessionMessage): QueuedFollowUp["attachments"] 
       url: part.url,
       size: part.size,
     }));
-
-const hasDeliveredRequest = (
-  request: PendingQueuedFollowUpsResponse["requests"][number] | undefined,
-  messages: SessionMessage[],
-) => {
-  if (!request?.steeringDelivery) return false;
-  const matching = messages.filter((message) => message.role === "user" && message.id === request.steeringDelivery!.id);
-  if (matching.length !== 1) return false;
-  return request.attachments.every((file) =>
-    matching[0].parts.some((part) => part.type === "file" && part.fileId === file.file_id),
-  );
-};
 
 // The server shows a sent message once the queue list shows its saved request, or once a new run
 // shows it in the conversation. Until then the client keeps its own copy.
@@ -67,6 +54,8 @@ export const splitQueuedFollowUps = (
 ) => {
   const transcriptMessages: SessionMessage[] = [];
   const queuedFollowUps: QueuedFollowUp[] = [];
+  const userIds = new Set(messages.filter((message) => message.role === "user").map((message) => message.id));
+  const handoffs = new Map<string, SessionMessage>();
 
   for (const message of messages) {
     const position = message.role === "user" ? getQueuedPromptPosition(message.id, sessionId) : null;
@@ -76,8 +65,12 @@ export const splitQueuedFollowUps = (
     }
 
     const request = queue?.requests.find((item) => item.queuePosition === position);
-    // A queued SSE snapshot can precede durable removal but arrive after the accepted user patch.
-    if (hasDeliveredRequest(request, messages)) continue;
+    if (request?.steeringDelivery) {
+      const id = request.steeringDelivery.id;
+      handoffs.set(id, message);
+      if (!userIds.has(id)) transcriptMessages.push({ ...message, id });
+      continue;
+    }
     queuedFollowUps.push({
       revision: request?.revision,
       model: request?.model,
@@ -105,5 +98,14 @@ export const splitQueuedFollowUps = (
       })),
     });
   }
-  return { messages: transcriptMessages, queuedFollowUps };
+  // The durable handoff owns optimism. Rejection clears it and restores the saved queue row;
+  // native confirmation replaces the projected message by the same identity.
+  const displayedMessages = transcriptMessages.map((message) => {
+    const handoff = handoffs.get(message.id);
+    if (!handoff) return message;
+    const files = new Set(message.parts.filter((part) => part.type === "file").map((part) => part.fileId ?? part.url));
+    const missing = handoff.parts.filter((part) => part.type === "file" && !files.has(part.fileId ?? part.url));
+    return missing.length ? { ...message, parts: [...message.parts, ...missing] } : message;
+  });
+  return { messages: displayedMessages, queuedFollowUps };
 };

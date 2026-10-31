@@ -1,5 +1,13 @@
-import { Box, HStack, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
-import { AttachedMenu, Header, PANEL_HEADER_CONTROL_SIZE, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
+import { Box, HStack, IconButton, Text } from "@chakra-ui/react";
+import {
+  AttachedMenu,
+  Header,
+  ScopedMenu as Menu,
+  PANEL_HEADER_CONTROL_SIZE,
+  Portal,
+  ResizableSplitLayout,
+  Tooltip,
+} from "@pstdio/ui";
 import type { ReactNode } from "react";
 import { useRef } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { type FrameArchiveInputs, publishFrameArchive } from "./frame-archive";
+import { hashNativeBuildSources } from "./native-source-hashes";
 import { generatedRoot, repoRoot } from "./story-catalog";
 import { catalogMetadata, parserInputs } from "./story-catalog-cache";
 
@@ -47,6 +48,7 @@ export const publishNativeBuild = async (
     "extensions/canvas/scripts/build-catalog.ts",
     "extensions/canvas/scripts/build-native-previews.ts",
     "extensions/canvas/scripts/native-build-output.ts",
+    "extensions/canvas/scripts/native-source-hashes.ts",
     "extensions/canvas/scripts/frame-archive.ts",
     ...["frame-runtime.tsx", "frame-navigation.ts", "frame-story.tsx"].map(
       (file) => `extensions/canvas/scripts/${file}`,
@@ -60,15 +62,7 @@ export const publishNativeBuild = async (
       .update(await readFile(resolve(repoRoot, source)))
       .digest("hex");
   }
-  for (const path of sources) {
-    if (!path.startsWith(`${repoRoot}/`) || path.includes("/node_modules/") || path.includes("/__test-tmp__/"))
-      continue;
-    if (path.includes("/catalog/generated/native") || path.endsWith("/catalog/generated/frame-bundle.ts")) continue;
-    if (!(await Bun.file(path).exists())) continue;
-    hashes[path.slice(repoRoot.length + 1)] = createHash("sha256")
-      .update(await readFile(path))
-      .digest("hex");
-  }
+  Object.assign(hashes, await hashNativeBuildSources(repoRoot, sources));
   for (const path of [
     "extensions/canvas/scripts/native-api-fixture.ts",
     "packages/canvas/src/native-preview-runtime.tsx",

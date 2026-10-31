@@ -14,9 +14,13 @@ export const useWebviewKeyboardShortcuts = (workbench: WorkbenchCore | undefined
     }
     const refresh = () => setShortcuts(createWebviewKeyboardShortcuts(workbench).shortcuts);
     const dispose = [
-      ...[workbench.keybindings.store, workbench.commands.store, workbench.context.store, workbench.layout.store].map(
-        (store) => store.subscribe(refresh),
-      ),
+      ...[
+        workbench.activation.store,
+        workbench.keybindings.store,
+        workbench.commands.store,
+        workbench.context.store,
+        workbench.layout.store,
+      ].map((store) => store.subscribe(refresh)),
       // Only the selected panel changes which shortcuts apply; previews and typed keys do not.
       workbench.keyboard.store.subscribeSelector((state) => state.selectedRegion, refresh),
     ];

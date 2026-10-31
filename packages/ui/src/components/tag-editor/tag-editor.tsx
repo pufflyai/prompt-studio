@@ -1,10 +1,10 @@
-import { Button, chakra, Editable, Flex, Icon, Menu, Stack, Text } from "@chakra-ui/react";
+import { Button, chakra, Editable, Flex, Icon, Stack, Text } from "@chakra-ui/react";
 import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Check, ChevronDown, Plus } from "lucide-react";
 import { useState } from "react";
-
 import { DeleteConfirmationModal } from "@/components/overlays/delete-confirmation-modal";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import { ListRow } from "../list-row/list-row";
 import type { TagEditorProps, TagEditorValue } from "./tag-editor.types";
 import { TagEditorHeading } from "./tag-editor-heading";

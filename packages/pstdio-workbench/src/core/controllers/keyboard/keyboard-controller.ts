@@ -166,6 +166,9 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       });
     },
     close: stop,
+    completeFocusRestore() {
+      store.setState({ restoreFocus: false });
+    },
     setPreview(preview: boolean) {
       if (store.getState().preview !== preview) store.setState({ preview });
     },

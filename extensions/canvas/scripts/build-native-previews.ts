@@ -15,24 +15,6 @@ const nativeDeclaration = `const __UI_CANVAS_NATIVE__={${Object.entries(previews
       `${JSON.stringify(name)}:()=>import(${JSON.stringify(nativeSources[name])}).then(module=>module[${JSON.stringify(preview.exportName)}])`,
   )
   .join(",")}};`;
-// Keep the shared rendering runtime together. Hundreds of tiny sandbox-local
-// module URLs otherwise repeat their loader work in every frame.
-const previewOutput = {
-  minify: true,
-  codeSplitting: {
-    groups: [
-      {
-        name: "preview-core",
-        test: /\/node_modules\/(?:react(?:-dom)?|scheduler|@chakra-ui|@emotion|@ark-ui|@zag-js)\//,
-        entriesAware: true,
-        // Merging groups with different entry sets creates initialization cycles.
-        // Keep each entry's dependency set intact without eager ESM wrappers.
-        entriesAwareMergeThreshold: 0,
-      },
-    ],
-  },
-};
-
 const buildPreviews = async (stories: Awaited<ReturnType<typeof generateStoryCatalog>>["stories"]) => {
   const packageRoot = resolve(repoRoot, suites.ui);
   const uiRequire = createRequire(resolve(repoRoot, "packages/ui/package.json"));
@@ -214,7 +196,7 @@ const buildPreviews = async (stories: Awaited<ReturnType<typeof generateStoryCat
       assetsInlineLimit: () => true,
       lib: { entry, name: "UICanvasPreview", formats: ["es"] },
       rollupOptions: {
-        output: previewOutput,
+        output: { minify: true },
       },
     },
   });

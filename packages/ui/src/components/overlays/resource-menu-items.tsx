@@ -1,6 +1,8 @@
-import { HStack, Icon, Menu, Portal } from "@chakra-ui/react";
+import { HStack, Icon } from "@chakra-ui/react";
 import { Check, ChevronRight } from "lucide-react";
 import { Fragment } from "react";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { ListRow } from "../list-row/list-row";
 import type { ResourceContextAction } from "./resource-context-menu";
 

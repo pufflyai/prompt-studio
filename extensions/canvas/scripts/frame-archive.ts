@@ -14,7 +14,7 @@ export interface FrameArchiveInputs {
 }
 const bindSources = (manifest: FrameManifest, sources: Map<string, string>, inputs: FrameArchiveInputs) => {
   const chunkFor = (source: string) => {
-    const chunk = sources.get(resolve(inputs.repoRoot, source));
+    const chunk = sources.get(resolve(inputs.repoRoot, source).replaceAll("\\", "/"));
     if (!chunk) throw new Error(`Preview source has no emitted module: ${source}`);
     return chunk;
   };
@@ -67,7 +67,8 @@ export const publishFrameArchive = async (root: string, outputs: NativeBuildOutp
       ...chunkStyles(output),
     };
     if (output.type === "chunk")
-      for (const source of Object.keys(output.modules ?? {})) sources.set(source.split("?")[0], output.fileName);
+      for (const source of Object.keys(output.modules ?? {}))
+        sources.set(source.split("?")[0].replaceAll("\\", "/"), output.fileName);
     else manifest.styles.push(output.fileName);
   }
   bindSources(manifest, sources, inputs);

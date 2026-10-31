@@ -1,6 +1,6 @@
 import { Button, HStack, Icon, Popover, Portal, Stack, Text } from "@chakra-ui/react";
 import type { ExtensionDiagnostic, ProjectExtensionInstance } from "@pstdio/sdk/api";
-import { toaster } from "@pstdio/ui";
+import { useToaster } from "@pstdio/ui";
 import { ArrowUpCircle, CircleAlert, Copy, TriangleAlert } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
@@ -15,6 +15,7 @@ export interface ExtensionHealthPopoverProps {
 }
 
 export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
+  const toaster = useToaster();
   const { extension, diagnostics, unavailableHarnesses = [], upgrading, onUpgrade } = props;
   const { t } = useTranslation("projects");
 
