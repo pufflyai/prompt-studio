@@ -1,8 +1,7 @@
 import { type CanvasZoomChange, zoomCanvas } from "@pstdio/ui/canvas";
-import type { CanvasDefinition } from "../canvases/definitions";
-import type { FrameTheme } from "../frame-themes";
+import type { CanvasDefinition } from "../canvas-model";
 import { createFrameStartupQueue } from "../frames/startup-queue";
-import type { Layout, LayoutChange } from "../layout";
+import type { FrameTheme, Layout, LayoutChange } from "../layout";
 import { frameAnchor, type ItemBounds, measureItem } from "./frame-bounds";
 import { createFrameSelection } from "./frame-selection";
 import { boundedCamera, boundedPoint, type Camera, fitCamera, type Point, revealCamera, zoomAt } from "./geometry";

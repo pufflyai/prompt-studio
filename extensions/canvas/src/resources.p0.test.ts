@@ -1,16 +1,13 @@
 import { expect, test } from "bun:test";
 import { canvasResources } from "./resources";
+import { testContext } from "./test-build";
 
-test("global resource search finds a grouped canvas by its scenarios and source paths", async () => {
-  const ctx = { projectId: "canvas-project", extensionId: "pstdio.canvas" } as never;
-  const result = await canvasResources.query(ctx, { query: "auto build", limit: 10 } as never);
-  expect(result.items.filter((item) => item.label === "Auto Build")).toHaveLength(1);
-  expect(result.items.find((item) => item.label === "Auto Build")!.target).toMatchObject({
-    kind: "page",
-    open: "preview",
-    resource: { type: "canvas" },
-  });
-  expect(await canvasResources.query(ctx, { query: "folder-picker-dialog.canvas", limit: 5 } as never)).toMatchObject({
-    items: [{ label: "Create folder" }],
-  });
+test("global resource search finds a canvas by its title, frames and file path", async () => {
+  const { ctx } = await testContext();
+  const search = (query: string) => canvasResources.query(ctx, { query, limit: 10 } as never);
+  const result = await search("create folder");
+  expect(result.items.map((item) => item.label)).toEqual(["Create folder"]);
+  expect(result.items[0]!.target).toMatchObject({ kind: "page", open: "preview", resource: { type: "canvas" } });
+  expect((await search("typography")).items.map((item) => item.label)).toEqual(["Foundations"]);
+  expect((await search("folder-picker.canvas")).items.map((item) => item.id)).toEqual(["src/folder-picker.canvas.tsx"]);
 });
