@@ -1,5 +1,5 @@
 import { Box, HStack, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { type ConversationFixture, fixtures, fixturesById } from "../mocks/library";
 import { ChatPanel } from "./chat-panel";
 
@@ -10,7 +10,7 @@ const meta: CanvasMeta<typeof FixtureRenderer> = {
     "Real conversation snippets curated from .pstdio-dev sessions. Pick a fixture to preview different tool-call shapes for each Harness.",
 };
 export default meta;
-type Story = CanvasVariant<typeof FixtureRenderer>;
+type Story = CanvasFrame<typeof FixtureRenderer>;
 interface FixtureRendererProps {
   fixtureId: string;
 }

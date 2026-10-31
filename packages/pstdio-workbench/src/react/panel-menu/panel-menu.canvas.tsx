@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
 import { Workbench, WorkbenchThemeProvider } from "../index";
@@ -86,7 +86,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof PanelMenuStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const ReopenAttached: Story = {
   id: "pstdio-workbench-reference-core-api-panel-menus--reopen-attached",
   args: { width: 700, menus: { closed: ["right"] } },

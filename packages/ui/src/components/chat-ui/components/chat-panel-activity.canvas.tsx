@@ -1,5 +1,5 @@
 import { Box, Button, IconButton } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ArrowUpRight, GitBranch } from "lucide-react";
 import { ChatPanel } from "./chat-panel";
 import { ChatWorkspaceHub } from "./workspace-hub";
@@ -59,7 +59,7 @@ const meta = {
   ),
 } satisfies CanvasMeta<typeof ChatPanel>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const WorkspaceActivity: Story = { id: "patterns-chat-activity-layout--workspace-activity" };
 export const Narrow: Story = {
   id: "patterns-chat-activity-layout--narrow",

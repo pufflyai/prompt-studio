@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { SessionAttachment } from "pstdio-api-contracts";
@@ -44,7 +44,7 @@ const meta: CanvasMeta<typeof SessionAttachmentControls> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof SessionAttachmentControls>;
+type Story = CanvasFrame<typeof SessionAttachmentControls>;
 const ControlsStory = (props: { initialAttachments?: SessionAttachment[]; uploading?: boolean }) => {
   const { initialAttachments = [], uploading = false } = props;
   const [attachments, setAttachments] = useState(initialAttachments);

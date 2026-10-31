@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { BackgroundMenu } from "./background-menu";
 
 const meta: CanvasMeta<typeof BackgroundMenu> = {
@@ -6,7 +6,7 @@ const meta: CanvasMeta<typeof BackgroundMenu> = {
   component: BackgroundMenu,
 };
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const TicketAndGate: Story = {
   id: "extensions-planner-timeline-create-menu--ticket-and-gate",
   args: { context: { x: 160, y: 160 }, onCreate: () => {}, onClose: () => {} },

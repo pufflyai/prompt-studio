@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
@@ -75,27 +75,27 @@ const DeferredMove = (props: { viewMode?: "board" | "list" }) => {
 };
 const meta: CanvasMeta = { title: "Renderers/Kanban/Move Preview" };
 export default meta;
-export const MoveBeforeSave: CanvasVariant = {
+export const MoveBeforeSave: CanvasFrame = {
   id: "renderers-kanban-move-preview--move-before-save",
   render: () => <DeferredMove />,
 };
-export const RestoreAfterFailure: CanvasVariant = {
+export const RestoreAfterFailure: CanvasFrame = {
   id: "renderers-kanban-move-preview--restore-after-failure",
   render: () => <DeferredMove />,
 };
-export const PropertyBeforeSave: CanvasVariant = {
+export const PropertyBeforeSave: CanvasFrame = {
   id: "renderers-kanban-move-preview--property-before-save",
   render: () => <DeferredMove />,
 };
-export const PropertyFailure: CanvasVariant = {
+export const PropertyFailure: CanvasFrame = {
   id: "renderers-kanban-move-preview--property-failure",
   render: () => <DeferredMove />,
 };
-export const ListPropertyBeforeSave: CanvasVariant = {
+export const ListPropertyBeforeSave: CanvasFrame = {
   id: "renderers-kanban-move-preview--list-property-before-save",
   render: () => <DeferredMove viewMode="list" />,
 };
-export const LaterPropertySurvivesFailure: CanvasVariant = {
+export const LaterPropertySurvivesFailure: CanvasFrame = {
   id: "renderers-kanban-move-preview--later-property-survives-failure",
   render: () => <DeferredMove />,
 };

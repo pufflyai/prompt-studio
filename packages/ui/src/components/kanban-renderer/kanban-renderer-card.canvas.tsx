@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 import { KanbanRendererCard } from "./kanban-renderer-card";
 
@@ -15,7 +15,7 @@ const meta: CanvasMeta<typeof KanbanRendererCard> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof KanbanRendererCard>;
+type Story = CanvasFrame<typeof KanbanRendererCard>;
 export const Default: Story = {
   id: "patterns-kanban-renderer-card--default",
   args: { title: "Implement user authentication flow" },

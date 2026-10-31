@@ -1,9 +1,9 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Bar } from "./collection-view-bar-story";
 
 const meta: CanvasMeta = { title: "Patterns/Collection View/Advanced Filter", fullscreen: true };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 export const NestedExactDateField: Story = {
   id: "patterns-collection-view-advanced-filter--nested-exact-date-field",
   render: () => (

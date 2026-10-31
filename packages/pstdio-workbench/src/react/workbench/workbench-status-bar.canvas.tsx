@@ -1,5 +1,5 @@
 import { Box, Button, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ComponentProps } from "react";
 import { createWorkbench } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -38,7 +38,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStatusBar>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SeveralOwnersInOrder: Story = {
   id: "pstdio-workbench-reference-core-api-status-bar--several-owners-in-order",
   args: { workbench },

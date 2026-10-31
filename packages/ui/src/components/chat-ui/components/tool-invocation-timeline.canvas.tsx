@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import type { SessionMessage, ToolPart } from "./message-types";
 import { ToolInvocationTimeline } from "./tool-invocation-timeline";
@@ -90,7 +90,7 @@ const meta: CanvasMeta<typeof ToolInvocationTimeline> = {
   component: ToolInvocationTimeline,
 };
 export default meta;
-type Story = CanvasVariant<typeof ToolInvocationTimeline>;
+type Story = CanvasFrame<typeof ToolInvocationTimeline>;
 export const LongTitles: Story = {
   id: "patterns-chat-tool-invocation-timeline--long-titles",
   description: "Long tool titles stay on one line in narrow chat panels. Expand a row to read its output.",

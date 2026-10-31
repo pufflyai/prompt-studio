@@ -1,5 +1,5 @@
 import { Box, Dialog, Portal, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { HarnessParamEditor } from "./harness-param-editor";
 import type { HarnessParamValues } from "./harness-param-values";
@@ -124,7 +124,7 @@ const meta: CanvasMeta<typeof HarnessParamEditorStory> = {
   component: HarnessParamEditorStory,
 };
 export default meta;
-type Story = CanvasVariant<typeof HarnessParamEditorStory>;
+type Story = CanvasFrame<typeof HarnessParamEditorStory>;
 export const Defaults: Story = {
   id: "components-param-editor-harness-run-options--defaults",
 };

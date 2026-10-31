@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { type ComponentProps, useState } from "react";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { AttachmentList } from "./attachment-list";
@@ -11,7 +11,7 @@ const meta: CanvasMeta<typeof ChatInput> = {
   component: ChatInput,
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatInput>;
+type Story = CanvasFrame<typeof ChatInput>;
 type ChatInputProps = ComponentProps<typeof ChatInput>;
 const initialState = createSerializedPromptState("");
 export const Default: Story = {

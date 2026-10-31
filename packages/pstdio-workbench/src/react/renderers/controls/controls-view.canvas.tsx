@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ControlValueMap } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
@@ -48,7 +48,7 @@ const meta: CanvasMeta<typeof ApplyControlsPreview> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof ApplyControlsPreview>;
+type Story = CanvasFrame<typeof ApplyControlsPreview>;
 export const ApplyResetAndRefresh: Story = {
   id: "workbench-controls-apply-drafts--apply-reset-and-refresh",
 };

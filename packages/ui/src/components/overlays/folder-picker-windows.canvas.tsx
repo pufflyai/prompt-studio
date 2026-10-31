@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { type ComponentProps, useState } from "react";
 import { FolderPickerDialog } from "./folder-picker-dialog";
 
@@ -49,7 +49,7 @@ const meta = {
   render: (args) => <WindowsPicker {...args} />,
 } satisfies CanvasMeta<typeof FolderPickerDialog>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Browse: Story = {
   id: "overlays-folderpickerdialog-windows--browse",
 };

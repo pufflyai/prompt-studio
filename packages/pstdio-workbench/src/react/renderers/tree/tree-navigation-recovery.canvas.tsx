@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
@@ -70,7 +70,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof NavigationRecovery>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const FailedRefresh: Story = {
   id: "pstdio-workbench-guides-navigation-recovery--failed-refresh",
 };

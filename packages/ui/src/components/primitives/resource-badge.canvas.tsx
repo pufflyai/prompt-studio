@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { MissingResourceBadge, ResourceBadge } from "@/components/primitives/resource-badge";
 
 const meta: CanvasMeta<typeof ResourceBadge> = {
@@ -6,7 +6,7 @@ const meta: CanvasMeta<typeof ResourceBadge> = {
   component: ResourceBadge,
 };
 export default meta;
-type Story = CanvasVariant<typeof ResourceBadge>;
+type Story = CanvasFrame<typeof ResourceBadge>;
 export const Default: Story = {
   id: "components-data-display-resource-badge--default",
   args: {

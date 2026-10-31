@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "../core";
 import { createCanvasArtifactsBridgeDocument } from "./artifacts-webview/bridge-document.canvas-fixture";
 import { createArtifactsWebviewExampleModule } from "./artifacts-webview/module";
@@ -19,7 +19,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const helloWorldWorkbench = createWorkbench();
 helloWorldWorkbench.registerModule(createHelloWorldModule());
 const pageCompositionWorkbench = createPageCompositionWorkbench();

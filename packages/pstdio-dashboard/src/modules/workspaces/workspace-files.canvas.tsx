@@ -1,5 +1,5 @@
 import { Box, Button } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -204,7 +204,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkspaceFilesStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const ChangesSelected: Story = {
   id: "modules-workspaces-files-and-changes--changes-selected",
   args: { state: "diffs" },

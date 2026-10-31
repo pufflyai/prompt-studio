@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DependencyTimeline } from "./dependency-timeline";
 import { DependencyTimelineExample } from "./dependency-timeline.examples";
 
@@ -19,7 +19,7 @@ const meta: CanvasMeta<typeof DependencyTimeline> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof DependencyTimeline>;
+type Story = CanvasFrame<typeof DependencyTimeline>;
 export const ReleasePlan: Story = {
   id: "components-layout-dependency-timeline--release-plan",
 };

@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ViewSort } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { DisplaySortControl } from "./display-sort-control";
@@ -8,7 +8,7 @@ const meta: CanvasMeta<typeof DisplaySortControl> = {
   component: DisplaySortControl,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const Ordering = () => {
   const [sorts, setSorts] = useState<ViewSort[]>([]);
   return (

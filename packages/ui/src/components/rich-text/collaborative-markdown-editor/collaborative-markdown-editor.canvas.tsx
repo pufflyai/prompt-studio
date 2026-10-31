@@ -8,7 +8,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import type { Provider } from "@lexical/yjs";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from "y-protocols/awareness";
 import * as Y from "yjs";
@@ -179,9 +179,9 @@ const meta: CanvasMeta<typeof CollaborativeMarkdownEditor> = {
   component: CollaborativeMarkdownEditor,
 };
 export default meta;
-type Story = CanvasVariant<typeof CollaborativeMarkdownEditor>;
+type Story = CanvasFrame<typeof CollaborativeMarkdownEditor>;
 /** Two editors syncing in real-time via in-memory Yjs. Type in one pane to see changes in the other. */
-export const SplitView: CanvasVariant = {
+export const SplitView: CanvasFrame = {
   id: "patterns-editors-collaborative-markdown-editor--split-view",
   render: () => <SplitViewDemo />,
 };

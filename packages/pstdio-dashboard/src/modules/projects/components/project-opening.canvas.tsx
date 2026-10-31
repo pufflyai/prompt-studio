@@ -1,5 +1,5 @@
 import { Dialog } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ProjectOpening } from "./project-opening";
 
 const meta = {
@@ -20,7 +20,7 @@ const meta = {
   args: { projectName: "Shared notes", onRetry: () => {}, onBack: () => {} },
 } satisfies CanvasMeta<typeof ProjectOpening>;
 export default meta;
-type Variant = CanvasVariant<typeof meta>;
+type Variant = CanvasFrame<typeof meta>;
 export const PreparingFolder: Variant = { id: "projects-opening-a-cloud-project--preparing-folder" };
 export const Downloading: Variant = {
   id: "projects-opening-a-cloud-project--downloading",

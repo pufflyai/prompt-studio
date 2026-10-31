@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ShapeField } from "../../components/shapes/shape-field";
 
 const meta = {
@@ -14,7 +14,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof ShapeField>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const DraggableAgents: Story = {
   id: "theme-tool-assembly--draggable-agents",
   description:

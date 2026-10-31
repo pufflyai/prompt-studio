@@ -1,5 +1,5 @@
 import { Box, Button, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useRef, useState } from "react";
 import { Tooltip } from "./tooltip";
 
@@ -10,7 +10,7 @@ const meta = {
     "Tooltips wait 380 ms on the first hover. Pass overflowRef for a label tooltip that is useful only when its text is clipped. The tooltip updates when the label or its available width changes. Keyboard focus uses the shared tooltip behavior.",
 } satisfies CanvasMeta<typeof Tooltip>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Default: Story = {
   id: "components-overlays-tooltip--default",
   args: { content: "Reasoning effort", children: <Button>High</Button> },

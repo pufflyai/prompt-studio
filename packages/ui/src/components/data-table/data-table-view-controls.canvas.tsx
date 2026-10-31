@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DEFAULT_DATA_TABLE_SETTINGS } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { DataTable } from "./data-table";
@@ -12,7 +12,7 @@ const meta: CanvasMeta<typeof DataTable> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const statuses = ["In review", "In progress", "Todo", "Backlog"];
 const priorities = ["Urgent", "High", "Medium"];
 const titles = [

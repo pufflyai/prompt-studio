@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { DisplayMenuSelect } from "./display-menu";
 
@@ -22,7 +22,7 @@ const LongGroupingMenu = () => {
 };
 const meta: CanvasMeta = { title: "Patterns/Collection View/Display Select" };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 export const LongOptions: Story = {
   id: "patterns-collection-view-display-select--long-options",
   render: () => <LongGroupingMenu />,

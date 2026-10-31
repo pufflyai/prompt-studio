@@ -1,5 +1,5 @@
 import { Flex, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { DEFAULT_PLATFORM, DEFAULT_SUITES } from "../benchmarks/platforms";
 import { storyRuns } from "../webview/story-fixtures";
@@ -44,7 +44,7 @@ const meta: CanvasMeta<typeof RunsStory> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof RunsStory>;
+type Story = CanvasFrame<typeof RunsStory>;
 export const Runs: Story = {
   id: "extensions-prompt-studio-dev-benchmark-runs--runs",
 };

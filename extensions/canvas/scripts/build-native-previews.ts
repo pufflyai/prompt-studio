@@ -7,10 +7,7 @@ import { type NativeBuildOutput, publishNativeBuild } from "./native-build-outpu
 import { generatedRoot, generateStoryCatalog, repoRoot, suites } from "./story-catalog";
 
 const nativeSources = Object.fromEntries(
-  Object.entries(previews).map(([name, preview]) => [
-    name,
-    resolve(import.meta.dir, "../src/canvases", preview.source),
-  ]),
+  Object.entries(previews).map(([name, preview]) => [name, resolve(repoRoot, preview.source)]),
 );
 const nativeDeclaration = `const __UI_CANVAS_NATIVE__={${Object.entries(previews)
   .map(
@@ -187,6 +184,9 @@ const buildPreviews = async (stories: Awaited<ReturnType<typeof generateStoryCat
             return 'import {ChakraProvider} from "@chakra-ui/react"; import {landingTheme} from "../theme/theme"; export const RootProvider = ({children}) => <ChakraProvider value={landingTheme}>{children}</ChakraProvider>;';
           if (id === resolve(repoRoot, suites.website, "src/services/analytics.ts"))
             return "export const loadAnalytics = async () => ({capture: () => {}});";
+          // The design system's preview would load its sources next to `@pstdio/ui` and break this
+          // catalog's shared chunks; the runtime themes these frames itself.
+          if (id === resolve(repoRoot, suites.ui, ".canvas/preview.tsx")) return "export default {};";
           if (id === resolve(repoRoot, suites.ui, "src/utils/theme-preference.tsx"))
             return 'export {getInitialThemePreference, ThemePreferenceProvider, useThemePreference} from "@pstdio/ui";';
           if (id.endsWith("/catalog/generated/native-preview.ts"))
@@ -195,7 +195,6 @@ const buildPreviews = async (stories: Awaited<ReturnType<typeof generateStoryCat
             return `export * from ${JSON.stringify(resolve(import.meta.dir, "frame-storage-fixture.ts"))};`;
           if (id === resolve(repoRoot, suites.dashboard, "src/lib/api.ts"))
             return `export * from ${JSON.stringify(resolve(import.meta.dir, "native-api-fixture.ts"))};`;
-          if (id === resolve(repoRoot, suites.ui, ".canvas/preview.tsx")) return "export default {};";
         },
       },
     ],

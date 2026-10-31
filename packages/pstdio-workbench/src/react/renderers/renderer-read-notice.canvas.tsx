@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { RendererReadNotice } from "./renderer-read-notice";
 
 const meta = {
@@ -8,7 +8,7 @@ const meta = {
   args: { error: "The view could not be refreshed. Try again.", retry: () => {} },
 } satisfies CanvasMeta<typeof RendererReadNotice>;
 export default meta;
-type Story = CanvasVariant<typeof RendererReadNotice>;
+type Story = CanvasFrame<typeof RendererReadNotice>;
 export const InitialFailure: Story = {
   id: "renderers-read-failure--initial-failure",
 };

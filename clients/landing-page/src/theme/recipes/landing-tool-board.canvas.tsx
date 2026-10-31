@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ToolBoard } from "../../components/shapes/tool-board";
 import { BOARD_PREVIEW_HEIGHT, BOARD_WIDTH, SLOT_TRAY_HEIGHT } from "../../services/shapes/assembly-layout";
 
@@ -20,7 +20,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof ToolBoard>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Empty: Story = {
   id: "theme-progressive-tool-board--empty",
 };

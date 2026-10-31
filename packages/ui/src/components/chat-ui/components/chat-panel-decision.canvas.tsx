@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ChatPanel, type ChatPanelProps } from "./chat-panel";
 import { HarnessControls } from "./harness-controls";
@@ -70,7 +70,7 @@ const meta: CanvasMeta<typeof ChatPanel> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 export const PlanApproval: Story = {
   id: "patterns-chat-composer-decision--plan-approval",
 };

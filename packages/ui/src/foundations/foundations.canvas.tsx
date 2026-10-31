@@ -1,5 +1,7 @@
 import { Box, Flex, Grid, Stack, Text } from "@chakra-ui/react";
 
+export default { title: "Design System/Foundations" };
+
 export const FoundationColors = () => (
   <Stack p="md" gap="lg">
     <Text textStyle="heading/M">Colors</Text>

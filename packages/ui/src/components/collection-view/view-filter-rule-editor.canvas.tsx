@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ViewFilterRule } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { findField } from "./collection-view-fields";
@@ -11,7 +11,7 @@ const meta: CanvasMeta<typeof ViewFilterRuleEditor> = {
   component: ViewFilterRuleEditor,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const Editor = (props: { rule: ViewFilterRule }) => {
   const [rule, setRule] = useState(props.rule);
   const field = findField(storyFields, rule.attributeId)!;

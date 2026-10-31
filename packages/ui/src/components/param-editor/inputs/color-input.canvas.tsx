@@ -1,5 +1,5 @@
 import { Box, Container } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ColorInput } from "./color-input";
 
 const meta = {
@@ -8,7 +8,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof ColorInput>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const ClosesOnBlur: Story = {
   id: "components-inputs-param-editor-color-input--closes-on-blur",
   render: (props) => {

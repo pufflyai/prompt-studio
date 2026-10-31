@@ -1,5 +1,5 @@
 import { Box, Button, IconButton, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { PaperclipIcon } from "lucide-react";
 import { useState } from "react";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
@@ -11,7 +11,7 @@ const meta: CanvasMeta<typeof ChatPanel> = {
   component: ChatPanel,
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 const questionPrompt: ChatInputQuestionPrompt = {
   questions: [{ id: "choice", question: "Choose a greeting", options: [{ label: "Hello" }], required: true }],
 };

@@ -1,5 +1,5 @@
 import { Box, Button, Container, HStack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ParamEditor } from "./param-editor";
 
 const meta = {
@@ -8,7 +8,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditor>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const GroupedInspector: Story = {
   id: "patterns-param-editor-inspector--grouped-inspector",
   render: (props) => {

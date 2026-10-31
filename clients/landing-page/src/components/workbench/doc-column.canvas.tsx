@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import darkMedia from "../../content/blog/images/blog-prompt-studio-0-41.png";
 import lightMedia from "../../content/blog/images/blog-prompt-studio-0-41-light.png";
 import { DocColumn, DocHtml } from "./doc-column";
@@ -35,7 +35,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof DocColumn>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const PrivacyPolicy: Story = {
   id: "landing-doccolumn--privacy-policy",
   args: { pageKey: "/privacy/", children: <DocHtml html={PRIVACY_HTML} /> },
