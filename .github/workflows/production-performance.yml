@@ -118,6 +118,7 @@ jobs:
           name: production-performance-${{ matrix.family }}-${{ matrix.os }}-attempt-${{ github.run_attempt }}
           path: |
             test-results/production-performance
+            test-results/quarantine/workbench-benchmark
             packages/e2e/test-results
             packages/e2e/playwright-report
             packages/ui/test-results

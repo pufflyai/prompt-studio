@@ -9,7 +9,7 @@ interface BenchmarkSuite {
   suites?: BenchmarkSuite[];
   specs?: { title: string; file: string; tests: BenchmarkTest[] }[];
 }
-export interface DesktopBenchmarkReport {
+export interface BrowserBenchmarkReport {
   config: { rootDir: string; metadata?: { quarantineAttempt?: string } };
   suites: BenchmarkSuite[];
   errors?: unknown[];
@@ -17,9 +17,9 @@ export interface DesktopBenchmarkReport {
 
 const benchmarkRecord = (spec: NonNullable<BenchmarkSuite["specs"]>[number], rootDir: string, root: string) => {
   const file = relative(root, resolve(rootDir, spec.file)).replaceAll("\\", "/");
-  if (spec.tests.length !== 1) throw new Error("Desktop benchmark must have one project and attempt");
+  if (spec.tests.length !== 1) throw new Error("Browser benchmark must have one project and attempt");
   const test = spec.tests[0]!;
-  if (test.results.length !== 1) throw new Error("Desktop benchmark must execute once");
+  if (test.results.length !== 1) throw new Error("Browser benchmark must execute once");
   const status = test.results[0]!.status;
   const outcomes: Record<string, string> = {
     passed: "success",
@@ -28,19 +28,19 @@ const benchmarkRecord = (spec: NonNullable<BenchmarkSuite["specs"]>[number], roo
     skipped: "skipped",
   };
   const outcome = outcomes[status];
-  if (!outcome) throw new Error("Incomplete desktop benchmark execution");
+  if (!outcome) throw new Error("Incomplete browser benchmark execution");
   if (status === "skipped" && test.expectedStatus !== "skipped")
-    throw new Error("Desktop benchmark was unexpectedly skipped");
+    throw new Error("Browser benchmark was unexpectedly skipped");
   return { file, title: spec.title, outcome };
 };
 
 /** Classify one ordered execution; quarantine changes the gate, never the workload or ordering. */
-export const desktopBenchmarkResults = (
-  report: DesktopBenchmarkReport,
+export const browserBenchmarkResults = (
+  report: BrowserBenchmarkReport,
   expected: { file: string; name: string }[],
   root: string,
 ) => {
-  if (report.errors?.length) throw new Error("Desktop benchmark setup failed");
+  if (report.errors?.length) throw new Error("Browser benchmark setup failed");
   const records: { file: string; title: string; outcome: string }[] = [];
   const filtered = (suites: BenchmarkSuite[]): BenchmarkSuite[] =>
     suites.map((suite) => ({
@@ -54,7 +54,7 @@ export const desktopBenchmarkResults = (
     }));
   const quarantineReport = { config: report.config, suites: filtered(report.suites), errors: [] };
   if (!records.length || new Set(records.map((entry) => `${entry.file}:${entry.title}`)).size !== records.length)
-    throw new Error("Empty or repeated desktop benchmark execution");
+    throw new Error("Empty or repeated browser benchmark execution");
   const quarantined = (entry: (typeof records)[number]) =>
     expected.some((test) => test.file === entry.file && test.name === entry.title);
   const summary = verifyBunQuarantineCases(records.filter(quarantined), expected);

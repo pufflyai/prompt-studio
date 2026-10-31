@@ -44,6 +44,8 @@ const selectedProjectKey = "dashboard-wb2:selected-project:global";
 // Uses the same workload as the warm relaunch check in packaged-app.p1.spec.ts: a project on the
 // Sessions page, the non-default theme, and an attached Side Panel.
 test("warm attach restores the workbench within budget", async () => {
+  // Approved 2026-10-31 for cold fixture setup and post-launch sampling; launch budgets stay unchanged.
+  if (process.platform === "darwin" && process.arch === "arm64") test.setTimeout(45_000);
   const home = createPackagedHome();
   enableBenchmarkMonitoring(home);
   let first: PackagedApp | null = null;
@@ -51,13 +53,17 @@ test("warm attach restores the workbench within budget", async () => {
   try {
     const { projectId, theme } =
       await test.step("Prepare a persistent runtime with saved workbench state", async () => {
+        // Warm attach needs an existing persistent runtime. Start that owner directly;
+        // a desktop-to-CLI ownership handoff belongs to the functional lifecycle suite.
+        expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
+        await waitForDescriptor(home, (descriptor) => descriptor.ownerType === "persistent");
         first = await launchPackagedApp(home);
         const { page } = first;
+        const workbenchState = () => page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
         const project = await createPackagedProject(first, "Warm attach project");
         await openPackagedProject(page, project);
         await page.getByRole("option", { name: "Sessions", exact: true }).click();
         await expect(page.getByLabel("Main").getByRole("log")).toBeVisible();
-        const workbenchState = () => page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
         const pageLocationKey = `dashboard-wb2:page-location:${project.id}`;
         await expect
           .poll(async () => {
@@ -65,6 +71,7 @@ test("warm attach restores the workbench within budget", async () => {
             return [values[selectedProjectKey], JSON.parse(values[pageLocationKey] ?? "null")?.location?.page?.id];
           })
           .toEqual([project.id, "session-composer"]);
+        // Initial project selection closes overlays. Open the theme picker after that transition.
         const theme =
           (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark" ? "pstdio-light" : "pstdio-dark";
         await page.evaluate(() =>
@@ -76,8 +83,6 @@ test("warm attach restores the workbench within budget", async () => {
           .getByRole("option", { name: theme === "pstdio-light" ? "Prompt Light" : "Prompt Dark", exact: true })
           .click();
         await expect.poll(workbenchState).toMatchObject({ values: { "theme-preference": theme } });
-        expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
-        await waitForDescriptor(home, (descriptor) => descriptor.ownerType === "persistent");
         return { projectId: project.id, theme };
       });
     await test.step("Attach the Side Panel and quit the first desktop window", async () => {
