@@ -62,13 +62,17 @@ if (row.suite) {
   ]);
   results.push({ files, lane: "performance", exitCode: code });
   failed = code !== 0;
-  const packages = readWorkspacePackages(root);
-  for (const file of files) {
-    const owner = packages.find((pkg) => file.startsWith(`${pkg.dir}/`))?.name ?? "repository";
-    await checkQuarantine(file, row.suite === "desktop" ? "packaged-desktop-benchmark" : "bun", owner, {
-      TEST_PRIORITIES: row.priority,
-      PSTDIO_EXTENSION_RELEASE_REF: sha,
-    });
+  // The desktop benchmark adapter already executes stable and quarantined cases together,
+  // in cold-start order, and requires their reports. Never execute those cases a second time.
+  if (row.suite !== "desktop") {
+    const packages = readWorkspacePackages(root);
+    for (const file of files) {
+      const owner = packages.find((pkg) => file.startsWith(`${pkg.dir}/`))?.name ?? "repository";
+      await checkQuarantine(file, "bun", owner, {
+        TEST_PRIORITIES: row.priority,
+        PSTDIO_EXTENSION_RELEASE_REF: sha,
+      });
+    }
   }
 } else {
   const packages = readWorkspacePackages(root).map((pkg) => ({
