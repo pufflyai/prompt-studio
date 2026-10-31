@@ -5,7 +5,7 @@ import { createWorkbenchHotkeyRegistrations } from "./workbench-hotkey-registrat
 
 test.each([
   { keybinding: "Alt+J", allowInInputs: false },
-  { keybinding: ["Alt+J", "K"], allowInInputs: true },
+  { keybinding: ["Alt+J", "K"] as string[], allowInInputs: true },
 ])("webview profiles do not inspect shortcuts they cannot relay: %j", (binding) => {
   const workbench = createWorkbench();
   workbench.commands.registerCommand(
