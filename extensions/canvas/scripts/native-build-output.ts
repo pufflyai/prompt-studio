@@ -38,7 +38,12 @@ export const publishNativeBuild = async (
       .update(await readFile(resolve(generatedRoot, file)))
       .digest("hex");
   const sources = [
-    ...new Set(outputs.filter((file) => file.type === "chunk").flatMap((file) => Object.keys(file.modules ?? {}))),
+    ...new Set(
+      outputs
+        .filter((file) => file.type === "chunk")
+        .flatMap((file) => Object.keys(file.modules ?? {}))
+        .map((path) => path.split("?")[0].replaceAll("\\", "/")),
+    ),
   ];
   const hashes: Record<string, string> = {};
   for (const source of [
@@ -61,7 +66,11 @@ export const publishNativeBuild = async (
       .digest("hex");
   }
   for (const path of sources) {
-    if (!path.startsWith(`${repoRoot}/`) || path.includes("/node_modules/") || path.includes("/__test-tmp__/"))
+    if (
+      !path.startsWith(`${repoRoot.replaceAll("\\", "/")}/`) ||
+      path.includes("/node_modules/") ||
+      path.includes("/__test-tmp__/")
+    )
       continue;
     if (path.includes("/catalog/generated/native") || path.endsWith("/catalog/generated/frame-bundle.ts")) continue;
     if (!(await Bun.file(path).exists())) continue;
