@@ -5,7 +5,8 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./writer": "./src/writer.ts"
+    "./writer": "./src/writer.ts",
+    "./suite-files": "./src/suite-files.json"
   },
   "scripts": {
     "bench": "bun src/cli.ts",

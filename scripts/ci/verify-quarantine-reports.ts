@@ -6,11 +6,13 @@ import {
   verifyPlaywrightQuarantineReport,
   verifyQuarantineAttempt,
 } from "./quarantine-reports";
+import { selectedQuarantineRegistry } from "./quarantine-test-files";
 import { quarantineGroups } from "./run-quarantined-tests";
-import { browserQuarantineReportPath, quarantineDirectory, quarantineRegistry } from "./test-quarantine";
+import { browserQuarantineReportPath, quarantineDirectory } from "./test-quarantine";
 import { readWorkspacePackages } from "./workspace-packages";
 
 const root = resolve(import.meta.dir, "../..");
+const registry = selectedQuarantineRegistry(root, process.argv);
 const runner = process.argv[2]!;
 const scopeAt = process.argv.indexOf("--scope");
 const scope = scopeAt < 0 ? undefined : process.argv[scopeAt + 1];
@@ -23,7 +25,7 @@ const record = (name: string, result: { executed: number; failures: number }) =>
 if (runner === "bun" || runner === "packaged-bun") {
   const identity = bunRunIdentity(root);
   for (const { owner, entries } of quarantineGroups(
-    quarantineRegistry,
+    registry,
     readWorkspacePackages(root),
     runner,
     process.platform,
@@ -58,14 +60,7 @@ if (runner === "bun" || runner === "packaged-bun") {
     );
   }
 } else if (["playwright", "playwright-ui", "packaged-desktop", "packaged-desktop-benchmark"].includes(runner)) {
-  const groups = quarantineGroups(
-    quarantineRegistry,
-    readWorkspacePackages(root),
-    runner,
-    process.platform,
-    process.arch,
-    scope,
-  );
+  const groups = quarantineGroups(registry, readWorkspacePackages(root), runner, process.platform, process.arch, scope);
   if (!groups.length) {
     record(runner, { executed: 0, failures: 0 });
     process.exit(0);

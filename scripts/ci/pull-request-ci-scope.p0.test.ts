@@ -4,6 +4,24 @@ import { resolveCiScope } from "./pull-request-ci-scope";
 import { plannedCiJobs } from "./required-ci-jobs";
 import { sourceCoverageArtifacts } from "./source-coverage-artifacts";
 
+test("an edited browser test is required on the PR even when its priority normally waits for production", () => {
+  const input = scopeFixture();
+  const file = "packages/e2e/src/ui/feature.p2.spec.ts";
+  const scope = resolveCiScope({ ...input, changedFiles: [file] });
+  expect(scope.editedMatrix).toEqual(
+    expect.arrayContaining([expect.objectContaining({ priority: "P2", runner: "app", files: JSON.stringify([file]) })]),
+  );
+  expect(plannedCiJobs(scope).find((job) => job.id === "edited_tests")?.count).toBeGreaterThan(0);
+});
+
+test("editing one test does not promote unrelated tests or change the queue selection", () => {
+  const input = scopeFixture();
+  const file = "packages/e2e/src/ui/feature.p2.spec.ts";
+  const scope = resolveCiScope({ ...input, changedFiles: [file] });
+  expect(scope.editedMatrix.flatMap((row) => JSON.parse(row.files))).toEqual([file]);
+  expect(resolveCiScope({ ...input, changedFiles: [file], event: "merge_group" }).editedMatrix).toEqual([]);
+});
+
 test("PR selection follows affected package dependencies without test filename lists", () => {
   const scope = resolveCiScope(scopeFixture());
   expect(scope.stage).toBe("pull_request");

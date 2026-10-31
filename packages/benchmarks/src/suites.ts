@@ -1,3 +1,4 @@
+import suiteFiles from "./suite-files.json";
 import type { BenchmarkSuite, SuiteContext, SuiteStep } from "./suite-types";
 
 export type { BenchmarkSuite, SuiteContext, SuiteStep } from "./suite-types";
@@ -24,10 +25,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "desktop",
     label: "Desktop app",
-    files: [
-      "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
-      "clients/desktop/src/e2e/packaged-renderer.p3.bench.ts",
-    ],
+    files: suiteFiles.desktop,
     prepare: (context) => [
       { command: ["bun", "run", "make", "--", `--arch=${arch(context)}`], cwd: "clients/desktop" },
       ...linuxSandbox(`${desktopOut(context)}/chrome-sandbox`),
@@ -48,16 +46,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "workbench",
     label: "Workbench interactions",
-    files: [
-      "packages/e2e/src/perf/nav-chrome.p3.bench.ts",
-      "packages/e2e/src/perf/panel-tabs.p3.bench.ts",
-      "packages/e2e/src/perf/project-switch.p3.bench.ts",
-      "packages/e2e/src/perf/resource-hierarchy.p3.bench.ts",
-      "packages/e2e/src/perf/side-panel.p3.bench.ts",
-      "packages/e2e/src/perf/sidenav-header.p3.bench.ts",
-      "packages/e2e/src/perf/workbench-interactions.p3.bench.ts",
-      "packages/e2e/src/packaged/packaged-paged-collections.p3.bench.ts",
-    ],
+    files: suiteFiles.workbench,
     prepare: () => [
       {
         command: [
@@ -103,7 +92,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "canvas",
     label: "Canvas cold startup",
-    files: ["packages/canvas-tests/src/performance/frame-startup.p3.bench.ts"],
+    files: suiteFiles.canvas,
     prepare: () => [
       { command: ["bun", "x", "--no-install", "lerna", "run", "build:previews", "--scope", "canvas-tests"] },
       { command: ["bunx", "playwright", "install", "chromium"], cwd: "packages/canvas-tests" },
@@ -125,10 +114,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "chat",
     label: "Chat rendering",
-    files: [
-      "packages/ui/src/components/chat-ui/performance/chat-panel.p3.bench.ts",
-      "packages/ui/src/components/chat-ui/performance/chat-rendering.p3.bench.ts",
-    ],
+    files: suiteFiles.chat,
     prepare: () => [
       // UI stories import the SDK through its published entry points.
       { command: ["bun", "run", "build", "--", "--scope", "@pstdio/sdk", "--include-dependencies"] },
@@ -151,7 +137,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "subnav",
     label: "Side navigation",
-    files: ["packages/e2e/src/perf/subnav.p3.bench.ts"],
+    files: suiteFiles.subnav,
     prepare: () => [
       {
         command: [
@@ -179,7 +165,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "planner",
     label: "Planner board",
-    files: ["packages/e2e/src/perf/planner-board-cold-open.p3.bench.ts"],
+    files: suiteFiles.planner,
     prepare: () => [
       {
         command: [
@@ -212,10 +198,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "storage",
     label: "Storage",
-    files: [
-      "packages/pstdio-db/src/services/extension-storage/document-storage.p3.bench.ts",
-      "packages/pstdio-db/src/services/sessions/session-query.p3.bench.ts",
-    ],
+    files: suiteFiles.storage,
     sample: (_context, files) =>
       files.map((file) => ({
         command: ["bun", ...(file.includes("session-query") ? ["--conditions=source"] : []), file],
@@ -224,11 +207,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "runtime",
     label: "Runtime",
-    files: [
-      "packages/pstdio-api-runtime-host/src/harness-session-resources.p3.bench.ts",
-      "packages/pstdio-workbench/src/core/controllers/page-runtime/open-resource-inventory.p3.bench.ts",
-      "packages/pstdio-api/src/features/workspaces/worktree-cleanup.p3.bench.ts",
-    ],
+    files: suiteFiles.runtime,
     // The workbench benchmark imports the SDK through its published entry points.
     prepare: () => [{ command: ["bun", "run", "build", "--", "--scope", "@pstdio/sdk", "--include-dependencies"] }],
     sample: (context, files) =>
@@ -245,7 +224,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "relay",
     label: "Relay storage",
-    files: ["services/relay/scripts/storage-bound.p3.bench.ts"],
+    files: suiteFiles.relay,
     // Needs Docker for Postgres and object storage, which only the Linux runners provide.
     platforms: LINUX,
     sample: (_context, files) => files.map((file) => ({ command: ["bun", file] })),

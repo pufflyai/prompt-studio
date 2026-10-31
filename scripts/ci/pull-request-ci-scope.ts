@@ -1,7 +1,8 @@
-import { execFileSync } from "node:child_process";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { basename } from "node:path";
+import { changedFiles } from "./changed-files";
 import { affectedPackages } from "./ci-packages";
+import { createEditedTestMatrix, editedTestFiles } from "./edited-test-matrix";
 import { partitionPackageChecks } from "./package-check-matrix";
 import { productionDesktopCheckPlatforms, productionToolchainPlatforms } from "./production-platforms";
 import { plannedCiJobs, requiredCiJobs } from "./required-ci-jobs";
@@ -55,6 +56,8 @@ export const resolveCiScope = (input: CiScopeInput) => {
     production,
     sourceCoverage: production && releaseChannel === "nightly",
     affectedOwners,
+    editedMatrix:
+      stage === "pull_request" ? createEditedTestMatrix(editedTestFiles(tests, code, packages), packages) : [],
     ...matrices,
     appMatrix: stage === "pull_request" ? [] : matrices.appMatrix,
     packagedMatrix: stage === "pull_request" ? [] : matrices.packagedMatrix,
@@ -94,10 +97,12 @@ if (import.meta.main) {
   const scope = resolveCiScope({
     event: process.env.GITHUB_EVENT_NAME ?? "",
     labels: JSON.parse(process.env.PULL_REQUEST_LABELS || "[]"),
-    changedFiles: execFileSync("git", ["diff", "--name-only", "--no-renames", "HEAD~1", "HEAD"], { encoding: "utf8" })
-      .trim()
-      .split("\n")
-      .filter(Boolean),
+    changedFiles: changedFiles(
+      process.cwd(),
+      process.env.GITHUB_EVENT_NAME === "pull_request"
+        ? JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH!, "utf8")).pull_request.base.sha
+        : undefined,
+    ),
     packages: readWorkspacePackages(process.cwd()),
     tests: discoverTestFiles(process.cwd()),
     profile,
