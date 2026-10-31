@@ -95,7 +95,7 @@ test(
         headers,
         body: JSON.stringify({ source: { kind: "catalog", name: "canvas" } }),
       });
-      expect(installed.status).toBe(201);
+      expect(installed.status, await installed.text()).toBe(201);
       const after = await (await fetch(`${url}/extensions`, { headers })).json();
       expect(after.extensions).toContainEqual(
         expect.objectContaining({ installName: "canvas", enabled: true, extensionId: "pstdio.canvas" }),
