@@ -1498,7 +1498,33 @@ jobs:
       CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
       CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
   validation_results:
-    needs: scope
+    # GitHub owns waiting for runners; the result reader starts after execution finishes.
+    needs:
+      - scope
+      - edited_tests
+      - static_checks
+      - package_checks
+      - integration_contracts
+      - bun_contracts
+      - database_tests
+      - published_extensions
+      - harness_cli_support
+      - windows_test_and_build
+      - windows_database_tests
+      - components
+      - browser_smoke
+      - e2e
+      - e2e_cli
+      - packaged_and_vite_e2e
+      - quarantined_bun_tests
+      - quarantined_native_ui_tests
+      - quarantined_browser_tests
+      - license_check
+      - build_clients
+      - build_docker
+      - packaged_toolchain
+      - source_coverage
+      - sdk_api_report
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -1515,7 +1541,7 @@ jobs:
         with:
           node-version: "24"
       - *a1
-      - name: Observe selected jobs; report only P1 failure early
+      - name: Require complete selected job results
         run: bun scripts/ci/monitor-ci-gates.ts
       - name: Preserve plan, results, and source identity
         if: always()
