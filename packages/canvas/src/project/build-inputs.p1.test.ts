@@ -53,7 +53,7 @@ test("a change to a file outside the project, such as a sibling workspace packag
   cleanups.push(() => rmSync(base, { recursive: true, force: true }));
   const root = project({
     ...sampleProject,
-    "src/shared.canvas.tsx": `import { Badge } from "${join(base, "shared/badge")}";\nexport const Default = () => <Badge />;\n`,
+    "src/shared.canvas.tsx": `import { Badge } from ${JSON.stringify(join(base, "shared/badge"))};\nexport const Default = () => <Badge />;\n`,
   });
   writeProjectFiles(base, { "shared/badge.tsx": "export const Badge = () => <span>New</span>;\n" });
   await buildCanvases({ root });
