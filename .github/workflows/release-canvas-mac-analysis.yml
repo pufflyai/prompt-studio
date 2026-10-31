@@ -1,0 +1,40 @@
+name: Release Intel Canvas installation analysis
+on:
+  push:
+    branches: [test/release-046-canvas-mac-analysis]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: macos-15-intel
+    timeout-minutes: 30
+    env:
+      CI_PRIORITY: P1
+      TEST_PRIORITIES: P1
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - run: bun scripts/ci/install-native-dependencies.ts
+      - run: bun run build -- --scope e2e --include-dependencies
+      - run: bun run --cwd scripts build:host
+      - run: bunx playwright@1.60.0 install chromium
+      - name: Diagnose the existing critical install workload without changing its deadline
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+        run: bun run --cwd packages/e2e test:packaged:cli --test-name-pattern '^installs Canvas from the catalog with working commands and its authoring skill$'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: canvas-install-phase-evidence
+          path: |
+            packages/e2e/test-results
+            test-results/ci
+          if-no-files-found: warn

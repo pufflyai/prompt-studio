@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium } from "@playwright/test";
@@ -14,12 +14,23 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 setupPackagedSmokeTests();
 
+const evidenceRoot = join(import.meta.dirname, "../../test-results/canvas-install-analysis");
+const phase = (name: string) => {
+  mkdirSync(evidenceRoot, { recursive: true });
+  appendFileSync(
+    join(evidenceRoot, "phases.jsonl"),
+    `${JSON.stringify({ phase: name, at: new Date().toISOString() })}\n`,
+  );
+};
+
 // Critical: an optional install must work outside a source checkout and include its usable skill.
 test(
   "installs Canvas from the catalog with working commands and its authoring skill",
   async () => {
+    phase("test-start");
     const root = mkdtempSync(join(tmpdir(), "packaged-canvas-"));
     const packed = await packExtension(join(import.meta.dirname, "../../../../extensions/canvas"));
+    phase("archive-packed");
     const { files } = await readExtensionPackage(packed.bytes);
     expect(files.has("src/catalog/generated/native-manifest.json")).toBe(false);
     for (const asset of ["frame-manifest.json", "frame-themes.json", "stories.json", "source-information.json"]) {
@@ -49,7 +60,12 @@ test(
     let child: ChildProcess | undefined;
     let browser: Browser | undefined;
     try {
-      const started = await startPackagedServe(root, { PSTDIO_EXTENSION_RELEASE_REF: `psx:${registry.url.origin}` });
+      phase("runtime-start");
+      const started = await startPackagedServe(root, {
+        PSTDIO_EXTENSION_RELEASE_REF: `psx:${registry.url.origin}`,
+        PSTDIO_LOG_PATH: join(evidenceRoot, "runtime.jsonl"),
+      });
+      phase("runtime-ready");
       child = started.child;
       const repo = join(root, "project");
       mkdirSync(repo);
@@ -59,16 +75,19 @@ test(
         headers,
         body: JSON.stringify(folderProjectInput({ name: "Canvas consumer" }, repo)),
       });
+      phase("project-created");
       expect(created.status).toBe(201);
       const project = (await created.json()) as { id: string };
       const url = `${started.baseUrl}/v1/projects/${project.id}`;
       const before = await (await fetch(`${url}/extensions`, { headers })).json();
       expect(before.marketplace).toContainEqual(expect.objectContaining({ installName: "canvas", installed: false }));
+      phase("install-start");
       const installed = await fetch(`${url}/extensions/install`, {
         method: "POST",
         headers,
         body: JSON.stringify({ source: { kind: "catalog", name: "canvas" } }),
       });
+      phase("install-response");
       expect(installed.status, await installed.text()).toBe(201);
       const after = await (await fetch(`${url}/extensions`, { headers })).json();
       expect(after.extensions).toContainEqual(
@@ -113,6 +132,7 @@ test(
         const code = Bun.gunzipSync(Buffer.from(files[name], "base64"));
         expect(code.byteLength).toBeGreaterThan(0);
       }
+      phase("commands-and-assets-ready");
       const skills = await (await fetch(`${url}/skills`, { headers })).json();
       expect(skills).toContainEqual(
         expect.objectContaining({
@@ -126,18 +146,29 @@ test(
       // Critical: packaged assets must also reach an opaque preview through the real webview command bridge.
       const button = listed.find((canvas: { id: string }) => canvas.id === "stories-ui-components-inputs-button");
       expect(button).toBeDefined();
+      phase("browser-launch");
       browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
+      await browser.startTracing(undefined, { path: join(evidenceRoot, "browser-trace.json") });
+      phase("browser-ready");
       const page = await browser.newPage();
+      page.on("pageerror", (error) => phase(`pageerror: ${error.message}`));
+      page.on("console", (message) => {
+        if (message.type() === "error") phase(`consoleerror: ${message.text()}`);
+      });
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
       await signInBrowser(page, started.descriptor);
+      phase("canvas-navigation-start");
       await page.goto(new URL(button.href, started.baseUrl).href);
+      phase("canvas-navigation-finished");
       const viewer = page.frameLocator('iframe[title="UI Canvas"]');
       await viewer.locator('iframe[data-frame-ready="true"]').waitFor();
+      phase("preview-ready");
       expect(await viewer.locator("[data-ui-canvas-error]").count()).toBe(0);
       await viewer
         .getByRole("button", { name: /^Theme for / })
         .first()
         .click();
+      phase("theme-menu-open");
       await viewer.getByRole("menuitem", { name: "Monokai (VS Code colors)", exact: true }).click();
       const element = await viewer.locator('iframe[data-frame-ready="true"]').first().elementHandle();
       const preview = (await element!.contentFrame())!;
@@ -150,7 +181,10 @@ test(
         };
       });
       expect(colors.message).not.toBe(colors.background);
+      phase("assertions-finished");
     } finally {
+      phase("cleanup-start");
+      await browser?.stopTracing();
       await browser?.close();
       if (child) await stopProcess(child);
       registry.stop(true);
