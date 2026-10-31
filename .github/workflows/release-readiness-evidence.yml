@@ -43,12 +43,15 @@ jobs:
                       visit(item)
           for path in pathlib.Path("evidence").rglob("packaged-benchmarks.json"):
               visit(json.loads(path.read_text()))
-          for label, job in [("Frontend setup", 124383614879), ("Landing-page Docker", 124383343193), ("Linux desktop", 124383343507)]:
+          for label, job in [("Linux desktop", 124383343507)]:
               annotations = json.loads(subprocess.check_output(["gh", "api", f"repos/pufflyai/prompt-studio/check-runs/{job}/annotations?per_page=100"]))
               sections.append("### " + label + "\n\n" + "\n".join(clean(item.get("message", "")) for item in annotations))
               try:
                   logs = subprocess.check_output(["gh", "api", "--allow-escape-sequences", f"repos/pufflyai/prompt-studio/actions/jobs/{job}/logs"], text=True, stderr=subprocess.STDOUT)
-                  sections.append("### " + label + " log tail\n\n" + clean("\n".join(logs.splitlines()[-100:])))
+                  lines = logs.splitlines()
+                  indices = [index for index, line in enumerate(lines) if re.search(r"Error: expect|Error: locator|Test timeout|✘|TimeoutError|Error: page|Error Context|tests failed", line)]
+                  selected = sorted({index for match in indices for index in range(max(0, match - 4), min(len(lines), match + 14))})
+                  sections.append("### " + label + " failure context\n\n" + clean("\n".join(lines[index] for index in selected)))
               except Exception as error:
                   sections.append("### Log access error\n\n" + clean(str(error) + "\n" + str(getattr(error, "output", ""))))
           payload = {"name": "Release 0.46 diagnostic details", "head_sha": os.environ["GITHUB_SHA"], "status": "completed", "conclusion": "neutral", "output": {"title": "Failure evidence; no tests rerun", "summary": "\n\n".join(sections)[:60000]}}
