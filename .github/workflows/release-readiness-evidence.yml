@@ -37,7 +37,7 @@ jobs:
                       visit(item)
           for path in pathlib.Path("evidence").rglob("packaged-benchmarks.json"):
               visit(json.loads(path.read_text()))
-          for label, job in [("Workbench header and atomic selection candidate",124425384165)]:
+          for label, job in [("Intel Mac lifecycle",124433444377),("Intel Mac monitoring",124433444373)]:
               annotations = json.loads(subprocess.check_output(["gh", "api", f"repos/pufflyai/prompt-studio/check-runs/{job}/annotations?per_page=100"]))
               sections.append("### " + label + "\n\n" + "\n".join(clean(item.get("message", "")) for item in annotations))
               try:
