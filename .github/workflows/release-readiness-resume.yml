@@ -29,18 +29,24 @@ jobs:
       - name: Configure native Chromium sandboxes
         if: runner.os == 'Linux'
         run: |
-          for sandbox in clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox; do
+          (cd clients/desktop && bun -e 'require("electron")')
+          for sandbox in clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox clients/desktop/node_modules/electron/dist/chrome-sandbox; do
             sudo chown root:root "$sandbox"
             sudo chmod 4755 "$sandbox"
           done
-      - name: Run maintained P2 desktop coverage once
+      - name: Verify the source Electron group after correcting its sandbox prerequisite
         shell: bash
+        env:
+          TEST_PRIORITIES: P2
         run: |
-          if [[ "$RUNNER_OS" == Linux ]]; then
-            xvfb-run -a bun scripts/ci/run-priority-tests.ts p2 --scope @pstdio/desktop --runner desktop --prebuilt
-          else
-            bun scripts/ci/run-priority-tests.ts p2 --scope @pstdio/desktop --runner desktop --prebuilt
-          fi
+          bun scripts/ci/run-priority-tests.ts p2 --scope @pstdio/desktop --runner desktop --list > "$RUNNER_TEMP/desktop-plan.json"
+          xvfb-run -a bun -e '
+            const plan = await Bun.file(process.argv[1]).json();
+            const source = plan.find((run) => run.id.endsWith(":source"));
+            if (!source) throw new Error("Missing registered source Electron group");
+            const child = Bun.spawn(source.command, { cwd: source.cwd, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+            process.exitCode = await child.exited;
+          ' "$RUNNER_TEMP/desktop-plan.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
