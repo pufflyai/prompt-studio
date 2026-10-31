@@ -56,6 +56,18 @@ const selected = defineView({
     }),
   },
 });
+const native = defineView({
+  id: "native",
+  title: "Native shared document",
+  body: {
+    kind: "file",
+    load: async () => ({
+      fileName: "selected.md",
+      mimeType: "text/markdown",
+      textDocument: { sourceId: body.id, params: {} },
+    }),
+  },
+});
 const shared = definePage({
   id: "shared",
   title: "Shared document",
@@ -65,10 +77,19 @@ const shared = definePage({
   slots: [],
 });
 
+const nativePage = definePage({
+  id: "native",
+  title: "Native shared document",
+  path: "native",
+  mode: workbenchModes.project,
+  main: { kind: "view", view: native.ref, cardinality: "one" },
+  slots: [],
+});
+
 export default defineExtension({
   artifactMounts: [documents],
   textSources: [body, privateBody],
   commands: [seed],
-  views: [selected],
-  pages: [shared],
+  views: [selected, native],
+  pages: [shared, nativePage],
 });
