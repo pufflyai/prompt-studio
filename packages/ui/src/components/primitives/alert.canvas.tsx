@@ -2,6 +2,7 @@ import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { AlertMessage } from "./alert";
+import { ScrollArea } from "./scroll-area";
 
 const meta = {
   title: "Primitives/AlertMessage",
@@ -218,4 +219,25 @@ export const ConstrainedContent: Story = {
 export const CopyMessage: Story = {
   id: "primitives-alertmessage--copy-message",
   render: () => <VariableContentPreview />,
+};
+
+export const PageScrolling: Story = {
+  id: "primitives-alertmessage--page-scrolling",
+  render: () => (
+    <Box height="96" width="lg" maxW="full">
+      <ScrollArea viewportProps={{ "aria-label": "Article", role: "region" }}>
+        <Stack gap="md" p="sm">
+          <AlertMessage status="info" title="Preview notice">
+            Keep reading by scrolling over this notice.
+          </AlertMessage>
+          <AlertMessage status="info" title="Import details" maxH="40">
+            {Array.from({ length: 30 }, (_, index) => `Imported document ${index + 1}.`).join("\n")}
+          </AlertMessage>
+          <Box minH="96">
+            <Text>Continue reading the article.</Text>
+          </Box>
+        </Stack>
+      </ScrollArea>
+    </Box>
+  ),
 };

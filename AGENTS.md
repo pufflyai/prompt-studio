@@ -30,6 +30,7 @@ Before every commit, run `git status` and `git diff --cached --stat`. If generat
 | Release output | `CHANGELOG.md` files and `package.json` versions | Only the Changesets release process writes them. Feature PRs add `.changeset/*.md` files instead. |
 | Webview runtime bundle | `packages/pstdio-extensions/src/bridge/webview-runtime/runtime.bundle.js` | Its source in `packages/pstdio-extensions/src/bridge` changes. Rebuild it from that source. |
 | Codex protocol types | `extensions/harness-codex/src/protocol/**` | The supported Codex app-server protocol changes. They are copied from Codex's ts-rs output; do not edit them by hand. |
+| Blog media for 0.46 and UI Canvas | `clients/landing-page/src/content/blog/images/blog-prompt-studio-0-46*`, `clients/landing-page/src/content/blog/images/blog-ui-canvas*`, `documentation/images/prompt-studio-0-46-*`, `documentation/images/ui-canvas-*` | Final PNG banners and JSON recipes, GIF workflows, and SVG screenshots used by these two posts. Raw captures, preview catalogs, and site build output remain excluded. |
 
 The UI Canvas preview catalog is never committed; Canvas and CI build it from source.
 

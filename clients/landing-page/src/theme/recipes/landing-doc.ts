@@ -39,6 +39,7 @@ export const landingDocSlotRecipe = defineSlotRecipe({
     "layout",
     "prose",
     "html",
+    "codeCopy",
     "outline",
     "outlineTitle",
     "outlineLink",
@@ -102,7 +103,19 @@ export const landingDocSlotRecipe = defineSlotRecipe({
       "& blockquote": { borderInlineStartWidth: "2px", borderColor: "border", ps: "md" },
       "& hr": { borderColor: "border" },
       "& :not(pre) > code": { textStyle: "mono/S", bg: "bg.muted", color: "fg", px: "2xs", borderRadius: "2xs" },
-      "& pre": { textStyle: "mono/S", p: "md", borderRadius: "sm", overflowX: "auto", ...codeColors },
+      "& pre": {
+        position: "relative",
+        textStyle: "mono/S",
+        p: "md",
+        pt: "10",
+        borderRadius: "sm",
+        overflowX: "auto",
+        ...codeColors,
+      },
+      "& pre:is([data-language=markdown], [data-language=md])": {
+        whiteSpace: "pre-wrap",
+        overflowWrap: "anywhere",
+      },
       // Wide tables scroll sideways on small screens instead of squeezing their columns.
       "& table": {
         display: { base: "block", md: "table" },
@@ -116,6 +129,7 @@ export const landingDocSlotRecipe = defineSlotRecipe({
     },
     // Markdown HTML joins the article's flow, so headings and paragraphs keep its spacing.
     html: { display: "contents", ...themedMedia },
+    codeCopy: { position: "absolute", top: "xs", insetInlineEnd: "xs" },
     outline: {
       display: { base: "none", xl: "flex" },
       flexDirection: "column",
