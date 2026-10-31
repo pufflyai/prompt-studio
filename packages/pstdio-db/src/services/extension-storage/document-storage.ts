@@ -20,13 +20,15 @@ import type { NumberChange } from "./resource-number-repair";
 import { createResourceRecords } from "./resource-records";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
+type StorageChange = StorageOwner & { documentId?: string };
+
 export const createDocumentStorageDBService = (
   db: DbClient,
   observer?: StorageObserver,
   diagnostics?: StorageDiagnostics,
 ) => {
   const cache = createDocumentCache();
-  const listeners = new Set<(owner: StorageOwner) => void>();
+  const listeners = new Set<(owner: StorageChange) => void>();
   const numberListeners = new Set<(event: NumberChange) => void>();
   const numbersChanged = (events: NumberChange[]) => {
     for (const event of events) for (const listener of numberListeners) listener(event);
@@ -43,7 +45,7 @@ export const createDocumentStorageDBService = (
           runDocumentTransaction(tx, { address, owner, cached: cache.get(key), diagnostics }, action),
         );
         cache.publish(key, result);
-        if (result.changed) for (const listener of listeners) listener(owner);
+        if (result.changed) for (const listener of listeners) listener({ ...owner, documentId });
         return result.value;
       } catch (error) {
         cache.discard(key);
@@ -53,6 +55,19 @@ export const createDocumentStorageDBService = (
     return transaction;
   };
   const transaction = transactionFor("records");
+  const revisionFor = (documentId: string) => async (owner: StorageOwner) => {
+    const [row] = await db
+      .select({ revision: storage_documents.revision })
+      .from(storage_documents)
+      .where(
+        and(
+          eq(storage_documents.workbench_id, owner.workbenchId),
+          eq(storage_documents.extension_id, owner.extensionId),
+          eq(storage_documents.document_id, documentId),
+        ),
+      );
+    return row?.revision ?? 0;
+  };
   const isResourceDocument = (id: string) => id.startsWith(resourceDocumentId("").slice(0, -2));
   return {
     transaction,
@@ -66,7 +81,7 @@ export const createDocumentStorageDBService = (
       };
     },
     documents: {
-      open: (documentId: string) => ({ transaction: transactionFor(documentId) }),
+      open: (documentId: string) => ({ transaction: transactionFor(documentId), revision: revisionFor(documentId) }),
       recordStream: (owner: StorageOwner) =>
         createRecordStreamStore(db, owner, {
           statistics,
@@ -123,7 +138,7 @@ export const createDocumentStorageDBService = (
       }
       return false;
     },
-    watch(listener: (owner: StorageOwner) => void) {
+    watch(listener: (owner: StorageChange) => void) {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);

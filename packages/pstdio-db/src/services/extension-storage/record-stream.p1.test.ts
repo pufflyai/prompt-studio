@@ -171,6 +171,38 @@ test("a record's file reaches the other device before the record does", async ()
   expect(second.assets.files.get(hash)).toEqual(bytes);
 });
 
+test("a later interrupted file download clears verified completion until the retry succeeds", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  let interrupted = false;
+  const second = await device({
+    ...fixture.relay,
+    blobs: {
+      ...fixture.relay.blobs,
+      get: async (id) => {
+        if (interrupted) throw new Error("File download interrupted");
+        return fixture.relay.blobs.get(id);
+      },
+    },
+  });
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  for (const peer of [first, second]) await peer.sync.synchronize();
+  expect((await second.sync.status()).downloaded).toBe(true);
+  const { bytes, asset } = file("a later file");
+  first.assets.files.set(asset.sha256, bytes);
+  await first.records.commit({ operationId: "file", edits: [{ recordId: "file", replace: "cover", asset }] });
+  expect((await first.sync.status()).pending).toBe(true);
+  await first.sync.synchronize();
+  expect((await first.sync.status()).pending).toBe(false);
+  interrupted = true;
+  await expect(second.sync.synchronize()).rejects.toThrow("File download interrupted");
+  expect((await second.sync.status()).downloaded).toBe(false);
+  interrupted = false;
+  await second.sync.synchronize();
+  expect((await second.sync.status()).downloaded).toBe(true);
+  expect(second.assets.files.get(asset.sha256)).toEqual(bytes);
+});
+
 test("a save larger than one relay update still arrives as one unit", async () => {
   const fixture = createRelay();
   const first = await device(fixture.relay);
