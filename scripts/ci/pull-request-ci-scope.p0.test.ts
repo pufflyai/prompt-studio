@@ -14,12 +14,19 @@ test("an edited browser test is required on the PR even when its priority normal
   expect(plannedCiJobs(scope).find((job) => job.id === "edited_tests")?.count).toBeGreaterThan(0);
 });
 
-test("editing one test does not promote unrelated tests or change the queue selection", () => {
+test("a PR runs only the tests it edits beyond P0, and the queue runs none of them", () => {
   const input = scopeFixture();
   const file = "packages/e2e/src/ui/feature.p2.spec.ts";
-  const scope = resolveCiScope({ ...input, changedFiles: [file] });
+  const changedFiles = [
+    file,
+    "packages/e2e/src/ui/helpers/camera.ts",
+    "packages/e2e/src/packaged/registry.fixture.ts",
+    "packages/e2e/src/packaged/run-packaged-cli-tests.ts",
+    "packages/e2e/src/ui/removed.p1.spec.ts",
+  ];
+  const scope = resolveCiScope({ ...input, changedFiles });
   expect(scope.editedMatrix.flatMap((row) => JSON.parse(row.files))).toEqual([file]);
-  expect(resolveCiScope({ ...input, changedFiles: [file], event: "merge_group" }).editedMatrix).toEqual([]);
+  expect(resolveCiScope({ ...input, changedFiles, event: "merge_group" }).editedMatrix).toEqual([]);
 });
 
 test("PR selection follows affected package dependencies without test filename lists", () => {

@@ -2,7 +2,7 @@ import { appendFileSync } from "node:fs";
 import { basename } from "node:path";
 import { changedFiles } from "./changed-files";
 import { affectedPackages } from "./ci-packages";
-import { createEditedTestMatrix, editedTestFiles } from "./edited-test-matrix";
+import { createEditedTestMatrix } from "./edited-test-matrix";
 import { partitionPackageChecks } from "./package-check-matrix";
 import { productionDesktopCheckPlatforms, productionToolchainPlatforms } from "./production-platforms";
 import { plannedCiJobs, requiredCiJobs } from "./required-ci-jobs";
@@ -62,8 +62,15 @@ export const resolveCiScope = (input: CiScopeInput) => {
     production,
     sourceCoverage: production && releaseChannel === "nightly",
     affectedOwners,
+    // Only tests edited by the PR run beyond P0. Support files, fixtures and runners rely on
+    // the affected P0 checks here and on the complete suites in the queue and nightly.
     editedMatrix:
-      stage === "pull_request" ? createEditedTestMatrix(editedTestFiles(tests, code, packages), packages) : [],
+      stage === "pull_request"
+        ? createEditedTestMatrix(
+            tests.filter((file) => code.includes(file)),
+            packages,
+          )
+        : [],
     ...matrices,
     appMatrix: production ? matrices.appMatrix : [],
     packagedMatrix: production ? matrices.packagedMatrix : [],

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { scopeFixture } from "./ci-scope.test-fixture";
-import { createEditedTestMatrix, editedTestFiles } from "./edited-test-matrix";
+import { createEditedTestMatrix } from "./edited-test-matrix";
 import { resolveCiScope } from "./pull-request-ci-scope";
 import { plannedCiJobs } from "./required-ci-jobs";
 import { evaluateCiGate } from "./test-policy";
@@ -65,16 +65,6 @@ test("edited native benchmarks check platform-specific behavior before the PR ca
   expect(backend.map((row) => row.platform).sort()).toEqual(["darwin", "linux", "win32"]);
 });
 
-test("test fixture edits select their owner tests and deleted tests are not scheduled", () => {
-  const input = scopeFixture();
-  const selected = editedTestFiles(
-    input.tests,
-    ["packages/e2e/src/ui/helpers/camera.ts", "removed.p2.spec.ts"],
-    input.packages,
-  );
-  expect(selected).toEqual(input.tests.filter((file) => file.startsWith("packages/e2e/")).sort());
-});
-
 test("the required PR gate cannot pass when an edited-test result is missing or fails", () => {
   const input = scopeFixture();
   const scope = resolveCiScope({ ...input, changedFiles: ["packages/e2e/src/ui/feature.p2.spec.ts"] });
@@ -102,44 +92,4 @@ test("the required PR gate cannot pass when an edited-test result is missing or 
       true,
     ).outcome,
   ).toBe("failure");
-});
-
-test("a runner entry edit selects its own suite plus every directly edited test", () => {
-  const input = scopeFixture();
-  const packages: Parameters<typeof editedTestFiles>[2] = input.packages.map((pkg) => ({
-    ...pkg,
-    scripts:
-      pkg.name === "e2e"
-        ? {
-            "test:packaged:cli": "bun src/packaged/run-packaged-cli-tests.ts",
-          }
-        : undefined,
-  }));
-  const direct = "packages/e2e/src/ui/feature.p2.spec.ts";
-  expect(
-    editedTestFiles(input.tests, ["packages/e2e/src/packaged/run-packaged-cli-tests.ts", direct], packages),
-  ).toEqual([...input.tests.filter((file) => file.includes("/packaged/")), direct].sort());
-  expect(
-    editedTestFiles(
-      input.tests,
-      ["packages/e2e/src/packaged/run-packaged-cli-tests.ts", "packages/e2e/src/ui/helpers/camera.ts"],
-      packages,
-    ),
-  ).toEqual(input.tests.filter((file) => file.startsWith("packages/e2e/")).sort());
-});
-
-test("a runner's adjacent P0 process contract checks runner edits without selecting unedited product journeys", () => {
-  const input = scopeFixture();
-  const contract = "packages/e2e/src/packaged/run-packaged-cli-tests.p0.test.ts";
-  const direct = "packages/e2e/src/packaged/shutdown.p2.test.ts";
-  const packages: Parameters<typeof editedTestFiles>[2] = input.packages.map((pkg) => ({
-    ...pkg,
-    scripts: pkg.name === "e2e" ? { "test:packaged:cli": "bun src/packaged/run-packaged-cli-tests.ts" } : undefined,
-  }));
-  const tests = [...input.tests, contract, direct];
-  const selected = editedTestFiles(tests, ["packages/e2e/src/packaged/run-packaged-cli-tests.ts", direct], packages);
-  expect(selected).toEqual([contract, direct].sort());
-  const rows = createEditedTestMatrix(selected, packages);
-  expect(rows).toHaveLength(6);
-  expect(rows.every((row) => JSON.parse(row.files).includes(direct))).toBe(true);
 });

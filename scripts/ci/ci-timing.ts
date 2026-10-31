@@ -109,8 +109,8 @@ export const summarizeCiTiming = (input: CiJob[], observedRuns: CiRunTiming[] = 
     const started = starts[0] ?? null;
     // Release publication and certification can finish after a nested functional gate.
     const final =
-      gate?.completed && first.every((job) => job.completed && Number.isFinite(Date.parse(job.completed)))
-        ? (first
+      gate?.completed && executed.every((job) => job.completed && Number.isFinite(Date.parse(job.completed)))
+        ? (executed
             .map((job) => job.completed!)
             .sort((a, b) => Date.parse(a) - Date.parse(b))
             .at(-1) ?? null)

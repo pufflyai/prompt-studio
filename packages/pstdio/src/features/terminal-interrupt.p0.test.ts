@@ -5,6 +5,8 @@ import { expect, test } from "bun:test";
 test.each([false, true])("terminal Ctrl+C restores the previous raw mode (%s)", async (raw) => {
   let output = "";
   const ready = Promise.withResolvers<void>();
+  // The child can exit before the PTY delivers its last bytes; the stream closes after them.
+  const closed = Promise.withResolvers<void>();
   const helper = new URL("./terminal-interrupt.ts", import.meta.url).href;
   const child = Bun.spawn(
     [
@@ -32,6 +34,7 @@ test.each([false, true])("terminal Ctrl+C restores the previous raw mode (%s)", 
           output += Buffer.from(bytes).toString();
           if (output.includes("ready")) ready.resolve();
         },
+        exit: () => closed.resolve(),
       },
     },
   );
@@ -43,7 +46,8 @@ test.each([false, true])("terminal Ctrl+C restores the previous raw mode (%s)", 
       }),
     ]);
     child.terminal!.write("\u0003");
-    expect({ code: await child.exited, output }).toMatchObject({ code: 130 });
+    const [code] = await Promise.all([child.exited, closed.promise]);
+    expect({ code, output }).toMatchObject({ code: 130 });
     const reports = output.split(/\r?\n/).filter((line) => line.startsWith("{"));
     expect(reports).toHaveLength(1);
     expect(JSON.parse(reports[0]!)).toEqual({ interrupted: true, raw, flowing: false });

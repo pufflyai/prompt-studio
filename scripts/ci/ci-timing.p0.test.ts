@@ -133,3 +133,12 @@ test("release timing includes publication after its nested functional gate", () 
   ]);
   expect(report.runs[0]).toMatchObject({ wallMs: 480_000, initialWaitMs: 5_000, elapsedAfterStartMs: 475_000 });
 });
+
+test("a skipped job without timestamps does not hide the run duration", () => {
+  const report = summarizeCiTiming([
+    job({ name: "scope", id: 1, started: "2026-10-25T00:00:05Z", completed: "2026-10-25T00:00:30Z" }),
+    job({ name: "build_docker", id: 3, conclusion: "skipped", started: null, completed: null }),
+    job({ id: 4, started: "2026-10-25T00:00:30Z", completed: "2026-10-25T00:01:00Z" }),
+  ]);
+  expect(report.runs[0]).toMatchObject({ wallMs: 60_000, elapsedAfterStartMs: 55_000 });
+});

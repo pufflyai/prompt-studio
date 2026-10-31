@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { productionDesktopPlatforms, productionToolchainPlatforms } from "./production-platforms";
 import { priorityFromFile, testRunner } from "./test-discovery";
 import { matchesPlatform, quarantineRegistry, quarantineRunnerForTest } from "./test-quarantine";
-import { testRunnerScripts } from "./test-runner-scripts";
 import type { readWorkspacePackages } from "./workspace-packages";
 
 // Scope runs before dependency installation. Resolve the workspace's public entry directly.
@@ -15,32 +14,6 @@ const { suites } = (await import(
 
 type Packages = ReturnType<typeof readWorkspacePackages>;
 const linux = { os: "ubuntu-24.04", platform: "linux", arch: "x64" };
-const supportsTests = (file: string, dir: string) =>
-  ["packages/e2e", "packages/canvas-tests"].includes(dir) ||
-  /(?:^|\/)(?:testing|test-utils|__fixtures__)\//.test(file) ||
-  /\.(?:test-)?fixture\.tsx?$/.test(file) ||
-  /^clients\/desktop\/playwright.*\.config\.ts$/.test(file);
-
-export const editedTestFiles = (tests: string[], changed: string[], packages: Packages) => {
-  const available = new Set(tests);
-  const selected = new Set(tests.filter((file) => changed.includes(file)));
-  for (const pkg of packages) {
-    for (const file of changed) {
-      if (!file.startsWith(`${pkg.dir}/`) || available.has(file) || !supportsTests(file, pkg.dir)) continue;
-      const runners = Object.entries(testRunnerScripts)
-        .filter(([, script]) => pkg.scripts?.[script]?.trim() === `bun ${file.slice(pkg.dir.length + 1)}`)
-        .map(([runner]) => runner);
-      let matching = tests.filter((test) => test.startsWith(`${pkg.dir}/`));
-      if (runners.length) {
-        const source = file.replace(/\.tsx?$/, "");
-        const contracts = matching.filter((test) => [`${source}.p0.test.ts`, `${source}.p0.test.tsx`].includes(test));
-        matching = contracts.length ? contracts : matching.filter((test) => runners.includes(testRunner(test)));
-      }
-      for (const test of matching) selected.add(test);
-    }
-  }
-  return [...selected].sort();
-};
 
 export const createEditedTestMatrix = (files: string[], packages: Packages) => {
   const groups = new Map<

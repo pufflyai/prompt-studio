@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 // Scope selection must work before installing Lerna or any package dependencies.
 export const readWorkspacePackages = (root: string) => {
   const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-  const packages: Array<{ name: string; dir: string; dependencies: string[]; scripts?: Record<string, string> }> = [];
+  const packages: Array<{ name: string; dir: string; dependencies: string[] }> = [];
   for (const pattern of manifest.workspaces as string[]) {
     const directories = pattern.endsWith("/*")
       ? readdirSync(join(root, pattern.slice(0, -2)), { withFileTypes: true })
@@ -22,7 +22,6 @@ export const readWorkspacePackages = (root: string) => {
       const pkg = JSON.parse(content);
       packages.push({
         name: pkg.name,
-        scripts: pkg.scripts ?? {},
         dir: relative(root, directory).replaceAll("\\", "/"),
         dependencies: [
           ...Object.keys(pkg.dependencies ?? {}),
