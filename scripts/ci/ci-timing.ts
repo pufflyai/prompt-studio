@@ -100,7 +100,7 @@ export const summarizeCiTiming = (input: CiJob[], observedRuns: CiRunTiming[] = 
         event: run!.event,
         runCreated: run!.created_at,
       };
-    const gate = first.find((job) => job.name === "ci_passed" || job.name.endsWith(" / ci_passed"));
+    const gate = first.find((job) => /(?:^| \/ )(?:production_)?ci_passed$/.test(job.name));
     const executed = first.filter((job) => job.conclusion !== "skipped");
     const starts = executed
       .map((job) => job.started)

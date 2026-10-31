@@ -122,7 +122,7 @@ test("separates initial scheduling delay from execution and does not sum paralle
 
 test("release timing includes publication after its nested functional gate", () => {
   const report = summarizeCiTiming([
-    job({ workflow: "release-packages.yml", name: "production / functional / ci_passed" }),
+    job({ workflow: "release-packages.yml", name: "production / functional / production_ci_passed" }),
     job({
       workflow: "release-packages.yml",
       name: "publish",
