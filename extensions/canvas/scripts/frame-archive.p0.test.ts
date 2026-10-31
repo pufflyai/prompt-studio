@@ -1,9 +1,47 @@
 import { expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { publishFrameArchive } from "./frame-archive";
+
+test.each(["/", "\\"])("preview archives bind source modules emitted with %s separators", async (separator) => {
+  const root = await mkdtemp(join(tmpdir(), "canvas-frame-paths-"));
+  const source = "examples/button.canvas.tsx";
+  const project = resolve(root, ".canvas/preview.tsx");
+  const native = resolve(root, "native.tsx");
+  const catalog = resolve(root, "catalog.ts");
+  const moduleId = (path: string) => `${path.replaceAll("\\", "/").replaceAll("/", separator)}?canvas`;
+  try {
+    await publishFrameArchive(
+      root,
+      [
+        {
+          type: "chunk",
+          fileName: "entry.js",
+          code: "export const ready = true;",
+          isEntry: true,
+          modules: Object.fromEntries(
+            [resolve(root, source), project, native, catalog].map((path) => [moduleId(path), {}]),
+          ),
+        },
+      ],
+      {
+        repoRoot: root,
+        sources: { [source]: "ui" },
+        projects: { ui: project },
+        nativeSources: { button: native },
+        catalogSource: catalog,
+      },
+    );
+    const manifest = JSON.parse(await readFile(join(root, "frame-manifest.json"), "utf8"));
+    expect(manifest.sources[source]).toEqual({ script: "entry.js", project: "entry.js" });
+    expect(manifest.sources["$native:button"]).toEqual({ script: "entry.js" });
+    expect(manifest.catalog).toBe("entry.js");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("preview archives omit host metadata and retain executable modules and styles", async () => {
   const root = await mkdtemp(join(tmpdir(), "canvas-frame-archive-"));

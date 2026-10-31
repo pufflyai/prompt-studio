@@ -25,7 +25,8 @@
       }
     },
     "implicitDependencies": [
-      "@pstdio/ui"
+      "@pstdio/ui",
+      "pstdio-dashboard"
     ]
   },
   "scripts": {

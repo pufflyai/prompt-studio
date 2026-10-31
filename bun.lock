@@ -1006,7 +1006,7 @@
         "vite": "^8.3.1",
       },
       "peerDependencies": {
-        "@chakra-ui/react": "^3.0.0",
+        "@chakra-ui/react": "^3.21.0",
         "@emotion/react": "^11.0.0",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
