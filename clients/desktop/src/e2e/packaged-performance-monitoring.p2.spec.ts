@@ -63,29 +63,45 @@ const rowCountsWhile = async (page: Page, key: string, ms: number) => {
 const forceSlowFrame = (page: Page) =>
   page.evaluate(
     () =>
-      new Promise<void>((resolve) =>
+      new Promise<{ startedAt: number; endedAt: number }>((resolve) =>
         setTimeout(() => {
+          const startedAt = performance.timeOrigin + performance.now();
           const end = performance.now() + 120;
           while (performance.now() < end) {}
-          resolve();
+          resolve({ startedAt, endedAt: performance.timeOrigin + performance.now() });
         }),
       ),
   );
+
+const overlapsTask = (frame: PerformanceSnapshot["frames"][number], task: { startedAt: number; endedAt: number }) => {
+  const startedAt = Date.parse(frame.startedAt);
+  return startedAt < task.endedAt && startedAt + frame.durationMs > task.startedAt;
+};
 
 test("keeps reporting slow frames after the workbench reloads", async () => {
   let app: PackagedApp | null = null;
   try {
     ({ app } = await launchProject("Reload", { monitoring: true }));
     const frames = async () => (await readSnapshot(app!.page))?.frames ?? [];
-    await forceSlowFrame(app.page);
-    await expect.poll(async () => (await frames()).length).toBeGreaterThan(0);
+    const firstTask = await forceSlowFrame(app.page);
+    await expect.poll(async () => (await frames()).some((frame) => overlapsTask(frame, firstTask))).toBe(true);
 
-    const before = new Set((await frames()).map((frame) => frame.startedAt));
+    await app.page.addInitScript(() => {
+      const observe = PerformanceObserver.prototype.observe;
+      PerformanceObserver.prototype.observe = function (options) {
+        observe.call(this, options);
+        if (options?.type === "long-animation-frame" || options?.type === "longtask")
+          (window as unknown as { slowFrameObserverReady: boolean }).slowFrameObserverReady = true;
+      };
+    });
     await app.page.reload();
     await expect(app.page.getByTestId("start-page")).toBeVisible();
     await expect.poll(async () => (await readSnapshot(app!.page)) !== null).toBe(true);
-    await forceSlowFrame(app.page);
-    await expect.poll(async () => (await frames()).some((frame) => !before.has(frame.startedAt))).toBe(true);
+    await app.page.waitForFunction(
+      () => (window as unknown as { slowFrameObserverReady?: boolean }).slowFrameObserverReady === true,
+    );
+    const secondTask = await forceSlowFrame(app.page);
+    await expect.poll(async () => (await frames()).some((frame) => overlapsTask(frame, secondTask))).toBe(true);
   } finally {
     await disposePackagedApp(app);
   }
