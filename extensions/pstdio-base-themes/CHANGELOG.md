@@ -1,5 +1,16 @@
 # pstdio-base-themes
 
+## 0.45.1-nightly.20261031193213
+
+_2026-10-31_
+
+### Patch Changes
+
+- 8e004ed: Theme the base theme canvases from the frame's theme, including VS Code theme tokens, and move their shared gallery out of the canvas file.
+- b5d3e2c: Replace Storybook preview tooling with native Canvas composition and critical Playwright checks; limit visual verification guidance to critical risks; distribute UI Canvas as an optional extension with a working-with-Canvas skill and dependency-scoped frame startup.
+- 2cd86db: Improve chat activity placement and Solarized contrast and tag colors.
+- 5e25e20: Accept extension API 0.3, which refuses storage records over 256 KiB and commits over 4 MiB.
+
 ## 0.45.0
 
 _2026-10-22_

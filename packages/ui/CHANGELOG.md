@@ -1,5 +1,50 @@
 # @pstdio/ui
 
+## 0.46.0-nightly.20261031193213
+
+_2026-10-31_
+
+### Minor Changes
+
+- 2f9afd0: Keep themes steady across projects, share theme conversion, and add Prompt Contrast Light and Dark.
+- 1d59445: Show closable tabs, page-scoped headers, compact tab cards with explicit creation actions, freely movable and pinnable tabs, and collection tab restoration across navigation.
+- 856afcf: Keep retained workbenches isolated while switching between projects.
+- 1a7f935: Add a shared dotted Canvas viewport with floating zoom controls, configurable scale limits, and shared navigation gestures.
+- dd5f406: Add optional bounded table and board queries with indexed page navigation and aggregate counts.
+- 85a84ff: Add a shared icon picker and persistent tree group icons, and use one row target for navigable branches.
+- e68ddda: Open workspace files without diff computation, preload Monaco alongside file reads, save workspace edits explicitly, and keep compact file trees within their viewport.
+- 714def5: Expose native harness account status and /login and /logout commands, with session setup states for missing harnesses and required sign-in.
+- 17e518d: Add the `optionCard` layer style for bordered choices in dialogs. The card holding the checked radio takes the accent border.
+- add1413: Add reusable outliner previews, persistent controls, multiselection, and keyboard reordering.
+- 1d59445: Add interactive tool cards for empty panels.
+- 4212050: Add a shortcut bubble with 2px corners, keyboard-selected tab outlines, accessible sequence separators, and arrow icons for shortcut keys.
+- 1a7f935: Add a dependency timeline through its own package entry with shared Canvas navigation.
+
+### Patch Changes
+
+- 0c1d165: Avoid constructing Chakra's unused default theme system during UI startup and require Chakra 3.21 or newer for its theme entry point.
+- b86f345: Add Home above Sessions, keep project navigation stable when entering and leaving tickets, place the mode return first in subnavigation content, and remove the desktop project breadcrumb button.
+- 969d652: Give user chat messages a background that stands apart from the app background in imported VS Code themes such as Monokai and Dracula.
+- 22ccce1: Show live steering messages immediately and restore rejected requests without unconfirmed delivery notices.
+- 4a7e459: Allow cards to move between every board column and remove drag permission settings.
+- f4f5498: Allow searchable menus to portal inside their owning dialog for accessible search and selection.
+- b5d3e2c: Replace Storybook preview tooling with native Canvas composition and critical Playwright checks; limit visual verification guidance to critical risks; distribute UI Canvas as an optional extension with a working-with-Canvas skill and dependency-scoped frame startup.
+- 422d8cb: Keep panel and fullscreen controls visible beside native window buttons on Linux and Windows.
+- 2cd86db: Improve chat activity placement and Solarized contrast and tag colors.
+- 85a84ff: Keep split frames fixed, respect focus choices, and remove the hidden-header hotspot.
+- 34f8998: Expose device-owned performance captures, recording exports, and Developer settings controls.
+- 96be793: Hide dot-prefixed folders by default in the project folder picker and toggle them with Cmd/Ctrl+Shift+Period.
+- 85a84ff: Scope Main tabs and choices to their page, preserve viewer context and safe history replay, and resolve declared breadcrumb icons.
+- 3c60fb2: Show the active Workspaces page and tooltips for navigation actions.
+- e3b8456: Move the performance meter and its details to the Prompt Studio Performance Monitoring extension, measure while that extension is loaded, remove the connection status badge, and keep status widget popover headers fixed with the scrollbar at the edge.
+- ec3e14f: Keep card gestures owned by the nested control where the pointer press began.
+- f874480: Hide command-controlled harness fields in run options and explain when to explore another implementation variant.
+- fc61aec: Keep project switching and panel controls responsive, and preserve native performance sampling while a backend reply is pending.
+- bf6b2d1: Use a 380 ms first-hover tooltip delay, show harness setting labels, reveal clipped tab titles, and keep full prompt history navigable while drafts are saved.
+- 35a2ab0: Focus a terminal opened from a menu even when the closing menu returns focus to its trigger.
+- 216b519: Bound ticket descriptions and use shared scrollbars in create dialogs.
+- f5c5c4b: Keep variable alerts bounded with full-message copying and matching scrollbars, and prevent offline icon lookups from crashing the runtime.
+
 ## 0.45.0
 
 _2026-10-22_

@@ -1,6 +1,6 @@
 {
   "name": "harness-pi",
-  "version": "0.44.0",
+  "version": "0.45.0-nightly.20261031193213",
   "displayName": "Pi",
   "description": "Contributes the optional Pi coding agent harness.",
   "publisher": "pstdio",

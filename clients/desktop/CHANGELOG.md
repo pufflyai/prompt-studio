@@ -1,5 +1,20 @@
 # @pstdio/desktop
 
+## 0.46.0-nightly.20261031193213
+
+_2026-10-31_
+
+### Minor Changes
+
+- 9931aa2: Breaking: 0.46 starts with a new database; data from older releases is exported as JSON to `~/.pstdio/backups/pre-0.46-*` for agents to re-import, and `ctx.storage.readLegacy` now always returns undefined.
+
+### Patch Changes
+
+- 422d8cb: Keep panel and fullscreen controls visible beside native window buttons on Linux and Windows.
+- 64513fa: Record native performance collection on time and reduce desktop checksum allocation work.
+- 22f6142: Update Electron to 43.8.1 to fix all open desktop security alerts.
+- f5c5c4b: Keep desktop recovery actions visible while long startup diagnostics scroll.
+
 ## 0.45.0
 
 _2026-10-22_

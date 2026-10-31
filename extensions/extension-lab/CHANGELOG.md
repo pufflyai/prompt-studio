@@ -1,5 +1,24 @@
 # extension-lab
 
+## 0.46.0-nightly.20261031193213
+
+_2026-10-31_
+
+### Minor Changes
+
+- 4eeef83: Declare and verify supported extension API baselines for independently published core extensions.
+- 2ff78f4: Add shared keyboard actions and contextual targets across core extensions and repository tools, with G R for Scribble navigation.
+- ff09af9: Use native Scribble page groups, editable titles and icons, and draft previews that create notes only on Save.
+- d0c28ac: Add Marmalade to Extension Lab with drawing tools, editable type, image adjustments, layer actions, shared undo history, and public commands.
+
+### Patch Changes
+
+- 2d863cb: Save example field edits atomically and preserve saved state across structural changes.
+- 315ad94: Keep example selections on tabless pages, share panel edits through editing sessions, and disable Boombox fullscreen.
+- 28e5989: Use shared status items and panels in examples, keep the queue scrollable, and synchronize Kiln playback.
+- 5e25e20: Accept extension API 0.3, which refuses storage records over 256 KiB and commits over 4 MiB.
+- 4cc9445: Remove obsolete board drag settings from Planner and Extension Lab.
+
 ## 0.45.0
 
 _2026-10-22_

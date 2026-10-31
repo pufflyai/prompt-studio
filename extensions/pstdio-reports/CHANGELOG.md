@@ -1,5 +1,21 @@
 # pstdio-reports
 
+## 0.46.0-nightly.20261031193213
+
+_2026-10-31_
+
+### Minor Changes
+
+- 2ff78f4: Add shared keyboard actions and contextual targets across core extensions and repository tools, with G R for Scribble navigation.
+- 4eeef83: Keep extension files in the full-ID `.pstdio/extension-storage/pstdio.<name>/` folder; earlier name-only folders are not read.
+
+### Patch Changes
+
+- 54422e2: Keep report numbers current after offline sync and resolve their old numbers as aliases.
+- 5e25e20: Store each report body as a file next to its evidence, so reports with long pasted logs stay under the 256 KiB record limit.
+- 5e25e20: Accept extension API 0.3, which refuses storage records over 256 KiB and commits over 4 MiB.
+- 16d0979: Use core record IDs in Planner, Reports, Notes and Artifacts and preserve stable migration imports.
+
 ## 0.45.0
 
 _2026-10-22_

@@ -1,6 +1,6 @@
 {
   "name": "canvas",
-  "version": "0.0.0",
+  "version": "0.0.1-nightly.20261031193213",
   "displayName": "UI Canvas",
   "description": "Designs, component states, and interactive examples in one UI workspace.",
   "publisher": "pstdio",

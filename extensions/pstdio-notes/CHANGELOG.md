@@ -1,5 +1,23 @@
 # pstdio-notes
 
+## 0.46.0-nightly.20261031193213
+
+_2026-10-31_
+
+### Minor Changes
+
+- 2ff78f4: Add shared keyboard actions and contextual targets across core extensions and repository tools, with G R for Scribble navigation.
+- 2ff78f4: Add one default shortcut per resource creation and navigation action through existing UI flows.
+- 4eeef83: Keep extension files in the full-ID `.pstdio/extension-storage/pstdio.<name>/` folder; earlier name-only folders are not read.
+
+### Patch Changes
+
+- b86f345: Add Home above Sessions, keep project navigation stable when entering and leaving tickets, place the mode return first in subnavigation content, and remove the desktop project breadcrumb button.
+- 055ad0a: Offer New note in the Notes page menu and placeholder and make the Notes navigation root open its page.
+- 4eeef83: Require extension API 0.2 or newer, because the chat link support uses resource-kind APIs that API 0.1.7 hosts do not have.
+- 5e25e20: Accept extension API 0.3, which refuses storage records over 256 KiB and commits over 4 MiB.
+- 16d0979: Use core record IDs in Planner, Reports, Notes and Artifacts and preserve stable migration imports.
+
 ## 0.45.0
 
 _2026-10-22_

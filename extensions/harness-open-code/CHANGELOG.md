@@ -1,5 +1,18 @@
 # harness-open-code
 
+## 0.46.0-nightly.20261031193213
+
+_2026-10-31_
+
+### Minor Changes
+
+- d309109: Install private native CLIs, prefer existing installations, and offer provider sign-in inside Prompt Studio.
+- 4eeef83: Declare and verify supported extension API baselines for independently published core extensions.
+
+### Patch Changes
+
+- 5e25e20: Accept extension API 0.3, which refuses storage records over 256 KiB and commits over 4 MiB.
+
 ## 0.45.0
 
 _2026-10-22_

@@ -1,5 +1,43 @@
 # @pstdio/sdk
 
+## 0.46.0-nightly.20261031193213
+
+_2026-10-31_
+
+### Minor Changes
+
+- 187bede: Restore a cloud project, or one extension in it, to a recovery point from the last hour, 12 hours or day with `pst projects restore`.
+- 4f3928b: Store each extension record in its own document so saves stay fast and memory stays bounded in large projects.
+- 65d36f4: Control Cloud early access per account and expose relay feature grants in account status.
+- 17e518d: Get your cloud projects back on a new or reset device after signing in, and give a project its folder later by cloning its git remote or choosing a checkout.
+- 1d59445: Show closable tabs, page-scoped headers, compact tab cards with explicit creation actions, freely movable and pinnable tabs, and collection tab restoration across navigation.
+- c938135: Add deterministic initial order positions for storage migrations.
+- 3cac00c: Preserve startup performance evidence and export saved recordings for benchmarks.
+- 85a84ff: Keep pages and reusable viewers independent, derive headers from page presentation, and preserve navigation and focus.
+- 7116e1b: Let collection badges open panels and other navigation actions.
+- 85a84ff: Support independent resource viewers in tabbed collections and safe replacement from resource-free landing pages.
+- 34f8998: Expose device-owned performance captures, recording exports, and Developer settings controls.
+- dd5f406: Add optional bounded table and board queries with indexed page navigation and aggregate counts.
+- 714def5: Expose native harness account status and /login and /logout commands, with session setup states for missing harnesses and required sign-in.
+- def084b: Add indexed record pages, aggregates and batch reads without hydrating owner documents, with safe runtime index activation and recovery of stale record and resource projections.
+- ec820b7: Use hosted Cloud login by default while preserving self-hosted account service overrides.
+- c37aad4: Version core extensions independently, store extension data under full `<publisher>.<name>` IDs where each extension starts fresh, and add opt-in PSX registry installs.
+- 85a84ff: Preserve each viewer's navigation context and prevent stale actions from crossing project or deletion boundaries.
+- 4212050: Add shared keyboard actions, global panel/fullscreen toggles, Ctrl+Tab and numbered tab selection, automatic exit after completed actions, and a grouped palette reference with one default shortcut per action.
+- 961fa89: Refuse extension storage records over 256 KiB and commits over 4 MiB, and export `storageLimits` and `isStorageLimitError`; this moves the extension API to 0.3.0, so store large content as files.
+- 9f0140e: Add explicit CLI live steering with guarded delivery and no automatic queue fallback.
+- 35226d1: Let extension status items open detail views in a host popover.
+- 85a84ff: Support page-owned Main content, non-rendering page groups, and independent panel views with mode-owned fullscreen policy.
+
+### Patch Changes
+
+- 8271995: Prepare local folders and restore synced files when opening cloud projects on a new machine.
+- 4a7e459: Allow cards to move between every board column and remove drag permission settings.
+- a5aaf39: Expose full project session controls, conversation streaming, approvals, attachments, and native commands to extensions.
+- b393779: Hold Alt to preview keyboard shortcuts, select numbered tabs without entering shortcut mode, add G → H for Home, show Mod+P on Search, deprecate the Help shortcut layer, and stop looking up shortcuts while typing plain keys.
+- 08d82a4: Publish SDK API metadata and support SDK/UI previews without a host release.
+- 8729077: Keep host-required extensions enabled across projects and add app-wide panels with device settings.
+
 ## 0.45.0
 
 _2026-10-22_
