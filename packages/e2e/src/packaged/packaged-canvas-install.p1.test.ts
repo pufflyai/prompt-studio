@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { type Browser, chromium } from "@playwright/test";
 import { packExtension, readExtensionPackage } from "pstdio-extensions/distribution";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -19,7 +19,16 @@ test(
   "installs Canvas from the catalog with working commands and its authoring skill",
   async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-canvas-"));
-    const packed = await packExtension(join(import.meta.dirname, "../../../../extensions/canvas"));
+    const source = join(root, "catalog-source");
+    cpSync(join(import.meta.dirname, "../../../../extensions/canvas"), source, {
+      recursive: true,
+      filter: (path) => basename(path) !== "node_modules",
+    });
+    const manifestPath = join(source, "package.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    // Catalog releases use stable versions even when the private source has a nightly snapshot version.
+    writeFileSync(manifestPath, JSON.stringify({ ...manifest, version: "1.0.0" }));
+    const packed = await packExtension(source);
     const { files } = await readExtensionPackage(packed.bytes);
     expect(files.has("src/catalog/generated/native-manifest.json")).toBe(false);
     for (const asset of ["frame-manifest.json", "frame-themes.json", "stories.json", "source-information.json"]) {
