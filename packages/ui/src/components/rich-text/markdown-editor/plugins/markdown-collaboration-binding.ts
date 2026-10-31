@@ -192,10 +192,11 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
     callbacks.current.onSelectionChange?.(null);
   };
   const stopRoot = editor.registerRootListener((root, previous) => {
-    previous?.removeEventListener("compositionstart", beginComposition);
+    previous?.removeEventListener("compositionstart", beginComposition, true);
     previous?.removeEventListener("compositionend", endComposition);
     previous?.removeEventListener("blur", blur);
-    root?.addEventListener("compositionstart", beginComposition);
+    // Lexical can write a placeholder in its start handler. Open the private draft before it runs.
+    root?.addEventListener("compositionstart", beginComposition, true);
     root?.addEventListener("compositionend", endComposition);
     root?.addEventListener("blur", blur);
   });
@@ -214,7 +215,7 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
     stopRecovery();
     onRecovery(null);
     const root = editor.getRootElement();
-    root?.removeEventListener("compositionstart", beginComposition);
+    root?.removeEventListener("compositionstart", beginComposition, true);
     root?.removeEventListener("compositionend", endComposition);
     root?.removeEventListener("blur", blur);
     callbacks.current.onSelectionChange?.(null);
