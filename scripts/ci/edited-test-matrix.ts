@@ -23,26 +23,23 @@ const supportsTests = (file: string, dir: string) =>
 
 export const editedTestFiles = (tests: string[], changed: string[], packages: Packages) => {
   const available = new Set(tests);
-  const supports = packages.flatMap((pkg) =>
-    changed
-      .filter((file) => file.startsWith(`${pkg.dir}/`) && !available.has(file) && supportsTests(file, pkg.dir))
-      .map((file) => ({
-        dir: pkg.dir,
-        // Only a direct runner entry can narrow selection. Shared helpers/configs keep the owner fallback.
-        runners: Object.entries(testRunnerScripts)
-          .filter(([, script]) => pkg.scripts?.[script]?.trim() === `bun ${file.slice(pkg.dir.length + 1)}`)
-          .map(([runner]) => runner),
-      })),
-  );
-  return [...new Set(tests)]
-    .filter(
-      (file) =>
-        changed.includes(file) ||
-        supports.some(
-          ({ dir, runners }) => file.startsWith(`${dir}/`) && (!runners.length || runners.includes(testRunner(file))),
-        ),
-    )
-    .sort();
+  const selected = new Set(tests.filter((file) => changed.includes(file)));
+  for (const pkg of packages) {
+    for (const file of changed) {
+      if (!file.startsWith(`${pkg.dir}/`) || available.has(file) || !supportsTests(file, pkg.dir)) continue;
+      const runners = Object.entries(testRunnerScripts)
+        .filter(([, script]) => pkg.scripts?.[script]?.trim() === `bun ${file.slice(pkg.dir.length + 1)}`)
+        .map(([runner]) => runner);
+      let matching = tests.filter((test) => test.startsWith(`${pkg.dir}/`));
+      if (runners.length) {
+        const source = file.replace(/\.tsx?$/, "");
+        const contracts = matching.filter((test) => [`${source}.p0.test.ts`, `${source}.p0.test.tsx`].includes(test));
+        matching = contracts.length ? contracts : matching.filter((test) => runners.includes(testRunner(test)));
+      }
+      for (const test of matching) selected.add(test);
+    }
+  }
+  return [...selected].sort();
 };
 
 export const createEditedTestMatrix = (files: string[], packages: Packages) => {

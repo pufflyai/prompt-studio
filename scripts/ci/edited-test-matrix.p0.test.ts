@@ -127,3 +127,19 @@ test("a runner entry edit selects its own suite plus every directly edited test"
     ),
   ).toEqual(input.tests.filter((file) => file.startsWith("packages/e2e/")).sort());
 });
+
+test("a runner's adjacent P0 process contract checks runner edits without selecting unedited product journeys", () => {
+  const input = scopeFixture();
+  const contract = "packages/e2e/src/packaged/run-packaged-cli-tests.p0.test.ts";
+  const direct = "packages/e2e/src/packaged/shutdown.p2.test.ts";
+  const packages: Parameters<typeof editedTestFiles>[2] = input.packages.map((pkg) => ({
+    ...pkg,
+    scripts: pkg.name === "e2e" ? { "test:packaged:cli": "bun src/packaged/run-packaged-cli-tests.ts" } : undefined,
+  }));
+  const tests = [...input.tests, contract, direct];
+  const selected = editedTestFiles(tests, ["packages/e2e/src/packaged/run-packaged-cli-tests.ts", direct], packages);
+  expect(selected).toEqual([contract, direct].sort());
+  const rows = createEditedTestMatrix(selected, packages);
+  expect(rows).toHaveLength(6);
+  expect(rows.every((row) => JSON.parse(row.files).includes(direct))).toBe(true);
+});
