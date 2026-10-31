@@ -1,0 +1,51 @@
+name: Release readiness evidence
+on:
+  push:
+    branches: [test/release-046-evidence]
+    paths: [.github/workflows/release-readiness-evidence.yml]
+permissions:
+  contents: read
+  actions: read
+  checks: write
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: benchmark-desktop-evidence-darwin-arm64
+          run-id: 41149279870
+          github-token: ${{ github.token }}
+          path: evidence
+      - name: Retain a compact diagnostic result
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import json, pathlib, re, subprocess, os
+          sections = []
+          def clean(message):
+              message = re.sub(r"\x1b\[[0-9;]*m", "", message)
+              message = re.sub(r"(browser-login=)[^\s\"\\]+", r"\1[redacted]", message)
+              return message[:8000]
+          def visit(value):
+              if isinstance(value, dict):
+                  for test in value.get("tests", []):
+                      for result in test.get("results", []):
+                          if result.get("status") not in ["passed", "skipped"]:
+                              errors = "\n".join(clean(error.get("message", "")) for error in result.get("errors", []))
+                              sections.append("### Desktop: " + value.get("title", "") + "\n\n" + errors)
+                  for item in value.values():
+                      visit(item)
+              elif isinstance(value, list):
+                  for item in value:
+                      visit(item)
+          for path in pathlib.Path("evidence").rglob("packaged-benchmarks.json"):
+              visit(json.loads(path.read_text()))
+          for label, job in [("Frontend setup", 124383614879), ("Landing-page Docker", 124383343193)]:
+              annotations = json.loads(subprocess.check_output(["gh", "api", f"repos/pufflyai/prompt-studio/check-runs/{job}/annotations?per_page=100"]))
+              sections.append("### " + label + "\n\n" + "\n".join(clean(item.get("message", "")) for item in annotations))
+          payload = {"name": "Release 0.46 diagnostic details", "head_sha": os.environ["GITHUB_SHA"], "status": "completed", "conclusion": "neutral", "output": {"title": "Failure evidence; no tests rerun", "summary": "\n\n".join(sections)[:60000]}}
+          result = json.loads(subprocess.check_output(["gh", "api", "--method", "POST", "repos/pufflyai/prompt-studio/check-runs", "--input", "-"], input=json.dumps(payload).encode()))
+          print("Diagnostic check:", result["id"])
