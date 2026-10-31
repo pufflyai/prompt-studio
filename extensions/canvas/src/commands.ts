@@ -26,13 +26,14 @@ export const commands = {
     },
     async run(ctx, input) {
       const files = buildFiles(ctx);
-      const build = await readBuild(files);
-      if (build.status !== "ready") throw new Error("The canvas build is not available");
-      return readFrameAssets(
-        build.manifest.frames,
-        { source: input.source, cached: input.cached as string[] },
-        (path) => files.readText(path),
-      );
+      const request = { source: input.source, cached: input.cached as string[] };
+      const read = async (fresh: boolean) => {
+        const build = await readBuild(files, { fresh });
+        if (build.status !== "ready" || !files) throw new Error("The canvas build is not available");
+        return readFrameAssets(build.manifest.frames, request, (path) => files.readText(path));
+      };
+      // A new build can replace modules between reading the manifest and reading them.
+      return read(false).catch(() => read(true));
     },
   }),
   // The view reads one canvas, or the first one when none is chosen, with the build's state.

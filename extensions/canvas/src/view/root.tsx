@@ -121,8 +121,8 @@ export const CanvasRoot = (props: RootProps) => {
   const read = useCanvasBuild(host, id);
   let body = <BuildNotice status="loading" />;
   if (read?.status === "ready" && read.canvas) {
-    // Frames that appear or disappear change positions and selection, so they start a new runtime.
-    const frames = read.canvas.items.map((item) => item.id).join("\n");
+    // Frames that appear, disappear or change size start a new runtime, which owns their layout.
+    const frames = read.canvas.items.map((item) => `${item.id}:${item.width}x${item.height}`).join("\n");
     body = read.canvas.error ? (
       <BuildNotice status="failed" message={read.canvas.error} name={read.canvas.name} />
     ) : (

@@ -44,10 +44,14 @@ const fingerprint = (text: string) => {
 };
 
 const canvasRevision = (manifest: CanvasBuildManifest, id: string) => {
+  const { modules } = manifest.frames;
   // The runtime entry changes with every build, so leave it out of each canvas's revision.
   const runtime = new Set(selectFrameModules(manifest.frames, "$runtime"));
   const own = selectFrameModules(manifest.frames, id).filter((name) => !runtime.has(name));
-  return fingerprint(own.sort().join("\n"));
+  // Module files are named by their content. A style-only edit keeps the JS chunk's name but
+  // changes its stylesheet's file, so the stylesheets count too.
+  const files = [...own, ...own.flatMap((name) => modules[name]?.css ?? [])].map((name) => modules[name]?.file ?? name);
+  return fingerprint([...new Set(files)].sort().join("\n"));
 };
 
 export const toCanvas = (manifest: CanvasBuildManifest, entry: CanvasEntry): CanvasDefinition => {

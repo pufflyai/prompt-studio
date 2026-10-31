@@ -1,7 +1,15 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 
-export type BuildStatus = "loading" | "missing" | "empty" | "unsupported" | "failed" | "removed" | "error";
+export type BuildStatus =
+  | "loading"
+  | "missing"
+  | "empty"
+  | "unavailable"
+  | "unsupported"
+  | "failed"
+  | "removed"
+  | "error";
 
 const EXAMPLE = `// src/button.canvas.tsx
 import { Button } from "./button";
@@ -52,6 +60,13 @@ export const BuildNotice = (props: BuildNoticeProps) => {
       </Stack>
     );
   if (status === "removed") return <EmptyState title="This canvas no longer exists" />;
+  if (status === "unavailable")
+    return (
+      <EmptyState
+        title="UI Canvas needs the project's local folder"
+        description="It reads the canvas build from the project folder on this computer, and this project has none it can read."
+      />
+    );
   if (status === "unsupported")
     return (
       <EmptyState
