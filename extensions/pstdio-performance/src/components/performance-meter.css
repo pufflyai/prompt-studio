@@ -20,7 +20,7 @@
   line-height: 150%;
   white-space: nowrap;
   cursor: pointer;
-  transition: all 0.1s ease-in-out;
+  transition: all var(--chakra-durations-surface-enter, 100ms) var(--chakra-easings-ease-in-out, ease-in-out);
 }
 
 .performance-meter:hover {
