@@ -11,7 +11,7 @@ Each stage has its own purpose. A later stage never trusts a result from a diffe
 
 ## Test priorities
 
-Every test file names its priority before the runner suffix, for example `session-state.p0.test.ts` or `startup.p1.spec.ts`. The priority decides when the complete suite runs. Tests a PR adds or edits also run on that PR, at every priority; the queue does not repeat them. Test discovery reads the filename; workflows never list test files. A test filename without a priority fails CI.
+Every test file names its priority before the runner suffix, for example `session-state.p0.test.ts` or `startup.p1.spec.ts`. The priority decides when the complete suite runs. Tests a PR adds or edits run in required PR CI at every priority. The queue does not run the `edited_tests` matrix, but its P0 and selected P1 checks can run the same files again. Test discovery reads the filename; workflows never list test files. A test filename without a priority fails CI.
 
 | Priority | What it protects | Runs in | Examples |
 | --- | --- | --- | --- |
@@ -68,7 +68,7 @@ The timing report keeps initial scheduling delay, elapsed time after the first j
 - Root build inputs and lockfiles select every workspace. Changes inside `scripts/ci/` select the tooling owner and its declared consumers; the queue still checks all owners.
 - A documentation-only change runs only the static checks.
 - Added or edited P1, P2 and P3 tests run immediately in required `edited_tests` jobs, alongside the affected P0 checks. P0 tests already covered by the baseline do not run twice. Deleted tests are not executed; their removal still selects affected workspace checks.
-- Only test files the PR adds or edits run beyond P0. Helpers, fixtures, runners and test configuration select their workspace's P0 checks, not its P1–P3 tests; those run in the queue or nightly.
+- Only test files the PR adds or edits run beyond P0. Helpers, fixtures, runners and test configuration select their workspace's P0 checks, not its P1–P3 tests. The queue runs selected P1 source contracts; complete P1–P3 coverage runs in nightly and stable validation.
 - Benchmarks and the service delivery smoke do not run on PRs. Edited benchmark files still run through `edited_tests`.
 - Edited tests use their registered runners and setup. Native desktop checks retain all four desktop platforms; packaged CLI and browser checks retain all six toolchain targets. An edited benchmark runs its complete registered suite once per applicable host, preserving its workload and cold-start order. Desktop benchmarks use all four desktop platforms; backend suites use Linux, Apple Silicon and Windows; browser and relay suites use Linux. Existing test limits and performance budgets apply.
 - Each selected file runs once per applicable platform. Stable failures block the PR. Quarantined cases retain their separate execution and report requirements. Missing execution evidence fails the check. Jobs preserve selected files, results, traces and measurements as artifacts; independent edited files continue after a failure.

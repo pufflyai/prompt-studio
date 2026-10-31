@@ -63,7 +63,7 @@ export const resolveCiScope = (input: CiScopeInput) => {
     sourceCoverage: production && releaseChannel === "nightly",
     affectedOwners,
     // Only tests edited by the PR run beyond P0. Support files, fixtures and runners rely on
-    // the affected P0 checks here and on the complete suites in the queue and nightly.
+    // the affected P0 checks here and on the complete suites in nightly and stable validation.
     editedMatrix:
       stage === "pull_request"
         ? createEditedTestMatrix(

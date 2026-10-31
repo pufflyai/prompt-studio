@@ -46,7 +46,7 @@ jobs:
         id: plan
         env:
           COMMITS: ${{ inputs.commits }}
-          PLATFORMS: ${{ inputs.platforms }}
+          PLATFORMS: ${{ inputs.platforms || 'linux-x64' }}
           SUITES: ${{ inputs.suites }}
           SAMPLES: ${{ inputs.samples }}
         run: |
