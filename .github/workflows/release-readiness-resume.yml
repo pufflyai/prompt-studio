@@ -1,0 +1,49 @@
+name: Release readiness resume verification
+on:
+  push:
+    branches: [test/release-046-resume]
+permissions:
+  contents: read
+jobs:
+  desktop:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15-intel]
+    env:
+      PSTDIO_EXTENSION_RELEASE_REF: ${{ github.sha }}
+      CI_PRIORITY: P2
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - run: bun scripts/ci/install-native-dependencies.ts
+      - run: bun run build -- --scope @pstdio/desktop --include-dependencies
+      - run: bun run --cwd clients/desktop package
+      - name: Configure native Chromium sandboxes
+        if: runner.os == 'Linux'
+        run: |
+          for sandbox in clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox clients/desktop/node_modules/electron/dist/chrome-sandbox; do
+            sudo chown root:root "$sandbox"
+            sudo chmod 4755 "$sandbox"
+          done
+      - name: Run maintained P2 desktop coverage once
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a bun scripts/ci/run-priority-tests.ts p2 --scope @pstdio/desktop --runner desktop --prebuilt
+          else
+            bun scripts/ci/run-priority-tests.ts p2 --scope @pstdio/desktop --runner desktop --prebuilt
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-resume-${{ matrix.os }}
+          path: clients/desktop/test-results
+          if-no-files-found: warn
