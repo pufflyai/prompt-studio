@@ -20,6 +20,7 @@ jobs:
           - { suite: runtime, os: macos-15 }
           - { suite: desktop, os: macos-15 }
     env:
+      CI_PRIORITY: "P3"
       UI_PERF_ASSERT_BUDGETS: "1"
       PLAYWRIGHT_TRACE: "off"
     steps:
