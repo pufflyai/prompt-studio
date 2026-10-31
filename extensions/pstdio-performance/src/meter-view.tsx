@@ -3,8 +3,8 @@ import { createWebviewClient, defineExtensionView } from "@pstdio/sdk/extensions
 import { useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { PerformanceMeter, PerformanceMeterOff } from "./components/performance-meter";
-import { PerformanceRoot } from "./components/performance-root";
 import { createSnapshotStore, type SnapshotStore } from "./snapshot-store";
+import { PerformanceTranslations } from "./translations";
 
 const Meter = (props: { store: SnapshotStore }) => {
   const { store } = props;
@@ -21,9 +21,9 @@ export default defineExtensionView({
     const lease = client.performance.retain().catch(() => undefined);
     const root = createRoot(context.mount);
     root.render(
-      <PerformanceRoot context={context}>
+      <PerformanceTranslations value={{ locale: context.locale, t: context.t }}>
         <Meter store={createSnapshotStore(client.performance)} />
-      </PerformanceRoot>,
+      </PerformanceTranslations>,
     );
     return () => {
       root.unmount();

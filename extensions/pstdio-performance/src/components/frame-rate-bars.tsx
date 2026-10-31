@@ -1,4 +1,5 @@
-import { Box, HStack } from "@chakra-ui/react";
+import "./performance-bars.css";
+import { performanceColor } from "./performance-color";
 
 // 50 fps or more stays quiet; slower seconds take the warning or error color.
 export const frameRateColor = (fps: number | undefined) => {
@@ -28,18 +29,24 @@ export const FrameRateBars = (props: FrameRateBarsProps) => {
   const recent = buckets.slice(-count);
   const bars = [...Array<number | undefined>(count - recent.length).fill(undefined), ...recent];
   return (
-    <HStack h={height} gap={gap} alignItems="end" aria-hidden>
+    <span
+      className="performance-bars"
+      style={{ height: `var(--chakra-sizes-${height})`, gap: `var(--chakra-spacing-${gap})` }}
+      aria-hidden
+    >
       {bars.map((fps, index) => (
-        <Box
+        <span
           // Bars are positional; a second has no identity of its own.
           key={index}
-          w={width}
-          flex={width === "auto" ? "1" : undefined}
-          h={`${Math.max(8, (Math.min(fps ?? 0, 60) / 60) * 100)}%`}
-          bg={barColor(fps)}
-          borderTopRadius="2xs"
+          className="performance-bar"
+          style={{
+            width: width === "auto" ? "auto" : `var(--chakra-sizes-${width})`,
+            flex: width === "auto" ? "1" : undefined,
+            height: `${Math.max(8, (Math.min(fps ?? 0, 60) / 60) * 100)}%`,
+            backgroundColor: performanceColor(barColor(fps)),
+          }}
         />
       ))}
-    </HStack>
+    </span>
   );
 };
