@@ -54,10 +54,12 @@ export const normalizeWorkbenchKeybinding = (keybinding: KeybindingSequence): Ke
 
 export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyRegistrationsInput) => {
   const { workbench, disabled = false, commandIds } = input;
+  if (!workbench.activation.isActive()) return [];
   const allowedCommandIds = commandIds ? new Set(commandIds) : undefined;
   let targets: KeyboardPresentation[] | undefined;
   const visibleTargets = () => (targets ??= workbench.keyboard.visibleTargets());
   const available = (id: string) => {
+    if (!workbench.activation.isActive()) return false;
     const binding = workbench.keybindings
       .listActiveKeybindings()
       .find((entry) => workbench.keybindings.getId(entry) === id);
@@ -81,6 +83,7 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
           requestId: JSON.stringify([getNavigationTargetKey(action), keybinding.keybinding]),
           execute: async () => {
             if (!available(workbench.keybindings.getId(keybinding))) return;
+
             if (workbench.keyboard.store.getState().active || keybinding.targetScope)
               return workbench.keyboard.invoke(workbench.keybindings.getId(keybinding));
             if (action.args === undefined && hasCommandParameters(record.command.params)) {
@@ -108,6 +111,7 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
         requestId: JSON.stringify([getNavigationTargetKey(action), keybinding.keybinding]),
         execute: () => {
           if (!available(workbench.keybindings.getId(keybinding))) return Promise.resolve();
+
           return runUserAction(workbench, "Open", () =>
             workbench.keyboard.store.getState().active || keybinding.targetScope
               ? workbench.keyboard.invoke(workbench.keybindings.getId(keybinding))

@@ -50,7 +50,7 @@ export const FullscreenKeyboard = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   useLayoutEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented || !workbench.fullscreen.store.getState().active) return;
+      if (!isFullscreenEscape(workbench, event)) return;
       if (workbench.commandPalette.store.getState().open) return;
       const target = event.target instanceof Element ? event.target : undefined;
       if (target?.closest('[role="menu"], [role="listbox"], [role="dialog"]:not([data-workbench-panel="side"])'))
@@ -65,3 +65,9 @@ export const FullscreenKeyboard = (props: { workbench: WorkbenchCore }) => {
   }, [workbench]);
   return null;
 };
+
+const isFullscreenEscape = (workbench: WorkbenchCore, event: KeyboardEvent) =>
+  workbench.activation.isActive() &&
+  event.key === "Escape" &&
+  !event.defaultPrevented &&
+  workbench.fullscreen.store.getState().active;

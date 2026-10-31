@@ -8,8 +8,9 @@ Accepted design for PS-776. Implementation is incomplete. Source-provider and
 projection ownership repairs and public session primitives are implemented. Native
 bridge adoption, installed editor acceptance and release validation remain open.
 
-This record was recovered from the retained implementation branch as 0117 because
-main had independently assigned 0116 to the Firefox test-home decision.
+This record was recovered as 0117 after main assigned 0116 to the Firefox
+test-home decision. It moved to 0118 when main independently assigned 0117 to
+Lexical typeahead anchor ownership. Its original proposal date is preserved.
 
 ## Decision
 

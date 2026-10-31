@@ -43,7 +43,7 @@ export type { SwitchProps } from "./switch";
 export { Switch } from "./switch";
 export type { TagSwatchProps } from "./tag-swatch";
 export { TagSwatch } from "./tag-swatch";
-export { Toaster, toaster } from "./toaster";
+export { Toaster, toaster, useToaster } from "./toaster";
 export { Tooltip } from "./tooltip";
 export type { WorkspaceBadgeProps } from "./workspace-badge";
 export { WorkspaceBadge } from "./workspace-badge";

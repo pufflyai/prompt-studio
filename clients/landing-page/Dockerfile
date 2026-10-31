@@ -24,6 +24,8 @@ RUN bun install --frozen-lockfile --ignore-scripts --filter @pstdio/sdk
 RUN bun run --cwd packages/sdk build:js
 RUN bun install --frozen-lockfile --ignore-scripts --filter @pstdio/landing-page
 
+# UI bundles the private theme helper declarations into its public types.
+RUN bun run --cwd packages/pstdio-theme build
 RUN cd packages/ui && bun run build
 RUN cd clients/landing-page && bun run build
 

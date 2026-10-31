@@ -22,6 +22,7 @@ import { callFrameCapability, frameDimensionChanged } from "./frame-capability";
 import type { HostEventPublisher } from "./host-event-publisher";
 import { extensionIframeAllow } from "./iframe-permissions";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
+import { useFrameTheme } from "./use-frame-theme";
 
 export interface ExtensionFrameProps {
   keyboardShortcuts?: readonly WebviewKeyboardShortcut[];
@@ -30,6 +31,8 @@ export interface ExtensionFrameProps {
   view: ExtensionViewDescriptor;
   props: Partial<WebviewHostProps> & Record<string, unknown>;
   theme: ThemePreference;
+  /** Theme element owned by this view's workbench. Defaults to the document. */
+  themeRoot?: () => HTMLElement | null;
   capabilities?: HostCapabilityRegistry;
   /** Private guest shortcut forwarding, outside extension capability grants. */
   onKeyboardEvent?: (event: import("pstdio-api-contracts").WebviewKeyboardEventParams) => void;
@@ -94,6 +97,8 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const connectedWindowRef = useRef<Window | null>(null);
   const propsRef = useRef(createWebviewHostProps(extensionProps));
   const themeRef = useRef(theme);
+  const themeRootRef = useRef(props.themeRoot);
+  themeRootRef.current = props.themeRoot;
   const capabilitiesRef = useRef(capabilities);
   const onKeyboardEventRef = useRef(onKeyboardEvent);
   const keyboardRef = useRef({ shortcuts: keyboardShortcuts, onShortcut });
@@ -225,8 +230,8 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
             moduleUrl: moduleUrlAtConnect,
             styles: stylesAtConnect,
             props: propsRef.current,
-            theme: resolveActiveTheme(themeRef.current),
-            themeVariables: collectChakraThemeVariables(),
+            theme: resolveActiveTheme(themeRef.current, themeRootRef.current?.()),
+            themeVariables: collectChakraThemeVariables(themeRootRef.current?.()),
             extensionId: view.extensionId,
           });
           if (iframeRef.current !== iframe) return;
@@ -277,40 +282,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     remoteRef.current?.propsUpdate({ props: createWebviewHostProps(extensionProps) });
   }, [extensionProps]);
 
-  useEffect(() => {
-    if (!initializedRef.current) return;
-    remoteRef.current?.themeUpdate({
-      theme: resolveActiveTheme(theme),
-      variables: collectChakraThemeVariables(),
-    });
-  }, [theme]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof MutationObserver === "undefined") return;
-
-    let frame: number | null = null;
-    const schedule = () => {
-      if (frame !== null) cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        frame = null;
-        if (!initializedRef.current) return;
-        remoteRef.current?.themeUpdate({
-          theme: resolveActiveTheme(themeRef.current),
-          variables: collectChakraThemeVariables(),
-        });
-      });
-    };
-
-    const observer = new MutationObserver(schedule);
-    const options = { attributeFilter: ["class", "data-color-mode", "data-theme", "style"], attributes: true };
-    observer.observe(document.documentElement, options);
-    observer.observe(document.body, options);
-
-    return () => {
-      observer.disconnect();
-      if (frame !== null) cancelAnimationFrame(frame);
-    };
-  }, []);
+  useFrameTheme({ theme, themeRoot: themeRootRef, initialized: initializedRef, remote: remoteRef });
 
   return (
     <div

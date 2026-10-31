@@ -46,7 +46,7 @@ The legacy native view adapter admits Markdown. Registered text sources can reso
 and project through ordinary extension callbacks without an open view. Public editor
 sessions and selected-source grants remain unimplemented in the PS-776 checkpoint;
 the private native session does not establish third-party editor parity. See
-[the shared text decision](../../adrs/0117-host-owned-shared-text-documents.md).
+[the shared text decision](../../adrs/0118-host-owned-shared-text-documents.md).
 
 Presence carries a caller-defined value. An icon editor can share selected icon IDs;
 a text editor can share history-relative selections. The host adapter validates and

@@ -35,7 +35,7 @@ test("dashboard keeps project selection open when no project is selected", async
   const projectPicker = page.getByRole("dialog").filter({ hasText: "No projects yet" });
   await expect(projectPicker).toBeVisible();
   await expect(projectPicker.getByRole("button", { name: "Close Projects" })).toHaveCount(0);
-  for (const control of await page.locator("#root button").all()) {
+  for (const control of await page.locator('#root button:not([role="dialog"] *)').all()) {
     await expect(control).toBeHidden();
   }
   await expect(page.getByRole("option", { name: "Search", exact: true })).toHaveCount(0);

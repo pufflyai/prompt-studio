@@ -1,7 +1,9 @@
-import { Box, Icon, Menu, Portal } from "@chakra-ui/react";
+import { Box, Icon } from "@chakra-ui/react";
 import { ChevronRight, FileText, Folder } from "lucide-react";
 import type { DragEvent } from "react";
 import { ListRow } from "@/components/list-row/list-row";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import type { ColumnFileItem } from "./column-file-paths";
 
 interface ColumnItemRowProps<T extends ColumnFileItem> {

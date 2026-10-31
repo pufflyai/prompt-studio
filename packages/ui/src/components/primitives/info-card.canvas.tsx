@@ -1,8 +1,9 @@
-import { Badge, Box, Button, HStack, Icon, Menu, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, HStack, Icon, Text } from "@chakra-ui/react";
 import { MoreHorizontal, PlayIcon, Settings, ShieldCheck, Sparkles } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { ListRow } from "@/components/list-row/list-row";
 import { InfoCard } from "@/components/primitives/info-card";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 
 type StoryFn = () => ReactNode;
 type InfoCardArgs = ComponentProps<typeof InfoCard>;

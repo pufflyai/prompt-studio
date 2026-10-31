@@ -32,6 +32,7 @@
   "popover.remoteBackend": "Backend distant",
   "popover.responseSummary": "moy. {{avg}} · max. {{max}}",
   "popover.responseTime": "Temps de réponse",
+  "popover.resuming": "Reprise · en attente d’un échantillon du processus",
   "popover.resume": "Reprendre",
   "popover.resumeLabel": "Reprendre {{name}}",
   "popover.roles.extension-frames": "Cadres d'extensions",

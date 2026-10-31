@@ -1,7 +1,9 @@
-import { Badge, Icon, Menu, Portal } from "@chakra-ui/react";
+import { Badge, Icon } from "@chakra-ui/react";
 import { Check, ChevronDown } from "lucide-react";
 import { ListRow } from "@/components/list-row/list-row";
 import { getIconComponent } from "@/components/primitives/icon-options";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import type { AttributeBadge } from "./kanban-renderer-helpers";
 
 interface KanbanRendererAttributeBadgeProps {
