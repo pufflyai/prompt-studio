@@ -1,4 +1,7 @@
 import { expect } from "bun:test";
+import { packagedProjectKey } from "./packaged-sync-project-key.fixture";
+
+export { packagedProjectKey } from "./packaged-sync-project-key.fixture";
 
 const validateLeafBegin = async (request: Request) => {
   const input = (await request.json()) as { sha256: string; byteLength: number };
@@ -6,9 +9,6 @@ const validateLeafBegin = async (request: Request) => {
   expect(input.sha256).toMatch(/^[a-f0-9]{64}$/);
   expect(input.byteLength).toBeGreaterThan(0);
 };
-
-/** The project key the peer hands out, so a test can derive the relay ID of a named document. */
-export const packagedProjectKey = { generation: 1, secret: "A".repeat(43) };
 
 const privateSpaceOwner = (parts: string[]) => {
   if (parts[4] !== "spaces") return null;
