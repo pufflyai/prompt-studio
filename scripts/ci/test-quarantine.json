@@ -673,5 +673,20 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/41200165464/job/124538114747"
     ],
     "removeWhen": "Find the slow relaunch phase on macOS, fix it, then pass this complete case in ten independent runs on each macOS architecture within its existing allowance, without retries."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-canvas-install.p2.test.ts",
+    "name": "installs Canvas from the catalog with working commands and its authoring skill",
+    "platforms": ["win32"],
+    "arch": "arm64",
+    "owner": "PS-1002 / extension dependency install size",
+    "reason": "A cold catalog install of UI Canvas downloads about 485 MB of npm packages, mostly @pstdio/ui's mermaid, monaco-editor and lucide-react. On Windows ARM the dependency install alone exceeds the 30 second allowance; the same test fails there on main. Preserve the cold install, the real extension commands and the browser frame check.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41163609063",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41199524648/job/124533078659",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41199524648/job/124533078715"
+    ],
+    "removeWhen": "PS-1002 makes a cold UI Canvas install finish well inside 30 seconds on Windows ARM; then pass ten independent Windows ARM runs within the existing 30 second allowance, without retries."
   }
 ]
