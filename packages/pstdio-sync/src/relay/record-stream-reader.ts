@@ -1,7 +1,7 @@
 import { recordStreamStateSchema, type StateInfo, type StoredUpdate } from "pstdio-sync-contracts";
 import * as Y from "yjs";
-import { decodeBytes } from "../shared";
 import { openBlob, openState, openSummary, openUpdate, type SyncSpace, UnreadableSyncData } from "../encryption";
+import { decodeBytes } from "../shared";
 import type { DocumentRelay, SyncFailure } from "./document-sync-types";
 import type { createRecordAssets } from "./record-assets";
 import { decodeRecordFrame as decodeFrame, type RecordFrame } from "./record-frames";
