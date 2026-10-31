@@ -10,6 +10,7 @@ const modes = [
   "Editing",
   "Saving",
   "Reconnecting",
+  "Restoring editing",
   "Read only",
   "Close blocked",
   "Retired source",
@@ -19,6 +20,7 @@ type Mode = (typeof modes)[number];
 const messages: Partial<Record<Mode, string>> = {
   Saving: "Saving changes…",
   Reconnecting: "Changes are waiting to be saved.",
+  "Restoring editing": "Finishing your text…",
   "Read only": "This document is read only.",
   "Close blocked": "Finish or cancel your text draft before closing.",
   "Retired source": "This source was removed. Your unsaved text is still available here.",
@@ -42,7 +44,7 @@ export const SharedTextEditors = () => {
     };
   }, [document]);
   const [closed, setClosed] = useState(false);
-  const editable = mode !== "Read only" && mode !== "Retired source";
+  const editable = mode !== "Read only" && mode !== "Retired source" && mode !== "Restoring editing";
   const message = messages[mode];
   const select = (next: Mode) => {
     setMode(next);
@@ -74,7 +76,8 @@ export const SharedTextEditors = () => {
           size="xs"
           variant="ghost"
           onClick={() => {
-            if (mode !== "Close blocked" && mode !== "Reconnecting" && mode !== "Saving") setClosed(true);
+            if (!(["Close blocked", "Reconnecting", "Saving", "Restoring editing"] as Mode[]).includes(mode))
+              setClosed(true);
           }}
         >
           {closed ? "Closed" : "Close tab"}
@@ -125,7 +128,9 @@ const EditorNotice = (props: { mode: Mode; message: string; retry: () => void })
   return (
     <Flex gap="sm" align="center" justify="space-between" bg="bg.muted" px="sm" py="xs">
       <Flex align="center" gap="xs">
-        {(mode === "Saving" || mode === "Reconnecting") && <Spinner size="xs" color="fg.muted" aria-label={mode} />}
+        {(mode === "Saving" || mode === "Reconnecting" || mode === "Restoring editing") && (
+          <Spinner size="xs" color="fg.muted" aria-label={mode} />
+        )}
         <Text color="fg.muted" textStyle="label/S/regular">
           {message}
         </Text>
