@@ -81,8 +81,6 @@ export const FramePreview = (props: FramePreviewProps) => {
           postFrame(frame.current, { nonce: nonce.current, type: "bootstrap", bootstrap });
           return;
         case "boot":
-          // Release before fixture setup, which can await nested previews.
-          job.current?.finish();
           sentTheme.current = themeId;
           postFrame(frame.current, {
             nonce: nonce.current,
@@ -95,7 +93,7 @@ export const FramePreview = (props: FramePreviewProps) => {
       if (message.nonce !== nonce.current) return;
       switch (message.type) {
         case "imports-ready":
-          // Let the next imports start without waiting for a React commit.
+          // Bound module imports, then release before setup can await nested previews.
           job.current?.finish();
           setImported(true);
           break;
