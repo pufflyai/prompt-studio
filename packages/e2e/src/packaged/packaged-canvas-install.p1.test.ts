@@ -18,6 +18,11 @@ setupPackagedSmokeTests();
 test(
   "installs Canvas from the catalog with working commands and its authoring skill",
   async () => {
+    const startedAt = performance.now();
+    const phase = (name: string) => console.info(`Canvas installation phase: ${name} +${Math.round(performance.now() - startedAt)}ms`);
+    const evidence = join(import.meta.dirname, "../../test-results");
+    mkdirSync(evidence, { recursive: true });
+    phase("pack catalog");
     const root = mkdtempSync(join(tmpdir(), "packaged-canvas-"));
     const packed = await packExtension(join(import.meta.dirname, "../../../../extensions/canvas"));
     const { files } = await readExtensionPackage(packed.bytes);
@@ -49,7 +54,9 @@ test(
     let child: ChildProcess | undefined;
     let browser: Browser | undefined;
     try {
-      const started = await startPackagedServe(root, { PSTDIO_EXTENSION_RELEASE_REF: `psx:${registry.url.origin}` });
+      phase("launch runtime");
+      const started = await startPackagedServe(root, { PSTDIO_EXTENSION_RELEASE_REF: `psx:${registry.url.origin}`, PSTDIO_LOG_PATH: join(evidence, "packaged-canvas-install-runtime.jsonl") });
+      phase("create project");
       child = started.child;
       const repo = join(root, "project");
       mkdirSync(repo);
@@ -62,14 +69,17 @@ test(
       expect(created.status).toBe(201);
       const project = (await created.json()) as { id: string };
       const url = `${started.baseUrl}/v1/projects/${project.id}`;
+      phase("read empty marketplace");
       const before = await (await fetch(`${url}/extensions`, { headers })).json();
       expect(before.marketplace).toContainEqual(expect.objectContaining({ installName: "canvas", installed: false }));
+      phase("install Canvas");
       const installed = await fetch(`${url}/extensions/install`, {
         method: "POST",
         headers,
         body: JSON.stringify({ source: { kind: "catalog", name: "canvas" } }),
       });
       expect(installed.status, await installed.text()).toBe(201);
+      phase("read installed marketplace");
       const after = await (await fetch(`${url}/extensions`, { headers })).json();
       expect(after.extensions).toContainEqual(
         expect.objectContaining({ installName: "canvas", enabled: true, extensionId: "pstdio.canvas" }),
@@ -87,14 +97,17 @@ test(
           },
           encoding: "utf8",
         });
+      phase("CLI list");
       const list = cli(["canvas", "list"]);
       expect(list.status).toBe(0);
       const listed = JSON.parse(list.stdout).canvases;
       expect(listed).toContainEqual(expect.objectContaining({ id: "shared-components" }));
+      phase("CLI layout");
       const layout = cli(["canvas", "layout", "read", "--canvas", "shared-components"]);
       expect(layout.status).toBe(0);
       expect(JSON.parse(layout.stdout).camera.zoom).toBeGreaterThan(0);
       // Critical: the installed package must supply the selected graph without a source checkout.
+      phase("read preview graph");
       const assets = await fetch(`${url}/extensions/commands/pstdio.canvas.command.preview.assets/execute`, {
         method: "POST",
         headers,
@@ -113,6 +126,7 @@ test(
         const code = Bun.gunzipSync(Buffer.from(files[name], "base64"));
         expect(code.byteLength).toBeGreaterThan(0);
       }
+      phase("read authoring skills");
       const skills = await (await fetch(`${url}/skills`, { headers })).json();
       expect(skills).toContainEqual(
         expect.objectContaining({
@@ -126,6 +140,7 @@ test(
       // Critical: packaged assets must also reach an opaque preview through the real webview command bridge.
       const button = listed.find((canvas: { id: string }) => canvas.id === "stories-ui-components-inputs-button");
       expect(button).toBeDefined();
+      phase("open browser preview");
       browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
       const page = await browser.newPage();
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
@@ -151,6 +166,7 @@ test(
       });
       expect(colors.message).not.toBe(colors.background);
     } finally {
+      phase("cleanup");
       await browser?.close();
       if (child) await stopProcess(child);
       registry.stop(true);
