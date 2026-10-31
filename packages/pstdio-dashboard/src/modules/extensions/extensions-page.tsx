@@ -44,25 +44,34 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
   });
   ctx.keybindings.registerKeybinding({
     action: { kind: "page", page: dashboardExtensionsPage },
+    keybinding: "Mod+Shift+X",
+    label: "Open extensions",
+  });
+  ctx.keybindings.registerKeybinding({
+    action: { kind: "page", page: dashboardExtensionsPage },
     keybinding: "E",
     layer: "go",
     label: "Go to extensions",
   });
+  const sections = [
+    {
+      ...dashboardNavigationSections.footer,
+      nodes: [
+        {
+          id: "extensions",
+          label: "Extensions",
+          icon: "Puzzle",
+          canHide: true,
+          target: { kind: "page" as const, page: dashboardExtensionsPage },
+        },
+      ],
+    },
+  ];
   registerDashboardNavigationContribution(ctx, {
-    id: "dashboard.extensions.project-nav",
+    id: "dashboard.extensions.footer",
     modes: ["project"],
-    getSections: () => [
-      {
-        ...dashboardNavigationSections.root,
-        nodes: [
-          {
-            id: "extensions",
-            label: "Extensions",
-            icon: "Puzzle",
-            target: { kind: "page", page: dashboardExtensionsPage },
-          },
-        ],
-      },
-    ],
+    slot: "footer",
+    getStructure: () => sections,
+    getSections: () => sections,
   });
 };

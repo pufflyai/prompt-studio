@@ -17,7 +17,7 @@ New projects already have the agent harnesses, the base themes, and Prompt Studi
 
 ## Install from the dashboard
 
-1. Choose **Browse extensions** on the project's Start page. You can also choose **Extensions** in the nav panel.
+1. Choose **Browse extensions** on the project's Start page. You can also choose **Extensions** in the nav panel footer or press Cmd/Ctrl+Shift+X.
 2. Find the extension under **Available**.
 3. Choose **Install**.
 

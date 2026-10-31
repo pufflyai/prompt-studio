@@ -30,6 +30,8 @@ Destination navigation uses shortcut mode's Go group: G → H for Home, G → S 
 
 Ctrl+Tab selects the next tab across the visible layout; Ctrl+Shift+Tab selects the previous tab. They wrap at either end and work outside and inside shortcut mode. Outside the mode they switch and focus immediately. One tab has an outline for the keyboard selection in shortcut mode, even when several panels each have a selected tab. Enter or Escape exits and returns focus to the selected presentation, including Secondary. Clicking an editor or leaving the window ends the mode.
 
+Cmd/Ctrl+Shift+X opens Extensions directly. Shortcut mode also offers G → E. The Extensions entry sits in the navigation footer beside Help and Settings.
+
 Alt+Shift+1 through Alt+Shift+9 select and focus the matching global tab number without entering shortcut mode. Inside shortcut mode, plain 1 through 9 select tabs from any navigation group; Enter exits into the final selected tab. User overrides live in the `workbench.keyboard` preference and can be set through `workbench.keyboard.setAssignment`; the reference is read-only. Empty-panel cards share this numbering: their number opens that card in its own panel. A tab opened from shortcut mode remains selected in shortcut mode. Cards show their shortcut only in the preview or in shortcut mode. An action or target chooser owns its own numbers while open. Numbers follow spatial placement and displayed tab/card order, and recompute when the layout changes. Alt+Shift+0 opens a searchable picker beyond nine.
 
 Panel actions use direct Alt+Shift chords and tab cycling uses Ctrl+Tab/Ctrl+Shift+Tab. They work from any shortcut-mode prefix and have no second View sequence. These explicit workbench chords also work while editing, including in managed webviews.
@@ -58,7 +60,7 @@ When actions share an initial, the host sorts the available actions by name, wit
 
 Alt+Shift+T is the single default shortcut for choosing a color theme. Theme providers contribute themes to that shared picker rather than registering another shortcut. Creation keeps C → N, C → T, and C → A without additional direct creation chords.
 
-Settings → E opens extension settings, I appearance and file icon themes, and S contributed skills. Mod+, opens agent runtime and skill setup. These destinations are registered once, regardless of the number of providers.
+Settings → I opens appearance and file icon themes, and S contributed skills. Mod+, opens agent runtime and skill setup. These destinations are registered once, regardless of the number of providers.
 
 Creation uses the same UI as the resource's existing entry point. Notes create and open directly, with bound empty parameters instead of an optional-parameter dialog. Ticket shortcuts and the palette invoke the board's `createRow.command`, so the shared creation dialog supplies markdown, attachments, editable properties, and the same submission handler. Artifact creation opens the library's existing creation choices.
 
