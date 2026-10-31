@@ -86,6 +86,7 @@ export const toProjectExtensionInstance = (
     displayName: instance.display_name_override ?? installedSource.display_name,
     version: installedSource.version,
     description: optionalString(manifest.description),
+    icon: optionalString(manifest.icon),
     sourcePath: installedSource.source_path,
     scope: sourceScope(installedSource.source_path),
     status: incompatible ? "error" : installedSource.status,

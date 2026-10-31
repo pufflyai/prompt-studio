@@ -8,7 +8,7 @@ import type {
 import { AlertMessage, EmptyState, Switch, type SwitchProps } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
-import { ArrowLeft, ArrowUpCircle, Blocks, Puzzle, RotateCw, SlidersHorizontal, Timer, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowUpCircle, Blocks, RotateCw, SlidersHorizontal, Timer, Trash2 } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,6 +18,7 @@ import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionDetailHealth } from "./extension-detail-health";
 import { ExtensionHealthPopover } from "./extension-health-popover";
+import { ExtensionIcon } from "./extension-icon";
 import { ExtensionSettingsForm } from "./extension-settings-form";
 import { settingsToParams } from "./extension-settings-params";
 
@@ -113,7 +114,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
             borderRadius="sm"
             bg="bg.subtle"
           >
-            <Puzzle size={22} />
+            <ExtensionIcon name={extension.icon} size="md" />
           </Flex>
           <Stack gap="0" flex="1" minW="0">
             <Text textStyle="heading/M">{extension.displayName}</Text>

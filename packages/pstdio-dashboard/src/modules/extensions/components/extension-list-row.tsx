@@ -5,11 +5,12 @@ import type {
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import { Switch, type SwitchProps, Tooltip } from "@pstdio/ui";
-import { ArrowUpCircle, ChevronRight, Folder, Globe, Puzzle } from "lucide-react";
+import { ArrowUpCircle, ChevronRight, Folder, Globe } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
 import { ExtensionHealthPopover } from "./extension-health-popover";
+import { ExtensionIcon } from "./extension-icon";
 
 export interface ExtensionListRowProps {
   extension: ProjectExtensionInstance;
@@ -70,7 +71,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         bg="bg.subtle"
         color={extension.enabled ? "fg" : "fg.subtle"}
       >
-        <Puzzle size={18} />
+        <ExtensionIcon name={extension.icon} />
       </Flex>
 
       <Stack gap="0" flex="1" minW="0">

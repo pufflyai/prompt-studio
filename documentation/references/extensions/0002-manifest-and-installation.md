@@ -12,6 +12,7 @@ Every extension package must include a `package.json` next to its entry file.
   "version": "0.1.0",
   "displayName": "Planner",
   "description": "Planner workflow extension.",
+  "icon": "Kanban",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
@@ -35,6 +36,7 @@ Optional fields:
 
 - `displayName`: dashboard display name. Falls back to `name`.
 - `description`: dashboard/catalog description.
+- `icon`: shared icon name, such as `Kanban` or `FileChartColumn`. Extensions lists and details use it. Older extensions without an icon use the generic puzzle icon.
 - `pstdio.scope`: install/load scope, either `user` or `repo`. Defaults to `user`.
 
 Derived fields:
