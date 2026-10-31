@@ -299,6 +299,14 @@ existing UUID output when `idPrefix` is omitted. Compact IDs are case-sensitive;
 extension adoption must keep ID lookup exact and shorthand lookup separate. These
 options do not rewrite existing IDs or change existing shorthand declarations.
 
+The migration callback also exposes additive `migration.position(rank, key)` for
+deterministic initial ordering. Existing callback arguments and methods stay
+available. Publish the host and SDK before extension migrations use it. The helper
+accepts a nonnegative safe integer rank and stable unique item key, separating
+equal ranks from different offline source lists. It produces a position compatible with
+ordinary `storage.positions.between` moves. It has no device or random suffix;
+use it only to migrate an order derived from stable source data.
+
 ## Personal device references in API 0.2.1
 
 Workspace/session read results and resource references may include `device: { ownerId, id, name }`. A synced record is readable on its owner's other devices. Execution stays on its source device. Shared personal references contain only owner and device details; another user cannot open the underlying record. This additive field ships in the release after 0.44.0.
