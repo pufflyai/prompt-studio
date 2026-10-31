@@ -1,6 +1,6 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { changeTicketFiles } from "./collections";
-import { storeTicketFileContent } from "./ticket-file-content";
+import { storeTicketFileContent, updateTicketFileContent } from "./ticket-file-content";
 import { validateTicketFileName } from "./ticket-file-name";
 import type { TicketContext } from "./ticket-identity";
 import type { StoredTicketFile } from "./types";
@@ -52,9 +52,9 @@ export const updateTicketFile = async (input: {
     const now = new Date().toISOString();
     const name = input.name ?? previous.name;
     const blobId =
-      input.content === undefined
+      input.content === undefined && input.name === undefined
         ? previous.blobId
-        : await storeTicketFileContent(input.storage, ticket.id, name, input.content);
+        : await updateTicketFileContent(input.storage, ticket.id, previous, name, input.content);
     const updated = { ...previous, name, blobId, updatedAt: now };
     const files = (ticket.files ?? []).map((file) => (file.id === input.fileId ? updated : file));
     return { ...ticket, files, updatedAt: now };
