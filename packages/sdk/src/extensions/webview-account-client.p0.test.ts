@@ -11,7 +11,12 @@ const createAccountHost = () => {
     extensionId: "pstdio.cloud",
     call: async <TResult>(method: string, params?: unknown) => {
       calls.push({ method, params });
-      return { state, offlineReady: true } as TResult;
+      return {
+        state,
+        offlineReady: true,
+        pendingItems: state === "synced" ? 0 : 2,
+        download: { completed: state === "synced" ? 3 : 1, total: 3 },
+      } as TResult;
     },
     onEvent: (_scope, listener) => {
       listeners.add(listener);
@@ -33,6 +38,10 @@ describe("webview account client", () => {
     const read = async () => states.push((await client.account.projectSyncStatus()).state);
 
     await read();
+    expect(await client.account.projectSyncStatus()).toMatchObject({
+      pendingItems: 2,
+      download: { completed: 1, total: 3 },
+    });
     const changed = Promise.withResolvers<void>();
     const unsubscribe = client.events.subscribe(accountEvents.projectSyncChanged, () => {
       void read().then(() => changed.resolve());
@@ -42,6 +51,10 @@ describe("webview account client", () => {
     unsubscribe();
 
     expect(states).toEqual(["waiting-to-sync", "synced"]);
+    expect(await client.account.projectSyncStatus()).toMatchObject({
+      pendingItems: 0,
+      download: { completed: 3, total: 3 },
+    });
     expect(calls[0]).toEqual({ method: "account.read", params: { op: "projectSyncStatus" } });
   });
 

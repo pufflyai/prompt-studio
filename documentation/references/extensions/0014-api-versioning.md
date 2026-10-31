@@ -327,6 +327,12 @@ additions ship in the release after 0.45.0. See [Restore project data](../../gui
 
 ## App-wide and device settings in API 0.3.0
 
+Cloud status also adds optional `ProjectSyncStatus.pendingItems`, `ProjectSyncStatus.download`,
+and `AccountStatus.signInRequired` in API 0.3.0. Existing state values and methods stay available.
+Counts and progress use verified sync documents, including their files; unknown directories
+leave the count absent and the download total null. Publish the SDK and matching host before
+extensions consume these fields. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).
+
 `workbenchSlots.globalSettings` and the `"device"` extension setting scope are
 additive. They join the planned API 0.3.0 release after 0.45.0. Existing
 project/global settings, extension detail panels, and published custom global

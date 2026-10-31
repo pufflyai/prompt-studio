@@ -53,6 +53,19 @@ export const createDocumentStorageDBService = (
     return transaction;
   };
   const transaction = transactionFor("records");
+  const revisionFor = (documentId: string) => async (owner: StorageOwner) => {
+    const [row] = await db
+      .select({ revision: storage_documents.revision })
+      .from(storage_documents)
+      .where(
+        and(
+          eq(storage_documents.workbench_id, owner.workbenchId),
+          eq(storage_documents.extension_id, owner.extensionId),
+          eq(storage_documents.document_id, documentId),
+        ),
+      );
+    return row?.revision ?? 0;
+  };
   const isResourceDocument = (id: string) => id.startsWith(resourceDocumentId("").slice(0, -2));
   return {
     transaction,
@@ -66,7 +79,7 @@ export const createDocumentStorageDBService = (
       };
     },
     documents: {
-      open: (documentId: string) => ({ transaction: transactionFor(documentId) }),
+      open: (documentId: string) => ({ transaction: transactionFor(documentId), revision: revisionFor(documentId) }),
       recordStream: (owner: StorageOwner) =>
         createRecordStreamStore(db, owner, {
           statistics,
