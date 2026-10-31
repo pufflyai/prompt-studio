@@ -1,9 +1,10 @@
 import { Button, Flex, HStack, Spinner, Stack, Tabs, Text } from "@chakra-ui/react";
 import type { MarketplaceExtension } from "@pstdio/sdk/api";
-import { ArrowLeft, Blocks, Download, Puzzle } from "lucide-react";
+import { ArrowLeft, Blocks, Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionContributions } from "./extension-contributions";
+import { ExtensionIcon } from "./extension-icon";
 
 interface AvailableExtensionDetailProps {
   extension: MarketplaceExtension;
@@ -18,7 +19,8 @@ interface AvailableExtensionDetailProps {
 export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) => {
   const { extension, metadata, contributionsError, loadingContributions, installing, onBack, onInstall } = props;
   const { t } = useTranslation("projects");
-  const extensionId = metadata?.extensions[0]?.id ?? extension.registry?.extensionId ?? extension.installName;
+  const extensionId =
+    extension.extensionId ?? metadata?.extensions[0]?.id ?? extension.registry?.extensionId ?? extension.installName;
   const origin = extension.registry
     ? `${extension.registry.url}/${extension.registry.extensionId}`
     : `${extension.origin.url}@${extension.origin.ref}#${extension.origin.path}`;
@@ -44,12 +46,12 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
             borderRadius="sm"
             bg="bg.subtle"
           >
-            <Puzzle size={22} />
+            <ExtensionIcon name={extension.icon} size="md" />
           </Flex>
           <Stack gap="0" flex="1" minW="0">
             <Text textStyle="heading/M">{extension.displayName}</Text>
             <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle">
-              {extension.installName}
+              {extensionId}
             </Text>
             <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" truncate>
               {extension.publisher ? `${extension.publisher} · ` : ""}

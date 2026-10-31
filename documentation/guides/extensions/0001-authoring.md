@@ -93,12 +93,14 @@ Create `package.json`:
   "devDependencies": {
     "@types/bun": "1.4.4",
     "typescript": "6.0.2"
-  }
+  },
+  "icon": "Bookmark"
 }
 ```
 
 - `publisher` and `name` form the extension ID, here `acme.bookmarks`. You can use your own publisher name; then also change `extensionId` in `src/bookmarks.ts` in step 3. Each part starts with a lowercase letter and contains only lowercase letters, numbers, and dashes.
 - `main` is the entry file.
+- `icon` names the icon shown in Extensions.
 - `engines.pstdio` lists the extension API versions this extension works with. `^0.1.6` accepts 0.1.6 and later 0.1 releases. `^0.2.0` and `^0.3.0` accept the next two breaking releases. Claim a version only after you run the extension on it.
 - `@pstdio/sdk` is pinned to the SDK release that matches your Prompt Studio version.
 
@@ -466,7 +468,7 @@ pst projects create
 pst bookmarks list
 ```
 
-A project you create after an install starts with every installed extension turned on, so you do not install Bookmarks again. In a project that existed before the install, turn Bookmarks on in **Settings → Extensions**. The last command prints `[]`. The second project has its own storage, so the bookmarks from `~/my-tools` do not appear. A bookmark added here does not appear in `~/my-tools`. In the dashboard, switch projects with the arrow next to the project name.
+A project you create after an install starts with every installed extension turned on, so you do not install Bookmarks again. In a project that existed before the install, turn Bookmarks on in **Extensions**. The last command prints `[]`. The second project has its own storage, so the bookmarks from `~/my-tools` do not appear. A bookmark added here does not appear in `~/my-tools`. In the dashboard, switch projects with the arrow next to the project name.
 
 ## 10. Check the extension
 

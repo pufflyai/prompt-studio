@@ -35,6 +35,7 @@ export type ExtensionMetadata = {
   displayName: string;
   version: string;
   description?: string;
+  icon?: string;
   enginesPstdio: string;
   pstdio?: PackageManifest["pstdio"];
 };
@@ -61,6 +62,7 @@ const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord
   displayName: metadata.displayName,
   version: metadata.version,
   description: metadata.description,
+  icon: metadata.icon,
   enginesPstdio: metadata.enginesPstdio,
   ...(metadata.pstdio ? { pstdio: metadata.pstdio } : {}),
   artifactMounts: Object.keys((definition.artifactMounts as UnknownRecord | undefined) ?? {}),
@@ -117,6 +119,7 @@ export const readExtensionSourceMetadata = (sourcePath: string) => {
     displayName: manifest.displayName ?? manifest.name,
     version: manifest.version,
     description: manifest.description,
+    icon: manifest.icon,
     enginesPstdio: manifest.enginesPstdio,
     pstdio: manifest.pstdio,
   };
@@ -144,6 +147,7 @@ const toLoadedExtension = (
     displayName: loaded.manifest.displayName ?? loaded.manifest.name,
     version: loaded.manifest.version,
     description: loaded.manifest.description,
+    icon: loaded.manifest.icon,
     enginesPstdio: loaded.manifest.enginesPstdio,
     pstdio: loaded.manifest.pstdio,
   };

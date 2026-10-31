@@ -60,7 +60,6 @@ export const createSettingsModule = () =>
       ctx.keybindings.registerKeybinding({ action: createSettingsFooterNode().target, keybinding: "Mod+," });
 
       for (const [key, panelId, label] of [
-        ["E", "extensions", "Extension settings"],
         ["I", "appearance", "Appearance settings"],
         ["S", "skills", "Inspect contributed skills"],
       ])

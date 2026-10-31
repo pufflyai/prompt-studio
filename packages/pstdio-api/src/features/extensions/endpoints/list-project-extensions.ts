@@ -51,6 +51,8 @@ export const listProjectExtensionsHandler = (
       const releaseRef = deps.extensionUpgradeService?.registry ? undefined : deps.extensionUpgradeService?.releaseRef;
       const marketplace = catalog.extensions.map((extension) => ({
         installName: extension.installName,
+        extensionId: extension.extensionId,
+        icon: extension.icon,
         displayName: extension.displayName,
         description: extension.description,
         origin: {

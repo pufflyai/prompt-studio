@@ -51,9 +51,8 @@ test("Upgrade installs an independently published Notes version while the packag
     const page = await browser.newPage();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, host.descriptor);
-    await page.goto(`${host.baseUrl}/projects/${project.id}/sessions`);
-    await page.getByText("Settings", { exact: true }).last().click();
-    await page.getByText("Extensions", { exact: true }).last().click();
+    await page.goto(`${host.baseUrl}/projects/${project.id}`);
+    await page.getByRole("option", { name: "Extensions", exact: true }).click();
     await page.getByText("Notes", { exact: true }).last().click();
     await expect(page.getByTestId("extension-upgrade")).toBeVisible();
     await expect(page.getByText(/pstdio\.pstdio-notes.*v0\.45\.1/)).toBeVisible();

@@ -60,7 +60,9 @@ export async function verifyPackagedNativeSettings(page: Page, input: NativeSett
     }),
   });
   expect(response.status).toBe(200);
-  await page.getByRole("dialog").getByRole("option", { name: "Extensions", exact: true }).click();
+  await page.getByRole("option", { name: "Extensions", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/extensions$`));
+  await page.reload();
   const entry = page.getByTestId("extension-entry").filter({ hasText: "test.native-settings" });
   await entry.click();
   const detail = page.getByRole("textbox", { name: "Detail 0", exact: true });
@@ -75,10 +77,10 @@ export async function verifyPackagedNativeSettings(page: Page, input: NativeSett
   await expect(detail).toHaveValue("Native controls persist their values");
   await expect(page.getByRole("button", { name: "Todo", exact: true })).toBeVisible();
   const scrolls = await page
-    .locator('[aria-modal="true"][data-scope="dialog"]')
+    .getByRole("main")
     .evaluate(
-      (dialog) =>
-        Array.from(dialog.querySelectorAll("*")).filter(
+      (page) =>
+        Array.from(page.querySelectorAll("*")).filter(
           (element) =>
             element.clientHeight > 0 &&
             element.scrollHeight > element.clientHeight + 2 &&
@@ -86,7 +88,7 @@ export async function verifyPackagedNativeSettings(page: Page, input: NativeSett
         ).length,
     );
   expect(scrolls).toBe(1);
-  await page.getByRole("button", { name: "Extensions", exact: true }).click();
+  await page.getByTestId("extension-detail-back").click();
   await entry.click();
   await expect(detail).toHaveValue("Native controls persist their values");
   const first = page.getByRole("textbox", { name: "First choice", exact: true });
@@ -111,7 +113,7 @@ export async function verifyPackagedNativeSettings(page: Page, input: NativeSett
   await expect
     .poll(async () => (await execute("read-instant-values")).values)
     .toEqual({ first: "First saved choice", second: "Second saved choice" });
-  await page.getByRole("button", { name: "Extensions", exact: true }).click();
+  await page.getByTestId("extension-detail-back").click();
   await entry.click();
   await expect(first).toHaveValue("First saved choice");
   await expect(second).toHaveValue("Second saved choice");
