@@ -105,7 +105,9 @@ export const CpuSection = (props: CpuSectionProps) => {
   const [expanded, setExpanded] = useState(false);
   const processMetrics = snapshot?.capabilities.processMetrics === true;
   const [frozenOrder, setFrozenOrder] = useState<string[] | null>(null);
-  const sources = cpuSources(snapshot);
+  const [previous, setPrevious] = useState(() => ({ snapshot, extensions: cpuSources(snapshot).extensions }));
+  const sources = cpuSources(snapshot, previous.extensions);
+  if (previous.snapshot !== snapshot) setPrevious({ snapshot, extensions: sources.extensions });
   const ordered = keepOrder(sources.extensions, frozenOrder);
   const folded = foldSources(ordered, expanded);
   // Pausing moves a row and new samples re-sort the list; neither may happen under the cursor.
@@ -123,6 +125,7 @@ export const CpuSection = (props: CpuSectionProps) => {
     return source.name || knownNames.get(source.key) || t("popover.pausedExtension", "Paused extension");
   };
   const detail = (source: CpuSource) => {
+    if (source.resuming) return t("popover.resuming", "Resuming · waiting for a process sample");
     if (source.paused) return t("popover.paused", "Paused · views unloaded");
     const views = plural("popover.views", source.views, "{{count}} view", "{{count}} views");
     if (source.cpuPercent === null) return `${views} · ${t("popover.inSharedProcess", "in the shared process")}`;

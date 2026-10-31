@@ -91,6 +91,23 @@ describe("cpu sources", () => {
     ]);
   });
 
+  test("keeps a resumed extension until its next process sample arrives", () => {
+    const paused = cpuSources(snapshot([], ["installed-shader"]));
+    const waiting = cpuSources(snapshot([]), paused.extensions);
+    expect(waiting.extensions).toMatchObject([
+      { key: "installed-shader", paused: false, resuming: true, cpuPercent: null, memoryKiB: null, views: 0 },
+    ]);
+    const stillWaiting = cpuSources(snapshot([]), waiting.extensions);
+    expect(stillWaiting.extensions).toEqual(waiting.extensions);
+    const running = cpuSources(
+      snapshot([process(5, "extension-frames", 9, frames("shader", 1))]),
+      stillWaiting.extensions,
+    );
+    expect(rows(running)).toEqual([["extension", "shader", 9, 1]]);
+    expect(cpuSources(snapshot([]), running.extensions).extensions).toEqual([]);
+    expect(cpuSources(null, waiting.extensions).extensions).toEqual([]);
+  });
+
   test("folds rows after the five busiest and adds up their CPU", () => {
     const processes = [7, 6, 5, 4, 3, 2, 1].map((cpu) =>
       process(cpu + 10, "extension-frames", cpu, frames(`ext-${cpu}`, 1)),

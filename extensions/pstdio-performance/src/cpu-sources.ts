@@ -19,6 +19,7 @@ export interface CpuSource {
   cpuPercent: number | null;
   memoryKiB: number | null;
   paused: boolean;
+  resuming?: boolean;
 }
 
 // Webview ids are `<publisher>.<extension>.view.<view>`: the only readable extension
@@ -77,7 +78,7 @@ const processRows = (process: PerformanceProcess, paused: ReadonlySet<string>): 
 };
 
 // An extension is listed while one of its views runs in a measured process, or while it is paused.
-export const cpuSources = (snapshot: PerformanceSnapshot | null | undefined) => {
+export const cpuSources = (snapshot: PerformanceSnapshot | null | undefined, previous: readonly CpuSource[] = []) => {
   const processes = snapshot?.processes ?? [];
   const paused = new Set(snapshot?.pausedExtensionIds ?? []);
   const workbench = processes.find((process) => process.role === "workbench");
@@ -104,7 +105,29 @@ export const cpuSources = (snapshot: PerformanceSnapshot | null | undefined) => 
           memoryKiB: workbench.memoryKiB.workingSet,
         }
       : null,
-    extensions: [...running, ...pausedSources],
+    extensions: [
+      ...running,
+      ...pausedSources,
+      // Pause state arrives before the next measured process sample. Keep the row while
+      // resumed views restart, without presenting their old CPU or memory as a new sample.
+      ...(snapshot
+        ? previous
+            .filter(
+              (source) =>
+                (source.paused || source.resuming) &&
+                !paused.has(source.key) &&
+                !running.some((row) => row.key === source.key),
+            )
+            .map((source) => ({
+              ...source,
+              paused: false,
+              resuming: true,
+              views: 0,
+              cpuPercent: null,
+              memoryKiB: null,
+            }))
+        : []),
+    ],
   };
 };
 

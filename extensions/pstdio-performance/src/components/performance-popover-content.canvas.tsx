@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { PerformancePopoverContent } from "./performance-popover-content";
+import { useState } from "react";
+import { PerformancePopoverContent, type PerformancePopoverContentProps } from "./performance-popover-content";
 import {
   backendSnapshot,
   browserSnapshot,
@@ -44,6 +45,20 @@ export const UnderLoad: Story = {
 export const ExtensionPaused: Story = {
   id: "settings-developer-tools-performance-popover--extension-paused",
   args: { snapshot: { ...smoothSnapshot, pausedExtensionIds: ["installed-motion"] } },
+};
+const ResumingExtension = (props: PerformancePopoverContentProps) => {
+  const [resumed, setResumed] = useState(false);
+  return (
+    <PerformancePopoverContent
+      {...props}
+      snapshot={{ ...smoothSnapshot, processes: [], pausedExtensionIds: resumed ? [] : ["installed-motion"] }}
+      onResume={() => setResumed(true)}
+    />
+  );
+};
+export const ExtensionResuming: Story = {
+  id: "settings-developer-tools-performance-popover--extension-resuming",
+  render: (args) => <ResumingExtension {...args} />,
 };
 export const ManyExtensions: Story = {
   id: "settings-developer-tools-performance-popover--many-extensions",
