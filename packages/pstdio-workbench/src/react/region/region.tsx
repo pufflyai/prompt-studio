@@ -216,7 +216,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
     if (!workbenchPanelRegions.includes(region as WorkbenchPanelRegion) && !panelMenuRegionIds.has(region)) return;
     const registration = workbench.keyboard.registerVisibleRegion(region, () => {
       const element = regionRef.current;
-      if (!element?.getClientRects().length || getComputedStyle(element).visibility === "hidden") return [];
+      if (!element?.checkVisibility({ visibilityProperty: true })) return [];
       return currentPresentation.current ? [currentPresentation.current] : [];
     });
     return () => registration.dispose();
