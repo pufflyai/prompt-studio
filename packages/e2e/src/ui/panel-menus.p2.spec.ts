@@ -249,7 +249,10 @@ test("updates a New session Sub Panel in place after the first message", async (
 
   const prompt = "Continue in this session tab";
   const sidePanel = page.locator('[data-workbench-panel="side"]');
-  await sidePanel.locator("[data-testid='content-editable'][contenteditable='true']").filter({ visible: true }).fill(prompt);
+  await sidePanel
+    .locator("[data-testid='content-editable'][contenteditable='true']")
+    .filter({ visible: true })
+    .fill(prompt);
   await sidePanel.getByTestId("send-message-button").filter({ visible: true }).click();
 
   await expect(sessionTabs).toHaveCount(2);
