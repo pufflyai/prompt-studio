@@ -10,30 +10,31 @@ export const createWebviewOverlaysClient = (host: GuestHost) => ({
 
 export type WebviewOverlaysClient = ReturnType<typeof createWebviewOverlaysClient>;
 
-/** Keep guest viewport coordinates current without polling or sharing guest DOM with the host. */
+/** Track the rendered anchor only while its overlay is open, including CSS layout and animation. */
 export const observeWebviewOverlayAnchor = (
   element: HTMLElement,
   onMove: (rect: WebviewOverlayRect) => void,
   onClose: () => void,
 ) => {
-  const document = element.ownerDocument;
-  const window = document.defaultView!;
+  const window = element.ownerDocument.defaultView!;
+  let frame = 0;
+  let previous = "";
+  let active = true;
   const update = () => {
+    if (!active) return;
     const rect = element.getBoundingClientRect();
     if (!element.isConnected || !rect.width || !rect.height) return onClose();
-    onMove({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+    const anchor = { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    const key = JSON.stringify(anchor);
+    if (key !== previous) {
+      previous = key;
+      onMove(anchor);
+    }
+    if (active) frame = window.requestAnimationFrame(update);
   };
-  const resize = new window.ResizeObserver(update);
-  resize.observe(element);
-  document.addEventListener("scroll", update, true);
-  window.addEventListener("resize", update);
-  const removal = new window.MutationObserver(update);
-  removal.observe(document, { childList: true, characterData: true, subtree: true });
   update();
   return () => {
-    resize.disconnect();
-    removal.disconnect();
-    document.removeEventListener("scroll", update, true);
-    window.removeEventListener("resize", update);
+    active = false;
+    window.cancelAnimationFrame(frame);
   };
 };

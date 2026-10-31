@@ -85,7 +85,10 @@ export const WebviewOverlayTrigger = (props: {
       ref={trigger}
       aria-haspopup={content.kind === "menu" ? "menu" : "dialog"}
       aria-expanded={open}
-      onClick={() => setOpen(!open)}
+      onClick={(event) => {
+        event.currentTarget.focus();
+        setOpen(!open);
+      }}
     >
       {children}
     </Box>
