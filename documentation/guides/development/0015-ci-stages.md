@@ -190,6 +190,7 @@ None of these replace the real queue run or release certification.
 Quarantine is manual, never automatic. Entries live in `scripts/ci/test-quarantine.json`. Each entry names the runner, file and title, platform, owner, reason, evidence and the condition for removing it.
 
 - Quarantined tests run in their own jobs. Their failures do not block the queue, but each test must still run exactly once.
+- A scoped Bun file whose reported cases all belong to the platform quarantine records an unselected stable lane with zero executed cases. The separate quarantine lane must still execute and verify those cases. Empty files, missing reports and unregistered skipped cases cannot use this handoff.
 - Retries are not allowed: no rerun flags, no per-test retries, no retries hidden in helpers.
 - Run them locally with `bun scripts/ci/run-quarantined-tests.ts bun` and check the reports with `bun scripts/ci/verify-quarantine-reports.ts bun`. The runner also accepts `packaged-bun`, `playwright-ui`, `playwright` and `packaged-desktop`, and `--scope <workspace>`. Pass the check the same runner and scope as the run, because it expects a report from every owner in that scope. A P0 test compares each workflow job's run and check steps.
 - Keep the first failed attempt before a rerun. A later pass does not explain the failure.
