@@ -102,9 +102,11 @@ test("names the process that hosts an extension and ends its frames when paused"
       new Set(process.extensionFrames.map((frame) => frame.installedExtensionId));
 
     await openLabPreview(app.page);
-    const source = await app.page.locator('iframe[title="Lab"]').getAttribute("src");
-    expect(source).not.toBeNull();
-    const scope = parseExtensionWebviewPath(new URL(source!, app.page.url()).pathname)?.scope;
+    const source = await app.page
+      .frameLocator('iframe[title="Lab"]')
+      .locator("html")
+      .evaluate(() => location.pathname);
+    const scope = parseExtensionWebviewPath(source)?.scope;
     expect(scope).toBeDefined();
     const fixtureId = scope!.installedExtensionId;
     await expect
