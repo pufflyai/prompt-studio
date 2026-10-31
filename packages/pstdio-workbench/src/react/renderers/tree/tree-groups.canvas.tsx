@@ -1,5 +1,5 @@
 import { Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { HostStorageProvider } from "@pstdio/ui";
 import { useState } from "react";
 import { createWorkbench } from "../../../core";
@@ -100,7 +100,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof TreeGroups>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Default: Story = {
   id: "pstdio-workbench-guides-tree-groups--default",
 };

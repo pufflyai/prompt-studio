@@ -1,6 +1,7 @@
-import { Box, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Input, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
-import { Button } from "../components/themed-primitives";
+
+export default { title: "Design System/Documentation" };
 
 export const LongDocumentation = () => {
   const [expanded, setExpanded] = useState(false);

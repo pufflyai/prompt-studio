@@ -1,5 +1,5 @@
 import { Avatar, Box, Button, HStack, Icon, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChevronRight, FileText, Folder, Home, MessageCircle } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Breadcrumb, type BreadcrumbProps } from "@/components/primitives/breadcrumb";
@@ -75,7 +75,7 @@ const ResourceActionsExample = () => {
     />
   );
 };
-export const ResourceActions: CanvasVariant<typeof Breadcrumb> = {
+export const ResourceActions: CanvasFrame<typeof Breadcrumb> = {
   id: "components-navigation-breadcrumb--resource-actions",
   render: () => <ResourceActionsExample />,
 };

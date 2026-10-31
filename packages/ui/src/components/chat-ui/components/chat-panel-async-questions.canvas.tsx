@@ -1,12 +1,12 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 
 const meta: CanvasMeta<typeof ChatPanel> = { title: "Chat/ChatPanel/Async questions", component: ChatPanel };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 const request = (
   callId: string,
   questions: Array<{

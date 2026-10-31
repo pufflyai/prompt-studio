@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import { createWorkbench } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
@@ -55,7 +55,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkspaceNavigationStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const NoCreationProviders: Story = {
   id: "dashboard-workspace-navigation--no-creation-providers",
   args: { providers: [] },

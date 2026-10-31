@@ -70,18 +70,30 @@ export const mountPreviewRuntime = (
   let loaded: LoadedStory | undefined;
   let item: CanvasItem | undefined;
   let active = true;
-  const App = (props: { loaded: LoadedStory; item: CanvasItem; theme: ThemePreferenceOption }) => (
-    <ChakraProvider value={psTheme}>
-      <ThemePreferenceProvider initialPreference={props.theme.id} themePreferences={[props.theme]} storage={storage}>
-        <Boundary>
-          <ReadyStory
-            loaded={props.loaded}
-            viewportHeight={props.item.preview?.kind === "story" ? props.item.preview.viewportHeight : 960}
-          />
-        </Boundary>
-      </ThemePreferenceProvider>
-    </ChakraProvider>
-  );
+  const App = (props: { loaded: LoadedStory; item: CanvasItem; theme: ThemePreferenceOption }) => {
+    const content = (
+      <Boundary>
+        <ReadyStory loaded={props.loaded} viewportHeight={props.item.preview?.viewportHeight ?? 960} />
+      </Boundary>
+    );
+    // Canvas files with preview decorators theme themselves from the frame's theme. Chakra here only
+    // serves this runtime's own frame chrome in `FrameStory`.
+    const { ThemeProvider } = props.loaded;
+    if (ThemeProvider)
+      return (
+        <ChakraProvider value={psTheme}>
+          <ThemeProvider value={props.theme}>{content}</ThemeProvider>
+        </ChakraProvider>
+      );
+    // Frames without preview decorators, such as the design pages in `previews.tsx`, are themed here.
+    return (
+      <ChakraProvider value={psTheme}>
+        <ThemePreferenceProvider initialPreference={props.theme.id} themePreferences={[props.theme]} storage={storage}>
+          {content}
+        </ThemePreferenceProvider>
+      </ChakraProvider>
+    );
+  };
   const render = () => {
     if (active && loaded && item) reactRoot.render(<App loaded={loaded} item={item} theme={theme} />);
   };

@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DesktopStartupProgress } from "./desktop-starting-state";
 
 const meta = {
@@ -7,7 +7,7 @@ const meta = {
   args: { phase: "database" },
 } satisfies CanvasMeta<typeof DesktopStartupProgress>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const PreparingData: Story = {
   id: "patterns-desktop-startup-progress--preparing-data",
 };

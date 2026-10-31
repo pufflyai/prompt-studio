@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import { useState } from "react";
 import { HarnessParamInlineControls } from "./harness-param-inline-controls";
@@ -34,7 +34,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof HarnessParamInlineControls>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const EffortLevels: Story = {
   id: "sessions-harness-inline-controls--effort-levels",
 };

@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { PerformancePopoverContent } from "./performance-popover-content";
 import {
   backendSnapshot,
@@ -32,7 +32,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof PerformancePopoverContent>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Smooth: Story = {
   id: "settings-developer-tools-performance-popover--smooth",
   args: { snapshot: smoothSnapshot },

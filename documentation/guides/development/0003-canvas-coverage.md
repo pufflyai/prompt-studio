@@ -20,6 +20,8 @@ bun run --cwd extensions/canvas test
 bun run --cwd extensions/canvas typecheck
 ```
 
+Prompt Studio also builds its canvases with `@pstdio/canvas`, like any other project. `bun run canvas` starts `pstdio-canvas watch` at the repository root, which rebuilds into `.pstdio/extension-storage/pstdio.canvas/build` whenever a canvas or a file it uses changes. `bun x pstdio-canvas build` builds once and lists any canvas that fails. UI Canvas reads this build once it adopts the package; until then it shows the catalog that `canvas:build` creates.
+
 Open canvases with `pst canvas open --canvas <id>`. Inspect Theme, Variant, Props and source, and real interactions. The first click selects a frame; the next interacts with its contents. Verify only affected critical behavior in the isolated app. Routine copy, spacing, cosmetic, and documentation changes require no browser runs or screenshots.
 
 Run `bun run --cwd scripts canvas:verify` in the isolated Docker tools container to check representative critical Canvas contracts. Browser interaction tests remain in `packages/canvas-tests`; their static preview build is a test fixture, not another developer catalog. For one existing test, use `bun run --cwd packages/canvas-tests test:browser -- src/ui/pstdio-workbench/critical-workbench.p1.spec.ts`.

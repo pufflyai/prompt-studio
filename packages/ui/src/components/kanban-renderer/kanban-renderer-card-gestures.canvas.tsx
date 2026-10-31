@@ -1,5 +1,5 @@
 import { Button } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { SessionIndicator } from "../primitives/session-indicator";
 import { KanbanRendererCard } from "./kanban-renderer-card";
 
@@ -10,7 +10,7 @@ const meta: CanvasMeta<typeof KanbanRendererCard> = {
 export default meta;
 const openCard = () => {};
 const openSession = () => {};
-export const NestedControlRelease: CanvasVariant<typeof KanbanRendererCard> = {
+export const NestedControlRelease: CanvasFrame<typeof KanbanRendererCard> = {
   id: "patterns-kanban-renderer-card-gestures--nested-control-release",
   args: {
     title: "Keep the ticket board open",

@@ -1,5 +1,5 @@
 import { Badge, Box, Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import {
   Bell,
   Copy,
@@ -259,7 +259,7 @@ const meta: CanvasMeta<typeof Sidenav> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof Sidenav>;
+type Story = CanvasFrame<typeof Sidenav>;
 export const DefaultDocsTree: Story = {
   id: "components-navigation-sidenav--default-docs-tree",
   render: () => <SidenavShell storageKey="preview-sidenav-default" />,

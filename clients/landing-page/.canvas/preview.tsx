@@ -1,7 +1,7 @@
-import type { CanvasProject } from "@pstdio/canvas";
+import type { CanvasPreview } from "@pstdio/canvas";
 import { RootProvider } from "../src/components/root-provider";
 
-const preview: CanvasProject = {
+const preview: CanvasPreview = {
   decorators: [
     (Story) => (
       <RootProvider>

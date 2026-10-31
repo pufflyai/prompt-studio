@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { WorkbenchStory } from "../workbench-story";
 import { createBoomboxWorkbench } from "./boombox";
@@ -15,7 +15,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const ScribbleStory = () => {
   const [workbench] = useState(createScribbleWorkbench);
   return <WorkbenchStory workbench={workbench} initialThemePreference={scribbleTheme.id} />;

@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { KanbanRendererSkeleton } from "./kanban-renderer-skeleton";
 
 const meta: CanvasMeta<typeof KanbanRendererSkeleton> = {
@@ -16,7 +16,7 @@ const meta: CanvasMeta<typeof KanbanRendererSkeleton> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof KanbanRendererSkeleton>;
+type Story = CanvasFrame<typeof KanbanRendererSkeleton>;
 export const Board: Story = {
   id: "patterns-kanban-renderer-loading--board",
 };

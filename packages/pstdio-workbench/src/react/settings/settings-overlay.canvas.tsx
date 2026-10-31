@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -68,7 +68,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof SettingsOverlayStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const CenteredClose: Story = {
   id: "pstdio-workbench-reference-core-api-settings-overlay--centered-close",
 };

@@ -1,5 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Computer, Plus } from "lucide-react";
 import { useState } from "react";
 import { ListRow } from "./list-row";
@@ -9,7 +9,7 @@ const meta = {
   component: ListRow,
 } satisfies CanvasMeta<typeof ListRow>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const NarrowNavigationExample = () => {
   const [actionCount, setActionCount] = useState(0);
   const [rowCount, setRowCount] = useState(0);

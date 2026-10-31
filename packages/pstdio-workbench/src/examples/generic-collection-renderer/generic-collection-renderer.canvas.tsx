@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../workbench-story";
 import { createGenericCollectionRendererModule } from "./module";
@@ -10,7 +10,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const workbench = createWorkbench();
 workbench.registerModule(createGenericCollectionRendererModule());
 export const ExtensionOwnedRules: Story = {

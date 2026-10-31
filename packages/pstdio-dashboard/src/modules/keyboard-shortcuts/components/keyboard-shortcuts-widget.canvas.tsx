@@ -1,5 +1,5 @@
 import { Dialog } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { WorkbenchKeyboardShortcutsPanel } from "@pstdio/workbench/react";
 
@@ -37,7 +37,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof WorkbenchKeyboardShortcutsPanel>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const AssignedShortcuts: Story = {
   id: "help-keyboard-shortcuts--assigned-shortcuts",
 };

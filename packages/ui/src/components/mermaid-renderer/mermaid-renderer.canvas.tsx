@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { useThemePreference } from "../../utils/theme-preference";
 import { mermaidFixtures } from "./mermaid-fixtures";
@@ -22,7 +22,7 @@ const meta: CanvasMeta<typeof MermaidRenderer> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof MermaidRenderer>;
+type Story = CanvasFrame<typeof MermaidRenderer>;
 const SourceChangeResetStory = () => {
   const [code, setCode] = useState<string>(mermaidFixtures.ps81Flowchart);
   return (

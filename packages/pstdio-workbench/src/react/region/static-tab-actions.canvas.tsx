@@ -1,5 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ResourceActionMenu } from "@pstdio/ui";
 import { useId, useState } from "react";
 import { createWorkbench } from "../../core";
@@ -58,9 +58,9 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof StaticTabActions>;
 export default meta;
-export const PinAndUnpin: CanvasVariant<typeof meta> = {
+export const PinAndUnpin: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-guides-static-tab-actions--pin-and-unpin",
 };
-export const AddAfterPin: CanvasVariant<typeof meta> = {
+export const AddAfterPin: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-guides-static-tab-actions--add-after-pin",
 };

@@ -1,16 +1,17 @@
-import { Dialog, Flex, Kbd, Popover, Portal, Stack, Tabs, Text } from "@chakra-ui/react";
+import { Badge, Button, Dialog, Flex, Kbd, Popover, Portal, Stack, Tabs, Text } from "@chakra-ui/react";
+import { useState } from "react";
+import { ListRow } from "@/components/list-row/list-row";
 import {
   AlertMessage,
   Chip,
   EmptyState,
-  ListRow,
   SessionIndicator,
   SimpleCard,
   SimpleCardBody,
   Tooltip,
-} from "@pstdio/ui";
-import { useState } from "react";
-import { Badge, Button } from "../components/themed-primitives";
+} from "@/components/primitives";
+
+export default { title: "Design System/Component surfaces" };
 
 export const FeedbackStates = () => (
   <Stack p="md" gap="md">

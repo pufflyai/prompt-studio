@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ParamEditor } from "@pstdio/ui/param-editor";
 import { useState } from "react";
 import type { CommandParamFieldProps } from "../../command-palette/command-param-field";
@@ -62,7 +62,7 @@ const meta = { title: "pstdio-workbench/Controls/Research agent", component: Res
   typeof ResearchAgent
 >;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Editable: Story = {
   id: "pstdio-workbench-controls-research-agent--editable",
 };

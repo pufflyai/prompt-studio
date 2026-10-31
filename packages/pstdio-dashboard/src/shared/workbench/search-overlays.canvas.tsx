@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { WorkbenchOverlayLayer } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
@@ -59,7 +59,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof SearchOverlayStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Projects: Story = {
   id: "dashboard-search-overlays--projects",
   args: { overlay: "Projects" },

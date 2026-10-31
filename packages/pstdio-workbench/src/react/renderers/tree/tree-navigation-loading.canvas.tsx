@@ -1,5 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createLevelNavigation, createWorkbench, type Disposable } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
@@ -113,7 +113,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof TreeNavigationLoading>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const PageChange: Story = {
   id: "pstdio-workbench-guides-tree-navigation-loading--page-change",
 };

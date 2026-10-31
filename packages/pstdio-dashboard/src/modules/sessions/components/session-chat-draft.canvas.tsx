@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -61,7 +61,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof SessionChatDraftStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const PreviewWithRestoredDraft: Story = {
   id: "modules-sessions-session-chat-draft--preview-with-restored-draft",
 };

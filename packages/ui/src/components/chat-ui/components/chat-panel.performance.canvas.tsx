@@ -1,5 +1,5 @@
 import { Button, HStack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
 import { startChatMountMetric } from "../performance/chat-mount-metrics";
 import {
@@ -29,7 +29,7 @@ const meta: CanvasMeta<typeof ChatPanel> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 const largeConversation = buildLargeChatConversation({
   sessionId: "perf-large",
   turns: CHAT_PERFORMANCE_STRESS_TURNS,

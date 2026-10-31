@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ExamplesView } from "../../components/sections/examples-view";
 import { WhatIsPromptStudioView } from "../../components/sections/what-is-prompt-studio-view";
@@ -22,7 +22,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof WhatIsPromptStudioView>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const WhatIsPromptStudio: Story = {
   id: "theme-landing-chapters--what-is-prompt-studio",
   description:

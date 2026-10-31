@@ -1,5 +1,5 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import {
   KanbanSquare,
   MessageCircle,
@@ -187,7 +187,7 @@ const meta: CanvasMeta<typeof PaletteStory> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof PaletteStory>;
+type Story = CanvasFrame<typeof PaletteStory>;
 export const Default: Story = {
   id: "components-overlays-palette--default",
   render: () => <PaletteStory />,

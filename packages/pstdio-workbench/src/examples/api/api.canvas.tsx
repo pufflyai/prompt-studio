@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { PageReplacementExample } from "../page-composition/module";
 import { ResourceRebindExample } from "./resource-rebind-example";
 import { ResourceTabsExample } from "./resource-tabs-example";
@@ -10,7 +10,7 @@ const meta = {
   description: "This Core API guide explains static and resource placements, then shows complete page replacement.",
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const StaticPlacement: Story = {
   id: "pstdio-workbench-guides-panels-and-pages--static-placement",
   name: "Static placement",

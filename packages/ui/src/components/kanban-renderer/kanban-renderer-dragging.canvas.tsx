@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { KanbanRenderer } from "./kanban-renderer";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
@@ -9,7 +9,7 @@ const meta: CanvasMeta = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const attributes: AttributeDescriptor[] = [
   {
     id: "status",

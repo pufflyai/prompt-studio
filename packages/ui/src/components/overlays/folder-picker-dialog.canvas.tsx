@@ -1,6 +1,33 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { type ComponentProps, useLayoutEffect, useState } from "react";
 import { FolderPickerDialog } from "./folder-picker-dialog";
+
+// Navigation and new folders change the example's own listing; choosing a folder ends the example.
+const InteractiveFolderPicker = (props: ComponentProps<typeof FolderPickerDialog>) => {
+  const [listing, setListing] = useState({ currentPath: props.currentPath, entries: props.entries });
+  const [open, setOpen] = useState(props.open);
+  const [chosen, setChosen] = useState(false);
+  if (chosen) return <p role="status">Example closed. Reset the frame to try it again.</p>;
+  return (
+    <FolderPickerDialog
+      {...props}
+      {...listing}
+      open={open}
+      onClose={() => setOpen(false)}
+      onSelect={() => setChosen(true)}
+      onNavigate={(currentPath) => setListing((current) => ({ ...current, currentPath }))}
+      onCreateFolder={async (name) =>
+        setListing((current) => ({
+          ...current,
+          entries: [
+            ...current.entries,
+            { name, path: `${current.currentPath.replace(/\/$/, "")}/${name}`, isDirectory: true },
+          ],
+        }))
+      }
+    />
+  );
+};
 
 const meta = {
   title: "Overlays/FolderPickerDialog",
@@ -20,9 +47,10 @@ const meta = {
     onNavigate: () => {},
     onCreateFolder: async () => {},
   },
+  render: (args) => <InteractiveFolderPicker {...args} />,
 } satisfies CanvasMeta<typeof FolderPickerDialog>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Folders: Story = {
   id: "overlays-folderpickerdialog--folders",
 };

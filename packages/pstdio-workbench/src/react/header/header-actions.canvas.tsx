@@ -1,5 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench, resourceContextMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -71,7 +71,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const FocusedResourceInLibrary: Story = {
   id: "pstdio-workbench-reference-core-api-header-actions--focused-resource-in-library",
   args: { workbench: createHeaderWorkbench() },

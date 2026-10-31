@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { CollectionViewBar } from "./collection-view-bar";
 import { Bar } from "./collection-view-bar-story";
 import { storyFilter } from "./collection-view-story-fixtures";
@@ -10,7 +10,7 @@ const meta: CanvasMeta<typeof CollectionViewBar> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 export const ManyFilters: Story = {
   id: "patterns-collection-view-filter-row--many-filters",
   render: () => (

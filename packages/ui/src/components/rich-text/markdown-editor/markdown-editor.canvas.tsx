@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { mermaidFixtures } from "@/components/mermaid-renderer/mermaid-fixtures";
 import { ScrollArea } from "@/components/primitives/scroll-area";
@@ -197,7 +197,7 @@ const meta: CanvasMeta<typeof MarkdownEditor> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof MarkdownEditor>;
+type Story = CanvasFrame<typeof MarkdownEditor>;
 export const Basic: Story = {
   id: "patterns-editors-markdown-editor--basic",
 };

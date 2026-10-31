@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ParamEditor } from "@pstdio/ui/param-editor";
 import { DEFAULT_STATUSES } from "../data/seed";
 import { emptyWorkflowStatuses } from "../data/workflow-statuses";
@@ -32,7 +32,7 @@ const meta: CanvasMeta<typeof ParamEditor> = {
   args: { variant: "small", groups: controls.groups, defaultValues: controls.values },
 };
 export default meta;
-type Story = CanvasVariant<typeof ParamEditor>;
+type Story = CanvasFrame<typeof ParamEditor>;
 export const CurrentStatuses: Story = {
   id: "extensions-planner-workflow-settings--current-statuses",
 };
