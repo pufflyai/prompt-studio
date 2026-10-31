@@ -14,21 +14,6 @@ const { suites } = (await import(
 
 type Packages = ReturnType<typeof readWorkspacePackages>;
 const linux = { os: "ubuntu-24.04", platform: "linux", arch: "x64" };
-const supportsTests = (file: string, dir: string) =>
-  ["packages/e2e", "packages/canvas-tests"].includes(dir) ||
-  /(?:^|\/)(?:testing|test-utils|__fixtures__)\//.test(file) ||
-  /\.(?:test-)?fixture\.tsx?$/.test(file) ||
-  /^clients\/desktop\/playwright.*\.config\.ts$/.test(file);
-
-export const editedTestFiles = (tests: string[], changed: string[], packages: Packages) => {
-  const available = new Set(tests);
-  const supports = packages.filter((pkg) =>
-    changed.some((file) => file.startsWith(`${pkg.dir}/`) && !available.has(file) && supportsTests(file, pkg.dir)),
-  );
-  return [...new Set(tests)]
-    .filter((file) => changed.includes(file) || supports.some((pkg) => file.startsWith(`${pkg.dir}/`)))
-    .sort();
-};
 
 export const createEditedTestMatrix = (files: string[], packages: Packages) => {
   const groups = new Map<
@@ -91,7 +76,7 @@ export const createEditedTestMatrix = (files: string[], packages: Packages) => {
           stable: !covered,
           quarantine: files.some((file) => quarantined.has(file)),
           suite: "",
-          browser: !["bun", "api", "integration", "cli"].includes(group.runner),
+          browser: !["bun", "api", "integration"].includes(group.runner),
           desktop: group.runner === "desktop",
         };
       });

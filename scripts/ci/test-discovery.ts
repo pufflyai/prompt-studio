@@ -50,7 +50,7 @@ export const testRunner = (file: string) => {
     return "app";
   }
   if (file.startsWith("packages/pstdio-api/")) return "api";
-  if (file.startsWith("packages/e2e/src/packaged/")) return "packaged-cli";
+  if (file.startsWith("packages/e2e/src/packaged/") && priorityFromFile(file) !== "P0") return "packaged-cli";
   if (file.startsWith("packages/e2e/src/cli/")) return "cli";
   if (file.startsWith("clients/desktop/src/e2e/")) return "browser-helper";
   return "bun";

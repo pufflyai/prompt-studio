@@ -8,6 +8,7 @@ import { type KeyboardEmptyPanels, listKeyboardNumberedTargets } from "./keyboar
 import { createKeyboardPreferences } from "./keyboard-preferences";
 import { type KeyboardPresentation, type KeyboardTabStrips, visibleKeyboardTargets } from "./keyboard-presentations";
 import { selectKeyboardTab } from "./keyboard-tab-selection";
+import { directShortcutHint } from "./shortcut-catalog";
 import { createShortcutCatalogReader, createShortcutHintReader } from "./shortcut-catalog-reader";
 import { shortcutMenuEntries } from "./shortcut-menu";
 
@@ -228,7 +229,9 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
     ...createKeyboardPreferences(getCore, refresh),
     hints,
     hint(action: import("../../registries/navigation/navigation-registry").NavigationTarget) {
-      return hints().get(getNavigationTargetKey(action));
+      return store.getState().active
+        ? hints().get(getNavigationTargetKey(action))
+        : directShortcutHint(getCore(), action);
     },
     visibleTargets,
   };

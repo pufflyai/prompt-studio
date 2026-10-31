@@ -33,7 +33,7 @@ const markdown = [
   "",
   `Main first-attempt successful completion: **${rate}** (${successful}/${total} observed push runs).`,
   "",
-  "Cancelled, skipped, incomplete and missing first attempts are not successful. Timing data is in timing.json; unknown PR scope and failure causes remain unclassified.",
+  "Cancelled, skipped, incomplete and missing first attempts are not successful. Timing data is in timing.json: initial scheduling delay, elapsed after the first job starts, aggregate runner execution, and per-job phases are separate. Elapsed after start can include later scheduling gaps. Unknown PR scope and failure causes remain unclassified.",
   "",
   "A later passing job on the same commit is evidence to investigate, not proof that the failed check is safe to retry.",
   "",

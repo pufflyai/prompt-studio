@@ -4,6 +4,32 @@ import { createWorkbench } from "../../workbench-core";
 import { directShortcutHint } from "./shortcut-catalog";
 import { shortcutOpeningChord } from "./shortcut-menu";
 
+test("inactive tree and menu hints avoid discovery providers and layout measurements", () => {
+  const core = createWorkbench();
+  const action = { kind: "command" as const, commandId: "hinted" };
+  core.commands.registerCommand({ id: "hinted", label: "Hinted" }, { execute() {} });
+  core.keybindings.registerKeybinding({ action, keybinding: "Alt+J", when: "available" });
+  core.context.set("available", true);
+  core.commands.registerCommand(
+    { id: "unrelated", label: "Unrelated" },
+    {
+      execute() {},
+      isVisible: () => {
+        throw new Error("Inactive hints must not discover unrelated actions");
+      },
+    },
+  );
+  core.keyboard.registerVisibleRegion("main", () => {
+    throw new Error("An ordinary hint must not measure the workbench layout");
+  });
+  expect(core.keyboard.hint(action)).toBe("Alt+J");
+  core.context.set("available", false);
+  expect(core.keyboard.hint(action)).toBeUndefined();
+  core.context.set("available", true);
+  core.keyboard.setPreview(true);
+  expect(core.keyboard.hint(action)).toBe("Alt+J");
+});
+
 test("direct tooltip hints inspect only their action and follow its current availability", () => {
   const core = createWorkbench();
   const action = { kind: "command" as const, commandId: "hinted" };

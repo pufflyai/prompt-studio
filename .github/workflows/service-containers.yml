@@ -21,6 +21,8 @@ permissions:
 
 jobs:
   psx_delivery:
+    # PR CI runs P0 only. Releases call this delivery smoke with their version.
+    if: github.event_name != 'pull_request' || inputs.version != ''
     # Temporary: Playwright's Chromium does not install on Ubuntu 26.04 yet (ADR 0105).
     runs-on: ubuntu-24.04
     steps:
