@@ -24,11 +24,19 @@ interface CiScopeInput {
 const documentation = (file: string) =>
   /\.(md|mdx|txt)$/.test(file) || file.startsWith("design/") || file === "LICENSE";
 
+const sharedBuildInput = (file: string) =>
+  file.startsWith("scripts/build/") || ["scripts/release/stage-package.ts", "scripts/test-setup.ts"].includes(file);
+
 const stageFor = (event: string, production: boolean, profile?: string) => {
   if (production) return "full";
   if (event === "pull_request") return "pull_request";
   if (event === "push" && profile !== "merge_queue") return "main";
   return "merge_queue";
+};
+
+const prioritiesFor = (stage: ReturnType<typeof stageFor>): TestPriority[] => {
+  if (stage === "full") return ["P0", "P1", "P2"];
+  return stage === "merge_queue" ? ["P0", "P1"] : ["P0"];
 };
 
 export const resolveCiScope = (input: CiScopeInput) => {
@@ -37,15 +45,12 @@ export const resolveCiScope = (input: CiScopeInput) => {
   const production = profile === "production" || (event === "workflow_dispatch" && profile !== "merge_queue");
   const stage = stageFor(event, production, profile);
   const code = changedFiles.filter((file) => !documentation(file));
-  const shared = code.some(
-    (file) => file.startsWith("scripts/") || !packages.some((pkg) => file.startsWith(`${pkg.dir}/`)),
-  );
+  const shared = code.some((file) => sharedBuildInput(file) || !packages.some((pkg) => file.startsWith(`${pkg.dir}/`)));
   let affectedOwners = affectedPackages(packages, code);
   if (shared || stage !== "pull_request") affectedOwners = packages.map((pkg) => pkg.name).sort();
   if (stage === "main") affectedOwners = [];
-  let priorities: TestPriority[] = ["P0"];
-  if (production) priorities = ["P0", "P1", "P2"];
-  const matrices = createTestMatrices(tests, packages, affectedOwners, priorities);
+  const matrices = createTestMatrices(tests, packages, affectedOwners, prioritiesFor(stage));
+  const componentMatrix = stage === "merge_queue" ? [] : matrices.componentMatrix;
   const browserSmoke = stage === "main" || stage === "merge_queue";
   const clientMatrix = (production ? productionDesktopCheckPlatforms(releaseChannel) : []).map((row) => ({
     ...row,
@@ -60,11 +65,12 @@ export const resolveCiScope = (input: CiScopeInput) => {
     editedMatrix:
       stage === "pull_request" ? createEditedTestMatrix(editedTestFiles(tests, code, packages), packages) : [],
     ...matrices,
-    appMatrix: stage === "pull_request" ? [] : matrices.appMatrix,
-    packagedMatrix: stage === "pull_request" ? [] : matrices.packagedMatrix,
+    appMatrix: production ? matrices.appMatrix : [],
+    packagedMatrix: production ? matrices.packagedMatrix : [],
+    componentMatrix,
     clientMatrix,
     toolchainMatrix: productionToolchainPlatforms(releaseChannel),
-    componentChecks: matrices.componentMatrix.length > 0,
+    componentChecks: componentMatrix.length > 0,
     databaseTests: matrices.databaseMatrix.length > 0,
     packageChecks: affectedOwners.length > 0,
     packageMatrix: partitionPackageChecks(affectedOwners),

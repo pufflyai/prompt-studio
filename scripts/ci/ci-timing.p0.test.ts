@@ -80,6 +80,9 @@ test("keeps action-required runs with no jobs in the first-attempt inventory", (
     firstAttemptSucceeded: false,
     missingFirstAttempt: true,
     wallMs: null,
+    initialWaitMs: null,
+    elapsedAfterStartMs: null,
+    totalRunnerMs: null,
   });
 });
 
@@ -100,4 +103,33 @@ test("does not certify a cancelled first run even when its gate had completed", 
     ],
   );
   expect(report.runs[0].firstAttemptSucceeded).toBe(false);
+});
+
+test("separates initial scheduling delay from execution and does not sum parallel jobs into stage duration", () => {
+  const report = summarizeCiTiming([
+    job({ name: "scope", id: 1, started: "2026-10-25T00:10:00Z", completed: "2026-10-25T00:10:10Z" }),
+    job({ name: "checks", id: 2, started: "2026-10-25T00:10:10Z", completed: "2026-10-25T00:12:50Z" }),
+    job({ name: "parallel", id: 3, started: "2026-10-25T00:10:10Z", completed: "2026-10-25T00:12:40Z" }),
+    job({ id: 4, started: "2026-10-25T00:12:50Z", completed: "2026-10-25T00:13:00Z" }),
+  ]);
+  expect(report.runs[0]).toMatchObject({
+    wallMs: 780_000,
+    initialWaitMs: 600_000,
+    elapsedAfterStartMs: 180_000,
+    totalRunnerMs: 330_000,
+  });
+});
+
+test("release timing includes publication after its nested functional gate", () => {
+  const report = summarizeCiTiming([
+    job({ workflow: "release-packages.yml", name: "production / functional / ci_passed" }),
+    job({
+      workflow: "release-packages.yml",
+      name: "publish",
+      id: 3,
+      started: "2026-10-25T00:03:00Z",
+      completed: "2026-10-25T00:08:00Z",
+    }),
+  ]);
+  expect(report.runs[0]).toMatchObject({ wallMs: 480_000, initialWaitMs: 5_000, elapsedAfterStartMs: 475_000 });
 });

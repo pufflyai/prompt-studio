@@ -101,7 +101,25 @@ export const summarizeCiTiming = (input: CiJob[], observedRuns: CiRunTiming[] = 
         runCreated: run!.created_at,
       };
     const gate = first.find((job) => job.name === "ci_passed" || job.name.endsWith(" / ci_passed"));
-    const final = gate?.completed ?? null;
+    const executed = first.filter((job) => job.conclusion !== "skipped");
+    const starts = executed
+      .map((job) => job.started)
+      .filter((value): value is string => value !== null && Number.isFinite(Date.parse(value)))
+      .sort((a, b) => Date.parse(a) - Date.parse(b));
+    const started = starts[0] ?? null;
+    // Release publication and certification can finish after a nested functional gate.
+    const final =
+      gate?.completed && first.every((job) => job.completed && Number.isFinite(Date.parse(job.completed)))
+        ? (first
+            .map((job) => job.completed!)
+            .sort((a, b) => Date.parse(a) - Date.parse(b))
+            .at(-1) ?? null)
+        : null;
+    const executions = executed.map((job) => elapsed(job.started, job.completed));
+    const totalRunnerMs =
+      first.length && executions.every((duration): duration is number => duration !== null)
+        ? executions.reduce((sum, duration) => sum + duration, 0)
+        : null;
     const nonSuccessfulRun = run?.run_attempt === 1 && run.conclusion !== undefined && run.conclusion !== "success";
     return {
       workflow: sample.workflow,
@@ -110,6 +128,9 @@ export const summarizeCiTiming = (input: CiJob[], observedRuns: CiRunTiming[] = 
       sha: sample.sha,
       stage: stageForRun(sample),
       wallMs: elapsed(sample.runCreated, final),
+      initialWaitMs: elapsed(sample.runCreated, started),
+      elapsedAfterStartMs: elapsed(started, final),
+      totalRunnerMs,
       // The required gate owns selection. Conditional jobs may be skipped, but a
       // skipped gate, cancelled job, or absent completion cannot certify a run.
       firstAttemptSucceeded: Boolean(
@@ -125,6 +146,6 @@ export const summarizeCiTiming = (input: CiJob[], observedRuns: CiRunTiming[] = 
   return {
     runs,
     limits:
-      "Job phase times can overlap across parallel jobs. Runner wait needs a job creation timestamp. PR scope and failure causes stay unclassified without evidence. Merge-candidate creation wait is outside run wall time.",
+      "Aggregate runner time sums parallel work; elapsed after start excludes initial scheduling but can include later scheduling gaps. A dependency critical path needs the workflow graph. Runner wait needs a job creation timestamp. PR scope and failure causes stay unclassified without evidence. Merge-candidate creation wait is outside run wall time.",
   };
 };

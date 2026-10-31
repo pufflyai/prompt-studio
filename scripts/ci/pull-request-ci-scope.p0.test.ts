@@ -35,7 +35,7 @@ test("PR selection follows affected package dependencies without test filename l
   expect(JSON.stringify(scope)).not.toContain("feature.p2");
 });
 
-test("PRs select focused P0 rules and the required queue selects P0 plus startup smoke", () => {
+test("PRs select focused P0 rules and the required queue adds source contracts and startup smoke", () => {
   const input = { ...scopeFixture(), changedFiles: ["scripts/ci/run-package-checks.ts"] };
   const pr = resolveCiScope(input);
   expect(pr.databaseMatrix.every((row) => row.priority === "P0")).toBe(true);
@@ -43,17 +43,22 @@ test("PRs select focused P0 rules and the required queue selects P0 plus startup
   expect(pr.appMatrix).toEqual([]);
   expect(plannedCiJobs(pr).every((job) => job.priority === "P0")).toBe(true);
   const queue = resolveCiScope({ ...input, event: "merge_group" });
-  expect(queue.databaseMatrix.every((row) => row.priority === "P0")).toBe(true);
+  expect(queue.databaseMatrix.some((row) => row.priority === "P1")).toBe(true);
   expect(queue.appMatrix).toEqual([]);
   expect(queue.browserSmoke).toBe(true);
   expect(queue.componentMatrix).toEqual([]);
 });
 
-test("the queue keeps P0 and smoke while production retains complete functional suites", () => {
+test("the queue keeps source contracts and smoke while production retains complete functional suites", () => {
   const queue = resolveCiScope({ ...scopeFixture(), event: "merge_group" });
   expect(queue.stage).toBe("merge_queue");
   expect(plannedCiJobs(queue).map((job) => job.id)).toContain("browser_smoke");
-  expect(plannedCiJobs(queue).every((job) => job.priority === "P0" || job.id === "browser_smoke")).toBe(true);
+  expect(
+    plannedCiJobs(queue)
+      .filter((job) => job.priority === "P1")
+      .map((job) => job.id),
+  ).toEqual(expect.arrayContaining(["browser_smoke", "database_tests_P1"]));
+  expect(plannedCiJobs(queue).some((job) => /^(e2e|components|build_clients)/.test(job.id))).toBe(false);
   expect(queue.appMatrix).toEqual([]);
   expect(queue.componentMatrix).toEqual([]);
   expect(JSON.stringify(queue)).not.toContain("feature.p2");
@@ -107,4 +112,28 @@ test("a newly named contract joins nightly automatically and main uses provenanc
   expect(main.packageChecks).toBe(false);
   expect(main.browserSmoke).toBe(true);
   expect(main.databaseMatrix).toEqual([]);
+});
+
+test("CI tooling edits check their owner and declared consumers while the queue still checks every owner", () => {
+  const input = scopeFixture();
+  input.packages.push(
+    { name: "pstdio-scripts", dir: "scripts", dependencies: [] },
+    { name: "tooling-consumer", dir: "packages/tooling-consumer", dependencies: ["pstdio-scripts"] },
+  );
+  input.tests.push("scripts/ci/selection.p0.test.ts");
+  const changedFiles = ["scripts/ci/selection.ts"];
+  const pr = resolveCiScope({ ...input, changedFiles });
+  expect(pr.affectedOwners).toEqual(["pstdio-scripts", "tooling-consumer"]);
+  expect(pr.databaseMatrix).toEqual([]);
+  const queue = resolveCiScope({ ...input, changedFiles, event: "merge_group" });
+  expect(queue.affectedOwners).toHaveLength(input.packages.length);
+  for (const file of [
+    "scripts/build/compile.ts",
+    "scripts/release/stage-package.ts",
+    "scripts/test-setup.ts",
+    "bun.lock",
+    "nx.json",
+  ]) {
+    expect(resolveCiScope({ ...input, changedFiles: [file] }).affectedOwners).toHaveLength(input.packages.length);
+  }
 });
