@@ -150,6 +150,9 @@ jobs:
         uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
+      - name: Set up Windows desktop recovery tools
+        if: runner.os == 'Windows' && (matrix.desktop || matrix.suite == 'desktop')
+        uses: ./.github/actions/setup-windows-desktop-tests
       - name: Install browser engines
         if: matrix.browser
         run: bunx playwright@1.60.0 install --with-deps
