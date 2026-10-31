@@ -1,22 +1,10 @@
-import {
-  Button,
-  chakra,
-  Field,
-  HStack,
-  Icon,
-  Input,
-  Menu,
-  Popover,
-  Portal,
-  Stack,
-  Tag,
-  Text,
-  useSlotRecipe,
-} from "@chakra-ui/react";
+import { Button, chakra, Field, HStack, Icon, Input, Stack, Tag, Text, useSlotRecipe } from "@chakra-ui/react";
 import { useState } from "react";
 import { ListRow } from "@/components/list-row/list-row";
 import { getIconComponent } from "@/components/primitives/icon-options";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ScopedMenu as Menu, ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 
 interface HarnessAction {
   id: string;

@@ -1,5 +1,7 @@
-import { Button, CloseButton, Dialog, Portal, Stack, Text } from "@chakra-ui/react";
+import { Button, CloseButton, Stack, Text } from "@chakra-ui/react";
 import { type ReactNode, useState } from "react";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 
 interface DeleteConfirmationModalProps {
   open: boolean;

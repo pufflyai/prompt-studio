@@ -1,7 +1,8 @@
-import { Button, Dialog, Stack } from "@chakra-ui/react";
+import { Button, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ListRow } from "@/components/list-row/list-row";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { SearchModalContent } from "./search-modal-content";
 
 const ProjectListDialog = (props: { showSearch: boolean }) => {

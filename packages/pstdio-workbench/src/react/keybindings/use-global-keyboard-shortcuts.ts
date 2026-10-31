@@ -14,7 +14,7 @@ export const useGlobalKeyboardShortcuts = (
       installKeyboardShortcuts(
         document,
         () =>
-          disabled
+          disabled || !workbench.activation.isActive()
             ? []
             : availableKeyboardShortcuts(document, createWebviewKeyboardShortcuts(workbench, commandIds).shortcuts),
         (request) => {

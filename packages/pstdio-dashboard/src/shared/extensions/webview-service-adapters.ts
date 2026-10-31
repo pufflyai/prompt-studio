@@ -1,4 +1,3 @@
-import { toaster } from "@pstdio/ui";
 import type {
   ExtensionWebviewNotificationsAdapter,
   ExtensionWebviewSettingsAdapter,
@@ -58,6 +57,7 @@ export const createDashboardWebviewSettingsAdapter = (owner: SettingsOwner) => {
 export const createDashboardWebviewNotificationsAdapter = (input: {
   projectId?: string;
   extensionId: string;
+  showNotice: (notice: { type?: "info" | "success" | "warning"; title?: string; description?: string }) => void;
   showError: (notice: { title?: string; description?: string }) => void;
 }) => {
   const projectId = input.projectId;
@@ -67,7 +67,7 @@ export const createDashboardWebviewNotificationsAdapter = (input: {
         input.showError({ title: notice.title ?? "Extension action failed", description: notice.message });
         return;
       }
-      toaster.create({ type: notice.type, title: notice.title, description: notice.message });
+      input.showNotice({ type: notice.type, title: notice.title, description: notice.message });
     },
     ...(projectId
       ? ({

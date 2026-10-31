@@ -2,11 +2,13 @@ import {
   ChakraProvider,
   type FileIconThemePreferenceOption,
   FileIconThemePreferenceProvider,
+  FileIconThemePreferenceSurface,
   psTheme,
   type ThemePreference,
   type ThemePreferenceOption,
   ThemePreferenceProvider,
   type ThemePreferenceStorage,
+  ThemePreferenceSurface,
 } from "@pstdio/ui";
 import { createContext, type ReactNode, useContext } from "react";
 
@@ -27,10 +29,15 @@ export const WorkbenchThemeProvider = (props: WorkbenchThemeProviderProps) => {
   const { children, initialThemePreference, themePreferences, fileIconThemePreferences } = props;
   const hasWorkbenchThemeProvider = useContext(WorkbenchThemeProviderContext);
 
-  if (hasWorkbenchThemeProvider) return children;
+  if (hasWorkbenchThemeProvider)
+    return (
+      <ThemePreferenceSurface>
+        <FileIconThemePreferenceSurface>{children}</FileIconThemePreferenceSurface>
+      </ThemePreferenceSurface>
+    );
 
   return (
-    <WorkbenchThemeProviderContext value>
+    <WorkbenchThemeProviderContext value={true}>
       <ThemePreferenceProvider
         initialPreference={initialThemePreference}
         defaultPreference={props.defaultThemePreference}
