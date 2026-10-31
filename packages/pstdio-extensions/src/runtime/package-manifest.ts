@@ -18,6 +18,7 @@ export interface PackageManifest {
   version: string;
   displayName?: string;
   description?: string;
+  icon?: string;
   publisher: string;
   main: string;
   enginesPstdio: string;
@@ -36,6 +37,8 @@ export type ReadPackageManifestResult = {
 
 const isStringRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const optionalString = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
 
 const requireField = (
   diagnostics: ExtensionDiagnostic[],
@@ -306,14 +309,12 @@ export const readPackageManifestMetadata = (packageDir: string): ReadPackageMani
   const entryPath = resolveEntry(diagnostics, packagePath, packageDir, main as string);
   if (!entryPath) return { manifest: null, entryPath: null, diagnostics };
 
-  const displayName = typeof raw.displayName === "string" && raw.displayName.length > 0 ? raw.displayName : undefined;
-  const description = typeof raw.description === "string" && raw.description.length > 0 ? raw.description : undefined;
-
   const manifest: PackageManifest = {
     name: name as string,
     version: version as string,
-    displayName,
-    description,
+    displayName: optionalString(raw.displayName),
+    description: optionalString(raw.description),
+    icon: optionalString(raw.icon),
     publisher: publisher as string,
     main: main as string,
     enginesPstdio: enginesPstdio as string,

@@ -3,6 +3,8 @@ import * as lucideIcons from "lucide-react";
 import { optionIcons } from "@/components/primitives/icon-options";
 import { MessagesCircle } from "./messages-circle-icon";
 
+const iconComponents = new Set<unknown>(Object.values(lucideIcons.icons));
+
 const toPascalCase = (value: string) =>
   value
     .split(/[^a-zA-Z0-9]+/)
@@ -17,7 +19,7 @@ export const resolveIconComponent = (name: string) => {
   if (pascalName === "MessagesCircle") return MessagesCircle;
   for (const candidate of [name, pascalName, `${pascalName}Icon`]) {
     const component = (lucideIcons as Record<string, unknown>)[candidate];
-    if (component && (typeof component === "function" || typeof component === "object")) return component as LucideIcon;
+    if (iconComponents.has(component)) return component as LucideIcon;
   }
   return undefined;
 };

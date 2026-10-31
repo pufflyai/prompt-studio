@@ -52,6 +52,7 @@ import {
   registerExtensionContributions,
 } from "./extension-contribution-registration";
 import { createExtensionRefreshQueue } from "./extension-refresh-queue";
+import { registerExtensionsPage } from "./extensions-page";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
 type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExtensionAppearanceResponse>;
@@ -81,6 +82,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
   ({
     id: "dashboard.extensions",
     activate(ctx: WorkbenchModuleContext) {
+      registerExtensionsPage(ctx);
       const owner = getRuntimeCollections();
       const executeCommand = input.executeCommand ?? executeExtensionCommand;
       const loadAppearance = input.loadAppearance ?? getProjectExtensionAppearance;

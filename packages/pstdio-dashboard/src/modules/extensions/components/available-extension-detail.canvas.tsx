@@ -7,7 +7,7 @@ const metadata = {
     {
       id: "pstdio.pstdio-reports",
       name: "pstdio-reports",
-      displayName: "Prompt Studio Reports",
+      displayName: "Agent Reports",
       sourcePath: "",
     },
   ],
@@ -71,7 +71,9 @@ const meta: CanvasMeta<typeof AvailableExtensionDetail> = {
   args: {
     extension: {
       installName: "pstdio-reports",
-      displayName: "Prompt Studio Reports",
+      extensionId: "pstdio.pstdio-reports",
+      icon: "FileChartColumn",
+      displayName: "Agent Reports",
       description: "Workspace reports for agent handoffs.",
       installed: false,
       origin: {

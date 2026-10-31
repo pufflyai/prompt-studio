@@ -202,9 +202,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     }, project.id);
     await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}`, { waitUntil: "domcontentloaded" });
-    await page.getByText("Settings", { exact: true }).last().click();
-    const settings = page.getByRole("dialog").last();
-    await settings.getByText("Extensions", { exact: true }).first().click();
+    await page.getByRole("option", { name: "Extensions", exact: true }).click();
 
     const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Project Planner" });
     await installedRow.waitFor();

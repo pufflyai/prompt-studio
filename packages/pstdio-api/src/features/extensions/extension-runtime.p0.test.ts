@@ -66,6 +66,18 @@ describe("hashExtensionSource", () => {
 });
 
 describe("first-party extension loading", () => {
+  test("preserves icon metadata in installed snapshots", async () => {
+    const root = makeExtension();
+    writePackage(root, "reports", { icon: "FileChartColumn" });
+    try {
+      const loaded = await loadExtensionSource(root);
+      expect(loaded.metadata).toMatchObject({ id: "pstdio.reports", icon: "FileChartColumn" });
+      expect(loaded.manifest).toMatchObject({ id: "pstdio.reports", icon: "FileChartColumn" });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("loads the workbench fixture with alpha.4 views and typed middleware", async () => {
     const sourcePath = resolve(import.meta.dir, "../../../../../packages/workbench-fixture");
     const loaded = await loadExtensionSource(sourcePath);

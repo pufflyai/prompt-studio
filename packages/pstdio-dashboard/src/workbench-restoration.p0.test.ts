@@ -109,7 +109,10 @@ describe("createDashboardWorkbench restoration", () => {
     await restored.dispose();
   });
 
-  test("opens the project named in the URL instead of the last selected project", async () => {
+  test.each([
+    ["sessions", "session-composer"],
+    ["extensions", "extensions"],
+  ])("opens the project and %s page named in the URL", async (path, pageId) => {
     const storage = createStorage();
     createDashboardProjectSelectionPersistence({
       namespace: dashboardWorkbenchStorageNamespace,
@@ -118,11 +121,13 @@ describe("createDashboardWorkbench restoration", () => {
     seedSyncedRows();
     const workbench = createDashboardWorkbench({
       storage,
-      pageLocationBrowser: browserAt("/projects/project-2/sessions"),
+      pageLocationBrowser: browserAt(`/projects/project-2/${path}`),
     });
     await flushMicrotasks();
 
     expect(getDashboardSelectedProjectId(workbench)).toBe("project-2");
+    expect(workbench.pages.store.getState().location?.page.id).toBe(pageId);
+    await workbench.dispose();
   });
 
   test("keeps each project's Side Panel presentation when switching projects", async () => {
