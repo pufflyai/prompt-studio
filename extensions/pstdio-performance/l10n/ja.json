@@ -31,6 +31,7 @@
   "popover.remoteBackend": "リモートのバックエンド",
   "popover.responseSummary": "平均 {{avg}} · 最大 {{max}}",
   "popover.responseTime": "応答時間",
+  "popover.resuming": "再開中 · プロセスのサンプルを待機中",
   "popover.resume": "再開",
   "popover.resumeLabel": "{{name}} を再開",
   "popover.roles.extension-frames": "拡張機能のフレーム",
