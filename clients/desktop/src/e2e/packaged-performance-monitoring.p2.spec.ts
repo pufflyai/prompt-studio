@@ -83,6 +83,9 @@ test("keeps reporting slow frames after the workbench reloads", async () => {
   try {
     ({ app } = await launchProject("Reload", { monitoring: true }));
     const frames = async () => (await readSnapshot(app!.page))?.frames ?? [];
+    await expect
+      .poll(async () => (await readSnapshot(app!.page))?.capabilities.slowFrames)
+      .toMatch(/^(long-animation-frame|longtask)$/);
     const firstTask = await forceSlowFrame(app.page);
     await expect.poll(async () => (await frames()).some((frame) => overlapsTask(frame, firstTask))).toBe(true);
 
