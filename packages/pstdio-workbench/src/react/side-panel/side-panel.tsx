@@ -49,6 +49,9 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
   const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   const attached = mode === "attached" && !fullscreen;
+  // The split layout makes a closed panel inert. Keep its header mounted across
+  // close/reopen; floating and fullscreen presentations own their separate header.
+  const hasAttachedHeader = mode !== "floating" && !fullscreen;
 
   return (
     <WorkbenchFocusRegion workbench={workbench} region="side" h="full" minH="0" minW="0" w="full">
@@ -61,7 +64,7 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         bg={workbenchBackgrounds.main}
         layerStyle="panel"
         header={
-          attached ? (
+          hasAttachedHeader ? (
             <PanelHeader workbench={workbench} region="side" variant="main" flexShrink={0} gap="sm">
               <WorkbenchSidePanelHeader header={header} />
               <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
