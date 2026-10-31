@@ -5,12 +5,12 @@ import { priorityFromFile, testRunner } from "./test-discovery";
 import { matchesPlatform, quarantineRegistry, quarantineRunnerForTest } from "./test-quarantine";
 import type { readWorkspacePackages } from "./workspace-packages";
 
-// Scope runs before dependency installation. Read the workspace public metadata export.
+// Scope runs before dependency installation. Resolve the workspace's public entry directly.
 const manifestPath = new URL("../../packages/benchmarks/package.json", import.meta.url);
 const benchmarkManifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-const suiteFiles = JSON.parse(
-  readFileSync(new URL(benchmarkManifest.exports["./suite-files"], manifestPath), "utf8"),
-) as Record<string, string[]>;
+const { suites } = (await import(
+  new URL(benchmarkManifest.exports["."], manifestPath).href
+)) as typeof import("pstdio-benchmarks");
 
 type Packages = ReturnType<typeof readWorkspacePackages>;
 const linux = { os: "ubuntu-24.04", platform: "linux", arch: "x64" };
@@ -40,9 +40,9 @@ export const createEditedTestMatrix = (files: string[], packages: Packages) => {
     const priority = priorityFromFile(file)!;
     const runner = testRunner(file);
     if (runner === "performance") {
-      const suite = Object.entries(suiteFiles).find(([, files]) => files.includes(file));
+      const suite = suites.find((suite) => suite.files.includes(file));
       if (!suite) throw new Error(`Edited benchmark has no registered suite: ${file}`);
-      performance.set(suite[0], [...(performance.get(suite[0]) ?? []), file]);
+      performance.set(suite.id, [...(performance.get(suite.id) ?? []), file]);
       continue;
     }
     const owner = packages.find((pkg) => file.startsWith(`${pkg.dir}/`))?.name ?? "repository";
