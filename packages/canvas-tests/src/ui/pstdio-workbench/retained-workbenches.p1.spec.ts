@@ -1,7 +1,7 @@
 import { expect, type FrameLocator, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
-const prefix = "workbench-pstdio-workbench-reference-core-api-multiple-workbenches--";
+const canvas = "packages/pstdio-workbench/src/react/workbench/multiple-workbenches.canvas.tsx";
 // Host activation can arrive while a modal owns pointer input.
 const select = (preview: FrameLocator, name: string) =>
   preview
@@ -10,7 +10,7 @@ const select = (preview: FrameLocator, name: string) =>
 
 // Critical: retained keyboard mode must preserve its search and release completed focus requests.
 test("switching retains keyboard search without replaying a completed focus request", async ({ page }) => {
-  const preview = await openCanvasPreview(page, `${prefix}retained-projects`);
+  const preview = await openCanvasPreview(page, `${canvas}#RetainedProjects`);
   const draft = preview.getByRole("textbox", { name: "A draft", exact: true });
   await draft.fill("Unsaved A");
   await page.keyboard.press("Alt+Shift+Space");
@@ -33,7 +33,7 @@ test("switching retains keyboard search without replaying a completed focus requ
 
 // Critical: a hidden picker must release dismissable-layer listeners and retain its draft/open state.
 test("switching suspends a color picker and restores its open state", async ({ page }) => {
-  const preview = await openCanvasPreview(page, `${prefix}retained-projects`);
+  const preview = await openCanvasPreview(page, `${canvas}#RetainedProjects`);
   const picker = preview.locator('[data-scope="color-picker"][data-part="root"]').first();
   await picker.locator('[data-part="trigger"]').click();
   await expect(picker.locator('[data-part="content"]')).toBeVisible();
@@ -46,7 +46,7 @@ test("switching suspends a color picker and restores its open state", async ({ p
 
 // Critical: the enclosing theme provider remains the owner across activation and inner remounts.
 test("outer theme controls remain connected to remounted workbenches", async ({ page }) => {
-  const preview = await openCanvasPreview(page, `${prefix}inherited-theme`);
+  const preview = await openCanvasPreview(page, `${canvas}#InheritedTheme`);
   const theme = preview.getByRole("button", { name: /^Outer theme:/ });
   const before = await theme.textContent();
   await theme.click();
@@ -63,7 +63,7 @@ test("outer theme controls remain connected to remounted workbenches", async ({ 
 
 // Critical: events in another project must not discard an unfinished link edit or its selection.
 test("an unfinished rich text link survives background resize and another editor's updates", async ({ page }) => {
-  const preview = await openCanvasPreview(page, `${prefix}rich-text-editors`);
+  const preview = await openCanvasPreview(page, `${canvas}#RichTextEditors`);
   const editor = preview.getByRole("group", { name: "A rich text" }).locator('[contenteditable="true"]');
   await editor.fill("Example");
   await editor.press("ControlOrMeta+A");
