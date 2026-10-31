@@ -56,6 +56,9 @@
     "@pstdio/cli-win-x64": "0.45.0",
     "@pstdio/cli-win-arm64": "0.45.0"
   },
+  "nx": {
+    "implicitDependencies": ["pstdio-dashboard"]
+  },
   "devDependencies": {
     "@pstdio/sdk": "workspace:*",
     "@types/bun": "1.4.4",
