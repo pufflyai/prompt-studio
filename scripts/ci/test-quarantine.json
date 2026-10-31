@@ -269,6 +269,48 @@
     "removeWhen": "Find why the packaged runtime ignores or stalls on SIGTERM after auto-build dispatch and fix it, then pass ten independent Linux runs within the existing 30 second allowance."
   },
   {
+    "runner": "bun",
+    "file": "extensions/harness-claude-code/src/managed-cli.p0.test.ts",
+    "name": "detects the installed private CLI without PATH tools",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-999 / Claude Code cold native startup",
+    "reason": "The asynchronous native version probe returned unavailable after 3009.40 ms in the post-merge remaining-package run at 6a4ca2007, against its existing 3000 ms process limit. The identical asynchronous fixture passed in its focused execution (381.24 ms) and complete harness suite before that run. The variable native startup phase is unconfirmed; preserve the real CLI, fresh home, empty PATH, assertions and limits in the separate evidence lane.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/pull/1624",
+      "https://github.com/pufflyai/prompt-studio/pull/1628"
+    ],
+    "removeWhen": "Identify and fix the variable native startup phase, then verify fresh-home, empty-PATH macOS ARM64 probes in representative first-attempt local and CI executions within the unchanged 3000 ms process and 5000 ms test limits, without retries or prewarming."
+  },
+  {
+    "runner": "bun",
+    "file": "extensions/harness-codex/src/managed-cli.p0.test.ts",
+    "name": "detects the installed private CLI without PATH tools",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-999 / Codex cold native startup",
+    "reason": "The asynchronous native version probe returned unavailable after 3013.68 ms in the post-merge remaining-package run at 6a4ca2007, against its existing 3000 ms process limit. The identical asynchronous fixture passed in its focused execution (37.89 ms) and complete harness suite before that run. The variable native startup phase is unconfirmed; preserve the real CLI, fresh home, empty PATH, assertions and limits in the separate evidence lane.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/pull/1624",
+      "https://github.com/pufflyai/prompt-studio/pull/1628"
+    ],
+    "removeWhen": "Identify and fix the variable native startup phase, then verify fresh-home, empty-PATH macOS ARM64 probes in representative first-attempt local and CI executions within the unchanged 3000 ms process and 5000 ms test limits, without retries or prewarming."
+  },
+  {
+    "runner": "bun",
+    "file": "extensions/harness-open-code/src/managed-cli.p0.test.ts",
+    "name": "detects the installed private CLI without PATH tools",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-999 / OpenCode cold native startup",
+    "reason": "The asynchronous native version probe returned unavailable after 3008.26 ms in the post-merge full local suite at 6a4ca2007, against its existing 3000 ms process limit. The identical asynchronous fixture passed in its focused execution (2930.91 ms) and complete harness suite before that run. This case is already quarantined on Linux. The native startup phase causing the remaining variation is unconfirmed; preserve the real CLI, fresh home, empty PATH, assertions and limits in the separate evidence lane.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/pull/1624",
+      "https://github.com/pufflyai/prompt-studio/pull/1628"
+    ],
+    "removeWhen": "Identify and fix the variable native startup phase, then verify fresh-home, empty-PATH macOS ARM64 probes in representative first-attempt local and CI executions within the unchanged 3000 ms process and 5000 ms test limits, without retries or prewarming."
+  },
+  {
     "runner": "packaged-desktop",
     "file": "clients/desktop/src/e2e/packaged-attached-recovery.p1.spec.ts",
     "name": "automatically recovers a CLI-started backend and restores the open project",
