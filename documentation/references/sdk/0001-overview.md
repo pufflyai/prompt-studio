@@ -17,6 +17,7 @@ Install the SDK version that matches your Prompt Studio app, such as `bun add @p
 | Entry point | Purpose |
 | --- | --- |
 | `@pstdio/sdk/extensions` | Contribution helpers, typed refs, command and renderer contexts, storage contracts, and the webview client |
+| `@pstdio/sdk/extensions/keyboard` | Keyboard forwarding for managed webviews and nested frames. |
 | `@pstdio/sdk/extensions/react` | React Query hooks for webviews: `useCommandQuery` and `useCommandMutation` |
 | `@pstdio/sdk/client` | The HTTP client for the Prompt Studio API: `createClient` and `PstdioApiError` |
 | `@pstdio/sdk/api` | HTTP request and response types |

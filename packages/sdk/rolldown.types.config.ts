@@ -2,7 +2,18 @@ import { isAbsolute, resolve } from "node:path";
 import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
 
-const entries = ["api", "client", "extensions", "extensions/react", "hooks", "prompts", "resources", "testing", "data"];
+const entries = [
+  "api",
+  "client",
+  "extensions",
+  "extensions/react",
+  "extensions/keyboard",
+  "hooks",
+  "prompts",
+  "resources",
+  "testing",
+  "data",
+];
 
 const tsconfig = resolve(import.meta.dirname, "tsconfig.build.json");
 

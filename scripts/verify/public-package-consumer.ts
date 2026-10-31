@@ -16,7 +16,17 @@ const run = (cwd: string, args: string[]) => {
 const readManifest = (path: string) => JSON.parse(readFileSync(join(path, "package.json"), "utf8"));
 
 const nativeEntries: Record<string, readonly string[]> = {
-  "@pstdio/sdk": ["./resources", "./api", "./client", "./extensions", "./prompts", "./hooks", "./testing", "./data"],
+  "@pstdio/sdk": [
+    "./resources",
+    "./api",
+    "./client",
+    "./extensions",
+    "./extensions/keyboard",
+    "./prompts",
+    "./hooks",
+    "./testing",
+    "./data",
+  ],
   "@pstdio/workbench": [".", "./storage", "./webview-runtime"],
 };
 
@@ -89,6 +99,10 @@ if (manifest.pstdio?.extensionApiVersion !== EXTENSION_API_VERSION)
       .map((entry, index) => `import * as entry${index} from ${JSON.stringify(entry)}; export { entry${index} };`)
       .join("\n") +
       `
+import { installWebviewKeyboardRelay as narrowKeyboardRelay, webviewKeyboardRelayDocument as narrowKeyboardDocument } from "@pstdio/sdk/extensions/keyboard";
+import { installWebviewKeyboardRelay, webviewKeyboardRelayDocument } from "@pstdio/sdk/extensions";
+if (typeof narrowKeyboardRelay !== "function" || narrowKeyboardRelay.toString() !== installWebviewKeyboardRelay.toString() || narrowKeyboardDocument !== webviewKeyboardRelayDocument)
+  throw new Error("Packed SDK keyboard entries differ");
 import { type CollectionBadgeItem, defineNavigationTree, defineView, workbenchModes } from "@pstdio/sdk/extensions";
 const attentionBadge: CollectionBadgeItem = {
   id: "attention", label: "1",

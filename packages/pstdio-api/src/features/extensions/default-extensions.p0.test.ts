@@ -297,7 +297,11 @@ describe("installDefaultExtensions sources", () => {
     });
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
-    expect(calls.map((call) => call.installName)).toEqual(["pstdio-base-themes", "pstdio-skills", "pstdio-performance"]);
+    expect(calls.map((call) => call.installName)).toEqual([
+      "pstdio-base-themes",
+      "pstdio-skills",
+      "pstdio-performance",
+    ]);
     expect(
       calls.every(
         (call) =>

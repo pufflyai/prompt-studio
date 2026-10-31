@@ -99,10 +99,6 @@ describe("extension catalog", () => {
       .filter((catalogEntry) => catalogEntry.default)
       .map((catalogEntry) => catalogEntry.installName);
 
-    expect(defaults).toEqual([
-      "pstdio-base-themes",
-      "pstdio-skills",
-      "pstdio-performance",
-    ]);
+    expect(defaults).toEqual(["pstdio-base-themes", "pstdio-skills", "pstdio-performance"]);
   });
 });
