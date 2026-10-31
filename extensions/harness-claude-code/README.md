@@ -45,3 +45,13 @@ The **Thinking** option sets how much effort Claude Code spends before it answer
 - Before a session starts in a new workspace, Prompt Studio copies the project's skills into `.claude/skills` in that workspace. To add them to the project folder as well, run `pst agents setup pstdio.harness-claude-code.harness.claude-code`.
 - Prompt Studio reads the conversation history from Claude Code's own files in `~/.claude/projects`.
 - The session's environment contains `PSTDIO_SESSION_ID` and `PSTDIO_PROJECT_ID`. When the agent runs `pst` commands, they act for that session and project.
+
+## Correct active work
+
+Use the conversation's steering controls to send a correction while Claude works. You can send new input or send a saved queued message now. From a terminal, use `pst sessions follow-up --id <session> --prompt "Use this correction" --steer`.
+
+Claude receives the correction at its next supported input boundary, usually after the current tool finishes. The same process and native session continue with the current model and settings. Attachments follow the same rules as ordinary prompts.
+
+Prompt Studio confirms delivery after Claude acknowledges the message. Each submission appears once in the conversation, including identical messages, and keeps its identity when history is reopened. Claude saves corrections received during a tool as queued-command entries; the harness reads those as user messages.
+
+If the run has already stopped accepting input, delivery is rejected. If the connection fails after a possible send, delivery remains uncertain and is never resent automatically. A run completes after its pending input and background work finish.

@@ -69,7 +69,7 @@ Queued sessions are scheduler-owned. A queued session must have a matching `sess
 
 The queue entry is the durable intent to run the session. The session row is the durable UI and lifecycle record.
 
-Native live input is an explicit alternative to a normal next-turn request. `POST /sessions/{id}/steer` captures an expected active run and inserts its delivery evidence already held from dispatch. It never falls back to starting or queuing another turn. Rejected new input is removed; uncertain input stays held and cannot replay automatically. See [native steering](../../adrs/0062-native-queued-message-steering.md) for the shared delivery rules and [CLI usage](../cli/0006-sessions.md#steer-active-work).
+Native live input is an explicit alternative to a normal next-turn request. `POST /sessions/{id}/steer` captures an expected active run and inserts its delivery evidence already held from dispatch. It never falls back to starting or queuing another turn. Rejected new input is removed; uncertain input stays held and cannot replay automatically. See [saved requests and explicit live input](#saved-requests-and-explicit-live-input) for the shared delivery rules and [CLI usage](../cli/0006-sessions.md#steer-active-work).
 
 ## Dispatch Safety
 
@@ -178,4 +178,8 @@ A queue position is a slot. A random revision identifies the current request in 
 
 Explicit steering uses the active harness handle's optional live-input capability. The host reserves one revision and captures its run owner under scheduler coordination. It keeps a control invocation open until delivery settles, while provider I/O runs outside the global scheduler lock. Questions and approvals block steering. Different saved execution settings require a future turn.
 
-Before provider I/O, the host persists a delivery identity and run identity on the request. Definite rejection releases it. Acceptance removes the request only after a correlated user message is checkpointed. Uncertain delivery stays visible, protects its attachments, and cannot drain, mutate, or replay automatically. Recovery requires positive correlated history evidence. See [ADR 0062](../../adrs/0062-native-queued-message-steering.md).
+Before provider I/O, the host persists a delivery identity and run identity on the request. Definite rejection releases it. Acceptance removes the request only after a correlated user message is checkpointed. Uncertain delivery stays visible, protects its attachments, and cannot drain, mutate, or replay automatically. Recovery requires positive correlated history evidence.
+
+The dashboard shows live input as a sent conversation message immediately. The pending request keeps its submitted content until the durable handoff or confirmed message takes over. Queue removal alone does not clear that optimistic message. A definite rejection restores the saved queue row. Uncertain input stays visible without a delivery notice, including after reload; it is never sent again automatically.
+
+The harness emits one user message with the host delivery identity before returning acceptance. Native history preserves that identity so recovery can match the delivery after a restart. A transport failure does not prove rejection. Stopping and resuming a process is a separate operation and does not implement steering.
