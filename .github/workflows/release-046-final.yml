@@ -2,6 +2,7 @@ name: Release 0.46 final qualification
 on:
   push:
     branches: [test/ci-reliability/release-046-final]
+    paths: ["packages/**", "extensions/**", "clients/**", "services/**", "bun.lock", "package.json"]
 permissions:
   contents: read
 jobs:
