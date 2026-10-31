@@ -58,12 +58,11 @@ const useWorkbenchPanelMenu = (
   const locationResource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const panelAvailable = isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, panel);
-  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
-  const currentRegionState = layout.regions[region];
-  const activeSubPanel = getActiveWorkbenchSubPanel(layout, panel, locationResource, {
-    ignoreOwnerResourceKey: panel === "side",
-  });
+  const currentRegionState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region]);
+  const activeSubPanel = useWorkbenchStore(workbench.layout.store, (state) =>
+    getActiveWorkbenchSubPanel(state.layout, panel, locationResource, { ignoreOwnerResourceKey: panel === "side" }),
+  );
   const activeLocationPanel = useWorkbenchLocationPanel(workbench, panel);
   const regionState = {
     ...currentRegionState,
