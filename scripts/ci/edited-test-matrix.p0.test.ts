@@ -103,3 +103,27 @@ test("the required PR gate cannot pass when an edited-test result is missing or 
     ).outcome,
   ).toBe("failure");
 });
+
+test("a runner entry edit selects its own suite plus every directly edited test", () => {
+  const input = scopeFixture();
+  const packages: Parameters<typeof editedTestFiles>[2] = input.packages.map((pkg) => ({
+    ...pkg,
+    scripts:
+      pkg.name === "e2e"
+        ? {
+            "test:packaged:cli": "bun src/packaged/run-packaged-cli-tests.ts",
+          }
+        : undefined,
+  }));
+  const direct = "packages/e2e/src/ui/feature.p2.spec.ts";
+  expect(
+    editedTestFiles(input.tests, ["packages/e2e/src/packaged/run-packaged-cli-tests.ts", direct], packages),
+  ).toEqual([...input.tests.filter((file) => file.includes("/packaged/")), direct].sort());
+  expect(
+    editedTestFiles(
+      input.tests,
+      ["packages/e2e/src/packaged/run-packaged-cli-tests.ts", "packages/e2e/src/ui/helpers/camera.ts"],
+      packages,
+    ),
+  ).toEqual(input.tests.filter((file) => file.startsWith("packages/e2e/")).sort());
+});

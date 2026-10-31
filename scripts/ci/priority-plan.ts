@@ -2,6 +2,7 @@ import { dirname, relative } from "node:path";
 import { suites } from "pstdio-benchmarks";
 import { selectPriorityTests, testRunner } from "./test-discovery";
 import type { TestPriority } from "./test-policy";
+import { testRunnerScripts } from "./test-runner-scripts";
 
 interface TestPackage {
   name: string;
@@ -39,13 +40,7 @@ const performanceCommand = (paths: string[], owner: TestPackage) => {
 const runCommand = (runner: string, files: string[], owner: TestPackage, componentOwner?: string) => {
   const paths = files.map((file) => relative(owner.dir, file).replaceAll("\\", "/"));
   if (runner === "api") return ["bun", "run", "test", `--files=${JSON.stringify(paths)}`];
-  const script = {
-    component: "test:browser",
-    app: "test:ui",
-    vite: "test:vite-terminal",
-    "packaged-cli": "test:packaged:cli",
-    "packaged-browser": "test:packaged:browser",
-  }[runner];
+  const script = testRunnerScripts[runner];
   if (script) return ["bun", "run", script, ...paths];
   if (runner === "cli")
     return [

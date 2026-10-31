@@ -232,12 +232,6 @@ jobs:
         with:
           path: .cache/ci-build
           key: nx-${{ runner.os }}-${{ runner.arch }}-host-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha }}-provenance
-      - name: Publish certified Apple Silicon host build cache on the default branch
-        if: needs.scope.outputs.stage == 'main'
-        uses: actions/cache/save@v4
-        with:
-          path: .cache/ci-build
-          key: nx-macOS-ARM64-host-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha }}-provenance
     needs: scope
     env:
       CI_PRIORITY: P0
@@ -677,15 +671,6 @@ jobs:
             packages/canvas-tests/test-results
             packages/canvas-tests/playwright-report
           if-no-files-found: warn
-      - name: Preserve owner build archives for certified main promotion
-        if: ${{ !cancelled() && needs.scope.outputs.stage == 'merge_queue' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-build-playwright-components-${{ matrix.package }}-attempt-${{ github.run_attempt }}
-          path: .cache/ci-build
-          include-hidden-files: true
-          compression-level: 0
-          if-no-files-found: error
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
         run: git diff --exit-code
@@ -717,6 +702,7 @@ jobs:
         with:
           profile: playwright
       - name: Copy certified browser build archives
+        if: needs.scope.outputs.stage == 'main'
         uses: actions/download-artifact@v4
         with:
           pattern: ci-build-playwright-*-attempt-${{ needs.static_checks.outputs.queue_attempt }}
@@ -724,8 +710,10 @@ jobs:
           github-token: ${{ github.token }}
           path: .cache/certified-browser-builds
       - name: Import complete certified browser archives
+        if: needs.scope.outputs.stage == 'main'
         run: bun scripts/ci/merge-build-cache.ts .cache/certified-browser-builds .cache/ci-build
       - name: Publish certified browser build cache on the default branch
+        if: needs.scope.outputs.stage == 'main'
         uses: actions/cache/save@v4
         with:
           path: .cache/ci-build
@@ -743,6 +731,15 @@ jobs:
             packages/e2e/test-results
             packages/e2e/playwright-report
           if-no-files-found: warn
+      - name: Preserve browser build archives for certified main promotion
+        if: ${{ !cancelled() && needs.scope.outputs.stage == 'merge_queue' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-build-playwright-smoke-attempt-${{ github.run_attempt }}
+          path: .cache/ci-build
+          include-hidden-files: true
+          compression-level: 0
+          if-no-files-found: error
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
         run: git diff --exit-code
@@ -755,7 +752,7 @@ jobs:
   e2e:
     name: e2e_${{ matrix.priority }} (${{ matrix.shard }}/${{ matrix.total }})
     needs: scope
-    if: needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.production == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -816,21 +813,12 @@ jobs:
             packages/e2e/test-results
             packages/e2e/playwright-report
           if-no-files-found: warn
-      - name: Preserve browser build archives for certified main promotion
-        if: ${{ !cancelled() && needs.scope.outputs.stage == 'merge_queue' && matrix.priority == 'P1' && matrix.shard == 1 }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-build-playwright-app-attempt-${{ github.run_attempt }}
-          path: .cache/ci-build
-          include-hidden-files: true
-          compression-level: 0
-          if-no-files-found: error
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
         run: git diff --exit-code
   e2e_cli:
     needs: scope
-    if: needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.production == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -875,7 +863,7 @@ jobs:
   packaged_and_vite_e2e:
     name: packaged_and_vite_e2e_${{ matrix.priority }} (${{ matrix.suite }} ${{ matrix.shard }})
     needs: scope
-    if: needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.production == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     strategy:
@@ -1149,7 +1137,7 @@ jobs:
   build_clients:
     name: build_clients (${{ matrix.target }} ${{ matrix.shard }}/${{ matrix.shards }})
     needs: scope
-    if: needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.production == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     env:
@@ -1182,7 +1170,7 @@ jobs:
           install-strategy: native
       - name: Test native DMG attachment cleanup
         id: dmg_cleanup
-        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.platform == 'darwin' && matrix.shard == 1
+        if: needs.scope.outputs.production == 'true' && matrix.platform == 'darwin' && matrix.shard == 1
         working-directory: clients/desktop
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"
@@ -1248,16 +1236,8 @@ jobs:
       - name: Record disk images after a failed macOS desktop build
         if: failure() && matrix.platform == 'darwin' && steps.desktop.outcome == 'failure'
         run: hdiutil info -plist
-      - name: Verify the native CLI already built for the desktop sidecar
-        if: needs.scope.outputs.stage == 'merge_queue'
-        env:
-          PSTDIO_VERIFY_PLATFORM_PKG: cli-${{ matrix.platform }}-${{ matrix.arch }}
-          CI_CHECK_COMMAND: bun run --cwd scripts verify:packages --profile integrity --prebuilt
-        run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
-          "$CI_CHECK_COMMAND"
-        shell: bash
       - name: Configure the Linux Chromium sandboxes
-        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.platform == 'linux'
+        if: needs.scope.outputs.production == 'true' && matrix.platform == 'linux'
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"
         env:
@@ -1273,10 +1253,10 @@ jobs:
             done
         shell: bash
       - name: Set up Windows desktop tests
-        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.platform == 'win32'
+        if: needs.scope.outputs.production == 'true' && matrix.platform == 'win32'
         uses: ./.github/actions/setup-windows-desktop-tests
       - name: Test source Electron
-        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.tests && matrix.shard == 1
+        if: needs.scope.outputs.production == 'true' && matrix.tests && matrix.shard == 1
         working-directory: clients/desktop
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"
@@ -1291,7 +1271,7 @@ jobs:
           bun run test:packaged -- --list --reporter=json > test-results/packaged-release-inventory.json
         shell: bash
       - name: Smoke packaged desktop app
-        if: (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.tests && !cancelled() &&
+        if: needs.scope.outputs.production == 'true' && matrix.tests && !cancelled() &&
           steps.desktop.outcome == 'success'
         env:
           DEBUG: pw:api,pw:browser
@@ -1314,7 +1294,7 @@ jobs:
           CI_PRIORITY: P2
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop --scope @pstdio/desktop
       - name: Preserve desktop test reports and traces
-        if: always() && (needs.scope.outputs.stage == 'merge_queue' || needs.scope.outputs.production == 'true') && matrix.tests
+        if: always() && needs.scope.outputs.production == 'true' && matrix.tests
         uses: actions/upload-artifact@v4
         with:
           name: desktop-test-results-${{ matrix.target }}-shard-${{ matrix.shard }}-of-${{ matrix.shards }}-attempt-${{ github.run_attempt }}
@@ -1325,15 +1305,6 @@ jobs:
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
         run: git diff --exit-code
-      - name: Share native desktop build archives with certified main promotion
-        if: ${{ !cancelled() && matrix.shard == 1 && needs.scope.outputs.stage == 'merge_queue' && steps.desktop.outcome == 'success' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-build-host-native-desktop-${{ runner.os }}-${{ runner.arch }}-attempt-${{ github.run_attempt }}
-          path: .cache/ci-build
-          include-hidden-files: true
-          compression-level: 0
-          if-no-files-found: error
   build_docker:
     needs: scope
     if: needs.scope.outputs.docker_build == 'true'

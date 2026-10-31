@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { productionDesktopPlatforms, productionToolchainPlatforms } from "./production-platforms";
 import { priorityFromFile, testRunner } from "./test-discovery";
 import { matchesPlatform, quarantineRegistry, quarantineRunnerForTest } from "./test-quarantine";
+import { testRunnerScripts } from "./test-runner-scripts";
 import type { readWorkspacePackages } from "./workspace-packages";
 
 // Scope runs before dependency installation. Resolve the workspace's public entry directly.
@@ -22,11 +23,25 @@ const supportsTests = (file: string, dir: string) =>
 
 export const editedTestFiles = (tests: string[], changed: string[], packages: Packages) => {
   const available = new Set(tests);
-  const supports = packages.filter((pkg) =>
-    changed.some((file) => file.startsWith(`${pkg.dir}/`) && !available.has(file) && supportsTests(file, pkg.dir)),
+  const supports = packages.flatMap((pkg) =>
+    changed
+      .filter((file) => file.startsWith(`${pkg.dir}/`) && !available.has(file) && supportsTests(file, pkg.dir))
+      .map((file) => ({
+        dir: pkg.dir,
+        // Only a direct runner entry can narrow selection. Shared helpers/configs keep the owner fallback.
+        runners: Object.entries(testRunnerScripts)
+          .filter(([, script]) => pkg.scripts?.[script]?.trim() === `bun ${file.slice(pkg.dir.length + 1)}`)
+          .map(([runner]) => runner),
+      })),
   );
   return [...new Set(tests)]
-    .filter((file) => changed.includes(file) || supports.some((pkg) => file.startsWith(`${pkg.dir}/`)))
+    .filter(
+      (file) =>
+        changed.includes(file) ||
+        supports.some(
+          ({ dir, runners }) => file.startsWith(`${dir}/`) && (!runners.length || runners.includes(testRunner(file))),
+        ),
+    )
     .sort();
 };
 

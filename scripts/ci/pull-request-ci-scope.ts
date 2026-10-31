@@ -43,14 +43,15 @@ export const resolveCiScope = (input: CiScopeInput) => {
   let affectedOwners = affectedPackages(packages, code);
   if (shared || stage !== "pull_request") affectedOwners = packages.map((pkg) => pkg.name).sort();
   if (stage === "main") affectedOwners = [];
-  let priorities: TestPriority[] = ["P0", "P1"];
-  if (stage === "pull_request") priorities = ["P0"];
+  let priorities: TestPriority[] = ["P0"];
   if (production) priorities = ["P0", "P1", "P2"];
   const matrices = createTestMatrices(tests, packages, affectedOwners, priorities);
-  const browserSmoke = stage === "main";
-  const clientMatrix = productionDesktopCheckPlatforms(production ? releaseChannel : "nightly")
-    .filter((row) => production || row.platform !== "win32")
-    .map((row) => ({ ...row, os: row.platform === "linux" ? "ubuntu-latest" : row.os, tests: true }));
+  const browserSmoke = stage === "main" || stage === "merge_queue";
+  const clientMatrix = (production ? productionDesktopCheckPlatforms(releaseChannel) : []).map((row) => ({
+    ...row,
+    os: row.platform === "linux" ? "ubuntu-latest" : row.os,
+    tests: true,
+  }));
   return {
     stage,
     production,

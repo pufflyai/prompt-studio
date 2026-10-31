@@ -4,10 +4,10 @@ This guide explains how a change moves from a pull request to a stable release, 
 
 ```text
 pull request ──► merge queue ──► main ──► nightly (daily) ──► stable release (manual)
- P0 + edited     P0 + P1        smoke     P0–P3, all hosts     P0–P3, signed apps
+ P0 + edited     P0 + smoke     smoke     P0–P3, all hosts     P0–P3, signed apps
 ```
 
-Each stage checks more than the one before it. A later stage never trusts a result from a different commit: the queue tests the exact merged commit, and a release tests the exact files it will publish.
+Each stage has its own purpose. A later stage never trusts a result from a different commit: the queue tests the exact merged commit, and a release tests the exact files it will publish.
 
 ## Test priorities
 
@@ -16,13 +16,13 @@ Every test file names its priority before the runner suffix, for example `sessio
 | Priority | What it protects | Runs in | Examples |
 | --- | --- | --- | --- |
 | P0 | Fast rules: types, validation, permissions, state changes, focused extension logic, repository and CI rules | Pull request, queue, nightly, stable | `session-state.p0.test.ts` |
-| P1 | Essential product behavior: session, workspace and extension lifecycles, data safety, restart and upgrade, sync, a working app, native and compiled startup | Queue, nightly, stable | `session-isolation.p1.test.ts`, `startup.p1.spec.ts` |
+| P1 | Essential product behavior: session, workspace and extension lifecycles, data safety, restart and upgrade, sync, a working app, native and compiled startup | Nightly, stable; startup smoke also in queue | `session-isolation.p1.test.ts`, `startup.p1.spec.ts` |
 | P2 | Breadth: extension feature workflows, component variants, more browsers and platforms, full install and update matrices | Nightly, stable | `planner-board.p2.spec.ts` |
 | P3 | Performance: startup, responsiveness, throughput, resource use, scale and endurance | Nightly, stable | `startup.p3.bench.ts`, `chat-rendering.p3.bench.ts` |
 
 Rules:
 
-- A slow essential test stays P1. Make its fixture faster; do not move it to nightly because it is slow.
+- A slow essential test stays P1. Make its fixture faster; do not reclassify it as P2 because it is slow.
 - If you are unsure how important a new behavior test is, start with P1.
 - One file has one priority. Split a file that mixes priorities, and keep tests with the same owner, priority and fixture together.
 - Keep each behavior in one place. A focused test proves the detailed rules. A browser test proves that the user interaction reaches those rules.
@@ -49,7 +49,7 @@ A local run only proves your own machine. It does not prove other platforms or s
 | Stage | Trigger | Workflow | What runs | Success means | Target time |
 | --- | --- | --- | --- | --- | --- |
 | Pull request | Push to a PR branch | Test and Build (`pull_request`) | Affected P0, lint, types and public contracts, plus added or edited tests at every priority | The baseline and edited tests passed for this PR | under 3 min for the baseline; edited tests add their normal setup and execution |
-| Merge queue | Add to queue | Test and Build (`merge_group`) | All P0 and P1, plus Linux and Apple Silicon desktop builds and startup | The exact merged commit is safe to land | under 8 min |
+| Merge queue | Add to queue | Test and Build (`merge_group`) | All P0 checks and real dashboard startup smoke | The exact merged commit passed baseline rules and starts | under 8 min |
 | Main | Queue merges a commit | Test and Build (`push`) | Checks that main matches the tested queue commit, publishes the build cache, runs a startup smoke test | Main is the commit the queue tested, and it still starts | a few min |
 | Nightly | 03:00 UTC daily, or manual `nightly` | Release Packages → Production validation | P0–P2 on all hosts including Windows, P3 performance, coverage, signed apps for Linux and Apple Silicon | Nightly published; full results recorded for that commit | under 40 min of work |
 | Stable release | Manual `stable` | Release Packages → Production validation | Everything nightly runs, plus signed desktop apps for Linux, macOS (Intel and Apple Silicon) and Windows, and the Windows update check | A complete certificate for the exact release files allows publishing | under 40 min of work |
@@ -64,10 +64,10 @@ Target times count real work: install, build, artifact transfer, tests, reports 
 - A change to shared repository files (root `package.json`, `bun.lock`, CI scripts and similar) selects every workspace.
 - A documentation-only change runs only the static checks.
 - Added or edited P1, P2 and P3 tests run immediately in required `edited_tests` jobs, alongside the affected P0 checks. P0 tests already covered by the baseline do not run twice. Deleted tests are not executed; their removal still selects affected workspace checks.
-- Changes to support files in the E2E or Canvas test workspaces, fixture files, `testing/`, `test-utils/`, `__fixtures__/`, or desktop Playwright configs select their owning workspace's tests. This conservative selection also checks tests affected by shared fixture edits.
+- Changes to support files in the E2E or Canvas test workspaces, fixture files, `testing/`, `test-utils/`, `__fixtures__/`, or desktop Playwright configs select their owning workspace's tests. A direct runner entry named by a workspace test script selects that runner's suite. Shared helpers and configuration keep the conservative owner-wide selection.
 - Edited tests use their registered runners and setup. Native desktop checks retain all four desktop platforms; packaged CLI and browser checks retain all six toolchain targets. An edited benchmark runs its complete registered suite once per applicable host, preserving its workload and cold-start order. Desktop benchmarks use all four desktop platforms; backend suites use Linux, Apple Silicon and Windows; browser and relay suites use Linux. Existing test limits and performance budgets apply.
 - Each selected file runs once per applicable platform. Stable failures block the PR. Quarantined cases retain their separate execution and report requirements. Missing execution evidence fails the check. Jobs preserve selected files, results, traces and measurements as artifacts; independent edited files continue after a failure.
-- Unedited P1 tests still run in the queue, and the complete P2/P3 matrices still run in production validation. Run relevant integration tests locally before queueing. To get production-level results on a PR, add the `ci:full` label (see [Extra diagnostics](#extra-diagnostics)).
+- Complete P1/P2/P3 matrices run in nightly and stable validation. Run relevant integration tests locally before queueing. To get production-level results on a PR, add the `ci:full` label (see [Extra diagnostics](#extra-diagnostics)).
 - A new push cancels the PR's older run.
 
 ## Merge queue
@@ -82,7 +82,9 @@ The `main` ruleset controls the queue:
 | Merge method | squash, 1 to 5 entries at a time, after waiting up to 5 minutes for more entries |
 | Check timeout | 60 minutes |
 
-The queue runs all P0 and P1 tests on the merged commit, builds the Linux and Apple Silicon desktop apps, and checks that they start. P1 API tests use up to five rows, P1 app tests up to two shards, and each component owner gets its own row.
+The queue runs all P0 checks and the existing real dashboard startup smoke on the merged commit. Complete P1 API, app, component, CLI and native desktop suites run in nightly and stable validation. Added or edited tests still run immediately in required PR CI.
+
+This reduces repeated builds and runner pressure. The trade-off is that integration regressions outside P0 and smoke may first appear after merging. Stable publishing remains blocked until complete validation certifies the exact release candidate.
 
 ### When a PR leaves the queue
 
@@ -117,7 +119,7 @@ Causes of unreliable queue failures we have fixed before:
 A push to `main` does not run the tests again. It:
 
 1. Checks that `main` has the same files and build inputs as the queue run that passed. A passing PR never certifies a different merged commit.
-2. Publishes the queue's Linux and Apple Silicon build archives as the shared build cache.
+2. Publishes the queue's Linux host and browser build archives as the shared build cache.
 3. Runs a browser startup smoke test.
 
 A red `main` usually means a startup smoke failure or a cache problem. Fix it before queueing more work.
@@ -196,7 +198,7 @@ Quarantine is manual, never automatic. Entries live in `scripts/ci/test-quaranti
 
 - CI reuses dependency downloads and Nx build archives. It never reuses test results.
 - Build inputs include production source and dependencies, the lockfile, build helpers, toolchain, OS, CPU and relevant environment. Changing only tests does not rebuild production code.
-- Only `main` publishes the shared Linux and Apple Silicon build cache, and only after it matches the queue run. Each job's archives are downloaded into their own folder, then imported one at a time: the same Nx hash can have different tar details on different runners, and parallel extraction can corrupt a file.
+- Only `main` publishes the shared certified Linux host and browser build cache, and only after it matches the queue run. Each job's archives are downloaded into their own folder, then imported one at a time: the same Nx hash can have different tar details on different runners, and parallel extraction can corrupt a file.
 - A missing cache entry runs the build. A failed build skips the tests that need it.
 - If a corrupt archive was published, delete those exact cache entries before you test the fix. Keep the failing logs and note which run produced the archive. A cache problem never justifies changing a test or its priority.
 

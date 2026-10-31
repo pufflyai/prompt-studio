@@ -35,7 +35,7 @@ test("PR selection follows affected package dependencies without test filename l
   expect(JSON.stringify(scope)).not.toContain("feature.p2");
 });
 
-test("PRs select focused P0 rules and the required queue selects every P1 owner", () => {
+test("PRs select focused P0 rules and the required queue selects P0 plus startup smoke", () => {
   const input = { ...scopeFixture(), changedFiles: ["scripts/ci/run-package-checks.ts"] };
   const pr = resolveCiScope(input);
   expect(pr.databaseMatrix.every((row) => row.priority === "P0")).toBe(true);
@@ -43,20 +43,23 @@ test("PRs select focused P0 rules and the required queue selects every P1 owner"
   expect(pr.appMatrix).toEqual([]);
   expect(plannedCiJobs(pr).every((job) => job.priority === "P0")).toBe(true);
   const queue = resolveCiScope({ ...input, event: "merge_group" });
-  expect(queue.databaseMatrix.some((row) => row.package === "pstdio-db" && row.priority === "P1")).toBe(true);
-  expect(queue.appMatrix.every((row) => row.priority === "P1")).toBe(true);
-  expect(queue.appMatrix).toHaveLength(2);
-  expect(queue.componentMatrix).toHaveLength(2);
+  expect(queue.databaseMatrix.every((row) => row.priority === "P0")).toBe(true);
+  expect(queue.appMatrix).toEqual([]);
+  expect(queue.browserSmoke).toBe(true);
+  expect(queue.componentMatrix).toEqual([]);
 });
 
-test("the queue includes every critical contract and production adds separate breadth", () => {
+test("the queue keeps P0 and smoke while production retains complete functional suites", () => {
   const queue = resolveCiScope({ ...scopeFixture(), event: "merge_group" });
   expect(queue.stage).toBe("merge_queue");
-  expect(queue.databaseMatrix.some((row) => row.package === "pstdio-db")).toBe(true);
-  expect(queue.appMatrix.every((row) => row.priority === "P1")).toBe(true);
-  expect(queue.componentMatrix).toHaveLength(2);
+  expect(plannedCiJobs(queue).map((job) => job.id)).toContain("browser_smoke");
+  expect(plannedCiJobs(queue).every((job) => job.priority === "P0" || job.id === "browser_smoke")).toBe(true);
+  expect(queue.appMatrix).toEqual([]);
+  expect(queue.componentMatrix).toEqual([]);
   expect(JSON.stringify(queue)).not.toContain("feature.p2");
   const production = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
+  expect(production.databaseMatrix.some((row) => row.priority === "P1")).toBe(true);
+  expect(production.componentMatrix.some((row) => row.priority === "P1")).toBe(true);
   expect(production.appMatrix.some((row) => row.priority === "P2")).toBe(true);
   expect(production.packagedMatrix.some((row) => row.priority === "P2")).toBe(true);
 });
@@ -66,7 +69,7 @@ test("Intel Mac validation belongs to full releases while nightly keeps Windows 
   const queue = resolveCiScope({ ...input, profile: "merge_queue" });
   const nightly = resolveCiScope({ ...input, releaseChannel: "nightly" });
   const stable = resolveCiScope({ ...input, releaseChannel: "stable" });
-  expect(queue.clientMatrix.map((row) => row.target)).toEqual(["linux-x64", "darwin-arm64"]);
+  expect(queue.clientMatrix).toEqual([]);
   expect(nightly.clientMatrix.map((row) => row.target)).toEqual(["linux-x64", "darwin-arm64", "win32-x64"]);
   expect(stable.clientMatrix.map((row) => row.target)).toContain("darwin-x64");
   expect(nightly.toolchainMatrix.map((row) => row.platform_pkg)).not.toContain("cli-darwin-x64");
@@ -93,12 +96,12 @@ test("shared inputs select all essential owners and prose starts no runtime suit
   expect(docs.componentMatrix).toEqual([]);
 });
 
-test("a newly named contract joins the queue automatically and main uses provenance plus smoke", () => {
+test("a newly named contract joins nightly automatically and main uses provenance plus smoke", () => {
   const input = scopeFixture();
   input.tests.push("packages/e2e/src/ui/new-contract.p1.spec.ts");
-  expect(JSON.stringify(resolveCiScope({ ...input, event: "merge_group" }).appMatrix)).toContain(
-    "new-contract.p1.spec.ts",
-  );
+  expect(
+    JSON.stringify(resolveCiScope({ ...input, event: "workflow_dispatch", profile: "production" }).appMatrix),
+  ).toContain("new-contract.p1.spec.ts");
   const main = resolveCiScope({ ...input, event: "push" });
   expect(main.stage).toBe("main");
   expect(main.packageChecks).toBe(false);
