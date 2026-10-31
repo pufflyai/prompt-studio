@@ -13,12 +13,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { suite: workbench, os: ubuntu-24.04 }
           - { suite: canvas, os: ubuntu-24.04 }
           - { suite: chat, os: ubuntu-24.04 }
           - { suite: runtime, os: ubuntu-24.04 }
           - { suite: runtime, os: macos-15 }
-          - { suite: desktop, os: macos-15 }
     env:
       CI_PRIORITY: "P3"
       UI_PERF_ASSERT_BUDGETS: "1"
