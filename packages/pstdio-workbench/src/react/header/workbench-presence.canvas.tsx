@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
 
 import { createWorkbench, type Disposable } from "../../core";
@@ -53,10 +53,10 @@ const OpenTabPresence = () => {
 const meta = {
   title: "pstdio-workbench/Guides/Header presence",
   component: OpenTabPresence,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof OpenTabPresence>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 
 export const AcrossOpenTabs: Story = {
   id: "pstdio-workbench-guides-header-presence--across-open-tabs",

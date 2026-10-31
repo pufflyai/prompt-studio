@@ -34,6 +34,7 @@ interface RelaySocketInput {
 const createRelaySocket = (input: RelaySocketInput) => {
   const address = serviceAddress(input.origin);
   let socket: WebSocket | undefined;
+  let socketReady = () => false;
   let dirty = false;
   let running: Promise<void> | undefined;
   const targeted = new Set<Promise<boolean>>();
@@ -47,7 +48,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
   const drain = async () => {
     const signal = attemptSignal;
     try {
-      while (dirty && connected && !signal.aborted) {
+      while (dirty && connected && !signal.aborted && socketReady()) {
         dirty = false;
         await input.synchronize(signal);
       }
@@ -69,7 +70,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
     if (changed) input.onStatusChange?.();
   };
   const wake = (synchronize?: TargetedSync) => {
-    if (synchronize && connected && !input.signal.aborted) {
+    if (synchronize && connected && !input.signal.aborted && !attemptSignal.aborted && socketReady()) {
       const signal = attemptSignal;
       const work = synchronize(signal);
       if (targeted.has(work)) return;
@@ -95,7 +96,8 @@ const createRelaySocket = (input: RelaySocketInput) => {
       return;
     }
     dirty = true;
-    if (connected && !running && !input.signal.aborted) running = drain();
+    // Renewal keeps connected true while the old attempt drains. The next ready event must run queued work.
+    if (connected && !running && !attemptSignal.aborted && socketReady()) running = drain();
   };
   const abort = () => {
     clearTimeout(retry);
@@ -118,6 +120,7 @@ const createRelaySocket = (input: RelaySocketInput) => {
     });
     socket = connection;
     let ready = false;
+    socketReady = () => ready && connection.readyState === WebSocket.OPEN;
     let failed = false;
     const fail = () => {
       failed = true;
@@ -188,9 +191,12 @@ const createRelaySocket = (input: RelaySocketInput) => {
       } catch {
         input.onError?.();
       }
+      const backoff = Promise.withResolvers<void>();
+      retryDone = backoff.resolve;
       clearTimeout(expiry);
       if (!input.signal.aborted && renewal) {
         input.onDisconnect?.("renewal");
+        retryDone = undefined;
         continue;
       }
       setConnected(false);
@@ -200,10 +206,9 @@ const createRelaySocket = (input: RelaySocketInput) => {
       await Promise.allSettled([...targeted]);
       attempt = undefined;
       if (input.signal.aborted) break;
-      await new Promise<void>((resolve) => {
-        retryDone = resolve;
-        retry = setTimeout(resolve, Math.min(1000 * 2 ** failures++, 30_000));
-      });
+      retry = setTimeout(backoff.resolve, Math.min(1000 * 2 ** failures++, 30_000));
+      await backoff.promise;
+      clearTimeout(retry);
       retryDone = undefined;
     }
     attempt?.abort();
@@ -213,6 +218,11 @@ const createRelaySocket = (input: RelaySocketInput) => {
   })();
   return {
     wake,
+    retry() {
+      clearTimeout(retry);
+      retryDone?.();
+      wake();
+    },
     done,
     status: () => ({ connected, busy: dirty || !!running || targeted.size > 0 }),
     send: (data: string) => {

@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -75,11 +75,10 @@ const fixture = (resource = false, rendererLabel?: string) => {
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Page grouping breadcrumbs",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
-  tags: ["page-grouping"],
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Landing: Story = {
   id: "pstdio-workbench-reference-core-api-page-grouping-breadcrumbs--landing",
   args: { workbench: fixture() },

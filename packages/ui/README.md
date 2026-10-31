@@ -13,7 +13,6 @@ Browse Design System in the Canvas extension. Open a component canvas and use Va
 ```sh
 bun run --cwd packages/ui build
 bun run --cwd scripts canvas:build
-bun run --cwd scripts canvas:coverage
 bun run --cwd extensions/canvas test
 ```
 

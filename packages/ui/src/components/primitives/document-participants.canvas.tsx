@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 
 import { type DocumentParticipant, DocumentParticipants } from "./document-participants";
@@ -12,7 +12,7 @@ const meta = { title: "Primitives/DocumentParticipants", component: DocumentPart
   typeof DocumentParticipants
 >;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 
 export const Connected: Story = {
   id: "primitives-document-participants--connected",

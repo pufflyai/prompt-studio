@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { HarnessBrowserProgress } from "./harness-browser-progress";
 
 const meta: CanvasMeta<typeof HarnessBrowserProgress> = {
@@ -7,7 +7,7 @@ const meta: CanvasMeta<typeof HarnessBrowserProgress> = {
   args: { name: "Codex", action: "login", onCancel: () => {} },
 };
 export default meta;
-type Story = CanvasVariant<typeof HarnessBrowserProgress>;
+type Story = CanvasFrame<typeof HarnessBrowserProgress>;
 export const Starting: Story = {
   id: "agents-browser-sign-in--starting",
 };

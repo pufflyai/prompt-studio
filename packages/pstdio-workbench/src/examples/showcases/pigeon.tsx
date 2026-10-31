@@ -70,7 +70,7 @@ export const createPigeonWorkbench = () => {
       },
     ],
   });
-  workbench.pageLocations.switchProject("storybook-pigeon");
+  workbench.pageLocations.switchProject("preview-pigeon");
   workbench.pageLocations.navigate({ kind: "page", page: pigeonHomePage });
   return workbench;
 };

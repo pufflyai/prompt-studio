@@ -1,5 +1,5 @@
 import { Box, Button, SimpleGrid, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { $getRoot, $getSelection, $isRangeSelection, getNearestEditorFromDOMNode } from "lexical";
 import { useEffect, useState } from "react";
 
@@ -177,10 +177,9 @@ const CollaborationScene = (props: {
 const meta = {
   title: "Patterns/Editors/Markdown Editor/Collaboration",
   component: MarkdownEditor,
-  parameters: { layout: "padded" },
 } satisfies CanvasMeta<typeof MarkdownEditor>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SharedEditing: Story = {
   id: "patterns-editors-markdown-editor-collaboration--shared-editing",
   render: () => <CollaborationScene />,
@@ -198,17 +197,17 @@ export const SharedTableEditing: Story = {
 
 export const SameTickRemoteFirst: Story = {
   id: "patterns-editors-markdown-editor-collaboration--same-tick-remote-first",
-  tags: ["!manifest"],
+
   render: () => <CollaborationScene source="Start" commitOrder="remote-first" />,
 };
 export const SameTickLocalFirst: Story = {
   id: "patterns-editors-markdown-editor-collaboration--same-tick-local-first",
-  tags: ["!manifest"],
+
   render: () => <CollaborationScene source="Start" commitOrder="local-first" />,
 };
 
 export const SameTickBothEditors: Story = {
   id: "patterns-editors-markdown-editor-collaboration--same-tick-both-editors",
-  tags: ["!manifest"],
+
   render: () => <CollaborationScene source="Start" commitOrder="both-local-first" />,
 };

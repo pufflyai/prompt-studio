@@ -14,8 +14,6 @@
     "test": "bun test ./src ./scripts",
     "typecheck": "bun check && bun scripts/typecheck-examples.ts",
     "catalog:build": "bun scripts/build-native-previews.ts",
-    "catalog:inventory": "bun scripts/migration-ledger.ts",
-    "catalog:coverage": "bun scripts/verify-migration-coverage.ts",
     "catalog:verify": "bun scripts/verify-native-previews.ts",
     "build": "bun scripts/build-catalog.ts"
   },

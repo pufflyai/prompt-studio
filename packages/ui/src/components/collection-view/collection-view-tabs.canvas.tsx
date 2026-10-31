@@ -1,5 +1,5 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { CollectionViewTabs } from "./collection-view-tabs";
 import { EMPTY_VIEW_FILTER } from "./collection-view-types";
@@ -38,7 +38,7 @@ const meta: CanvasMeta = {
   title: "Patterns/Collection View/View Tabs",
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const ReorderableTabs = (props: { crowded?: boolean }) => {
   const { crowded } = props;
   const [savedViews, setSavedViews] = useState(views.slice(0, crowded ? 18 : 3));

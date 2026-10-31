@@ -53,6 +53,7 @@ export const readStoryParserCache = async (root: string) => {
         id: story.id.slice(story.suite.length + 1),
         name: story.name,
         exportName: story.exportName,
+        ...(story.defaultTheme ? { defaultTheme: story.defaultTheme } : {}),
       });
     }
   } catch {

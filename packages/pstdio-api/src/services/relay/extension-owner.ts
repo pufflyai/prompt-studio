@@ -116,6 +116,7 @@ export const startRelayExtension = async (input: {
       contextKey: input.contextKey,
       wake: connection.wake,
       wakeDocument,
+      retry: connection.retry,
       done: connection.done.finally(documents.close),
       status: async () => ({ ...(await documents.status()), ...active.status() }),
       close: () => {

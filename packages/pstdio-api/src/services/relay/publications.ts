@@ -86,6 +86,11 @@ export const startPublishedExtensions = (input: {
   });
   return {
     owner,
+    retry() {
+      if (failed) failed.waiting = false;
+      clearTimeout(retry);
+      connection.retry();
+    },
     wake: connection.wake,
     done: connection.done.finally(() => {
       clearTimeout(retry);

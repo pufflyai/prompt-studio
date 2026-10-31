@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useRef, useState } from "react";
 
 import { createWorkbench } from "../../../core";
@@ -55,7 +55,7 @@ const meta = {
   component: PendingTreeRename,
 } satisfies CanvasMeta<typeof PendingTreeRename>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const PendingSave: Story = {
   id: "research--pending-save",
 };

@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type {
   ExtensionDiagnostic,
   ProjectExtensionInstance,
@@ -133,11 +133,11 @@ const failedExtension = installedExtensions[1]!;
 const meta: CanvasMeta<typeof ExtensionsPanelView> = {
   title: "ProjectSettings/ExtensionsPanel",
   component: ExtensionsPanelView,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: { onUpgrade: noop, onDropFolder: noop },
 };
 export default meta;
-type Story = CanvasVariant<typeof ExtensionsPanelView>;
+type Story = CanvasFrame<typeof ExtensionsPanelView>;
 export const Populated: Story = {
   id: "projectsettings-extensionspanel--populated",
   args: {

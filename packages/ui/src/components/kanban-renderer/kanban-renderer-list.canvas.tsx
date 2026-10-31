@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { CircleAlert, CircleCheck, CircleDashed, CircleDot, CircleX, Play, Signal } from "lucide-react";
 import { useState } from "react";
 import { KanbanRendererList, type KanbanRendererListItem } from "./kanban-renderer-list";
@@ -7,10 +7,9 @@ import { KanbanRendererList, type KanbanRendererListItem } from "./kanban-render
 const meta: CanvasMeta<typeof KanbanRendererList> = {
   title: "Patterns/Kanban Renderer/List",
   component: KanbanRendererList,
-  parameters: { layout: "padded" },
 };
 export default meta;
-type Story = CanvasVariant<typeof KanbanRendererList>;
+type Story = CanvasFrame<typeof KanbanRendererList>;
 const mockItems: KanbanRendererListItem[] = [
   {
     id: "1",
@@ -148,7 +147,6 @@ const largeItems: KanbanRendererListItem[] = Array.from({ length: 1000 }, (_, in
 // A long list mounts the rows near the viewport, so opening 1,000 tickets stays fast.
 export const LargeList: Story = {
   id: "patterns-kanban-renderer-list--large-list",
-  tags: ["!manifest"],
   args: { items: largeItems },
   decorators: [
     (Story) => (

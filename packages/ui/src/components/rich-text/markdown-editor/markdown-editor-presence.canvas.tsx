@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
 
 import * as Y from "yjs";
@@ -60,10 +60,9 @@ const PresenceScene = (props: { long?: boolean; narrow?: boolean }) => {
 const meta = {
   title: "Patterns/Editors/Markdown Editor/Presence",
   component: MarkdownEditor,
-  parameters: { layout: "padded" },
 } satisfies CanvasMeta<typeof MarkdownEditor>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 
 export const RemoteSelection: Story = {
   id: "patterns-editors-markdown-editor-presence--remote-selection",

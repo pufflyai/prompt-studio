@@ -1,5 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 
 import { DataTable } from "./data-table";
@@ -55,10 +55,9 @@ const DraftTransactionsScene = () => {
 const meta = {
   title: "Components/Data Display/DataTable/Draft Transactions",
   component: DataTable,
-  parameters: { layout: "padded" },
 } satisfies CanvasMeta<typeof DataTable>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 
 export const RemovedTarget: Story = {
   id: "components-data-display-data-table-draft-transactions--removed-target",

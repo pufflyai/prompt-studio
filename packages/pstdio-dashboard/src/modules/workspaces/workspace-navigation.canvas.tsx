@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import { createWorkbench } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
@@ -10,7 +10,7 @@ import { workspaceNavigationNode } from "./workspace-navigation";
 const WorkspaceNavigationStory = (props: { providers: WorkspaceProviderDescriptor[] }) => {
   const { providers } = props;
   const [workbench] = useState(() => {
-    const page = { kind: "page", extensionId: "storybook", id: "workspace-navigation" } as const;
+    const page = { kind: "page", extensionId: "preview", id: "workspace-navigation" } as const;
     const next = createWorkbench({ startPage: page });
     next.modes.registerMode({ id: "workspace-navigation", label: "Workspaces", activate: () => undefined });
     for (const [id, label] of [
@@ -39,7 +39,7 @@ const WorkspaceNavigationStory = (props: { providers: WorkspaceProviderDescripto
       main: { kind: "view", view: { kind: "view", id: "workspace-navigation" }, cardinality: "one" },
       slots: [],
     });
-    next.pageLocations.switchProject("storybook-workspace-navigation");
+    next.pageLocations.switchProject("preview-workspace-navigation");
     next.pageLocations.navigate({ kind: "page", page });
     return next;
   });
@@ -52,10 +52,10 @@ const WorkspaceNavigationStory = (props: { providers: WorkspaceProviderDescripto
 const meta = {
   title: "Dashboard/Workspace navigation",
   component: WorkspaceNavigationStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkspaceNavigationStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const NoCreationProviders: Story = {
   id: "dashboard-workspace-navigation--no-creation-providers",
   args: { providers: [] },

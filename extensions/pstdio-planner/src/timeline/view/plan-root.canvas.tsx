@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { GuestHost } from "@pstdio/sdk/extensions";
 import { buildPlan } from "../model/build-plan";
 import { PlanRoot } from "./plan-root";
@@ -73,7 +73,7 @@ const meta: CanvasMeta<typeof TimelineStory> = {
   component: TimelineStory,
 };
 export default meta;
-type Story = CanvasVariant<typeof TimelineStory>;
+type Story = CanvasFrame<typeof TimelineStory>;
 export const LoadingTickets: Story = {
   id: "extensions-planner-timeline--loading-tickets",
   args: { loading: "tickets" },

@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 
 import * as Y from "yjs";
@@ -134,11 +134,10 @@ const RetainedDocumentPresence = () => {
 const meta = {
   title: "pstdio-workbench/Guides/Header presence/Retained views",
   component: RetainedDocumentPresence,
-  parameters: { layout: "fullscreen" },
-  tags: ["!manifest"],
+  fullscreen: true,
 } satisfies CanvasMeta<typeof RetainedDocumentPresence>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 
 export const CloseAndReopen: Story = {
   id: "note--close-and-reopen",

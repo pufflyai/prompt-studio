@@ -1,5 +1,5 @@
 import { Box, Button, Flex, Spinner, Stack, Text, Textarea } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DocumentParticipants } from "@pstdio/ui";
 import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
 import { useEffect, useState } from "react";
@@ -147,18 +147,12 @@ const EditorNotice = (props: { mode: Mode; message: string; retry: () => void })
 const meta = {
   title: "pstdio-workbench/File editor/Public text sessions",
   component: SharedTextEditors,
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "Native and installed text presentations share admission, close guards, local save status and friendly presence. Synthetic design state only; no host or project data is changed.",
-      },
-    },
-  },
+  fullscreen: true,
+  description:
+    "Native and installed text presentations share admission, close guards, local save status and friendly presence. Synthetic design state only; no host or project data is changed.",
 } satisfies CanvasMeta<typeof SharedTextEditors>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const LifecycleAndRecovery: Story = {
   id: "pstdio-workbench-file-editor-public-text-sessions--lifecycle-and-recovery",
 };

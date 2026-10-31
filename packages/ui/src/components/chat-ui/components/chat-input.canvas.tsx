@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { type ComponentProps, useState } from "react";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { AttachmentList } from "./attachment-list";
@@ -9,13 +9,9 @@ import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 const meta: CanvasMeta<typeof ChatInput> = {
   title: "Patterns/Chat/Chat Input",
   component: ChatInput,
-  parameters: {
-    layout: "centered",
-    actions: { argTypesRegex: "^on(?!Change)[A-Z].*" },
-  },
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatInput>;
+type Story = CanvasFrame<typeof ChatInput>;
 type ChatInputProps = ComponentProps<typeof ChatInput>;
 const initialState = createSerializedPromptState("");
 export const Default: Story = {
@@ -304,13 +300,11 @@ export const PromptHistory: Story = {
 };
 export const PromptHistoryFull: Story = {
   id: "patterns-chat-chat-input--prompt-history-full",
-  tags: ["!manifest"],
   render: PromptHistory.render,
   args: { ...PromptHistory.args, recentUserMessages: Array.from({ length: 12 }, (_, i) => `Prompt ${12 - i}`) },
 };
 export const PromptHistoryMultiline: Story = {
   id: "patterns-chat-chat-input--prompt-history-multiline",
-  tags: ["!manifest"],
   render: PromptHistory.render,
   args: { ...PromptHistory.args, recentUserMessages: ["First line\nSecond line", "Earlier prompt"] },
 };
@@ -321,7 +315,6 @@ export const PromptHistoryDraft: Story = {
 };
 export const PromptHistoryStreaming: Story = {
   id: "patterns-chat-chat-input--prompt-history-streaming",
-  tags: ["!manifest"],
   render: PromptHistory.render,
   args: { ...PromptHistory.args, streaming: true },
 };

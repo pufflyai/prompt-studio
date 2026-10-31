@@ -7,7 +7,7 @@ import { BoomboxNav, BoomboxRail } from "./boombox-navigation";
 import { createShowcaseStore, usePageSelection, useShowcaseStore } from "./showcase-store";
 import { boomboxTheme } from "./themes";
 
-const homePage: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "boombox" };
+const homePage: PageRef = { extensionId: "preview.showcases", kind: "page", id: "boombox" };
 const store = createShowcaseStore({ playing: true, likedIds: ["paper-moon"], queueIds: ["afterimage", "still-life"] });
 const Artwork = (props: { size?: string; track: BoomboxTrack }) => (
   <Box
@@ -288,7 +288,7 @@ export const createBoomboxWorkbench = () => {
   });
   workbench.modePlacements.registerPlacement({
     id: "boombox.player",
-    ref: { extensionId: "storybook.showcases", kind: "placement", id: "boombox.player" },
+    ref: { extensionId: "preview.showcases", kind: "placement", id: "boombox.player" },
     modeId: "boombox",
     region: "secondary",
     item: {
@@ -318,7 +318,7 @@ export const createBoomboxWorkbench = () => {
     },
     slots: [],
   });
-  workbench.pageLocations.switchProject("storybook-boombox");
+  workbench.pageLocations.switchProject("preview-boombox");
   workbench.pageLocations.navigate({ kind: "page", page: homePage });
   return workbench;
 };

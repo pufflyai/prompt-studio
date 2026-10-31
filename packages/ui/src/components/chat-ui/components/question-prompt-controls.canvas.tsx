@@ -1,5 +1,5 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 import { QuestionPromptControls } from "./chat-input-question-prompt";
@@ -69,7 +69,7 @@ const meta: CanvasMeta<typeof QuestionForm> = {
   args: { prompt },
 };
 export default meta;
-type Story = CanvasVariant<typeof QuestionForm>;
+type Story = CanvasFrame<typeof QuestionForm>;
 export const StepTabs: Story = {
   id: "patterns-chat-question-form--step-tabs",
 };

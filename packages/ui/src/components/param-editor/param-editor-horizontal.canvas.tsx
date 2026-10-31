@@ -1,18 +1,14 @@
 import { Container } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ParamEditorHorizontal } from "./param-editor-horizontal";
 
 const meta = {
   title: "Patterns/Param Editor/Param Editor Horizontal",
   component: ParamEditorHorizontal,
-  parameters: {
-    layout: "fullscreen",
-  },
-  tags: [],
-  argTypes: {},
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditorHorizontal>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Demo: Story = {
   id: "patterns-param-editor-param-editor-horizontal--demo",
   render: (props) => {

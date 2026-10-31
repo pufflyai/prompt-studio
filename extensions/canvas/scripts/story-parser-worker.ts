@@ -9,7 +9,7 @@ export interface ParsedStorySource {
   title: string;
   component?: string;
   componentImport?: string;
-  stories: { exportName: string; id: string; name: string }[];
+  stories: { exportName: string; id: string; name: string; defaultTheme?: string }[];
 }
 interface ParserInput {
   manifest: string;

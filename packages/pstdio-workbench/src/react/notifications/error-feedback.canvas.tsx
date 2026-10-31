@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Toaster } from "@pstdio/ui";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
@@ -97,10 +97,10 @@ const ErrorFeedback = (props: { errorCount?: number; longMessages?: boolean; sta
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Error feedback",
   component: ErrorFeedback,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ErrorFeedback>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SystemAndActionErrors: Story = {
   id: "pstdio-workbench-reference-core-api-error-feedback--system-and-action-errors",
 };

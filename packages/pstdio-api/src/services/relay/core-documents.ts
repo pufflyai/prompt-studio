@@ -147,6 +147,8 @@ export const startCoreDocumentSync = (input: {
     deps.projectInfoService.watchChanges(changed),
   ];
   return {
+    wake: connection.wake,
+    retry: connection.retry,
     done: connection.done.finally(async () => {
       for (const stop of stops) stop();
       close();

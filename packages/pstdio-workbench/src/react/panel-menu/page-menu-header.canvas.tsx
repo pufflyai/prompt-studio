@@ -1,11 +1,11 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
 import { Workbench, WorkbenchThemeProvider } from "../index";
 
 const createTablessWorkbench = (withMenu: boolean) => {
-  const page = { extensionId: "storybook", kind: "page" as const, id: "board" };
+  const page = { extensionId: "preview", kind: "page" as const, id: "board" };
   const workbench = createWorkbench({ startPage: page });
   workbench.modes.registerMode({ id: "board", activate: () => undefined });
   workbench.views.registerView({
@@ -58,10 +58,10 @@ const PageMenuHeaderStory = (props: PageMenuHeaderStoryProps) => {
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Page menu header",
   component: PageMenuHeaderStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof PageMenuHeaderStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 /** A tabless page keeps a minimal header that holds only the openers of its closed view menus. */
 export const WithClosedViewMenu: Story = {
   id: "pstdio-workbench-reference-core-api-page-menu-header--with-closed-view-menu",

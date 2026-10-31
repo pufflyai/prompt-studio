@@ -5,15 +5,7 @@ import { getRuntimeCollections } from "@/lib/sync/collections";
 import {
   localizeExtensionAppearance,
   type ResolvedWorkbenchExtensionAppearance,
-  registerExtensionTranslationBundles,
 } from "@/shared/extensions/extension-localization";
-
-export const emptyDashboardExtensionAppearance = {
-  themes: [],
-  fileIconThemes: [],
-  translations: [],
-  diagnostics: [],
-} satisfies ListExtensionAppearanceResponse;
 
 const toThemePreference = (theme: ResolvedWorkbenchExtensionAppearance["themes"][number]) =>
   ({
@@ -40,7 +32,6 @@ export const registerExtensionAppearance = (
   rawAppearance: ListExtensionAppearanceResponse,
   owner = getRuntimeCollections(),
 ) => {
-  const translationDisposable = registerExtensionTranslationBundles(rawAppearance, owner);
   const appearance = localizeExtensionAppearance(rawAppearance, owner);
   const themeDisposable =
     appearance.themes.length > 0 ? ctx.themes.register(appearance.themes.map(toThemePreference)) : undefined;
@@ -52,7 +43,6 @@ export const registerExtensionAppearance = (
     dispose() {
       themeDisposable?.dispose();
       fileIconThemeDisposable?.dispose();
-      translationDisposable.dispose();
     },
   };
 };

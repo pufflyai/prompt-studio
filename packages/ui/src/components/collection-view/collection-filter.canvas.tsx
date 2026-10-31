@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { CollectionFilter, type CollectionFilterProps } from "./collection-filter";
 import { storyFields, storyOptions } from "./collection-view-story-fixtures";
@@ -24,7 +24,7 @@ const meta: CanvasMeta<typeof CollectionFilter> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof CollectionFilter>;
+type Story = CanvasFrame<typeof CollectionFilter>;
 export const InlineCriteria: Story = {
   id: "patterns-collection-view-collection-filter--inline-criteria",
 };

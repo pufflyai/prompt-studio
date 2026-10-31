@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Archive } from "lucide-react";
 import { useState } from "react";
 import { ListRow } from "./list-row";
@@ -9,7 +9,7 @@ const meta: CanvasMeta<typeof ListRow> = {
   component: ListRow,
 };
 export default meta;
-type Story = CanvasVariant<typeof ListRow>;
+type Story = CanvasFrame<typeof ListRow>;
 const ActionMenu = (props: { searchable?: boolean }) => {
   const { searchable } = props;
   const [invoked, setInvoked] = useState(0);

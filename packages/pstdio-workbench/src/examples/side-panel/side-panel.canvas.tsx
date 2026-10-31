@@ -1,5 +1,5 @@
 import { Input, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { SlidersHorizontal } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { createWorkbench } from "../../core";
@@ -67,16 +67,13 @@ const SidePanelStory = (props: SidePanelStoryProps) => {
 };
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Side Panel",
-  parameters: { layout: "fullscreen" },
-  tags: ["autodocs"],
+  fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const AttachedOnly: Story = {
   id: "pstdio-workbench-reference-core-api-side-panel--attached-only",
-  parameters: {
-    docs: { description: { story: "An attached-only panel opens from the navigation bar and has no bubble." } },
-  },
+  description: "An attached-only panel opens from the navigation bar and has no bubble.",
   render: () => <SidePanelStory detachable={false} />,
 };
 export const DefaultBubble: Story = {
@@ -85,8 +82,6 @@ export const DefaultBubble: Story = {
 };
 export const CustomBubbleIcon: Story = {
   id: "pstdio-workbench-reference-core-api-side-panel--custom-bubble-icon",
-  parameters: {
-    docs: { description: { story: "Pass sidePanelBubbleIcon to Workbench to replace the default chat icon." } },
-  },
+  description: "Pass sidePanelBubbleIcon to Workbench to replace the default chat icon.",
   render: () => <SidePanelStory bubbleIcon={<SlidersHorizontal size={20} />} />,
 };

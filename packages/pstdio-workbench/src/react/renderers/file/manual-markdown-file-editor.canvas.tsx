@@ -1,5 +1,5 @@
 import { Box, Button, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
@@ -47,10 +47,9 @@ const ManualMarkdownFile = () => {
 const meta = {
   title: "Renderers/Manual Markdown File Editor",
   component: ManualMarkdownFile,
-  tags: ["!manifest"],
 } satisfies CanvasMeta<typeof ManualMarkdownFile>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 
 export const ExplicitSave: Story = {
   id: "manual-markdown--explicit-save",

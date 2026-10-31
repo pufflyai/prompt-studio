@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
@@ -43,7 +43,7 @@ const createFixture = (initialFailure: boolean) => {
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   workbench.pages.registerPage({
     id: "guide",
-    ref: { kind: "page", extensionId: "storybook", id: "guide" },
+    ref: { kind: "page", extensionId: "preview", id: "guide" },
     modeId: "project",
     path: "",
     main: { kind: "view", view: { kind: "view", id: "guide" }, cardinality: "one" },
@@ -54,8 +54,8 @@ const createFixture = (initialFailure: boolean) => {
     region: "sidenav",
     item: { kind: "view", presence: "fixed", view: { kind: "view", id: "navigation" } },
   });
-  workbench.pageLocations.setProject("storybook");
-  workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", extensionId: "storybook", id: "guide" } });
+  workbench.pageLocations.setProject("preview");
+  workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", extensionId: "preview", id: "guide" } });
   return workbench;
 };
 const NavigationRecovery = (props: { initialFailure: boolean }) => {
@@ -67,10 +67,10 @@ const meta = {
   title: "pstdio-workbench/Guides/Navigation recovery",
   component: NavigationRecovery,
   args: { initialFailure: false },
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof NavigationRecovery>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const FailedRefresh: Story = {
   id: "pstdio-workbench-guides-navigation-recovery--failed-refresh",
 };

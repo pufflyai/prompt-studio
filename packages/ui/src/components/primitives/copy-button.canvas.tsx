@@ -1,22 +1,16 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { CopyButton } from "./copy-button";
 
 const meta: CanvasMeta<typeof CopyButton> = {
   title: "Components/Inputs/CopyButton",
   component: CopyButton,
   args: { text: "Build the tools that make your work easier." },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Copies exact text and briefly shows Copied or a retry message. Pass a function as text to read changing content at click time. Extension webviews must declare clipboard.write.",
-      },
-    },
-  },
+  description:
+    "Copies exact text and briefly shows Copied or a retry message. Pass a function as text to read changing content at click time. Extension webviews must declare clipboard.write.",
 };
 export default meta;
-type Story = CanvasVariant<typeof CopyButton>;
+type Story = CanvasFrame<typeof CopyButton>;
 export const Default: Story = {
   id: "components-inputs-copybutton--default",
 };

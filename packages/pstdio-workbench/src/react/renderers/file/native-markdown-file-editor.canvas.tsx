@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { StrictMode } from "react";
 
 import * as Y from "yjs";
@@ -63,17 +63,11 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "The host session owns text and local-save acknowledgement. These local story fixtures illustrate view states; real transport is checked separately.",
-      },
-    },
-  },
+  description:
+    "The host session owns text and local-save acknowledgement. These local story fixtures illustrate view states; real transport is checked separately.",
 } satisfies CanvasMeta<typeof NativeMarkdownFileEditor>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Editing: Story = {
   id: "renderers-native-markdown-file-editor--editing",
   args: { connect: () => createStorySession() },
@@ -90,5 +84,4 @@ export const StrictEffects: Story = {
       <NativeMarkdownFileEditor {...args} />
     </StrictMode>
   ),
-  tags: ["!manifest"],
 };

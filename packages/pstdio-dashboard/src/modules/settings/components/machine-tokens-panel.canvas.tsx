@@ -1,13 +1,12 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { MachineTokensPanelView } from "./machine-tokens-panel";
 
 const meta: CanvasMeta<typeof MachineTokensPanelView> = {
   title: "ProjectSettings/MachineTokensPanel",
   component: MachineTokensPanelView,
-  parameters: { layout: "padded" },
 };
 export default meta;
-type Story = CanvasVariant<typeof MachineTokensPanelView>;
+type Story = CanvasFrame<typeof MachineTokensPanelView>;
 export const ActiveToken: Story = {
   id: "projectsettings-machinetokenspanel--active-token",
   args: {

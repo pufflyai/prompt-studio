@@ -6,9 +6,7 @@ export const globalCss = {
       base: "bg.accent-secondary.blue-medium",
       _dark: "bg.accent-secondary.blue-medium",
     },
-    color: {
-      _dark: "fg.inverted",
-    },
+    color: "text.selection",
   },
 
   ":root": {

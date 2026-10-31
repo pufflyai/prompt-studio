@@ -33,6 +33,8 @@ export const startAutomationSync = (input: {
     }
   });
   return {
+    wake: connection.wake,
+    retry: connection.retry,
     done: connection.done.finally(() => {
       stop();
       return documents.close();

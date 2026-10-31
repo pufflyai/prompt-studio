@@ -1,5 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { TreeList, type TreeListSection } from "@pstdio/ui";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
@@ -58,11 +58,10 @@ const ProgressiveRead = () => {
 const meta = {
   title: "pstdio-workbench/Guides/Progressive read continuity",
   component: ProgressiveRead,
-  tags: ["!manifest"],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ProgressiveRead>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const RefreshBeforeCompletion: Story = {
   id: "pstdio-workbench-guides-progressive-read-continuity--refresh-before-completion",
 };

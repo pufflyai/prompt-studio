@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Canvas } from "./canvas";
 import { FlowCanvasExample, FreeformCanvasExample, ScrollCanvasExample } from "./canvas.examples";
 
@@ -12,22 +12,12 @@ const meta: CanvasMeta<typeof Canvas> = {
     onReset: () => {},
     onNavigationEnd: () => {},
   },
-  argTypes: {
-    minZoom: { control: { type: "number", min: 0.01, step: 0.1 } },
-    maxZoom: { control: { type: "number", min: 0.01, step: 0.1 } },
-  },
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "A dotted viewport with fixed timeline-style zoom controls, pan, anchored zoom, keyboard, and touch. Callers own their camera and pass the controlled zoom. minZoom/maxZoom apply to every zoom input (defaults 0.25 and 1). Mark live content or drag targets with data-canvas-control. Focus the canvas and press F to fit or 0 to reset the example camera; callbacks appear in Storybook Actions.",
-      },
-    },
-  },
+  description:
+    "A dotted viewport with fixed timeline-style zoom controls, pan, anchored zoom, keyboard, and touch. Callers own their camera and pass the controlled zoom. minZoom/maxZoom apply to every zoom input (defaults 0.25 and 1). Mark live content or drag targets with data-canvas-control. Focus the canvas and press F to fit or 0 to reset the example camera.",
+  fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof Canvas>;
+type Story = CanvasFrame<typeof Canvas>;
 export const LivePreviews: Story = {
   id: "components-layout-canvas--live-previews",
   args: { minZoom: 0.1, maxZoom: 4 },

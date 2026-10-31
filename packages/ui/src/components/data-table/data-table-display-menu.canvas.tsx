@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DEFAULT_DATA_TABLE_SETTINGS } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
@@ -12,7 +12,7 @@ const meta: CanvasMeta<typeof DataTableDisplayMenu> = {
   component: DataTableDisplayMenu,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const columns: AttributeDescriptor[] = [
   { id: "ID", label: "ID", type: { kind: "string" } },
   { id: "Title", label: "Title", type: { kind: "string" } },

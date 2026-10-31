@@ -453,3 +453,198 @@ test("a planned access renewal reconnects at once without reporting the connecti
     await connection.done;
   }
 });
+
+test.each([false, true])("retry reconnects before backoff, including during teardown: %s", async (duringTeardown) => {
+  const controller = new AbortController();
+  const first = Promise.withResolvers<void>();
+  const disconnected = Promise.withResolvers<void>();
+  const reconnected = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let socket: Bun.ServerWebSocket<unknown> | undefined;
+  let attempts = 0;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 426 });
+    },
+    websocket: {
+      open(client) {
+        socket = client;
+        client.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+      },
+      message() {},
+    },
+  });
+  const connection = createRelayConnection({
+    origin: server.url.origin,
+    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    access: async () => ({ token: "access", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
+    signal: controller.signal,
+    synchronize: async (signal) => {
+      if (++attempts > 1) {
+        reconnected.resolve();
+        return;
+      }
+      first.resolve();
+      await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+      if (duringTeardown) await release.promise;
+    },
+    onStatusChange: () => {
+      if (attempts === 1 && !connection.status().connected) {
+        disconnected.resolve();
+        if (duringTeardown) connection.retry();
+      }
+    },
+  });
+  try {
+    await first.promise;
+    socket?.close();
+    await disconnected.promise;
+    if (!duringTeardown) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      connection.retry();
+    }
+    release.resolve();
+    const result = await Promise.race([reconnected.promise.then(() => true), Bun.sleep(500).then(() => false)]);
+    expect(result).toBe(true);
+    expect(attempts).toBe(2);
+  } finally {
+    release.resolve();
+    controller.abort();
+    await connection.done;
+    await server.stop(true);
+  }
+});
+
+test("retry during access renewal waits for the renewed socket without aborting durable work", async () => {
+  const controller = new AbortController();
+  const synchronized = Promise.withResolvers<void>();
+  const renewing = Promise.withResolvers<void>();
+  const renewed = Promise.withResolvers<void>();
+  const finishFirst = Promise.withResolvers<void>();
+  let firstSignal: AbortSignal | undefined;
+  let accesses = 0;
+  let opens = 0;
+  let synchronizations = 0;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 426 });
+    },
+    websocket: {
+      open(socket) {
+        opens++;
+        socket.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+      },
+      message() {},
+    },
+  });
+  const connection = createRelayConnection({
+    origin: server.url.origin,
+    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    access: async () => {
+      if (++accesses === 2) {
+        renewing.resolve();
+        await renewed.promise;
+      }
+      return {
+        token: "renewal-access",
+        expiresAt: new Date(Date.now() + (accesses === 1 ? 100 : 30_000)).toISOString(),
+      };
+    },
+    signal: controller.signal,
+    synchronize: async (signal) => {
+      if (++synchronizations > 1) {
+        expect(signal).toBe(firstSignal!);
+        synchronized.resolve();
+        return;
+      }
+      firstSignal = signal;
+      await finishFirst.promise;
+    },
+  });
+  const observed = Promise.race([synchronized.promise.then(() => true), Bun.sleep(500).then(() => false)]);
+  try {
+    await renewing.promise;
+    connection.retry();
+    finishFirst.resolve();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(firstSignal?.aborted).toBe(false);
+    expect(synchronizations).toBe(1);
+    renewed.resolve();
+    const result = await observed;
+    expect(opens).toBe(2);
+    expect(result).toBe(true);
+    expect(synchronizations).toBe(2);
+  } finally {
+    finishFirst.resolve();
+    renewed.resolve();
+    controller.abort();
+    await connection.done;
+    await server.stop(true);
+  }
+});
+
+test("manual retry waits for relay protocol readiness after the renewed transport opens", async () => {
+  const controller = new AbortController();
+  const transportReady = Promise.withResolvers<void>();
+  const synchronized = Promise.withResolvers<void>();
+  let renewed: Bun.ServerWebSocket<unknown> | undefined;
+  let opens = 0;
+  let accesses = 0;
+  let synchronizations = 0;
+  let firstSignal: AbortSignal | undefined;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 426 });
+    },
+    websocket: {
+      open(socket) {
+        if (++opens === 1) socket.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+        else {
+          renewed = socket;
+          // The client's automatic pong proves its transport has opened, without releasing protocol readiness.
+          socket.ping("transport-open");
+        }
+      },
+      pong() {
+        transportReady.resolve();
+      },
+      message() {},
+    },
+  });
+  const connection = createRelayConnection({
+    origin: server.url.origin,
+    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    signal: controller.signal,
+    access: async () => ({
+      token: "renewal-access",
+      expiresAt: new Date(Date.now() + (++accesses === 1 ? 100 : 30_000)).toISOString(),
+    }),
+    synchronize: async (signal) => {
+      if (++synchronizations === 1) firstSignal = signal;
+      else synchronized.resolve();
+    },
+  });
+  try {
+    await transportReady.promise;
+    connection.retry();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(synchronizations).toBe(1);
+    expect(firstSignal?.aborted).toBe(false);
+    renewed!.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+    await synchronized.promise;
+    expect(synchronizations).toBe(2);
+  } finally {
+    controller.abort();
+    await connection.done;
+    await server.stop(true);
+  }
+});

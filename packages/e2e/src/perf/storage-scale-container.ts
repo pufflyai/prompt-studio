@@ -20,6 +20,43 @@ export const configuredContainer = (home: string) => {
   return config;
 };
 
+// Output of `getconf CLK_TCK`, `/proc/<pid>/stat` and `/proc/<pid>/status` read inside the container.
+export const parseContainerProcess = (output: string) => {
+  const [ticksLine = "", stat = "", ...status] = output.split("\n");
+  const clockTicks = Number(ticksLine);
+  // comm is parenthesized and may itself contain spaces or parentheses.
+  const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+  if (!(clockTicks > 0) || fields.length < 20 || fields[0] === "Z") return null;
+  const memory = (key: string) => {
+    const match = status.join("\n").match(new RegExp(`^${key}:\\s+(\\d+) kB$`, "m"));
+    return match ? Number(match[1]) * 1024 : null;
+  };
+  const residentBytes = memory("VmRSS");
+  if (residentBytes === null) return null;
+  return {
+    processStartId: fields[19]!,
+    cpuTimeMs: ((Number(fields[11]) + Number(fields[12])) * 1000) / clockTicks,
+    residentBytes,
+    peakResidentBytes: memory("VmHWM"),
+    physicalFootprintBytes: null,
+    peakPhysicalFootprintBytes: null,
+    privateCommittedBytes: null,
+  };
+};
+
+// The runtime's PID belongs to the container's namespace, so its kernel readings come from there too.
+export const readContainerProcess = async (config: ContainerRuntime, pid: number) => {
+  const read = Bun.spawn(
+    ["docker", "exec", config.containerId, "sh", "-c", `getconf CLK_TCK && cat /proc/${pid}/stat /proc/${pid}/status`],
+    // A stalled Docker daemon must not hold up the next 2-second sample.
+    { stdout: "pipe", stderr: "ignore", timeout: 1_500 },
+  );
+  const output = await new Response(read.stdout).text();
+  // A missing process or a timed-out read exits non-zero; it has no reading.
+  if ((await read.exited) !== 0) return null;
+  return parseContainerProcess(output);
+};
+
 export const applyContainerProfile = (config: ContainerRuntime, profile: Profile) => {
   const cpus = contract.profiles[profile].runtimeCpus ?? 0;
   docker(["update", "--cpus", String(cpus), config.containerId]);

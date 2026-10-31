@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ThemePreferenceProvider, useThemePreference } from "../../utils/theme-preference";
 import { CodeDiffEditor, CodeEditor } from "./code-editor";
 
@@ -21,7 +21,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof CodeEditor>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Editable: Story = {
   id: "patterns-editors-code-editor--editable",
 };
@@ -31,7 +31,6 @@ export const ReadOnly: Story = {
 };
 export const ConstrainedContainer: Story = {
   id: "patterns-editors-code-editor--constrained-container",
-  tags: ["!manifest"],
   args: {
     defaultCode: 'export const greeting: number = "Hello";\n',
   },
@@ -83,7 +82,6 @@ const ThemeSwitchingEditors = () => {
 };
 export const ThemeSwitching: Story = {
   id: "patterns-editors-code-editor--theme-switching",
-  tags: ["!manifest"],
   render: () => (
     <ThemePreferenceProvider initialPreference="pstdio-light">
       <ThemeSwitchingEditors />

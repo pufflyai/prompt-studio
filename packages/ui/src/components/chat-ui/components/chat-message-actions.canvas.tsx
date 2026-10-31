@@ -1,5 +1,5 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 
@@ -82,10 +82,9 @@ const incompleteTurnMessages: SessionMessage[] = [
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Message Actions",
   component: ChatPanel,
-  parameters: { layout: "padded" },
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 const panelProps = {
   emptyStateTitle: "No messages yet",
   emptyStateDescription: "Send a message to start this session.",
