@@ -1,6 +1,6 @@
 # UI Canvas
 
-Browse a project's own components and design pages inside Prompt Studio. The project writes small `*.canvas.tsx` files next to its components, and the [`@pstdio/canvas`](../../packages/canvas/README.md) package builds them. UI Canvas shows what that package built; it never builds anything or runs project code itself. The workbench saves each canvas's camera, frame positions and frame themes.
+Browse a project's own components and design pages inside Prompt Studio. The project writes small `*.canvas.tsx` files next to its components, and the [`@pstdio/canvas`](../../packages/canvas/README.md) package builds them. UI Canvas shows what that package built. Its extension backend never builds anything or runs project code. Canvas code runs only inside each frame, a sandboxed iframe with no access to Prompt Studio. The workbench saves each canvas's camera, frame positions and frame themes.
 
 UI Canvas is an optional extension. Install it from the extension catalog:
 

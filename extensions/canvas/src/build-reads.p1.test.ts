@@ -25,14 +25,16 @@ test("a project without a readable folder shows an empty, explained state instea
 });
 
 // A project folder that counts manifest reads and can swap in a newer build mid-request.
+// Each folder reports its own timestamps, so a manifest cached by one test never matches another.
 const projectFolder = (manifests: ReturnType<typeof testManifest>[], modules: Record<string, string>) => {
+  const folder = crypto.randomUUID();
   let reads = 0;
   return {
     reads: () => reads,
     files: {
       exists: async (path: string) => path === `${DEFAULT_OUT}/manifest.json`,
       list: async () => [
-        { path: `${DEFAULT_OUT}/manifest.json`, updatedAt: `build-${Math.min(reads, manifests.length - 1)}` },
+        { path: `${DEFAULT_OUT}/manifest.json`, updatedAt: `${folder}-build-${Math.min(reads, manifests.length - 1)}` },
       ],
       readText: async (path: string) => {
         if (path === `${DEFAULT_OUT}/manifest.json`)

@@ -311,13 +311,20 @@ Never edit generated SQL by hand. Keep one migration entry per PR. Verify migrat
 
 Use the live Canvas extension for designs and component examples. See the [authoring and coverage guide](0003-canvas-coverage.md).
 
+Start the watcher in its own terminal. It keeps running until you stop it, and UI Canvas shows what it builds:
+
 ```sh
 bun run canvas
+```
+
+In another terminal:
+
+```sh
 pst canvas list
 pst canvas open --canvas packages/ui/src/foundations/foundations.canvas.tsx
 ```
 
-`bun run canvas` keeps `pstdio-canvas watch` running; UI Canvas shows what it builds. Run the critical Canvas browser checks with `bun run --cwd packages/canvas-tests test` in the isolated Docker tools container.
+Run the critical Canvas browser checks with `bun run --cwd packages/canvas-tests test` in the isolated Docker tools container.
 
 ## Project Validation
 

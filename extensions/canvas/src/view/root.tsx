@@ -94,11 +94,16 @@ const useCanvasBuild = (host: GuestHost, id: string | undefined) => {
   useEffect(() => {
     const client = createWebviewClient<typeof commands>(host);
     let active = true;
-    const refresh = () =>
+    // Build changes can start reads that overlap; only the latest read may update the view.
+    let latest = 0;
+    const refresh = () => {
+      const request = ++latest;
+      const current = () => active && request === latest;
       void client.commands["canvas.read"]({ canvas: id }).then(
-        (next) => active && setRead(next as CanvasRead),
-        (error) => active && setRead({ status: "error", message: String(error) }),
+        (next) => current() && setRead(next as CanvasRead),
+        (error) => current() && setRead({ status: "error", message: String(error) }),
       );
+    };
     refresh();
     const unsubscribe = client.events.subscribe(artifactChanged(buildMount), refresh);
     return () => {

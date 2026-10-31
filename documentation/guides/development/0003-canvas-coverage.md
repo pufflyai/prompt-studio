@@ -14,8 +14,15 @@ Canvas owns UI designs, component state examples, and prop usage. Put source exa
 
 Use the [Canvas skill](../../../extensions/canvas/skills/canvas/SKILL.md). Update the relevant live design before production UI work and link its page, exact preview names, and source paths in the ticket.
 
+Start the watcher in its own terminal; it keeps running until you stop it:
+
 ```sh
 bun run canvas
+```
+
+Run the checks in another terminal:
+
+```sh
 bun run --cwd packages/canvas-tests typecheck
 bun run --cwd extensions/canvas test
 ```
