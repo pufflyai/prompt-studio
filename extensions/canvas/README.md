@@ -1,112 +1,83 @@
 # UI Canvas
 
-Explore and compare live UI designs inside Prompt Studio. A source registry defines named canvases and previews; the workbench saves their camera, frame positions, and individual frame themes.
+Browse a project's own components and design pages inside Prompt Studio. The project writes small `*.canvas.tsx` files next to its components, and the [`@pstdio/canvas`](../../packages/canvas/README.md) package builds them. UI Canvas shows what that package built; it never builds anything or runs project code itself. The workbench saves each canvas's camera, frame positions and frame themes.
 
-UI Canvas is an optional extension. After upgrading to a release that includes it, install it from the extension catalog:
+UI Canvas is an optional extension. Install it from the extension catalog:
 
 ```sh
 pst extensions add canvas
 ```
 
-Catalog installation uses the host's configured registry or the matching Git release.
 A downloaded package also works without Git or a source checkout:
 
 ```sh
 pst extensions add /path/to/pstdio.canvas-<version>.tgz
 ```
 
-Its catalog is downloaded on demand and is not embedded in the core CLI. It is not installed or enabled by default. The extension includes the `canvas` skill for browsing, comparing variants and themes, arranging frames, and source maintenance. Installed previews are precompiled and work without a Prompt Studio source checkout. Editing the catalog itself requires its source checkout and the development commands below.
+It is not installed or enabled by default. It includes the `canvas` skill for browsing, comparing themes, arranging frames and writing canvas files. Use a runtime that satisfies the extension API range declared in `package.json`.
 
-Use a runtime that satisfies the extension API range declared in `package.json`.
+## Set up a project
 
-Open **UI Canvas** in the project navigation. Browse **Design System**, **Workbench Core**, **Dashboard**, **Extensions**, and **Landing Page**, with expandable subgroups. All canvases use one shared, project-owned tab viewer. Selecting a canvas opens an unpinned preview tab by default. The next unpinned selection replaces that preview. Use Pin tab to pin a canvas; pinned canvases retain their preview inputs and camera in the shared tab list. Landing-page components have their own Landing Page group. Host UI such as Paused extension view belongs under Workbench Core → Chrome; actual extension-owned examples belong under Extensions. **Foundations** contains three previews of semantic colors, typography, spacing, and radii. **Shared components** contains nine previews of controls, feedback, identity, surfaces, keyboard hints, empty states, and overlays. All previews use synthetic data and local state. Creating a project in the preview never creates a real project.
+```sh
+bun add -d @pstdio/canvas
+bun x pstdio-canvas watch
+```
+
+Keep the watcher running while you work, or let an agent start it. It writes each build to `.pstdio/extension-storage/pstdio.canvas/build/`, the folder UI Canvas reads, and puts a `.gitignore` there so builds are never committed. UI Canvas declares that folder as a watched storage folder: when the watcher writes a new build, the host tells UI Canvas, and it reloads only the frames whose code changed. Until a build exists, UI Canvas shows these commands and an example file.
+
+A canvas file is one canvas, and each named export is one frame:
+
+```tsx
+// src/button.canvas.tsx
+import { Button } from "./button";
+
+export default { title: "Components/Button", component: Button };
+export const Primary = { args: { children: "Save" } };
+export const Loading = () => <Button loading>Save</Button>;
+```
+
+The title's part before the last `/` is the navigation group. A `.canvas/preview.tsx` file supplies CSS and decorators for the canvas files below it. See the [`@pstdio/canvas` README](../../packages/canvas/README.md) for the full format.
 
 ## Work with a design
 
-Canvases use the diamond icon in navigation, resource search, breadcrumbs, and tabs. Select a frame before using its contents: the first click selects it without activating a control. The selected frame has an outline. Clicking another frame or empty canvas space changes or clears selection; Escape clears it when the canvas has focus. The larger grip selects and moves its frame. Selection is local to the open canvas and is not saved; changing selection preserves mounted previews and draft input.
+Open **UI Canvas** in the project navigation. Canvases are grouped by their titles. Selecting one opens an unpinned preview tab; the next unpinned selection replaces it. Pin a tab to keep it. A canvas whose build failed shows its error; the others still work.
 
-- Click a preview name to copy its exact name. Enter, Space, and touch also work. If clipboard access fails, select and copy the displayed name.
-- Drag its move handle or focus the handle and use arrow keys. Shift moves farther. Preview content remains interactive.
-- Drag empty space, hold Space while dragging, or use the middle mouse button to pan. Space-to-pan stays off while a control or editable region has focus.
+Select a frame before using its contents: the first click selects it without activating a control. Clicking another frame or empty canvas space changes or clears selection; Escape clears it when the canvas has focus. Changing selection keeps mounted frames and their input.
+
+- Click a frame name to copy it. If clipboard access fails, select and copy the displayed name.
+- Drag a frame's move handle, or focus the handle and use arrow keys. Shift moves farther.
+- Drag empty space, hold Space while dragging, or use the middle mouse button to pan.
 - Use Ctrl/Meta + wheel or trackpad pinch to zoom around the pointer. Ordinary wheel input scrolls nested content while it can scroll, then pans the canvas.
-- Focus the canvas for arrow-key pan, `+`/`-` zoom, `F` to fit, and `0` to reset. Camera buttons stay fixed above the canvas. Reset keeps frame positions and preview drafts.
+- Focus the canvas for arrow-key pan, `+`/`-` zoom, `F` to fit, and `0` to reset.
 
-Frames show a shared loading panel and spinner while their compiled preview starts. Each canvas starts at most four frames at once, prioritizing selected and visible frames. A slot is released when the preview runtime boots, before asynchronous fixture setup. Offscreen frames continue loading and loaded frames stay mounted to retain drafts.
+Each frame has a **Theme** menu with Follow app and the built-in themes. A frame whose file sets `defaultTheme` to a theme only the project knows shows that theme too; the frame receives its id, and the project's decorator supplies its colors. Theme changes keep input and local state.
 
-Each frame has a **Theme** menu with Follow app, Prompt Light, Prompt Dark, Prompt Contrast Light, Prompt Contrast Dark, Solarized Light, Solarized Dark, Dracula, and Monokai. Its choice is saved independently. Theme changes preserve mounted inputs and local state. The canvas shell follows the workbench. Physical touch and trackpad behavior depends on the browser; automation does not prove those device behaviors.
+Frames show a loading panel while their code starts. Each canvas starts at most four frames at once, selected and visible frames first.
 
-## Edit source
-
-`src/canvases/definitions.ts` owns canvas IDs, unique readable names, preview membership, component keys, initial positions, and intended dimensions. `src/canvases/previews.tsx` maps component keys to the design pages in `packages/ui/src/foundations/` and their named React exports. The compiler creates a lazy lookup so frames import only their native component group. Add another canvas to the definitions array and another preview component when needed. Camera and gesture code do not need to change.
-
-Preserve IDs and names in follow-up edits. Add a new named entry for another version. Keep unrelated designs. Place new entries in nearby empty space and reveal them through the camera. Use the `canvas` skill for the full authoring and validation rules.
-
-Use public production component APIs, shared styles, safe data, and local callbacks. Do not change production components to make previews work. Keep experiment code in this extension. Content is compiled with the extension; the browser never interprets stored source strings as code. Runtime content editing, resizing, drawing, connectors, and property editors are outside this extension's scope.
-
-The `src/controller/` files own geometry, cached bounds, input routing, and batched transforms. Native portals stay in their library-owned document roots. Each preview document handles links, including portal links: `#canvas-item=<item-id>` reveals an item, and other links stay in the preview.
-
-## Commands and saved data
-
-```bash
-pst canvas list
-pst canvas open --canvas foundations
-pst canvas layout read --canvas foundations
-pst canvas layout update --canvas foundations --change '{"positions":{"colors":{"x":80,"y":40}}}'
-pst extensions dev extensions/canvas
-```
-
-The browser and CLI use the same layout commands. `list` and `open` return project-owned dashboard links for tickets. `ctx.storage.records` stores one versioned shared map per project and canvas. Each position has its own map entry, so simultaneous moves of different frames merge. Source IDs filter saved positions. The saved data cannot hide frames or replace names, dimensions, preview code, or form contents. Frame themes use separate shared-map entries; the workbench owns the shell theme.
-
-Canvas saves after gestures or a bounded debounce. It renders source defaults when storage is unavailable and reports read or save failures beside the canvas. Draft input survives camera and layout changes but is intentionally not persisted across reload.
-
-## Ticket designs
-
-Canvas is the source of truth for UI appearance, component states, and example prop usage. When the project's Canvas policy is enabled and Canvas is available, tickets that change UI update the relevant live design before production work. Record a skipped step when disabled or unavailable. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Planner's **Update canvas designs for UI changes** setting controls this guidance.
-
-## Validation
-
-Run `bun run --cwd extensions/canvas test` and `bun run --cwd extensions/canvas typecheck`. The workspace examples cover the interactive starter, zoomed-out previews, and a populated 24-preview canvas. Validate only critical behavior risks with Playwright in the isolated Docker app. Routine cosmetic changes do not require browser runs. Report physical-device and browser behaviors that were not tested.
-
-## Native catalog
-
-UI Canvas indexes every current Canvas variant export. Related scenarios share one source-owned topic canvas and keep their original scenario IDs. Auto Build combines its status and form examples; Create folder combines folder-picker states. Earlier scenario URLs resolve to the grouped canvas. Select canvases in the navigation panel or find them through global resource search. The Design playground and Documentation panels demo canvases have been removed from navigation. Their interaction fixtures remain in verification examples. Search accepts source paths, export IDs, names, and design keywords.
-
-Each component has one frame. Its **Variant** menu, beside **Theme**, selects an original scenario’s predefined args. Selecting a variant resets that example’s local fixture state and keeps its frame theme and position. Every original scenario ID remains in resource search.
-
-Scenarios render compiled original React components in individual preview documents. Each document owns its React, Chakra, theme, and application fixture state so several dialogs and store variants can be used together. Preview code is compiled into individually compressed modules; project storage cannot provide executable content. Application examples use local API and in-memory storage fixtures. Gallery token overrides stay local to each preview. Monaco uses its public worker factory to load the prebuilt classic workers from document-owned URLs, preserving TypeScript diagnostics inside the opaque sandbox. Website analytics is inert in previews. Examples contain rendering and fixture setup only. Critical behavioral assertions live in Playwright tests using the same preview renderer and sandbox. **Props and source** shows the frame's description and arguments, component references, the source hash, and complete source code.
-
-Documentation frames have content-driven heights. Resize observations and font completion refresh measured bounds. Fit and explicit reveal include a tall panel and its title. Fullscreen application examples retain a minimum viewport inside the documentation frame; lists and editors retain their own scrolling. Long prose, source listings, and API details have no inner vertical scroll area. The **IntrinsicDocumentation** verification story checks expansion and draft retention outside the canvas resource registry.
-
-Each frame starts only the compiled modules and styles reachable from its example and suite provider, in the archive's original stylesheet order. The bundled archive compresses modules individually so cold startup decodes only the selected graph. The viewer caches immutable decoded Blobs; embedded documentation requests its own graph lazily through the existing frame bridge. Module instances and fixture state stay in each opaque preview. Syntax highlighting initializes only when a component needs it.
-
-### Rebuild and verify
-
-From the repository root:
+Use the CLI from the linked project directory:
 
 ```sh
-bun run --cwd scripts canvas:build
+pst canvas list
+pst canvas open --canvas src/button.canvas.tsx
+pst canvas layout read --canvas src/button.canvas.tsx
+```
+
+## How frames load
+
+The `preview.assets` command reads the modules a frame needs from the build folder, using the module graph in the build's `manifest.json`. The view decodes shared modules once and reuses them across frames. Each frame is an opaque sandbox with its own React, providers, theme and state. A frame that shows UI Canvas itself asks its own host for code through the `@pstdio/canvas` frame bridge.
+
+## Develop UI Canvas
+
+```sh
 bun run --cwd extensions/canvas test
 bun run --cwd extensions/canvas typecheck
 ```
 
-`canvas:build` composes colocated `*.canvas.tsx` examples, then records source and output hashes. Generated modules are build output; edit the source and rebuild. The builder retains each scenario's existing ID, args, decorators and asynchronous `setup`.
+`scripts/` holds the page that renders UI Canvas outside the dashboard for browser checks. `packages/canvas-tests` builds Prompt Studio with `pstdio-canvas build`, serves that build through this page, and runs the critical browser checks:
 
-The extension's normal `build` command discovers current examples and reuses compiled previews while their inputs are unchanged. Its `src/catalog/generated/native-manifest.json` freshness manifest is a local cache, excluded from Git, extension watching, and packages by the extension's `.gitignore`. It records source, dependency lockfile, and output hashes; a clean checkout builds it before freshness checks run. Nx caches and restores the manifest along with the compiled catalog.
+```sh
+bun run --cwd packages/canvas-tests test
+bun run --cwd packages/canvas-tests perf:startup
+```
 
-Run `bun run build -- --scope canvas --include-dependencies` before individual Canvas tests and after editing examples, components, or dependencies. Normal Nx test and type-check tasks build it first. Hashes are checked when a build runs; they do not watch files or rerender previews on their own. Freshness verification stays separate from generation.
-
-The whole catalog in `src/catalog/generated/` is build output and is never committed (AGENTS.md "Generated files"); the root `.gitignore` excludes it. Nx builds it before Canvas tests and type checks, and packaged Canvas archives include the built catalog. A Git install of a release tag has no catalog until Canvas builds previews itself (PS-987).
-
-`typecheck` checks the extension and examples across all owning workspaces. Published extension configurations exclude repository-only examples; the catalog checks them separately with the private authoring types.
-
-Run `canvas:verify` inside the isolated Docker tooling container with Chromium installed. It checks representative critical interactions, documentation expansion, retained drafts, measured fit, and the unchanged populated 24-preview workload. It does not behaviorally test every variant. Failed cases retain Playwright traces and screenshots under `packages/canvas-tests/test-results/`. Browser interaction checks live in `packages/canvas-tests`; its static preview build is test-only. The live Canvas is the developer catalog. Physical touch, trackpad behavior, full visual fidelity, packaged verification, full tests, and CI remain separate checks.
-
-### Frame startup
-
-The extension loads each example's dependency graph through its private `preview.assets` command and the public package-file API. The viewer decodes shared immutable module bytes once and reuses them across frames. Each opaque sandbox still creates its own module URLs and owns its React, providers, theme, and fixture state. Reset and variant changes create a fresh sandbox. The catalog lookup table stays separate so one example does not download every other example. Styles follow Vite's per-chunk dependency metadata in the catalog's cascade order; unrelated website fonts, math, and editor styles stay out of a frame's startup graph.
-
-Run `bun run --cwd packages/canvas-tests perf:startup` for one cold-context measurement each of a button, a documentation frame, and the existing populated 24-frame workload. It reports navigation-to-first-ready and all-ready times, module counts, bytes, queue time, asset preparation, imports, setup, and commit time. Set `BENCHMARK_RESULTS` to a file path to retain benchmark measurements. The optional double-animation-frame paint marker can be absent for offscreen documents; it never gates readiness. This diagnostic benchmark preserves the normal test readiness allowance and does not replace the existing camera workload or budgets.
-
-### Critical checks only
-
-Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies. Keep examples for design exploration without a matching test for each example. Each retained browser test identifies its critical risk.
+Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots.

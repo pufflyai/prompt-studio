@@ -211,4 +211,3 @@ infra/terraform/**/*.tfplan
 infra/terraform/**/crash*.log
 
 # UI Canvas builds its preview catalog from source; it is never committed (AGENTS.md "Generated files").
-extensions/canvas/src/catalog/generated/

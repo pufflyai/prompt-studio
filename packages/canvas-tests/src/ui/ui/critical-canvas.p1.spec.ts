@@ -20,9 +20,12 @@ test("selection gates input and preserves independent frame state", async ({ pag
   await checkFrameSelection(await openSurface(page, "playground"), page);
 });
 
-// Critical: a contained dialog must preserve draft state across themes and reset on variant changes.
-test("folder dialogs, themes, variants, and camera gestures stay isolated", async ({ page }) => {
-  await checkGroupedFolders(await openSurface(page, "stories-ui-overlays-folderpickerdialog"), page);
+// Critical: a contained dialog must preserve draft state across themes and stay out of sibling frames.
+test("folder dialogs, themes, sibling frames, and camera gestures stay isolated", async ({ page }) => {
+  await checkGroupedFolders(
+    await openSurface(page, "packages/ui/src/components/overlays/folder-picker-dialog.canvas.tsx"),
+    page,
+  );
 });
 
 // Critical: long documentation must remain readable and retain edited input when it expands.
@@ -49,12 +52,15 @@ test("the populated camera workload retains 24 previews and batches saves", asyn
     });
   });
   try {
-    const surface = await openSurface(page, "verification-populated", 8_000);
+    const surface = await openSurface(page, "populated", 8_000);
     await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(24);
     const maximum = Number(await surface.locator("html").getAttribute("data-canvas-startup-maximum"));
     expect(maximum).toBeGreaterThan(0);
     expect(maximum).toBeLessThanOrEqual(4);
-    expect(requested.sort()).toEqual(["$native:controls", "$native:project-form", "$runtime"].sort());
+    // Both fixture frames come from one canvas file, so its code loads once.
+    expect(requested.sort()).toEqual(
+      ["$runtime", "packages/ui/src/foundations/interactive-previews.canvas.tsx"].sort(),
+    );
     const result = await profilePopulatedCanvas(surface);
     expect(result.previews).toBe(24);
     expect(result.saves).toBe(1);

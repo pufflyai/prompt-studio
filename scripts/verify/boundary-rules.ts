@@ -3,7 +3,7 @@
 // intentional architecture changes — update the docs when this map changes.
 export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "@pstdio/canvas": [],
-  canvas: ["@pstdio/sdk", "@pstdio/ui"],
+  canvas: ["@pstdio/sdk", "@pstdio/ui", "@pstdio/canvas"],
   "social-radar": ["@pstdio/sdk", "@pstdio/ui", "@pstdio/canvas"],
   "pstdio-service-telemetry": [],
   // The benchmark result writer is a dependency-free leaf. Packages declare it only as a development

@@ -1,10 +1,8 @@
+import type { FrameBootstrap } from "@pstdio/canvas";
 import type { FrameAssetRequest, FrameAssetResponse } from "./module-graph";
 
-export interface FrameBootstrap {
-  scripts: Record<string, Blob>;
-  styles: Blob[];
-  entry: string;
-}
+/** Loads the code for one canvas; a new revision of that canvas loads its new modules. */
+export type FrameLoader = (source: string, revision?: string) => Promise<FrameBootstrap>;
 export const createFrameAssetLoader = (fetchAssets: (request: FrameAssetRequest) => Promise<FrameAssetResponse>) => {
   const files = new Map<string, Promise<Blob>>();
   const previews = new Map<string, Promise<FrameBootstrap>>();
@@ -48,19 +46,20 @@ export const createFrameAssetLoader = (fetchAssets: (request: FrameAssetRequest)
     });
     return runtime;
   };
-  const load = (source: string) => {
+  const load: FrameLoader = (source, revision = "") => {
     if (source === "$runtime") return prepareRuntime();
-    let prepared = previews.get(source);
+    const key = `${source}@${revision}`;
+    let prepared = previews.get(key);
     if (!prepared) {
       prepared = (async () => {
         // Decode the common runtime once before concurrent previews request their own modules.
         await prepareRuntime();
         return prepare(source);
       })().catch((error) => {
-        previews.delete(source);
+        previews.delete(key);
         throw error;
       });
-      previews.set(source, prepared);
+      previews.set(key, prepared);
     }
     return prepared;
   };

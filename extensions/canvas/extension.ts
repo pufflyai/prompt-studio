@@ -7,6 +7,7 @@ import {
   packageAsset,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
+import { buildFiles, buildMount, readBuild } from "./src/build-mount";
 import { commands } from "./src/commands";
 import { canvasPage, canvasPanel, canvasResource, canvasView, homePage } from "./src/navigation";
 import { canvasTree } from "./src/navigation-tree";
@@ -18,18 +19,22 @@ const tree = defineView({
   icon: canvasResource.icon,
   body: {
     kind: "tree",
-    body: async (ctx) => [
-      {
-        id: "canvases",
-        label: "UI Canvas",
-        collapsible: false,
-        nodes: canvasTree(ctx.projectId),
-      },
-    ],
+    body: async (ctx) => {
+      const build = await readBuild(buildFiles(ctx));
+      return [
+        {
+          id: "canvases",
+          label: "UI Canvas",
+          collapsible: false,
+          nodes: canvasTree(ctx.projectId, build.status === "ready" ? build.manifest.canvases : []),
+        },
+      ];
+    },
   },
 });
 export default defineExtension({
   commands: Object.values(commands),
+  artifactMounts: [buildMount],
   resourceKinds: [canvasResource],
   commandPaletteResources: [canvasResources],
   views: [canvasView, tree],

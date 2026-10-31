@@ -13,6 +13,16 @@ const projectReact = (base: string): Bun.BunPlugin => ({
   },
 });
 
+// Project code and the frame runtime must share this package's module state, such as the loader
+// that nested frames use, so `@pstdio/canvas` always means the package running the build.
+const PACKAGE_INDEX = resolve(import.meta.dir, "../index.ts");
+const ownPackage: Bun.BunPlugin = {
+  name: "pstdio-canvas-own-package",
+  setup(build) {
+    build.onResolve({ filter: /^@pstdio\/canvas$/ }, () => ({ path: PACKAGE_INDEX }));
+  },
+};
+
 // Vite's `?raw` (file text) and `?url` (file address) imports are common in React projects.
 // Frames load from blob URLs, so a `?url` import becomes a data URL.
 const queryImports: Bun.BunPlugin = {
@@ -97,7 +107,7 @@ const bunBuild = (root: string, entry: string, canvases: CanvasEntry[], outdir?:
     define: { "process.env.NODE_ENV": '"production"' },
     naming: { entry: "[name]-[hash].[ext]", chunk: "chunk-[hash].[ext]", asset: "[name]-[hash].[ext]" },
     loader,
-    plugins: [projectReact(reactBase(root, canvases)), queryImports],
+    plugins: [projectReact(reactBase(root, canvases)), ownPackage, queryImports],
   });
 
 type BuildLogs = Bun.BuildOutput["logs"];

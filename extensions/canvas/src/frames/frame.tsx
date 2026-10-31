@@ -1,15 +1,15 @@
 import { Box, Text } from "@chakra-ui/react";
-import { type ThemePreferenceOption, useThemePreference } from "@pstdio/ui";
-import { type RefObject, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { CanvasItem } from "../canvases/definitions";
-import { PreviewSource } from "../catalog/source-information";
+import { type FrameBootstrap, type FrameMessage, type FrameRequest, frameProtocol } from "@pstdio/canvas";
+import { useThemePreference } from "@pstdio/ui";
+import { type RefObject, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import type { CanvasItem } from "../canvas-model";
 import { Button } from "../components/themed-primitives";
 import type { CanvasRuntime } from "../controller/runtime";
-import { frameThemePreferences, resolveFrameTheme } from "../frame-themes";
-import { type FrameBootstrap, frameBootstrap, frameDocument } from "./assets";
+import { frameThemeOption, resolveFrameTheme } from "../frame-themes";
+import { frameDocument } from "./assets";
+import { FrameLoaderContext } from "./frame-loader";
 import { FrameLoading } from "./frame-loading";
 import { navigateFrame } from "./navigation";
-import { type FrameMessage, type FrameRequest, frameProtocol } from "./protocol";
 import { useFrameStartup } from "./use-frame-startup";
 
 const postFrame = (frame: HTMLIFrameElement | null, message: Omit<FrameRequest, "protocol">) =>
@@ -25,6 +25,7 @@ interface FramePreviewProps {
 }
 export const FramePreview = (props: FramePreviewProps) => {
   const { item, runtime, container, selected: frameSelected } = props;
+  const frameBootstrap = useContext(FrameLoaderContext);
   const frame = useRef<HTMLIFrameElement>(null);
   const nonce = useRef(crypto.randomUUID());
   const [revision, setRevision] = useState(0);
@@ -34,26 +35,23 @@ export const FramePreview = (props: FramePreviewProps) => {
   const [bootstrap, setBootstrap] = useState<FrameBootstrap>();
   const [height, setHeight] = useState(item.height);
   const [information, setInformation] = useState<FrameMessage["information"]>();
-  const [expanded, setExpanded] = useState(false);
   const [ready, setReady] = useState(false);
   const [imported, setImported] = useState(false);
   const [error, setError] = useState("");
   const selected = useSyncExternalStore(runtime.subscribe, () =>
-    resolveFrameTheme(
-      runtime.get().themes[item.id],
-      item.preview?.kind === "story" ? item.preview.defaultTheme : undefined,
-    ),
+    resolveFrameTheme(runtime.get().themes[item.id], item.preview.defaultTheme),
   );
   const app = useThemePreference();
   const appTheme = app.themePreferences.find((theme) => theme.id === app.themePreference);
-  const theme = selected === "app" ? appTheme : frameThemePreferences.find((theme) => theme.id === selected);
-  const sentTheme = useRef<typeof theme>(undefined);
-  const source = item.preview?.source ?? `$native:${item.component}`;
+  const themeId = selected === "app" ? appTheme?.id : selected;
+  const theme = frameThemeOption(selected, appTheme);
+  const sentTheme = useRef<string | undefined>(undefined);
+  const { source, exportName, viewportHeight, revision: build } = item.preview;
   useEffect(() => {
     if (!started) return;
     let active = true;
     const begin = performance.now();
-    void frameBootstrap(source)
+    void frameBootstrap(source, build)
       .then((data) => {
         if (!active) return;
         assetsMs.current = performance.now() - begin;
@@ -65,15 +63,15 @@ export const FramePreview = (props: FramePreviewProps) => {
     return () => {
       active = false;
     };
-  }, [source, started]);
+  }, [frameBootstrap, source, build, started]);
   useEffect(() => {
     if (ready || error) job.current?.finish();
   }, [ready, error, job]);
   useEffect(() => {
-    if (!ready || sentTheme.current === theme) return;
-    sentTheme.current = theme;
-    postFrame(frame.current, { nonce: nonce.current, type: "theme", theme: theme as ThemePreferenceOption });
-  }, [theme, ready]);
+    if (!ready || sentTheme.current === themeId) return;
+    sentTheme.current = themeId;
+    postFrame(frame.current, { nonce: nonce.current, type: "theme", theme });
+  }, [theme, themeId, ready]);
   useEffect(() => {
     const receive = (event: MessageEvent<FrameMessage>) => {
       const message = event.data;
@@ -85,12 +83,12 @@ export const FramePreview = (props: FramePreviewProps) => {
         case "boot":
           // Release before fixture setup, which can await nested previews.
           job.current?.finish();
-          sentTheme.current = theme;
+          sentTheme.current = themeId;
           postFrame(frame.current, {
             nonce: nonce.current,
             type: "render",
-            item,
-            theme: theme as ThemePreferenceOption,
+            item: { preview: { source, exportName, viewportHeight } },
+            theme,
           });
           return;
       }
@@ -143,7 +141,20 @@ export const FramePreview = (props: FramePreviewProps) => {
     };
     window.addEventListener("message", receive);
     return () => window.removeEventListener("message", receive);
-  }, [bootstrap, theme, item, runtime, startedAt, queuedAt, job]);
+  }, [
+    bootstrap,
+    frameBootstrap,
+    theme,
+    themeId,
+    source,
+    exportName,
+    viewportHeight,
+    item,
+    runtime,
+    startedAt,
+    queuedAt,
+    job,
+  ]);
   let phase = "queued";
   if (started) phase = "loading";
   if (imported) phase = "setup";
@@ -164,7 +175,7 @@ export const FramePreview = (props: FramePreviewProps) => {
           title={item.name}
           srcDoc={frameDocument()}
           sandbox="allow-scripts allow-forms"
-          data-frame-story={item.preview?.kind === "story" ? item.preview.id : undefined}
+          data-frame-story={`${source}#${exportName}`}
           data-ui-canvas-component
           data-frame-ready={ready || undefined}
           data-frame-modules={Object.keys(bootstrap.scripts).length}
@@ -193,22 +204,18 @@ export const FramePreview = (props: FramePreviewProps) => {
       >
         Reset frame
       </Button>
-      {item.preview && (
-        <Box as="details" p="sm" onToggle={(event) => setExpanded(event.currentTarget.hasAttribute("open"))}>
-          <Box as="summary">Props and source</Box>
-          <Text textStyle="mono/XS">
-            {item.preview.source}
-            {item.preview.kind === "story" && `#${item.preview.exportName}`}
-          </Text>
-          {information?.description && <Text>{information.description}</Text>}
-          {information?.args && (
-            <Box as="pre" whiteSpace="pre-wrap" overflowWrap="anywhere">
-              {information.args}
-            </Box>
-          )}
-          {expanded && <PreviewSource source={item.preview.source} />}
-        </Box>
-      )}
+      <Box as="details" p="sm">
+        <Box as="summary">Props and source</Box>
+        <Text textStyle="mono/XS">
+          {source}#{exportName}
+        </Text>
+        {information?.description && <Text>{information.description}</Text>}
+        {information?.args && (
+          <Box as="pre" whiteSpace="pre-wrap" overflowWrap="anywhere">
+            {information.args}
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 };

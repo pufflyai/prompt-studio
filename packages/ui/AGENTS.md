@@ -8,7 +8,7 @@ Use the live Canvas designs as the source of truth for appearance, component sta
 - Verify props against source types and the canvas's Props and source details.
 - Prefer exported `@pstdio/ui` components when an equivalent exists.
 - Keep examples in colocated `*.canvas.tsx` files. Use deterministic local fixtures. Add interaction tests only for critical behavior; examples do not each need a test.
-- Rebuild with `bun run --cwd scripts canvas:build`, then run isolated browser checks only for critical risks.
+- Keep `bun run canvas` running while you work, then run isolated browser checks only for critical risks.
 
 ## Styling
 

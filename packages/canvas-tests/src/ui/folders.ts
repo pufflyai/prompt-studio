@@ -1,8 +1,8 @@
 import { expect, type Frame, type Page } from "@playwright/test";
 
 export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
-  const item = page.locator('[data-canvas-item="ui-overlays-folderpickerdialog--folders"]');
-  await item.getByRole("button", { name: "Select FolderPickerDialog", exact: true }).click();
+  const item = page.locator('[data-canvas-item="Folders"]');
+  await item.getByRole("button", { name: "Select Folders", exact: true }).click();
   const preview = item.frameLocator("iframe");
   await preview.getByRole("button", { name: "New folder", exact: true }).click();
   await preview.getByRole("textbox", { name: "New folder name" }).fill("canvas-interactive");
@@ -63,22 +63,19 @@ export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
   await expect(preview.getByRole("dialog")).toBeVisible();
   await expect(preview.getByRole("option", { name: "canvas-interactive" })).toHaveCount(0);
   await expect.poll(() => preview.locator("html").evaluate((element) => element.classList.contains("dark"))).toBe(true);
-  await item.getByRole("button", { name: "Variant for" }).click();
-  await page.getByRole("menuitem", { name: "Empty", exact: true }).click();
-  await expect(item.locator("iframe")).toHaveAttribute("data-frame-story", "ui-overlays-folderpickerdialog--empty");
-  await expect(item.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
-  await expect(preview.getByRole("option", { name: "canvas-interactive" })).toHaveCount(0);
-  await expect.poll(() => preview.locator("html").evaluate((element) => element.classList.contains("dark"))).toBe(true);
-  await item.getByRole("button", { name: "Variant for" }).click();
-  await page.getByRole("menuitem", { name: "Folders", exact: true }).click();
-  await expect(item.locator("iframe")).toHaveAttribute("data-frame-story", "ui-overlays-folderpickerdialog--folders");
-  await expect(item.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
-  expect(await preview.getByRole("option").count()).toBeGreaterThan(0);
+  // Each export is its own frame, so the Empty frame never sees the Folders frame's draft.
+  const sibling = page.locator('[data-canvas-item="Empty"]');
+  await sibling.getByRole("button", { name: "Select Empty", exact: true }).click();
+  await expect(sibling.locator("iframe")).toHaveAttribute(
+    "data-frame-story",
+    "packages/ui/src/components/overlays/folder-picker-dialog.canvas.tsx#Empty",
+  );
+  await expect(sibling.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
+  await expect(sibling.frameLocator("iframe").getByRole("option", { name: "canvas-interactive" })).toHaveCount(0);
   return {
     frames: await page.locator("[data-canvas-stage] > [data-canvas-item]").count(),
     folderCreated: true,
-    variantFixtureIsolated: true,
-    variantRetainedTheme: true,
+    siblingFrameIsolated: true,
     themeRetainedDraft: true,
     zoomFactorFor100Pixels: zoom,
     emptyCanvasZoomFactor: after.zoom,
