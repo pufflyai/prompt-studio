@@ -5,6 +5,12 @@ import { resolveCiScope } from "./pull-request-ci-scope";
 import { plannedCiJobs } from "./required-ci-jobs";
 import { evaluateCiGate } from "./test-policy";
 
+test("edited CLI shutdown checks install the browser engines they exercise", () => {
+  const rows = createEditedTestMatrix(["packages/e2e/src/cli/close.p1.test.ts"], scopeFixture().packages);
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ runner: "cli", browser: true });
+});
+
 test("edited native desktop tests retain every stable desktop platform", () => {
   const file = "clients/desktop/src/e2e/packaged-recovery.p2.spec.ts";
   const rows = createEditedTestMatrix([file], [{ name: "@pstdio/desktop", dir: "clients/desktop", dependencies: [] }]);
