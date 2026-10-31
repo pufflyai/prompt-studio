@@ -1,0 +1,31 @@
+name: Release 0.46 Intel CLI qualification
+on:
+  push:
+    branches: [test/release-046-intel-cli-proof]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      platforms: ${{ steps.matrix.outputs.platforms }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - id: matrix
+        run: >-
+          bun -e 'import { appendFileSync } from "node:fs";
+          import { productionToolchainPlatforms } from "./scripts/ci/production-platforms";
+          appendFileSync(process.env.GITHUB_OUTPUT, `platforms=${JSON.stringify(productionToolchainPlatforms("stable").filter(row => row.platform_pkg === "cli-darwin-x64"))}\n`);'
+  verify:
+    needs: plan
+    uses: ./.github/workflows/verify-packaged-toolchain.yml
+    with:
+      ref: ${{ github.sha }}
+      profile: full
+      priority: P2
+      platforms: ${{ needs.plan.outputs.platforms }}
