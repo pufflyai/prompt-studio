@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
 import { test } from "../testing/packaged-fixture";
 import {
   createPackagedHome,
@@ -75,15 +76,16 @@ test("keeps reporting slow frames after the workbench reloads", async () => {
   let app: PackagedApp | null = null;
   try {
     ({ app } = await launchProject("Reload", { monitoring: true }));
-    const frames = async () => (await readSnapshot(app!.page))?.frames.length ?? 0;
+    const frames = async () => (await readSnapshot(app!.page))?.frames ?? [];
     await forceSlowFrame(app.page);
-    await expect.poll(frames).toBeGreaterThan(0);
+    await expect.poll(async () => (await frames()).length).toBeGreaterThan(0);
 
-    const before = await frames();
+    const before = new Set((await frames()).map((frame) => frame.startedAt));
     await app.page.reload();
     await expect(app.page.getByTestId("start-page")).toBeVisible();
+    await expect.poll(async () => (await readSnapshot(app!.page)) !== null).toBe(true);
     await forceSlowFrame(app.page);
-    await expect.poll(frames).toBeGreaterThan(before);
+    await expect.poll(async () => (await frames()).some((frame) => !before.has(frame.startedAt))).toBe(true);
   } finally {
     await disposePackagedApp(app);
   }
@@ -100,9 +102,15 @@ test("names the process that hosts an extension and ends its frames when paused"
       new Set(process.extensionFrames.map((frame) => frame.installedExtensionId));
 
     await openLabPreview(app.page);
-    await expect.poll(async () => (await extensionProcesses()).length).toBeGreaterThan(0);
-    const fixtureProcess = (await extensionProcesses())[0]!;
-    const fixtureId = [...hostedIds(fixtureProcess)][0]!;
+    const source = await app.page.locator('iframe[title="Lab"]').getAttribute("src");
+    expect(source).not.toBeNull();
+    const scope = parseExtensionWebviewPath(new URL(source!, app.page.url()).pathname)?.scope;
+    expect(scope).toBeDefined();
+    const fixtureId = scope!.installedExtensionId;
+    await expect
+      .poll(async () => (await extensionProcesses()).some((process) => hostedIds(process).has(fixtureId)))
+      .toBe(true);
+    const fixtureProcess = (await extensionProcesses()).find((process) => hostedIds(process).has(fixtureId))!;
     const workbench = (await processes()).find((process) => process.role === "workbench");
     expect(fixtureProcess.pid).not.toBe(workbench?.pid);
 
