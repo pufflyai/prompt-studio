@@ -3,9 +3,25 @@ import i18n from "@/i18n";
 import { createRuntimeCollections } from "@/lib/sync/collections";
 import {
   getExtensionTranslationContext,
+  localizeExtensionValue,
   registerExtensionTranslationBundles,
   resolveLocalizableString,
 } from "./extension-localization";
+
+test("localizing a label retains unchanged payloads and leaves the source intact", () => {
+  const tokens = { colors: { background: "#123456" }, rules: [{ token: "comment", color: "#abcdef" }] };
+  const source = { title: { $l10n: "missing", default: "Title" }, tokens, entries: [tokens] };
+  const localized = localizeExtensionValue(source) as {
+    title: string;
+    tokens: typeof tokens;
+    entries: (typeof tokens)[];
+  };
+  expect(localized.title).toBe("Title");
+  expect(localized.tokens).toBe(tokens);
+  expect(localized.entries).toBe(source.entries);
+  expect(source.title).toEqual({ $l10n: "missing", default: "Title" });
+  expect(localizeExtensionValue(tokens)).toBe(tokens);
+});
 
 test("disposing the runtime owner removes its translation resources", async () => {
   const owner = createRuntimeCollections();

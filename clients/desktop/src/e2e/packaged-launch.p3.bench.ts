@@ -51,6 +51,10 @@ test("warm attach restores the workbench within budget", async () => {
   try {
     const { projectId, theme } =
       await test.step("Prepare a persistent runtime with saved workbench state", async () => {
+        // Warm attach needs an existing persistent runtime. Start that owner directly;
+        // a desktop-to-CLI ownership handoff belongs to the functional lifecycle suite.
+        expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
+        await waitForDescriptor(home, (descriptor) => descriptor.ownerType === "persistent");
         first = await launchPackagedApp(home);
         const { page } = first;
         const project = await createPackagedProject(first, "Warm attach project");
@@ -76,8 +80,6 @@ test("warm attach restores the workbench within budget", async () => {
           .getByRole("option", { name: theme === "pstdio-light" ? "Prompt Light" : "Prompt Dark", exact: true })
           .click();
         await expect.poll(workbenchState).toMatchObject({ values: { "theme-preference": theme } });
-        expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
-        await waitForDescriptor(home, (descriptor) => descriptor.ownerType === "persistent");
         return { projectId: project.id, theme };
       });
     await test.step("Attach the Side Panel and quit the first desktop window", async () => {

@@ -171,6 +171,10 @@ test("switches projects once and within budget", async ({ page, request }) => {
       await switchProject(projectB, cycle, "a-to-b");
       await switchProject(projectA, cycle, "b-to-a");
     }
+    await test.info().attach("project-switch-samples", {
+      contentType: "application/json",
+      body: JSON.stringify(samples),
+    });
 
     const aToB = samples.filter((sample) => sample.direction === "a-to-b").map((sample) => sample.duration);
     const bToA = samples.filter((sample) => sample.direction === "b-to-a").map((sample) => sample.duration);

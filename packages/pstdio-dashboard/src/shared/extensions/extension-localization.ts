@@ -57,16 +57,35 @@ export const resolveLocalizableString = (
 
 const resolveValue = (value: unknown, extensionId: string | undefined, owner = getRuntimeCollections()): unknown => {
   if (isLocalizedString(value)) return resolveLocalizableString(value, extensionId, undefined, owner);
-  if (Array.isArray(value)) return value.map((item) => resolveValue(item, extensionId, owner));
+  if (Array.isArray(value)) {
+    let next: unknown[] | undefined;
+    for (let index = 0; index < value.length; index++) {
+      const item = resolveValue(value[index], extensionId, owner);
+      if (item !== value[index]) {
+        next ??= value.slice();
+        next[index] = item;
+      }
+    }
+    return next ?? value;
+  }
   if (typeof value !== "object" || value === null) return value;
 
   const nextExtensionId =
     "extensionId" in value && typeof (value as { extensionId?: unknown }).extensionId === "string"
       ? (value as { extensionId: string }).extensionId
       : extensionId;
-  const next: Record<string, unknown> = {};
-  for (const [key, item] of Object.entries(value)) next[key] = resolveValue(item, nextExtensionId, owner);
-  return next;
+  // Large theme and schema payloads usually contain no labels. Retain those branches
+  // instead of cloning the whole catalog on every project switch and locale refresh.
+  const record = value as Record<string, unknown>;
+  let next: Record<string, unknown> | undefined;
+  for (const key of Object.keys(record)) {
+    const item = resolveValue(record[key], nextExtensionId, owner);
+    if (item !== record[key]) {
+      next ??= { ...record };
+      next[key] = item;
+    }
+  }
+  return next ?? value;
 };
 
 export const localizeExtensionMetadata = (metadata: WorkbenchExtensionMetadata, owner = getRuntimeCollections()) =>
