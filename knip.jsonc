@@ -263,7 +263,7 @@
       "entry": [
         "package.json",
         "rolldown.*.config.ts",
-        "src/{api,client,extensions,extensions/react,prompts,hooks,resources,testing,data}/index.ts",
+        "src/{api,client,extensions,extensions/keyboard,extensions/react,prompts,hooks,resources,testing,data}/index.ts",
         "src/**/*.test.ts",
         "src/**/*.typecheck.ts"
       ],
