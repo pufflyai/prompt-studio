@@ -6,12 +6,10 @@ import { documents } from "./src/mounts";
 import { editor, note, notesPage } from "./src/pages";
 import { resolveNotePathCommand } from "./src/resolve-note-path";
 import { noteResources } from "./src/resources";
-import { noteText } from "./src/text-source";
 import { notesTree, notesTreeNavigation } from "./src/tree";
 
 export default defineExtension({
   artifactMounts: [documents],
-  textSources: [noteText],
   resourceKinds: [note],
   commandPaletteResources: [noteResources],
   views: [editor, notesTree],

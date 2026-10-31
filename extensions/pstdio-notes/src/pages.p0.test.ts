@@ -1,10 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage as createIdStorage } from "@pstdio/sdk/testing";
-import { parseNoteDocument } from "./note-frontmatter";
 import { createNote, deleteNote, listNotes, renameNote } from "./notes";
 import { editor, notesPage } from "./pages";
 import { createNotesMount } from "./test-mount";
-import { noteText } from "./text-source";
 
 const coreIds = createIdStorage().ids;
 
@@ -27,21 +25,17 @@ const createContext = (files = "write") => {
   };
 };
 
-const load = async (ctx: unknown, id?: string) => {
-  const result = await editor.body.load(
+const load = (ctx: unknown, id?: string) =>
+  editor.body.load(
     ctx as never,
     { renderer: { rendererId: "notes", ...(id ? { resource: { type: "note", id } } : {}) } } as never,
   );
-  return "content" in result ? { ...result, content: parseNoteDocument(result.content ?? "").body } : result;
-};
 
-const save = async (ctx: unknown, id: string, content: string) => {
-  const params = { noteId: id };
-  const source = await noteText.resolve(ctx as never, { params });
-  const body = parseNoteDocument(source.content).body;
-  const prefix = source.content.slice(0, source.content.length - body.length);
-  return noteText.project(ctx as never, { params, content: `${prefix}\n\n${content}` });
-};
+const save = (ctx: unknown, id: string, content: string) =>
+  editor.body.save?.(
+    ctx as never,
+    { renderer: { rendererId: "notes", resource: { type: "note", id } }, content } as never,
+  );
 
 describe("note editor", () => {
   test("loads read-only note content without allowing edits", async () => {

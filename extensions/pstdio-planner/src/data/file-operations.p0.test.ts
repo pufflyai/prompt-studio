@@ -80,28 +80,7 @@ describe("ticket file operations", () => {
     expect(await readTicketFileContent(storage, "ticket-1", files.get(second.id)!)).toBe("");
   });
 
-  test("editing and renaming a ticket file retain its source blob identity", async () => {
-    const storage = createMemoryStorage();
-    await putTicket(storage, ticket());
-    const file = await createTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", name: "a.md" });
-    const updated = await updateTicketFile({
-      ...ticketContext(storage),
-      ticketId: "ticket-1",
-      fileId: file.id,
-      content: "Edited",
-    });
-    expect(updated?.blobId).toBe(file.blobId);
-    const renamed = await updateTicketFile({
-      ...ticketContext(storage),
-      ticketId: "ticket-1",
-      fileId: file.id,
-      name: "renamed.md",
-    });
-    expect(renamed?.blobId).toBe(file.blobId);
-    expect(await readTicketFileContent(storage, "ticket-1", renamed!)).toBe("Edited");
-  });
-
-  test("file bodies stay out of the ticket record and only their current bytes remain", async () => {
+  test("file bodies stay out of the ticket record and replaced bodies are deleted", async () => {
     const storage = createMemoryStorage();
     await putTicket(storage, ticket());
     const blobs = storage.scope({ type: "resource", resource: { type: "ticket", id: "ticket-1" } }).files;
@@ -117,8 +96,7 @@ describe("ticket file operations", () => {
 
     expect(JSON.stringify(await ticketsCollection(storage).get("ticket-1")).length).toBeLessThan(1_000);
     expect(await readTicketFileContent(storage, "ticket-1", updated!)).toBe(body);
-    expect(await blobs.list()).toHaveLength(1);
-    expect(updated?.blobId).toBe(file.blobId);
+    expect(await blobs.get(file.blobId)).toBeUndefined();
     await deleteTicketFile({ ...ticketContext(storage), ticketId: "ticket-1", fileId: file.id });
     expect(await blobs.list()).toEqual([]);
   });
