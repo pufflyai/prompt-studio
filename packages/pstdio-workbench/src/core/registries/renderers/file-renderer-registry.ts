@@ -1,5 +1,6 @@
 import type { TextFilePresentation } from "@pstdio/sdk/extensions";
 import type { NativeDocumentSource } from "pstdio-api-contracts";
+import type { NativeTextPresentation } from "../../../extensions/bridge/native-text-presentation";
 import type { NativeDocumentSession } from "../../native-documents/native-document-session";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
@@ -54,6 +55,11 @@ export interface FileRendererContribution {
   id: string;
   title: string;
   resourceKind?: string;
+  /** Host adapter for a native presentation of a declared public text source. */
+  connectText?(
+    input: WorkbenchPanelRenderInput,
+    pageParams?: import("@pstdio/sdk/extensions").PageParams,
+  ): NativeTextPresentation;
   /** The host supplies this for native shared Markdown views. */
   connectDocument?(
     resource: ResourceRef | undefined,

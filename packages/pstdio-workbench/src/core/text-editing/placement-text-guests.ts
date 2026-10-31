@@ -9,6 +9,7 @@ import type { WorkbenchCore } from "../workbench-core-types";
 type Guest = ReturnType<TextEditingConnection["guest"]>;
 type Scope = Extract<TextEditingConnectionInput, { kind: "placement" }>;
 interface Owner {
+  events: HostEventPublisher;
   connection: Promise<TextEditingConnection>;
   guest: Promise<Guest>;
   current(scope?: Scope): boolean;
@@ -31,6 +32,8 @@ export interface PlacementTextGuestInput {
   scope: Scope;
   transport: TextEditingTransportClient;
   events: HostEventPublisher;
+  /** Native SDK sessions drain before their enclosing guest connection is released. */
+  prepareSessionClose?: () => Promise<void>;
 }
 const scopeKey = (scope: Scope) =>
   JSON.stringify([scope.viewId, scope.target && createNativeDocumentKey(scope.target)]);
@@ -70,6 +73,7 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
       throw error;
     });
   const owner: Owner = {
+    events,
     connection,
     current: (scope = input.scope) =>
       scopeKey(scope) === selectedScope &&
@@ -94,6 +98,7 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
       for (const stop of cleanups.splice(0)) stop();
     },
     async close() {
+      await input.prepareSessionClose?.();
       const guest = await owner.guest;
       await guest.close();
       owner.detach();
@@ -137,6 +142,15 @@ export const requestPlacementText = async <Request extends TextEditingRequest>(
   const guest = await owner.guest;
   if (!owner.current(input.scope)) throw closed();
   return guest.host.call("editing.text", request);
+};
+
+/** Failed native admission is drained before a fresh public session is requested. */
+export const releasePlacementTextGuest = async (workbench: WorkbenchCore, events: HostEventPublisher) => {
+  const state = getOwnership(workbench);
+  const live = state.live.get(events);
+  const owners = new Set(state.retiring);
+  if (live) owners.add(live);
+  for (const owner of owners) if (owner.events === events) await retire(state, owner);
 };
 
 export const disposePlacementTextGuests = (workbench: WorkbenchCore) => {

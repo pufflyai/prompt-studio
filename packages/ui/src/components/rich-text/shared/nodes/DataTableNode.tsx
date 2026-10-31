@@ -67,6 +67,8 @@ const MarkdownDataTable = (props: MarkdownDataTableProps) => {
     });
     return {
       dispose: draft.dispose,
+      update: draft.update,
+      cancel: draft.cancel,
       commit(value: string) {
         draft.commit(value);
         focusTable();

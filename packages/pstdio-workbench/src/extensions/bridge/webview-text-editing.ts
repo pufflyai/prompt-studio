@@ -13,6 +13,7 @@ export interface WorkbenchTextEditingInput {
   textTarget?: NativeDocumentTarget;
   textEditing?: TextEditingTransportClient;
   hostEvents?: HostEventPublisher;
+  prepareSessionClose?: () => Promise<void>;
 }
 
 export const createWorkbenchTextEditingAdapter = (input: WorkbenchTextEditingInput) => {
@@ -44,6 +45,7 @@ export const createWorkbenchTextEditingAdapter = (input: WorkbenchTextEditingInp
         scope: { kind: "placement", viewId: webviewId, target },
         transport: textEditing,
         events: hostEvents,
+        prepareSessionClose: input.prepareSessionClose,
       },
       request,
     );

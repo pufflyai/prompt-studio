@@ -125,6 +125,9 @@ export type DataTableEditTarget =
   | { kind: "header"; columnId: string; value: string };
 
 export interface DataTableEditDraft {
+  update?(value: string): void;
+  /** Refuse dismissal when the draft has already entered a save owned by this editor. */
+  cancel?(): boolean;
   commit(value: string): void;
   dispose(): void;
 }

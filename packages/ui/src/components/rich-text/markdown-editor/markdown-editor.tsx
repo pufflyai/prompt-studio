@@ -70,7 +70,10 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
     onChange,
     collaboration,
   } = props;
-  const { frontmatter, body } = splitFrontmatter(collaboration?.document.getText("content").toString() ?? defaultState);
+  const sharedText = collaboration?.session?.getSnapshot().text ?? collaboration?.document?.getText("content");
+  const { frontmatter, body } = splitFrontmatter(sharedText?.toString() ?? defaultState);
+  const [finishing, setFinishing] = useState(false);
+  const editable = isEditable && !finishing;
   const shouldTrackChanges = !collaboration && isEditable && Boolean(onChange);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const collaborationRef = useRef<MarkdownDocumentBinding | null>(null);
@@ -129,6 +132,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
                 editable={isEditable}
                 onChange={onChange}
                 bindingRef={collaborationRef}
+                onFinishingChange={setFinishing}
               />
             ) : (
               <MarkdownHistoryPlugin />
@@ -197,7 +201,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
                 }}
               />
             ) : null}
-            <ToggleEditablePlugin isEditable={isEditable} />
+            <ToggleEditablePlugin isEditable={editable} />
             {collaboration && (
               <MarkdownPresencePlugin
                 collaboration={collaboration}

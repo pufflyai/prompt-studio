@@ -1,6 +1,6 @@
 import { Box, Button, Center, Flex, Text } from "@chakra-ui/react";
 import { type PageParams, resourceKey } from "@pstdio/sdk/extensions";
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   RegisteredFileRendererContribution,
   WorkbenchCore,
@@ -20,7 +20,6 @@ import {
   type FileEditController,
   type FileEditControllerState,
 } from "./file-renderer-edit-state";
-import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
 import {
   acceptFileRendererLoad,
@@ -32,6 +31,7 @@ import {
 import { FileRendererPathHeader } from "./file-renderer-path-header";
 import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 import { useFileSectionSelection } from "./file-renderer-sections";
+import { FileRendererStatusNotice } from "./file-renderer-status-notice";
 import { SelectedTextEditor } from "./selected-text-editor";
 
 interface WorkbenchFileRendererViewProps {
@@ -102,6 +102,17 @@ const getNativeMarkdownConnection = (
   const presentation = resolveFileRendererPresentation(file, Boolean(contribution.save));
   if (presentation.kind !== "markdown" || !presentation.isEditable) return undefined;
   return () => connect(resource, pageParams);
+};
+const getPublicMarkdownConnection = (
+  contribution: RegisteredFileRendererContribution,
+  file: LoadedFile | null,
+  input: WorkbenchPanelRenderInput | undefined,
+  pageParams: PageParams | undefined,
+) => {
+  const connect = contribution.connectText;
+  if (contribution.saveMode === "manual" || !file?.textDocument || !input || !connect) return undefined;
+  if (resolveFileRendererPresentation(file, Boolean(contribution.save)).kind !== "markdown") return undefined;
+  return () => connect(input, pageParams);
 };
 
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
@@ -274,19 +285,17 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   // contribution alone reuses the editor and keeps showing the previous file.
   let editorKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
   const connectDocument = getNativeMarkdownConnection(contribution, currentLoaded, resource, pageParams);
-  if (connectDocument && currentLoaded) editorKey = currentLoaded.loadKey;
-  let errorNotice: ReactNode = null;
-  if (editState.removed) {
-    errorNotice = (
-      <FileRendererErrorNotice message="This resource was removed. Your draft is kept here. Copy it before closing this tab." />
-    );
-  } else if (loadError) {
-    errorNotice = <FileRendererErrorNotice message={loadError} onRetry={() => retryReadRef.current?.()} />;
-  } else if (editState.saveError) {
-    errorNotice = (
-      <FileRendererErrorNotice message={editState.saveError} onRetry={() => controllerRef.current?.retry()} />
-    );
-  }
+  const connectText = getPublicMarkdownConnection(contribution, currentLoaded, props.presentationInput, pageParams);
+  const sharedEditor = connectText ?? connectDocument;
+  if (sharedEditor && currentLoaded) editorKey = currentLoaded.loadKey;
+  const errorNotice = (
+    <FileRendererStatusNotice
+      state={editState}
+      loadError={loadError}
+      retryRead={() => retryReadRef.current?.()}
+      retrySave={() => controllerRef.current?.retry()}
+    />
+  );
   return (
     <Flex
       direction="column"
@@ -301,7 +310,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
         }
       }}
     >
-      {currentLoaded && !connectDocument && (
+      {currentLoaded && !sharedEditor && (
         <FileRendererHeader
           file={currentLoaded}
           dirty={manualSave && editState.dirty}
@@ -327,6 +336,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           sectionNavigation={editorSectionNavigation}
           title={resource?.label ?? contribution.title}
           connectDocument={connectDocument}
+          connectText={connectText}
         />
       </Box>
     </Flex>

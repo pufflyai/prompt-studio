@@ -1,5 +1,5 @@
 import type { CommandExecuteRequest, CommandExecutionResult } from "@pstdio/sdk/api";
-import type { NativeDocumentsClient } from "@pstdio/sdk/client";
+import type { NativeDocumentsClient, TextEditingTransportClient } from "@pstdio/sdk/client";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type {
@@ -11,6 +11,7 @@ import type {
   WorkbenchModuleContext,
 } from "../../core";
 import { createNativeDocumentSession } from "../../core/native-documents/native-document-session";
+import { createNativeTextPresentation } from "../bridge/native-text-presentation";
 import { unwrapCommandValue } from "../host/command-response";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import { executeWorkbenchExtensionCommandResponse } from "../host/workbench-extension-command";
@@ -23,6 +24,7 @@ export interface RegisterWorkbenchExtensionFileRenderersInput {
   projectId: string;
   workbench: WorkbenchModuleContext;
   nativeDocuments?: NativeDocumentsClient;
+  textEditing?: TextEditingTransportClient;
 }
 
 const slotContext = (input: { projectId: string; rendererId: string; resource?: ResourceRef }) => ({
@@ -107,6 +109,16 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
       body: {
         kind: "file",
         resourceKind: record.resourceKind,
+        connectText: input.textEditing
+          ? (presentation, pageParams) =>
+              createNativeTextPresentation({
+                workbench: presentation.workbench,
+                placement: presentation.instance,
+                projectId: input.projectId,
+                textEditing: input.textEditing!,
+                textTarget: { fileRendererId: record.id, resource: presentation.instance.resource, pageParams },
+              })
+          : undefined,
         connectDocument:
           client && record.saveHandlerId
             ? (resource, pageParams) =>

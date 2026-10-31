@@ -2,16 +2,16 @@ import { Box, Center, Flex, Image, Text } from "@chakra-ui/react";
 import type { FileSourcePosition } from "@pstdio/sdk/extensions";
 import { AlertMessage, EmptyState } from "@pstdio/ui";
 import { CodeEditor } from "@pstdio/ui/diff";
-import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
 import { type ReactNode, type RefObject, Suspense, useLayoutEffect } from "react";
 import type { FileRendererContent } from "../../../core";
 import type { NativeDocumentSession } from "../../../core/native-documents/native-document-session";
 import type { WorkbenchPresence } from "../../../core/presence/workbench-presence";
+import type { NativeTextPresentation } from "../../../extensions/bridge/native-text-presentation";
 import { FileRendererLoading } from "./file-renderer-loading";
 import { resolveFileRendererPresentation } from "./file-renderer-presentation";
-import { NativeMarkdownFileEditor } from "./native-markdown-file-editor";
+import { MarkdownFileContent } from "./markdown-file-content";
 
-interface FileRendererContentViewProps {
+export interface FileRendererContentViewProps {
   content: FileRendererContent | null;
   presence: WorkbenchPresence;
   open: boolean;
@@ -28,23 +28,20 @@ interface FileRendererContentViewProps {
   };
   title: string;
   connectDocument?: () => NativeDocumentSession;
+  connectText?: () => NativeTextPresentation;
 }
 
 export const FileRendererContentView = (props: FileRendererContentViewProps) => {
   const {
     content,
-    presence,
-    open,
     position,
     editorKey,
     errorNotice,
     contributionCanSave,
-    onActiveSectionChange,
     onChange,
     rendererRef,
     sectionNavigation,
     title,
-    connectDocument,
   } = props;
   useLayoutEffect(() => {
     if (!editorKey || sectionNavigation) return;
@@ -128,38 +125,12 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
     );
   }
 
-  if (presentation.isEditable && connectDocument && content.documentSource) {
-    return (
-      <Flex ref={rendererRef} direction="column" h="full" minH="0" bg="bg">
-        {positionNotice}
-        <NativeMarkdownFileEditor
-          key={editorKey}
-          connect={connectDocument}
-          presence={presence}
-          open={open}
-          placeholder={content.placeholder ?? "Write…"}
-          sectionNavigation={sectionNavigation}
-          onActiveSectionChange={onActiveSectionChange}
-          errorNotice={errorNotice}
-        />
-      </Flex>
-    );
-  }
   return (
-    <Flex ref={rendererRef} direction="column" h="full" minH="0" overflow="hidden" bg="bg">
-      {errorNotice}
-      {positionNotice}
-      <Box flex="1" minH="0" overflowY="auto">
-        <LazyMarkdownEditor
-          key={editorKey}
-          defaultState={content.content ?? ""}
-          isEditable={presentation.isEditable}
-          sectionNavigation={sectionNavigation}
-          placeholder={presentation.isEditable ? (content.placeholder ?? "Write…") : undefined}
-          onActiveSectionChange={onActiveSectionChange}
-          onChange={presentation.isEditable ? onChange : undefined}
-        />
-      </Box>
-    </Flex>
+    <MarkdownFileContent
+      {...props}
+      content={content}
+      editable={presentation.isEditable}
+      positionNotice={positionNotice}
+    />
   );
 };

@@ -147,6 +147,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         },
         kanbanAdapter: kanban,
         nativeDocuments: getApiClient().nativeDocuments,
+        textEditing: getApiClient().textEditing,
         dataTableAdapter: {
           resolveRowResource: (_record, row) =>
             toDashboardExtensionResource(row.resource, input.projectId, input.metadata.resourceKinds),

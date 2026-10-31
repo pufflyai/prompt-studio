@@ -49,6 +49,8 @@ export const useDataTableDrafts = (input: Pick<DataTableProps, "data" | "editMod
       });
     },
     changeCell(cell: Omit<CellDraft, "transaction">) {
+      if (activeCell?.rowId === cell.rowId && activeCell.columnId === cell.columnId)
+        activeCell.transaction?.update?.(cell.draft);
       setActiveCell((current) =>
         current?.rowId === cell.rowId && current.columnId === cell.columnId
           ? { ...current, draft: cell.draft }
@@ -56,6 +58,7 @@ export const useDataTableDrafts = (input: Pick<DataTableProps, "data" | "editMod
       );
     },
     cancelCell() {
+      if (activeCell?.transaction?.cancel?.() === false) return;
       setActiveCell(null);
     },
     commitCell() {
@@ -77,9 +80,11 @@ export const useDataTableDrafts = (input: Pick<DataTableProps, "data" | "editMod
       });
     },
     changeHeader(draft: string) {
+      activeHeader?.transaction?.update?.(draft);
       setActiveHeader((current) => (current ? { ...current, draft } : current));
     },
     cancelHeader() {
+      if (activeHeader?.transaction?.cancel?.() === false) return;
       setActiveHeader(null);
     },
     commitHeader() {

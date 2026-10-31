@@ -96,6 +96,18 @@ export const createMarkdownSessionDocument = (session: TextEditingSession, befor
       });
     return finish();
   });
+  const cancelComposition = () => {
+    if (finishing) return false;
+    if (!draft) return true;
+    if (!draft.cancel()) return false;
+    draft = undefined;
+    preview?.destroy();
+    preview = undefined;
+    failure = undefined;
+    publish(binding.text.toString(), "reset");
+    changed();
+    return true;
+  };
   return {
     get text() {
       return preview?.getText("content") ?? draft?.text ?? binding.text;
@@ -126,22 +138,37 @@ export const createMarkdownSessionDocument = (session: TextEditingSession, befor
       if (draft || preview) throw new Error("Finish your current text first");
       binding.applyLocalUpdate(update);
     },
-    createDraft: () => session.createDraft(),
+    createDraft() {
+      beforeReceive?.();
+      if (draft || preview) throw new Error("Finish your current text first");
+      const original = session.createDraft();
+      const originalHistory = historyId;
+      const retain = () => {
+        if (draft && draft !== original) throw new Error("Finish your current text first");
+        draft = original;
+        preview ??= clone(original.text.doc!);
+      };
+      return {
+        text: original.text,
+        commit() {
+          if (draft && draft !== original) throw new Error("Finish your current text first");
+          draft = original;
+          draftHistory = originalHistory;
+          return Promise.resolve(finish());
+        },
+        retain() {
+          retain();
+          failure = session.getSnapshot().error ?? new Error("Your draft is kept here");
+          changed();
+        },
+        cancel: () => (draft === original ? cancelComposition() : original.cancel()),
+      };
+    },
+    isComposing: () => Boolean(draft && !preview),
     isFinishing: () => Boolean(preview),
     failure: () => failure,
     retry: finish,
-    cancelComposition() {
-      if (finishing) return false;
-      if (!draft) return true;
-      if (!draft.cancel()) return false;
-      draft = undefined;
-      preview?.destroy();
-      preview = undefined;
-      failure = undefined;
-      publish(binding.text.toString(), "reset");
-      changed();
-      return true;
-    },
+    cancelComposition,
     subscribeRecovery(listener: () => void) {
       recoveryListeners.add(listener);
       return () => {
