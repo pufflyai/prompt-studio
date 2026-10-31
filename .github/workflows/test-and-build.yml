@@ -150,6 +150,7 @@ jobs:
         uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
+          windows-dev-drive: ${{ matrix.runner == 'packaged-cli' || matrix.runner == 'packaged-browser' }}
       - name: Set up Windows desktop recovery tools
         if: runner.os == 'Windows' && (matrix.desktop || matrix.suite == 'desktop')
         uses: ./.github/actions/setup-windows-desktop-tests
