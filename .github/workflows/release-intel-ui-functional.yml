@@ -1,0 +1,63 @@
+name: Release 0.46 Intel UI functional qualification
+on:
+  push:
+    branches: [test/release-046-intel-ui-functional]
+permissions:
+  contents: read
+jobs:
+  desktop:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15-intel]
+    env:
+      PSTDIO_EXTENSION_RELEASE_REF: ${{ github.sha }}
+      CI_PRIORITY: P2
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - run: bun scripts/ci/install-native-dependencies.ts
+      - run: bun run build -- --scope @pstdio/desktop --include-dependencies
+      - run: bun run --cwd clients/desktop package
+      - name: Configure native Chromium sandboxes
+        if: runner.os == 'Linux'
+        run: |
+          for sandbox in clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox; do
+            sudo chown root:root "$sandbox"
+            sudo chmod 4755 "$sandbox"
+          done
+      - name: Verify affected functional cases once with unchanged deadlines
+        shell: bash
+        run: |
+          bun -e '
+            import { existsSync, copyFileSync, cpSync } from "node:fs";
+            const pattern = "starts without editors|promotes ownership|restarts a crashed sidecar|automatically recovers a CLI-started backend|reports a failed tab write";
+            let failed = false;
+            for (const priority of ["p1", "p2"]) {
+              const env = { ...process.env, TEST_PRIORITIES: priority.toUpperCase() };
+              const listed = Bun.spawnSync(["bun", "scripts/ci/run-priority-tests.ts", priority, "--scope", "@pstdio/desktop", "--runner", "desktop", "--list"], { env });
+              if (listed.exitCode !== 0) throw new Error(listed.stderr.toString());
+              const packaged = JSON.parse(listed.stdout.toString()).find(run => run.id.endsWith(":packaged"));
+              if (!packaged) throw new Error("Missing registered packaged desktop group");
+              const child = Bun.spawn([...packaged.command, "--grep", pattern], { cwd: packaged.cwd, env, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+              failed = (await child.exited !== 0) || failed;
+              const resultRoot = "clients/desktop/test-results";
+              const report = `${resultRoot}/packaged-release-readiness.json`;
+              if (existsSync(report)) copyFileSync(report, `${resultRoot}/intel-functional-${priority}.json`);
+              if (existsSync(`${resultRoot}/packaged`)) cpSync(`${resultRoot}/packaged`, `${resultRoot}/intel-functional-${priority}`, { recursive: true });
+            }
+            process.exitCode = failed ? 1 : 0;
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-intel-functional-${{ matrix.os }}
+          path: clients/desktop/test-results
+          if-no-files-found: warn
