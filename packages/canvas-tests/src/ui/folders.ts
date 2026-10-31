@@ -57,6 +57,15 @@ export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
   await browserPage.mouse.up({ button: "middle" });
   await expect(preview.getByRole("textbox", { name: "New folder name" })).toHaveCount(0);
   await viewport.press("f");
+  // Fitting keeps the whole canvas framed while frames still load and grow, so wait until the camera
+  // settles; a click measured inside a frame lands elsewhere while the stage still moves.
+  await expect
+    .poll(async () => {
+      const before = await stage.evaluate((element) => getComputedStyle(element).transform);
+      await browserPage.waitForTimeout(250);
+      return before === (await stage.evaluate((element) => getComputedStyle(element).transform));
+    })
+    .toBe(true);
   await preview.getByRole("button", { name: "Open folder", exact: true }).click();
   await expect(preview.getByRole("status")).toContainText("Example closed");
   await item.getByRole("button", { name: "Reset frame", exact: true }).click();
