@@ -29,9 +29,7 @@ const createRepo = () => {
 const openExtensions = async (page: import("@playwright/test").Page, projectId: string) => {
   await bypassOnboarding(page, projectId);
   await page.goto(`/projects/${projectId}`);
-  await page.getByText("Settings", { exact: true }).last().click();
-  const settings = page.getByRole("dialog").last();
-  await settings.getByText("Extensions", { exact: true }).first().click();
+  await page.getByRole("option", { name: "Extensions", exact: true }).click();
   await expect(page.getByTestId("extensions-panel")).toBeVisible();
 };
 
