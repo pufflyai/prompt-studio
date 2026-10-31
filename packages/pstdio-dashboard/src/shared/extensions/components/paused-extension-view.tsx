@@ -42,7 +42,7 @@ export const PausedExtensionView = (props: PausedExtensionViewProps) => {
           </Text>
           <Button size="2xs" variant="ghost" onClick={resume}>
             <Play />
-            {t("performance.popover.resume")}
+            {t("performance.paused.resume")}
           </Button>
         </HStack>
       ) : (
@@ -54,7 +54,7 @@ export const PausedExtensionView = (props: PausedExtensionViewProps) => {
           >
             <Button size="sm" variant="outline" onClick={resume}>
               <Play />
-              {t("performance.popover.resume")}
+              {t("performance.paused.resume")}
             </Button>
           </EmptyState>
         </Center>

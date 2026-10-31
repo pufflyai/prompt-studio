@@ -38,9 +38,6 @@ const userMessageWithAttachments: SessionMessage = {
 const meta: CanvasMeta<typeof MessagePartsRenderer> = {
   title: "Patterns/Chat/Message Parts Renderer",
   component: MessagePartsRenderer,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof MessagePartsRenderer>;

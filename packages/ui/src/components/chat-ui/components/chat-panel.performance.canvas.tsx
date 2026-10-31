@@ -24,17 +24,9 @@ import type { SessionMessage } from "./message-types";
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel Performance",
   component: ChatPanel,
-  parameters: {
-    layout: "fullscreen",
-    controls: { disable: true },
-    docs: {
-      description: {
-        component:
-          "Performance benchmarks for ChatPanel mount, streaming, and session switching. Excluded from agent manifests.",
-      },
-    },
-  },
-  tags: ["!manifest"],
+  description:
+    "Performance benchmarks for ChatPanel mount, streaming, and session switching. Excluded from agent manifests.",
+  fullscreen: true,
 };
 export default meta;
 type Story = CanvasVariant<typeof ChatPanel>;

@@ -4,9 +4,6 @@ import { MissingResourceBadge, ResourceBadge } from "@/components/primitives/res
 const meta: CanvasMeta<typeof ResourceBadge> = {
   title: "Components/Data Display/Resource Badge",
   component: ResourceBadge,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof ResourceBadge>;

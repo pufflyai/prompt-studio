@@ -27,7 +27,6 @@
     "**/*.test.tsx",
     "**/*.canvas.ts",
     "**/*.canvas.tsx",
-    "**/*.storybook.ts",
     "src/examples",
     "../pstdio-api-contracts/src/**/*.test.ts",
     "../pstdio-sync-contracts/src/**/*.test.ts",

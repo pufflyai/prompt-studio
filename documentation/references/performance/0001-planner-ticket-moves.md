@@ -23,6 +23,8 @@ The default browser CPU throttle is 4. Use `CPU_THROTTLE=1` for normal browser s
 
 The script writes samples, screenshots, and Chromium CPU profiles under `__test-tmp__/planner-stress/<run-id>/`. It checks persisted status and relative order after moves. It has no performance pass/fail budget. Existing timeouts are unchanged.
 
+Both move diagnostics remain the maintained way to measure moves. The `planner` benchmark suite's [board cold open](0002-planner-board-cold-open.md) measures only the first card after a restart, and no benchmark moves a card or counts reorder writes. See [diagnostics with unique evidence](../../guides/development/0016-writing-benchmarks.md#keep-a-diagnostic-only-for-unique-evidence).
+
 ## Results
 
 Times below are median milliseconds from the drop event to the first animation frame with the expected card placement. This is a browser-clock measurement. It excludes setup and automation waits. A status move can appear before the following reorder and refresh finish.

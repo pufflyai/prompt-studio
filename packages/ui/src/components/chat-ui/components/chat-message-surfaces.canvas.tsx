@@ -1,14 +1,15 @@
-import { Box, Theme } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
-import { canvasVsCodeThemes } from "../../../theme/custom/vscode-theme.canvas-fixture";
-import { defaultThemePreferences, type ThemePreferenceOption } from "../../../utils/apply-theme-preference";
 import { ChatPanel } from "./chat-panel";
 
-const themes: ThemePreferenceOption[] = [...defaultThemePreferences, ...canvasVsCodeThemes];
 const meta = {
   title: "Patterns/Chat/Message Surfaces",
   component: ChatPanel,
-  parameters: { layout: "padded" },
+  render: (args) => (
+    <Box maxW="chat-content" h="md">
+      <ChatPanel {...args} />
+    </Box>
+  ),
   args: {
     messages: [
       { id: "user", role: "user", parts: [{ type: "text", text: "Summarize the remaining release risks." }] },
@@ -22,35 +23,30 @@ const meta = {
     emptyStateDescription: "Start a conversation.",
     chatInputPlaceholder: "Reply...",
   },
-  render: (args, context) => {
-    const theme = themes.find((theme) => theme.id === context.globals.theme) ?? themes[0]!;
-    const tokens = Object.fromEntries(
-      Object.entries(theme.tokens ?? {}).map(([path, value]) => [`--chakra-${path.replaceAll(".", "-")}`, value]),
-    );
-    return (
-      <Theme appearance={theme.mode} css={tokens}>
-        <Box maxW="chat-content" h="md">
-          <ChatPanel {...args} />
-        </Box>
-      </Theme>
-    );
-  },
 } satisfies CanvasMeta<typeof ChatPanel>;
 
 export default meta;
 type Story = CanvasVariant<typeof meta>;
 
-export const Light: Story = { id: "patterns-chat-message-surfaces--light", globals: { theme: "pstdio-light" } };
-export const Dark: Story = { id: "patterns-chat-message-surfaces--dark", globals: { theme: "pstdio-dark" } };
+export const Light: Story = { id: "patterns-chat-message-surfaces--light", defaultTheme: "pstdio-light" };
+export const Dark: Story = { id: "patterns-chat-message-surfaces--dark", defaultTheme: "pstdio-dark" };
+export const ContrastLight: Story = {
+  id: "patterns-chat-message-surfaces--contrast-light",
+  defaultTheme: "prompt-contrast-light",
+};
+export const ContrastDark: Story = {
+  id: "patterns-chat-message-surfaces--contrast-dark",
+  defaultTheme: "prompt-contrast-dark",
+};
 export const VsCodeMonokai: Story = {
   id: "patterns-chat-message-surfaces--vs-code-monokai",
-  globals: { theme: "vscode-monokai" },
+  defaultTheme: "vscode-monokai",
 };
 export const VsCodeDracula: Story = {
   id: "patterns-chat-message-surfaces--vs-code-dracula",
-  globals: { theme: "vscode-dracula" },
+  defaultTheme: "vscode-dracula",
 };
 export const VsCodeSolarizedLight: Story = {
   id: "patterns-chat-message-surfaces--vs-code-solarized-light",
-  globals: { theme: "vscode-solarized-light" },
+  defaultTheme: "vscode-solarized-light",
 };

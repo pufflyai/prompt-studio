@@ -78,7 +78,6 @@ const NoteTabActions = () => {
 const meta = {
   title: "pstdio-workbench/Guides/Tab actions",
   component: NoteTabActions,
-  tags: ["!manifest"],
   decorators: [
     (Story) => (
       <WorkbenchThemeProvider>

@@ -49,7 +49,6 @@ export const RetainedDraft: Story = {
 };
 export const Dark: Story = {
   id: "patterns-chat-composer-fallback--dark",
-  globals: { theme: "pstdio-dark" },
 };
 export const RetainedQueuedEdit: Story = {
   id: "patterns-chat-composer-fallback--retained-queued-edit",
@@ -60,7 +59,6 @@ export const RetainedQueuedEdit: Story = {
 };
 export const RetainedQuestionAnswers: Story = {
   id: "patterns-chat-composer-fallback--retained-question-answers",
-  tags: ["!manifest"],
   args: {
     chatInputQuestionPrompt: {
       callId: "release-checks",
@@ -80,7 +78,6 @@ export const RetainedQuestionAnswers: Story = {
 };
 export const RetainedConfirmation: Story = {
   id: "patterns-chat-composer-fallback--retained-confirmation",
-  tags: ["!manifest"],
   args: {
     composerDecision: {
       id: "release-approval",

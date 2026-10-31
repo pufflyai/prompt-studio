@@ -163,7 +163,6 @@ export const MovingPinchAnchor: Story = {
 export const TouchNavigation: Story = {
   id: "extensions-planner-timeline-graph-tracks--touch-navigation",
   args: { height: 360 },
-  parameters: { viewport: { defaultViewport: "mobile1" } },
 };
 export const KeyboardAfterPan: Story = {
   id: "extensions-planner-timeline-graph-tracks--keyboard-after-pan",

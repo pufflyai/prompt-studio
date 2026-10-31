@@ -4,7 +4,7 @@ import { TreeResourceActionsStory } from "./tree-resource-actions-story";
 const meta = {
   title: "pstdio-workbench/Guides/Tree resource actions",
   component: TreeResourceActionsStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof TreeResourceActionsStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

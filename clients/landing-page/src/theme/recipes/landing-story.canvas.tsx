@@ -12,7 +12,7 @@ const ExampleChapters = () => {
 const meta = {
   title: "Theme/Landing Chapters",
   component: WhatIsPromptStudioView,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => (
       <Box height="100dvh">
@@ -25,14 +25,8 @@ export default meta;
 type Story = CanvasVariant<typeof meta>;
 export const WhatIsPromptStudio: Story = {
   id: "theme-landing-chapters--what-is-prompt-studio",
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Chapters advance every eight seconds without transition animations. A compact tab row sits above the bounded chapter scroll area. Hover or focus holds the current chapter. Tabs have no numbered stepper or playback controls.",
-      },
-    },
-  },
+  description:
+    "Chapters advance every eight seconds without transition animations. A compact tab row sits above the bounded chapter scroll area. Hover or focus holds the current chapter. Tabs have no numbered stepper or playback controls.",
 };
 export const Examples: Story = {
   id: "theme-landing-chapters--examples",

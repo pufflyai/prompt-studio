@@ -4,7 +4,6 @@ import { DesktopStartupProgress } from "./desktop-starting-state";
 const meta = {
   title: "Patterns/Desktop/Startup progress",
   component: DesktopStartupProgress,
-  parameters: { layout: "centered" },
   args: { phase: "database" },
 } satisfies CanvasMeta<typeof DesktopStartupProgress>;
 export default meta;

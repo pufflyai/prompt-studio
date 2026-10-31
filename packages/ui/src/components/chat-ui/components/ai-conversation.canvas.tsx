@@ -12,9 +12,6 @@ const conversationMessages = rawConversationMessages as unknown as SessionMessag
 const meta: CanvasMeta<typeof ChatPrimitives.Root> = {
   title: "Patterns/Chat/AI Conversation",
   component: ChatPrimitives.Root,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof ChatPrimitives.Root>;

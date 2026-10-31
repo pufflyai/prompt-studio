@@ -48,7 +48,6 @@ const VirtualSortableTree = () => {
 const meta = {
   title: "Components/Data Display/Tree List/Virtual Sortable",
   component: VirtualSortableTree,
-  tags: ["!manifest"],
 } satisfies CanvasMeta<typeof VirtualSortableTree>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

@@ -6,7 +6,6 @@ const meta = {
   title: "Landing/OS logos",
   component: OSLogo,
   args: { platform: "macOS" },
-  parameters: { layout: "centered" },
 } satisfies CanvasMeta<typeof OSLogo>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

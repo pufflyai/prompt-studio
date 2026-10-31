@@ -88,7 +88,7 @@ const WorkspaceParamPreview = (props: WorkspaceParamPreviewProps) => {
 const meta = {
   title: "CommandParams/WorkspaceParamField",
   component: WorkspaceParamPreview,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkspaceParamPreview>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

@@ -35,7 +35,7 @@ const InteractiveTrends = (props: InteractiveTrendsProps) => {
 const meta: CanvasMeta<typeof InteractiveTrends> = {
   title: "Extensions/Prompt Studio Dev/Performance trends",
   component: InteractiveTrends,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: { versions: storyTrends.versions, metrics: storyTrends.metrics },
 };
 export default meta;

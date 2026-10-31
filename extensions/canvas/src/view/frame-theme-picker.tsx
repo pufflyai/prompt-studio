@@ -1,12 +1,16 @@
 import { Menu, Portal } from "@chakra-ui/react";
 import { useSyncExternalStore } from "react";
+import type { CanvasItem } from "../canvases/definitions";
 import { Button } from "../components/themed-primitives";
 import type { CanvasRuntime } from "../controller/runtime";
-import { frameThemes } from "../frame-themes";
+import { frameThemes, resolveFrameTheme } from "../frame-themes";
 
-export const FrameThemePicker = (props: { id: string; name: string; runtime: CanvasRuntime }) => {
-  const { id, name, runtime } = props;
-  const selected = useSyncExternalStore(runtime.subscribe, () => runtime.get().themes[id] ?? "app");
+export const FrameThemePicker = (props: { item: CanvasItem; runtime: CanvasRuntime }) => {
+  const { item, runtime } = props;
+  const { id, name } = item;
+  const selected = useSyncExternalStore(runtime.subscribe, () =>
+    resolveFrameTheme(runtime.get().themes[id], item.preview?.kind === "story" ? item.preview.defaultTheme : undefined),
+  );
   return (
     <Menu.Root>
       <Menu.Trigger asChild>

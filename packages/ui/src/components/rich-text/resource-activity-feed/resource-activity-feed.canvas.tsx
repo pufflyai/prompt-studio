@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { ComponentProps } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { ResourceActivityFeed, type ResourceActivityFeedItem } from "./resource-activity-feed";
 
@@ -102,20 +103,19 @@ const wideItems: ResourceActivityFeedItem[] = [
     relatedResources: [{ id: "PS-276", type: "ticket", label: "Refine PS-276" }],
   },
 ];
+// Each frame sets the width the feed gets inside a scrolling page.
+const feedFrame = (width: string) => (args: ComponentProps<typeof ResourceActivityFeed>) => (
+  <ScrollArea height="100vh" background="bg" color="fg" contentProps={{ padding: { base: "md", md: "xl" } }}>
+    <Box width="full" maxWidth={width} marginX="auto">
+      <ResourceActivityFeed {...args} />
+    </Box>
+  </ScrollArea>
+);
 const meta = {
   title: "Components/Data Display/Resource Activity Feed",
   component: ResourceActivityFeed,
-  tags: ["ps-287"],
-  parameters: { layout: "fullscreen" },
-  decorators: [
-    (Story, context) => (
-      <ScrollArea height="100vh" background="bg" color="fg" contentProps={{ padding: { base: "md", md: "xl" } }}>
-        <Box width="full" maxWidth={context.parameters.feedWidth ?? "820px"} marginX="auto">
-          <Story />
-        </Box>
-      </ScrollArea>
-    ),
-  ],
+  fullscreen: true,
+  render: feedFrame("820px"),
 } satisfies CanvasMeta<typeof ResourceActivityFeed>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;
@@ -153,27 +153,26 @@ export const LongContent: Story = {
 };
 export const WideContent: Story = {
   id: "components-data-display-resource-activity-feed--wide-content",
+  render: feedFrame("1100px"),
   args: {
     items: wideItems,
     onActionSelect: () => undefined,
     onRelatedResourceSelect: () => undefined,
   },
-  parameters: { feedWidth: "1100px" },
 };
 export const PanelMenu: Story = {
   id: "components-data-display-resource-activity-feed--panel-menu",
+  render: feedFrame("320px"),
   args: {
     items: [attentionItem, ...mixedItems.slice(0, 2)],
     size: "compact",
     onActionSelect: () => undefined,
     onRelatedResourceSelect: () => undefined,
   },
-  parameters: { feedWidth: "320px" },
 };
 export const PanelMenuDark: Story = {
   id: "components-data-display-resource-activity-feed--panel-menu-dark",
   ...PanelMenu,
-  globals: { theme: "pstdio-dark" },
 };
 export const DarkMode: Story = {
   id: "components-data-display-resource-activity-feed--dark-mode",
@@ -184,5 +183,4 @@ export const DarkMode: Story = {
     onLoadMore: () => undefined,
     onRelatedResourceSelect: () => undefined,
   },
-  globals: { theme: "pstdio-dark" },
 };

@@ -17,7 +17,6 @@ const unavailableHelper: AgentInfo = {
 const meta: CanvasMeta<typeof StartHarnessStatus> = {
   title: "Start/HarnessStatus",
   component: StartHarnessStatus,
-  parameters: { layout: "padded" },
   decorators: [
     (Story) => (
       <Box maxW="52rem">

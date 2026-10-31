@@ -6,7 +6,7 @@ import { buildTicketAttributes } from "./data/mappers";
 const meta: CanvasMeta<typeof KanbanRenderer> = {
   title: "Extensions/Planner/Ticket Archive Filter",
   component: KanbanRenderer,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 };
 export default meta;
 type Story = CanvasVariant<typeof meta>;
@@ -16,7 +16,7 @@ const attributes = JSON.parse(JSON.stringify(buildTicketAttributes([])), (_key, 
 const archiveFilterStory = (state: "active" | "archived") =>
   ({
     args: {
-      storageKey: `storybook-ticket-archive-${state}`,
+      storageKey: `preview-ticket-archive-${state}`,
       attributes,
       rows: [
         { id: "active", title: "Active ticket", attributes: { archived: "active" } },

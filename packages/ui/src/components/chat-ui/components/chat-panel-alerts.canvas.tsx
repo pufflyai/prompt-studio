@@ -9,7 +9,6 @@ import { ChatWorkspaceHub } from "./workspace-hub";
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel/Alerts",
   component: ChatPanel,
-  parameters: { layout: "padded" },
 };
 export default meta;
 type Story = CanvasVariant<typeof ChatPanel>;

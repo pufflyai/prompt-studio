@@ -31,7 +31,6 @@ const meta = {
   title: "Themes/Single theme",
   component: CoreComponents,
   args: { section: "all" },
-  argTypes: { section: { control: "select", options: ["all", ...Object.keys(sections)] } },
 } satisfies CanvasMeta<typeof CoreComponents>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;
@@ -40,20 +39,16 @@ export const Core: Story = {
 };
 export const InteractionChecks: Story = {
   id: "themes-single-theme--interaction-checks",
-  globals: { theme: "solarized-light" },
 };
 export const SolarizedDarkChecks: Story = {
   id: "themes-single-theme--solarized-dark-checks",
   ...InteractionChecks,
-  globals: { theme: "solarized-dark" },
 };
 export const DraculaChecks: Story = {
   id: "themes-single-theme--dracula-checks",
   ...InteractionChecks,
-  globals: { theme: "dracula" },
 };
 export const MonokaiChecks: Story = {
   id: "themes-single-theme--monokai-checks",
   ...InteractionChecks,
-  globals: { theme: "monokai" },
 };

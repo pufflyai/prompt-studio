@@ -177,9 +177,6 @@ function SplitViewDemo() {
 const meta: CanvasMeta<typeof CollaborativeMarkdownEditor> = {
   title: "Patterns/Editors/Collaborative Markdown Editor",
   component: CollaborativeMarkdownEditor,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof CollaborativeMarkdownEditor>;
@@ -194,7 +191,7 @@ export const SingleEditor: Story = {
   args: {
     roomId: "todo:story-demo",
     wsUrl: "ws://localhost:3000/v1/docs",
-    userName: "Storybook User",
+    userName: "Canvas User",
     userColor: "#30bced",
     placeholder: "Start typing collaboratively...",
   },

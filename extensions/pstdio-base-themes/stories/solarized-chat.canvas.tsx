@@ -68,26 +68,21 @@ function SolarizedChat(props: SolarizedChatProps) {
 }
 const meta = {
   title: "Themes/Solarized chat",
-  tags: ["solarized-chat"],
   component: SolarizedChat,
 } satisfies CanvasMeta<typeof SolarizedChat>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;
 export const Dark: Story = {
   id: "themes-solarized-chat--dark",
-  globals: { theme: "solarized-dark" },
 };
 export const Light: Story = {
   id: "themes-solarized-chat--light",
-  globals: { theme: "solarized-light" },
 };
 export const DarkSidePanel: Story = {
   id: "themes-solarized-chat--dark-side-panel",
   args: { surface: "bg.panel", width: "80" },
-  globals: { theme: "solarized-dark" },
 };
 export const LightSidePanel: Story = {
   id: "themes-solarized-chat--light-side-panel",
   args: { surface: "bg.panel", width: "80" },
-  globals: { theme: "solarized-light" },
 };

@@ -88,15 +88,9 @@ const ProjectSwitchStory = (props: { workbench: WorkbenchCore }) => {
 const meta = {
   title: "pstdio-workbench/Guides/Project switch",
   component: ProjectSwitchStory,
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "A project switch keeps the workbench shell mounted. Only views that belong to the project start fresh: open the Notes view, edit it, then open the other project.",
-      },
-    },
-  },
+  description:
+    "A project switch keeps the workbench shell mounted. Only views that belong to the project start fresh: open the Notes view, edit it, then open the other project.",
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ProjectSwitchStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

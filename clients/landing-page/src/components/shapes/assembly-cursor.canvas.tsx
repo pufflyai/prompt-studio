@@ -18,7 +18,6 @@ const CursorModes = () => {
 const meta = {
   title: "Landing/Agent Cursors",
   component: CursorModes,
-  parameters: { layout: "centered" },
 } satisfies CanvasMeta<typeof CursorModes>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

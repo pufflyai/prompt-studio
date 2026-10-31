@@ -106,18 +106,10 @@ const LongVisibilityMenu = () => {
   );
 };
 const meta: CanvasMeta<typeof ResourceContextMenu> = {
-  tags: ["menu-selection"],
   title: "Components/Overlays/Resource Context Menu",
   component: ResourceContextMenu,
-  parameters: {
-    layout: "padded",
-    docs: {
-      description: {
-        component:
-          "Right-click menu for resource and Sidenav actions. Menus taller than the space left in the viewport scroll inside the menu.",
-      },
-    },
-  },
+  description:
+    "Right-click menu for resource and Sidenav actions. Menus taller than the space left in the viewport scroll inside the menu.",
 };
 export default meta;
 type Story = CanvasVariant<typeof ResourceContextMenu>;
@@ -169,7 +161,6 @@ export const LongMenuScrolls: Story = {
 };
 export const EscapeRespectsNewFocus: Story = {
   id: "components-overlays-resource-context-menu--escape-respects-new-focus",
-  tags: ["!manifest", "menu-escape-focus"],
   render: () => (
     <Stack>
       <ResourceContextMenu actions={createActions(1)}>
@@ -183,7 +174,6 @@ export const EscapeRespectsNewFocus: Story = {
 };
 export const LongSubmenuScrolls: Story = {
   id: "components-overlays-resource-context-menu--long-submenu-scrolls",
-  tags: ["!manifest"],
   render: () => <LongVisibilityMenu />,
 };
 export const ResourceAndSurfaceGroups: CanvasVariant<typeof meta> = {

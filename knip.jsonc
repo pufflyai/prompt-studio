@@ -98,13 +98,17 @@
     },
     "packages/canvas": {
       "entry": [
+        "bin/pstdio-canvas.ts",
+        "scripts/prune-tests.ts",
         "src/index.ts",
         "src/indexer.ts",
         "src/native-preview-runtime.tsx",
+        // Generated build entries import the frame runtime by file path.
+        "src/runtime/frame-runtime.tsx",
         "src/**/*.test.ts",
         "src/**/*.test.tsx"
       ],
-      "project": ["src/**/*.{ts,tsx}"]
+      "project": ["bin/**/*.ts", "scripts/**/*.ts", "src/**/*.{ts,tsx}"]
     },
     "packages/canvas-tests": {
       "entry": [
@@ -150,6 +154,7 @@
       // Extensions e2e installs at runtime by path, and the dashboard it builds and serves.
       // Declared so CI treats their changes as e2e changes.
       "ignoreDependencies": [
+        "canvas",
         "extension-lab",
         "harness-claude-code",
         "harness-codex",
@@ -160,6 +165,7 @@
         "pstdio-base-themes",
         "pstdio-dashboard",
         "pstdio-notes",
+        "pstdio-performance",
         "pstdio-planner",
         "pstdio-reports",
         "pstdio-skills",
@@ -298,6 +304,8 @@
         // Keep in sync with build-entries.ts and vite.monaco.config.ts.
         "src/index.ts",
         "src/theme/index.ts",
+        // The Canvas build loads these themes by absolute path.
+        "src/theme/custom/vscode-theme.canvas-fixture.ts",
         "src/components/{canvas,dependency-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.canvas.tsx",
@@ -306,9 +314,7 @@
         "src/**/*.test.tsx"
       ],
       "project": ["*.ts", ".canvas/**/*.{ts,tsx}", "scripts/**/*.ts", "src/**/*.{ts,tsx}"],
-      "ignore": ["dist/**", "canvas-test-static/**"],
-      // The Canvas builder resolves the MDX compiler from this authoring workspace.
-      "ignoreDependencies": ["@mdx-js/mdx"]
+      "ignore": ["dist/**", "canvas-test-static/**"]
     },
     "packages/workbench-fixture": {
       // Views are webview entries that extension.ts references by path.
@@ -359,6 +365,16 @@
         "src/**/*.test.ts",
         "src/**/*.canvas.tsx",
         "src/{view,open-artifact}.tsx"
+      ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-performance": {
+      "entry": [
+        "package.json",
+        "extension.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/{meter,details}-view.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },

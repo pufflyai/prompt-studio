@@ -11,7 +11,7 @@ import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../module";
 import { seedWorkspaceViewsStory } from "./workspace-views-story";
 
-const PROJECT_ID = "storybook-workspace-list";
+const PROJECT_ID = "preview-workspace-list";
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 const workspaceRow = (
   row: {
@@ -63,7 +63,7 @@ const seedWorkspaces = () =>
       created_at: hoursAgo(2),
     }),
   ]);
-// Storybook has no API server. Only diff summaries are answered, and only while the story is mounted.
+// Canvas previews have no API server. Only diff summaries are answered, and only while the story is mounted.
 const useDiffSummaryResponses = () => {
   useEffect(() => {
     const originalFetch = globalThis.fetch;
@@ -106,7 +106,7 @@ const WorkspaceListStory = (props: WorkspaceListStoryProps) => {
 const meta = {
   title: "Dashboard/Workspace list",
   component: WorkspaceListStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkspaceListStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

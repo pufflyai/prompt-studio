@@ -45,9 +45,7 @@ const InputPreview = (props: { fixture: ParamEditorInputFixture }) => {
 };
 const meta = {
   title: "Patterns/Param Editor",
-  parameters: {
-    layout: "fullscreen",
-  },
+  fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

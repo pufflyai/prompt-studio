@@ -55,16 +55,13 @@ export const QueueWhileRunning: CanvasVariant<typeof meta> = {
 };
 export const KeepFailedDraft: CanvasVariant<typeof meta> = {
   id: "patterns-chat-follow-up-submission--keep-failed-draft",
-  tags: ["!manifest"],
   args: { fail: true, slow: true },
 };
 export const SlowSubmission: CanvasVariant<typeof meta> = {
   id: "patterns-chat-follow-up-submission--slow-submission",
-  tags: ["!manifest"],
   args: { slow: true },
 };
 export const KeepFailedQuestionAnswers: CanvasVariant<typeof meta> = {
   id: "patterns-chat-follow-up-submission--keep-failed-question-answers",
-  tags: ["!manifest"],
   args: { fail: true, slow: true, question: true },
 };

@@ -6,9 +6,6 @@ import { ChatWorkspaceHub } from "./workspace-hub";
 const meta: CanvasMeta<typeof ChatWorkspaceHub> = {
   title: "Patterns/Chat/Workspace Hub",
   component: ChatWorkspaceHub,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof ChatWorkspaceHub>;

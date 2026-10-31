@@ -42,7 +42,7 @@ const MultilinePreview = (props: { readOnly?: boolean; grouped?: boolean; varian
 const meta = {
   title: "Patterns/Param Editor/Multiline Text",
   component: MultilinePreview,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof MultilinePreview>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

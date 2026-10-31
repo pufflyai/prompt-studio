@@ -9,7 +9,7 @@ import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 const meta: CanvasMeta<typeof KanbanRenderer> = {
   title: "Patterns/Kanban Renderer/View Controls",
   component: KanbanRenderer,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 };
 export default meta;
 type Story = CanvasVariant;
@@ -60,18 +60,18 @@ const ViewControlsBoard = (props: ViewControlsBoardProps) => {
 /** Search narrows the cards, marks each match, and counts matches against each column's total. */
 export const Search: Story = {
   id: "patterns-kanban-renderer-view-controls--search",
-  render: () => <ViewControlsBoard storageKey="storybook-kanban-view-controls-search" />,
+  render: () => <ViewControlsBoard storageKey="preview-kanban-view-controls-search" />,
 };
 export const SearchNoMatches: Story = {
   id: "patterns-kanban-renderer-view-controls--search-no-matches",
-  render: () => <ViewControlsBoard storageKey="storybook-kanban-view-controls-no-matches" />,
+  render: () => <ViewControlsBoard storageKey="preview-kanban-view-controls-no-matches" />,
 };
 /** Rules with conditions, plus an "or" group that reads as one pill. */
 export const FilterRules: Story = {
   id: "patterns-kanban-renderer-view-controls--filter-rules",
   render: () => (
     <ViewControlsBoard
-      storageKey="storybook-kanban-view-controls-rules"
+      storageKey="preview-kanban-view-controls-rules"
       defaultFilter={{
         conjunction: "and",
         rules: [{ attributeId: "status", condition: "is-none-of", value: ["done"] }],
@@ -93,7 +93,7 @@ export const MultiSort: Story = {
   id: "patterns-kanban-renderer-view-controls--multi-sort",
   render: () => (
     <ViewControlsBoard
-      storageKey="storybook-kanban-view-controls-multi-sort"
+      storageKey="preview-kanban-view-controls-multi-sort"
       defaultSorts={[
         { attributeId: "priority", direction: "asc" },
         { attributeId: "updated", direction: "desc" },
@@ -104,5 +104,5 @@ export const MultiSort: Story = {
 /** Without sorts, dragging a card inside a column keeps the new position. */
 export const ManualOrderWithoutSort: Story = {
   id: "patterns-kanban-renderer-view-controls--manual-order-without-sort",
-  render: () => <ViewControlsBoard storageKey="storybook-kanban-view-controls-manual" />,
+  render: () => <ViewControlsBoard storageKey="preview-kanban-view-controls-manual" />,
 };

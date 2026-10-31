@@ -173,7 +173,7 @@ export const Narrow: Story = {
 export const InsideDialog: Story = {
   id: "components-param-editor-harness-run-options--inside-dialog",
   args: { showCommandParams: false },
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => (
       <Dialog.Root open modal size="lg">

@@ -187,6 +187,6 @@ export const createModeContributionWorkbench = () => {
   registerModeSidenav(workbench, "project", "Northstar project");
   registerModeSidenav(workbench, "session", "Session S-104");
   for (const page of guidePages) registerPage(workbench, page);
-  workbench.pageLocations.switchProject("storybook");
+  workbench.pageLocations.switchProject("preview");
   return workbench;
 };

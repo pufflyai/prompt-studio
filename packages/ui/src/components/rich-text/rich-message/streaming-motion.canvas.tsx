@@ -30,7 +30,6 @@ const StreamingMessage = () => {
   );
 };
 const meta = {
-  tags: ["motion"],
   title: "Patterns/Editors/RichMessage/Streaming Motion",
   component: StreamingMessage,
 } satisfies CanvasMeta<typeof StreamingMessage>;

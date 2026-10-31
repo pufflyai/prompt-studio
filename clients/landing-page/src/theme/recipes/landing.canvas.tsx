@@ -6,31 +6,19 @@ import { LANDING_PAGES } from "../../content/landing-pages";
 const meta = {
   title: "Theme/Landing Pages",
   component: WorkbenchLanding,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: { initialPath: "/", pages: LANDING_PAGES, initialDocument: undefined },
 } satisfies CanvasMeta<typeof WorkbenchLanding>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;
 export const Desktop: Story = {
   id: "theme-landing-pages--desktop",
-  parameters: {
-    docs: {
-      description: {
-        story: "The download copy and editor stay vertically centered in the main area on wide desktops.",
-      },
-    },
-  },
+  description: "The download copy and editor stay vertically centered in the main area on wide desktops.",
 };
 export const CompactDesktop: Story = {
   id: "theme-landing-pages--compact-desktop",
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Home fits a 1080p desktop with browser chrome, including collapsed window mode. The download column keeps its width; vertical spacing and the editor height are compact.",
-      },
-    },
-  },
+  description:
+    "Home fits a 1080p desktop with browser chrome, including collapsed window mode. The download column keeps its width; vertical spacing and the editor height are compact.",
 };
 export const SingleColumn: Story = {
   id: "theme-landing-pages--single-column",
@@ -41,9 +29,7 @@ export const SingleColumn: Story = {
       </Box>
     ),
   ],
-  parameters: {
-    docs: { description: { story: "The download panel and editor stack when their main area is below 1200 pixels." } },
-  },
+  description: "The download panel and editor stack when their main area is below 1200 pixels.",
 };
 export const Mobile: Story = {
   id: "theme-landing-pages--mobile",

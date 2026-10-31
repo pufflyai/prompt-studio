@@ -11,7 +11,7 @@ export const changeThemeThroughCommandPalette = async (page: Page) => {
   await palette.getByRole("option", { name: /Choose color theme/ }).click();
 
   await expect(palette.getByPlaceholder("Search themes")).toBeVisible();
-  await palette.getByRole("option", { name: "pstdio-light", exact: true }).click();
+  await palette.getByRole("option", { name: "Prompt Light", exact: true }).click();
   await expect(palette).not.toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-light");
   expect(await page.evaluate(() => localStorage.getItem("theme-preference"))).toBe("pstdio-light");

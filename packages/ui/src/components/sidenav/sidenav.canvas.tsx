@@ -256,41 +256,27 @@ const SidenavShell = (props: SidenavShellProps) => {
 const meta: CanvasMeta<typeof Sidenav> = {
   title: "Components/Navigation/Sidenav",
   component: Sidenav,
-  parameters: {
-    layout: "fullscreen",
-  },
+  fullscreen: true,
 };
 export default meta;
 type Story = CanvasVariant<typeof Sidenav>;
 export const DefaultDocsTree: Story = {
   id: "components-navigation-sidenav--default-docs-tree",
-  render: () => <SidenavShell storageKey="storybook-sidenav-default" />,
+  render: () => <SidenavShell storageKey="preview-sidenav-default" />,
 };
 export const HeaderAndFooterLayout: Story = {
   id: "components-navigation-sidenav--header-and-footer-layout",
-  render: () => <SidenavShell storageKey="storybook-sidenav-layout" />,
+  render: () => <SidenavShell storageKey="preview-sidenav-layout" />,
 };
 export const HiddenWithExternalReopen: Story = {
   id: "components-navigation-sidenav--hidden-with-external-reopen",
-  render: () => <SidenavShell storageKey="storybook-sidenav-reopen" />,
-  parameters: {
-    docs: {
-      description: {
-        story: "Hide the sidenav by dragging past the collapse threshold and reopen from the external button.",
-      },
-    },
-  },
+  render: () => <SidenavShell storageKey="preview-sidenav-reopen" />,
+  description: "Hide the sidenav by dragging past the collapse threshold and reopen from the external button.",
 };
 export const PersistenceRestore: Story = {
   id: "components-navigation-sidenav--persistence-restore",
-  render: () => <SidenavShell storageKey="storybook-sidenav-persist" />,
-  parameters: {
-    docs: {
-      description: {
-        story: "Expand or collapse nodes, hide the sidenav, then refresh Storybook to verify persisted state restore.",
-      },
-    },
-  },
+  render: () => <SidenavShell storageKey="preview-sidenav-persist" />,
+  description: "Expand or collapse nodes, hide the sidenav, then reload the frame to verify persisted state restore.",
 };
 const WholeSidenavContextMenuStory = () => {
   const [notificationsVisible, setNotificationsVisible] = useState(true);
@@ -306,20 +292,12 @@ const WholeSidenavContextMenuStory = () => {
       onClick: () => setNotificationsVisible((visible) => !visible),
     },
   ];
-  return (
-    <SidenavShell storageKey="storybook-sidenav-context-menu" sections={sections} contextActions={contextActions} />
-  );
+  return <SidenavShell storageKey="preview-sidenav-context-menu" sections={sections} contextActions={contextActions} />;
 };
 export const WholeSidenavContextMenu: Story = {
   id: "components-navigation-sidenav--whole-sidenav-context-menu",
   render: () => <WholeSidenavContextMenuStory />,
-  parameters: {
-    docs: {
-      description: {
-        story: "Right-click the header, navigation tree, empty space, or footer to customize Sidenav items.",
-      },
-    },
-  },
+  description: "Right-click the header, navigation tree, empty space, or footer to customize Sidenav items.",
 };
 export const NamespaceIsolation: Story = {
   id: "components-navigation-sidenav--namespace-isolation",
@@ -330,13 +308,13 @@ export const NamespaceIsolation: Story = {
           <Text mb="2" textStyle="paragraph/S/medium">
             Sidenav A
           </Text>
-          <SidenavShell storageKey="storybook-sidenav-namespace-a" sections={sidenavSections} />
+          <SidenavShell storageKey="preview-sidenav-namespace-a" sections={sidenavSections} />
         </Box>
         <Box flex="1" minW="0">
           <Text mb="2" textStyle="paragraph/S/medium">
             Sidenav B
           </Text>
-          <SidenavShell storageKey="storybook-sidenav-namespace-b" sections={sidenavSections} />
+          <SidenavShell storageKey="preview-sidenav-namespace-b" sections={sidenavSections} />
         </Box>
       </Stack>
     );
@@ -344,12 +322,6 @@ export const NamespaceIsolation: Story = {
 };
 export const ColoredSessionIcons: Story = {
   id: "components-navigation-sidenav--colored-session-icons",
-  render: () => <SidenavShell storageKey="storybook-sidenav-colored-icons" sections={coloredSessionSections} />,
-  parameters: {
-    docs: {
-      description: {
-        story: "Sidenav nodes can provide iconColor so status-driven icons keep their semantic colors.",
-      },
-    },
-  },
+  render: () => <SidenavShell storageKey="preview-sidenav-colored-icons" sections={coloredSessionSections} />,
+  description: "Sidenav nodes can provide iconColor so status-driven icons keep their semantic colors.",
 };

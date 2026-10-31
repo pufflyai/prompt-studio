@@ -21,6 +21,7 @@ export const buttonRecipe = defineRecipe({
     color: "fg",
     bg: "bg",
     borderColor: "border",
+    focusRingColor: "border.accent-light",
     _disabled: {
       opacity: 1,
       color: "fg.subtle",
@@ -67,8 +68,10 @@ export const buttonRecipe = defineRecipe({
         color: "fg.button.primary.default",
         bg: "bg.button.primary.default",
         border: "none",
-        _hover: { bg: "bg.button.primary.hover" },
-        _active: { bg: "bg.button.primary.pressed" },
+        _hover: {
+          "&:not(:active, [data-active])": { bg: "bg.button.primary.hover", color: "fg.button.primary.hover" },
+        },
+        _active: { bg: "bg.button.primary.pressed", color: "fg.button.primary.pressed" },
       },
       destructive: {
         color: "blacks.50",

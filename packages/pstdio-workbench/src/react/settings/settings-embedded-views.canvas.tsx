@@ -33,7 +33,7 @@ const EmbeddedSettingsStory = () => {
   useEffect(() => {
     const settings = workbench.registerModule(createWorkbenchSettingsModule());
     const controls = workbench.registerModule({
-      id: "storybook.settings.embedded",
+      id: "preview.settings.embedded",
       activate(ctx) {
         const children = ["First", "Second"].map((title) => {
           ctx.views.registerView({
@@ -99,7 +99,7 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof EmbeddedSettingsStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

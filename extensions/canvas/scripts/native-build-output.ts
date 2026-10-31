@@ -23,7 +23,7 @@ interface Asset {
 export type NativeBuildOutput = Chunk | Asset;
 export const publishNativeBuild = async (
   outputs: NativeBuildOutput[],
-  counts: { stories: number; documents: number },
+  counts: { stories: number },
   inputs: FrameArchiveInputs,
 ) => {
   await rm(resolve(generatedRoot, "native"), { recursive: true, force: true });
@@ -71,7 +71,6 @@ export const publishNativeBuild = async (
   }
   for (const path of [
     "extensions/canvas/scripts/native-api-fixture.ts",
-    "packages/ui/.canvas/document-blocks.tsx",
     "packages/canvas/src/native-preview-runtime.tsx",
   ]) {
     hashes[path] = createHash("sha256")
@@ -85,7 +84,6 @@ export const publishNativeBuild = async (
         hashes,
         outputs: outputHashes,
         stories: counts.stories,
-        documents: counts.documents,
         bytes: outputs.reduce(
           (sum, file) => sum + (file.type === "chunk" ? Buffer.byteLength(file.code) : Buffer.byteLength(file.source)),
           0,
@@ -95,5 +93,5 @@ export const publishNativeBuild = async (
       2,
     )}\n`,
   );
-  console.log(`${counts.stories} native stories and ${counts.documents} native documents`);
+  console.log(`${counts.stories} native stories`);
 };

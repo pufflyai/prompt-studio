@@ -4,7 +4,7 @@ import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createNavigationWorkbench = () => {
-  const page = { kind: "page", extensionId: "storybook", id: "panel-controls" } as const;
+  const page = { kind: "page", extensionId: "preview", id: "panel-controls" } as const;
   const workbench = createWorkbench({ startPage: page, initialSidePanelMode: "attached" });
   workbench.modes.registerMode({ id: "project", activate() {}, chrome: { sidenav: "navigation" } });
   for (const [id, title] of [
@@ -30,20 +30,20 @@ const createNavigationWorkbench = () => {
   for (const region of ["secondary", "side"] as const) {
     workbench.modePlacements.registerPlacement({
       id: region,
-      ref: { kind: "placement", extensionId: "storybook", id: region },
+      ref: { kind: "placement", extensionId: "preview", id: region },
       modeId: "project",
       region,
       item: { kind: "view", view: { kind: "view", id: region }, presence: "open" },
     });
   }
-  workbench.pageLocations.switchProject("storybook");
+  workbench.pageLocations.switchProject("preview");
   workbench.pageLocations.navigate({ kind: "page", page });
   return workbench;
 };
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Browser panel controls",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
 type Story = CanvasVariant<typeof meta>;

@@ -50,9 +50,6 @@ const LosslessSourceStory = (props: { source?: string }) => {
 const meta: CanvasMeta<typeof MarkdownEditor> = {
   title: "Patterns/Editors/Markdown Editor/Source Preservation",
   component: MarkdownEditor,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
 type Story = CanvasVariant<typeof MarkdownEditor>;
@@ -62,6 +59,5 @@ export const LosslessEditing: Story = {
 };
 export const SelectAllHeadings: Story = {
   id: "patterns-editors-markdown-editor-source-preservation--select-all-headings",
-  tags: ["!manifest"],
   render: () => <LosslessSourceStory source={"First paragraph.\n\n\n\nSecond paragraph.\n\n\n\nThird paragraph."} />,
 };

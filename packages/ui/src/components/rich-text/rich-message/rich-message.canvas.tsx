@@ -120,22 +120,9 @@ print(list(fib(10)))
 const meta: CanvasMeta<typeof RichMessage> = {
   title: "Patterns/Chat/Rich Message",
   component: RichMessage,
-  parameters: {
-    layout: "padded",
-  },
   args: {
     debug: false,
     defaultState: message,
-  },
-  argTypes: {
-    defaultState: {
-      control: "text",
-      description: "Markdown source to render",
-    },
-    debug: {
-      control: "boolean",
-      description: "Show Lexical tree for debugging",
-    },
   },
 };
 export default meta;

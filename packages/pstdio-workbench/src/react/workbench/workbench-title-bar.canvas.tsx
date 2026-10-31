@@ -11,15 +11,9 @@ import { WorkbenchPanelToggles } from "./workbench-panel-toggles";
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Title bar",
   component: Workbench,
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "The host can place title-bar content above every workbench region. The slot shares the active workbench theme and remains visible across modes.",
-      },
-    },
-  },
+  description:
+    "The host can place title-bar content above every workbench region. The slot shares the active workbench theme and remains visible across modes.",
+  fullscreen: true,
   decorators: [
     (Story) => (
       <WorkbenchThemeProvider>
