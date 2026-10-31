@@ -69,8 +69,13 @@ const consumerSources = (root: string) =>
 
 test("Notes and Planner use public native sessions while retaining domain titles and source identity", async ({
   resources,
-}) => {
+}, testInfo) => {
+  const beginning = performance.now();
+  const phase = (name: string) =>
+    console.info(`[Text consumers +${Math.round(performance.now() - beginning)}ms] ${name}`);
+  phase("install packed consumer dependencies");
   const defaults = consumerSources(resources.root);
+  phase("start packaged host");
   const started = await startPackagedServe(resources.root, {
     PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({ defaultExtensions: defaults }),
   });
@@ -79,6 +84,7 @@ test("Notes and Planner use public native sessions while retaining domain titles
   const folder = join(resources.root, "project");
   mkdirSync(folder);
   const project = await client.projects.create(folderProjectInput({ name: "Text consumers" }, folder));
+  phase("project created");
   const command = async <T>(owner: string, id: string, params: Record<string, unknown>) => {
     const result = await client.extensions.execute(`${owner}.command.${id}`, { projectId: project.id, params });
     expect(result.outcome.ok).toBe(true);
@@ -105,6 +111,16 @@ test("Notes and Planner use public native sessions while retaining domain titles
     localStorage.setItem("onboarding-complete", "true");
   });
   const page = await context.newPage();
+  page.on("pageerror", (error) => console.error("Text consumer page error:", error.message));
+  const nativeEditor = async (initial: string) => {
+    try {
+      return await verifyNativePublicTextEditor(page, initial);
+    } catch (error) {
+      console.error("Text consumer failed page:", await page.locator("body").ariaSnapshot());
+      await page.screenshot({ path: testInfo.outputPath("consumer-failure.png") }).catch(() => {});
+      throw error;
+    }
+  };
   await signInBrowser(page, started.descriptor);
   const url = (owner: string, path: string, type: string, id: string) => {
     const target = new URL(`${started.baseUrl}/projects/${project.id}/extensions/${owner}/${path}`);
@@ -119,8 +135,13 @@ test("Notes and Planner use public native sessions while retaining domain titles
   const note = await command<{ id: string }>(notes, "notes.create", { title: "Kept note title" });
   const noteFile = join(folder, ".pstdio/extension-storage", notes, "documents", note.id, "content.md");
   const header = readFileSync(noteFile, "utf8");
-  await page.goto(url(notes, "notes", "note", note.id));
-  const noteEditor = await verifyNativePublicTextEditor(page, "");
+  // Notes opens panels through its navigation target; it is not a resource-bound page.
+  await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  const sidebar = page.locator('[data-workbench-region="sidenav"]');
+  await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
+  await sidebar.getByRole("option", { name: "Kept note title", exact: true }).click();
+  const noteEditor = await nativeEditor("");
+  phase("native note and public peer");
   const notePeer = await openPeer(`${notes}.view.note-editor`, { type: "note", id: note.id });
   await noteEditor.fill("Browser note");
   await expect.poll(() => notePeer.getSnapshot().text.toString()).toContain("Browser note");
@@ -136,11 +157,13 @@ test("Notes and Planner use public native sessions while retaining domain titles
   await expect(noteEditor).toContainText("After rename");
   await expect.poll(() => readFileSync(noteFile, "utf8")).toContain("After rename");
   await notePeer.close();
+  phase("note body, title and rename persisted");
 
   const planner = "pstdio.pstdio-planner";
   const ticket = await command<{ id: string }>(planner, "create-ticket", { title: "Initial ticket" });
   await page.goto(url(planner, "ticket", "ticket", ticket.id));
-  const ticketEditor = await verifyNativePublicTextEditor(page, "");
+  const ticketEditor = await nativeEditor("");
+  phase("native ticket and public peer");
   const ticketPeer = await openPeer(`${planner}.view.ticket-editor`, { type: "ticket", id: ticket.id });
   await ticketEditor.fill("Shared ticket title");
   await expect.poll(() => ticketPeer.getSnapshot().text.toString()).toContain("Shared ticket title");
@@ -154,4 +177,5 @@ test("Notes and Planner use public native sessions while retaining domain titles
     })
     .toBe(true);
   await ticketPeer.close();
+  phase("ticket body and derived title persisted");
 });
