@@ -18,7 +18,7 @@ test.each([false, true])("terminal Ctrl+C restores the previous raw mode (%s)", 
     const stop = onTerminalInterrupt(() => {
       clearTimeout(deadline);
       stop();
-      console.log("interrupted", process.stdin.isRaw, process.stdin.readableFlowing);
+      console.log(JSON.stringify({ interrupted: true, raw: process.stdin.isRaw, flowing: process.stdin.readableFlowing }));
       process.exitCode = 130;
     });
     console.log("ready");
@@ -44,7 +44,9 @@ test.each([false, true])("terminal Ctrl+C restores the previous raw mode (%s)", 
     ]);
     child.terminal!.write("\u0003");
     expect({ code: await child.exited, output }).toMatchObject({ code: 130 });
-    expect(output).toContain(`interrupted ${raw} false`);
+    const reports = output.split(/\r?\n/).filter((line) => line.startsWith("{"));
+    expect(reports).toHaveLength(1);
+    expect(JSON.parse(reports[0]!)).toEqual({ interrupted: true, raw, flowing: false });
   } finally {
     child.kill();
     child.terminal?.close();

@@ -1,4 +1,4 @@
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync } from "node:fs";
 import { basename } from "node:path";
 import { changedFiles } from "./changed-files";
 import { affectedPackages } from "./ci-packages";
@@ -106,9 +106,9 @@ if (import.meta.main) {
     labels: JSON.parse(process.env.PULL_REQUEST_LABELS || "[]"),
     changedFiles: changedFiles(
       process.cwd(),
-      process.env.GITHUB_EVENT_NAME === "pull_request"
-        ? JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH!, "utf8")).pull_request.base.sha
-        : undefined,
+      // A PR checkout is the tested merge candidate. Event base metadata can lag
+      // main; its first parent is the actual base and excludes upstream-only edits.
+      process.env.GITHUB_EVENT_NAME === "pull_request" ? "HEAD^1" : undefined,
     ),
     packages: readWorkspacePackages(process.cwd()),
     tests: discoverTestFiles(process.cwd()),
