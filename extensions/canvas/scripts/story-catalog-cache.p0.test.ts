@@ -12,7 +12,15 @@ test("parser reuse rejects changed compiler inputs, dependency locks and generat
     catalogMetadata[0],
     JSON.stringify({
       stories: [
-        { source, id: "ui-example--default", suite: "ui", title: "Example", name: "Default", exportName: "Default" },
+        {
+          source,
+          id: "ui-example--default",
+          suite: "ui",
+          title: "Example",
+          name: "Default",
+          exportName: "Default",
+          defaultTheme: "prompt-contrast-dark",
+        },
       ],
     }),
   );
@@ -27,7 +35,9 @@ test("parser reuse rejects changed compiler inputs, dependency locks and generat
     );
     const cached = (await readStoryParserCache(root)).get(source)!;
     expect(cached.hash).toBe(digest("original source"));
-    expect(cached.parsed.stories).toEqual([{ id: "example--default", name: "Default", exportName: "Default" }]);
+    expect(cached.parsed.stories).toEqual([
+      { id: "example--default", name: "Default", exportName: "Default", defaultTheme: "prompt-contrast-dark" },
+    ]);
     for (const [path, content] of inputs) {
       await Bun.write(join(root, path), `${content}\nchanged`);
       expect((await readStoryParserCache(root)).size).toBe(0);

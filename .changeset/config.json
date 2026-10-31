@@ -44,7 +44,8 @@
     "pstdio-service-telemetry",
     "pstdio-psx",
     "storage-scale-fixture",
-    "canvas-tests"
+    "canvas-tests",
+    "pstdio-theme"
   ],
   "snapshot": {
     "useCalculatedVersion": true,

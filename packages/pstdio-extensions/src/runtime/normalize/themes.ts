@@ -1,11 +1,12 @@
 import type { ThemeContribution } from "@pstdio/sdk/extensions";
+import { parseVsCodeColorTheme } from "pstdio-theme";
 import type { NormalizedExtension, RuntimeThemeRecord } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { addAppearanceDiagnostic, parseJsonc, validateContributionAsset } from "./appearance-assets";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { asLocalizableString, isLocalizableString } from "./localizable";
-import { createMonacoTheme, createThemePreference, inferMode, type VsCodeColorTheme } from "./vscode-color-theme";
+import { createMonacoTheme, createThemePreference, inferMode } from "./vscode-color-theme";
 
 const readThemeAsset = (
   ext: NormalizedExtension,
@@ -13,11 +14,11 @@ const readThemeAsset = (
   runtime: Accumulator,
   localId: string,
   assetPath: string | null,
-): VsCodeColorTheme => {
-  if (!assetPath) return {};
+) => {
+  if (!assetPath) return null;
   try {
     const parsed = parseJsonc(assetPath);
-    return isRecord(parsed) ? (parsed as VsCodeColorTheme) : {};
+    return parseVsCodeColorTheme(parsed);
   } catch (error) {
     addAppearanceDiagnostic(runtime, {
       code: "malformed_theme_asset",
@@ -25,7 +26,7 @@ const readThemeAsset = (
       extensionId: ext.id,
       sourcePath: source.sourcePath,
     });
-    return {};
+    return null;
   }
 };
 
@@ -60,6 +61,7 @@ export const registerThemes = (
     const asset = validateContributionAsset(ext, source, runtime, localId, contribution.source, "theme");
     if (!asset) continue;
     const parsedTheme = readThemeAsset(ext, source, runtime, localId, asset.path);
+    if (!parsedTheme) continue;
     const base = contributionRecordBase(ext, source, "theme", localId);
     const id = base.id;
     const mode = inferMode(parsedTheme, contribution.mode);

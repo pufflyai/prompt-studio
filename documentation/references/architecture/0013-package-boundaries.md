@@ -20,13 +20,16 @@ layer-map change.
    consumes its identity and exact-target schemas for local environment bindings;
    it adds no host or provider dependency to the synchronization package.
 
-   `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-paths`,
+   `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-theme`, `pstdio-paths`,
    `pstdio-logging`, `pstdio-scheduler`, `pstdio-wt`, `pstdio-db`, and
    `pstdio-storage` define stable contracts, file-type metadata, paths, logging,
    scheduling, git, persistence, and filesystem storage primitives.
    `pstdio-storage` reuses asset reference types from `pstdio-sync-contracts`
    and does not depend on `pstdio-db`. They do not
    depend on SDK, UI, workbench, dashboard, or API host packages.
+   `pstdio-theme` owns browser-free palette conversion for the extension runtime
+   and UI importer. UI bundles its implementation and public types; it is not
+   a published SDK contract.
    `pstdio-db` also consumes synchronization contracts for the durable extension
    journal and accepted state. It does not import the test-only conformance entry.
    The private `pstdio-sync` package owns the production, runtime-neutral record
