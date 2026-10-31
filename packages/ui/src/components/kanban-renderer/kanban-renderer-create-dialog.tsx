@@ -1,10 +1,11 @@
-import { Button, CloseButton, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
+import { Button, CloseButton, HStack, Stack, Text } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { useEffect, useId, useState } from "react";
 import { handleDialogAcceptShortcut } from "@/components/overlays/dialog-accept-shortcut";
 import type { Param, ParamValueMap } from "@/components/param-editor/param-editor.types";
 import { ParamEditorHorizontal } from "@/components/param-editor/param-editor-horizontal";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { useKanbanCreatePreference } from "./kanban-create-preference.store";
 import { KanbanCreateSubmit } from "./kanban-create-submit";
 import { CreateFieldControl } from "./kanban-renderer-create-field";

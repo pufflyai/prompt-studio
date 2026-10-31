@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Menu, Popover, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { Archive, Copy, FileText, GitBranch, Lock, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { PaletteShortcut } from "@/components/command-palette/palette-shortcut";
@@ -6,6 +6,7 @@ import { DeleteConfirmationModal } from "@/components/overlays/delete-confirmati
 import { ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { SearchableMenu, type SearchableMenuItem } from "@/components/overlays/searchable-menu";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ScopedMenu as Menu, ScopedPopover as Popover } from "@/utils/scoped-overlays";
 import { GalleryCard, GallerySection } from "../gallery-frame";
 
 const branchItems: SearchableMenuItem[] = [

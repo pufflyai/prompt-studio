@@ -1,5 +1,6 @@
-import { Box, Dialog, Text } from "@chakra-ui/react";
+import { Box, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { NotificationCenter } from "./notification-center";
 import type { NotificationCenterItem } from "./notification-center.types";
 

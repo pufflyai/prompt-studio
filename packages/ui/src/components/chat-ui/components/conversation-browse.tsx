@@ -1,5 +1,6 @@
-import { Box, chakra, Flex, Portal, Stack, Text } from "@chakra-ui/react";
+import { Box, chakra, Flex, Stack, Text } from "@chakra-ui/react";
 import { type PointerEvent, useState } from "react";
+import { Portal } from "@/utils/ui-scope";
 
 export interface ConversationBrowseItem {
   /** Turn id used to scroll the log to this user message. */

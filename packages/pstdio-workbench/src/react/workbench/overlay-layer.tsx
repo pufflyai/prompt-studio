@@ -1,4 +1,5 @@
-import { Center, CloseButton, Dialog, Portal } from "@chakra-ui/react";
+import { Center, CloseButton } from "@chakra-ui/react";
+import { ScopedDialog as Dialog, Portal } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { getWorkbenchRenderers, type WorkbenchCore, type WorkbenchWidgetPlacement } from "../../core";

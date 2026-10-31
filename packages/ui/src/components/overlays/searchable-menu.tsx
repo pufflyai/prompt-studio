@@ -1,9 +1,11 @@
-import { Icon, Menu, Portal, type PortalProps } from "@chakra-ui/react";
+import { Icon, type PortalProps } from "@chakra-ui/react";
 import { ChevronDown } from "lucide-react";
 import { type ElementType, type ReactNode, useEffect, useRef, useState } from "react";
 import { Header } from "@/components/layout/header";
 import { ListRow } from "@/components/list-row/list-row";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { SearchableMenuInput } from "./searchable-menu-input";
 import { SearchableMenuRow } from "./searchable-menu-row";
 

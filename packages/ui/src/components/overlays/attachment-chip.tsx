@@ -1,6 +1,7 @@
-import { Badge, chakra, IconButton, Image, Popover, Text } from "@chakra-ui/react";
+import { Badge, chakra, IconButton, Image, Text } from "@chakra-ui/react";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
 
 export interface AttachmentChipProps {
   file: File;

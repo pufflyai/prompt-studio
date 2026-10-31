@@ -1,5 +1,5 @@
-import { Dialog } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { ScopedDialog as Dialog } from "@pstdio/ui";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { createKeyboardWorkbench } from "./keyboard.fixture";
 import { WorkbenchKeyboardShortcutsPanel } from "./keyboard-shortcuts-panel";
