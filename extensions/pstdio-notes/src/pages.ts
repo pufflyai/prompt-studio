@@ -2,24 +2,21 @@ import {
   definePage,
   defineView,
   type ExtensionContextBase,
-  eventRef,
   l10n,
   type ResourceRef,
   viewDataEvents,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
+import { notesChanged } from "./events";
 import { notesFileAccess } from "./file-access";
 import { documents } from "./mounts";
 import { note } from "./resource-kinds";
+import { noteText } from "./text-source";
 
+export { notesChanged } from "./events";
 export { note } from "./resource-kinds";
 
-import { noteExists, readNote, readNoteTitle, writeNote } from "./notes";
-
-export const notesChanged = eventRef<{ noteId?: string }>({
-  extensionId: "pstdio.pstdio-notes",
-  id: "notes.changed",
-});
+import { noteExists, readNoteSource, readNoteTitle } from "./notes";
 
 /** Notes belong to the default project workspace through the host artifact mount. */
 export const notesMount = (ctx: ExtensionContextBase) => ctx.artifacts.mount(documents.id);
@@ -51,7 +48,7 @@ export const editor = defineView({
 
       let content: string;
       try {
-        content = await readNote(mount, id);
+        content = await readNoteSource(mount, id);
       } catch (error) {
         if (await noteExists(mount, id)) throw error;
         return { emptyState: { title: "Note not found", description: "This note was deleted." } };
@@ -60,18 +57,10 @@ export const editor = defineView({
         fileName: `${id}.md`,
         mimeType: "text/markdown",
         content,
+        textDocument: { sourceId: noteText.id, params: { noteId: id } },
         editable: writable,
         placeholder: "Write your notes here...",
       };
-    },
-    save: async (ctx, { renderer, content }) => {
-      const id = renderer.resource?.id;
-      const mount = notesMount(ctx);
-      if (!id) throw new Error("No note open");
-
-      await writeNote(mount, id, content);
-      await ctx.events.emit(notesChanged, { noteId: id });
-      return { revision: new Date().toISOString() };
     },
   },
 });

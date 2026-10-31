@@ -26,6 +26,7 @@ import { ticketRenumberedHook } from "./src/hooks/ticket-renumbered";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { plannerKeyboardCommands, plannerShortcuts } from "./src/keyboard";
 import { notifyBlocked } from "./src/planner-notifications";
+import { ticketText } from "./src/text-source";
 import { readStatusSettings, saveStatusSettings } from "./src/ticket-status-settings";
 import { commands as timelineCommands } from "./src/timeline/commands";
 import { gateCleanup } from "./src/timeline/commands/gate-cleanup";
@@ -42,6 +43,7 @@ const templateCommandRefs = {
 };
 
 export default defineExtension({
+  textSources: [ticketText],
   settings: {
     properties: {
       "workflow.statuses": {
