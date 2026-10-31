@@ -25,7 +25,8 @@
       }
     },
     "implicitDependencies": [
-      "@pstdio/ui"
+      "@pstdio/ui",
+      "pstdio-dashboard"
     ]
   },
   "scripts": {
@@ -55,9 +56,6 @@
     "@pstdio/cli-linux-arm64": "0.45.0",
     "@pstdio/cli-win-x64": "0.45.0",
     "@pstdio/cli-win-arm64": "0.45.0"
-  },
-  "nx": {
-    "implicitDependencies": ["pstdio-dashboard"]
   },
   "devDependencies": {
     "@pstdio/sdk": "workspace:*",
