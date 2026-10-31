@@ -453,20 +453,10 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: "24"
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - name: Install dependencies and restore build cache
-        uses: ./.github/actions/setup-ci-cache
-      # Canvas is the only extension with build output: its preview catalog is built from
-      # this repo's UI, so it must exist before the extension is copied out and checked.
-      - name: Build the Canvas preview catalog
-        run: bun run build -- --scope canvas --include-dependencies
       - name: Check extensions against published SDK and UI packages
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"

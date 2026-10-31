@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
-import { type FrameManifest, readFrameAssets, selectFrameModules } from "./module-graph";
+import type { FrameManifest } from "@pstdio/canvas";
+import { readFrameAssets, selectFrameModules } from "./module-graph";
 
 const module = (name: string, imports: string[] = [], dynamicImports: string[] = []) => ({
-  file: `src/catalog/generated/frame-modules/${name}.txt`,
+  file: `modules/${name}.txt`,
   imports,
   dynamicImports,
   bytes: 10,

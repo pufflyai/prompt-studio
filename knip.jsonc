@@ -325,8 +325,6 @@
       "entry": [
         "extension.ts",
         "src/view/main.tsx",
-        // Native preview modules are lazy entries named by the data-only registry.
-        "src/canvases/{component-controls,component-surfaces,documentation,foundations,interactive-previews}.tsx",
         "src/**/*.test.ts",
         "src/**/*.canvas.tsx",
         "scripts/**/*.{ts,tsx}"

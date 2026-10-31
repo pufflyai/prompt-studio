@@ -20,9 +20,12 @@ test("selection gates input and preserves independent frame state", async ({ pag
   await checkFrameSelection(await openSurface(page, "playground"), page);
 });
 
-// Critical: a contained dialog must preserve draft state across themes and reset on variant changes.
-test("folder dialogs, themes, variants, and camera gestures stay isolated", async ({ page }) => {
-  await checkGroupedFolders(await openSurface(page, "stories-ui-overlays-folderpickerdialog"), page);
+// Critical: a contained dialog must preserve draft state across themes and stay out of sibling frames.
+test("folder dialogs, themes, sibling frames, and camera gestures stay isolated", async ({ page }) => {
+  await checkGroupedFolders(
+    await openSurface(page, "packages/ui/src/components/overlays/folder-picker-dialog.canvas.tsx"),
+    page,
+  );
 });
 
 // Critical: long documentation must remain readable and retain edited input when it expands.

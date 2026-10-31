@@ -55,8 +55,8 @@ The Canvas variants show default, hover, pressed, focus, disabled, loading, inva
 
 ```sh
 bun run --cwd extensions/pstdio-base-themes typecheck
-bun run --cwd scripts canvas:build
-bun run --cwd scripts canvas:verify
+bun x pstdio-canvas build
+bun run --cwd packages/canvas-tests test
 ```
 
 UI and preview tooling are development dependencies. `extension.ts` imports only the SDK. The package file list includes its entry point, themes, and icons; it excludes preview sources and test output. Git installs retain the extension lockfile.

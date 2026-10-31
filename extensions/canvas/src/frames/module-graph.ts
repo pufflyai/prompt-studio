@@ -1,10 +1,5 @@
-export interface FrameManifest {
-  entry: string;
-  catalog: string;
-  sources: Record<string, { script: string; project?: string }>;
-  modules: Record<string, { file: string; imports: string[]; dynamicImports: string[]; bytes: number; css?: string[] }>;
-  styles: string[];
-}
+import type { FrameManifest } from "@pstdio/canvas";
+
 export interface FrameAssetRequest {
   source: string;
   cached: string[];
