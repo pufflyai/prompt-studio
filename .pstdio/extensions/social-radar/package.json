@@ -36,5 +36,6 @@
     "@types/react-dom": "19.2.3",
     "typescript": "6.0.2",
     "@pstdio/canvas": "workspace:*"
-  }
+  },
+  "icon": "Radar"
 }
