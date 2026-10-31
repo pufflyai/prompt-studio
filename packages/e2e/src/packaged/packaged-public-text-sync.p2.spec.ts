@@ -9,6 +9,7 @@ import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { type Browser, test as base, chromium, expect, type Route } from "../scripts/playwright-test";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { buildBinary } from "./packaged-helpers";
+import { readEncryptedPublicText } from "./packaged-public-text-encryption.fixture";
 import {
   type PublicTextDevice,
   publicTextSyncFixture,
@@ -192,19 +193,18 @@ test("native Markdown and an installed public editor converge across encrypted h
   const streamId = await space.documentId(JSON.stringify(["paper.public-text-source", "record-stream"]));
   const stream = documents.get(`~${streamId}`);
   expect(stream?.updates.length).toBeGreaterThan(0);
-  const cleartext: string[] = [];
   for (const update of stream!.updates) {
     const envelope = { updateId: String(update.updateId), payload: String(update.payload) };
-    cleartext.push(Buffer.from(await openUpdate(space, streamId, envelope)).toString("latin1"));
+    await openUpdate(space, streamId, envelope);
   }
-  expect(cleartext.some((bytes) => bytes.includes("public-two-host-secret"))).toBe(true);
+  const native = await readEncryptedPublicText(space, contents);
+  expect(native.text).toBe(stopped);
+  expect(native.updates.length).toBeGreaterThan(0);
   const wrongSpace = await createSyncSpace({
     projectId: project.id,
     spaceOwner: null,
     keys: [{ generation: 1, secret: "C".repeat(43) }],
   });
-  const sample = stream!.updates[0]!;
-  await expect(
-    openUpdate(wrongSpace, streamId, { updateId: String(sample.updateId), payload: String(sample.payload) }),
-  ).rejects.toThrow();
+  const sample = native.updates[0]!;
+  await expect(openUpdate(wrongSpace, native.documentId, sample)).rejects.toThrow();
 });

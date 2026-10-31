@@ -5,8 +5,15 @@ import { stopChildProcess } from "../scripts/child-process";
 import { waitForProcessReady } from "../scripts/process-readiness";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 
-interface RelayContents {
-  documents: [string, { payload?: string; updates: Record<string, unknown>[] }][];
+export interface RelayContents {
+  documents: [
+    string,
+    {
+      state: { stateId: string; baseStateId: string | null; through: number } | null;
+      payload?: string;
+      updates: { updateId: string; payload: string; sequence: number }[];
+    },
+  ][];
   blobs: string[];
 }
 
