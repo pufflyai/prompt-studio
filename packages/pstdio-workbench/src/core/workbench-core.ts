@@ -65,6 +65,7 @@ import { createFileIconThemeRegistry } from "./registries/themes/file-icon-theme
 import { createThemeRegistry } from "./registries/themes/theme-registry";
 import { createContextKeyService } from "./shared/context/context-key-service";
 import { createDisposable } from "./shared/disposable";
+import { disposePlacementTextGuests } from "./text-editing/placement-text-guests";
 import {
   activeWorkbenchResource,
   connectWorkbenchCoreState,
@@ -305,6 +306,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     },
 
     async dispose() {
+      await disposePlacementTextGuests(core);
       core.presence.dispose();
       viewers.dispose();
       disposeFullscreen();
@@ -329,9 +331,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
       );
     },
 
-    registerChildModule(module) {
-      return core.registerModule(module);
-    },
+    registerChildModule: (module) => core.registerModule(module),
 
     ...createWorkbenchModuleRegistry(() => core),
   };

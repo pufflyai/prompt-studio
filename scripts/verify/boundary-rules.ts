@@ -116,6 +116,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // e2e also declares the extensions it installs at runtime and the dashboard it serves,
   // so changing one marks e2e as affected.
   e2e: [
+    "@pstdio/ui",
     "@pstdio/sdk",
     "@pstdio/workbench",
     "pstdio",

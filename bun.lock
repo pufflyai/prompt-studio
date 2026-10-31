@@ -498,6 +498,7 @@
         "@aws-sdk/client-s3": "3.1152.0",
         "@playwright/test": "^1.60.0",
         "@pstdio/sdk": "workspace:*",
+        "@pstdio/ui": "workspace:*",
         "@pstdio/workbench": "workspace:*",
         "@tanstack/react-query": "^5.90.21",
         "@types/cmd-shim": "5.0.2",

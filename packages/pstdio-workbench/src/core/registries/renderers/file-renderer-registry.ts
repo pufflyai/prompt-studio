@@ -1,3 +1,4 @@
+import type { TextFilePresentation } from "@pstdio/sdk/extensions";
 import type { NativeDocumentSource } from "pstdio-api-contracts";
 import type { NativeDocumentSession } from "../../native-documents/native-document-session";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
@@ -10,7 +11,7 @@ import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./ren
 // What a file renderer's load resolves to. The React layer dispatches to a
 // markdown editor, a code editor, or an image preview based on `fileName` /
 // `mimeType`; text-ish files carry `content`, images carry `dataUrl`.
-export interface FileRendererContent {
+export interface FileRendererContent extends TextFilePresentation {
   documentSource?: NativeDocumentSource;
   fileName?: string;
   /** Workspace-relative path shown above the file preview. */

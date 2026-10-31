@@ -1,3 +1,4 @@
+import type { NativeDocumentTarget } from "pstdio-api-contracts";
 import type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
 import type { ThemePreference } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher, type HostEventPublisher } from "pstdio-extensions/bridge/host";
@@ -17,6 +18,7 @@ export interface BridgeWebviewRenderContext {
   webviewId: string;
   extensionId?: string;
   placement: WorkbenchPanelInstance;
+  textTarget?: NativeDocumentTarget;
   /** Channel for pushing host events (e.g. terminal output) into this webview. */
   hostEvents: HostEventPublisher;
 }

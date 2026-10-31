@@ -12,6 +12,22 @@ import { createRoot } from "react-dom/client";
 
 const workbench = createWorkbench();
 const stats = { retained: 0, released: 0, subscriptions: 0 };
+let retainedRequest: unknown;
+window.addEventListener("message", (event) => {
+  if (event.data?.action === "lifetime-replay-observed") {
+    document.querySelector("#replayed")!.textContent = JSON.stringify(stats);
+    return;
+  }
+  const frame = document.querySelector<HTMLIFrameElement>('iframe[title="First"]');
+  if (
+    frame?.contentWindow === event.source &&
+    event.data?.action === "RIMLESS/RPC_REQUEST" &&
+    event.data.callName === "call" &&
+    event.data.args?.[0]?.method === "performance.read" &&
+    event.data.args[0].params?.operation === "retain"
+  )
+    retainedRequest = event.data;
+});
 const update = () => {
   document.querySelector("#ownership")!.textContent = JSON.stringify(stats);
 };
@@ -105,5 +121,11 @@ void workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID);
 document.querySelector("#close")!.addEventListener("click", () => root.unmount());
 document.querySelector("#emit")!.addEventListener("click", () => {
   for (const listener of listeners) listener(null);
+});
+document.querySelector("#replay")!.addEventListener("click", () => {
+  if (!retainedRequest) throw new Error("The live guest did not make its retain request");
+  window.postMessage(retainedRequest, location.origin);
+  // Messages from this source are ordered. Observe after the replay reached its old listener.
+  window.postMessage({ action: "lifetime-replay-observed" }, location.origin);
 });
 update();

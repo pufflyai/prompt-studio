@@ -13,6 +13,8 @@ export interface WorkbenchPanelRenderInput {
   panel: WorkbenchPanelContribution | PlaceholderContribution | RegisteredPlaceholderContribution;
   instance: WorkbenchPanelInstance;
   refresh: () => void;
+  /** Source selected by the host for a custom text presentation. Never read from guest props. */
+  textTarget?: NativeDocumentTarget;
   /** Intrinsic sizing for embedded surfaces such as status details. */
   sizing?: "content-width" | "content-height";
 }
@@ -98,3 +100,5 @@ export const createWorkbenchRendererRegistry = (
   for (const renderer of input.initialRenderers ?? []) registry.registerRenderer(renderer);
   return registry;
 };
+
+import type { NativeDocumentTarget } from "pstdio-api-contracts";

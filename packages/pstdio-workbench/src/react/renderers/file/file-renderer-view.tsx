@@ -1,7 +1,12 @@
 import { Box, Button, Center, Flex, Text } from "@chakra-ui/react";
 import { type PageParams, resourceKey } from "@pstdio/sdk/extensions";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { RegisteredFileRendererContribution, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
+import type {
+  RegisteredFileRendererContribution,
+  WorkbenchCore,
+  WorkbenchPanelInstance,
+  WorkbenchPanelRenderInput,
+} from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
 import {
   getFileSectionNavigation,
@@ -27,6 +32,7 @@ import {
 import { FileRendererPathHeader } from "./file-renderer-path-header";
 import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 import { useFileSectionSelection } from "./file-renderer-sections";
+import { SelectedTextEditor } from "./selected-text-editor";
 
 interface WorkbenchFileRendererViewProps {
   workbench: WorkbenchCore;
@@ -34,6 +40,7 @@ interface WorkbenchFileRendererViewProps {
   // The bound resource (e.g. the open ticket / ticket-file) the load/save
   // commands operate on.
   placement?: WorkbenchPanelInstance;
+  presentationInput?: WorkbenchPanelRenderInput;
 }
 const SAVE_DEBOUNCE_MS = 600;
 const describeError = (error: unknown) => (error instanceof Error ? error.message : "Failed to load file.");
@@ -250,6 +257,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   };
   const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
   const loadError = error?.loadKey === loadKey ? error.message : undefined;
+  if (currentLoaded?.textEditor)
+    return <SelectedTextEditor {...props} open={open} content={currentLoaded} pageParams={pageParams} />;
   if (loadError && !currentLoaded) {
     return (
       <Center h="full" minH="0" bg="bg" p="md" flexDirection="column" gap="sm">
