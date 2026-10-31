@@ -3,6 +3,24 @@ import { createWorkbench } from "../../core";
 import { createWebviewKeyboardShortcuts } from "./webview-keyboard-shortcuts";
 import { createWorkbenchHotkeyRegistrations } from "./workbench-hotkey-registrations";
 
+test.each([
+  { keybinding: "Alt+J", allowInInputs: false },
+  { keybinding: ["Alt+J", "K"], allowInInputs: true },
+])("webview profiles do not inspect shortcuts they cannot relay: %j", (binding) => {
+  const workbench = createWorkbench();
+  workbench.commands.registerCommand(
+    { id: "excluded", label: "Excluded" },
+    {
+      execute() {},
+      isEnabled: () => {
+        throw new Error("This shortcut is not part of the webview profile");
+      },
+    },
+  );
+  workbench.keybindings.registerKeybinding({ action: { kind: "command", commandId: "excluded" }, ...binding });
+  expect(createWebviewKeyboardShortcuts(workbench).shortcuts.length).toBeGreaterThan(0);
+});
+
 test("the fullscreen shortcut toggles from editable nested content and completes shortcut mode", async () => {
   const workbench = createWorkbench();
   workbench.context.set("inputFocus", true);
