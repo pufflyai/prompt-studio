@@ -43,7 +43,7 @@ jobs:
                       visit(item)
           for path in pathlib.Path("evidence").rglob("packaged-benchmarks.json"):
               visit(json.loads(path.read_text()))
-          for label, job in [("Final workbench components", 124401395221)]:
+          for label, job in [["database_tests_P1 (pstdio-api 1/5)",124401395371],["e2e_P2 (5/12)",124401395482],["packaged_and_vite_e2e_P1 (browser 1/1)",124401395485],["e2e_P1 (1/2)",124401395601],["e2e_P1 (2/2)",124401395605]]:
               annotations = json.loads(subprocess.check_output(["gh", "api", f"repos/pufflyai/prompt-studio/check-runs/{job}/annotations?per_page=100"]))
               sections.append("### " + label + "\n\n" + "\n".join(clean(item.get("message", "")) for item in annotations))
               try:
