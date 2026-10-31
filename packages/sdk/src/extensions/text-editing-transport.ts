@@ -69,7 +69,6 @@ interface TextPumpInput {
   receive: (snapshot: TextWireSnapshot) => void;
   install: (snapshot: TextWireSnapshot) => void;
   closed: () => boolean;
-  closing: () => boolean;
 }
 export const createTextEditingPump = (input: TextPumpInput) => {
   let sequence = 0;
@@ -149,7 +148,8 @@ export const createTextEditingPump = (input: TextPumpInput) => {
         input.receive(snapshot);
         continue;
       }
-      if (input.closing() || input.canonicalSeed() === replica.seedId) return;
+      // Closing stops new authorship, but admitted work still needs its canonical rendering before closeReady.
+      if (input.canonicalSeed() === replica.seedId) return;
       await adopt(replica);
     }
   };

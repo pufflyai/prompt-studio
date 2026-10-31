@@ -116,7 +116,6 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
     receive,
     install,
     closed: () => lifecycle.closed(),
-    closing: () => lifecycle.closing(),
   });
   function drive() {
     if (lifecycle.closed() || writing || blocked()) return;

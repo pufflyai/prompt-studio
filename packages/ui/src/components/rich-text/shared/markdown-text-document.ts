@@ -3,7 +3,7 @@ import * as Y from "yjs";
 
 type ChangeOrigin = "remote" | "history" | "composition" | "edit";
 /** A rendering replica keeps composition edits based on the source the person still sees. */
-export const createMarkdownTextDocument = (shared: Y.Doc, beforeRemote?: () => void) => {
+export const createMarkdownTextDocument = (shared: Y.Doc, beforeRemote?: () => void, sharedOrigin?: object) => {
   const replica = new Y.Doc({ gc: false });
   Y.applyUpdate(replica, Y.encodeStateAsUpdate(shared));
   const text = replica.getText("content");
@@ -34,7 +34,9 @@ export const createMarkdownTextDocument = (shared: Y.Doc, beforeRemote?: () => v
   };
   const send = (update: Uint8Array, origin: unknown) => {
     if (origin !== localOrigin && origin !== history) return;
-    Y.applyUpdate(shared, update, localOrigin);
+    // The public session origin also belongs to other local callers. Own forwarding is already rendered.
+    rendered = text.toString();
+    Y.applyUpdate(shared, update, sharedOrigin ?? localOrigin);
     if (origin === history) publish("history");
   };
   shared.on("update", receive);

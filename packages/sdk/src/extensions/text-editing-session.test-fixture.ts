@@ -6,7 +6,7 @@ import { createTextEditingClient } from "./text-editing-client";
 import { decodeTextBytes, encodeTextBytes } from "./text-editing-codec";
 
 export const textEditingSessionFixture = async (editable = true) => {
-  const document = new Y.Doc();
+  let document = new Y.Doc();
   await seedTextDocument(document, "source");
   const listeners = new Set<(value: unknown) => void>();
   let revision = 1;
@@ -69,7 +69,16 @@ export const textEditingSessionFixture = async (editable = true) => {
     },
   } as GuestHost;
   return {
-    document,
+    get document() {
+      return document;
+    },
+    async replaceHistory(content: string) {
+      const next = new Y.Doc();
+      await seedTextDocument(next, content);
+      document.destroy();
+      document = next;
+      revision++;
+    },
     snapshot,
     beforeAck: (handler: () => void) => {
       beforeAck = handler;

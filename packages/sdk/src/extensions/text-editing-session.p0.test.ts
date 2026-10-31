@@ -191,3 +191,69 @@ test("a lost acknowledgement retries its admitted batch before requesting writab
   await f.session.close();
   f.document.destroy();
 });
+
+test("draft cancellation reports whether an editor can dismiss its tentative text", async () => {
+  const f = await fixture();
+  const tentative = f.session.createDraft();
+  tentative.text.insert(0, "discard ");
+  expect(tentative.cancel()).toBe(true);
+  const draft = f.session.createDraft();
+  draft.text.insert(0, "keep ");
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  f.hold(async () => {
+    entered.resolve();
+    await release.promise;
+  });
+  const committing = draft.commit();
+  await entered.promise;
+  try {
+    expect(draft.cancel()).toBe(false);
+    expect(draft.text.toString()).toBe("keep source");
+  } finally {
+    release.resolve();
+    await committing;
+    expect(draft.cancel()).toBe(false);
+    await f.session.close();
+    f.document.destroy();
+  }
+});
+
+test("close installs a newer canonical history before a finishing draft releases its visible preview", async () => {
+  const f = await fixture();
+  const draft = f.session.createDraft();
+  draft.text.insert(0, "IME ");
+  await f.replaceHistory("parent history");
+  f.emit({ type: "snapshot", version: 1, snapshot: await f.snapshot() });
+  await f.session.retry();
+  expect(f.session.getSnapshot().text.toString()).toBe("parent history");
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  f.hold(async () => {
+    entered.resolve();
+    await release.promise;
+  });
+  const committing = draft.commit();
+  await entered.promise;
+  let visible: string | undefined;
+  f.session.beforeClose(async () => {
+    await draft.commit();
+    await f.session.retry();
+    visible = f.session.getSnapshot().text.toString();
+  });
+  const closing = f.session.close();
+  expect(f.session.getSnapshot().closing).toBe(true);
+  // The host's receipt now belongs to a third canonical history; the parent's second history cannot apply it.
+  await f.replaceHistory("canonical saved IME");
+  f.hold(undefined);
+  release.resolve();
+  try {
+    await committing;
+    await closing;
+    expect(visible).toBe("canonical saved IME");
+  } finally {
+    release.resolve();
+    await f.session.close();
+    f.document.destroy();
+  }
+});

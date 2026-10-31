@@ -57,10 +57,13 @@ export const createTextEditingDraft = (input: {
       return work;
     },
     cancel() {
-      if ((!frozen || refused) && !work && !done) {
+      if (done) return false;
+      if ((!frozen || refused) && !work) {
         input.cancelled?.();
         finish();
+        return true;
       }
+      return false;
     },
   };
   return { draft, pending: () => !done && (changed || frozen), frozen: () => frozen };
