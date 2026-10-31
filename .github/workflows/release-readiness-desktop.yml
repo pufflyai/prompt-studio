@@ -1,0 +1,65 @@
+name: Release readiness desktop diagnostics
+on:
+  push:
+    branches: [test/release-046-desktop-performance]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  prior_evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: benchmark-desktop-evidence-darwin-arm64
+          run-id: 41149279870
+          github-token: ${{ github.token }}
+          path: evidence
+      - name: Read the previous failure without rerunning tests
+        shell: python
+        run: |
+          import json, pathlib, re
+          def visit(value):
+              if isinstance(value, dict):
+                  for test in value.get("tests", []):
+                      for result in test.get("results", []):
+                          if result.get("status") != "passed":
+                              print("TEST:", value.get("title"), "STATUS:", result.get("status"))
+                              for error in result.get("errors", []):
+                                  message = re.sub(r"\x1b\[[0-9;]*m", "", error.get("message", ""))
+                                  print(message[:6000])
+                  for item in value.values():
+                      visit(item)
+              elif isinstance(value, list):
+                  for item in value:
+                      visit(item)
+          for path in pathlib.Path("evidence").rglob("packaged-benchmarks.json"):
+              visit(json.loads(path.read_text()))
+  desktop:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      CI_PRIORITY: P3
+      PLAYWRIGHT_TRACE: "off"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install native dependencies
+        run: bun scripts/ci/install-native-dependencies.ts
+      - name: Run the complete ordered desktop workload with corrected setup
+        run: bun packages/benchmarks/src/cli.ts run --checkout "$GITHUB_WORKSPACE=$GITHUB_SHA=release-fixes-and-theme-setup" --suites desktop --samples 1 --cache "$RUNNER_TEMP/benchmark-cache" --out test-results/release-readiness
+      - name: Preserve measurements and desktop evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-readiness-desktop
+          path: |
+            test-results
+            clients/desktop/test-results
+          if-no-files-found: warn
