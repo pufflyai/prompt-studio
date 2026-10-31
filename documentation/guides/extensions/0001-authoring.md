@@ -93,12 +93,14 @@ Create `package.json`:
   "devDependencies": {
     "@types/bun": "1.4.4",
     "typescript": "6.0.2"
-  }
+  },
+  "icon": "Bookmark"
 }
 ```
 
 - `publisher` and `name` form the extension ID, here `acme.bookmarks`. You can use your own publisher name; then also change `extensionId` in `src/bookmarks.ts` in step 3. Each part starts with a lowercase letter and contains only lowercase letters, numbers, and dashes.
 - `main` is the entry file.
+- `icon` names the icon shown in Extensions.
 - `engines.pstdio` lists the extension API versions this extension works with. `^0.1.6` accepts 0.1.6 and later 0.1 releases. `^0.2.0` and `^0.3.0` accept the next two breaking releases. Claim a version only after you run the extension on it.
 - `@pstdio/sdk` is pinned to the SDK release that matches your Prompt Studio version.
 
