@@ -7,13 +7,13 @@ import type {
   HarnessExit,
   HarnessQuestionChannel,
   HarnessSession,
-  SessionMessage,
 } from "@pstdio/sdk/extensions";
-import { createRawEventStream, extractSessionId, sendUserMessage } from "./cli-stream";
+import { createRawEventStream, extractSessionId } from "./cli-stream";
 import { claudePrompt } from "./literal-prompt";
 import { createMessageAccumulator } from "./message-accumulator";
 import { normalizeClaudeCodeStream } from "./normalize-stream";
 import { closeOpenQuestions } from "./questions";
+import { createSessionInput, promptWithAttachmentManifest, userMessageFor } from "./session-input";
 import type { RawLogEvent } from "./types";
 
 // Strip the nested-session marker so spawned agents do not detect a parent Claude session.
@@ -28,6 +28,7 @@ const BASE_ARGS = [
   "--input-format",
   "stream-json",
   "--verbose",
+  "--replay-user-messages",
   "--permission-prompt-tool",
   "stdio",
 ];
@@ -74,27 +75,11 @@ export const buildResumeArgs = (input: {
   return args;
 };
 
-const promptWithAttachmentManifest = (prompt: string, attachments: HarnessAttachment[] = []) => {
-  if (attachments.length === 0) return prompt;
-
-  return [
-    prompt,
-    "",
-    "<session-attachments>",
-    ...attachments.map(
-      (attachment) =>
-        `- name=${JSON.stringify(attachment.fileName)} path=${JSON.stringify(attachment.localPath)} mime=${JSON.stringify(
-          attachment.mimeType,
-        )} size=${attachment.sizeBytes}`,
-    ),
-    "</session-attachments>",
-  ].join("\n");
-};
-
 const runPipelineFromEvents = async (
   events: AsyncIterable<RawLogEvent>,
   sink: HarnessEventSink,
   accumulatorOptions: Parameters<typeof createMessageAccumulator>[1],
+  sessionInput: ReturnType<typeof createSessionInput>,
   compact = false,
 ) => {
   const accumulator = createMessageAccumulator(sink, accumulatorOptions);
@@ -103,6 +88,7 @@ const runPipelineFromEvents = async (
   for await (const message of normalizeClaudeCodeStream(events, { compact })) {
     if (message.parts.some((part) => part.type === "error")) failed = true;
     accumulator.push(message);
+    if (message.role === "user") sessionInput.accepted(message.id);
   }
 
   // Claude's output ends when it exits, so a question it was still waiting on can never be answered.
@@ -162,30 +148,12 @@ const toHarnessExit = (exit: { code: number | null; signal: string | null }): Ha
 };
 
 // The host closes the conversation once `stop` returns, so the questions are closed before that.
-const stopClaude = (child: SpawnedChild, events: HarnessEventSink) => () => {
-  closeOpenQuestions(events);
-  child.kill();
-};
-
-const userMessageFor = (prompt: string, attachments: HarnessAttachment[] = []): SessionMessage => {
-  const createdAt = Date.now();
-  return {
-    id: `user-${createdAt}`,
-    role: "user",
-    createdAt,
-    parts: [
-      { type: "text", text: prompt },
-      ...attachments.map((attachment) => ({
-        type: "file" as const,
-        fileId: attachment.fileId,
-        filename: attachment.fileName,
-        mediaType: attachment.mimeType ?? undefined,
-        size: attachment.sizeBytes,
-        url: attachment.url,
-      })),
-    ],
+const stopClaude =
+  (child: SpawnedChild, events: HarnessEventSink, sessionInput: ReturnType<typeof createSessionInput>) => () => {
+    closeOpenQuestions(events);
+    sessionInput.stop();
+    child.kill();
   };
-};
 
 export type StartSpawnInput = {
   signal?: AbortSignal;
@@ -207,19 +175,30 @@ export const startClaudeCodeSession = async (input: StartSpawnInput, deps: Spawn
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
   // Keep diagnostics from filling the pipe and blocking the executable.
   child.stderr.resume();
-  const abort = () => child.kill();
+  const abort = () => {
+    sessionInput.stop();
+    child.kill();
+  };
   input.signal?.addEventListener("abort", abort, { once: true });
   void child.onExit.then(() => input.signal?.removeEventListener("abort", abort));
 
-  sendUserMessage(
-    child.stdin,
+  const sessionInput = createSessionInput(child.stdin);
+  void child.onExit.then(sessionInput.processExited);
+  const initialMessage = userMessageFor(input.prompt, input.attachments);
+  sessionInput.send(
+    initialMessage,
     promptWithAttachmentManifest(claudePrompt(input.prompt, input.nativeCommand), input.attachments),
   );
 
-  const events = createRawEventStream(child.stdout, child.stdin, {
-    questions: input.questions,
-    approvals: input.approvals,
-  });
+  const events = createRawEventStream(
+    child.stdout,
+    child.stdin,
+    {
+      questions: input.questions,
+      approvals: input.approvals,
+    },
+    sessionInput,
+  );
   let extracted: Awaited<ReturnType<typeof extractSessionId>>;
   try {
     extracted = await extractSessionId(events);
@@ -234,9 +213,10 @@ export const startClaudeCodeSession = async (input: StartSpawnInput, deps: Spawn
     remainingEvents,
     input.events,
     {
-      initialMessages: [userMessageFor(input.prompt, input.attachments)],
+      initialMessages: [initialMessage],
       pushInitialMessages: true,
     },
+    sessionInput,
     Boolean(input.nativeCommand && /^\/compact(?:\s|$)/.test(input.prompt)),
   );
 
@@ -246,8 +226,9 @@ export const startClaudeCodeSession = async (input: StartSpawnInput, deps: Spawn
 
   return {
     agentSessionId: sessionId,
+    steer: sessionInput.steer,
     done,
-    stop: stopClaude(child, input.events),
+    stop: stopClaude(child, input.events, sessionInput),
     timeoutStrategy: "provider", // Process exit, not chat activity, owns completion.
     pid: child.pid,
   } satisfies HarnessSession;
@@ -265,28 +246,40 @@ export const resumeClaudeCodeSession = (input: ResumeSpawnInput, deps: SpawnDeps
   const args = buildResumeArgs(input);
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
   child.stderr.resume();
-  const abort = () => child.kill();
+  const abort = () => {
+    sessionInput.stop();
+    child.kill();
+  };
   input.signal?.addEventListener("abort", abort, { once: true });
   void child.onExit.then(() => input.signal?.removeEventListener("abort", abort));
 
-  sendUserMessage(
-    child.stdin,
+  const sessionInput = createSessionInput(child.stdin);
+  void child.onExit.then(sessionInput.processExited);
+  const initialMessage = userMessageFor(input.prompt, input.attachments);
+  sessionInput.send(
+    initialMessage,
     promptWithAttachmentManifest(claudePrompt(input.prompt, input.nativeCommand), input.attachments),
   );
 
-  const events = createRawEventStream(child.stdout, child.stdin, {
-    questions: input.questions,
-    approvals: input.approvals,
-  });
+  const events = createRawEventStream(
+    child.stdout,
+    child.stdin,
+    {
+      questions: input.questions,
+      approvals: input.approvals,
+    },
+    sessionInput,
+  );
 
   const pipelineDone = runPipelineFromEvents(
     events,
     input.events,
     {
-      initialMessages: [userMessageFor(input.prompt, input.attachments)],
+      initialMessages: [initialMessage],
       indexOffset: input.messageOffset ?? 0,
       pushInitialMessages: true,
     },
+    sessionInput,
     Boolean(input.nativeCommand && /^\/compact(?:\s|$)/.test(input.prompt)),
   );
 
@@ -296,8 +289,9 @@ export const resumeClaudeCodeSession = (input: ResumeSpawnInput, deps: SpawnDeps
 
   return {
     agentSessionId: input.agentSessionId,
+    steer: sessionInput.steer,
     done,
-    stop: stopClaude(child, input.events),
+    stop: stopClaude(child, input.events, sessionInput),
     timeoutStrategy: "provider",
     pid: child.pid,
   } satisfies HarnessSession;

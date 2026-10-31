@@ -101,9 +101,6 @@ export const QueuedFollowUpRow = (props: QueuedFollowUpRowProps) => {
             </button>
           </Box>
         )}
-        {item.steeringDelivery ? (
-          <Text css={styles.notice}>Delivery is unconfirmed. Saved input is kept and will not be replayed.</Text>
-        ) : null}
       </Stack>
       {onRemove && !editor && !disabled ? (
         <HStack css={styles.actions} data-visible={hovered || focused || editing}>

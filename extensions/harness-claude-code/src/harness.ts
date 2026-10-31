@@ -44,7 +44,26 @@ export const parseTranscript = (content: string): ClaudeCodeTranscriptEntry[] =>
     if (!trimmed) continue;
 
     try {
-      const parsed = JSON.parse(trimmed) as unknown;
+      let parsed = JSON.parse(trimmed) as unknown;
+
+      // Claude saves mid-tool input as a queued-command attachment rather than a user entry.
+      const record = parsed as {
+        type?: string;
+        attachment?: { type?: string; source_uuid?: string; prompt?: unknown; timestamp?: string };
+      } | null;
+      if (
+        record?.type === "attachment" &&
+        record.attachment?.type === "queued_command" &&
+        typeof record.attachment.source_uuid === "string" &&
+        typeof record.attachment.prompt === "string"
+      ) {
+        parsed = {
+          uuid: record.attachment.source_uuid,
+          type: "user",
+          timestamp: record.attachment.timestamp,
+          message: { role: "user", content: record.attachment.prompt },
+        };
+      }
 
       if (!isValidEntry(parsed)) continue;
       const existingIndex = seen.get(parsed.uuid);
