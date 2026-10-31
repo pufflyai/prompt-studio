@@ -71,6 +71,14 @@ const editingSession = (adapters: ExtensionWebviewHostAdapters) => {
     });
 };
 
+const installationCapabilities = (service: ExtensionWebviewHostAdapters["installations"]) => ({
+  "extensions.installations.read": capability("extensions.installations.read", service && (() => service.list())),
+  "extensions.installations.retry": capability(
+    "extensions.installations.retry",
+    service && ((request) => service.retry(request.id)),
+  ),
+});
+
 export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebviewHostAdapters) => {
   const {
     hostEvents,
@@ -89,6 +97,7 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
   const readHarnesses = adapters.harnesses?.read.bind(adapters.harnesses);
   const account = createAccountCapability(adapters.account);
   return {
+    ...installationCapabilities(adapters.installations),
     "harnesses.read": capability("harnesses.read", readHarnesses),
     "resources.actions": capability("resources.actions", adapters.resourceActions),
     "commands.execute": capability("commands.execute", commandExecution(adapters)),

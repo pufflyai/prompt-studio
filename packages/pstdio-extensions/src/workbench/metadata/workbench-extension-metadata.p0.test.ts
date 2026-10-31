@@ -16,6 +16,7 @@ import {
   workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
+import { checkExtensionHostCompatibility, dashboardExtensionHostCapabilities } from "../../runtime/host-capabilities";
 import type { LoadedExtensionSource } from "../../runtime/loader";
 import { normalizeExtensionSources } from "../../runtime/normalize";
 import { createWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
@@ -44,10 +45,26 @@ test("keeps status detail views qualified through runtime normalization and publ
     id: "activity",
     view: view.ref,
     popover: view.ref,
+    visibilitySetting: "activity.enabled",
     slot: workbenchSlots.statusBarTrailing,
   });
   const runtime = normalizeExtensionSources([source(defineExtension({ views: [view], statusBarItems: [item] }))]);
   const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
+  expect(metadata.statusBarItems[0]?.visibilitySetting).toBe("activity.enabled");
+  const host = {
+    ...dashboardExtensionHostCapabilities,
+    capabilities: Object.fromEntries(
+      Object.entries(dashboardExtensionHostCapabilities.capabilities).filter(
+        ([key]) => key !== "status-bar-item.visibility-setting.v1",
+      ),
+    ),
+  };
+  expect(checkExtensionHostCompatibility(runtime, host).diagnostics).toContainEqual(
+    expect.objectContaining({
+      code: "extension_host_capability_missing",
+      metadata: expect.objectContaining({ missingCapability: "status-bar-item.visibility-setting.v1" }),
+    }),
+  );
   expect(runtime.statusBarItems[0]?.contribution.popover).toEqual({
     extensionId: "pstdio.lab",
     kind: "view",

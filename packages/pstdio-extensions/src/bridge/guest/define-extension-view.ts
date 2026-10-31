@@ -9,13 +9,12 @@ import type {
 import type { HostCapabilityReply, HostCapabilityRequest } from "../contract";
 import { normalizeRuntimeError } from "../normalize-error";
 
-export {
-  defineExtensionView,
-  type ExtensionViewModule,
-  type ExtensionViewRender,
-  type ExtensionViewRenderContext,
-  type GuestHost,
-  type PropsStore,
+export type {
+  ExtensionViewModule,
+  ExtensionViewRender,
+  ExtensionViewRenderContext,
+  GuestHost,
+  PropsStore,
 } from "@pstdio/sdk/extensions";
 
 export const createGuestHost = (

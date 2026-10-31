@@ -10,6 +10,7 @@ import * as loginCommand from "./login";
 import * as logoutCommand from "./logout";
 import * as logsCommand from "./logs";
 import * as notificationsCommand from "./notifications";
+import * as onboardingCommand from "./onboarding";
 import * as performanceCommand from "./performance";
 import { performanceObserverCommand } from "./performance-observer";
 import * as projectsCommand from "./projects";
@@ -33,6 +34,7 @@ export const topLevelCommandModules = [
   logoutCommand,
   logsCommand,
   notificationsCommand,
+  onboardingCommand,
   performanceCommand,
   performanceObserverCommand,
   viewsCommand,

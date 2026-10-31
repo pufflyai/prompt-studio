@@ -58,6 +58,7 @@ export const runExtensionSmoke = async (input: {
       signal: input.signal,
     });
     const client = createClient({ baseUrl: host.origin, token: host.token });
+    await client.onboarding.update({ step: "skip" });
     const project = await client.projects.create({
       name: "Extension smoke test",
       initial_workspace: { provider_id: "pstdio.root", params: { path: context.project } },

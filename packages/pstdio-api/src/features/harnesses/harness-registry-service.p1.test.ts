@@ -56,27 +56,6 @@ describe("harness registry", () => {
     rmSync(tempRoot, { recursive: true, force: true });
   });
 
-  test("installs default harness extensions before serving agent info", async () => {
-    process.env.PSTDIO_HOME = join(tempRoot, "home-defaults");
-    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
-      { source: resolve(REPO_ROOT, "packages/workbench-fixture"), installName: "workbench-fixture", skipInstall: true },
-    ]);
-
-    const { app, close } = await createTestApp({
-      databasePath: ":memory:",
-      storageRoot: join(tempRoot, "storage-defaults"),
-    });
-
-    try {
-      const res = await app.request("/v1/agents/info");
-      const agents = (await res.json()) as Array<{ id: string; name: string; availability: { type: string } }>;
-
-      expect(agents).toEqual(fixtureAgents);
-    } finally {
-      await close();
-    }
-  }, 40_000);
-
   test("resolves harnesses from extensions the user installed into PSTDIO_HOME, before any project exists", async () => {
     // The user decides what lives in PSTDIO_HOME/extensions (`pst extensions add`);
     // the host only loads what is there.

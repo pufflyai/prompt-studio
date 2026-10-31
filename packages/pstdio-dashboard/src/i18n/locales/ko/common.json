@@ -2,5 +2,27 @@
   "browserSignIn": {
     "title": "터미널에서 Prompt Studio를 여세요",
     "description": "이 브라우저는 로그인되어 있지 않습니다. 터미널에서 이 명령을 실행하면 로그인된 대시보드가 열립니다."
+  },
+  "onboarding": {
+    "onThisDevice": "이 기기",
+    "onThisMac": "이 Mac",
+    "installed": "이 기기에 설치됨",
+    "available": "설치 가능",
+    "workAreas": "작업 분야",
+    "extensions": "설치할 확장 기능",
+    "coding": "코딩",
+    "planning": "프로젝트 계획",
+    "skip": "설정 건너뛰기",
+    "chooseHarnesses": "하네스 선택",
+    "chooseWork": "어떤 작업을 하시겠어요?",
+    "subtitle": "기본 확장 기능입니다. 나중에 설치하거나 직접 만들 수 있습니다.",
+    "noHarness": "Prompt Studio를 계속 사용할 수 있지만 앱에서 하네스를 실행할 수는 없습니다.",
+    "continue": "계속",
+    "finish": "완료",
+    "back": "뒤로",
+    "saveError": "설정을 저장하지 못했습니다",
+    "title": "초기 설정",
+    "customizations": "사용자 지정",
+    "dontShow": "초기 설정 표시 안 함"
   }
 }

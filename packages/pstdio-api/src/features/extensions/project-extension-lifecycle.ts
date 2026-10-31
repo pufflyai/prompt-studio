@@ -10,6 +10,7 @@ import type { RouteDeps } from "../deps";
 import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
 import type { ExtensionsRouteDeps } from "./deps";
 import { setDeviceAutomationEnabled } from "./device-automations";
+import { packagedExtensionCatalog } from "./extension-catalog";
 import { extensionChangesWorkspaceProvisioning } from "./extension-skill-cleanup";
 import { toExtensionEnableInput } from "./install-extension-source";
 import { toProjectExtensionInstance } from "./project-extension-instance";
@@ -18,6 +19,7 @@ import { removeSharedSelection, shareEnabledChoice } from "./publication/change-
 import { selectPublicationSource } from "./publication/prepare-activation";
 
 type LifecycleDeps = ExtensionsRouteDeps & {
+  extensionInstallations: RouteDeps["extensionInstallations"];
   installedExtensionSourcesService: RouteDeps["installedExtensionSourcesService"];
   provisionProjectWorkspaces?: typeof provisionProjectWorkspaces;
 };
@@ -56,7 +58,7 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
       ({ installedSource }) => installedSource.extension_id === extensionId,
     );
 
-  const install = async (projectId: string, input: InstallExtensionRequest | UploadExtensionRequest) => {
+  const performInstall = async (projectId: string, input: InstallExtensionRequest | UploadExtensionRequest) => {
     if (!deps.extensionUpgradeService)
       throw new ExtensionUpgradeUnavailableError("Extension installation is unavailable.");
     const source = await deps.extensionUpgradeService.installSource(projectId, input);
@@ -65,8 +67,23 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
       installName: source.installName,
       ...toExtensionEnableInput(source),
     });
-    await provisionWhenRequired(projectId, await changesWorkspaceProvisioning(result.installedSource));
-    return { source, extension: await projectExtension(result.instance, result.installedSource) };
+    return { source, ...result };
+  };
+
+  const install = async (projectId: string, input: InstallExtensionRequest | UploadExtensionRequest) => {
+    let name: string;
+    if ("kind" in input) name = input.folderName;
+    else if (input.source.kind === "catalog") name = input.source.name;
+    else name = input.source.path.split("/").at(-1)!;
+    const installName = input.installName ?? name;
+    const entry = packagedExtensionCatalog.extensions.find((entry) => entry.installName === name);
+    const result = await deps.extensionInstallations.run(
+      { projectId, installName, displayName: entry?.displayName ?? installName, extensionId: entry?.extensionId },
+      () => performInstall(projectId, input),
+      installName,
+      async (result) => provisionWhenRequired(projectId, await changesWorkspaceProvisioning(result.installedSource)),
+    );
+    return { source: result.source, extension: await projectExtension(result.instance, result.installedSource) };
   };
 
   const setEnabled = async (projectId: string, instanceId: string, enabled: boolean) => {

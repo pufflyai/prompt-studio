@@ -1,6 +1,7 @@
 import type { RouteDeps } from "../features/deps";
 import {
   installDefaultExtensions,
+  installMissingDefaultExtensions,
   registerInstalledExtensionSources,
   syncInstalledExtensionsForProjects,
 } from "../features/extensions/default-extensions";
@@ -58,10 +59,10 @@ const provisionRecoveredWorkspaces = (deps: RouteDeps, projectIds: string[], sig
 
 const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortSignal) => {
   const sourceMode = process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1";
-  if (!sourceMode && (await deps.projectService.list()).length > 0) return;
-
   try {
-    const installed = await installDefaultExtensions({
+    const install = sourceMode ? installDefaultExtensions : installMissingDefaultExtensions;
+    const installed = await install({
+      extensionInstallations: deps.extensionInstallations,
       forceSourceDefaults: sourceMode,
       onInstallFailure: ({ error, installName, source }) => {
         if (signal?.aborted) return;
@@ -80,6 +81,12 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
     });
     signal?.throwIfAborted();
     await registerInstalledExtensionSources(deps.extensionService, installed);
+    if (installed.length) {
+      await syncInstalledExtensionsForProjects({
+        extensionService: deps.extensionService,
+        projectService: deps.projectService,
+      });
+    }
   } catch (err) {
     if (signal?.aborted) return;
     apiLogger.warn(

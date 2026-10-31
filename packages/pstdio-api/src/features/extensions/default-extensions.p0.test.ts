@@ -2,6 +2,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import { createExtensionInstallations } from "../../services/extension-installations";
 import { installDefaultExtensions, resolveDefaultExtensionsConfig } from "./default-extensions";
 import { installed, writeExtension } from "./default-extensions-test-fixtures";
 
@@ -13,14 +14,7 @@ describe("resolveDefaultExtensionsConfig", () => {
   test("returns the production defaults when the env override is absent", async () => {
     const config = await resolveDefaultExtensionsConfig({});
 
-    expect(config.defaultExtensions).toEqual([
-      "harness-claude-code",
-      "harness-codex",
-      "harness-open-code",
-      "pstdio-base-themes",
-      "pstdio-skills",
-      "pstdio-performance",
-    ]);
+    expect(config.defaultExtensions).toEqual(["pstdio-base-themes", "pstdio-skills", "pstdio-performance"]);
   });
 
   test("uses PSTDIO_DEFAULT_EXTENSIONS JSON when set", async () => {
@@ -70,6 +64,34 @@ describe("resolveDefaultExtensionsConfig", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+});
+
+test("default preparation and catalog installations finish when they overlap", async () => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-default-jobs-"));
+  const source = join(root, "pstdio-planner");
+  writeExtension(source, "pstdio-planner");
+  const jobs = createExtensionInstallations({
+    installCatalog: async () => {
+      await installDefaultExtensions({
+        config: { defaultExtensions: [{ source }] },
+        installExtensionSource: async () => installed,
+      });
+    },
+  });
+  const one = jobs.enqueueCatalog({ installName: "one", displayName: "One" });
+  const two = jobs.enqueueCatalog({ installName: "two", displayName: "Two" });
+  try {
+    await installDefaultExtensions({
+      config: { defaultExtensions: [{ source }] },
+      extensionInstallations: jobs,
+      installExtensionSource: async () => installed,
+    });
+    await Promise.all([jobs.wait(one.id), jobs.wait(two.id)]);
+    expect(jobs.list().map((job) => job.status)).toEqual(["completed", "completed", "completed"]);
+  } finally {
+    await jobs.dispose();
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 describe("installDefaultExtensions", () => {
@@ -276,9 +298,6 @@ describe("installDefaultExtensions sources", () => {
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
     expect(calls.map((call) => call.installName)).toEqual([
-      "harness-claude-code",
-      "harness-codex",
-      "harness-open-code",
       "pstdio-base-themes",
       "pstdio-skills",
       "pstdio-performance",

@@ -4,6 +4,30 @@ The harness extensions use the public command and mode contract introduced by [S
 
 ## Native mappings
 
+### On-demand packages (0.46)
+
+The planned API 0.3.0 adds optional `HarnessProvider.prepare(ctx)`. The host runs it
+once per provider context before CLI detection, account actions, model discovery,
+and session operations. Static capability discovery does not acquire packages.
+Preparation runs outside the short availability-probe deadline. A failed
+preparation remains retryable and does not hide healthy harnesses.
+
+`prepareHarnessPackage(ctx, { command, minimumVersion, name, version, env? })`
+probes a command array with `--version`. It returns `null` when that global CLI
+is usable. Otherwise it calls the optional `ctx.packages.ensure({ name, version })`
+capability and returns the acquired package's absolute path. Versions must be
+exact. The host uses bundled Bun, skips install scripts, and keeps the package
+under the contributing harness's cache directory. Acquisitions report progress
+through the shared installation service. Package files stay outside extension
+source and project folders.
+
+The provider owns executable resolution within the returned package. Keep that
+resolution shared by detection, account actions, models, and sessions. The
+[temporary native package resolution decision](../../adrs/0110-temporary-native-cli-package-resolution.md)
+describes the upstream package-layout limits.
+
+### Commands
+
 | Harness | Commands and state |
 | --- | --- |
 | Codex | `/goal` uses native goal RPCs and autonomous turns. Pause, resume, edit, and clear act on native state. Stop pauses the goal and interrupts its current turn. `/plan` selects native collaboration mode in existing session parameters. A completed native proposal offers Approve and implement, which validates its revision and starts a normal turn in the same thread. `/compact` waits for native compaction completion. |

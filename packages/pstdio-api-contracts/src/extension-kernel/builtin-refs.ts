@@ -44,6 +44,7 @@ export const workbenchResourceKinds = {
 };
 
 export const workbenchPages = {
+  extension: hostRef("page", "extension"),
   start: hostRef("page", "start"),
   sessions: hostRef("page", "sessions"),
   session: hostRef("page", "session"),
@@ -54,6 +55,12 @@ export const workbenchPages = {
 };
 
 export const workbenchPageDefinitions = {
+  extension: {
+    ref: workbenchPages.extension,
+    mode: workbenchModes.project,
+    path: "extensions/view",
+    primary: { cardinality: "one", resourceKinds: ["extension"] },
+  },
   start: {
     ref: workbenchPages.start,
     mode: workbenchModes.project,

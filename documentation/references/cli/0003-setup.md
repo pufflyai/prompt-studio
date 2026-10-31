@@ -13,6 +13,36 @@ The runtime is one background process that serves the API and the dashboard on t
 | `pst close` | Stop the runtime. It refuses while work is still running. |
 | `pst logs` | Print the end of the runtime log file, or its path. |
 
+## Project setup (0.46)
+
+Creating a project opens a setup dialog for choosing harnesses and default
+extensions after you choose its folder. Finishing or skipping setup opens the
+project workspace. Completing or skipping setup does not hide it for the next
+project. Opening a project from the project list does not start setup.
+You can choose several harnesses, continue without one, or choose **Skip setup**.
+**Settings → Customizations → Don’t show onboarding** hides the flow on this host.
+Appearance controls are in a separate section of Customizations.
+Installed harnesses and extensions are shown separately from downloads. The project
+keeps its background layout while the setup dialog is open. Extension installation
+continues after setup closes; only the requesting project enables the chosen tools.
+
+The unreleased 0.46 CLI exposes the same choices:
+
+~~~bash
+pst onboarding status
+pst onboarding harnesses --harness codex --harness claude-code
+pst onboarding complete --work coding --work planning
+pst onboarding skip
+pst onboarding hide
+pst onboarding show
+~~~
+
+Run `harnesses` and `complete` inside the linked project, or pass `--project-id`.
+`harnesses` with no `--harness` saves an empty selection. `complete` with no `--work`
+keeps the foundation defaults without optional tool bundles. `show` clears the visibility
+preference so setup opens again when you create a project. Skipping does not install choices
+that have not been submitted. Jobs already accepted by the runtime continue.
+
 ## Automatic start
 
 Most commands need the runtime. Before they run, the CLI looks for a running runtime and starts one when none is found. `pst close`, `pst logs`, `pst serve`, `pst extensions install-browser`, and `pst extensions test` skip this step. `extensions add` first looks for a linked project: a folder with `.pstdio/config.json`, in the current folder or a parent folder. Without one, it fails before it starts or contacts the API. From the release after 0.43.x, that error prints the command to run from your project folder, with the source as an absolute path. Installed-scope `extensions check` does the same. `extensions check <path>` stays local and checks the source with the extension API version built into this CLI.

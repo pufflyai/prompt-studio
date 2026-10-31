@@ -89,3 +89,34 @@ test("project logs retain the failed setup step when the workspace records its e
     setup_error: "fixture setup failed",
   });
 });
+
+test("retrying a repo default completes registration and workspace setup", async () => {
+  const { writeExtension } = await import("../extensions/default-extensions-test-fixtures");
+  const { writeFileSync, existsSync } = await import("node:fs");
+  const project = await handle.deps.projectService.create({ name: "Repo retry" });
+  const folder = join(root, "project");
+  const source = join(root, "repo-tool");
+  const available = join(root, "available");
+  mkdirSync(folder);
+  writeExtension(source, "repo-tool", "repo");
+  writeFileSync(
+    join(source, "extension.ts"),
+    `
+    if (!(await Bun.file(${JSON.stringify(available)}).exists())) throw new Error("Source unavailable");
+    export default {};
+  `,
+  );
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([{ source, installName: "repo-tool", skipInstall: true }]);
+  await initializeProjectWorkspace(handle.deps, project.id, { provider_id: "pstdio.root", params: { path: folder } });
+  expect((await handle.deps.workspaceService.getDefault(project.id))?.setup_error).toContain("Source unavailable");
+  writeFileSync(available, "ready");
+  const job = handle.deps.extensionInstallations.list().find((item) => item.installName === "repo-tool")!;
+  handle.deps.extensionInstallations.retry(job.id);
+  await handle.deps.extensionInstallations.wait(job.id);
+  expect(existsSync(join(folder, ".pstdio", "extensions", "repo-tool", "extension.ts"))).toBe(true);
+  expect(await handle.deps.extensionService.listProjectExtensionInstances(project.id)).toHaveLength(1);
+  expect(await handle.deps.workspaceService.getDefault(project.id)).toMatchObject({
+    initializing: false,
+    setup_error: null,
+  });
+});

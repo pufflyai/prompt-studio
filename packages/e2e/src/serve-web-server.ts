@@ -31,6 +31,7 @@ export const serveWebServer = {
     PSTDIO_DB_PATH: ":memory:",
     PSTDIO_EVENT_BUS_BUFFER_SIZE: "5",
     PSTDIO_HOME: homePath,
+    PSTDIO_LOG_PATH: join(repoRoot, "packages/e2e/test-results", e2eRunId, "runtime.jsonl"),
     PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
     PSTDIO_EXTENSION_RELEASE_REF: "e2e",
     PSTDIO_EXTENSION_SOURCE_ROOT: repoRoot,

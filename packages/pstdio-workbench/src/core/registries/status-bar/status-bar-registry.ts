@@ -31,6 +31,7 @@ export interface WorkbenchStatusBarRegistry {
   getItem(id: string): WorkbenchStatusBarItem | undefined;
   listItems(): WorkbenchStatusBarItem[];
   listVisibleItems(slot?: WorkbenchStatusBarSlot): WorkbenchStatusBarItem[];
+  refreshVisibility(): void;
   reorderItem(id: string, position: WorkbenchStatusBarPosition): void;
 }
 
@@ -89,6 +90,9 @@ export const createStatusBarRegistry = (input: CreateWorkbenchStatusBarRegistryI
     },
 
     listItems,
+    refreshVisibility() {
+      store.setState({ items: { ...store.getState().items } }, false, "refreshVisibility");
+    },
 
     reorderItem(id, position) {
       const snapshot = store.getState();

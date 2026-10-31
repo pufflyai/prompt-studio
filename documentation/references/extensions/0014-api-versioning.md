@@ -32,6 +32,12 @@ Pages that describe APIs from `main` say so and name the first release that has 
 Status bar items on `main` can also declare a `popover` view through the additive
 `status-bar-item.popover.v1` host capability. This shares the planned API 0.3.0 release.
 
+The same release adds status-item `visibilitySetting`, the
+`extensions.installations.read` and `extensions.installations.retry` webview
+capabilities, `workbenchPages.extension`, and the `/client` onboarding and
+installation-job methods. Harnesses can implement `prepare(ctx)` and acquire
+pinned packages through `ctx.packages.ensure()`. Existing harnesses need no change.
+
 The page and panel additions share the planned API 0.3.0 release: page-owned empty views and landing slots, non-rendering page groups with default children, closable fixed tabs, tabless Main presentation, independent panel views, declarative slot replacements, caller-relative viewer navigation, mode-owned fullscreen permission, and collection badge navigation actions. They do not add another version step before that release.
 
 ### Which version each check uses

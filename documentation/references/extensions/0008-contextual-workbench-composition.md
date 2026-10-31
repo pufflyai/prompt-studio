@@ -33,6 +33,20 @@ intrinsic height, and long details scroll inside the shared popover. Closing it
 unmounts the detail view and releases its subscriptions. The status view remains
 mounted. Existing items without `popover` keep their current behavior.
 
+The planned API 0.3.0 also accepts `visibilitySetting`, the name of a boolean
+setting owned by the contributing extension. This requires the
+`status-bar-item.visibility-setting.v1` capability. Declare its default in `settings`.
+The host observes that setting and hides the status item when it is false.
+This affects only presentation; background work keeps running. A global setting
+can use the same user preference storage as the Performance widget.
+
+Webviews with `extensions.installations.read` can call
+`client.installations.list()` to read the host's installation jobs. Declare
+`extensions.installations.retry` to call `client.installations.retry(id)`.
+These methods use the same installation service as the CLI and extension UI.
+To open the corresponding extension page, use `workbenchPages.extension` with
+an `extension` resource whose ID is the install name.
+
 ## Examples
 
 The [workbench cookbook](../../guides/extensions/0002-workbench-cookbook.md) links working examples for editable pages, inspectors, shared panels, editor collections, provider refs, and webview lifecycle. See also [Contributions](0004-contribution-api.md), [Modes and layout](0009-modes-and-layout.md), and [Navigation and layout state](0010-navigation-and-layout-state.md).

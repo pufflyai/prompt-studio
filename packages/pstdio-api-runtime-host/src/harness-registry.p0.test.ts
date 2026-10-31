@@ -59,6 +59,81 @@ const startInput: HarnessStartInput = {
 };
 
 describe("harness detection isolation", () => {
+  it("rejects a retired harness after preparation has already completed", async () => {
+    const detect = mock(() => ({ available: true }));
+    const registry = createHarnessRegistry([record({ prepare: async () => {}, detect })], buildContext);
+    const harness = registry.list()[0]!;
+    expect((await harness.detect()).available).toBe(true);
+    const pending = harness.detect();
+    const closing = registry.dispose();
+    await expect(pending).rejects.toThrow("disposed");
+    await closing;
+    expect(detect).toHaveBeenCalledTimes(1);
+  });
+  it("finishes preparation before disposing provider resources", async () => {
+    const started = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const events: string[] = [];
+    const registry = createHarnessRegistry(
+      [
+        record({
+          prepare: async () => {
+            started.resolve();
+            await release.promise;
+            events.push("allocated");
+          },
+          dispose: () => {
+            events.push("disposed");
+          },
+        }),
+      ],
+      buildContext,
+    );
+    const detection = registry.list()[0]!.detect();
+    void detection.catch(() => {});
+    await started.promise;
+    const closing = registry.dispose();
+    await Bun.sleep(0);
+    expect(events).toEqual([]);
+    release.resolve();
+    await closing;
+    await expect(detection).rejects.toThrow("disposed");
+    expect(events).toEqual(["allocated", "disposed"]);
+  });
+  it("prepares a harness once before operations and retries a failed preparation", async () => {
+    let attempts = 0;
+    const gate = Promise.withResolvers<void>();
+    const ready: string[] = [];
+    const registry = createHarnessRegistry(
+      [
+        record({
+          prepare: async () => {
+            if (++attempts === 1) throw new Error("Download failed");
+            await gate.promise;
+            ready.push("prepared");
+          },
+          detect: () => {
+            ready.push("detected");
+            return { available: true };
+          },
+        }),
+      ],
+      buildContext,
+    );
+    const harness = registry.list()[0]!;
+    await harness.capabilities();
+    expect(attempts).toBe(0);
+    expect((await harness.detect()).available).toBe(false);
+    const detection = harness.detect();
+    const capabilities = harness.capabilities();
+    await Bun.sleep(0);
+    expect(ready).toEqual([]);
+    gate.resolve();
+    await Promise.all([detection, capabilities]);
+    expect(ready).toEqual(["prepared", "detected"]);
+    expect(attempts).toBe(2);
+    await registry.dispose();
+  });
   it("isolates a throwing detection provider from healthy harnesses", async () => {
     const registry = createHarnessRegistry(
       [

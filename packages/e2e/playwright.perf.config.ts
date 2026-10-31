@@ -5,6 +5,7 @@ import { uiOrigin } from "./src/ui-server";
 
 export default defineConfig({
   testDir: "./src/perf",
+  globalSetup: "./src/scripts/global-setup.ts",
   testMatch: suites
     .find((suite) => suite.id === "workbench")!
     .files.filter((file) => file.startsWith("packages/e2e/src/perf/"))

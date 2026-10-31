@@ -42,6 +42,11 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // packaged-cloud-notes-onboarding.p2.test.ts checks local folder ownership and the actual Notes plus/save/sync flow.
 // packaged-board-panning-smoke.p2.test.ts retains card opening and dragging; the UI Card Gestures story covers nested-control pointer ownership.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import {
+  expectPackagedOnboarding,
+  expectPackagedProjectChoices,
+  writePackagedOnboardingSources,
+} from "./packaged-onboarding-smoke";
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -86,6 +91,7 @@ test(
     let child: ChildProcess | null = null;
 
     try {
+      writePackagedOnboardingSources(tempRoot);
       const extensionSource = writeExtensionWithDependency(tempRoot, `^0.0.9 || ^${EXTENSION_API_VERSION}`);
       const installEnvironmentProbe = writeExtensionInstallEnvironmentProbe(tempRoot);
       const navigationProbe = writeNavigationExtension(tempRoot);
@@ -106,6 +112,7 @@ test(
         OPENAI_API_KEY: "provider-secret",
       });
       child = started.child;
+      await expectPackagedOnboarding(started.baseUrl, runtimeAuthorization(started.descriptor));
 
       const projectFolder = join(tempRoot, "project");
       const peerFolder = join(tempRoot, "peer-project");
@@ -125,6 +132,13 @@ test(
 
       const project = (await createRes.json()) as { id: string };
       const peer = (await peerRes.json()) as { id: string };
+      await expectPackagedProjectChoices(
+        started.baseUrl,
+        runtimeAuthorization(started.descriptor),
+        project.id,
+        peer.id,
+        tempRoot,
+      );
       const peerExtensions = await fetch(`${started.baseUrl}/v1/projects/${peer.id}/extensions`, {
         headers: runtimeAuthorization(started.descriptor),
       });

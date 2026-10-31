@@ -27,7 +27,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
       await expect(button).toBeHidden();
     }
     await picker.getByRole("button", { name: "Settings", exact: true }).click();
-    await expect(page.getByRole("option", { name: "Appearance", exact: true })).toBeVisible();
+    await expect(page.getByRole("option", { name: "Customizations", exact: true })).toBeVisible();
     await page.getByRole("button", { name: /^Close/ }).click();
     await expect(picker).toBeVisible();
     await page.keyboard.press("Escape");

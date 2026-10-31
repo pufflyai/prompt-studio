@@ -283,6 +283,7 @@ export const toInternalWorkbenchExtensionMetadata = (
       extensionId: item.extensionId,
       viewId: contributionRefId(item.view),
       popoverViewId: item.popover ? contributionRefId(item.popover) : undefined,
+      visibilitySetting: item.visibilitySetting,
       slot: item.slot.id.endsWith("leading") ? "leading" : "trailing",
       order: item.order,
       when: toWorkbenchWhenExpression(item.when),

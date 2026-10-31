@@ -10,7 +10,21 @@ import { createDashboardSessionDraftPersistence } from "@/shared/app/session-dra
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { flushMicrotasks } from "./modules/extensions/module-test-fixtures";
-import { createDashboardWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
+import { createDashboardWorkbench as createWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
+
+const createDashboardWorkbench = (input: Parameters<typeof createWorkbench>[0] = {}) =>
+  createWorkbench({
+    ...input,
+    onboarding: {
+      read: async () => ({
+        state: { completed: true, hidden: false, harnesses: null, workAreas: null },
+        installedExtensions: [],
+        detectedHarnesses: [],
+        platform: "linux",
+      }),
+      update: async () => ({ completed: true, hidden: false, harnesses: null, workAreas: null }),
+    },
+  });
 
 const createStorage = (): WorkbenchStorageLike => {
   const values = new Map<string, string>();

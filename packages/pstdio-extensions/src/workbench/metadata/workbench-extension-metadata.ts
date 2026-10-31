@@ -221,6 +221,7 @@ export const createWorkbenchExtensionMetadata = (
     extensionId: item.extensionId,
     view: normalizedRef(item.contribution.view, item.extensionId),
     popover: item.contribution.popover ? normalizedRef(item.contribution.popover, item.extensionId) : undefined,
+    visibilitySetting: item.contribution.visibilitySetting,
     slot: item.contribution.slot,
     order: item.contribution.order,
     when: normalizeWhen(item.contribution.when, item.extensionId),

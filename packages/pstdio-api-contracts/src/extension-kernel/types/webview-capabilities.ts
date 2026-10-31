@@ -1,4 +1,5 @@
 import type { AgentInfo, AgentModel, HarnessParamsInfo } from "../../agents";
+import type { ExtensionInstallation } from "../../extensions/installation-jobs";
 import type { TerminalSessionOperation, TerminalSessionResult } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
 import type {
@@ -22,6 +23,8 @@ export const WEBVIEW_HOST_CAPABILITY_VERSION = 1;
 
 // Capabilities a webview must declare in its manifest before the bridge will route them.
 export const WEBVIEW_DECLARABLE_CAPABILITIES = [
+  "extensions.installations.read",
+  "extensions.installations.retry",
   "clipboard.write",
   "commands.execute",
   "commands.stream",
@@ -222,6 +225,8 @@ export interface WebviewKeyboardShortcutRequest {
 }
 
 export interface WebviewHostCapabilityParams {
+  "extensions.installations.read": Record<string, never>;
+  "extensions.installations.retry": { id: string };
   "performance.read": PerformanceReadRequest;
   "performance.control": PerformanceControlRequest;
   "harnesses.read": { harnessId?: string; model?: string };
@@ -261,6 +266,8 @@ export interface WebviewHostCapabilityParams {
 }
 
 export interface WebviewHostCapabilityResults {
+  "extensions.installations.read": ExtensionInstallation[];
+  "extensions.installations.retry": ExtensionInstallation;
   "performance.read": PerformanceReadResult;
   "performance.control": void;
   "harnesses.read": {

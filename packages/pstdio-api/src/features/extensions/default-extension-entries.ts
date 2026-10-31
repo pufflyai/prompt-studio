@@ -84,6 +84,50 @@ const readDefaultScope = (sourcePath: string) => {
 
 type SharedCheckout = Awaited<ReturnType<typeof createSharedNamedSourceCheckout>>;
 
+export const createDefaultCheckoutPool = (
+  entries: DefaultExtensionEntry[],
+  prepareShared = createSharedNamedSourceCheckout,
+) => {
+  const namesByRef = new Map<string | undefined, string[]>();
+  for (const entry of entries) {
+    const source = sourceFor(entry);
+    if (!isLocalExtensionSource(source))
+      namesByRef.set(entryRef(entry), [...(namesByRef.get(entryRef(entry)) ?? []), source]);
+  }
+  const pending = new Map<string | undefined, { checkout: Promise<SharedCheckout>; users: number }>();
+  const prepare: typeof createSharedNamedSourceCheckout = async (names, options) => {
+    const ref = options?.ref;
+    let lease = pending.get(ref);
+    if (!lease) {
+      lease = {
+        checkout: Promise.resolve().then(() => prepareShared(namesByRef.get(ref) ?? names, options)),
+        users: 0,
+      };
+      pending.set(ref, lease);
+    }
+    const current = lease;
+    current.users++;
+    const release = () => {
+      if (--current.users) return false;
+      pending.delete(ref);
+      return true;
+    };
+    try {
+      const shared = await current.checkout;
+      return {
+        ...shared,
+        cleanup: () => {
+          if (release()) shared.cleanup();
+        },
+      };
+    } catch (error) {
+      release();
+      throw error;
+    }
+  };
+  return { prepare };
+};
+
 const prepareDefaultCheckouts = async (
   entries: DefaultExtensionEntry[],
   input: {
