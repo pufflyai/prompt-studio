@@ -82,6 +82,18 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     initialState: { keybindings: [] },
   });
 
+  // Whether a chord holds any modifier is platform-independent: Mod resolves to
+  // either Ctrl or Meta. Avoid detecting the platform again for every hint read.
+  const inputModifiers = new Map<string, boolean>();
+  const holdsInputModifier = (key: string) => {
+    const cached = inputModifiers.get(key);
+    if (cached !== undefined) return cached;
+    const parsed = parseHotkey(key);
+    const held = parsed.alt || parsed.ctrl || parsed.meta;
+    inputModifiers.set(key, held);
+    return held;
+  };
+
   const getId = (binding: Keybinding) =>
     binding.id ??
     `${binding.sourceExtensionId ?? "workbench"}:${binding.layer ?? "direct"}:${getNavigationTargetKey(binding.action)}`;
@@ -94,14 +106,14 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     else if (layer === "current") defaultScope = "panel";
     const keybinding = override?.keybinding ?? binding.keybinding;
     const first = getKeybindingSteps(keybinding)[0];
-    const held = first ? parseHotkey(first) : undefined;
+    const held = first ? holdsInputModifier(first) : false;
     return {
       ...binding,
       id: getId(binding),
       targetScope: binding.targetScope ?? defaultScope,
       keybinding,
       // Plain keys belong to the editor, so only Alt, Ctrl or Cmd chords may act while typing.
-      allowInInputs: binding.allowInInputs === true && Boolean(held?.alt || held?.ctrl || held?.meta),
+      allowInInputs: binding.allowInInputs === true && held,
       layer,
       disabled: override?.disabled === true,
     };

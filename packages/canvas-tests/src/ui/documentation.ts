@@ -57,6 +57,7 @@ export const checkIntrinsicDocumentation = async (page: Frame) => {
 export const profilePopulatedCanvas = async (page: Frame) => {
   const viewport = page.getByRole("region", { name: "Populated verification canvas" });
   await Promise.all(page.childFrames().map((frame) => frame.evaluate(() => document.fonts.ready)));
+  await viewport.focus();
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const startupLongTasks = await page.evaluate(() => {
     const tasks = window.__CANVAS_VERIFICATION__.longTasks;
@@ -65,8 +66,9 @@ export const profilePopulatedCanvas = async (page: Frame) => {
     return tasks;
   });
   const start = performance.now();
-  for (let index = 0; index < 24; index++) await viewport.press(index % 2 ? "ArrowLeft" : "ArrowRight");
-  for (let index = 0; index < 8; index++) await viewport.press(index % 2 ? "-" : "+");
+  const keyboard = page.page().keyboard;
+  for (let index = 0; index < 24; index++) await keyboard.press(index % 2 ? "ArrowLeft" : "ArrowRight");
+  for (let index = 0; index < 8; index++) await keyboard.press(index % 2 ? "-" : "+");
   await page.waitForFunction(() => window.__CANVAS_VERIFICATION__.saves > 0);
   return {
     previews: await page.locator("[data-canvas-item]").count(),

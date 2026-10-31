@@ -31,6 +31,7 @@
   "popover.remoteBackend": "遠端後端",
   "popover.responseSummary": "平均 {{avg}} · 最大 {{max}}",
   "popover.responseTime": "回應時間",
+  "popover.resuming": "正在恢復 · 等待程序取樣",
   "popover.resume": "繼續",
   "popover.resumeLabel": "繼續 {{name}}",
   "popover.roles.extension-frames": "擴充功能框架",
