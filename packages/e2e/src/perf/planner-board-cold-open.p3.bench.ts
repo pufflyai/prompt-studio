@@ -219,6 +219,7 @@ Reports every sample against the ${targetMs} ms target. Seeding takes several mi
   buildBinary();
   const kept = process.argv.includes("--home") ? option("--home", 0) : undefined;
   const home = kept ?? mkdtempSync(join(tmpdir(), "pstdio-planner-cold-open-"));
+  mkdirSync(home, { recursive: true });
   try {
     const fixturePath = join(home, "fixture.json");
     const seeded = existsSync(fixturePath);
