@@ -54,8 +54,7 @@ if (import.meta.main) {
   const checks = performanceChecks(family);
   const directory = `test-results/production-performance/${family}`;
   mkdirSync(directory, { recursive: true });
-  if (family === "backend")
-    for (const check of checks) await Bun.write(`${directory}/${check.id}.jsonl`, "");
+  if (family === "backend") for (const check of checks) await Bun.write(`${directory}/${check.id}.jsonl`, "");
   const metadata = {
     sourceSha: process.env.SOURCE_SHA,
     versionSha: process.env.VERSION_SHA,
