@@ -17,18 +17,6 @@ export const storeTicketFileContent = async (
   content: string,
 ) => (await ticketBlobs(storage, ticketId).put({ name, data: new TextEncoder().encode(content) })).id;
 
-export const updateTicketFileContent = async (
-  storage: ExtensionStorageApi,
-  ticketId: string,
-  file: StoredTicketFile,
-  name: string,
-  content?: string,
-) => {
-  const blobs = ticketBlobs(storage, ticketId);
-  const data = content === undefined ? await blobs.getBytes(file.blobId) : new TextEncoder().encode(content);
-  return (await blobs.update(file.blobId, { name, data })).id;
-};
-
 export const deleteTicketFileContent = (storage: ExtensionStorageApi, ticketId: string, blobIds: string[]) =>
   Promise.all(blobIds.map((id) => ticketBlobs(storage, ticketId).delete(id)));
 
