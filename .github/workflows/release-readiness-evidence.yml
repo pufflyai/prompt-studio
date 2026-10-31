@@ -43,7 +43,7 @@ jobs:
                       visit(item)
           for path in pathlib.Path("evidence").rglob("packaged-benchmarks.json"):
               visit(json.loads(path.read_text()))
-          for label, job in [["Native Linux ARM64 verifier",124401395808]]:
+          for label, job in [("Current Linux desktop",124406809913),("Current ARM Mac desktop",124406809886)]:
               annotations = json.loads(subprocess.check_output(["gh", "api", f"repos/pufflyai/prompt-studio/check-runs/{job}/annotations?per_page=100"]))
               sections.append("### " + label + "\n\n" + "\n".join(clean(item.get("message", "")) for item in annotations))
               try:
@@ -53,7 +53,7 @@ jobs:
                   if start >= 0:
                       logs = logs[start:]
                   lines = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", logs).splitlines()
-                  indices = [index for index, line in enumerate(lines) if re.search(r"Error:|error:|Expected:|Received:|EPERM|EACCES|ENOENT|chown:|\\(fail\\)|✘", line)]
+                  indices = [index for index, line in enumerate(lines) if re.search(r"Error:|error:|Expected:|Received:|EPERM|EACCES|ENOENT|chown:|\\(fail\\)|✘|stopped after|cancelled", line)]
                   selected = sorted({index for match in indices for index in range(max(0, match - 4), min(len(lines), match + 14))})
                   sections.append("### " + label + " failure context\n\n" + clean("\n".join(lines[index] for index in selected[-150:])))
               except Exception as error:
