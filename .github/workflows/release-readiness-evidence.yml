@@ -12,12 +12,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: benchmark-desktop-evidence-darwin-arm64
-          run-id: 41149279870
-          github-token: ${{ github.token }}
-          path: evidence
       - name: Retain a compact diagnostic result
         shell: python
         env:
@@ -43,7 +37,7 @@ jobs:
                       visit(item)
           for path in pathlib.Path("evidence").rglob("packaged-benchmarks.json"):
               visit(json.loads(path.read_text()))
-          for label, job in [("Intel Mac desktop shard 1",124415574696),("Intel Mac desktop shard 2",124415574581),("Windows ARM Canvas",124415574872)]:
+          for label, job in [("Workbench visibility candidate",124421658268)]:
               annotations = json.loads(subprocess.check_output(["gh", "api", f"repos/pufflyai/prompt-studio/check-runs/{job}/annotations?per_page=100"]))
               sections.append("### " + label + "\n\n" + "\n".join(clean(item.get("message", "")) for item in annotations))
               try:
