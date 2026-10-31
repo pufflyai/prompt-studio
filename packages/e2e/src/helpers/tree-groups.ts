@@ -38,6 +38,8 @@ export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locato
   // Visibility alone does not ensure a stable, unobstructed pointer target after reload.
   await group.hover();
   const header = (await group.boundingBox())!;
+  // A late layout update can move the group after hover positioned the pointer.
+  await page.mouse.move(header.x + header.width / 2, header.y + header.height / 2);
   await page.mouse.down();
   await page.mouse.move(header.x + header.width / 2, header.y + header.height / 2 - 35, { steps: 8 });
   await expect(page.locator("[data-panel-dragging]")).toHaveCount(0);
