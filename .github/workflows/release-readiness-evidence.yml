@@ -43,7 +43,7 @@ jobs:
                       visit(item)
           for path in pathlib.Path("evidence").rglob("packaged-benchmarks.json"):
               visit(json.loads(path.read_text()))
-          for label, job in [["Database plan",124401395371],["P1 UI plan 1",124401395601],["P1 UI plan 2",124401395605],["Packaged P1 CLI",124401395497]]:
+          for label, job in [["Native Linux ARM64 verifier",124401395808]]:
               annotations = json.loads(subprocess.check_output(["gh", "api", f"repos/pufflyai/prompt-studio/check-runs/{job}/annotations?per_page=100"]))
               sections.append("### " + label + "\n\n" + "\n".join(clean(item.get("message", "")) for item in annotations))
               try:
@@ -53,9 +53,9 @@ jobs:
                   if start >= 0:
                       logs = logs[start:]
                   lines = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", logs).splitlines()
-                  indices = [index for index, line in enumerate(lines) if re.search(r"(?i)error|fail|timeout|timed|exceeded|cancel|SIGTERM|ENOENT", line)]
+                  indices = [index for index, line in enumerate(lines) if re.search(r"Error:|error:|Expected:|Received:|EPERM|EACCES|ENOENT|chown:|\\(fail\\)|✘", line)]
                   selected = sorted({index for match in indices for index in range(max(0, match - 4), min(len(lines), match + 14))})
-                  sections.append("### " + label + " failure context\n\n" + clean("\n".join(lines[index] for index in (selected[-100:] if selected else range(max(0,len(lines)-60),len(lines))))))
+                  sections.append("### " + label + " failure context\n\n" + clean("\n".join(lines[index] for index in selected[-150:])))
               except Exception as error:
                   sections.append("### Log access error\n\n" + clean(str(error) + "\n" + str(getattr(error, "output", ""))))
           payload = {"name": "Release 0.46 diagnostic details", "head_sha": os.environ["GITHUB_SHA"], "status": "completed", "conclusion": "neutral", "output": {"title": "Failure evidence; no tests rerun", "summary": "\n\n".join(sections)[:60000]}}
