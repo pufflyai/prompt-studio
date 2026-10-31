@@ -43,7 +43,7 @@ jobs:
                       visit(item)
           for path in pathlib.Path("evidence").rglob("packaged-benchmarks.json"):
               visit(json.loads(path.read_text()))
-          for label, job in [("Current Linux desktop",124406809913),("Current ARM Mac desktop",124406809886)]:
+          for label, job in [("Intel Mac desktop shard 1",124415574696),("Intel Mac desktop shard 2",124415574581),("Windows ARM Canvas",124415574872)]:
               annotations = json.loads(subprocess.check_output(["gh", "api", f"repos/pufflyai/prompt-studio/check-runs/{job}/annotations?per_page=100"]))
               sections.append("### " + label + "\n\n" + "\n".join(clean(item.get("message", "")) for item in annotations))
               try:
